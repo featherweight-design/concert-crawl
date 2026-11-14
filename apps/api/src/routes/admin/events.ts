@@ -745,17 +745,18 @@ eventsAdminRouter.patch(
 
     // Past lock, on this PATCH only: a show whose stored date is before today
     // in Denver (the list's Past side) may change `hiddenFromConsumer` and the
-    // corrections of B+ addendum 5 §4 (`title`, `artist`, `doorsTime`,
-    // `showTime`, and `date` to another past date), which tell no watcher. A
-    // past show stored as postponed may make the `title` and `artist`
-    // corrections and change `date`, `doorsTime`, `showTime` and `status`, so
-    // it can be rescheduled. A field re-sent at its stored value is not a
-    // change. Anything else is 409 `past_locked`, read under the row lock, and
-    // not audited. Corrections audit as `event.update`, like every other edit.
+    // corrections of B+ addendum 5 §4 (`title`, `doorsTime`, `showTime`, and
+    // `date` to another past date), which tell no watcher. A past show stored
+    // as postponed may make the `title` correction and change `date`,
+    // `doorsTime`, `showTime` and `status`, so it can be rescheduled. A field
+    // re-sent at its stored value is not a change. Anything else is 409
+    // `past_locked`, read under the row lock, and not audited. Corrections
+    // audit as `event.update`, like every other edit.
     //
-    // A date, time or headliner change that would duplicate another upcoming
-    // row at the venue (the partial unique index the crawler upserts on) is
-    // 409 `duplicate_show` rather than a 500.
+    // A date or show-time change (or a status change back to upcoming) that
+    // would land on another upcoming row's night at the venue (the partial
+    // unique index the crawler upserts on) is 409 `duplicate_show` rather
+    // than a 500.
     let updated: Awaited<ReturnType<typeof updateEvent>>;
     try {
       updated = await updateEvent(id, body, {

@@ -18,7 +18,7 @@ import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import type { AdminEvent } from '@/components/admin/events/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { pastLockedMessage } from './past-locked';
+import { duplicateShowMessage, pastLockedMessage } from './past-locked';
 
 type StatusTab =
   'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected';
@@ -457,6 +457,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
     } catch (err) {
       setActionError(
         pastLockedMessage(err) ??
+          duplicateShowMessage(err) ??
           (err instanceof Error
             ? err.message
             : ADMIN_COPY.events.errors.saveFailed),
