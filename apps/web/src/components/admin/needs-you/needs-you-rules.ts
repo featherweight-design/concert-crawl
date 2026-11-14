@@ -154,11 +154,19 @@ export const metaTime = (
 };
 
 /** The card's meta line: "Globe Hall · Thu Nov 12 · 8 PM". */
+/** A price check's card meta ends with what is listed now: "listed $29–$64". */
+const listedMetaOf = (row: QueueRow): string | null => {
+  if (row.kind !== 'price-check' || !row.priceFacts) return null;
+  const range = priceRangeOf(row.priceFacts.listed, row.priceFacts.listedMax);
+  return range === null ? null : COPY.listedMeta(range);
+};
+
 export const metaOf = (row: QueueRow): string =>
   [
     row.venueName,
     row.fanDate ? metaDate(row.fanDate) : null,
     metaTime(row.showTime),
+    listedMetaOf(row),
   ]
     .filter((part): part is string => part !== null)
     .join(' · ');

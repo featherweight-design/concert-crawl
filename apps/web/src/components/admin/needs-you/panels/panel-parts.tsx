@@ -201,6 +201,7 @@ export const AnswerButtons = ({
   busy,
   note,
   extra,
+  extraFirst = false,
   extraLast = false,
   hide,
   labelOf,
@@ -212,6 +213,8 @@ export const AnswerButtons = ({
   note: string | null;
   /** A drawn button that is a link, not an answer (e.g. Check source). */
   extra?: ReactNode;
+  /** Put `extra` above the answers, full width (the price check's ticket page). */
+  extraFirst?: boolean;
   /** Put `extra` after every answer, not after the lead. */
   extraLast?: boolean;
   /** Answers a drawn link stands in for (e.g. Edit, then list). */
@@ -279,13 +282,18 @@ export const AnswerButtons = ({
         )}
         {createPortal(
           <>
+            {extraFirst && extra}
             {lead?.suggested && button(lead, true)}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {!extraLast && lead?.suggested && extra}
+              {!extraLast && !extraFirst && lead?.suggested && extra}
               {others.map((answer, index) => (
                 <Fragment key={answer.slug}>
                   {button(answer, false)}
-                  {!extraLast && !lead?.suggested && index === 0 && extra}
+                  {!extraLast &&
+                    !extraFirst &&
+                    !lead?.suggested &&
+                    index === 0 &&
+                    extra}
                 </Fragment>
               ))}
               {extraLast && extra}
@@ -298,6 +306,7 @@ export const AnswerButtons = ({
   return (
     <Section label={ADMIN_COPY.needsYou.panel.yourAnswer}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {extraFirst && extra}
         {lead?.suggested && button(lead, true)}
         <div
           // Labels stay on one line; a row that runs out of room wraps whole
@@ -306,11 +315,15 @@ export const AnswerButtons = ({
         >
           {/* The board's order: the lead, then Check source, then the rest.
               With no lead drawn full width, the first answer stands in. */}
-          {!extraLast && lead?.suggested && extra}
+          {!extraLast && !extraFirst && lead?.suggested && extra}
           {others.map((answer, index) => (
             <Fragment key={answer.slug}>
               {button(answer, false)}
-              {!extraLast && !lead?.suggested && index === 0 && extra}
+              {!extraLast &&
+                !extraFirst &&
+                !lead?.suggested &&
+                index === 0 &&
+                extra}
             </Fragment>
           ))}
           {extraLast && extra}

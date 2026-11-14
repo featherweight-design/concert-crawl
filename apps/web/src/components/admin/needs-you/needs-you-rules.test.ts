@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CrawlRunReason } from '@concert-crawl/types';
 import type { QueueRow } from './needs-you-api';
 import {
+  metaOf,
   cardLabelOf,
   causeText,
   countAfterRemoval,
@@ -298,6 +299,15 @@ describe('price and bug helpers', () => {
       evidence: [],
     } as unknown as QueueRow;
     expect(whatOf(base)).toBe('Listed $29–$64, a fan checked $45+.');
+    // The card's meta ends with what is listed now (`price-check-m`).
+    expect(
+      metaOf({
+        ...base,
+        venueName: 'Red Rocks',
+        fanDate: null,
+        showTime: null,
+      } as QueueRow),
+    ).toBe('Red Rocks · listed $29–$64');
     expect(
       cardLabelOf(base, {
         slug: 'use_checked_price',
