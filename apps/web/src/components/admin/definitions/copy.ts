@@ -3413,7 +3413,9 @@ export const ADMIN_COPY = {
       breadcrumbAriaLabel: 'Breadcrumb',
     },
     crumbs: {
-      editVenue: 'Edit venue',
+      // The venue-name slot until the venue page sets its name
+      // (`07/loading-venue-page` draws "Venues / …").
+      venuePending: '…',
       details: 'Details',
     },
   },

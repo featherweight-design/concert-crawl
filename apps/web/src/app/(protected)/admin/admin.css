@@ -282,6 +282,21 @@
   }
 }
 
+/* The venue page skeleton's header (venues/[id]/loading.tsx). A server
+   fallback can't read useIsPhone, so it draws both forms, each sized from
+   venue-header-geometry, and the breakpoint (ADMIN_PHONE_MAX_WIDTH) shows one. */
+.venue-header-skeleton-phone {
+  display: none;
+}
+@media (max-width: 720px) {
+  .venue-header-skeleton-desktop {
+    display: none;
+  }
+  .venue-header-skeleton-phone {
+    display: flex;
+  }
+}
+
 /* Health (admin 1c). Desktop is 03/health-desktop, the phone 03/health-mobile;
    copy that differs renders twice and the breakpoint picks one. Between 720
    and 1100 the boards draw nothing (gap G14): tiles go 2 by 2, columns stack. */
