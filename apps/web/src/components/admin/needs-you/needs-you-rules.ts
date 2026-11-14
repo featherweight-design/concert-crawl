@@ -566,6 +566,28 @@ export const pagePathOf = (pageUrl: string): string => {
   }
 };
 
+/**
+ * A report's page by name ("Event", "Browse"), from the first part of its
+ * path; null when the app has no name for it, so the caller keeps the path.
+ */
+export const pageNameOf = (pageUrl: string): string | null => {
+  let pathname: string;
+  try {
+    pathname = new URL(pageUrl).pathname;
+  } catch {
+    return null;
+  }
+  const [first = '', second] = pathname
+    .split('/')
+    .filter((part) => part !== '');
+  const names = PANEL.bug.pageNames;
+  if (!Object.hasOwn(names, first)) return null;
+  const detail = PANEL.bug.pageNamesDetail;
+  return second !== undefined && Object.hasOwn(detail, first)
+    ? (detail[first] ?? null)
+    : (names[first] ?? null);
+};
+
 export const panelTitleOf = (row: QueueRow): string => {
   switch (row.kind) {
     case 'artist': {

@@ -524,7 +524,8 @@ describe('BugPanel', () => {
     // The panel title quotes the message too, so it shows twice.
     expect(screen.getAllByText('“Button broken”')).toHaveLength(2);
     expect(screen.getByText('@fan1')).toBeInTheDocument();
-    expect(screen.getByText('/events/abc')).toBeInTheDocument();
+    // The page by its name, as the board draws it, not the raw path.
+    expect(screen.getByText('Event')).toBeInTheDocument();
   });
 
   it("draws the reporter's device only when the widget sent one", () => {

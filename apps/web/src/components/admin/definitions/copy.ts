@@ -2640,6 +2640,31 @@ export const ADMIN_COPY = {
         from: 'From',
         page: 'Page',
         device: 'Device',
+        // The page a report came from, by its first path segment: the nav's own
+        // names where the app has them. A segment with a second part is one
+        // thing (an event, a venue, an artist), not the list. Unmapped pages
+        // keep their path.
+        pageNames: {
+          '': 'Home',
+          events: 'Browse',
+          e: 'Event',
+          venues: 'Venues',
+          artists: 'Artist',
+          watching: 'Watching',
+          history: 'Concerts',
+          following: 'Following',
+          crews: 'Crews',
+          passport: 'Passport',
+          me: 'Account',
+          search: 'Search',
+          'whats-new': 'What’s new',
+          changelog: 'What’s new',
+        } as Record<string, string>,
+        pageNamesDetail: {
+          events: 'Event',
+          venues: 'Venue',
+          crews: 'Crew',
+        } as Record<string, string>,
         ago: (minutes: number) =>
           minutes < 60
             ? `${Math.max(1, minutes)} min ago`

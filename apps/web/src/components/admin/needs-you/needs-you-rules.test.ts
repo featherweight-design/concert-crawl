@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CrawlRunReason } from '@concert-crawl/types';
 import type { QueueRow } from './needs-you-api';
 import {
+  pageNameOf,
   panelTitleOf,
   metaOf,
   cardLabelOf,
@@ -145,6 +146,20 @@ describe('panel helpers', () => {
     expect(
       panelTitleOf({ ...base, title: 'Purpose Progression' } as QueueRow),
     ).toBe('Is “Purpose Progression” a concert?');
+  });
+
+  it('names the page a bug came from, and keeps the path for an unmapped one', () => {
+    const at = (path: string) => pageNameOf(`https://concertcrawl.app${path}`);
+    expect(at('/')).toBe('Home');
+    expect(at('/events')).toBe('Browse');
+    expect(at('/events/abc')).toBe('Event');
+    expect(at('/e/abc123')).toBe('Event');
+    expect(at('/venues')).toBe('Venues');
+    expect(at('/venues/levitt')).toBe('Venue');
+    expect(at('/history')).toBe('Concerts');
+    expect(at('/something-new')).toBeNull();
+    expect(pageNameOf('not a url')).toBeNull();
+    expect(at('/constructor')).toBeNull();
   });
 
   it('keeps the fourteen newest runs and the status words', () => {
