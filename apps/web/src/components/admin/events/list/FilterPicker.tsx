@@ -251,7 +251,7 @@ export const FilterPicker = ({
   selected,
   search,
   max,
-  all,
+  unticked,
   onApply,
 }: {
   label: string;
@@ -263,8 +263,11 @@ export const FilterPicker = ({
   search?: string;
   /** The most rows that can be ticked; the rest are disabled at it. */
   max?: number;
-  /** The rows on this side, for Show N with nothing ticked. */
-  all: number;
+  /**
+   * Show N with nothing ticked: the rows the other filters allow, which is
+   * every option's count added up.
+   */
+  unticked: number;
   onApply: (keys: string[]) => void;
 }) => {
   const isPhone = useIsPhone();
@@ -345,7 +348,7 @@ export const FilterPicker = ({
         {COPY.clear}
       </button>
       <button type="button" style={footButton(true)} onClick={apply}>
-        {COPY.show(showCount(chosen, countOf, all))}
+        {COPY.show(showCount(chosen, countOf, unticked))}
       </button>
     </div>
   );

@@ -31,7 +31,7 @@ const picker = (props: Partial<Parameters<typeof FilterPicker>[0]> = {}) => (
     testId="status-filter"
     options={STATUSES}
     selected={[]}
-    all={1204}
+    unticked={15}
     onApply={vi.fn()}
     {...props}
   />

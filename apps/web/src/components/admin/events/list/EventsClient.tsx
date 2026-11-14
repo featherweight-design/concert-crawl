@@ -23,6 +23,7 @@ import {
 import { EventsList } from './EventsList';
 import {
   EMPTY_FILTERS,
+  EVENT_LIST_STATUSES,
   MAX_VENUE_FILTER,
   STATUS_FILTER_OPTIONS,
   eventsListHref,
@@ -90,8 +91,11 @@ export const EventsClient = () => {
     [router],
   );
 
-  // Every venue a load has named, so a ticked venue the current search leaves
-  // out of `byVenue` still has a row (at 0) to untick in the picker.
+  // Every venue a load has named. The API lists each venue with a show in the
+  // scope (side and search), at 0 when the other filters empty it; a ticked
+  // venue with no show in the scope at all (the search leaves it out, or a
+  // linked URL) is missing from `byVenue`, and still needs a row (at 0) to
+  // untick in the picker.
   const knownVenues = useRef(new Map<string, VenueCount>());
 
   // Only the newest load may write: a slow older one must not overwrite it.
@@ -185,8 +189,9 @@ export const EventsClient = () => {
 
   const past = filters.when === 'past';
   // Rows are drawn only under the filters they were loaded for. The counts
-  // follow the side alone (the API scopes them to the side and the search),
-  // so the chips stay put while a filter change loads.
+  // are faceted under every filter, so they are exact for the filters they
+  // were loaded for; while a filter change on the same side loads, the last
+  // ones stay up so the chips never blank, and the new load replaces them.
   const page =
     loaded !== null && loaded.key === filtersKey ? loaded.data : null;
   const counts =
@@ -324,7 +329,10 @@ export const EventsClient = () => {
         testId="venue-filter"
         search={COPY.findVenue}
         max={MAX_VENUE_FILTER}
-        all={shownCounts.all}
+        unticked={shownCounts.byVenue.reduce(
+          (sum, venue) => sum + venue.total,
+          0,
+        )}
         selected={filters.venueIds}
         options={withTicked(shownCounts.byVenue)
           .sort(
@@ -345,7 +353,12 @@ export const EventsClient = () => {
         key="status"
         label={COPY.anyStatus}
         testId="status-filter"
-        all={shownCounts.all}
+        // Every status, not only the pickable ones: with nothing ticked,
+        // No longer listed and Played rows show too.
+        unticked={EVENT_LIST_STATUSES.reduce(
+          (sum, status) => sum + (shownCounts.byStatus[status] ?? 0),
+          0,
+        )}
         selected={filters.statuses}
         options={STATUS_FILTER_OPTIONS.map((status) => ({
           key: status,

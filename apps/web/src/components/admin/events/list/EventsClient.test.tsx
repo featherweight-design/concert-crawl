@@ -15,6 +15,7 @@ import type { EventListPage } from './events-api';
 const COPY = ADMIN_COPY.eventsList;
 const RED_ROCKS = '0b9c4f3e-1d2a-4c5b-8e7f-a1b2c3d4e5f6';
 const BLUEBIRD = '7f6e5d4c-3b2a-4190-8f7e-6d5c4b3a2910';
+const OGDEN = '3c2b1a09-8f7e-4d6c-9b5a-4e3d2c1b0a98';
 
 const mockReplace = vi.fn();
 let mockSearch = '';
@@ -28,6 +29,8 @@ vi.mock('next/navigation', () => ({
 const getToken = vi.fn(async () => 'token');
 vi.mock('@clerk/nextjs', () => ({ useAuth: () => ({ getToken }) }));
 
+// Faceted, as the API sends them: with no filter on, the venues and the
+// statuses each add up to the 1,204 rows.
 const page: EventListPage = {
   rows: [],
   total: 1204,
@@ -35,8 +38,16 @@ const page: EventListPage = {
     all: 1204,
     noPrice: 214,
     hidden: 4,
-    byStatus: { available: 903, soldout: 142, postponed: 6, cancelled: 9 },
+    byStatus: {
+      available: 1047,
+      soldout: 142,
+      postponed: 6,
+      cancelled: 9,
+      delisted: 0,
+      played: 0,
+    },
     byVenue: [
+      { venueId: OGDEN, name: 'Ogden Theatre', slug: 'og', total: 1053 },
       { venueId: BLUEBIRD, name: 'Bluebird Theater', slug: 'bb', total: 63 },
       { venueId: RED_ROCKS, name: 'Red Rocks', slug: 'rr', total: 88 },
     ],
@@ -95,13 +106,39 @@ describe('EventsClient filters', () => {
     expect(screen.queryByTestId('status-filter')).toBeNull();
   });
 
+  it('offers the rows the other filters allow when no venue is ticked', async () => {
+    mockSearch = 'statuses=postponed,cancelled';
+    list.mockResolvedValueOnce({
+      ...page,
+      total: 15,
+      counts: {
+        ...page.counts,
+        byVenue: [
+          { ...page.counts.byVenue[1]!, total: 6 },
+          { ...page.counts.byVenue[2]!, total: 9 },
+        ],
+      },
+    });
+    render(<EventsClient />);
+    fireEvent.click(await screen.findByTestId('venue-filter-chip'));
+    const popover = screen.getByTestId('venue-filter');
+    // Not the 1,204 on the side: the status filter is on.
+    expect(
+      within(popover).getByRole('button', { name: 'Show 15' }),
+    ).toBeInTheDocument();
+    fireEvent.click(within(popover).getByLabelText(/Red Rocks/));
+    expect(
+      within(popover).getByRole('button', { name: 'Show 9' }),
+    ).toBeInTheDocument();
+  });
+
   it('keeps a ticked venue listed at 0 when the search drops it', async () => {
     mockSearch = `venueIds=${RED_ROCKS}`;
     const { rerender } = render(<EventsClient />);
     await screen.findByTestId('venue-filter-chip');
     list.mockResolvedValueOnce({
       ...page,
-      counts: { ...page.counts, all: 63, byVenue: [page.counts.byVenue[0]!] },
+      counts: { ...page.counts, all: 63, byVenue: [page.counts.byVenue[1]!] },
     });
     mockSearch = `venueIds=${RED_ROCKS}&q=blue`;
     rerender(<EventsClient />);

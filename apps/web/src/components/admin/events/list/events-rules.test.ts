@@ -165,7 +165,7 @@ describe('showCount', () => {
     expect(showCount(['postponed', 'cancelled'], countOf, 1204)).toBe(15);
   });
 
-  it('shows every row when nothing is ticked', () => {
-    expect(showCount([], countOf, 1204)).toBe(1204);
+  it('shows the rows the other filters allow when nothing is ticked', () => {
+    expect(showCount([], countOf, 15)).toBe(15);
   });
 });

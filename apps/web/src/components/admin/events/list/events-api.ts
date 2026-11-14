@@ -47,8 +47,12 @@ export interface VenueCount {
 }
 
 /**
- * The shows on this side (Upcoming or Past) that match the search, whole and
- * by filter. No other filter narrows them.
+ * Faceted counts over this side (Upcoming or Past) and the search. `all` is
+ * that scope alone. Each other count applies every filter but its own, so a
+ * picker's ticked counts add up to exactly the rows Apply shows: `byVenue`
+ * leaves out the venue filter (a venue with a show in the scope is listed,
+ * at 0 when the other filters empty it), `byStatus` the status filter (the
+ * API sends every key), and No price and Hidden their own toggle.
  */
 export interface EventListCounts {
   all: number;

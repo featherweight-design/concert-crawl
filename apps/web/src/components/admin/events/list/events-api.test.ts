@@ -28,6 +28,18 @@ describe('countsFrom', () => {
     });
   });
 
+  it('reads every status key the API always sends, zeros included', () => {
+    const byStatus = {
+      available: 3,
+      soldout: 0,
+      postponed: 1,
+      cancelled: 0,
+      delisted: 0,
+      played: 0,
+    };
+    expect(countsFrom(counts({ byStatus }))?.byStatus).toEqual(byStatus);
+  });
+
   it('keeps only the statuses it knows, with counts', () => {
     expect(
       countsFrom(counts({ byStatus: { soldout: 3, moved: 2, played: 'x' } }))
