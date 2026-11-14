@@ -19,7 +19,6 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import {
-  crawlRunReasonEnum,
   db,
   events,
   priceSubmissions,
@@ -27,6 +26,7 @@ import {
   venues,
 } from '@concert-crawl/db';
 import { createLogger } from '@concert-crawl/logger';
+import { CRAWL_RUN_REASONS } from '@concert-crawl/types';
 import { matchesAcknowledgement } from '@concert-crawl/crawler-core/triage-conditions';
 import type { AdminVariables } from './index.js';
 import {
@@ -196,11 +196,7 @@ const runRowSchema = z.object({
   status: z.enum(['success', 'failed', 'partial', 'skipped']),
   // Only the Needs you query selects it; a value this build doesn't know
   // reads as none rather than dropping the row.
-  reason: z
-    .enum(crawlRunReasonEnum.enumValues)
-    .nullable()
-    .optional()
-    .catch(null),
+  reason: z.enum(CRAWL_RUN_REASONS).nullable().optional().catch(null),
   http_status_code: z.number().int().nullable(),
   error_message: z.string().nullable(),
   events_found: z.number().int(),
