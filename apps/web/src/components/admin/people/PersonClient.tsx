@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { ChevronLeft } from 'lucide-react';
 import type { PersonDetail, Role } from '@concert-crawl/types';
@@ -16,7 +16,7 @@ import {
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { refusedStatus } from '../invite-codes/codes-api';
 import { Hint } from '../invite-codes/CodeFormParts';
-import { RowMenu } from '@/components/admin/primitives';
+import { RowMenu, type RowMenuItem } from '@/components/admin/primitives';
 import { MENU_ICONS } from '../invite-codes/code-menu-icons';
 import { Avatar } from './PeopleClient';
 import { RoleChip } from './RoleChip';
@@ -49,6 +49,7 @@ type Notice =
  */
 export function PersonClient({ userId }: { userId: string }) {
   const { getToken, userId: viewerId } = useAuth();
+  const router = useRouter();
   const isPhone = useIsPhone();
   const { setPageTitle } = usePageTitle();
   const api = useMemo(() => personApi(getToken), [getToken]);
@@ -187,9 +188,34 @@ export function PersonClient({ userId }: { userId: string }) {
     }
   };
 
-  // Your own page has no ⋯: the API won't sign you out of the session you
-  // are using, and the menu's other item waits on 4d (HOLD).
-  const menu = isSelf ? null : (
+  // `A3/12/person-menu-d`, the same order on both widths. Your own page has
+  // no Sign out (the API won't end the session you are using), and See their
+  // Submitted prices shows only when there is a handle to filter on and at
+  // least one price; a page with neither item has no ⋯.
+  const menuItems: RowMenuItem[] = [];
+  if (!isSelf) {
+    menuItems.push({
+      key: 'sign-out',
+      icon: MENU_ICONS.signOut,
+      label: COPY.menu.signOut,
+      hint: COPY.menu.signOutHint,
+      onSelect: () => setSigningOut('ask'),
+    });
+  }
+  if (person.handle !== null && person.stats.submittedPrices > 0) {
+    const handle = person.handle;
+    menuItems.push({
+      key: 'see-prices',
+      icon: MENU_ICONS.prices,
+      label: COPY.menu.seePrices,
+      hint: COPY.menu.seePricesHint(person.stats.submittedPrices),
+      onSelect: () =>
+        router.push(
+          `/admin/prices?tab=submitted&handle=${encodeURIComponent(handle)}`,
+        ),
+    });
+  }
+  const menu = menuItems.length === 0 ? null : (
     <RowMenu
       label={COPY.menu.label(name)}
       width={300}
@@ -219,15 +245,7 @@ export function PersonClient({ userId }: { userId: string }) {
               color: 'var(--fg)',
             }
       }
-      items={[
-        {
-          key: 'sign-out',
-          icon: MENU_ICONS.signOut,
-          label: COPY.menu.signOut,
-          hint: COPY.menu.signOutHint,
-          onSelect: () => setSigningOut('ask'),
-        },
-      ]}
+      items={menuItems}
     />
   );
 

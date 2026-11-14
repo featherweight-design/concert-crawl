@@ -10,4 +10,6 @@ export const MENU_ICONS = {
   // The drawn X (`07/code-row-menu`), not the forbidden-circle Ban.
   revoke: X,
   reactivate: RotateCcw,
+  // `A3/12/person-menu-d`: See their Submitted prices draws the price tag.
+  prices: Tag,
 } as const;

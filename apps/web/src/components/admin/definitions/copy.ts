@@ -3227,6 +3227,10 @@ export const ADMIN_COPY = {
       label: (name: string) => `More for ${name}`,
       signOut: 'Sign them out everywhere…',
       signOutHint: 'For a lost phone. They can sign in again.',
+      // `A3/12/person-menu-d`: opens Submitted prices filtered to them.
+      seePrices: 'See their Submitted prices',
+      seePricesHint: (count: number) =>
+        `${count} ${count === 1 ? 'price' : 'prices'}`,
     },
     signOut: {
       title: (name: string) => `Sign ${name} out everywhere?`,
