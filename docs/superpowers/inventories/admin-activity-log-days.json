@@ -1,0 +1,47 @@
+{
+  "feature": "Admin · Activity log days (addendum 6 #37 B1, #24 avatars)",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/37-activity-log/log-day-picker-d, log-older-day-d, log-m. CONTACT_SHEET_ROLE=admin. Read-only: every step reads (the stepper, the month, the day chip); nothing writes. Days come from the scratch branch, so a quiet day shows the empty state with its Pick another day line. Search and the Anyone/Any page menus are B2 and C.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "log-today",
+      "label": "Activity log, today: the stepper with › off",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "[data-testid='activity-log-day-stepper']",
+          "settle": 4000
+        }
+      ]
+    },
+    {
+      "id": "log-older-day",
+      "label": "Activity log, the day before: › on, the end line",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "[data-testid='activity-log-day-stepper']",
+          "settle": 3000
+        },
+        { "clickRole": "button", "name": "Previous day", "settle": 3000 }
+      ]
+    },
+    {
+      "id": "log-month",
+      "label": "Activity log, the month open with dots",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "[data-testid='activity-log-day-chip']",
+          "settle": 3000
+        },
+        { "click": "[data-testid='activity-log-day-chip']", "settle": 3000 }
+      ]
+    }
+  ]
+}

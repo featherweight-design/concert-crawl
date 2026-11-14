@@ -317,7 +317,14 @@ const LogCards = ({
             <What item={item} />
           </div>
           <div
-            style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 4 }}
+            style={{
+              fontSize: 12,
+              color: 'var(--fg-subtle)',
+              marginTop: 4,
+              // A long handle breaks rather than pushing the card off a
+              // 320px screen.
+              overflowWrap: 'anywhere',
+            }}
           >
             {actorLabel(item)} · {logTime(item.createdAt)} ·{' '}
             <Where item={item} />
