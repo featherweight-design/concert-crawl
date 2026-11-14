@@ -1,3 +1,17 @@
+# [1.465.0](https://github.com/featherweight-design/concert-crawl/compare/v1.464.0...v1.465.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** keep the pull to refresh tests and the menu identity tests current ([64aa2be](https://github.com/featherweight-design/concert-crawl/commit/64aa2bed1a1b2a097da90308141c1fdeda01b426))
+* **web:** keep the shelf and pull to refresh tests current ([683b8af](https://github.com/featherweight-design/concert-crawl/commit/683b8af42c0ef2b7df7c08460ba31fcdba986cd7))
+
+
+### Features
+
+* **admin:** the price batch card names its show window, or none when a held price is in it ([f080eb2](https://github.com/featherweight-design/concert-crawl/commit/f080eb28f55a2707ac5c7b4dcc16538e57bffbe6))
+* **web:** list and empty-state sweep ([ddef8a6](https://github.com/featherweight-design/concert-crawl/commit/ddef8a699b122dfdda4ab4840f7502123b1882e9))
+
 # [1.464.0](https://github.com/featherweight-design/concert-crawl/compare/v1.463.0...v1.464.0) (2026-11-14)
 
 
