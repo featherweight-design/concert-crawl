@@ -403,8 +403,9 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   );
 
   // Addendum 5 `details-d` / `details-m`: Short name is the Look card's last
-  // row (addendum 4, item 4 A). Empty clears it, and the tiles fall back to
-  // the full name.
+  // row (addendum 4, item 4 A). Empty clears it. `venueShortName` reads it
+  // (the venue guide today; the small tiles next), and without one falls
+  // back to its own shortening of the full name.
   const lookCard = (
     <LookCard slug={venue.slug} name={venue.name} phone={phone}>
       <Field
