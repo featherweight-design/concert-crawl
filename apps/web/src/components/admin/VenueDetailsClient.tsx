@@ -953,8 +953,10 @@ export function VenueDetailsClient({
           </div>
         </VDSection>
 
-        {/* City and About's bar, in flow under them: DetailsTab's own bar
-            holds the bottom edge, so a second sticky bar would cover it. */}
+        {/* City and About's bar, in flow under them. DetailsTab's bar sticks
+            only inside DetailsTab's box, so pinned here the two would stack
+            while the cards are in view. Until 7b folds City and About into
+            the cards, each bar sits with the fields it saves. */}
         {isDirty && legacySaveBar(false)}
 
         {/* 05 · identity art */}

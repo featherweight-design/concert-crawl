@@ -309,9 +309,19 @@ describe('DetailsTab', () => {
       COPY.cards.tickets,
       COPY.cards.contact,
     ]);
+    // One column: all three cards share a parent (desktop splits them).
+    const parentOf = (id: string) => screen.getByTestId(id).parentElement;
+    expect(parentOf('details-venue')).toBe(parentOf('details-contact'));
     // details-m draws the cards at 16/18 on phone too, unlike Source's 14.
     for (const id of ['details-venue', 'details-tickets', 'details-contact']) {
       expect(screen.getByTestId(id).style.padding).toBe('16px 18px');
     }
+  });
+
+  it('puts Venue in its own column on desktop', () => {
+    render(<DetailsTab venue={venue} />);
+    const parentOf = (id: string) => screen.getByTestId(id).parentElement;
+    expect(parentOf('details-venue')).not.toBe(parentOf('details-contact'));
+    expect(parentOf('details-tickets')).toBe(parentOf('details-contact'));
   });
 });
