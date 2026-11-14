@@ -144,6 +144,7 @@ const EventConfirm = ({
   failedSaved,
   onCancel,
   act,
+  ready = true,
   children,
 }: {
   title: string;
@@ -156,6 +157,8 @@ const EventConfirm = ({
   onCancel: () => void;
   /** Saves; the caller closes the dialog once it resolves. */
   act: () => Promise<void>;
+  /** False keeps the confirm off (a New date the same as the old one). */
+  ready?: boolean;
   children: ReactNode;
 }) => {
   const [pending, setPending] = useState(false);
@@ -169,6 +172,7 @@ const EventConfirm = ({
       confirmVariant={danger ? 'dangerOutline' : 'gradient'}
       buttonSize="large"
       pending={pending}
+      confirmDisabled={!ready}
       onConfirm={() => {
         setPending(true);
         setFailed(false);
@@ -421,6 +425,12 @@ export const StatusCard = ({
             ADMIN_COPY.eventsList.status[detail.status],
           )}
           onCancel={close}
+          // A New date must move the show: the same day and time is no date.
+          ready={
+            newDate === null ||
+            newDate.date !== detail.date ||
+            newDate.showTime !== (detail.showTime?.slice(0, 5) ?? null)
+          }
           act={async () => {
             await onPostpone(newDate);
             close();
@@ -487,6 +497,7 @@ export const StatusCard = ({
                   onChange={(showTime) => setNewDate({ ...newDate, showTime })}
                   phone={phone}
                   placeholder={ADMIN_COPY.eventEdit.none}
+                  label={ADMIN_COPY.eventEdit.show.showTime}
                 />
               </div>
             </div>

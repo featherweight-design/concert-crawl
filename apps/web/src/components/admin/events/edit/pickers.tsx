@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -36,26 +37,37 @@ const POPOVER: CSSProperties = {
 };
 
 /** Closes a popover on an outside press or Escape. */
-const useDismiss = (open: boolean, close: () => void) => {
+const usePopover = () => {
+  const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  /** Closes, handing focus back to the field so it never drops to the page. */
+  const close = useCallback(() => {
+    setOpen(false);
+    trigger.current?.focus();
+  }, []);
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (evt: PointerEvent) => {
       if (evt.target instanceof Node && !ref.current?.contains(evt.target)) {
-        close();
+        setOpen(false);
       }
     };
+    // Captured and stopped, so Escape closes only the popover, never the
+    // dialog it sits in (Postponed's New date).
     const onKey = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') close();
+      if (evt.key !== 'Escape') return;
+      evt.stopPropagation();
+      close();
     };
     document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keydown', onKey, true);
     };
   }, [open, close]);
-  return ref;
+  return { open, setOpen, close, ref, trigger };
 };
 
 const pad = (value: number) => String(value).padStart(2, '0');
@@ -115,12 +127,16 @@ export const DateField = ({
   min?: string;
   withYear: boolean;
 }) => {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, close, ref, trigger } = usePopover();
   const [view, setView] = useState(() => ({
     year: Number(value.slice(0, 4)),
     month: Number(value.slice(5, 7)) - 1,
   }));
-  const ref = useDismiss(open, () => setOpen(false));
+  const chosenRef = useRef<HTMLButtonElement>(null);
+  // Focus lands on the chosen day when the month opens.
+  useEffect(() => {
+    if (open) chosenRef.current?.focus();
+  }, [open]);
 
   if (phone) {
     return (
@@ -130,7 +146,10 @@ export const DateField = ({
         value={value}
         min={min}
         onChange={(evt) => {
-          if (evt.target.value !== '') onChange(evt.target.value);
+          const next = evt.target.value;
+          // The OS picker honours `min`, but a typed date may not.
+          if (next === '' || (min !== undefined && next < min)) return;
+          onChange(next);
         }}
         style={{ ...FIELD, fontSize: 16 }}
       />
@@ -140,7 +159,7 @@ export const DateField = ({
   const pick = (iso: string) => {
     if (min !== undefined && iso < min) return;
     onChange(iso);
-    setOpen(false);
+    close();
   };
   const shift = (step: number) =>
     setView(({ year, month }) => {
@@ -151,6 +170,7 @@ export const DateField = ({
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
+        ref={trigger}
         id={id}
         type="button"
         aria-haspopup="dialog"
@@ -214,8 +234,10 @@ export const DateField = ({
               return (
                 <button
                   key={iso}
+                  ref={chosen ? chosenRef : undefined}
                   type="button"
                   aria-pressed={chosen}
+                  aria-current={iso === today ? 'date' : undefined}
                   aria-label={fieldDate(iso, true)}
                   disabled={barred}
                   onClick={() => pick(iso)}
@@ -306,7 +328,12 @@ export const parseTime = (text: string): string | null => {
     if (hours < 1 || hours > 12) return null;
     if (half === 'p' && hours !== 12) hours += 12;
     if (half === 'a' && hours === 12) hours = 0;
-  } else if (hours > 23) {
+  } else if (
+    hours > 23 ||
+    (hours >= 1 && hours <= 11 && match[2] === undefined)
+  ) {
+    // A bare "7" could be morning or evening: it needs its am or pm. "19",
+    // "0" and "12" read on a 24-hour clock.
     return null;
   }
   return `${pad(hours)}:${pad(minutes)}`;
@@ -329,6 +356,7 @@ export const TimeField = ({
   onChange,
   phone,
   placeholder,
+  label,
 }: {
   id: string;
   /** `HH:MM` (or `HH:MM:SS`), or null for none. */
@@ -336,12 +364,15 @@ export const TimeField = ({
   onChange: (value: string | null) => void;
   phone: boolean;
   placeholder: ReactNode;
+  /** The field's name (Doors, Show), for the popover and its text field. */
+  label: string;
 }) => {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, close, ref, trigger } = usePopover();
   const [text, setText] = useState('');
   const hintId = useId();
-  const ref = useDismiss(open, () => setOpen(false));
   const current = value?.slice(0, 5) ?? null;
+  // Typed text that isn't a time says so, rather than doing nothing.
+  const invalid = text.trim() !== '' && parseTime(text) === null;
 
   if (phone) {
     return (
@@ -357,12 +388,13 @@ export const TimeField = ({
 
   const commit = (next: string | null) => {
     onChange(next);
-    setOpen(false);
+    close();
   };
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
+        ref={trigger}
         id={id}
         type="button"
         aria-haspopup="dialog"
@@ -376,22 +408,33 @@ export const TimeField = ({
         {fieldTime(current) ?? placeholder}
       </button>
       {open && (
-        <div role="dialog" style={{ ...POPOVER, width: 240 }}>
+        <div
+          role="dialog"
+          aria-label={label}
+          style={{ ...POPOVER, width: 240 }}
+        >
           <input
             // The popover's one job: focus lands here to type.
             autoFocus
+            aria-label={label}
             aria-describedby={hintId}
+            aria-invalid={invalid || undefined}
             value={text}
             onChange={(evt) => setText(evt.target.value)}
             onKeyDown={(evt) => {
               if (evt.key !== 'Enter') return;
+              // An emptied field clears the time; anything else must parse.
+              if (text.trim() === '') {
+                commit(null);
+                return;
+              }
               const parsed = parseTime(text);
               if (parsed !== null) commit(parsed);
             }}
             style={{
-              ...inputStyle(false),
+              ...inputStyle(invalid),
               height: 40,
-              border: '1px solid var(--signal)',
+              ...(!invalid && { border: '1px solid var(--signal)' }),
             }}
           />
           <div

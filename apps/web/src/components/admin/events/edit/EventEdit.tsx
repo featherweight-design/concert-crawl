@@ -512,6 +512,7 @@ export const EventEdit = ({
           onChange={(time) => setDraft({ ...draft, [key]: time })}
           phone={phone}
           placeholder={COPY.none}
+          label={label}
         />
       </Field>
     );
@@ -610,9 +611,8 @@ export const EventEdit = ({
           // With a New date, the show moves to it (one `watch.postponed`).
           ...(newDate !== null && {
             date: newDate.date,
-            ...(newDate.showTime !== null && {
-              showTime: `${newDate.showTime}:00`,
-            }),
+            // Sent even when cleared: a new date drawn with no time has none.
+            showTime: stored(newDate.showTime),
           }),
         })
       }

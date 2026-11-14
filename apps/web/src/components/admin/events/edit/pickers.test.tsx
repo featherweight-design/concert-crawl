@@ -22,6 +22,8 @@ describe('parseTime', () => {
     expect(parseTime('25:00')).toBeNull();
     expect(parseTime('13 pm')).toBeNull();
     expect(parseTime('7:75')).toBeNull();
+    // Morning or evening? A bare hour needs its am or pm.
+    expect(parseTime('7')).toBeNull();
     expect(parseTime('soon')).toBeNull();
   });
 });
@@ -94,15 +96,66 @@ describe('TimeField on desktop', () => {
         onChange={onChange}
         phone={false}
         placeholder="—"
+        label="Doors"
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: '6:00 PM' }));
     expect(
       screen.getByRole('option', { name: '6:00 PM', selected: true }),
     ).toBeInTheDocument();
-    const field = screen.getByDisplayValue('6:00 PM');
+    const field = screen.getByRole('textbox', { name: 'Doors' });
     fireEvent.change(field, { target: { value: '7:15 pm' } });
     fireEvent.keyDown(field, { key: 'Enter' });
     expect(onChange).toHaveBeenCalledWith('19:15');
+
+    fireEvent.click(screen.getByRole('button', { name: '6:00 PM' }));
+    fireEvent.click(screen.getByRole('option', { name: '8:30 PM' }));
+    expect(onChange).toHaveBeenLastCalledWith('20:30');
+  });
+
+  it('clears on an emptied field, and flags text that is not a time', () => {
+    const onChange = vi.fn();
+    render(
+      <TimeField
+        id="t"
+        value="18:00:00"
+        onChange={onChange}
+        phone={false}
+        placeholder="—"
+        label="Doors"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '6:00 PM' }));
+    const field = screen.getByRole('textbox', { name: 'Doors' });
+    fireEvent.change(field, { target: { value: '7' } });
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.change(field, { target: { value: '' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('DateField on the phone', () => {
+  it('refuses a typed date before `min`', () => {
+    const onChange = vi.fn();
+    render(
+      <DateField
+        id="d"
+        value="2026-11-14"
+        onChange={onChange}
+        today="2026-11-12"
+        min="2026-11-12"
+        phone
+        withYear={false}
+      />,
+    );
+    const field = document.getElementById('d');
+    if (field === null) throw new Error('field');
+    fireEvent.change(field, { target: { value: '2026-11-01' } });
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.change(field, { target: { value: '2026-11-20' } });
+    expect(onChange).toHaveBeenCalledWith('2026-11-20');
   });
 });
