@@ -40,6 +40,8 @@ interface EvidenceSlotProps {
   /** The phone's ⋯ sheet snoozes from the item itself. */
   onSnooze: (until: string) => void;
   onNotUseful: (reason: string) => void;
+  /** The block for a failed answer on this item, drawn under the answers (desktop). */
+  answerFailed?: ReactNode;
 }
 
 /** The kinds whose panel is drawn per kind; the rest keep the generic one. */
@@ -81,6 +83,7 @@ export const EvidenceSlot = ({
   onAnswer,
   onSnooze,
   onNotUseful,
+  answerFailed,
 }: EvidenceSlotProps) => {
   const isPhone = useIsPhone();
   const Drawn = drawnPanel(row.kind);
@@ -122,6 +125,10 @@ export const EvidenceSlot = ({
         {...(subtitle ? { subtitle } : {})}
       >
         {body}
+        {/* A failed answer shows its block under the answers
+            (`10-needs-you-panels/panel-answer-failed`); the phone's block
+            floats above the page footer instead. */}
+        {answerFailed && <div style={{ marginTop: 14 }}>{answerFailed}</div>}
       </SidePanel>
     );
   if (Drawn)
