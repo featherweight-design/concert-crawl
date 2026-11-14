@@ -233,7 +233,9 @@ export const EventsClient = () => {
       )}
       <p style={{ margin: 0, fontSize: 13.5, color: 'var(--fg-muted)' }}>
         {past
-          ? COPY.pastSubtitle
+          ? isPhone
+            ? COPY.pastPhoneSubtitle
+            : COPY.pastSubtitle
           : counts === undefined
             ? null
             : isPhone

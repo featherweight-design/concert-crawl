@@ -12,10 +12,14 @@ import {
 } from '@/components/admin/primitives';
 import { gradientBorder } from '@/components/admin/artists/artist-styles';
 import { Switch } from '@/components/admin/people/PersonParts';
+import { metaDate } from '@/components/admin/needs-you/needs-you-rules';
+import { StatusChip } from '@/components/consumer/StatusChip';
+import { STATUS_CHIP } from '../list/events-rules';
 import type { EventDetail } from './event-detail';
 import { DateField, TimeField } from './pickers';
 
 const COPY = ADMIN_COPY.eventEdit;
+const PAST = COPY.past;
 const FAILED = ADMIN_COPY.states.saveFailed;
 
 /** What the Save bar saves: Tickets available or Sold out. */
@@ -292,9 +296,11 @@ export const StatusCard = ({
   onHidden,
   dialog,
   setDialog,
+  children,
 }: {
   detail: EventDetail;
   phone: boolean;
+  /** A played past show: its chip and went count, no pills. */
   past: boolean;
   /** The drafted sale, or null when the pills show what is saved. */
   sale: Sale | null;
@@ -307,6 +313,8 @@ export const StatusCard = ({
   /** Held by the page, so the ⋯'s Hide from site… opens the same dialog. */
   dialog: StatusDialog | null;
   setDialog: (dialog: StatusDialog | null) => void;
+  /** Drawn under the pills: a passed postponed show's New date. */
+  children?: ReactNode;
 }) => {
   const [unhideFailed, setUnhideFailed] = useState(false);
   // Postponed's choice: null is No new date yet. Each opening starts there.
@@ -335,7 +343,34 @@ export const StatusCard = ({
       phone={phone}
       testId="event-edit-status"
     >
-      {delisted && sale === null ? (
+      {past ? (
+        // `04/past-show-d`, `36/past-show-m`: the chip and the went count; a
+        // played show has no status to set. The desktop line leads with the
+        // date and adds the note; the phone draws the count alone.
+        <div
+          data-testid="status-past"
+          style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* The list's chip, built here: `EventsList` imports this file. */}
+            <StatusChip
+              status={STATUS_CHIP[detail.status]}
+              label={ADMIN_COPY.eventsList.status[detail.status]}
+            />
+            <span
+              style={{ fontSize: phone ? 12.5 : 13, color: 'var(--fg-muted)' }}
+            >
+              {[
+                ...(phone ? [] : [metaDate(detail.date)]),
+                ...(detail.wentCount === null
+                  ? []
+                  : [PAST.went(detail.wentCount)]),
+              ].join(' · ')}
+            </span>
+          </div>
+          {!phone && <div style={SMALL}>{PAST.noStatus}</div>}
+        </div>
+      ) : delisted && sale === null ? (
         // `04/listed-again`, before: read-only, with the one way back.
         <div
           data-testid="status-delisted"
@@ -414,6 +449,7 @@ export const StatusCard = ({
           )}
         </div>
       )}
+      {children}
       <div
         style={{
           display: 'flex',
@@ -435,7 +471,7 @@ export const StatusCard = ({
         <span style={{ fontSize: 14, fontWeight: 700 }}>
           {COPY.status.hide}
         </span>
-        <span style={SMALL}>{COPY.status.hideHint}</span>
+        <span style={SMALL}>{past ? PAST.hideHint : COPY.status.hideHint}</span>
       </div>
       {unhideFailed && (
         <SaveFailedToast

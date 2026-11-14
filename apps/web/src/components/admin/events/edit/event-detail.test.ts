@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dayBefore,
   eventDetailFrom,
+  isPostponedPassed,
   fieldDate,
   fieldTime,
   isPast,
@@ -54,6 +56,7 @@ describe('eventDetailFrom', () => {
       hidden: false,
       hiddenReason: null,
       watchingCount: 4,
+      wentCount: null,
       isSoldOut: false,
       priceMin: '12.00',
       priceMax: null,
@@ -139,5 +142,25 @@ describe('field formats', () => {
     if (detail === null) throw new Error('fixture');
     expect(isPast(detail, '2026-11-15')).toBe(true);
     expect(isPast(detail, '2026-11-14')).toBe(false);
+  });
+
+  it('keeps a postponed show whose date passed apart from a played one', () => {
+    const detail = eventDetailFrom({ ...PAYLOAD, listStatus: 'postponed' });
+    if (detail === null) throw new Error('fixture');
+    expect(isPostponedPassed(detail, '2026-11-15')).toBe(true);
+    expect(isPostponedPassed(detail, '2026-11-14')).toBe(false);
+    expect(
+      isPostponedPassed({ ...detail, status: 'played' }, '2026-11-15'),
+    ).toBe(false);
+  });
+
+  it('steps back a day across a month and a year', () => {
+    expect(dayBefore('2026-12-01')).toBe('2026-11-30');
+    expect(dayBefore('2027-01-01')).toBe('2026-12-31');
+  });
+
+  it('reads the went count, and none when it is missing', () => {
+    expect(eventDetailFrom({ ...PAYLOAD, wentCount: 18 })?.wentCount).toBe(18);
+    expect(eventDetailFrom(PAYLOAD)?.wentCount).toBeNull();
   });
 });

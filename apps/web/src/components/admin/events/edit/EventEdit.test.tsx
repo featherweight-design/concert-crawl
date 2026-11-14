@@ -28,7 +28,16 @@ vi.mock('@/lib/api', () => ({
     patch: (...args: unknown[]) => patch(...args),
     post: (...args: unknown[]) => post(...args),
   },
+  ApiError: class ApiError extends Error {
+    constructor(
+      public status: number,
+      message: string,
+    ) {
+      super(message);
+    }
+  },
 }));
+const { ApiError } = await import('@/lib/api');
 vi.mock('../editor/MergeEventDialog', () => ({
   MergeEventDialog: () => <div data-testid="merge-dialog" />,
 }));
@@ -50,6 +59,7 @@ const DETAIL: EventDetail = {
   hidden: false,
   hiddenReason: null,
   watchingCount: 4,
+  wentCount: 18,
   isSoldOut: false,
   priceMin: '12.00',
   priceMax: null,
@@ -147,10 +157,33 @@ describe('EventEdit', () => {
     await waitFor(() => expect(titleInput()).toHaveValue(DETAIL.title));
   });
 
-  it('locks a past show: no Save bar, the title reads only', () => {
-    render(<EventEdit detail={DETAIL} today="2026-11-20" />);
-    expect(titleInput()).toHaveAttribute('readonly');
-    expect(screen.queryByTestId('event-edit-save-bar')).toBeNull();
+  it('names the date passed on a postponed show, never Played', () => {
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'postponed' }}
+        today="2026-11-20"
+      />,
+    );
+    expect(screen.getByTestId('event-edit-meta')).toHaveTextContent(
+      COPY.passed.meta('Sat Nov 14', 'Larimer Lounge'),
+    );
+  });
+
+  it('says why a refused save was refused, with no Try again', async () => {
+    patch.mockRejectedValue(new ApiError(409, 'duplicate_show'));
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.change(titleInput(), { target: { value: 'New title' } });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    expect(
+      await screen.findByText(
+        new RegExp(ADMIN_COPY.events.errors.duplicateShow),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    ).toBeNull();
   });
 
   it('opens the merge dialog from the ⋯', () => {
@@ -338,7 +371,7 @@ describe('EventEdit Status card', () => {
     );
   });
 
-  it('edits the date on the Show card, and locks it on a past show', async () => {
+  it('edits the date on the Show card, and keeps a past show’s in the past', async () => {
     patch.mockResolvedValue({});
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
     // The field is named by its label, not the date it shows.
@@ -352,8 +385,23 @@ describe('EventEdit Status card', () => {
       }),
     );
     cleanup();
+    patch.mockClear();
     render(<EventEdit detail={DETAIL} today="2026-11-20" />);
-    expect(screen.getByLabelText(COPY.show.date)).toHaveAttribute('readonly');
+    fireEvent.click(screen.getByLabelText(COPY.show.date));
+    // A played show's correction stays before today: the API refuses later.
+    expect(
+      screen.getByRole('button', { name: 'Fri, Nov 20, 2026' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: COPY.pickers.today }),
+    ).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Thu, Nov 12, 2026' }));
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        date: '2026-11-12',
+      }),
+    );
   });
 
   it('keeps the Postponed dialog open and says so when it fails', async () => {
@@ -445,7 +493,7 @@ describe('EventEdit Status card', () => {
     );
   });
 
-  it('holds Cancelled, names a delisted show, and locks a past one', () => {
+  it('holds Cancelled, names a delisted show, and reads a past one only', () => {
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
     expect(pill('cancelled')).toHaveAttribute('aria-disabled', 'true');
     cleanup();
@@ -459,7 +507,126 @@ describe('EventEdit Status card', () => {
       COPY.status.delisted,
     );
     cleanup();
-    render(<EventEdit detail={DETAIL} today="2026-11-20" />);
-    expect(pill('soldout')).toHaveAttribute('aria-disabled', 'true');
+    render(
+      <EventEdit detail={{ ...DETAIL, status: 'played' }} today="2026-11-20" />,
+    );
+    expect(screen.queryByTestId('status-pill-soldout')).toBeNull();
+    expect(screen.getByTestId('status-past')).toHaveTextContent(
+      `Sat Nov 14 · ${COPY.past.went(18)}`,
+    );
+    expect(screen.getByText(COPY.past.noStatus)).toBeInTheDocument();
+    // Hide from site still works on a past show.
+    expect(
+      screen.getByRole('switch', { name: COPY.status.hide }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('EventEdit past show (B+ addendum 6 item 36)', () => {
+  const PLAYED: EventDetail = { ...DETAIL, status: 'played' };
+
+  it('banners a played show and corrects its title, times and date', async () => {
+    patch.mockResolvedValue({});
+    render(<EventEdit detail={PLAYED} today="2026-11-20" />);
+    expect(screen.getByTestId('event-edit-banner')).toHaveTextContent(
+      COPY.past.banner,
+    );
+    // The Save bar waits for a change.
+    expect(screen.queryByTestId('event-edit-save-bar')).toBeNull();
+    expect(titleInput()).not.toHaveAttribute('readonly');
+    // Venue stays read-only until the 4b venue work.
+    expect(screen.getByLabelText(COPY.show.venue)).toHaveAttribute('readonly');
+    fireEvent.change(titleInput(), { target: { value: 'Six Foot Blonde' } });
+    fireEvent.click(screen.getByLabelText(COPY.show.doors));
+    fireEvent.click(screen.getByRole('option', { name: '7:30 PM' }));
+    expect(screen.getByText(COPY.saveBar.unsaved(2))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    // Only the corrections the API takes on a past show.
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        title: 'Six Foot Blonde',
+        doorsTime: '19:30:00',
+      }),
+    );
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('reads a played show’s price as a record', () => {
+    render(<EventEdit detail={PLAYED} today="2026-11-20" />);
+    expect(screen.queryByTestId('event-edit-price-edit')).toBeNull();
+    expect(screen.getByText(COPY.past.priceRecord)).toBeInTheDocument();
+  });
+
+  it('says a refused correction in the past-locked words', async () => {
+    patch.mockRejectedValue(new ApiError(409, 'past_locked'));
+    render(<EventEdit detail={PLAYED} today="2026-11-20" />);
+    fireEvent.change(titleInput(), { target: { value: 'Other' } });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    expect(
+      await screen.findByText(new RegExp(ADMIN_COPY.events.errors.pastLocked)),
+    ).toBeInTheDocument();
+  });
+
+  it('stacks banner, Show, Status, Price on the phone, with a one-row Save bar', () => {
+    setPhone(true);
+    render(<EventEdit detail={PLAYED} today="2026-11-20" />);
+    const order = [
+      'event-edit-banner',
+      'event-edit-show',
+      'event-edit-status',
+      'event-edit-price',
+    ].map((id) => screen.getByTestId(id));
+    order.slice(1).forEach((card, i) => {
+      const before = order[i];
+      if (before === undefined) throw new Error('missing card');
+      expect(
+        before.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+    fireEvent.change(titleInput(), { target: { value: 'Other' } });
+    // `36/past-show-m`: count, Discard and Save in one row.
+    expect(screen.getByTestId('event-edit-save-bar').style.flexDirection).toBe(
+      'row',
+    );
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: COPY.saveBar.discard }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps a passed postponed show on the upcoming editor, asking for its new date', async () => {
+    patch.mockResolvedValue({});
+    const passed: EventDetail = { ...DETAIL, status: 'postponed' };
+    render(<EventEdit detail={passed} today="2026-11-20" />);
+    const banner = screen.getByTestId('event-edit-banner');
+    expect(banner).toHaveTextContent(COPY.passed.bannerLead('Sat Nov 14'));
+    expect(banner).toHaveTextContent(COPY.passed.bannerBody(4));
+    expect(screen.getByLabelText(COPY.passed.originalDate)).toHaveValue(
+      'Sat, Nov 14, 2026',
+    );
+    // The pills stay, Postponed chosen; Save bar as on an upcoming show.
+    expect(screen.getByTestId('status-pill-postponed')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByTestId('event-edit-save-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('event-edit-new-date-hint')).toHaveTextContent(
+      COPY.passed.notSet(4),
+    );
+    const newDate = screen.getByLabelText(COPY.passed.newDate);
+    expect(newDate).toHaveTextContent(COPY.passed.pick);
+    fireEvent.click(newDate);
+    // New date takes future dates only.
+    expect(
+      screen.getByRole('button', { name: 'Thu, Nov 19, 2026' }),
+    ).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Fri, Nov 27, 2026' }));
+    expect(screen.queryByTestId('event-edit-new-date-hint')).toBeNull();
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        date: '2026-11-27',
+      }),
+    );
   });
 });
