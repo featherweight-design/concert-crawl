@@ -1579,9 +1579,12 @@ export const CONSUMER_COPY = {
     submissionsNewestFirst: 'Newest first',
     // A filter with no rows: the shared state card (`bp-s-empty_search_m`).
     submissionsFilterEmpty: {
-      eyebrow: 'No matches',
+      // The same eyebrow Browse's filtered-empty state wears (`emptyFilteredEyebrow`).
+      eyebrow: 'Filtered',
+      // Echoes the search empty title ("Nothing under that name."). The chip's
+      // own label fills it, so it reads for Live, Pending and Price checks
+      // alike; All is never empty when the page has rows.
       title: (label: string): string => `Nothing under ${label}.`,
-      body: 'Switch filters to see your other prices.',
       action: 'Show all',
     },
     submissionDisputed: 'Someone disputed this. Tap to see what they saw.',

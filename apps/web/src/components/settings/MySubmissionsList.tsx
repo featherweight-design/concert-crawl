@@ -106,7 +106,6 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
           title={SETTINGS_COPY.submissionsFilterEmpty.title(
             SETTINGS_COPY.submissionFilters[filter],
           )}
-          body={SETTINGS_COPY.submissionsFilterEmpty.body}
           action={{
             label: SETTINGS_COPY.submissionsFilterEmpty.action,
             onClick: () => setFilter('all'),

@@ -78,7 +78,11 @@ describe('MySubmissionsList filter row', () => {
       screen.getByRole('button', { name: copy.submissionsFilterEmpty.action }),
     );
     expect(screen.getByText(row.artist)).toBeTruthy();
-    expect(screen.queryByText(copy.submissionsFilterEmpty.body)).toBeNull();
+    expect(
+      screen.queryByText(
+        copy.submissionsFilterEmpty.title(copy.submissionFilters.pending),
+      ),
+    ).toBeNull();
   });
 
   it('notes the sort order at the end of the row', () => {
