@@ -84,6 +84,7 @@ export function pickPriceCheckOutcome(input: {
       row.id === liveDisputedSubmissionId
     ) {
       outcome = {
+        submissionId: liveId,
         outcome: 'updated',
         resolvedAt: row.updatedAt.toISOString(),
         previous: {
@@ -98,6 +99,7 @@ export function pickPriceCheckOutcome(input: {
       )
     ) {
       outcome = {
+        submissionId: liveId,
         outcome: 'held',
         resolvedAt: row.updatedAt.toISOString(),
         previous: null,
