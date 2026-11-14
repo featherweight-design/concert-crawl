@@ -27,7 +27,7 @@ const COPY = AUTH_FLOW_COPY;
 export function AuthParts() {
   const [agreed, setAgreed] = useState(false);
   const [code, setCode] = useState('48');
-  const [legal, setLegal] = useState(false);
+  const [legal, setLegal] = useState<'terms' | 'privacy' | null>(null);
   return (
     <AuthPage venueCount={21}>
       <StepTrail step={2} total={3} />
@@ -60,11 +60,11 @@ export function AuthParts() {
       />
       <ConsentCheck checked={agreed} onChange={setAgreed}>
         {COPY.consent.lead}
-        <LegalLink onClick={() => setLegal(true)}>
+        <LegalLink href="/legal/terms" onClick={() => setLegal('terms')}>
           {COPY.consent.terms}
         </LegalLink>
         {COPY.consent.and}
-        <LegalLink onClick={() => setLegal(true)}>
+        <LegalLink href="/legal/privacy" onClick={() => setLegal('privacy')}>
           {COPY.consent.privacy}
         </LegalLink>
         {COPY.consent.end}
@@ -86,9 +86,11 @@ export function AuthParts() {
       <AppliedChip />
       <StepTrail step={3} total={3} done />
       <LegalSheet
-        open={legal}
-        onClose={() => setLegal(false)}
-        title="Terms of Service"
+        open={legal !== null}
+        onClose={() => setLegal(null)}
+        title={
+          legal === 'privacy' ? COPY.parts.privacyTitle : COPY.parts.termsTitle
+        }
       >
         <p className="m-0 text-sm text-fg-muted">{COPY.parts.legalBody}</p>
       </LegalSheet>

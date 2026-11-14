@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import { AUTH_FLOW_COPY } from './definitions/copy';
 import { AuthErrorLine } from './AuthField';
 
@@ -49,10 +49,11 @@ export function CodeBoxes({
           disabled={disabled}
           inputMode="numeric"
           autoComplete="one-time-code"
-          maxLength={LENGTH}
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? `${id}-error` : undefined}
-          className="absolute inset-0 z-10 size-full cursor-text opacity-0"
+          // No maxLength: it would cut "123 456" to five digits before the
+          // spaces are stripped. The slice above keeps six.
+          className="absolute inset-0 z-10 size-full cursor-text text-base opacity-0"
         />
         <div
           aria-hidden="true"
@@ -68,29 +69,32 @@ export function CodeBoxes({
                 : digit
                   ? 'border-[color-mix(in_srgb,var(--signal)_45%,var(--border-strong))]'
                   : 'border-border-strong';
+            // The boxes share the row, up to the board's 46px, so six fit a
+            // 320px phone (280px of room) without scrolling the page.
             return (
-              <span key={index} className="flex items-center gap-[9px]">
+              <Fragment key={index}>
+                {index === 3 ? (
+                  <i className="h-0.5 w-2 shrink-0 rounded-[1px] bg-border-strong" />
+                ) : null}
                 <span
-                  className={`flex h-14 w-[46px] min-w-0 shrink items-center justify-center rounded-xl border-[1.5px] bg-surface-1 font-mono text-[22px] font-semibold text-fg ${border}`}
+                  className={`flex h-14 max-w-[46px] min-w-0 flex-1 items-center justify-center rounded-xl border-[1.5px] bg-surface-1 font-mono text-[22px] font-semibold text-fg ${border}`}
                 >
                   {digit ??
                     (isActive ? (
                       <i className="h-[22px] w-[1.5px] bg-signal" />
                     ) : null)}
                 </span>
-                {index === 2 ? (
-                  <i className="h-0.5 w-2 rounded-[1px] bg-border-strong" />
-                ) : null}
-              </span>
+              </Fragment>
             );
           })}
         </div>
       </div>
-      {error ? (
-        <div className="mt-2" aria-live="polite">
+      {/* Always mounted, so a screen reader hears the message arrive. */}
+      <div className={error ? 'mt-2' : undefined} aria-live="polite">
+        {error ? (
           <AuthErrorLine id={`${id}-error`}>{error}</AuthErrorLine>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

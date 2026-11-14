@@ -81,11 +81,10 @@ export function AuthField({
         />
         {trailing}
       </div>
-      {error ? (
-        <div className="mt-[7px]" aria-live="polite">
-          <AuthErrorLine id={noteId}>{error}</AuthErrorLine>
-        </div>
-      ) : hint ? (
+      <div className={error ? 'mt-[7px]' : undefined} aria-live="polite">
+        {error ? <AuthErrorLine id={noteId}>{error}</AuthErrorLine> : null}
+      </div>
+      {!error && hint ? (
         <p
           id={noteId}
           className="mt-[7px] mb-0 text-[13px] leading-[1.45] text-fg-muted"
@@ -110,9 +109,9 @@ export function PasswordField(
         <button
           type="button"
           onClick={() => setShown((prev) => !prev)}
-          aria-pressed={shown}
+          aria-label={shown ? COPY.password.hideLabel : COPY.password.showLabel}
           disabled={props.disabled}
-          className="h-9 min-w-11 rounded-lg px-2.5 text-[13px] font-bold text-fg-muted"
+          className="h-11 min-w-11 rounded-lg px-2.5 text-[13px] font-bold text-fg-muted"
         >
           {shown ? COPY.password.hide : COPY.password.show}
         </button>

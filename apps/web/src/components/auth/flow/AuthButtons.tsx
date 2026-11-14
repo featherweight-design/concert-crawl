@@ -13,21 +13,21 @@ function Spinner({ onInk }: { onInk?: boolean }) {
       viewBox="0 0 16 16"
       fill="none"
       aria-hidden="true"
-      className="animate-spin motion-reduce:animate-none"
+      className={`animate-spin motion-reduce:animate-none ${onInk ? 'text-fg-on-accent' : 'text-fg-muted'}`}
     >
       <circle
         cx="8"
         cy="8"
         r="6"
         strokeWidth="2"
-        stroke={onInk ? 'var(--fg-on-accent)' : 'var(--fg-muted)'}
+        stroke="currentColor"
         opacity="0.25"
       />
       <path
         d="M8 2a6 6 0 0 1 6 6"
         strokeWidth="2"
         strokeLinecap="round"
-        stroke={onInk ? 'var(--fg-on-accent)' : 'var(--fg-muted)'}
+        stroke="currentColor"
       />
     </svg>
   );
@@ -80,8 +80,18 @@ export function PrimaryButton({
     <button
       type="submit"
       {...rest}
-      disabled={disabled || busy}
+      disabled={disabled}
+      // Busy holds the press without `disabled`, so focus stays on the button
+      // while the form is working (a disabled control drops focus to the body).
+      aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
+      onClick={(evt) => {
+        if (busy) {
+          evt.preventDefault();
+          return;
+        }
+        rest.onClick?.(evt);
+      }}
       className={`${BASE} ${width} gap-2 ${look} ${busy ? 'gap-2.5 opacity-70' : ''} ${className}`}
     >
       {busy ? <Spinner onInk /> : null}
@@ -132,8 +142,12 @@ export function GoogleButton({
     <button
       type="button"
       {...rest}
-      disabled={rest.disabled || busy}
+      aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
+      onClick={(evt) => {
+        if (busy) return;
+        rest.onClick?.(evt);
+      }}
       className={`${BASE} w-full gap-2.5 border border-border-strong bg-[color-mix(in_srgb,var(--bg-elevated)_70%,transparent)] ${busy ? 'text-fg-muted' : 'text-fg'}`}
     >
       {busy ? <Spinner /> : <GoogleMark />}
