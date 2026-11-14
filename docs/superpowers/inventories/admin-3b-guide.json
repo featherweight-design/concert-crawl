@@ -1,0 +1,60 @@
+{
+  "feature": "Admin 3b part 6 · venue Guide tab and edit panel",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: design/design_handoff_admin_redesign/boards/04-venues/venue-guide.html and guide-edit-a-section.html. Read-only: rows open panels and never press Save draft, Publish or Unpublish; each panel row also answers guide writes with a 500 as a guard (the panel saves through server actions, so the guard is belt-and-braces only). On the local scratch branch (2026-11-13) every venue's guide is empty: all nine sections Missing, nothing published, so the published read state and the Edit panel on a written section cannot be photographed without writing a guide. Walked by hand once a venue has a written, published guide: the Published and Draft state chips, the Edit panel on a written section, and Unpublish in the panel menu.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/b1-guide-sheet",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "guide",
+      "label": "Guide tab read state, every section Missing (Bluebird Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=guide",
+          "wait": "[data-testid=\"guide-row-transit\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "write-accessibility",
+      "label": "Write panel on Accessibility: the Can't document yet switch",
+      "steps": [
+        {
+          "route": "**/v1/admin/venues/*/guide**",
+          "status": 500,
+          "body": ""
+        },
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=guide",
+          "wait": "[data-testid=\"guide-row-accessibility\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "button", "name": "^Write Accessibility$" },
+        { "wait": "[data-testid=\"guide-counter\"]" },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "write-tip",
+      "label": "Write panel on the insider tip",
+      "steps": [
+        {
+          "route": "**/v1/admin/venues/*/guide**",
+          "status": 500,
+          "body": ""
+        },
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=guide",
+          "wait": "[data-testid=\"guide-row-insider_tip\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "button", "name": "^Write Insider tip$" },
+        { "wait": "[data-testid=\"guide-counter\"]" },
+        { "settle": 1500 }
+      ]
+    }
+  ]
+}
