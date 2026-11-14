@@ -399,7 +399,8 @@ eventReportsRouter.post(
     // Every report crossing the threshold goes through the shared writes
     // (clearSoldOut, promoteReport), which decide under the event's and the
     // report's row locks. With `onPast: 'close'`, a report on a past
-    // show (postponed-passed included) closes as moot: `rejected` with the
+    // show (postponed-passed included, except a cancelled report on a
+    // postponed-passed show, which promotes) closes as moot: `rejected` with the
     // note "show already played", so it leaves the admin queue and a later
     // reschedule can never promote it. Nothing else changes and nobody hears,
     // and the fan still gets an ordinary answer, never an error. A report

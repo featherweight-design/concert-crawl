@@ -278,7 +278,8 @@ eventsAdminRouter.patch(
     // Promoting any report goes through the shared writes, which decide under
     // the event's and the report's row locks: whether it is news (fan-out
     // fires only on a real transition) is read there too. A past show is 409
-    // `past_locked` and a missing event 404, with nothing written and no
+    // `past_locked` (except a cancelled report on a postponed show whose date
+    // passed, which promotes) and a missing event 404, with nothing written and no
     // audit row; a report resolved before the lock keeps the already-resolved
     // answer.
     let isRealTransition = false;

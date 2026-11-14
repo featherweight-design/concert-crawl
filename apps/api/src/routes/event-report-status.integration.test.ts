@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const { authState } = vi.hoisted(() => ({
-  authState: {
-    current: null as {
-      userId: string;
-      sessionClaims: { metadata?: { role?: string } };
-    } | null,
-  },
-}));
+interface AuthState {
+  current: {
+    userId: string;
+    sessionClaims: { metadata?: { role?: string } };
+  } | null;
+}
+
+const { authState } = vi.hoisted(() => {
+  const state: AuthState = { current: null };
+  return { authState: state };
+});
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -24,6 +27,7 @@ import {
 } from '@concert-crawl/db';
 import { ER_POLICY } from '@concert-crawl/types';
 import { eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import { createApp } from '../app.js';
 import { todayInDenver } from '../lib/time.js';
 import { countLockWaiters, withLockHolder } from '../test/helpers/locks.js';
@@ -36,6 +40,8 @@ import {
 } from '../test/helpers/seed.js';
 
 const app = createApp();
+
+const confirmBody = z.object({ data: z.object({ resolved: z.boolean() }) });
 
 /**
  * Cancelled and postponed reports promote through promoteReport, the one
@@ -112,7 +118,7 @@ describe('cancelled and postponed reports under the shared write', () => {
         },
       );
       expect(res.status).toBe(200);
-      const body = (await res.json()) as { data: { resolved: boolean } };
+      const body = confirmBody.parse(await res.json());
       expect(body.data.resolved).toBe(idx === ER_POLICY.confirmsRequired - 1);
     }
   };
@@ -238,8 +244,11 @@ describe('cancelled and postponed reports under the shared write', () => {
               adminPromote(first.id),
               adminPromote(second.id),
             ]);
-            // Settles never reject unobserved, even if the wait below throws.
-            requests.catch(() => undefined);
+            // Never rejects unobserved, even if the wait below throws; the
+            // test still awaits `pending` and fails on the rejection there.
+            requests.catch((err: unknown) => {
+              console.error('concurrent admin promotes failed', err);
+            });
             return { pending: requests, bothWaited: await waitForWaiters(2) };
           },
         );
