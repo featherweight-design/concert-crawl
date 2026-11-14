@@ -217,6 +217,75 @@ describe('NeedsYouClient', () => {
     expect(within(line).queryByRole('button', { name: 'Undo' })).toBeNull();
   });
 
+  it('opens the Pause panel from Keep paused... and sends its body with the answer', async () => {
+    const venue = item({
+      key: 'venue-failing:v1',
+      kind: 'venue-failing',
+      title: 'Globe Hall stopped crawling after 3 failures',
+      fanDate: null,
+      watchers: 0,
+      showCount: 14,
+      answers: [
+        answer({
+          slug: 're_crawl_now',
+          label: 'Re-crawl now',
+          suggested: true,
+        }),
+        answer({ slug: 'keep_paused', label: 'Keep paused...' }),
+      ],
+      evidence: [],
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+        calls.push({
+          url,
+          method: init?.method ?? 'GET',
+          body: init?.body ? JSON.parse(init.body) : undefined,
+        });
+        if (url.endsWith('/needs-you/count'))
+          return json({
+            ...COUNT,
+            decisions: 1,
+            byKind: { ...COUNT.byKind, 'show-dropped': 0, bug: 0 },
+          });
+        if (url.endsWith('/answer'))
+          return json({
+            key: 'venue-failing:v1',
+            slug: 'keep_paused',
+            auditId: 'audit-p',
+            undoable: false,
+          });
+        return json([venue]);
+      }),
+    );
+    render(<NeedsYouClient item={null} />);
+    const card = (await screen.findAllByTestId('needs-you-item'))[0];
+    fireEvent.click(
+      within(card as HTMLElement).getByRole('button', {
+        name: 'Keep paused...',
+      }),
+    );
+    // The panel asks first: nothing has gone to the API yet.
+    const dialog = await screen.findByRole('dialog');
+    expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(false);
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Pause crawling' }),
+    );
+    await waitFor(() =>
+      expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(true),
+    );
+    const sent = calls.find((call) => call.url.endsWith('/answer'))?.body;
+    expect(sent).toMatchObject({
+      answer: 'keep_paused',
+      reason: expect.any(String),
+      resume: expect.objectContaining({ mode: expect.any(String) }),
+    });
+    expect(await screen.findByTestId('needs-you-answered')).toHaveTextContent(
+      'marked Keep paused.',
+    );
+  });
+
   it('snoozing a card takes it off the list without an Undo', async () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');

@@ -24,6 +24,8 @@ import { AllClear } from './AllClear';
 import { AnsweredRow } from './AnsweredRow';
 import { NeedsYouSkeleton } from './NeedsYouSkeleton';
 import { EvidenceSlot } from './EvidenceSlot';
+import { PausePanel } from '../venues/PausePanel';
+import { refusedStatus } from '../invite-codes/codes-api';
 import { PriceBatchSheet } from './PriceBatchSheet';
 import { QueueItem } from './QueueItem';
 import {
@@ -35,6 +37,7 @@ import {
 import {
   FILTERS,
   NAVIGATION_SLUGS,
+  PAUSE_SLUGS,
   answeredName,
   countAfterRemoval,
   defaultParams,
@@ -100,6 +103,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [undoing, setUndoing] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
+  // The venue answer whose Pause panel is open (Keep paused..., Pause crawling...).
+  const [pausing, setPausing] = useState<{
+    row: QueueRow;
+    answer: NeedsYouAnswer;
+  } | null>(null);
   // The price batch whose sheet is open (phone only: `a-batch-of-prices`).
   const [batchKey, setBatchKey] = useState<string | null>(null);
   const [failure, setFailure] = useState<{
@@ -231,6 +239,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       return setBatchKey(row.key);
     // An answer that only navigates opens the item (the API refuses it).
     if (NAVIGATION_SLUGS.has(answer.slug)) return select(row.key);
+    // Pausing a crawl asks why and for how long first (A3 2c #16, #22).
+    if (PAUSE_SLUGS.has(answer.slug) && row.venueId)
+      return setPausing({ row, answer });
     // An answer that tells fans asks first and cannot be taken back.
     if (answer.notifiesFans) return setPending({ row, answer, params });
     void runAnswer(row, answer, params);
@@ -490,6 +501,44 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           row={{ key: batchRow.key, submissionIds: batchRow.submissionIds }}
           onApprove={(ids) => approveBatch(batchRow, ids)}
           onClose={() => setBatchKey(null)}
+        />
+      )}
+
+      {pausing && pausing.row.venueId && (
+        <PausePanel
+          venues={[
+            {
+              id: pausing.row.venueId,
+              name: pausing.row.venueName ?? pausing.row.title,
+              eventCount: pausing.row.showCount ?? 0,
+            },
+          ]}
+          onClose={() => setPausing(null)}
+          onSubmit={async (body) => {
+            const { row, answer } = pausing;
+            try {
+              const result = await api.pause(row.key, answer.slug, body);
+              setPausing(null);
+              settle(
+                row,
+                {
+                  // The label's "..." only says a panel opens first.
+                  line: COPY.answered(
+                    answeredName(row.title),
+                    answer.label.replace(/\.\.\.$/, ''),
+                  ),
+                  auditId: result.undoable ? result.auditId : null,
+                },
+                true,
+              );
+              return null;
+            } catch (err) {
+              // The API's 422 is a date it won't take; the panel words it.
+              if (refusedStatus(err) === 422)
+                return ADMIN_COPY.pausePanel.dateError('');
+              return `${COPY.answerFailed.title}. ${COPY.answerFailed.saved}`;
+            }
+          }}
         />
       )}
 

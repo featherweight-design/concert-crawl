@@ -523,7 +523,8 @@ const venueFaultItems: Adapter = async ({ now }) => {
         ],
         answers: [
           answer('re_crawl_now', 'Re-crawl now'),
-          answer('keep_paused', 'Keep paused'),
+          // The "..." says it opens the Pause panel first (A3 2c #16).
+          answer('keep_paused', 'Keep paused...'),
         ],
       });
     } else {
@@ -553,7 +554,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
         ],
         answers: [
           answer('re_crawl_once', 'Re-crawl once'),
-          answer('pause_crawling', 'Pause crawling'),
+          answer('pause_crawling', 'Pause crawling...'),
         ],
       });
     }

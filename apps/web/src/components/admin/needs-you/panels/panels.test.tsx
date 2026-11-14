@@ -159,7 +159,7 @@ describe('VenuePanel', () => {
     showCount: 14,
     answers: [
       answer({ slug: 're_crawl_now', label: 'Re-crawl now' }),
-      answer({ slug: 'keep_paused', label: 'Keep paused' }),
+      answer({ slug: 'keep_paused', label: 'Keep paused...' }),
     ],
   });
 
@@ -230,7 +230,7 @@ describe('VenuePanel', () => {
     open(failing);
     const recrawl = screen.getByRole('button', { name: 'Re-crawl now' });
     const source = screen.getByTestId('check-source');
-    const paused = screen.getByRole('button', { name: 'Keep paused' });
+    const paused = screen.getByRole('button', { name: 'Keep paused...' });
     expect(source).toHaveAttribute('href', '/admin/venues/v1?tab=source');
     expect(
       recrawl.compareDocumentPosition(source) &

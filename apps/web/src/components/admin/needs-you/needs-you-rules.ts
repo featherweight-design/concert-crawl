@@ -253,6 +253,12 @@ export const cardAnswers = (row: QueueRow) =>
  * Answers that open the item instead of writing: the API refuses them (400),
  * so the queue opens the item's panel for them (2c draws what they lead to).
  */
+/** The venue answers that open the Pause panel before they go to the API. */
+export const PAUSE_SLUGS: ReadonlySet<string> = new Set([
+  'keep_paused',
+  'pause_crawling',
+]);
+
 export const NAVIGATION_SLUGS: ReadonlySet<string> = new Set([
   'edit_then_list',
   'review',
