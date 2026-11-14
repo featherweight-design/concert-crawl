@@ -3278,6 +3278,8 @@ export const ADMIN_COPY = {
       title: (code: string) => `Reactivate ${code}?`,
       body: (code: string, max: number, used: number) =>
         `People can join with ${code} again, up to its ${max} ${max === 1 ? 'seat' : 'seats'} (${used} used).`,
+      // `07/reactivate-a-code`, without "because…": no reason is stored.
+      revokedOn: (date: string) => `It was revoked on ${date}.`,
       keep: 'Keep it ended',
       confirm: 'Reactivate',
     },

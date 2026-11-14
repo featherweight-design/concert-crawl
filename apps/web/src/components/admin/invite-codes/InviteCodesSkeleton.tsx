@@ -31,7 +31,8 @@ export const InviteCodesRowsSkeleton = ({
     style={{
       borderRadius: 14,
       border: '1px solid var(--border)',
-      background: 'var(--bg-elevated)',
+      // Both loading boards draw the card on surface-1 (#11162E).
+      background: 'var(--surface-1)',
       overflow: 'hidden',
     }}
   >

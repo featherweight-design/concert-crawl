@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { Plus, Ticket } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -286,13 +286,12 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   } else if (codes.length === 0) {
     body = (
       <EmptyState
-        icon={Ticket}
+        icon={Users}
         title={COPY.empty.title}
         body={COPY.empty.body(MAX_SEATS)}
         action={
           <AdminButton
             type="button"
-            icon={Plus}
             variant="gradient"
             onClick={() => setOpen({ kind: 'new' })}
           >

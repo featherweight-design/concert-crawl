@@ -45,7 +45,9 @@ export const RevokeConfirm = ({
 );
 
 /**
- * `07/reactivate-a-code`, without "because…" (no reason is stored). Keeps the
+ * `07/reactivate-a-code`: "It was revoked on {date}." when it was revoked (an
+ * expired code has no date to give), without "because…" (no reason is
+ * stored). Keeps the
  * old expiry when it's still ahead (A3 5b row 13).
  */
 export const ReactivateConfirm = ({
@@ -71,6 +73,8 @@ export const ReactivateConfirm = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <span>
             {COPY.reactivate.body(code.code, code.maxUses, seatsTaken(code))}
+            {code.revokedAt &&
+              ` ${COPY.reactivate.revokedOn(shortDate(code.revokedAt))}`}
           </span>
           <ExpiryPills
             value={expiry}

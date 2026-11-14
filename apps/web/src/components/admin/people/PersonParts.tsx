@@ -5,6 +5,7 @@ import { Bug, Check, Eye, Music, Tag } from 'lucide-react';
 import type { PersonDetail, PersonRecent } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, useIsPhone } from '@/components/admin/primitives';
+import { SIDEBAR_WIDTH } from '@/components/admin/shell/content-pane';
 import { shortDate } from '../invite-codes/code-rules';
 import { Hint } from '../invite-codes/CodeFormParts';
 import type { SettableRole } from './person-api';
@@ -268,15 +269,12 @@ export const Account = (props: AccountProps) => {
       </>
     );
   }
-  return (
+  const card = (
     <Block title={COPY.account}>
       <div style={{ ...ROW, flexWrap: 'wrap' }}>
         <span style={{ ...MUTED, flex: 1 }}>{COPY.email}</span>
         {email}
       </div>
-      {props.shownEmail && (
-        <div style={{ ...CAPTION, marginBottom: 8 }}>{COPY.emailShownNote}</div>
-      )}
       {props.emailError && (
         <Hint tone="var(--danger)" alert>
           {COPY.emailFailed}
@@ -306,6 +304,21 @@ export const Account = (props: AccountProps) => {
         </Hint>
       )}
     </Block>
+  );
+  if (!props.shownEmail) return card;
+  // `07/email-revealed`: the note sits under the card, 14 below it, at 12.5.
+  return (
+    <div
+      style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}
+    >
+      {card}
+      <div
+        data-testid="email-shown-note"
+        style={{ fontSize: 12.5, lineHeight: 1.45, color: 'var(--fg-muted)' }}
+      >
+        {COPY.emailShownNote}
+      </div>
+    </div>
   );
 };
 
@@ -359,11 +372,14 @@ export const Toast = ({
   return (
     <div
       role="status"
+      data-testid="person-toast"
       style={{
         position: 'fixed',
         zIndex: 60,
-        left: 16,
-        right: 16,
+        // `07/role-changed-with-undo` centres it under the content column
+        // (left:232px;right:0), not the viewport; the phone keeps 16 sides.
+        left: isPhone ? 16 : SIDEBAR_WIDTH,
+        right: isPhone ? 16 : 0,
         bottom: isPhone ? 'calc(76px + env(safe-area-inset-bottom))' : 24,
         display: 'flex',
         justifyContent: 'center',

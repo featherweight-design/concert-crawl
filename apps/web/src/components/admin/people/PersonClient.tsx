@@ -11,7 +11,6 @@ import {
   AdminButton,
   ConfirmDialog,
   CouldntLoad,
-  StatusBadge,
   useIsPhone,
 } from '@/components/admin/primitives';
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
@@ -20,7 +19,7 @@ import { Hint } from '../invite-codes/CodeFormParts';
 import { RowMenu } from '@/components/admin/primitives';
 import { MENU_ICONS } from '../invite-codes/code-menu-icons';
 import { Avatar } from './PeopleClient';
-import { ROLE_KIND } from './people-rules';
+import { RoleChip } from './RoleChip';
 import { personApi, type SettableRole } from './person-api';
 import {
   asksFirst,
@@ -194,15 +193,32 @@ export function PersonClient({ userId }: { userId: string }) {
     <RowMenu
       label={COPY.menu.label(name)}
       width={300}
-      triggerStyle={{
-        height: 36,
-        padding: '0 10px',
-        alignItems: 'center',
-        borderRadius: 9,
-        border: '1px solid var(--border-strong)',
-        background: 'var(--surface-2)',
-        color: 'var(--fg)',
-      }}
+      testId="person-menu"
+      // `12/person-menu-d` boxes the desktop ⋯ at 36; `07/person-mobile`
+      // draws a bare 18px fg-muted glyph, padded out to a 44px tap target
+      // with the padding cancelled so the glyph sits where it is drawn.
+      iconSize={isPhone ? 18 : 16}
+      {...(isPhone && { iconStrokeWidth: 1.5 })}
+      triggerStyle={
+        isPhone
+          ? {
+              padding: 13,
+              margin: -13,
+              alignItems: 'center',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--fg-muted)',
+            }
+          : {
+              height: 36,
+              padding: '0 10px',
+              alignItems: 'center',
+              borderRadius: 9,
+              border: '1px solid var(--border-strong)',
+              background: 'var(--surface-2)',
+              color: 'var(--fg)',
+            }
+      }
       items={[
         {
           key: 'sign-out',
@@ -215,11 +231,7 @@ export function PersonClient({ userId }: { userId: string }) {
     />
   );
 
-  const roleChip = (
-    <StatusBadge kind={ROLE_KIND[person.role]} dot>
-      {ROLES[person.role]}
-    </StatusBadge>
-  );
+  const roleChip = <RoleChip role={person.role}>{ROLES[person.role]}</RoleChip>;
 
   const head = (
     <div
@@ -290,8 +302,8 @@ export function PersonClient({ userId }: { userId: string }) {
       >
         {COPY.role}
       </div>
+      {/* `07/person-mobile` draws no caption under the segment. */}
       {segment}
-      {caption}
     </div>
   ) : (
     <div
