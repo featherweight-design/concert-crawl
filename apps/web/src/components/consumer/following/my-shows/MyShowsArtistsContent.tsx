@@ -109,10 +109,10 @@ export const MyShowsArtistsContent = ({
   if (follows.length === 0) {
     return (
       <main className="flex w-full flex-1 flex-col">
-        <div className="flex flex-1 flex-col sm:hidden">
+        <div className="flex flex-1 flex-col lg:hidden">
           <ArtistsEmpty locked={locked} />
         </div>
-        <div className="hidden flex-1 flex-col sm:flex">
+        <div className="hidden flex-1 flex-col lg:flex">
           <ArtistsEmpty locked={locked} desktop />
         </div>
         {picker}
@@ -192,7 +192,7 @@ export const MyShowsArtistsContent = ({
       {/* Mobile: a list of cards (B+), so it no longer bleeds to the edge. */}
       <div
         data-testid="my-shows-artists-mobile"
-        className="w-full flex-1 sm:hidden"
+        className="w-full flex-1 lg:hidden"
       >
         {meta}
         <div>
@@ -256,7 +256,7 @@ export const MyShowsArtistsContent = ({
           was truncating what mobile showed. Two-up gives the cell 434px. */}
       <div
         data-testid="my-shows-artists-desktop"
-        className="hidden w-full flex-1 sm:block"
+        className="hidden w-full flex-1 lg:block"
       >
         {/* No page title: the active sub-tab above already reads "Artists",
             and the sibling Watching and Concerts tabs ship none either. */}

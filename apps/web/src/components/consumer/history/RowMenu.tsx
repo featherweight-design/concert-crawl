@@ -187,7 +187,7 @@ export const RowMenu = ({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((was) => !was)}
-        className={`inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 text-[var(--fg-muted)] transition-opacity duration-[var(--motion-fast)] ease-[var(--motion-ease)] focus-visible:opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100 ${open ? 'bg-[var(--surface-3,var(--surface-2))] sm:opacity-100' : 'bg-transparent'}`}
+        className={`inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 text-[var(--fg-muted)] transition-opacity duration-[var(--motion-fast)] ease-[var(--motion-ease)] focus-visible:opacity-100 lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100 ${open ? 'bg-[var(--surface-3,var(--surface-2))] lg:opacity-100' : 'bg-transparent'}`}
       >
         <DotsIcon />
       </button>

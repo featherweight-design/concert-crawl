@@ -51,7 +51,7 @@ const StatTile = ({
       // boards draw "Mission Ballroom", rather than cutting to "Larim…".
       // The values are 28px on the phone and about 44 from sm up
       // (`bp-concerts`), not 28 at every width.
-      className="truncate text-[28px] max-sm:whitespace-normal sm:text-[44px]"
+      className="truncate text-[28px] max-lg:whitespace-normal lg:text-[44px]"
       style={{
         fontFamily: 'var(--font-ui)',
         fontWeight: 900,
@@ -159,7 +159,7 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
   return (
     <header
       data-testid="history-header"
-      className="mb-5 border-b border-transparent pb-4 sm:mb-6 sm:pb-5"
+      className="mb-5 border-b border-transparent pb-4 lg:mb-6 lg:pb-5"
       style={MY_SHOWS_HEADER_RULE_STYLE}
     >
       {/* The tier chip that used to sit opposite the eyebrow is gone — this
@@ -183,7 +183,7 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
       {/* A phone sets the tiles in equal thirds, three to a row, as the boards
           do; from `sm` they flow at their natural width. Either way it wraps
           instead of scrolling at 320px: six tiles never fit one row. */}
-      <dl className="m-0 grid grid-cols-3 items-start gap-x-4 gap-y-4 sm:flex sm:flex-wrap sm:items-center sm:gap-x-5">
+      <dl className="m-0 grid grid-cols-3 items-start gap-x-4 gap-y-4 lg:flex lg:flex-wrap lg:items-center lg:gap-x-5">
         {tiles.map((tile) => (
           <StatTile
             key={tile.key}

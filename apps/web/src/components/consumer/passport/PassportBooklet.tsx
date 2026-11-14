@@ -375,12 +375,12 @@ export function PassportBooklet({
     <section aria-label={COPY.bookletLabel}>
       <BookletView
         layout="stack"
-        className="flex flex-col gap-4 sm:hidden"
+        className="flex flex-col gap-4 lg:hidden"
         {...shared}
       />
       <BookletView
         layout="spread"
-        className="hidden flex-col gap-4 sm:flex"
+        className="hidden flex-col gap-4 lg:flex"
         {...shared}
       />
     </section>

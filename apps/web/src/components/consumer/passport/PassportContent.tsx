@@ -57,7 +57,7 @@ function PageTitle() {
   const lead = COPY.pageTitle.slice(0, split + 1);
   const mark = COPY.pageTitle.slice(split + 1);
   return (
-    <h1 className="text-[34px] font-black leading-none tracking-[-0.04em] text-fg sm:text-[44px]">
+    <h1 className="text-[34px] font-black leading-none tracking-[-0.04em] text-fg lg:text-[44px]">
       {lead}
       <span
         style={{
@@ -133,7 +133,7 @@ export const PassportContent = ({
     return (
       <Shell>
         {!openBook && (
-          <div data-passport-empty-layout="phone" className="sm:hidden">
+          <div data-passport-empty-layout="phone" className="lg:hidden">
             <header className="mb-6">
               <PageTitle />
             </header>
@@ -145,16 +145,16 @@ export const PassportContent = ({
         )}
         <div
           data-passport-empty-layout="desktop"
-          className={`${openBook ? 'grid' : 'hidden sm:grid'} grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']`}
+          className={`${openBook ? 'grid' : 'hidden lg:grid'} grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']`}
         >
           <header className="flex flex-col gap-2 [grid-area:head]">
             <p
-              className={`font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle ${openBook ? 'hidden sm:block' : ''}`}
+              className={`font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle ${openBook ? 'hidden lg:block' : ''}`}
             >
               {COPY.breadcrumb}
             </p>
             <PageTitle />
-            <p className="text-sm text-fg-muted sm:text-[15px]">{subtitle}</p>
+            <p className="text-sm text-fg-muted lg:text-[15px]">{subtitle}</p>
           </header>
           <div className="min-w-0 [grid-area:book]">
             <PassportBooklet
@@ -188,11 +188,11 @@ export const PassportContent = ({
     <Shell>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
         <header className="flex flex-col gap-2 [grid-area:head]">
-          <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle sm:block">
+          <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle lg:block">
             {COPY.breadcrumb}
           </p>
           <PageTitle />
-          <p className="text-sm text-fg-muted sm:text-[15px]">
+          <p className="text-sm text-fg-muted lg:text-[15px]">
             {COPY.pageSubtitle}
           </p>
         </header>

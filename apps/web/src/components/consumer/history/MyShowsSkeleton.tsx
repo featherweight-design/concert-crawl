@@ -84,7 +84,7 @@ export const MyShowsRowSkeleton = ({
 export const MyShowsHeadlineSkeleton = () => (
   <div
     data-testid="my-shows-headline-skeleton"
-    className="mb-5 flex flex-col gap-3 border-b border-border pb-4 sm:mb-6 sm:pb-5"
+    className="mb-5 flex flex-col gap-3 border-b border-border pb-4 lg:mb-6 lg:pb-5"
   >
     <SkeletonBlock width={60} height={8} radius={4} />
     <SkeletonBlock width="min(190px, 55%)" height={34} radius={8} />
@@ -95,7 +95,7 @@ export const MyShowsHeadlineSkeleton = () => (
 export const MyShowsStatsSkeleton = () => (
   <div
     data-testid="my-shows-stats-skeleton"
-    className="mb-5 grid grid-cols-3 gap-x-5 gap-y-6 border-b border-border pb-5 sm:mb-6"
+    className="mb-5 grid grid-cols-3 gap-x-5 gap-y-6 border-b border-border pb-5 lg:mb-6"
   >
     {Array.from({ length: 6 }).map((_, idx) => (
       <span key={idx} className="flex flex-col gap-2">

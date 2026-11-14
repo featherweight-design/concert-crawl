@@ -26,7 +26,7 @@ export default function PassportLoading() {
             <SkeletonBlock width={64} height={10} />
             <SkeletonBlock height={92} radius={16} />
           </div>
-          <div className="grid grid-cols-5 gap-2 sm:gap-3">
+          <div className="grid grid-cols-5 gap-2 lg:gap-3">
             {Array.from({ length: 10 }, (_, index) => (
               <span key={index} className="flex justify-center">
                 <SkeletonBlock width={48} height={48} radius={13} />

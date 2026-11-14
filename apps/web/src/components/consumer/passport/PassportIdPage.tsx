@@ -73,7 +73,7 @@ export function PassportIdPage({ identity, stats }: PassportIdPageProps) {
   return (
     <div
       data-booklet-leaf="id"
-      className="flex h-full flex-col gap-5 p-6 sm:p-7"
+      className="flex h-full flex-col gap-5 p-6 lg:p-7"
     >
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-signal">

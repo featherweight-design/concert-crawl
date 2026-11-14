@@ -352,7 +352,7 @@ describe('PassportContent', () => {
     renderContent({ past: [], upcoming: [] });
     expect(
       document.querySelector('[data-passport-empty-layout="phone"]')?.className,
-    ).toBe('sm:hidden');
+    ).toBe('lg:hidden');
   });
 
   // A resolving plan must not flash the lock screen at a Supporter.

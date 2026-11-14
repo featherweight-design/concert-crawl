@@ -45,7 +45,7 @@ export function FilterSheet({
   const dialogRef = useRef<HTMLElement>(null);
   const onPhone = useOnPhone();
   // Tab trap, Escape and focus return only while the sheet is actually showing:
-  // the venue filter bar keeps it mounted but hidden (`sm:hidden`) at desktop
+  // the venue filter bar keeps it mounted but hidden (`lg:hidden`) at desktop
   // width while the popover is open, and a trap on a hidden dialog would block
   // Tab on the page.
   useModalDialog(dialogRef, open && onPhone, onClose);
@@ -61,7 +61,7 @@ export function FilterSheet({
   // whole-card links answering taps meant for the sheet. z-[90] is the shared
   // dialog band, above the persistent chrome.
   return createPortal(
-    <div className="fixed inset-0 z-[90] sm:hidden">
+    <div className="fixed inset-0 z-[90] lg:hidden">
       <button
         type="button"
         className="absolute inset-0"

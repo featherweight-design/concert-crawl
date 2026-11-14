@@ -89,7 +89,7 @@ export const FollowShelfSkeleton = ({
             lineHeight={1.45}
             width="60%"
             barHeight={10}
-            className="sm:hidden"
+            className="lg:hidden"
           />
         </div>
       )}
@@ -97,13 +97,13 @@ export const FollowShelfSkeleton = ({
     {/* Full bleed on the phone, as the live rail is. The page's
         overflow-x-clip holds the cut-off card in. */}
     <ul
-      className={`-mx-4 flex list-none overflow-hidden px-4 py-3 sm:mx-0 sm:px-0 ${SHELF_RAIL_GAP_CLASS}`}
+      className={`-mx-4 flex list-none overflow-hidden px-4 py-3 lg:mx-0 lg:px-0 ${SHELF_RAIL_GAP_CLASS}`}
     >
       <SkeletonCard />
       <SkeletonCard />
       <SkeletonCard />
-      <SkeletonCard className="hidden sm:flex" />
-      <SkeletonCard className="hidden sm:flex" />
+      <SkeletonCard className="hidden lg:flex" />
+      <SkeletonCard className="hidden lg:flex" />
     </ul>
   </section>
 );

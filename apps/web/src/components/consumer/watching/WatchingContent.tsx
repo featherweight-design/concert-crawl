@@ -300,7 +300,7 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
           data-testid="watching-header"
           // Focus lands here when a dismissed row was the last one, so a
           // keyboard user sees where it went.
-          className="mb-5 rounded-sm border-b border-transparent pb-4 outline-none focus-visible:ring-2 focus-visible:ring-signal sm:mb-6 sm:pb-5"
+          className="mb-5 rounded-sm border-b border-transparent pb-4 outline-none focus-visible:ring-2 focus-visible:ring-signal lg:mb-6 lg:pb-5"
           style={MY_SHOWS_HEADER_RULE_STYLE}
         >
           <p
@@ -320,7 +320,7 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
             {/* The board draws about 42px on the phone and 48 from sm up
                 (`bp-m-watching_m`, `bp-watching`), not 36 at every width. */}
             <p
-              className="text-[42px] sm:text-[48px]"
+              className="text-[42px] lg:text-[48px]"
               style={{
                 fontFamily: 'var(--font-ui)',
                 fontWeight: 900,
@@ -365,7 +365,7 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
       {displayedShows.length === 0 ? (
         <WatchingEmpty />
       ) : (
-        <div className="flex flex-col gap-2 sm:gap-3">
+        <div className="flex flex-col gap-2 lg:gap-3">
           {groups.map((group) => (
             <section key={group.key}>
               <div className="flex items-baseline gap-2 px-1 pb-1 pt-2.5">
