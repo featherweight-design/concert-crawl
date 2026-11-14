@@ -30,11 +30,26 @@ export const PRICE_CHECK_OUTCOME_DAYS = 14;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// updatedAt is stamped by Postgres now() and compared with this process's
+// clock, so a decision made seconds ago can read a little in the future when
+// the API host runs behind the database. Allow that much; anything further
+// ahead is not a real decision time.
+const CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+// Reasons written when an update WON a check (settleCheckOnCounterPromotion):
+// the rows they archive are the old price and the other pending updates. An
+// archived update carrying one of these is not a loser the price held against.
+const WON_CHECK_REASON_PREFIXES = [
+  'Replaced by price check update',
+  'Superseded by price check update',
+] as const;
+
 export interface ArchivedCheckRow {
   id: string;
   priceMin: string;
   priceMax: string | null;
   disputedSubmissionId: string | null;
+  archivedReason: string | null;
   updatedAt: Date;
 }
 
@@ -56,7 +71,9 @@ export function pickPriceCheckOutcome(input: {
 
   for (const row of archived) {
     const age = now.getTime() - row.updatedAt.getTime();
-    if (age < 0 || age > PRICE_CHECK_OUTCOME_DAYS * DAY_MS) continue;
+    if (age < -CLOCK_SKEW_MS || age > PRICE_CHECK_OUTCOME_DAYS * DAY_MS) {
+      continue;
+    }
     // The live row was written after the check was decided: it is no longer
     // the price the check settled.
     if (liveUpdatedAt.getTime() > row.updatedAt.getTime()) continue;
@@ -74,7 +91,12 @@ export function pickPriceCheckOutcome(input: {
           ceiling: row.priceMax !== null ? parseFloat(row.priceMax) : null,
         },
       };
-    } else if (row.disputedSubmissionId === liveId) {
+    } else if (
+      row.disputedSubmissionId === liveId &&
+      !WON_CHECK_REASON_PREFIXES.some((prefix) =>
+        row.archivedReason?.startsWith(prefix),
+      )
+    ) {
       outcome = {
         outcome: 'held',
         resolvedAt: row.updatedAt.toISOString(),
