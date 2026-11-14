@@ -326,25 +326,131 @@ describe('admin feedback (integration)', () => {
       const res = await app.request('/v1/admin/feedback/counts');
       expect(res.status).toBe(200);
       const json = (await res.json()) as { data: AdminFeedbackCounts };
-      expect(json.data).toEqual({ unread: 2, toRead: 4, done: 2 });
+      expect(json.data).toEqual({
+        unread: 2,
+        toRead: 4,
+        done: 2,
+        kinds: { bugs: 3, ideas: 0, venues: 1 },
+      });
+    });
+
+    it('counts each kind inside To read only, with error reports under Bugs', async () => {
+      setAuth('admin');
+      await seedFeedback('unread', 'bug');
+      await seedFeedback('read', 'error_report');
+      await seedFeedback('flagged', 'idea');
+      await seedFeedback('unread', 'praise');
+      await seedFeedback('resolved', 'bug');
+      await seedFeedback('archived', 'venue_suggestion');
+
+      const res = await app.request('/v1/admin/feedback/counts');
+      const json = (await res.json()) as { data: AdminFeedbackCounts };
+      expect(json.data.kinds).toEqual({ bugs: 2, ideas: 1, venues: 0 });
     });
 
     it('is zero on an empty table', async () => {
       setAuth('admin');
       const res = await app.request('/v1/admin/feedback/counts');
       const json = (await res.json()) as { data: AdminFeedbackCounts };
-      expect(json.data).toEqual({ unread: 0, toRead: 0, done: 0 });
+      expect(json.data).toEqual({
+        unread: 0,
+        toRead: 0,
+        done: 0,
+        kinds: { bugs: 0, ideas: 0, venues: 0 },
+      });
+    });
+  });
+
+  describe('kind, search and the submitter handle (P47-19 PR 4)', () => {
+    it('filters Bugs to bug and error_report', async () => {
+      setAuth('admin');
+      await seedFeedback('unread', 'bug');
+      await seedFeedback('unread', 'error_report');
+      await seedFeedback('unread', 'idea');
+      await seedFeedback('unread', 'venue_suggestion');
+
+      const bugs = await list('?view=to_read&kind=bugs');
+      expect(bugs.status).toBe(200);
+      expect(bugs.data.map((item) => item.category).sort()).toEqual([
+        'bug',
+        'error_report',
+      ]);
+      const venues = await list('?kind=venues');
+      expect(venues.data.map((item) => item.category)).toEqual([
+        'venue_suggestion',
+      ]);
+    });
+
+    it('searches the message case-insensitively, with LIKE metacharacters literal', async () => {
+      setAuth('admin');
+      await seedFeedback('resolved', 'bug', { message: 'Map button is dead' });
+      await seedFeedback('resolved', 'bug', { message: 'Price shows 50% off' });
+      await seedFeedback('resolved', 'bug', { message: 'Price shows 500 off' });
+
+      const map = await list('?view=done&search=MAP');
+      expect(map.data.map((item) => item.message)).toEqual([
+        'Map button is dead',
+      ]);
+      const percent = await list(
+        `?view=done&search=${encodeURIComponent('50%')}`,
+      );
+      expect(percent.data.map((item) => item.message)).toEqual([
+        'Price shows 50% off',
+      ]);
+      const underscore = await list('?view=done&search=_');
+      expect(underscore.data).toEqual([]);
+    });
+
+    it('treats a blank search as no search', async () => {
+      setAuth('admin');
+      await seedFeedback('resolved');
+      await seedFeedback('archived');
+
+      const { status, data } = await list('?view=done&search=%20%20');
+      expect(status).toBe(200);
+      expect(data).toHaveLength(2);
+    });
+
+    it('returns the submitter handle, never the Clerk id, and null without a profile', async () => {
+      setAuth('admin');
+      await seedUserProfile('user_mira', { handle: 'mira.k' });
+      await seedFeedback('unread', 'bug', { userId: 'user_mira' });
+      await seedFeedback('unread', 'idea', { userId: 'user_no_profile' });
+      await seedFeedback('unread', 'praise', { userId: null });
+
+      const { data } = await list('?view=to_read');
+      const byCategory = new Map(
+        data.map((item) => [item.category, item.submittedBy]),
+      );
+      expect(byCategory.get('bug')).toBe('mira.k');
+      expect(byCategory.get('idea')).toBeNull();
+      expect(byCategory.get('praise')).toBeNull();
+    });
+
+    it('returns both handles on a PATCH answer', async () => {
+      setAuth('admin');
+      await seedUserProfile('user_mira', { handle: 'mira.k' });
+      await seedUserProfile(ADMIN_ID, { handle: 'hugh' });
+      const id = await seedFeedback('unread', 'bug', { userId: 'user_mira' });
+
+      const { status, data } = await patch(id, { status: 'resolved' });
+      expect(status).toBe(200);
+      expect(data.submittedBy).toBe('mira.k');
+      expect(data.resolvedBy).toBe('hugh');
     });
   });
 
   describe('Zod at the boundary', () => {
-    it.each(['view=inbox', 'category=rumour', 'status=done'])(
-      'rejects %s with 400',
-      async (query) => {
-        setAuth('admin');
-        expect((await list(`?${query}`)).status).toBe(400);
-      },
-    );
+    it.each([
+      'view=inbox',
+      'category=rumour',
+      'status=done',
+      'kind=praise',
+      `search=${'x'.repeat(201)}`,
+    ])('rejects %s with 400', async (query) => {
+      setAuth('admin');
+      expect((await list(`?${query}`)).status).toBe(400);
+    });
 
     it('refuses non-admins', async () => {
       setAuth('user', 'user_plain');
