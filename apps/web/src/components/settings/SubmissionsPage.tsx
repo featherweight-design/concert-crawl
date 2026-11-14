@@ -36,7 +36,7 @@ export const SubmissionsPage = ({
       <div className="flex h-[54px] items-center justify-between border-b border-border bg-bg-elevated px-4">
         <Link
           href="/me"
-          className="w-[60px] shrink-0 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-fg-muted"
+          className="w-[60px] shrink-0 whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-[0.06em] text-fg-muted"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
           {SETTINGS_COPY.submissionsBack}
