@@ -29,7 +29,7 @@ import { apiClient } from '@/lib/api';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { MergeEventDialog } from '../editor/MergeEventDialog';
-import { StatusCard, pillOf, type Sale, type StatusDialog } from './StatusCard';
+import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
 import { StatusChips } from '../list/EventsList';
 import { fieldDate, fieldTime, isPast, type EventDetail } from './event-detail';
 
@@ -388,21 +388,34 @@ export const EventEdit = ({
     const saleChanged = next.sale !== null && next.sale !== savedSale;
     const body: { title?: string; status?: 'upcoming' } = {
       ...(next.title !== savedTitle && { title: next.title }),
-      // Back on sale from Postponed or Cancelled: the show is on again.
+      // The pills pick one status: leaving Postponed, Cancelled or No longer
+      // listed for either sale pill puts the show back on (a status write also
+      // ends a delisting, server side).
       ...(saleChanged &&
-        (detail.status === 'postponed' || detail.status === 'cancelled') && {
-          status: 'upcoming',
-        }),
+        (detail.status === 'postponed' ||
+          detail.status === 'cancelled' ||
+          detail.status === 'delisted') && { status: 'upcoming' }),
     };
-    if (Object.keys(body).length > 0) await apiClient.patch(path, token, body);
-    // Sold out is its own flag with its own Watcher notice (`watch.soldout`).
-    if (saleChanged && next.sale === 'soldout' && !detail.isSoldOut) {
-      await apiClient.post(`${path}/sold-out`, token, {});
+    let landed = false;
+    try {
+      if (Object.keys(body).length > 0) {
+        await apiClient.patch(path, token, body);
+        landed = true;
+      }
+      // Sold out is its own flag with its own Watcher notice (`watch.soldout`).
+      if (saleChanged && next.sale === 'soldout' && !detail.isSoldOut) {
+        await apiClient.post(`${path}/sold-out`, token, {});
+        landed = true;
+      }
+      if (saleChanged && next.sale === 'available' && detail.isSoldOut) {
+        await apiClient.post(`${path}/available`, token, {});
+        landed = true;
+      }
+    } finally {
+      // A write that landed before a later one failed still shows: the page
+      // re-reads what is saved, so the snap-back names the truth.
+      if (landed) router.refresh();
     }
-    if (saleChanged && next.sale === 'available' && detail.isSoldOut) {
-      await apiClient.post(`${path}/available`, token, {});
-    }
-    router.refresh();
   });
   const [dialog, setDialog] = useState<StatusDialog | null>(null);
   /** Postponed and Hide save at once, outside the Save bar (they confirm). */
@@ -412,9 +425,20 @@ export const EventEdit = ({
   };
   const [draft, setDraft] = useState<Fields>(snap.value);
   // What is saved (after a save, a refresh, or a snap-back) resets the form.
-  useEffect(() => setDraft(snap.value), [snap.value]);
+  // Per field, so a status save (Postponed moves the saved sale) never throws
+  // away a title being typed.
+  const savedValueTitle = snap.value.title;
+  const savedValueSale = snap.value.sale;
+  useEffect(
+    () => setDraft((prev) => ({ ...prev, title: savedValueTitle })),
+    [savedValueTitle],
+  );
+  useEffect(
+    () => setDraft((prev) => ({ ...prev, sale: savedValueSale })),
+    [savedValueSale],
+  );
   // A save that fails fast can batch its pending and failed states into one
-  // render, so `snap.value` never changes identity: snap back on the failure.
+  // render, so the values above never change: snap back on the failure.
   useEffect(() => {
     if (snap.failed !== null) setDraft(snap.failed.saved);
   }, [snap.failed]);
@@ -508,7 +532,10 @@ export const EventEdit = ({
       onPostpone={() => saveNow({ status: 'postponed' })}
       onHidden={(hidden) => saveNow({ hiddenFromConsumer: hidden })}
       dialog={dialog}
-      setDialog={setDialog}
+      // Postponed and Hide save at once; never while a Save bar save runs.
+      setDialog={(next) => {
+        if (next === null || !snap.saving) setDialog(next);
+      }}
     />
   );
 
@@ -527,7 +554,7 @@ export const EventEdit = ({
         detail={detail}
         phone={phone}
         onMerge={() => setMerging(true)}
-        onHide={detail.hidden ? null : () => setDialog('hide')}
+        onHide={detail.hidden || snap.saving ? null : () => setDialog('hide')}
       />
       {phone ? (
         // `06/event-edit-mobile`: the Show fields, then Status, stacked.
@@ -560,9 +587,7 @@ export const EventEdit = ({
           saved={
             snap.failed.attempted.title !== snap.failed.saved.title
               ? COPY.saveFailed.saved(snap.failed.saved.title)
-              : COPY.statusSaved(
-                  COPY.status[pillOf(detail.status) ?? 'available'],
-                )
+              : COPY.statusSaved(ADMIN_COPY.eventsList.status[detail.status])
           }
           onRetry={() => void snap.retry()}
           retrying={snap.saving}

@@ -71,8 +71,10 @@ const Pills = ({
     { key: 'cancelled', label: COPY.status.cancelled, disabled: true },
   ];
   return (
+    // Toggle buttons, one Tab stop each: Postponed opens a dialog rather than
+    // choosing in place, so a radio group's arrow-key semantics would lie.
     <div
-      role="radiogroup"
+      role="group"
       aria-label={COPY.status.title}
       style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
     >
@@ -82,8 +84,7 @@ const Pills = ({
           <button
             key={key}
             type="button"
-            role="radio"
-            aria-checked={on}
+            aria-pressed={on}
             aria-disabled={disabled || undefined}
             data-testid={`status-pill-${key}`}
             onClick={() => {
@@ -182,11 +183,16 @@ const Radio = ({
   disabled: boolean;
   label: string;
 }) => (
-  <div
-    role="radio"
-    aria-checked={checked}
-    aria-disabled={disabled || undefined}
+  // A toggle button: "No new date yet" is the only choice until New date's
+  // pickers are drawn, so it stays pressed and New date is disabled.
+  <button
+    type="button"
+    aria-pressed={checked}
+    disabled={disabled}
     style={{
+      width: '100%',
+      textAlign: 'left',
+      cursor: 'default',
       display: 'flex',
       alignItems: 'center',
       gap: 12,
@@ -214,7 +220,7 @@ const Radio = ({
       }}
     />
     {label}
-  </div>
+  </button>
 );
 
 /**
@@ -247,8 +253,18 @@ export const StatusCard = ({
   setDialog: (dialog: StatusDialog | null) => void;
 }) => {
   const [unhideFailed, setUnhideFailed] = useState(false);
+  const [unhiding, setUnhiding] = useState(false);
   const current = pillOf(detail.status);
   const close = () => setDialog(null);
+  // Showing a hidden show again saves at once; one at a time.
+  const unhide = () => {
+    if (unhiding) return;
+    setUnhiding(true);
+    setUnhideFailed(false);
+    onHidden(false)
+      .catch(() => setUnhideFailed(true))
+      .finally(() => setUnhiding(false));
+  };
   return (
     <AdminCard
       title={COPY.status.title}
@@ -279,14 +295,10 @@ export const StatusCard = ({
         <Switch
           on={detail.hidden}
           label={COPY.status.hide}
-          disabled={false}
+          disabled={unhiding}
           onChange={(next) => {
-            if (next) {
-              setDialog('hide');
-              return;
-            }
-            setUnhideFailed(false);
-            onHidden(false).catch(() => setUnhideFailed(true));
+            if (next) setDialog('hide');
+            else unhide();
           }}
         />
         <span style={{ fontSize: 14, fontWeight: 700 }}>
@@ -298,10 +310,8 @@ export const StatusCard = ({
         <SaveFailedToast
           what={COPY.unhideFailed.what}
           saved={COPY.unhideFailed.saved}
-          onRetry={() => {
-            setUnhideFailed(false);
-            onHidden(false).catch(() => setUnhideFailed(true));
-          }}
+          onRetry={unhide}
+          retrying={unhiding}
           onDismiss={() => setUnhideFailed(false)}
         />
       )}
@@ -312,7 +322,9 @@ export const StatusCard = ({
           confirmIcon={CalendarClock}
           danger={false}
           failedWhat={COPY.postponed.failed}
-          failedSaved={COPY.statusSaved(COPY.status[current ?? 'available'])}
+          failedSaved={COPY.statusSaved(
+            ADMIN_COPY.eventsList.status[detail.status],
+          )}
           onCancel={close}
           act={async () => {
             await onPostpone();
@@ -325,7 +337,7 @@ export const StatusCard = ({
               : `${COPY.postponed.notice(detail.watchingCount)} ${COPY.postponed.stays}`}
           </div>
           <div
-            role="radiogroup"
+            role="group"
             aria-label={COPY.postponed.title(detail.artist)}
             style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
           >
