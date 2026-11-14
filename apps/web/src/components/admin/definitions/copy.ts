@@ -3316,7 +3316,7 @@ export const ADMIN_COPY = {
         artists: (count: number) =>
           `${count} ${count === 1 ? 'artist' : 'artists'} to check`,
         prices: (count: number) => `${count} missing a price`,
-        people: 'People, invite codes, posters',
+        people: 'People and roles',
         featureFlags: (count: number) =>
           `${count} ${count === 1 ? 'flag' : 'flags'}`,
         crawlRuns: (when: string) => `Last run ${when}`,

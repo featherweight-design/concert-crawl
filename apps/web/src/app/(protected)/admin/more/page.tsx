@@ -5,6 +5,12 @@ import {
   AdminMoreList,
   type AdminMoreDetails,
 } from '@/components/admin/shell/AdminMoreList';
+import { crawlWhen } from '@/components/admin/shell/crawl-when';
+
+/** The Needs you facts' last nightly crawl (its start), the same one All clear shows. */
+interface CrawlFacts {
+  lastCrawl: { at: string } | null;
+}
 
 interface ReviewCounts {
   prices: number;
@@ -23,9 +29,8 @@ const EMPTY: AdminMoreDetails = {
   missingPrices: null,
   featureFlags: null,
   feedbackToRead: null,
-  // "Last run" is the latest daily crawl's START (#178 item 29). Nothing on
-  // main records a run's start yet; 1d's batches API does. Until then the
-  // row shows no detail line rather than an end time dressed as a start.
+  // "Last run" is the latest daily crawl's START (#178 item 29), read from the
+  // Needs you facts. Unknown draws no detail line rather than a guess.
   lastCrawl: null,
 };
 
@@ -41,13 +46,15 @@ export default async function AdminMorePage() {
 
   let data = EMPTY;
   if (token) {
-    const [review, feedback, artists, flags] = await Promise.allSettled([
+    const [review, feedback, artists, flags, facts] = await Promise.allSettled([
       apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
       apiClient.get<{ unread: number }>('/v1/admin/feedback/counts', token),
       apiClient.get<ArtistCounts>('/v1/admin/artists/counts', token),
       apiClient.get<unknown[]>('/v1/admin/feature-flags', token),
+      apiClient.get<CrawlFacts>('/v1/admin/needs-you/facts', token),
     ]);
     const artistCounts = settledValue(artists);
+    const lastCrawlAt = settledValue(facts)?.lastCrawl?.at ?? null;
     data = {
       ...EMPTY,
       // The Artists To check tab, the same number the tab itself shows.
@@ -55,6 +62,7 @@ export default async function AdminMorePage() {
       missingPrices: settledValue(review)?.prices ?? null,
       featureFlags: settledValue(flags)?.length ?? null,
       feedbackToRead: settledValue(feedback)?.unread ?? null,
+      lastCrawl: lastCrawlAt ? crawlWhen(lastCrawlAt, new Date()) : null,
     };
   }
 
