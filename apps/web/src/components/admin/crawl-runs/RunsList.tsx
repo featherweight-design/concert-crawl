@@ -52,6 +52,53 @@ const pill = (on: boolean): CSSProperties => ({
       }),
 });
 
+export interface FilterOption<Key extends string> {
+  key: Key;
+  label: string;
+  /** Drawn beside the label when above 0, read out as `countLabel`. */
+  count?: number;
+  countLabel?: string;
+}
+
+/** A run list's filter pills (`04/venue-runs`, `07/crawl-runs-desktop`). */
+export const FilterPills = <Key extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly FilterOption<Key>[];
+  value: Key;
+  onChange: (next: Key) => void;
+}) => (
+  <div
+    role="group"
+    aria-label={label}
+    style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+  >
+    {options.map((option) => (
+      <button
+        key={option.key}
+        type="button"
+        aria-pressed={value === option.key}
+        onClick={() => onChange(option.key)}
+        style={pill(value === option.key)}
+      >
+        {option.label}
+        {option.count !== undefined && option.count > 0 && (
+          <span
+            aria-label={option.countLabel}
+            style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}
+          >
+            {option.count.toLocaleString('en-US')}
+          </span>
+        )}
+      </button>
+    ))}
+  </div>
+);
+
 /** All / Not OK. Not OK carries the count of loaded runs that weren't. */
 export const RunFilters = ({
   filter,
@@ -62,31 +109,21 @@ export const RunFilters = ({
   notOkCount: number;
   onChange: (next: RunFilter) => void;
 }) => (
-  <div
-    role="group"
-    aria-label={COPY.filters.label}
-    style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
-  >
-    {RUN_FILTERS.map((key) => (
-      <button
-        key={key}
-        type="button"
-        aria-pressed={filter === key}
-        onClick={() => onChange(key)}
-        style={pill(filter === key)}
-      >
-        {COPY.filters[key]}
-        {key === 'notOk' && notOkCount > 0 && (
-          <span
-            aria-label={COPY.filters.notOkCount(notOkCount)}
-            style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}
-          >
-            {notOkCount.toLocaleString('en-US')}
-          </span>
-        )}
-      </button>
-    ))}
-  </div>
+  <FilterPills
+    label={COPY.filters.label}
+    value={filter}
+    onChange={onChange}
+    options={RUN_FILTERS.map((key) =>
+      key === 'notOk'
+        ? {
+            key,
+            label: COPY.filters[key],
+            count: notOkCount,
+            countLabel: COPY.filters.notOkCount(notOkCount),
+          }
+        : { key, label: COPY.filters[key] },
+    )}
+  />
 );
 
 /**
