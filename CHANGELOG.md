@@ -1,3 +1,15 @@
+# [1.432.0](https://github.com/featherweight-design/concert-crawl/compare/v1.431.1...v1.432.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** count only off-season snoozes, skip a running night, share the crawl window read ([d5745d3](https://github.com/featherweight-design/concert-crawl/commit/d5745d35c00b9132ab5c8611e05e1482a817c3a2))
+
+
+### Features
+
+* **admin:** draw the all-clear facts card from a new needs-you facts read ([b168dde](https://github.com/featherweight-design/concert-crawl/commit/b168ddec0f162d3183df0504d8eaa03c60d3753b))
+
 ## [1.431.1](https://github.com/featherweight-design/concert-crawl/compare/v1.431.0...v1.431.1) (2026-11-14)
 
 
