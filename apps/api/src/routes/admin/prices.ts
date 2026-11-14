@@ -47,6 +47,7 @@ import { handleQuerySchema } from '../../lib/validator.js';
 import { setSubmissionStatus } from './lib/price-submission-status.js';
 import { containsPattern } from '../../lib/escape-like.js';
 import { editSubmissionPrice } from './lib/price-edit.js';
+import { replaceListedPrice } from './lib/price-replace.js';
 import {
   parseRejection,
   REJECTION_REASONS,
@@ -873,6 +874,63 @@ pricesAdminRouter.patch(
     });
 
     return ctx.json({ success: true, data: result.updated });
+  },
+);
+
+// POST /v1/admin/prices/events/:eventId/replace: the event editor's Edit
+// price on a show whose price an admin has no own row for. Replaces the
+// listed price with the admin's, archiving the prices it replaces without
+// telling their senders (replaceListedPrice).
+pricesAdminRouter.post(
+  '/events/:eventId/replace',
+  zValidator('param', z.object({ eventId: idSchema }), (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid id' }, 400);
+    }
+  }),
+  zValidator('json', editPriceSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid price' }, 422);
+    }
+  }),
+  async (ctx) => {
+    const { eventId } = ctx.req.valid('param');
+    const { priceMin, priceMax } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
+
+    const result = await replaceListedPrice(
+      eventId,
+      actor.userId,
+      priceMin,
+      priceMax ?? null,
+    );
+    if (result.ok === 'contest_lockout') {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'This show has a Price check open. Resolve it from the Price checks tab.',
+        },
+        409,
+      );
+    }
+    if (!result.ok)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
+
+    ctx.set('auditActorId', actor.userId);
+    ctx.set('auditAction', 'price.submission.replace_listed');
+    ctx.set('auditTargetId', eventId);
+    ctx.set('auditMeta', {
+      before: result.before,
+      after: { priceMin, priceMax: priceMax ?? null },
+      submissionId: result.submissionId,
+      replacedSubmissionIds: result.replacedIds,
+    });
+
+    return ctx.json(
+      { success: true, data: { submissionId: result.submissionId } },
+      201,
+    );
   },
 );
 
