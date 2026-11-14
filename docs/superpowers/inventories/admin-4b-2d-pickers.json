@@ -1,0 +1,76 @@
+{
+  "feature": "Admin 4b-2 pickers: Event edit date and time pickers, Postponed New date, Listed again",
+  "note": "Addendum 5 item 4 (design/design_handoff_bplus_redesign/addendum-5, 04-event-edit). CONTACT_SHEET_ROLE=admin. Read-only: opens pickers and the Postponed dialog, never saves. Boards: 04/date-picker-d, 04/time-picker-d, 04/listed-again; addendum-3 10/postponed-d. Phone uses the OS date and time pickers (README), so the picker rows' phone cells show the native fields. Scratch Neon fixtures: Violet Grohl (upcoming) and Dead Poet Society x Honey Revenge (delisted). By hand: a save with a new date (stop the API for the failure).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "date-picker",
+      "label": "Date picker open on the Show card",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 2500 },
+        { "click": "#event-edit-date" },
+        { "settle": 500 }
+      ]
+    },
+    {
+      "id": "time-picker",
+      "label": "Time picker open on Doors",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 2500 },
+        { "click": "#event-edit-doors" },
+        { "settle": 500 }
+      ]
+    },
+    {
+      "id": "postponed-new-date",
+      "label": "Postponed with New date: Date and Show fields",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 2500 },
+        { "click": "[data-testid=\"status-pill-postponed\"]" },
+        { "wait": "[role=\"dialog\"]", "settle": 300 },
+        { "clickRole": "button", "name": "New date" },
+        { "settle": 500 }
+      ]
+    },
+    {
+      "id": "listed-again",
+      "label": "No longer listed, then Listed again (pills back, earlier status picked)",
+      "steps": [
+        {
+          "goto": "/admin/events/b4d5f4ab-1a89-4a21-8b3d-53a7b709eaf4/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        {
+          "fill": "#event-edit-title",
+          "text": "Dead Poet Society x Honey Revenge"
+        },
+        { "settle": 2500 },
+        { "click": "[data-testid=\"listed-again\"]" },
+        { "settle": 500 }
+      ]
+    }
+  ]
+}
