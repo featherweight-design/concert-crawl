@@ -32,9 +32,9 @@ const LOCKING_COMPONENTS = [
 
 // Files that match the patterns but must NOT lock, each with its reason.
 const EXEMPT: Record<string, string> = {
-  // The cold-start splash: pointer-events pass through to the page and it
-  // never holds the app, so locking would freeze a page the user can touch.
-  'components/pwa/LaunchAnimation.tsx': 'pass-through splash, not modal',
+  // (The cold-start splash was exempt here. Its fixed overlay is now drawn in
+  // components/pwa/launch.css, which this scan does not read, and it passes
+  // pointer events through and never holds the app, so it must not lock.)
   // The vendor picker's phone sheet renders inside ModalShell, the single
   // modal root, which already holds the lock (see the comment at the sheet).
   'components/consumer/submit-price/VendorField.tsx':
