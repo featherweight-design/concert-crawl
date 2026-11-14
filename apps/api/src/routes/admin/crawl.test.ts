@@ -1168,7 +1168,7 @@ describe('Admin crawl routes wake the crawler (Render exit step 2)', () => {
     const { db } = await import('@concert-crawl/db');
     const venueIds = ['v1', 'v2', 'v3'];
     vi.mocked(db.select().from().where).mockResolvedValueOnce(
-      venueIds.map((id) => ({ id })),
+      venueIds.map((id) => ({ ...ELIGIBLE, id })),
     );
     vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce(
       venueIds.map((venueId, index) => ({ id: `t${index}`, venueId })),
