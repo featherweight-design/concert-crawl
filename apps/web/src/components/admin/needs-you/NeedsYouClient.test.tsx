@@ -312,6 +312,33 @@ describe('NeedsYouClient', () => {
     );
   });
 
+  it('says how many Watchers were told when the answer reports it', async () => {
+    const fetchMock = vi.mocked(fetch);
+    const base = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation(async (url, init) => {
+      if (String(url).endsWith('/answer'))
+        return json({
+          key: 'show-dropped:e1',
+          slug: 'postponed',
+          auditId: 'audit-2',
+          undoable: false,
+          result: { watchersNotified: 12 },
+        });
+      return base ? base(url, init) : json({});
+    });
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: 'Postponed' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Mark postponed' }),
+    );
+    expect(await screen.findByTestId('needs-you-answered')).toHaveTextContent(
+      'Olive Jones marked Postponed. 12 Watchers were told.',
+    );
+  });
+
   it('asks Postponed for a new date or none, and sends only what was chosen', async () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');

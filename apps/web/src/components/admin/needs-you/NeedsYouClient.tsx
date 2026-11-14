@@ -267,7 +267,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       settle(
         row,
         {
-          line: COPY.answered(answeredName(row.title), answer.label),
+          line: COPY.answered(
+            answeredName(row.title),
+            answer.label,
+            result.watchersNotified,
+          ),
           auditId: result.undoable ? result.auditId : null,
         },
         true,
@@ -693,7 +697,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
             settle(
               row,
               {
-                line: COPY.answered(answeredName(row.title), answer.label),
+                line: COPY.answered(
+                  answeredName(row.title),
+                  answer.label,
+                  result.watchersNotified,
+                ),
                 auditId: result.undoable ? result.auditId : null,
               },
               true,
