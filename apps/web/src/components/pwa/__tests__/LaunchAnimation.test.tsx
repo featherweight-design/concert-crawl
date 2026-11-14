@@ -10,6 +10,14 @@ import { LAUNCH_ATTR, LAUNCH_MS, LAUNCH_PLAYED_KEY } from '@/lib/pwa/launch';
 
 const launching = () => document.documentElement.hasAttribute(LAUNCH_ATTR);
 
+// jsdom has no AnimationEvent, so React listens for the prefixed event name
+// there and the plain `animationend` goes unheard. A browser sends the plain
+// one; sending both keeps the test about our handler, not the DOM.
+const endAnimation = (element: Element) => {
+  fireEvent.animationEnd(element);
+  fireEvent(element, new Event('webkitAnimationEnd', { bubbles: true }));
+};
+
 beforeEach(() => {
   window.sessionStorage.clear();
 });
@@ -91,9 +99,9 @@ describe('LaunchAnimation', () => {
     render(<LaunchAnimation />);
     expect(launching()).toBe(true);
     // A child's animationend bubbles up and must not end the overlay early.
-    fireEvent.animationEnd(screen.getByTestId('launch-mark'));
+    endAnimation(screen.getByTestId('launch-mark'));
     expect(launching()).toBe(true);
-    fireEvent.animationEnd(screen.getByTestId('launch-animation'));
+    endAnimation(screen.getByTestId('launch-animation'));
     expect(launching()).toBe(false);
   });
 
