@@ -444,39 +444,41 @@ export const BatchesSkeleton = ({ filters = true }: { filters?: boolean }) => (
     )}
     <PhoneSkeletonRows />
     <div className={DESKTOP_ONLY}>
-      <div aria-hidden style={CARD}>
-        <ColumnLabels />
-        {Array.from({ length: SKELETON_ROWS }, (_, row) => (
-          <div key={row} style={{ ...ROW, padding: '14px 0' }}>
-            <div
-              style={{
-                ...FIRST_CELL,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 5,
-              }}
-            >
-              <SkeletonBlock width={52} height={12} radius={6} />
-              <SkeletonBlock width={40} height={10} radius={6} />
+      <Scroll>
+        <div aria-hidden style={{ ...CARD, minWidth: TABLE_MIN_WIDTH }}>
+          <ColumnLabels />
+          {Array.from({ length: SKELETON_ROWS }, (_, row) => (
+            <div key={row} style={{ ...ROW, padding: '14px 0' }}>
+              <div
+                style={{
+                  ...FIRST_CELL,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 5,
+                }}
+              >
+                <SkeletonBlock width={52} height={12} radius={6} />
+                <SkeletonBlock width={40} height={10} radius={6} />
+              </div>
+              <div style={CELL}>
+                <SkeletonBlock width={120} height={12} radius={6} />
+              </div>
+              <div style={CELL}>
+                <SkeletonBlock width={60} height={22} radius={999} />
+              </div>
+              <div style={CELL}>
+                <SkeletonBlock width="80%" height={12} radius={6} />
+              </div>
+              <div style={CELL}>
+                <SkeletonBlock width={36} height={12} radius={6} />
+              </div>
+              <div style={CELL}>
+                <SkeletonBlock width={32} height={12} radius={6} />
+              </div>
             </div>
-            <div style={CELL}>
-              <SkeletonBlock width={120} height={12} radius={6} />
-            </div>
-            <div style={CELL}>
-              <SkeletonBlock width={60} height={22} radius={999} />
-            </div>
-            <div style={CELL}>
-              <SkeletonBlock width="80%" height={12} radius={6} />
-            </div>
-            <div style={CELL}>
-              <SkeletonBlock width={36} height={12} radius={6} />
-            </div>
-            <div style={CELL}>
-              <SkeletonBlock width={32} height={12} radius={6} />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </Scroll>
     </div>
   </div>
 );

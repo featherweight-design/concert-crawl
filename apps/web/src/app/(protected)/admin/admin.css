@@ -371,6 +371,24 @@
   }
 }
 
+/* Crawl runs (1d): the page's gaps by the breakpoint, so the route's
+   loading.tsx and the first paint on a phone match the loaded page. Desktop
+   07/crawl-runs-desktop is 16 apart; the phone A3/09/runs-filters-m is 12,
+   and 8 from the filter to the list. */
+.crawl-runs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@media (max-width: 720px) {
+  .crawl-runs-page {
+    gap: 12px;
+  }
+  .crawl-runs-content {
+    margin-top: -4px;
+  }
+}
+
 /* Health (admin 1c). Desktop is 03/health-desktop, the phone 03/health-mobile;
    copy that differs renders twice and the breakpoint picks one. Between 720
    and 1100 the boards draw nothing (gap G14): tiles go 2 by 2, columns stack. */

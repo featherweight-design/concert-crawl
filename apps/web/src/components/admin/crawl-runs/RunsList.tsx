@@ -409,6 +409,7 @@ export const LoadMoreFooter = ({
   failedLabel = COPY.loadMoreFailed,
   testId = 'runs-load-more',
   padding,
+  rule = true,
 }: {
   shown: number;
   step: number;
@@ -426,6 +427,12 @@ export const LoadMoreFooter = ({
    * Left out, the footer pads only its top.
    */
   padding?: string;
+  /**
+   * The divider above the row. A list whose last row already draws its own
+   * bottom rule (the phone cards) turns it off, so the board's single 1px
+   * rule isn't doubled (as Venues' fold row does on the phone).
+   */
+  rule?: boolean;
 }) => (
   <div
     data-testid={testId}
@@ -435,7 +442,7 @@ export const LoadMoreFooter = ({
       flexWrap: 'wrap',
       gap: 12,
       ...(padding === undefined ? { paddingTop: 12 } : { padding }),
-      borderTop: '1px solid var(--border)',
+      ...(rule && { borderTop: '1px solid var(--border)' }),
     }}
   >
     <span style={{ fontSize: 12.5, color: 'var(--fg-subtle)' }}>
