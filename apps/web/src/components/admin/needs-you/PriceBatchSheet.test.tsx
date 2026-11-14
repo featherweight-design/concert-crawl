@@ -44,6 +44,8 @@ const submission = (
   priceMin: '44',
   priceMax: null,
   handle: 'fan',
+  avatarColor: null,
+  avatarSecondColor: null,
   backedBy: 2,
   state: 'waiting',
   ticketUrl: null,

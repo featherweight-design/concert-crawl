@@ -3,6 +3,7 @@
  * contract as the Prices page's other calls (Clerk token through `call`,
  * payloads narrowed with guards so a shape drift fails into Couldn't load).
  */
+import { AVATAR_COLORS, type AvatarColor } from '@concert-crawl/types';
 import {
   call,
   isCount,
@@ -29,10 +30,20 @@ export interface SubmittedRow {
   priceMax: string | null;
   /** The fan's @handle without the "@"; null when they have none. */
   handle: string | null;
+  /** The fan's own avatar pair; null until they pick one. */
+  avatarColor: AvatarColor | null;
+  avatarSecondColor: AvatarColor | null;
   backedBy: number;
   state: SubmissionState;
   ticketUrl: string | null;
 }
+
+const isAvatarColor = (value: unknown): value is AvatarColor =>
+  AVATAR_COLORS.some((colour) => colour === value);
+
+/** A colour the client doesn't know (or an older API's absent one) is null. */
+const colourOrNull = (value: unknown): AvatarColor | null =>
+  isAvatarColor(value) ? value : null;
 
 export interface StateCounts {
   all: number;
@@ -67,6 +78,8 @@ const rowFrom = (value: unknown): SubmittedRow | null => {
     priceMin: value['priceMin'],
     priceMax: value['priceMax'],
     handle: value['handle'],
+    avatarColor: colourOrNull(value['avatarColor']),
+    avatarSecondColor: colourOrNull(value['avatarSecondColor']),
     backedBy: value['backedBy'],
     state: value['state'],
     ticketUrl: value['ticketUrl'],

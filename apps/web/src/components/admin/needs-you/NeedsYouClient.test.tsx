@@ -358,6 +358,8 @@ describe('NeedsYouClient', () => {
       priceMin: '30',
       priceMax: null,
       handle: 'fan',
+      avatarColor: null,
+      avatarSecondColor: null,
       backedBy: 2,
       state: 'waiting',
       ticketUrl: null,
