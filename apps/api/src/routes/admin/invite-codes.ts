@@ -485,13 +485,16 @@ inviteCodesAdminRouter.get(
       profiles.map((profile) => [profile.userId, profile]),
     );
 
-    const data: InviteCodeRedemption[] = page.map((person) => ({
-      userId: person.userId,
-      handle: profileOf.get(person.userId)?.handle ?? null,
-      role: roles.get(person.userId) ?? null,
-      redeemedAt: person.redeemedAt.toISOString(),
-      ...avatarOf(profileOf.get(person.userId)),
-    }));
+    const data: InviteCodeRedemption[] = page.map((person) => {
+      const profile = profileOf.get(person.userId);
+      return {
+        userId: person.userId,
+        handle: profile?.handle ?? null,
+        role: roles.get(person.userId) ?? null,
+        redeemedAt: person.redeemedAt.toISOString(),
+        ...avatarOf(profile),
+      };
+    });
     const body: InviteCodeRedemptionsResponse = { data, total };
     return ctx.json({ success: true, data: body });
   },
