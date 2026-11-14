@@ -1,3 +1,19 @@
+# [1.481.0](https://github.com/featherweight-design/concert-crawl/compare/v1.480.0...v1.481.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api,web:** return patched feedback from the transaction and skip no-op status ([31a0f22](https://github.com/featherweight-design/concert-crawl/commit/31a0f22887e9ac52f3b1b3318022310b5a0b4449))
+* **api:** build feedback's item columns lazily so db mocks still load ([37b340e](https://github.com/featherweight-design/concert-crawl/commit/37b340e831b0fba27cf9e85356d0e154e8ff205d))
+* **web:** focus the code field once the redeem settles, not while it is disabled ([fd6c42e](https://github.com/featherweight-design/concert-crawl/commit/fd6c42e557506924515e8eebc21e93ef3f8adbdf))
+* **web:** word past cancelled and delisted shows, hold passed sale pills ([39c0b37](https://github.com/featherweight-design/concert-crawl/commit/39c0b37243f57b7a4ec91478b0be382ef2138223))
+
+
+### Features
+
+* **db,api:** feedback kinds, resolved_by/at and To read/Done views (migration 0117) ([7277668](https://github.com/featherweight-design/concert-crawl/commit/72776684ad30bd37ff7e6057d49e80fbaac5ed4d))
+* **web:** correct a past show in the event editor ([49ba104](https://github.com/featherweight-design/concert-crawl/commit/49ba1041f11ab1e427e6957fcd47eb519f705295))
+
 # [1.480.0](https://github.com/featherweight-design/concert-crawl/compare/v1.479.0...v1.480.0) (2026-11-14)
 
 
