@@ -1,0 +1,154 @@
+[
+ {
+  "section": "01-postponed-last-seen",
+  "name": "postponed-passed-d",
+  "title": "Postponed past its date · From the crawl",
+  "note": "Last seen is the show’s last-seen time. “Still says Postponed” is gone: no status is kept per crawl.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "02-error-reports",
+  "name": "error-report-d",
+  "title": "Feedback · an error report",
+  "note": "One person’s report. No count; Sentry event id and Error ID as text with Copy.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "02-error-reports",
+  "name": "error-report-m",
+  "title": "Feedback · an error report, phone",
+  "note": "The same lines stacked.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "02-error-reports",
+  "name": "feedback-rulings",
+  "title": "Feedback panels · what was drawn, ruled",
+  "note": "Items 2 and 3, element by element.",
+  "w": 1480,
+  "h": 640
+ },
+ {
+  "section": "03-venue-suggestions",
+  "name": "suggestion-d",
+  "title": "Feedback · a venue suggestion",
+  "note": "The message is all we have. Start adding it and Mark done.",
+  "w": 1280,
+  "h": 700
+ },
+ {
+  "section": "03-venue-suggestions",
+  "name": "suggestion-start-d",
+  "title": "Start adding it · Add a venue, empty",
+  "note": "The message quoted above an empty Basics step.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "03-venue-suggestions",
+  "name": "suggestion-m",
+  "title": "Feedback · a venue suggestion, phone",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-feedback-rows",
+  "name": "feedback-rows-d",
+  "title": "Feedback · the list, hints redrawn",
+  "note": "Only Also in Needs you, on unread bugs, and the Screenshot mark.",
+  "w": 1280,
+  "h": 620
+ },
+ {
+  "section": "04-feedback-rows",
+  "name": "feedback-hints",
+  "title": "Feedback rows · each hint, ruled",
+  "note": "",
+  "w": 1380,
+  "h": 640
+ },
+ {
+  "section": "05-tour-name",
+  "name": "tour-name-d",
+  "title": "Event edit · Tour name, desktop",
+  "note": "In the Show card under Title, mid-edit.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "05-tour-name",
+  "name": "tour-name-states",
+  "title": "Event edit · Tour name, its states",
+  "note": "Empty, filled, changed.",
+  "w": 1180,
+  "h": 520
+ },
+ {
+  "section": "05-tour-name",
+  "name": "tour-name-m",
+  "title": "Event edit · Tour name, phone",
+  "note": "Same place, hint under the field.",
+  "w": 390,
+  "h": 1100
+ },
+ {
+  "section": "06-sold-out-evidence",
+  "name": "sold-out-mark-d",
+  "title": "Event edit · marking Sold out",
+  "note": "The form opens under the chips.",
+  "w": 1280,
+  "h": 1080
+ },
+ {
+  "section": "06-sold-out-evidence",
+  "name": "sold-out-confirm-d",
+  "title": "Event edit · Mark sold out, the dialog",
+  "note": "It notifies Watchers, so Save asks first.",
+  "w": 1280,
+  "h": 1080
+ },
+ {
+  "section": "06-sold-out-evidence",
+  "name": "sold-out-live-d",
+  "title": "Event edit · a live Sold out, its record",
+  "note": "Read-only, from a fan report.",
+  "w": 1280,
+  "h": 980
+ },
+ {
+  "section": "06-sold-out-evidence",
+  "name": "sold-out-states",
+  "title": "Sold-out evidence · every state",
+  "note": "Form, fan, admin, nothing recorded.",
+  "w": 1640,
+  "h": 640
+ },
+ {
+  "section": "06-sold-out-evidence",
+  "name": "sold-out-mark-m",
+  "title": "Event edit · marking Sold out, phone",
+  "note": "",
+  "w": 390,
+  "h": 1500
+ },
+ {
+  "section": "06-sold-out-evidence",
+  "name": "sold-out-confirm-m",
+  "title": "Event edit · Mark sold out, phone sheet",
+  "note": "The dialog as a sheet.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-sold-out-evidence",
+  "name": "sold-out-live-m",
+  "title": "Event edit · a live Sold out, phone",
+  "note": "",
+  "w": 390,
+  "h": 1360
+ }
+]
