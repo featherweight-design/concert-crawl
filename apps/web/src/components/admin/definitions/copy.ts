@@ -4114,8 +4114,9 @@ export const ADMIN_COPY = {
     // an admin's Hide, the crawler's not-a-concert call and the artist
     // re-derive all land there, so the chip names no actor.
     hiddenReason: {
-      unsure: 'Hidden: unsure',
-      admin: 'Hidden',
+      // Drawn uppercase (`02/events-statuschip-d`).
+      unsure: 'Hidden · unsure',
+      admin: 'Hidden · by admin',
     },
     columns: {
       date: 'Date',

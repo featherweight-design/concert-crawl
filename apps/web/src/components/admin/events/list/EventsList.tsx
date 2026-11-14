@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Calendar, ExternalLink } from 'lucide-react';
+import { Calendar, ExternalLink, Eye } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { RowMenu, useIsPhone } from '@/components/admin/primitives';
 import { StatusChip } from '@/components/consumer/StatusChip';
@@ -25,38 +25,60 @@ const ellipsis: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-/**
- * The status chip, and for a hidden show a second Hidden chip with its reason
- * (4b#8: the status stays, Hidden is separate).
- */
-export const StatusChips = ({
+/** The show's one status, as the fan app's `StatusChip` (addendum 5, §2). */
+export const ShowStatusChip = ({
   row,
-  align = 'start',
 }: {
-  /** A list row or Event edit's detail: both carry these three. */
-  row: Pick<EventListRow, 'status' | 'hidden' | 'hiddenReason'>;
-  align?: 'start' | 'end';
+  /** A list row or Event edit's detail: both carry it. */
+  row: Pick<EventListRow, 'status'>;
 }) => (
-  <span
-    style={{
-      display: 'inline-flex',
-      flexWrap: 'wrap',
-      justifyContent: align === 'end' ? 'flex-end' : 'flex-start',
-      gap: 6,
-    }}
-  >
-    <StatusChip
-      status={STATUS_CHIP[row.status]}
-      label={COPY.status[row.status]}
-    />
-    {row.hidden && (
-      <StatusChip
-        status="hidden"
-        label={COPY.hiddenReason[row.hiddenReason ?? 'admin']}
-      />
-    )}
-  </span>
+  <StatusChip
+    status={STATUS_CHIP[row.status]}
+    label={COPY.status[row.status]}
+  />
 );
+
+/**
+ * Hidden is not a status (addendum 5, §2): a hidden show keeps its status
+ * chip and gets this muted tag under its title, "HIDDEN · UNSURE" or
+ * "HIDDEN · BY ADMIN" (`02/events-statuschip-d`, `-m`).
+ */
+export const HiddenTag = ({
+  row,
+}: {
+  row: Pick<EventListRow, 'hidden' | 'hiddenReason'>;
+}) =>
+  row.hidden ? (
+    <span
+      data-testid="hidden-tag"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        minWidth: 0,
+        color: 'var(--fg-subtle)',
+      }}
+    >
+      <Eye
+        size={12}
+        strokeWidth={1.6}
+        aria-hidden="true"
+        style={{ flex: 'none', display: 'block' }}
+      />
+      <span
+        style={{
+          ...MONO,
+          ...ellipsis,
+          fontSize: 9,
+          letterSpacing: '0.1em',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+        }}
+      >
+        {COPY.hiddenReason[row.hiddenReason ?? 'admin']}
+      </span>
+    </span>
+  ) : null;
 
 /** A table cell keeps one line; a phone card wraps the name, never cuts it. */
 const VenueLine = ({
@@ -216,12 +238,17 @@ const DesktopTable = ({ rows, when }: { rows: EventListRow[]; when: When }) => {
                 >
                   {row.title}
                 </div>
+                {row.hidden && (
+                  <div style={{ display: 'flex', marginTop: 2 }}>
+                    <HiddenTag row={row} />
+                  </div>
+                )}
               </td>
               <td style={td}>
                 <VenueLine row={row} size={22} />
               </td>
               <td style={td}>
-                <StatusChips row={row} />
+                <ShowStatusChip row={row} />
               </td>
               <td
                 style={{
@@ -283,6 +310,11 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)' }}>
           {row.title}
         </div>
+        {row.hidden && (
+          <div style={{ display: 'flex' }}>
+            <HiddenTag row={row} />
+          </div>
+        )}
         <VenueLine row={row} size={18} wrap />
       </div>
       <div
@@ -310,7 +342,7 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
             {countLine}
           </span>
         )}
-        <StatusChips row={row} align="end" />
+        <ShowStatusChip row={row} />
       </div>
     </>
   );

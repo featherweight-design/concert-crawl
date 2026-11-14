@@ -31,7 +31,7 @@ import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { MergeEventDialog } from '../editor/MergeEventDialog';
 import { PriceCard } from './PriceCard';
 import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
-import { StatusChips } from '../list/EventsList';
+import { HiddenTag, ShowStatusChip } from '../list/EventsList';
 import { fieldDate, fieldTime, isPast, type EventDetail } from './event-detail';
 
 const COPY = ADMIN_COPY.eventEdit;
@@ -172,7 +172,8 @@ const Header = ({
             marginTop: 8,
           }}
         >
-          <StatusChips row={detail} />
+          <ShowStatusChip row={detail} />
+          <HiddenTag row={detail} />
           <span style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
             {COPY.meta(metaDate(detail.date), detail.watchingCount)}
           </span>
