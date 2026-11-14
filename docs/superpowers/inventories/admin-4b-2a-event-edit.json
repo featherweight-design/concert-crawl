@@ -16,7 +16,8 @@
           "expectStatus": 200,
           "wait": "[data-testid=\"event-edit\"]"
         },
-        { "settle": 1200 }
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 1500 }
       ]
     },
     {
@@ -39,8 +40,10 @@
         {
           "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
           "expectStatus": 200,
-          "wait": "[data-testid=\"event-edit-menu\"]"
+          "wait": "[data-testid=\"event-edit\"]"
         },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 1000 },
         { "click": "[data-testid=\"event-edit-menu\"]" },
         { "wait": "[role=\"menu\"]", "settle": 400 }
       ]
@@ -54,7 +57,7 @@
           "expectStatus": 200,
           "wait": "[data-testid=\"event-edit\"]"
         },
-        { "settle": 1200 }
+        { "settle": 3000 }
       ]
     }
   ]
