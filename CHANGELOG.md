@@ -1,3 +1,15 @@
+# [1.439.0](https://github.com/featherweight-design/concert-crawl/compare/v1.438.0...v1.439.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** drop a failed answer's block when its item is left ([d0c2323](https://github.com/featherweight-design/concert-crawl/commit/d0c232347e560c0dbb536f463e3361c258d35a2f))
+
+
+### Features
+
+* **admin:** name the failed answer and show its block inside the open panel ([4eb0db4](https://github.com/featherweight-design/concert-crawl/commit/4eb0db4fae8d16983f9f95e87277aa43d87da466))
+
 # [1.438.0](https://github.com/featherweight-design/concert-crawl/compare/v1.437.0...v1.438.0) (2026-11-14)
 
 
