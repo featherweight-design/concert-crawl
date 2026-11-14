@@ -16,9 +16,12 @@ import {
   auditLog,
   notifications,
   venueFaultAcknowledgements,
-  costTracking,
 } from '@concert-crawl/db';
-import { calculateCost, type TokenUsage } from '@concert-crawl/crawler-core';
+import {
+  recordLlmCost,
+  VENUE_ABOUT_MODEL,
+  type TokenUsage,
+} from '@concert-crawl/crawler-core';
 import {
   and,
   count,
@@ -1259,9 +1262,10 @@ venuesAdminRouter.post(
 );
 
 /**
- * One `cost_tracking` row for a generate-about call, priced as the crawler
- * prices its Haiku calls. A failed write is logged, never the response's
- * failure: the admin's draft matters more than the ledger line.
+ * One `cost_tracking` row for a generate-about call, written through
+ * recordLlmCost at the rates of the model the call sends. A failed write is
+ * logged, never the response's failure: the admin's draft matters more than
+ * the ledger line.
  */
 const recordAboutCost = async (
   venueId: string,
@@ -1274,11 +1278,11 @@ const recordAboutCost = async (
       cacheReadTokens: usage?.cache_read_input_tokens ?? 0,
       cacheWriteTokens: usage?.cache_creation_input_tokens ?? 0,
     };
-    await db.insert(costTracking).values({
+    await recordLlmCost({
       service: 'venue-about',
-      costUsd: calculateCost(tokens).toFixed(6),
-      tokensUsed: String(tokens.inputTokens + tokens.outputTokens),
-      metadata: JSON.stringify({ venueId, ...tokens }),
+      usage: tokens,
+      model: VENUE_ABOUT_MODEL,
+      metadata: { venueId },
     });
   } catch (err) {
     apiLogger.warn(
@@ -1331,7 +1335,7 @@ Respond with only valid JSON, no markdown, no extra text.`;
     const anthropic = new Anthropic();
     const message = await anthropic.messages.create(
       {
-        model: 'claude-haiku-4-5',
+        model: VENUE_ABOUT_MODEL,
         max_tokens: 256,
         messages: [{ role: 'user', content: prompt }],
       },

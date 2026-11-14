@@ -10,7 +10,7 @@ export {
   IS_CONCERT_RULES,
 } from './lib/extractors/llm.js';
 export { calculateCost, MODEL_RATES, type PricedModelId } from './lib/cost.js';
-export { LLM_EXTRACTION_MODEL } from './lib/llm-models.js';
+export { LLM_EXTRACTION_MODEL, VENUE_ABOUT_MODEL } from './lib/llm-models.js';
 export {
   LLM_SERVICES,
   recordLlmCost,
