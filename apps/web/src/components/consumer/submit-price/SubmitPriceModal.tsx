@@ -7,10 +7,11 @@ import { ShieldCheck } from 'lucide-react';
 import { ModalShell } from '@/components/consumer/modal-shell';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { CCMark } from '@/components/brand/cc-mark';
+import { PriceRailMark } from '../price-rail/PriceRailMark';
 import { SPNumberField } from '../SPNumberField';
 import { ChipGroup } from '../ChipGroup';
 import { VendorField } from './VendorField';
+import { corroborationConfirmsRequired } from '@/lib/confirms-required';
 import { validateSubmission } from '@/lib/sp-policy';
 import {
   deriveSourceCategory,
@@ -267,6 +268,10 @@ export function SubmitPriceModal({
   onWithdrawSuccess,
 }: SubmitPriceModalProps) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  // How many confirms the new price needs, for the done screen's stub.
+  const confirmsNeeded = corroborationConfirmsRequired(date);
+  // What was just submitted, for the done screen's pending stub.
+  const [submittedRows, setSubmittedRows] = useState<SubmitPriceResult[]>([]);
 
   const [resolvedModalState, setModalState] =
     useState<ModalState>('loading-check');
@@ -548,7 +553,7 @@ export function SubmitPriceModal({
             (!patchResponse.success && patchResponse.error) || 'Edit failed',
           );
         }
-        onSuccess?.([
+        const editedRows = [
           {
             isEdit: true,
             id: existingSubmission.id,
@@ -560,7 +565,9 @@ export function SubmitPriceModal({
             howFound,
             sourceCategory: patchResponse.data.sourceCategory,
           },
-        ]);
+        ];
+        setSubmittedRows(editedRows);
+        onSuccess?.(editedRows);
         setModalState('success');
         return;
       }
@@ -616,19 +623,18 @@ export function SubmitPriceModal({
         );
       }
       if (rawResponse.success === true) {
-        onSuccess?.(
-          rawResponse.data.map((row) => ({
-            isEdit: false,
-            id: row.id,
-            priceMin: row.priceMin,
-            priceMax: row.priceMax,
-            tier: row.tier,
-            vendor: row.vendor,
-            howFound: row.howFound,
-            sourceCategory: row.sourceCategory,
-          })),
-          rawResponse.submissionsRemaining,
-        );
+        const postedRows = rawResponse.data.map((row) => ({
+          isEdit: false,
+          id: row.id,
+          priceMin: row.priceMin,
+          priceMax: row.priceMax,
+          tier: row.tier,
+          vendor: row.vendor,
+          howFound: row.howFound,
+          sourceCategory: row.sourceCategory,
+        }));
+        setSubmittedRows(postedRows);
+        onSuccess?.(postedRows, rawResponse.submissionsRemaining);
       }
       setModalState('success');
     } catch (err) {
@@ -685,7 +691,7 @@ export function SubmitPriceModal({
 
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <CCMark size={22} />
+      <PriceRailMark />
       <div style={{ flex: 1, minWidth: 0 }}>
         <PriceHeaderRail state={modalState} />
       </div>
@@ -698,12 +704,12 @@ export function SubmitPriceModal({
           cursor: 'pointer',
           width: 30,
           height: 30,
-          borderRadius: 8,
+          borderRadius: 9,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: 'var(--fg-muted)',
-          border: '1px solid var(--border)',
+          border: '1px solid var(--border-strong)',
         }}
       >
         <CloseIcon />
@@ -750,6 +756,7 @@ export function SubmitPriceModal({
       onClose={onClose}
       ariaLabel={CONSUMER_COPY.submitPrice.modal.ariaLabel}
       sheetHeight={isShort ? 'short' : 'tall'}
+      desktopTopEdge
       header={header}
       footer={footer}
     >
@@ -770,7 +777,13 @@ export function SubmitPriceModal({
         </div>
       )}
 
-      {modalState === 'success' && <SuccessState onClose={onClose} />}
+      {modalState === 'success' && (
+        <SuccessState
+          onClose={onClose}
+          rows={submittedRows}
+          confirmsNeeded={confirmsNeeded}
+        />
+      )}
 
       {modalState === 'error' && (
         <ErrorState
@@ -1126,7 +1139,105 @@ export function SubmitPriceModal({
 
 // ── Sub-views ────────────────────────────────────────────────────────────────
 
-function SuccessState({ onClose }: { onClose: () => void }) {
+// The pending stub on the done screen (B+ more-p-submit_done_m): the price just
+// sent with its confirm dots, all hollow because nothing has confirmed it yet.
+function PendingStub({
+  row,
+  confirmsNeeded,
+}: {
+  row: SubmitPriceResult;
+  confirmsNeeded: number;
+}) {
+  const copy = CONSUMER_COPY.submitPrice.success.stub;
+  const price =
+    row.priceMax !== null && Number(row.priceMax) > Number(row.priceMin)
+      ? `$${Number(row.priceMin)}–$${Number(row.priceMax)}`
+      : `$${Number(row.priceMin)}`;
+  const vendor =
+    row.vendor === 'VenueBoxOffice' ? 'Venue box office' : row.vendor;
+  return (
+    <div
+      data-testid="pending-stub"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        padding: '16px 18px',
+        borderRadius: 14,
+        border:
+          '1px dashed color-mix(in oklab, var(--signal) 55%, transparent)',
+        background: 'var(--bg)',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 900,
+          fontSize: 32,
+          letterSpacing: '-0.03em',
+          color: 'var(--fg)',
+          lineHeight: 1,
+        }}
+      >
+        {price}
+      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {copy.meta(row.tier, vendor)}
+        </span>
+        <span
+          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+          data-testid="pending-stub-status"
+        >
+          <span aria-hidden="true" style={{ display: 'flex', gap: 6 }}>
+            {Array.from({ length: confirmsNeeded }, (_, index) => (
+              <span
+                key={index}
+                data-testid="pending-stub-dot"
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  border: '1.5px solid var(--price-text-signal)',
+                }}
+              />
+            ))}
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--price-text-signal)',
+              fontWeight: 600,
+            }}
+          >
+            {copy.status(confirmsNeeded)}
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SuccessState({
+  onClose,
+  rows,
+  confirmsNeeded,
+}: {
+  onClose: () => void;
+  rows: SubmitPriceResult[];
+  confirmsNeeded: number;
+}) {
   return (
     <div
       style={{
@@ -1157,6 +1268,9 @@ function SuccessState({ onClose }: { onClose: () => void }) {
       >
         {CONSUMER_COPY.submitPrice.success.body}
       </div>
+      {rows.map((row) => (
+        <PendingStub key={row.id} row={row} confirmsNeeded={confirmsNeeded} />
+      ))}
       <div
         style={{
           display: 'flex',
@@ -1198,7 +1312,6 @@ function ErrorState({
         padding: '8px 0',
       }}
     >
-      <StatusRail tone="error" />
       <div
         style={{
           fontSize: 30,
@@ -1231,7 +1344,7 @@ function ErrorState({
         <PrimaryButton onClick={onReset}>
           {CONSUMER_COPY.submitPrice.error.tryAgainButton}
         </PrimaryButton>
-        <GhostButton onClick={onClose}>
+        <GhostButton outlined onClick={onClose}>
           {CONSUMER_COPY.submitPrice.error.closeButton}
         </GhostButton>
       </div>
@@ -1338,32 +1451,32 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
       : isDone
         ? CONSUMER_COPY.submitPrice.header.code.alreadySubmitted
         : CONSUMER_COPY.submitPrice.header.code.open;
-  const pulse =
-    state === 'form' || state === 'submitting' || state === 'loading-check';
-
   return (
     <div
+      data-testid="submit-rail"
       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
     >
+      {/* A still dot with a faint halo, in the state's colour (the boards draw
+          no pulse). */}
       <span
+        aria-hidden="true"
         style={{
-          width: 6,
-          height: 6,
-          borderRadius: 6,
+          width: 10,
+          height: 10,
+          borderRadius: '50%',
           background: accent,
           flexShrink: 0,
-          boxShadow: pulse ? `0 0 8px ${accent}` : 'none',
-          animation: pulse ? 'fbPulse 1.6s ease-in-out infinite' : 'none',
+          boxShadow: `0 0 0 3px color-mix(in oklab, ${accent} 22%, transparent)`,
         }}
       />
       <span
         style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: accent,
-          letterSpacing: '0.16em',
+          fontSize: 11,
+          color: 'var(--fg-muted)',
+          letterSpacing: '0.12em',
           textTransform: 'uppercase',
-          fontWeight: 700,
+          fontWeight: 600,
           whiteSpace: 'nowrap',
         }}
       >
@@ -1371,61 +1484,17 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
       </span>
       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
       <span
+        data-testid="submit-rail-code"
         style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: 'var(--fg-subtle)',
-          letterSpacing: '0.14em',
+          fontSize: 11,
+          color: accent,
+          letterSpacing: '0.12em',
           textTransform: 'uppercase',
           fontWeight: 700,
         }}
       >
         {code}
-      </span>
-    </div>
-  );
-}
-
-function StatusRail({ tone }: { tone: 'error' }) {
-  const accent = tone === 'error' ? 'var(--warning)' : 'var(--signal)';
-  return (
-    <div
-      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
-    >
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: 6,
-          background: accent,
-          flexShrink: 0,
-        }}
-      />
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: accent,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          fontWeight: 700,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {CONSUMER_COPY.submitPrice.statusRail.errorLabel}
-      </span>
-      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: 'var(--fg-subtle)',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          fontWeight: 700,
-        }}
-      >
-        {CONSUMER_COPY.submitPrice.statusRail.errorCode}
       </span>
     </div>
   );
@@ -1454,9 +1523,11 @@ function PrimaryButton({
         height: 48,
         width: '100%',
         boxSizing: 'border-box',
-        background: 'var(--signal)',
+        // The boards draw every filled button as the signal-to-pink gradient
+        // at radius 12 (more-p-submit_m, _done_m, _error_m).
+        background: 'linear-gradient(90deg, var(--signal), var(--cta-end))',
         color: 'var(--fg-on-accent)',
-        borderRadius: 10,
+        borderRadius: 12,
         fontFamily: 'var(--font-ui)',
         fontWeight: 800,
         fontSize: 14.5,
@@ -1476,9 +1547,11 @@ const SubmitButton = PrimaryButton;
 function GhostButton({
   children,
   onClick,
+  outlined = false,
 }: {
   children: React.ReactNode;
   onClick: () => void;
+  outlined?: boolean;
 }) {
   return (
     <button
@@ -1493,11 +1566,13 @@ function GhostButton({
         width: '100%',
         boxSizing: 'border-box',
         height: 44,
-        borderRadius: 10,
-        color: 'var(--fg-muted)',
+        borderRadius: outlined ? 12 : 10,
+        // Only the error board draws it outlined (more-p-error_m's Close).
+        ...(outlined ? { border: '1px solid var(--border-strong)' } : {}),
+        color: outlined ? 'var(--fg)' : 'var(--fg-muted)',
         fontFamily: 'var(--font-ui)',
         fontWeight: 700,
-        fontSize: 13,
+        fontSize: outlined ? 14 : 13,
         letterSpacing: '-0.005em',
         textAlign: 'center',
       }}

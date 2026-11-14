@@ -305,7 +305,8 @@ export const CONSUMER_COPY = {
     },
     header: {
       eyebrow: {
-        error: 'Hmm · stalled',
+        // One rail on the error screen, drawn in the header (more-p-error_m).
+        error: "Didn't save · price channel",
         success: 'Got it · submitted',
         alreadySubmitted: 'Already submitted',
         open: 'Community prices · open',
@@ -331,15 +332,15 @@ export const CONSUMER_COPY = {
       footerNote: 'Anonymous to other fans. Three prices per show per 24h.',
       submitButton: 'Submit price',
     },
-    statusRail: {
-      errorLabel: "Didn't save · price channel",
-      // No number: see feedback.modal.statusRail.errorCode.
-      errorCode: 'ERR',
-    },
     success: {
       heading: 'Got it.',
       body: 'Your price is pending. Once other fans confirm it, it goes live and you get some cred.',
       backButton: 'Back to show',
+      // The pending stub under the body (B+ more-p-submit_done_m)
+      stub: {
+        meta: (tier: string, vendor: string) => `${tier} · ${vendor}`,
+        status: (needed: number) => `Pending · 0 of ${needed}`,
+      },
     },
     error: {
       heading: 'Didn’t go through.',

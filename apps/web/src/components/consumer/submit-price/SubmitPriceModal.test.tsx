@@ -998,3 +998,74 @@ describe('SubmitPriceModal — edit mode PATCH (#832)', () => {
     });
   });
 });
+
+// B+ done and error screens (more-p-submit_done_m, more-p-error_m).
+describe('SubmitPriceModal — B+ done and error screens', () => {
+  const mockSecondResponse = (second: unknown, ok = true) => {
+    let callCount = 0;
+    global.fetch = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok,
+        status: ok ? 200 : 500,
+        json: async () => second,
+      });
+    });
+  };
+
+  it('draws the pending stub: the price, tier and vendor, and hollow confirm dots', async () => {
+    mockSecondResponse({
+      success: true,
+      submissionsRemaining: 2,
+      data: [
+        {
+          id: 'new-1',
+          priceMin: '44',
+          priceMax: null,
+          tier: 'GA',
+          vendor: 'Ticketmaster',
+          howFound: 'standard_ticket',
+          sourceCategory: 'standard',
+        },
+      ],
+    });
+    render(<SubmitPriceModal {...defaultProps} />);
+    await fillForm();
+    fireEvent.click(screen.getByText('Submit price'));
+    await waitFor(() =>
+      expect(screen.getByTestId('pending-stub')).toBeTruthy(),
+    );
+    const stub = screen.getByTestId('pending-stub');
+    expect(stub).toHaveTextContent('$44');
+    expect(stub).toHaveTextContent('GA · Ticketmaster');
+    // 2099 is not an imminent show, so it needs the standard two confirms.
+    expect(screen.getAllByTestId('pending-stub-dot')).toHaveLength(2);
+    expect(screen.getByTestId('pending-stub-status')).toHaveTextContent(
+      'Pending · 0 of 2',
+    );
+  });
+
+  it('draws one rail on the error screen, in the header', async () => {
+    mockSecondResponse({ error: 'Server error' }, false);
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
+    fireEvent.click(screen.getByText('Submit price'));
+    await waitFor(() =>
+      expect(screen.getByText('Didn’t go through.')).toBeTruthy(),
+    );
+    expect(screen.getAllByTestId('submit-rail')).toHaveLength(1);
+    expect(screen.getByTestId('submit-rail')).toHaveTextContent(
+      'Didn’t save · price channel',
+    );
+    expect(screen.getByTestId('submit-rail-code')).toHaveTextContent('ERR');
+  });
+});

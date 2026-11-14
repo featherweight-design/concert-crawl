@@ -25,6 +25,12 @@ interface ModalShellProps {
    * top edge, a soft glow on desktop and a dim without a blur.
    */
   surface?: 'default' | 'crew';
+  /**
+   * Draws the blue-to-pink top edge on the desktop dialog (the price sheets'
+   * boards, more-p-submit_d and more-p-check_d). Opt in: only the dialogs a
+   * board draws it on carry it. The phone sheet has its own edge already.
+   */
+  desktopTopEdge?: boolean;
   /** Desktop modal width in px (default 520). Wide surfaces (tier picker) pass more. */
   desktopWidth?: number;
   /**
@@ -47,6 +53,7 @@ export function ModalShell({
   children,
   sheetHeight = 'tall',
   surface = 'default',
+  desktopTopEdge = false,
   desktopWidth = 520,
   role = 'dialog',
   ariaLabelledBy,
@@ -282,6 +289,21 @@ export function ModalShell({
             overflow: 'hidden',
           }}
         >
+          {desktopTopEdge && !crew && (
+            <div
+              aria-hidden="true"
+              data-testid="modal-top-edge"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 2,
+                background:
+                  'linear-gradient(90deg, var(--signal), var(--accent))',
+              }}
+            />
+          )}
           {header != null && (
             <div
               style={{
