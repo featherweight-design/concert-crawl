@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { ChevronRight, Search, X } from 'lucide-react';
+import { ChevronRight, Search, Users, X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -13,19 +13,17 @@ import {
   EmptyState,
   Pagination,
   PersonAvatar,
-  StatusBadge,
   useIsPhone,
 } from '@/components/admin/primitives';
 import type { AvatarColor } from '@concert-crawl/types';
 import { codesApi, type ListedInviteCode } from '../invite-codes/codes-api';
 import { countPosters } from '../invite-codes/code-rules';
 import { PeopleTabs } from './PeopleTabs';
-import { PeopleRowsSkeleton } from './PeopleSkeleton';
+import { PeoplePhoneRowsSkeleton, PeopleRowsSkeleton } from './PeopleSkeleton';
 import { peopleApi, type AdminPerson, type PeoplePage } from './people-api';
 import {
   CHIPS,
   PAGE_SIZE,
-  ROLE_KIND,
   chipCount,
   codeNameFor,
   fetchPeople,
@@ -34,6 +32,7 @@ import {
   personHref,
   type Chip,
 } from './people-rules';
+import { RoleChip } from './RoleChip';
 
 const COPY = ADMIN_COPY.peoplePage;
 const MONO_HEAD: CSSProperties = {
@@ -183,10 +182,8 @@ const Handle = ({ person }: { person: AdminPerson }) => (
   </span>
 );
 
-const RoleChip = ({ person }: { person: AdminPerson }) => (
-  <StatusBadge kind={ROLE_KIND[person.role]} dot>
-    {COPY.roles[person.role]}
-  </StatusBadge>
+const PersonRoleChip = ({ person }: { person: AdminPerson }) => (
+  <RoleChip role={person.role}>{COPY.roles[person.role]}</RoleChip>
 );
 
 const ROW_LINK: CSSProperties = {
@@ -355,10 +352,11 @@ export function PeopleClient({ code }: { code: string | null }) {
   if (failed) {
     body = <CouldntLoad page={COPY.title} onRetry={() => void load()} />;
   } else if (result == null) {
-    body = <PeopleRowsSkeleton />;
+    body = isPhone ? <PeoplePhoneRowsSkeleton /> : <PeopleRowsSkeleton />;
   } else if (result.people.length === 0) {
     body = (
       <EmptyState
+        icon={Users}
         title={COPY.noResults.title}
         body={COPY.noResults.body}
         action={
@@ -391,23 +389,35 @@ export function PeopleClient({ code }: { code: string | null }) {
                 prefetch={false}
                 style={{ ...ROW_LINK, padding: '12px 0' }}
               >
-                <Avatar person={person} size={38} />
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <Handle person={person} />
-                  {active && (
-                    <span
-                      style={{
-                        ...CELL,
-                        display: 'block',
-                        fontSize: 12,
-                        marginTop: 2,
-                      }}
-                    >
-                      {COPY.active.phone(active)}
-                    </span>
-                  )}
+                {/* `07/people-mobile`: avatar to handle 10, text to chip 12. */}
+                <span
+                  data-testid="person-row-identity"
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <Avatar person={person} size={38} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <Handle person={person} />
+                    {active && (
+                      <span
+                        style={{
+                          ...CELL,
+                          display: 'block',
+                          fontSize: 12,
+                          marginTop: 2,
+                        }}
+                      >
+                        {COPY.active.phone(active)}
+                      </span>
+                    )}
+                  </span>
                 </span>
-                <RoleChip person={person} />
+                <PersonRoleChip person={person} />
               </Link>
             </li>
           );
@@ -461,7 +471,7 @@ export function PeopleClient({ code }: { code: string | null }) {
                   <Handle person={person} />
                 </span>
                 <span style={COLUMN.role}>
-                  <RoleChip person={person} />
+                  <PersonRoleChip person={person} />
                 </span>
                 <span style={{ ...CELL, ...COLUMN.joined }}>
                   {joinedLabel(person)}
@@ -469,9 +479,12 @@ export function PeopleClient({ code }: { code: string | null }) {
                 <span style={{ ...CELL, ...COLUMN.lastActive }}>
                   {lastActiveLabel(person.lastActiveAt, now)}
                 </span>
-                <span style={{ ...CELL, ...COLUMN.watching }}>
-                  {/* Blank when they're Watching nothing. */}
-                  {person.watching > 0 ? person.watching : null}
+                <span
+                  data-testid="person-watching"
+                  style={{ ...CELL, ...COLUMN.watching }}
+                >
+                  {/* `07/people` writes a zero as "0", never a blank. */}
+                  {person.watching}
                 </span>
                 <span aria-hidden style={CHEVRON_COLUMN}>
                   <ChevronRight size={14} />

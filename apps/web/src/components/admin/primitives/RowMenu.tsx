@@ -51,6 +51,8 @@ export const RowMenu = ({
   width = 320,
   triggerStyle,
   testId,
+  iconSize = 16,
+  iconStrokeWidth,
 }: {
   label: string;
   /** Marks the ⋯ as `testId` and each item as `testId-<key>`. */
@@ -60,6 +62,10 @@ export const RowMenu = ({
   width?: number;
   /** The person page draws its ⋯ as a 36px outlined button. */
   triggerStyle?: CSSProperties;
+  /** The ⋯ glyph's size; `07/person-mobile` draws a bare 18px one. */
+  iconSize?: number;
+  /** The ⋯ glyph's stroke; lucide's default (2) when left out. */
+  iconStrokeWidth?: number;
 }) => {
   // Where the menu opens, measured from the trigger. Fixed rather than
   // absolute, because a table scrolls inside its card and would clip it.
@@ -173,7 +179,12 @@ export const RowMenu = ({
           ...triggerStyle,
         }}
       >
-        <MoreHorizontal size={16} />
+        <MoreHorizontal
+          size={iconSize}
+          {...(iconStrokeWidth !== undefined && {
+            strokeWidth: iconStrokeWidth,
+          })}
+        />
       </button>
       {open && (
         <div
