@@ -3,28 +3,11 @@ import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type {
-  ApiProvider,
-  PlatformProbeResult,
-  VenueGuide,
-  VenuePlatform,
-  VenueWithCrawlHealth,
-} from '@concert-crawl/types';
+import type { VenueGuide, VenueWithCrawlHealth } from '@concert-crawl/types';
+import { updateVenue, generateVenueAbout } from '@/lib/actions/venues';
 import {
-  isVenuePlatform,
-  MIN_CRAWL_DELAY_MS,
-  platformRequiresVenueId,
-} from '@concert-crawl/types';
-import {
-  updateVenue,
-  generateVenueAbout,
-  probeVenuePlatform,
-} from '@/lib/actions/venues';
-import {
-  AdminButton,
   AdminTabs,
   MonoLabel,
-  StatusBadge,
   useIsPhone,
 } from '@/components/admin/primitives';
 import {
@@ -37,6 +20,7 @@ import { VenueHeader } from '@/components/admin/venues/VenueHeader';
 import { useRecrawl } from '@/components/admin/venues/useRecrawl';
 import { recrawlOff } from '@/components/admin/venues/venue-header-rules';
 import { OverviewTab } from '@/components/admin/venues/overview/OverviewTab';
+import { SourceTab } from '@/components/admin/venues/source/SourceTab';
 import type { OverviewData } from '@/components/admin/venues/overview/overview-data';
 import { RunsTab } from '@/components/admin/venues/runs/RunsTab';
 import type { RunsPage } from '@/components/admin/crawl-runs/run-data';
@@ -46,7 +30,6 @@ import {
   ia_isDark,
   identityFor,
 } from '@/components/consumer/identity-art/IdentityArt';
-import { WAIT_UNTIL_VALUES } from '@/components/admin/definitions/constants';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   GenerateField,
@@ -73,24 +56,6 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, '')
     .slice(0, 60);
 }
-
-// Platform probe (#665) — single-POST status machine, mirroring
-// OpsToolsSection's test-email pattern (idle | pending | done | error).
-type ProbeStatus =
-  | { kind: 'idle' }
-  | { kind: 'pending' }
-  | { kind: 'done'; result: PlatformProbeResult }
-  | { kind: 'error'; message: string };
-
-const probeReasonLabel = (
-  reason: 'missing_config' | 'fetch_error' | 'schema_error',
-): string => {
-  const reasons =
-    ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe.reasons;
-  if (reason === 'missing_config') return reasons.missingConfig;
-  if (reason === 'schema_error') return reasons.schemaError;
-  return reasons.fetchError;
-};
 
 // ── VD Primitives ─────────────────────────────────────────────
 
@@ -467,26 +432,6 @@ function VDSegToggle({
 
 // ── Other local helpers ───────────────────────────────────────
 
-function RobotsHint({ allowed }: { allowed: boolean | null }) {
-  if (allowed === null)
-    return (
-      <StatusBadge kind="neutral" variant="mono">
-        {ADMIN_COPY.venueDetailsClient.robots.unchecked}
-      </StatusBadge>
-    );
-  if (allowed)
-    return (
-      <StatusBadge kind="success" variant="mono">
-        {ADMIN_COPY.venueDetailsClient.robots.allowed}
-      </StatusBadge>
-    );
-  return (
-    <StatusBadge kind="danger" variant="mono">
-      {ADMIN_COPY.venueDetailsClient.robots.blocked}
-    </StatusBadge>
-  );
-}
-
 // ── Main component ───────────────────────────────────────────
 
 interface Props {
@@ -523,8 +468,7 @@ const VENUE_TAB_ITEMS = VENUE_TABS.map((key) => ({
   label: VENUE_TAB_LABEL[key],
 }));
 /** The fields a save can be refused on, and where each one lives. */
-type RefusedField =
-  'slug' | 'platformVenueId' | 'apiAccountId' | 'crawlWaitForSelector';
+type RefusedField = 'slug';
 const REFUSED_FIELD_HOME: Record<
   RefusedField,
   { tab: VenueTab; inputId: string; label: string }
@@ -533,23 +477,6 @@ const REFUSED_FIELD_HOME: Record<
     tab: 'details',
     inputId: 'edit-venue-slug',
     label: ADMIN_COPY.venueDetailsClient.fields.slug.label,
-  },
-  platformVenueId: {
-    tab: 'source',
-    inputId: 'edit-venue-platform-venue-id',
-    label:
-      ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
-        .label,
-  },
-  apiAccountId: {
-    tab: 'source',
-    inputId: 'edit-venue-api-account-id',
-    label: ADMIN_COPY.venueDetailsClient.fields.apiAccountId.label,
-  },
-  crawlWaitForSelector: {
-    tab: 'source',
-    inputId: 'edit-venue-wait-for-selector',
-    label: ADMIN_COPY.venueDetailsClient.fields.waitSelector.label,
   },
 };
 const venueTabId = (key: VenueTab) => `venue-tab-${key}`;
@@ -663,45 +590,19 @@ export function VenueDetailsClient({
   // Form refs (uncontrolled inputs)
   const nameRef = useRef<HTMLInputElement>(null);
   const slugRef = useRef<HTMLInputElement>(null);
-  const websiteUrlRef = useRef<HTMLInputElement>(null);
   const cityRef = useRef<HTMLInputElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
 
-  // Controlled state
+  // Controlled state. Source's fields (how the venue is read, the calendar
+  // page) live in `SourceTab` with its own save (3b part 6).
   const [nameVal, setNameVal] = useState(venue.name);
   const [slugVal, setSlugVal] = useState(venue.slug);
-  const [urlVal, setUrlVal] = useState(venue.websiteUrl);
   const [cityVal, setCityVal] = useState(venue.city);
   const [addressVal, setAddressVal] = useState(venue.address ?? '');
-  const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil);
-  const [waitForSelectorVal, setWaitForSelectorVal] = useState(
-    venue.crawlWaitForSelector ?? '',
-  );
   const [ticketVendorVal, setTicketVendorVal] = useState<string | null>(
     venue.ticketVendor ?? null,
   );
   const [priceUrlVal, setPriceUrlVal] = useState(venue.priceUrl ?? '');
-  const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
-    venue.crawlMode ?? null,
-  );
-  const [extractionStrategyVal, setExtractionStrategyVal] = useState<
-    'structured_data' | 'llm' | 'manual' | null
-  >(venue.extractionStrategy ?? null);
-  const [platformVal, setPlatformVal] = useState<VenuePlatform | null>(
-    venue.platform ?? null,
-  );
-  const [platformVenueIdVal, setPlatformVenueIdVal] = useState(
-    venue.platformVenueId ?? '',
-  );
-  const [apiProviderVal, setApiProviderVal] = useState<ApiProvider | null>(
-    venue.apiProvider ?? null,
-  );
-  const [apiAccountIdVal, setApiAccountIdVal] = useState(
-    venue.apiAccountId ?? '',
-  );
-  const [debugCaptureHtmlVal, setDebugCaptureHtmlVal] = useState(
-    venue.debugCaptureHtml,
-  );
   const [capacityVal, setCapacityVal] = useState<string>(
     venue.capacity != null ? String(venue.capacity) : '',
   );
@@ -715,32 +616,12 @@ export function VenueDetailsClient({
   const dirtyFields: string[] = [
     ...(nameVal !== venue.name ? ['Name'] : []),
     ...(slugVal !== venue.slug ? ['Slug'] : []),
-    ...(urlVal !== venue.websiteUrl ? ['URL'] : []),
     ...(cityVal !== venue.city ? ['City'] : []),
     ...(addressVal !== (venue.address ?? '') ? ['Address'] : []),
-    ...(waitUntilVal !== venue.crawlWaitUntil ? ['Wait until'] : []),
-    ...((waitForSelectorVal || null) !== venue.crawlWaitForSelector
-      ? ['Selector']
-      : []),
     ...(ticketVendorVal !== (venue.ticketVendor ?? null)
       ? ['Ticket vendor']
       : []),
     ...(priceUrlVal !== (venue.priceUrl ?? '') ? ['Price URL'] : []),
-    ...(crawlModeVal !== (venue.crawlMode ?? null) ? ['Fetch mode'] : []),
-    ...(extractionStrategyVal !== (venue.extractionStrategy ?? null)
-      ? ['Strategy']
-      : []),
-    ...(platformVal !== (venue.platform ?? null) ? ['Platform'] : []),
-    ...(platformVenueIdVal !== (venue.platformVenueId ?? '')
-      ? ['Platform venue ID']
-      : []),
-    ...(apiProviderVal !== (venue.apiProvider ?? null) ? ['API provider'] : []),
-    ...(apiAccountIdVal !== (venue.apiAccountId ?? '')
-      ? ['API account ID']
-      : []),
-    ...(debugCaptureHtmlVal !== venue.debugCaptureHtml
-      ? ['Debug capture']
-      : []),
     ...(capacityVal !== (venue.capacity != null ? String(venue.capacity) : '')
       ? ['Capacity']
       : []),
@@ -749,13 +630,6 @@ export function VenueDetailsClient({
     ...(neighborhoodVal !== (venue.neighborhood ?? '') ? ['Neighborhood'] : []),
   ];
   const isDirty = dirtyFields.length > 0;
-  const browserGateDirty =
-    (waitForSelectorVal.trim() || null) !== venue.crawlWaitForSelector ||
-    crawlModeVal !== (venue.crawlMode ?? null) ||
-    platformVal !== (venue.platform ?? null) ||
-    platformVenueIdVal.trim() !== (venue.platformVenueId ?? '') ||
-    apiProviderVal !== (venue.apiProvider ?? null) ||
-    apiAccountIdVal.trim() !== (venue.apiAccountId ?? '');
 
   const [saveState, setSaveState] = useState<
     'idle' | 'saving' | 'saved' | 'error'
@@ -763,9 +637,6 @@ export function VenueDetailsClient({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     slug?: string | undefined;
-    platformVenueId?: string | undefined;
-    apiAccountId?: string | undefined;
-    crawlWaitForSelector?: string | undefined;
   }>({});
 
   // Responsive breakpoint
@@ -793,54 +664,6 @@ export function VenueDetailsClient({
   const [generateError, setGenerateError] = useState<string | undefined>();
   const [capacityGenerated, setCapacityGenerated] = useState(false);
   const [neighborhoodGenerated, setNeighborhoodGenerated] = useState(false);
-
-  // Platform probe state (#665)
-  const [probeStatus, setProbeStatus] = useState<ProbeStatus>({ kind: 'idle' });
-
-  const runPlatformProbe = async () => {
-    // An id-bearing platform without a venue ID can only ever come back
-    // missing_config — short-circuit instead of burning a round-trip.
-    if (
-      platformRequiresVenueId(platformVal) &&
-      platformVenueIdVal.trim() === ''
-    ) {
-      setProbeStatus({
-        kind: 'done',
-        result: {
-          ok: false,
-          reason: 'missing_config',
-          error:
-            ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
-              .requiredError,
-        },
-      });
-      return;
-    }
-    setProbeStatus({ kind: 'pending' });
-    try {
-      const result = await probeVenuePlatform(venue.id, {
-        platform: platformVal,
-        platformVenueId: platformVenueIdVal.trim() || null,
-      });
-      if (!result.success || !result.data) {
-        setProbeStatus({
-          kind: 'error',
-          message:
-            result.error ??
-            ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
-              .requestFailed,
-        });
-        return;
-      }
-      setProbeStatus({ kind: 'done', result: result.data });
-    } catch (err) {
-      console.error('probeVenuePlatform failed', err);
-      setProbeStatus({
-        kind: 'error',
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
 
   async function handleGenerateAbout() {
     setGenerateState('loading');
@@ -886,21 +709,10 @@ export function VenueDetailsClient({
   function handleDiscard() {
     setNameVal(venue.name);
     setSlugVal(venue.slug);
-    setUrlVal(venue.websiteUrl);
     setCityVal(venue.city);
     setAddressVal(venue.address ?? '');
-    setWaitUntilVal(venue.crawlWaitUntil);
-    setWaitForSelectorVal(venue.crawlWaitForSelector ?? '');
     setTicketVendorVal(venue.ticketVendor ?? null);
     setPriceUrlVal(venue.priceUrl ?? '');
-    setCrawlModeVal(venue.crawlMode ?? null);
-    setExtractionStrategyVal(venue.extractionStrategy ?? null);
-    setPlatformVal(venue.platform ?? null);
-    setPlatformVenueIdVal(venue.platformVenueId ?? '');
-    setApiProviderVal(venue.apiProvider ?? null);
-    setApiAccountIdVal(venue.apiAccountId ?? '');
-    setProbeStatus({ kind: 'idle' });
-    setDebugCaptureHtmlVal(venue.debugCaptureHtml);
     setCapacityVal(venue.capacity != null ? String(venue.capacity) : '');
     setVenueTypeVal(venue.venueType ?? '');
     setAboutVal(venue.about ?? '');
@@ -910,7 +722,6 @@ export function VenueDetailsClient({
     setFieldErrors({});
     if (nameRef.current) nameRef.current.value = venue.name;
     if (slugRef.current) slugRef.current.value = venue.slug;
-    if (websiteUrlRef.current) websiteUrlRef.current.value = venue.websiteUrl;
     if (cityRef.current) cityRef.current.value = venue.city;
     if (addressRef.current) addressRef.current.value = venue.address ?? '';
   }
@@ -918,52 +729,20 @@ export function VenueDetailsClient({
   async function handleSave() {
     setSaveError(null);
     setFieldErrors({});
-
-    // Client-side guard mirroring the API's Zod refine: an id-bearing
-    // platform without a venue ID is unroutable, so block the save inline.
-    if (
-      platformRequiresVenueId(platformVal) &&
-      platformVenueIdVal.trim() === ''
-    ) {
-      refuseField(
-        'platformVenueId',
-        ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
-          .requiredError,
-      );
-      setSaveState('error');
-      return;
-    }
-
     setSaveState('saving');
 
+    // Only this bar's fields. Source's (how the venue is read, the calendar
+    // page) go through Source's own bar, and the crawl rules (request delay,
+    // robots.txt) are never sent: the API refuses them.
     const formData = new FormData();
     formData.set('name', nameVal.trim());
     formData.set('slug', slugVal.trim());
-    formData.set('websiteUrl', urlVal.trim());
     formData.set('city', cityVal.trim() || 'Denver');
     formData.set('address', addressVal.trim());
-    formData.set('crawlWaitUntil', waitUntilVal);
-    // The request delay is never sent: the crawl rules fix it and the API
-    // refuses it (3b ruling d).
     // `active` is left out on purpose: Pause and Activate own it. Resending the
     // value this page loaded with would let a stale tab reactivate a venue
-    // paused or removed since.
-    // Always sent: an empty value is how a cleared vendor reaches the API (a
-    // missing key now means "leave it", so skipping it could never clear one).
+    // paused or removed since. An empty vendor clears it.
     formData.set('ticketVendor', ticketVendorVal ?? '');
-    formData.set('extractionStrategy', extractionStrategyVal ?? '');
-    // The API re-checks the browser-mode selector rule whenever any of these
-    // fields is in the body, so send them only when one changed. Otherwise a
-    // pre-existing browser venue without a selector could never save anything.
-    if (browserGateDirty) {
-      formData.set('crawlWaitForSelector', waitForSelectorVal.trim());
-      formData.set('crawlMode', crawlModeVal ?? '');
-      formData.set('platform', platformVal ?? '');
-      formData.set('platformVenueId', platformVenueIdVal.trim());
-      formData.set('apiProvider', apiProviderVal ?? '');
-      formData.set('apiAccountId', apiAccountIdVal.trim());
-    }
-    formData.set('debugCaptureHtml', String(debugCaptureHtmlVal));
     formData.set('capacity', capacityVal.trim());
     formData.set('venueType', venueTypeVal.trim());
     formData.set('about', aboutVal.trim());
@@ -978,19 +757,6 @@ export function VenueDetailsClient({
             'slug',
             result.error ?? ADMIN_COPY.venueDetailsClient.errors.slugInUse,
           );
-        } else if (result.field === 'apiAccountId') {
-          refuseField(
-            'apiAccountId',
-            result.error ??
-              ADMIN_COPY.venueDetailsClient.fields.apiAccountId.errorRequired,
-          );
-        } else if (
-          (result.field === 'crawlWaitForSelector' ||
-            result.field === 'platformVenueId') &&
-          result.error !== undefined
-        ) {
-          // The API names the field and the rule; mark the input with it.
-          refuseField(result.field, result.error);
         } else {
           setSaveError(
             result.error ?? ADMIN_COPY.venueDetailsClient.errors.saveFailed,
@@ -1225,50 +991,8 @@ export function VenueDetailsClient({
               </VDField>
             </div>
 
-            {/* Source URL */}
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.sourceUrl.label}
-              htmlFor="edit-venue-url"
-              labelRight={<RobotsHint allowed={venue.robotsTxtAllowed} />}
-              hint={ADMIN_COPY.venueDetailsClient.fields.sourceUrl.hint}
-            >
-              {/* The header's View on site opens our page (3a 4a), so the
-                  venue's own site stays reachable here until 3b's Source tab
-                  owns it. */}
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <VDInput
-                  id="edit-venue-url"
-                  type="url"
-                  inputRef={websiteUrlRef}
-                  defaultValue={venue.websiteUrl}
-                  disabled={isDisabled}
-                  onChange={(evt) => setUrlVal(evt.target.value)}
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    flex: 1,
-                  }}
-                />
-                {isSafeHttpUrl(urlVal) && (
-                  <a
-                    href={urlVal}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={
-                      ADMIN_COPY.venueDetailsClient.fields.sourceUrl.openLabel
-                    }
-                    data-testid="venue-source-url-open"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: 'var(--fg-muted)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <ExternalLink size={14} />
-                  </a>
-                )}
-              </div>
-            </VDField>
+            {/* The calendar page (`website_url`) is Source's now (3b part
+                6), saved by Source's own bar. */}
 
             {/* Street address */}
             <VDField
@@ -1814,661 +1538,9 @@ export function VenueDetailsClient({
       </VenueTabPanel>
 
       <VenueTabPanel tab="source" active={tab}>
-        {/* 03 · crawl config */}
-        <VDSection
-          eyebrow={ADMIN_COPY.venueDetailsClient.sections.crawlConfig.eyebrow}
-          title={ADMIN_COPY.venueDetailsClient.sections.crawlConfig.title}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-              gap: 16,
-              alignItems: 'start',
-              // #1076 — grid columns default to `min-width: auto`, so
-              // intrinsically-sized descendants (e.g. an input's placeholder
-              // or a `JetBrains Mono` value string) can push a track wider
-              // than 1fr and shove children past the VDSection's overflow-
-              // hidden edge. Force both tracks to shrink and let the width:
-              // 100% inputs actually respect their container.
-              minWidth: 0,
-            }}
-          >
-            {/* Left column */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
-                minWidth: 0,
-              }}
-            >
-              {/* Platform routing (#721/#665) — sits BEFORE Extraction
-                  Strategy because it overrides it when set */}
-              <VDField
-                label={
-                  ADMIN_COPY.venueDetailsClient.fields.platformRouting.platform
-                    .label
-                }
-                htmlFor="edit-venue-platform"
-                description={
-                  ADMIN_COPY.venueDetailsClient.fields.platformRouting.help
-                }
-              >
-                <VDSelect
-                  id="edit-venue-platform"
-                  value={platformVal ?? ''}
-                  disabled={isDisabled}
-                  onChange={(evt) => {
-                    const nextPlatform = isVenuePlatform(evt.target.value)
-                      ? evt.target.value
-                      : null;
-                    setPlatformVal(nextPlatform);
-                    // Switching to a platform that takes no venue ID drops a
-                    // stale one rather than leaving it in a hidden field.
-                    if (!platformRequiresVenueId(nextPlatform)) {
-                      setPlatformVenueIdVal('');
-                    }
-                    setProbeStatus({ kind: 'idle' });
-                    setFieldErrors((prev) => ({
-                      ...prev,
-                      platformVenueId: undefined,
-                    }));
-                  }}
-                >
-                  <option value="">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                        .platform.auto
-                    }
-                  </option>
-                  <option value="aeg">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                        .platform.aeg
-                    }
-                  </option>
-                  <option value="livenation">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                        .platform.livenation
-                    }
-                  </option>
-                  <option value="detail-page">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                        .platform.detailPage
-                    }
-                  </option>
-                </VDSelect>
-              </VDField>
-
-              {/* detail-page (#1295) addresses the venue by its own
-                  websiteUrl, so it has no ID to collect */}
-              {platformRequiresVenueId(platformVal) && (
-                <VDField
-                  label={
-                    ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                      .platformVenueId.label
-                  }
-                  htmlFor="edit-venue-platform-venue-id"
-                  hint={
-                    platformVal === 'livenation'
-                      ? ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                          .platformVenueId.livenationHint
-                      : ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                          .platformVenueId.aegHint
-                  }
-                  {...(fieldErrors.platformVenueId
-                    ? { error: fieldErrors.platformVenueId }
-                    : {})}
-                >
-                  <VDInput
-                    id="edit-venue-platform-venue-id"
-                    value={platformVenueIdVal}
-                    placeholder={
-                      platformVal === 'livenation'
-                        ? ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                            .platformVenueId.livenationPlaceholder
-                        : ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                            .platformVenueId.aegPlaceholder
-                    }
-                    disabled={isDisabled}
-                    hasError={Boolean(fieldErrors.platformVenueId)}
-                    onChange={(evt) => {
-                      setPlatformVenueIdVal(evt.target.value);
-                      // A probe result describes the ID it was run against —
-                      // editing the ID makes it stale
-                      setProbeStatus({ kind: 'idle' });
-                      setFieldErrors((prev) => ({
-                        ...prev,
-                        platformVenueId: undefined,
-                      }));
-                    }}
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  />
-                </VDField>
-              )}
-
-              {/* Probe platform fetch — dry-run of the CURRENT form values */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ alignSelf: 'flex-start' }}>
-                  <AdminButton
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    disabled={
-                      isDisabled ||
-                      probeStatus.kind === 'pending' ||
-                      platformVal === null
-                    }
-                    onClick={() => void runPlatformProbe()}
-                  >
-                    {probeStatus.kind === 'pending'
-                      ? ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                          .probe.buttonPending
-                      : ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                          .probe.button}
-                  </AdminButton>
-                </div>
-                {probeStatus.kind === 'done' && probeStatus.result.ok && (
-                  <div
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 11,
-                      color: 'var(--success)',
-                      lineHeight: 1.5,
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
-                        .okPrefix
-                    }{' '}
-                    {probeStatus.result.eventsFound}{' '}
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
-                        .okEvents
-                    }{' '}
-                    {probeStatus.result.fetchLatencyMs}ms ·{' '}
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
-                        .okSource
-                    }{' '}
-                    {probeStatus.result.sourceUrl}
-                  </div>
-                )}
-                {probeStatus.kind === 'done' && !probeStatus.result.ok && (
-                  <div
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 11,
-                      color: 'var(--warning)',
-                      lineHeight: 1.5,
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
-                        .failedPrefix
-                    }{' '}
-                    {probeReasonLabel(probeStatus.result.reason)} —{' '}
-                    {probeStatus.result.error}
-                  </div>
-                )}
-                {probeStatus.kind === 'error' && (
-                  <div
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 11,
-                      color: 'var(--danger)',
-                      lineHeight: 1.5,
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
-                        .requestFailed
-                    }
-                    : {probeStatus.message}
-                  </div>
-                )}
-              </div>
-
-              {/* API integration (#506/#505) — sits BEFORE Extraction
-                  Strategy because a provider bypasses the crawl cascade */}
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.apiProvider.label}
-                htmlFor="edit-venue-api-provider"
-                hint={ADMIN_COPY.venueDetailsClient.fields.apiProvider.hint}
-              >
-                <VDSelect
-                  id="edit-venue-api-provider"
-                  value={apiProviderVal ?? ''}
-                  disabled={isDisabled}
-                  onChange={(evt) => {
-                    // Map only supported option values so the union stays
-                    // narrow; anything unexpected collapses to None.
-                    const nextProvider: ApiProvider | null =
-                      evt.target.value === 'venuepilot' ? 'venuepilot' : null;
-                    setApiProviderVal(nextProvider);
-                    if (nextProvider === null) {
-                      setApiAccountIdVal('');
-                      setFieldErrors((prev) => ({
-                        ...prev,
-                        apiAccountId: undefined,
-                      }));
-                    }
-                  }}
-                >
-                  <option value="">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.apiProvider
-                        .optionNone
-                    }
-                  </option>
-                  <option value="venuepilot">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.apiProvider
-                        .optionVenuePilot
-                    }
-                  </option>
-                </VDSelect>
-              </VDField>
-
-              <div aria-live="polite">
-                {apiProviderVal !== null && (
-                  <VDField
-                    label={
-                      ADMIN_COPY.venueDetailsClient.fields.apiAccountId.label
-                    }
-                    htmlFor="edit-venue-api-account-id"
-                    hint={
-                      ADMIN_COPY.venueDetailsClient.fields.apiAccountId.hint
-                    }
-                    {...(fieldErrors.apiAccountId
-                      ? { error: fieldErrors.apiAccountId }
-                      : {})}
-                  >
-                    <VDInput
-                      id="edit-venue-api-account-id"
-                      value={apiAccountIdVal}
-                      disabled={isDisabled}
-                      hasError={Boolean(fieldErrors.apiAccountId)}
-                      onChange={(evt) => {
-                        setApiAccountIdVal(evt.target.value);
-                        if (fieldErrors.apiAccountId) {
-                          setFieldErrors((prev) => ({
-                            ...prev,
-                            apiAccountId: undefined,
-                          }));
-                        }
-                      }}
-                    />
-                  </VDField>
-                )}
-              </div>
-
-              {/* Extraction strategy */}
-              <VDField
-                label={
-                  ADMIN_COPY.venueDetailsClient.fields.extractionStrategy.label
-                }
-                htmlFor="edit-venue-extraction-strategy"
-              >
-                <VDSelect
-                  id="edit-venue-extraction-strategy"
-                  value={extractionStrategyVal ?? ''}
-                  disabled={isDisabled}
-                  onChange={(evt) =>
-                    setExtractionStrategyVal(
-                      (evt.target.value || null) as
-                        'structured_data' | 'llm' | 'manual' | null,
-                    )
-                  }
-                >
-                  <option value="">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.extractionStrategy
-                        .auto
-                    }
-                  </option>
-                  <option value="structured_data">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.extractionStrategy
-                        .structuredData
-                    }
-                  </option>
-                  <option value="llm">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.extractionStrategy
-                        .llm
-                    }
-                  </option>
-                  <option value="manual">
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.extractionStrategy
-                        .manual
-                    }
-                  </option>
-                </VDSelect>
-              </VDField>
-
-              {/* Request delay: read-only, fixed by the crawl rules (3b
-                  ruling d). Shows the stored value; the save never sends it. */}
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.requestDelay.label}
-                htmlFor="edit-venue-crawl-delay"
-                hint={ADMIN_COPY.venueDetailsClient.fields.requestDelay.hint}
-              >
-                <div style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
-                  <VDInput
-                    id="edit-venue-crawl-delay"
-                    type="number"
-                    // The delay the crawler uses: a legacy row stored under
-                    // the floor is paced at the floor, so show that.
-                    value={Math.max(venue.crawlDelayMs, MIN_CRAWL_DELAY_MS)}
-                    readOnly
-                    style={{
-                      borderTopRightRadius: 0,
-                      borderBottomRightRadius: 0,
-                      borderRight: 'none',
-                    }}
-                  />
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 10px',
-                      background: 'var(--surface-1)',
-                      border: '1px solid var(--border-strong)',
-                      borderTopRightRadius: 8,
-                      borderBottomRightRadius: 8,
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'var(--fg-subtle)',
-                      letterSpacing: '0.04em',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {ADMIN_COPY.venueDetailsClient.fields.requestDelay.unit}
-                  </div>
-                </div>
-              </VDField>
-            </div>
-
-            {/* Right column */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
-                minWidth: 0,
-              }}
-            >
-              {/* Fetch mode */}
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.fetchMode.label}
-                htmlFor="edit-venue-crawl-mode"
-                labelAs="group"
-              >
-                <div style={{ alignSelf: 'flex-start' }}>
-                  <VDSegToggle
-                    id="edit-venue-crawl-mode"
-                    ariaLabelledBy="edit-venue-crawl-mode-label"
-                    options={[
-                      {
-                        value: 'auto',
-                        label:
-                          ADMIN_COPY.venueDetailsClient.fields.fetchMode
-                            .autoDetect,
-                      },
-                      {
-                        value: 'http',
-                        label:
-                          ADMIN_COPY.venueDetailsClient.fields.fetchMode
-                            .httpOnly,
-                      },
-                      {
-                        value: 'browser',
-                        label:
-                          ADMIN_COPY.venueDetailsClient.fields.fetchMode
-                            .browser,
-                      },
-                    ]}
-                    value={crawlModeVal ?? 'auto'}
-                    onChange={(val) =>
-                      setCrawlModeVal(
-                        val === 'auto' ? null : (val as 'http' | 'browser'),
-                      )
-                    }
-                    disabled={isDisabled}
-                  />
-                </div>
-                <div
-                  style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 11,
-                    color: 'var(--fg-muted)',
-                    lineHeight: 1.5,
-                    marginTop: 4,
-                  }}
-                >
-                  {crawlModeVal === null && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>
-                        {
-                          ADMIN_COPY.venueDetailsClient.fields.fetchMode
-                            .autoDetect
-                        }
-                      </strong>{' '}
-                      —{' '}
-                      {
-                        ADMIN_COPY.venueDetailsClient.fields.fetchMode
-                          .autoDescription
-                      }
-                    </>
-                  )}
-                  {crawlModeVal === 'http' && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>
-                        {
-                          ADMIN_COPY.venueDetailsClient.fields.fetchMode
-                            .httpOnly
-                        }
-                      </strong>{' '}
-                      —{' '}
-                      {
-                        ADMIN_COPY.venueDetailsClient.fields.fetchMode
-                          .httpDescription
-                      }
-                    </>
-                  )}
-                  {crawlModeVal === 'browser' && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>
-                        {ADMIN_COPY.venueDetailsClient.fields.fetchMode.browser}
-                      </strong>{' '}
-                      —{' '}
-                      {
-                        ADMIN_COPY.venueDetailsClient.fields.fetchMode
-                          .browserDescription
-                      }
-                    </>
-                  )}
-                </div>
-              </VDField>
-
-              {/* Wait until — the page event Playwright waits for */}
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.waitUntil.label}
-                htmlFor="edit-venue-wait-until"
-                labelAs="group"
-                hint={
-                  // fetchPage navigates to domcontentloaded whenever a
-                  // selector is set, and HTTP-only never launches Playwright.
-                  crawlModeVal === 'http'
-                    ? ADMIN_COPY.venueDetailsClient.fields.waitUntil
-                        .ignoredHttpOnly
-                    : waitForSelectorVal.trim()
-                      ? ADMIN_COPY.venueDetailsClient.fields.waitUntil
-                          .ignoredWithSelector
-                      : ADMIN_COPY.venueDetailsClient.fields.waitUntil.hints[
-                          waitUntilVal
-                        ]
-                }
-              >
-                <div style={{ alignSelf: 'flex-start' }}>
-                  <VDSegToggle
-                    id="edit-venue-wait-until"
-                    ariaLabelledBy="edit-venue-wait-until-label"
-                    options={WAIT_UNTIL_VALUES.map((value) => ({
-                      value,
-                      label:
-                        ADMIN_COPY.venueDetailsClient.fields.waitUntil.options[
-                          value
-                        ],
-                    }))}
-                    value={waitUntilVal}
-                    onChange={(val) => {
-                      const match = WAIT_UNTIL_VALUES.find(
-                        (option) => option === val,
-                      );
-                      if (match) setWaitUntilVal(match);
-                    }}
-                    disabled={isDisabled}
-                  />
-                </div>
-              </VDField>
-
-              {/* Schedule — static (per-venue config tracked in #530) */}
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.schedule.label}
-                htmlFor="edit-venue-schedule"
-                labelRight={
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      color: 'var(--fg-subtle)',
-                    }}
-                  >
-                    {ADMIN_COPY.venueDetailsClient.fields.schedule.badge}
-                  </span>
-                }
-              >
-                <VDInput
-                  id="edit-venue-schedule"
-                  value={ADMIN_COPY.venueDetailsClient.fields.schedule.value}
-                  disabled
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                />
-              </VDField>
-
-              {/* Wait selector */}
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.waitSelector.label}
-                htmlFor="edit-venue-wait-for-selector"
-                labelRight={
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      color: 'var(--fg-subtle)',
-                    }}
-                  >
-                    {ADMIN_COPY.venueDetailsClient.fields.waitSelector.badge}
-                  </span>
-                }
-                hint={ADMIN_COPY.venueDetailsClient.fields.waitSelector.hint}
-                {...(fieldErrors.crawlWaitForSelector
-                  ? { error: fieldErrors.crawlWaitForSelector }
-                  : {})}
-              >
-                <VDInput
-                  id="edit-venue-wait-for-selector"
-                  value={waitForSelectorVal}
-                  placeholder={
-                    ADMIN_COPY.venueDetailsClient.fields.waitSelector
-                      .placeholder
-                  }
-                  disabled={isDisabled}
-                  hasError={Boolean(fieldErrors.crawlWaitForSelector)}
-                  onChange={(evt) => {
-                    setWaitForSelectorVal(evt.target.value);
-                    if (fieldErrors.crawlWaitForSelector) {
-                      setFieldErrors((prev) => ({
-                        ...prev,
-                        crawlWaitForSelector: undefined,
-                      }));
-                    }
-                  }}
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                />
-              </VDField>
-
-              {/* Debug · capture HTML */}
-              <VDField
-                label={
-                  ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml.label
-                }
-                htmlFor="edit-venue-debug-capture-html"
-                labelAs="group"
-                hint={
-                  ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml.hint
-                }
-                labelRight={
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      color: 'var(--warning)',
-                    }}
-                  >
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml
-                        .badge
-                    }
-                  </span>
-                }
-              >
-                <div style={{ alignSelf: 'flex-start' }}>
-                  <VDSegToggle
-                    id="edit-venue-debug-capture-html"
-                    ariaLabelledBy="edit-venue-debug-capture-html-label"
-                    options={[
-                      {
-                        value: 'off',
-                        label:
-                          ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml
-                            .off,
-                      },
-                      {
-                        value: 'on',
-                        label:
-                          ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml
-                            .on,
-                      },
-                    ]}
-                    value={debugCaptureHtmlVal ? 'on' : 'off'}
-                    onChange={(val) => setDebugCaptureHtmlVal(val === 'on')}
-                    disabled={isDisabled}
-                  />
-                </div>
-              </VDField>
-            </div>
-          </div>
-        </VDSection>
+        {/* Source has its own save (3b part 6); the page's bar never sends
+            its fields. */}
+        <SourceTab venue={venue} />
       </VenueTabPanel>
 
       <VenueTabPanel tab="guide" active={tab}>

@@ -842,8 +842,8 @@ export const ADMIN_COPY = {
     },
   },
 
-  // The venue page's Source tab (3b part 6). 6b-i adds it for the inert
-  // source rules; 6b-ii mounts the tab that reads the rest.
+  // The venue page's Source tab (3b part 6, `04/venue-source`, `G4/*`). The
+  // crawl rules are shown here and never edited (ruling d).
   venueSource: {
     read: {
       title: 'How we read it',
@@ -1303,10 +1303,6 @@ export const ADMIN_COPY = {
         eyebrow: '02 · ticketing',
         title: 'Where fans buy',
       },
-      crawlConfig: {
-        eyebrow: '03 · crawl config',
-        title: 'How the scraper hits this venue',
-      },
       editorial: {
         eyebrow: '04 · editorial',
         title: 'About · capacity · neighborhood',
@@ -1336,11 +1332,6 @@ export const ADMIN_COPY = {
         prefix: '/v/',
         regenerateTitle: 'Regenerate slug from name',
       },
-      sourceUrl: {
-        label: 'Source URL',
-        hint: 'The events page we crawl on the configured schedule.',
-        openLabel: 'Open the venue’s events page',
-      },
       city: 'City',
       address: {
         label: 'Street address',
@@ -1353,113 +1344,6 @@ export const ADMIN_COPY = {
         hint: "Default destination for the 'Buy tickets' button when an event has no per-show URL.",
         openTitle: 'Open ticket URL',
         placeholder: 'https://...',
-      },
-      platformRouting: {
-        heading: 'Platform routing',
-        help: 'Platform routing overrides Extraction Strategy — when a platform is set, events come from the platform feed instead of the crawl cascade.',
-        platform: {
-          label: 'Platform',
-          auto: 'Auto (no platform)',
-          aeg: 'AEG',
-          livenation: 'Live Nation',
-          detailPage: 'Detail pages (follow calendar links)',
-        },
-        platformVenueId: {
-          label: 'Platform venue ID',
-          aegHint:
-            "Events.json shard ID from aegwebprod.blob.core.windows.net/json/events/<shardId>/events.json — find this in the venue's calendar page HTML.",
-          livenationHint:
-            "Venue ID from the site's own calendar payload (e.g. KovZpZAE6eJA) — find it as venue.discovery_id in any event record on the venue's /shows/calendar/<YYYY-MM> page.",
-          aegPlaceholder: 'e.g. 89',
-          livenationPlaceholder: 'e.g. KovZpZAE6eJA',
-          requiredError: 'Platform venue ID is required when a platform is set',
-        },
-        probe: {
-          button: 'Probe platform fetch',
-          buttonPending: 'Probing…',
-          okPrefix: 'Probe OK —',
-          okEvents: 'events found in',
-          okSource: 'source:',
-          failedPrefix: 'Probe failed —',
-          reasons: {
-            missingConfig: 'missing config (set a platform + venue ID first)',
-            fetchError: 'fetch error',
-            schemaError: 'platform response did not match expected schema',
-          },
-          requestFailed: 'Probe request failed',
-        },
-      },
-      apiProvider: {
-        label: 'API provider',
-        hint: 'If this venue exposes a calendar API, pick the provider — we’ll skip crawling and pull events directly.',
-        optionNone: 'None',
-        optionVenuePilot: 'VenuePilot',
-      },
-      apiAccountId: {
-        label: 'API account ID',
-        hint: 'The venue’s identifier with the provider (e.g. VenuePilot venue ID).',
-        errorRequired:
-          'API account ID is required when an API provider is selected',
-      },
-      extractionStrategy: {
-        label: 'Extraction strategy',
-        auto: '— Auto —',
-        structuredData: 'structured — schema.org/Event',
-        llm: 'LLM — Claude Haiku extraction',
-        manual: 'manual — admin entry only',
-      },
-      requestDelay: {
-        label: 'Request delay',
-        hint: 'Fixed by the crawl rules. Shown, not editable.',
-        unit: 'ms',
-      },
-      fetchMode: {
-        label: 'Fetch mode',
-        autoDetect: 'Auto-detect',
-        httpOnly: 'HTTP only',
-        browser: 'Browser',
-        autoDescription:
-          'tries plain HTTP first; falls back to browser if needed.',
-        httpDescription: 'plain request. Fails if events need JavaScript.',
-        browserDescription:
-          'always uses Playwright. Required for JS-rendered pages.',
-      },
-      waitUntil: {
-        label: 'Wait until',
-        options: {
-          networkidle: 'Network idle',
-          load: 'Load',
-          domcontentloaded: 'DOM ready',
-        },
-        hints: {
-          networkidle:
-            'Waits until the network goes quiet. Times out on pages that keep polling or hold a connection open.',
-          load: "Waits for the page's load event. Use when network idle times out.",
-          domcontentloaded:
-            'Waits only for the HTML to parse. Fastest; may miss events added by scripts.',
-        },
-        ignoredWithSelector:
-          'Not used while a Wait selector is set: the page loads to DOM ready, then waits for the selector.',
-        ignoredHttpOnly:
-          'Not used in HTTP only mode, which never opens a browser.',
-      },
-      schedule: {
-        label: 'Schedule (cron)',
-        badge: 'Daily · 3 AM MT',
-        value: '0 3 * * *',
-      },
-      waitSelector: {
-        label: 'Wait selector',
-        badge: 'Optional',
-        hint: 'If set, Playwright waits for this selector before parsing.',
-        placeholder: 'e.g. .event-card, [data-event]',
-      },
-      debugCaptureHtml: {
-        label: 'Debug · capture HTML',
-        badge: 'Diagnostic',
-        hint: 'Logs the raw fetched HTML to crawler stdout on each run. Use when a venue serves a sparse or empty page — capture once, then disable.',
-        off: 'Off',
-        on: 'On',
       },
       about: {
         label: 'About',
@@ -1506,11 +1390,6 @@ export const ADMIN_COPY = {
       eventbrite: 'Eventbrite',
       venueBoxOffice: 'Venue Box Office',
       unknownValue: 'Unknown',
-    },
-    robots: {
-      unchecked: 'unchecked',
-      allowed: 'robots ok',
-      blocked: 'robots blocked',
     },
     dangerZone: {
       crawlPause: {

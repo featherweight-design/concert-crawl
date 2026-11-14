@@ -9,21 +9,18 @@ import {
   waitFor,
   cleanup,
 } from '@testing-library/react';
-import type {
-  PlatformProbeResult,
-  VenueWithCrawlHealth,
-} from '@concert-crawl/types';
+import type { VenueWithCrawlHealth } from '@concert-crawl/types';
 
 // ───── Mocks ─────────────────────────────────────────────────────────────────
 
-const mockProbeVenuePlatform = vi.fn();
+const mockUpdateVenue = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
-  updateVenue: vi.fn(),
+  updateVenue: (...args: unknown[]) => mockUpdateVenue(...args),
   pauseVenue: vi.fn(),
   activateVenue: vi.fn(),
   setVenueFeatured: vi.fn(),
   generateVenueAbout: vi.fn(),
-  probeVenuePlatform: (...args: unknown[]) => mockProbeVenuePlatform(...args),
+  probeVenuePlatform: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -56,8 +53,6 @@ vi.mock('@/components/admin/venues/VenueHeader', () => ({
   VenueHeader: () => null,
 }));
 
-// The page's one re-crawl and the Overview cards sit behind Clerk auth and
-// have their own suites.
 vi.mock('@/components/admin/venues/useRecrawl', () => ({
   useRecrawl: () => ({
     state: 'idle',
@@ -70,13 +65,9 @@ vi.mock('@/components/admin/venues/useRecrawl', () => ({
 vi.mock('@/components/admin/venues/overview/OverviewTab', () => ({
   OverviewTab: () => null,
 }));
-// The Runs tab fetches behind Clerk auth; it has its own suite.
 vi.mock('@/components/admin/venues/runs/RunsTab', () => ({
   RunsTab: () => null,
 }));
-
-// Reads triage over the network behind Clerk auth; these suites are about the
-// venue form, and there is no ClerkProvider around them.
 vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
   VenueExpectedBadge: () => null,
 }));
@@ -84,10 +75,8 @@ vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
 import { VenueDetailsClient } from './VenueDetailsClient';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const PLATFORM_COPY = ADMIN_COPY.venueDetailsClient.fields.platformRouting;
+const SAVE_LABEL = ADMIN_COPY.venueDetailsClient.saveBar.saveChanges;
 
-// jsdom has no window.matchMedia — VenueDetailsClient reads it for its
-// mobile breakpoint effect.
 const matchMediaStub = (query: string): MediaQueryList => ({
   matches: false,
   media: query,
@@ -98,8 +87,6 @@ const matchMediaStub = (query: string): MediaQueryList => ({
   removeEventListener: () => undefined,
   dispatchEvent: () => false,
 });
-
-// ───── Helpers ───────────────────────────────────────────────────────────────
 
 const buildVenue = (
   overrides: Partial<VenueWithCrawlHealth> = {},
@@ -156,36 +143,14 @@ const buildVenue = (
   ...overrides,
 });
 
-const platformSelect = (): HTMLSelectElement => {
-  const select = document.getElementById('edit-venue-platform');
-  if (!(select instanceof HTMLSelectElement)) {
-    throw new Error('Expected #edit-venue-platform to be a select');
-  }
-  return select;
-};
-
-const platformVenueIdInput = (): HTMLInputElement | null => {
-  const input = document.getElementById('edit-venue-platform-venue-id');
-  if (input !== null && !(input instanceof HTMLInputElement)) {
-    throw new Error('Expected #edit-venue-platform-venue-id to be an input');
-  }
-  return input;
-};
-
-const probeButton = (): HTMLButtonElement => {
-  const btn = screen.getByRole('button', { name: PLATFORM_COPY.probe.button });
-  if (!(btn instanceof HTMLButtonElement)) {
-    throw new Error('Expected probe button to be an HTMLButtonElement');
-  }
-  return btn;
-};
-
-// ───── Tests ─────────────────────────────────────────────────────────────────
-
-describe('VenueDetailsClient — platform routing (#721 #665)', () => {
+// The crawl config moved out of the page's one form into the Source tab, with
+// its own save (3b part 6). The page's bar must never send a Source field or a
+// crawl rule; SourceTab's own suite covers the tab.
+describe('VenueDetailsClient — Source is split out (3b part 6)', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
-    mockProbeVenuePlatform.mockReset();
+    mockUpdateVenue.mockReset();
+    mockUpdateVenue.mockResolvedValue({ success: true });
   });
 
   afterEach(() => {
@@ -193,240 +158,71 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders the platform select with Auto selected and no ID input by default', () => {
+  it('mounts the Source tab in the Source panel, with no old crawl config', () => {
     render(<VenueDetailsClient initialTab="source" venue={buildVenue()} />);
-
-    expect(platformSelect().value).toBe('');
-    expect(platformVenueIdInput()).toBeNull();
-    expect(probeButton().disabled).toBe(true);
-  });
-
-  it('shows the venue ID input when a platform is selected', () => {
-    render(<VenueDetailsClient initialTab="source" venue={buildVenue()} />);
-
-    fireEvent.change(platformSelect(), { target: { value: 'aeg' } });
-
-    const idInput = platformVenueIdInput();
-    expect(idInput).not.toBeNull();
-    expect(
-      screen.getByText(PLATFORM_COPY.platformVenueId.aegHint),
-    ).toBeTruthy();
-    expect(probeButton().disabled).toBe(false);
-  });
-
-  it('hides and clears the venue ID when switching back to Auto', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
-      />,
+    const sourcePanel = screen.getByTestId('venue-panel-source');
+    expect(sourcePanel.querySelector('[data-testid="venue-source"]')).not.toBe(
+      null,
     );
-
-    expect(platformVenueIdInput()?.value).toBe('89');
-
-    fireEvent.change(platformSelect(), { target: { value: '' } });
-    expect(platformVenueIdInput()).toBeNull();
-
-    // Re-selecting the platform starts from a cleared ID, not the stale one
-    fireEvent.change(platformSelect(), { target: { value: 'aeg' } });
-    expect(platformVenueIdInput()?.value).toBe('');
-  });
-
-  it('offers detail-page and collects no venue ID for it (#1435)', () => {
-    render(<VenueDetailsClient initialTab="source" venue={buildVenue()} />);
-
-    fireEvent.change(platformSelect(), { target: { value: 'detail-page' } });
-
-    expect(platformSelect().value).toBe('detail-page');
-    // The fetcher keys off websiteUrl, so there is nothing to enter — and the
-    // probe must still be reachable without an ID.
-    expect(platformVenueIdInput()).toBeNull();
-    expect(probeButton().disabled).toBe(false);
-  });
-
-  it('drops a stale venue ID when switching from AEG to detail-page', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
-      />,
-    );
-    expect(platformVenueIdInput()?.value).toBe('89');
-
-    fireEvent.change(platformSelect(), { target: { value: 'detail-page' } });
-    expect(platformVenueIdInput()).toBeNull();
-
-    fireEvent.change(platformSelect(), { target: { value: 'aeg' } });
-    expect(platformVenueIdInput()?.value).toBe('');
-  });
-
-  it('runs the probe: pending → done renders eventsFound and sourceUrl', async () => {
-    const okResult: PlatformProbeResult = {
-      ok: true,
-      eventsFound: 12,
-      fetchLatencyMs: 250,
-      sourceUrl: 'https://aegwebprod.blob.core.windows.net/json/events/89',
-    };
-    let resolveProbe: (value: {
-      success: boolean;
-      data?: PlatformProbeResult;
-      error?: string;
-    }) => void = () => undefined;
-    mockProbeVenuePlatform.mockReturnValue(
-      new Promise((resolve) => {
-        resolveProbe = resolve;
-      }),
-    );
-
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
-      />,
-    );
-
-    fireEvent.click(probeButton());
-
-    // Pending state: button swaps to the pending label and disables
-    const pendingButton = await screen.findByRole('button', {
-      name: PLATFORM_COPY.probe.buttonPending,
-    });
-    if (!(pendingButton instanceof HTMLButtonElement)) {
-      throw new Error('Expected pending probe button to be a button');
+    for (const id of [
+      'edit-venue-platform',
+      'edit-venue-crawl-delay',
+      'edit-venue-extraction-strategy',
+      'edit-venue-api-provider',
+      'edit-venue-debug-capture-html',
+      'edit-venue-url',
+    ]) {
+      expect(document.getElementById(id)).toBeNull();
     }
-    expect(pendingButton.disabled).toBe(true);
+  });
 
-    resolveProbe({ success: true, data: okResult });
+  it('the page’s save sends Details fields and no Source field or crawl rule', async () => {
+    render(
+      <VenueDetailsClient
+        initialTab="details"
+        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
+      />,
+    );
+    const address = document.getElementById('edit-venue-address');
+    if (!(address instanceof HTMLInputElement)) {
+      throw new Error('Expected #edit-venue-address to be an input');
+    }
+    fireEvent.change(address, { target: { value: '1 Colfax Ave' } });
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
 
-    await waitFor(() => {
-      expect(
-        screen.getByText((content) =>
-          content.includes(`12 ${PLATFORM_COPY.probe.okEvents} 250ms`),
-        ),
-      ).toBeTruthy();
-    });
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    const formData = mockUpdateVenue.mock.calls[0]?.[1];
+    if (!(formData instanceof FormData)) {
+      throw new Error('Expected updateVenue to receive a FormData');
+    }
+    expect(formData.get('address')).toBe('1 Colfax Ave');
+    for (const key of [
+      'websiteUrl',
+      'extractionStrategy',
+      'platform',
+      'platformVenueId',
+      'apiProvider',
+      'apiAccountId',
+      'crawlMode',
+      'crawlWaitUntil',
+      'crawlWaitForSelector',
+      'debugCaptureHtml',
+      'crawlDelayMs',
+      'robotsTxtAllowed',
+    ]) {
+      expect(formData.has(key)).toBe(false);
+    }
+  });
+
+  it('an edit in Source does not raise the page’s bar', () => {
+    render(<VenueDetailsClient initialTab="source" venue={buildVenue()} />);
+    fireEvent.change(
+      screen.getByLabelText(ADMIN_COPY.venueSource.read.calendarPage.label),
+      { target: { value: 'https://gothic.example/calendar' } },
+    );
+    expect(screen.queryByRole('button', { name: SAVE_LABEL })).toBeNull();
     expect(
-      screen.getByText(
-        new RegExp('aegwebprod\\.blob\\.core\\.windows\\.net/json/events/89'),
-      ),
+      screen.getByRole('button', { name: ADMIN_COPY.venueSource.saveBar.save }),
     ).toBeTruthy();
-    expect(mockProbeVenuePlatform).toHaveBeenCalledWith('venue-1', {
-      platform: 'aeg',
-      platformVenueId: '89',
-    });
-  });
-
-  it('renders the failure reason when the probe reports ok:false', async () => {
-    const failedResult: PlatformProbeResult = {
-      ok: false,
-      reason: 'fetch_error',
-      error: 'AEG feed returned 503',
-    };
-    mockProbeVenuePlatform.mockResolvedValue({
-      success: true,
-      data: failedResult,
-    });
-
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
-      />,
-    );
-
-    fireEvent.click(probeButton());
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(new RegExp(PLATFORM_COPY.probe.reasons.fetchError)),
-      ).toBeTruthy();
-    });
-    expect(screen.getByText(/AEG feed returned 503/)).toBeTruthy();
-  });
-
-  it('clears a probe result when the venue ID input changes', async () => {
-    mockProbeVenuePlatform.mockResolvedValue({
-      success: true,
-      data: {
-        ok: true,
-        eventsFound: 12,
-        fetchLatencyMs: 250,
-        sourceUrl: 'https://aegwebprod.blob.core.windows.net/json/events/89',
-      },
-    });
-
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
-      />,
-    );
-
-    fireEvent.click(probeButton());
-    await waitFor(() => {
-      expect(
-        screen.getByText((content) =>
-          content.includes(`12 ${PLATFORM_COPY.probe.okEvents}`),
-        ),
-      ).toBeTruthy();
-    });
-
-    const idInput = platformVenueIdInput();
-    if (!idInput) throw new Error('Expected the venue ID input to render');
-    fireEvent.change(idInput, { target: { value: '90' } });
-
-    expect(
-      screen.queryByText((content) =>
-        content.includes(`12 ${PLATFORM_COPY.probe.okEvents}`),
-      ),
-    ).toBeNull();
-  });
-
-  it('short-circuits to missing_config without a request when the ID is empty', async () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ platform: 'aeg', platformVenueId: null })}
-      />,
-    );
-
-    fireEvent.click(probeButton());
-
-    await waitFor(() => {
-      expect(
-        screen.getByText((content) =>
-          content.includes(PLATFORM_COPY.probe.reasons.missingConfig),
-        ),
-      ).toBeTruthy();
-    });
-    expect(
-      screen.getByText((content) =>
-        content.includes(PLATFORM_COPY.platformVenueId.requiredError),
-      ),
-    ).toBeTruthy();
-    expect(mockProbeVenuePlatform).not.toHaveBeenCalled();
-  });
-
-  it('renders the request-failed message when the action itself fails', async () => {
-    mockProbeVenuePlatform.mockResolvedValue({
-      success: false,
-      error: 'network down',
-    });
-
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
-      />,
-    );
-
-    fireEvent.click(probeButton());
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(new RegExp(PLATFORM_COPY.probe.requestFailed)),
-      ).toBeTruthy();
-    });
-    expect(screen.getByText(/network down/)).toBeTruthy();
   });
 });

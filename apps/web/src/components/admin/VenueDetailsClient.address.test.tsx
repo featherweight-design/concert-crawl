@@ -188,21 +188,22 @@ describe('VenueDetailsClient — street address field', () => {
   });
 
   // The header's View on site opens our page, so the venue's own site must
-  // stay one click away for crawl debugging (orchestrator, 3a 4a).
-  it('links to the venue website beside the Source URL', () => {
+  // stay one click away for crawl debugging (orchestrator, 3a 4a). It sits
+  // beside Source's Calendar page now (3b part 6).
+  it('links to the venue website beside the Calendar page', () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ websiteUrl: 'https://venue.example/events' })}
       />,
     );
 
-    const link = screen.getByTestId('venue-source-url-open');
+    const link = screen.getByRole('link', {
+      name: ADMIN_COPY.venueSource.read.calendarPage.open,
+    });
     expect(link.getAttribute('href')).toBe('https://venue.example/events');
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(link.getAttribute('aria-label')).toBe(
-      ADMIN_COPY.venueDetailsClient.fields.sourceUrl.openLabel,
-    );
   });
 
   it('sends the edited address to updateVenue on save', async () => {
