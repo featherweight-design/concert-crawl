@@ -23,6 +23,7 @@ import {
 import { EventsList } from './EventsList';
 import {
   EMPTY_FILTERS,
+  MAX_VENUE_FILTER,
   STATUS_FILTER_OPTIONS,
   eventsListHref,
   filtersFromParams,
@@ -67,8 +68,10 @@ export const EventsClient = () => {
 
   const filtersKey = eventsListHref(filters);
 
-  // The page on screen, with the filters it was loaded for, so Load more and
-  // the rows never mix one side's or one search's page with another's.
+  // The last page loaded, with the filters it was loaded for. Its rows are
+  // drawn only under those exact filters, and Load more only extends it
+  // there; its counts serve the chips while another load on the same side is
+  // in flight.
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -95,6 +98,8 @@ export const EventsClient = () => {
   const latestLoad = useRef(0);
   const load = useCallback(async () => {
     const mine = ++latestLoad.current;
+    // A failure belongs to the load that hit it; a new load starts clean.
+    setFailed(false);
     setLoadState('idle');
     setPending(true);
     try {
@@ -179,10 +184,15 @@ export const EventsClient = () => {
   };
 
   const past = filters.when === 'past';
-  // A page loaded for the other side is never drawn under this one.
+  // Rows are drawn only under the filters they were loaded for. The counts
+  // follow the side alone (the API scopes them to the side and the search),
+  // so the chips stay put while a filter change loads.
   const page =
-    loaded !== null && loaded.when === filters.when ? loaded.data : null;
-  const counts = page?.counts;
+    loaded !== null && loaded.key === filtersKey ? loaded.data : null;
+  const counts =
+    loaded !== null && loaded.when === filters.when
+      ? loaded.data.counts
+      : undefined;
 
   const header = (
     <header style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -313,6 +323,7 @@ export const EventsClient = () => {
         label={COPY.anyVenue}
         testId="venue-filter"
         search={COPY.findVenue}
+        max={MAX_VENUE_FILTER}
         all={shownCounts.all}
         selected={filters.venueIds}
         options={withTicked(shownCounts.byVenue)
@@ -351,7 +362,7 @@ export const EventsClient = () => {
   });
 
   // Past draws none of these (`06/past-shows`). On Upcoming they wait for
-  // this side's counts, which the skeleton below covers.
+  // this side's first counts, which the skeleton below covers.
   const filterChips =
     past || counts === undefined ? null : filterChipsFor(counts);
 
@@ -409,7 +420,7 @@ export const EventsClient = () => {
             Math.max(0, shownPage.total - shown),
           )}
           more={shown < shownPage.total}
-          // Nothing more loads while a search or side change is in flight.
+          // Nothing more loads while a load for these filters is in flight.
           state={pending ? 'loading' : loadState}
           onLoadMore={() => void onLoadMore()}
           note={past ? COPY.pastNote : undefined}
@@ -423,8 +434,8 @@ export const EventsClient = () => {
   const content = failed ? (
     <CouldntLoad page={COPY.title} onRetry={() => void load()} />
   ) : page === null ? (
-    // The other side's page is still on hand: the table's skeleton until
-    // this side's arrives (`07/loading-events`).
+    // A page for other filters is still on hand: the table's skeleton, under
+    // the filter row, until these filters' page arrives (`07/loading-events`).
     <PageSkeleton card rows={8} columns={5} rowHeight={65} />
   ) : page.total === 0 ? (
     <EmptyState

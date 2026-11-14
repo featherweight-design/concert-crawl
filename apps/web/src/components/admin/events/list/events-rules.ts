@@ -81,6 +81,12 @@ const flag = (raw: string | null): boolean => raw === '1' || raw === 'true';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * The most venues one list filters by, so the URL and the API query stay
+ * bounded. The URL keeps the first 50; the picker disables the rest.
+ */
+export const MAX_VENUE_FILTER = 50;
+
+/**
  * The page's URL (`/admin/events?q=&when=past&venueIds=&statuses=&noPrice=1&hidden=1`)
  * as filters. Past draws no venue, status, No price or Hidden chips
  * (`06/past-shows`), so on Past those are dropped rather than applied unseen.
@@ -94,7 +100,9 @@ export const filtersFromParams = (
   return {
     query,
     when,
-    venueIds: csv(params.get('venueIds')).filter((id) => UUID.test(id)),
+    venueIds: csv(params.get('venueIds'))
+      .filter((id) => UUID.test(id))
+      .slice(0, MAX_VENUE_FILTER),
     statuses: csv(params.get('statuses')).filter(isFilterStatus),
     noPrice: flag(params.get('noPrice')),
     hidden: flag(params.get('hidden')),
