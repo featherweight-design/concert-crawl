@@ -14,6 +14,8 @@ import { HistoryLocked } from '@/components/consumer/history/HistoryLocked';
 import { PassportActions } from '@/components/consumer/passport/PassportActions';
 import { PassportBooklet } from '@/components/consumer/passport/PassportBooklet';
 import { PassportEmpty } from '@/components/consumer/passport/PassportEmpty';
+import { PassportTopBar } from '@/components/consumer/passport/PassportTopBar';
+import { usePassportShare } from '@/components/consumer/passport/lib/use-passport-share';
 import type { PassportIdentity } from '@/components/consumer/passport/PassportIdPage';
 import { UpNextStubs } from '@/components/consumer/passport/UpNextStubs';
 import { VenuesCollected } from '@/components/consumer/passport/VenuesCollected';
@@ -104,6 +106,8 @@ export const PassportContent = ({
     setMounted(true);
   }, []);
   const imageUrl = `/passport/square?theme=${encodeURIComponent(theme)}`;
+  // One fetch and one share for the top bar's icon and the Share row.
+  const share = usePassportShare(mounted ? imageUrl : null);
 
   // Server 403 wins outright; the client hook decides for a plan the server
   // hasn't rejected — e.g. a token that downgraded mid-session.
@@ -197,11 +201,19 @@ export const PassportContent = ({
     <Shell>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
         <header className="flex flex-col gap-2 [grid-area:head]">
+          {/* A phone draws the top bar in place of the title block and its
+              subtitle (`more-r3-passport_m`); from lg up the header is the
+              breadcrumb, title and subtitle. */}
+          {mounted && <PassportTopBar share={share} />}
           <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle lg:block">
             {COPY.breadcrumb}
           </p>
-          <PageTitle />
-          <p className="text-sm text-fg-muted lg:text-[15px]">
+          <div className={mounted ? 'hidden lg:block' : ''}>
+            <PageTitle />
+          </div>
+          <p
+            className={`text-sm text-fg-muted lg:text-[15px] ${mounted ? 'hidden lg:block' : ''}`}
+          >
             {COPY.statsSubtitle(stats.nights, stats.venues, pages.length)}
           </p>
         </header>
@@ -214,7 +226,7 @@ export const PassportContent = ({
         </div>
 
         <div className="[grid-area:actions] lg:self-end">
-          {mounted && <PassportActions imageUrl={imageUrl} />}
+          {mounted && <PassportActions imageUrl={imageUrl} share={share} />}
         </div>
 
         <div className="flex flex-col gap-7 [grid-area:side]">
