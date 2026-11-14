@@ -155,8 +155,7 @@ const mergeResult = (
   return {
     ok: true,
     params: { toEventId: targetId },
-    // The merge deletes the source row, so the answer's audit keeps it whole.
-    before: { source: result.source },
+    before: null,
     result: {
       mergedInto: targetId,
       referencesMoved: result.referencesMoved,
