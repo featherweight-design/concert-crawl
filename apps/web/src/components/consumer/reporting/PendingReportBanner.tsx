@@ -12,7 +12,7 @@ const copy = REPORTING_COPY.pendingReportBanner;
 
 // ── Helper ────────────────────────────────────────────────────────
 
-const EVIDENCE_METHOD_LABELS: Record<string, string> = {
+export const EVIDENCE_METHOD_LABELS: Record<string, string> = {
   bought_myself: 'First-hand',
   saw_listing: 'Saw listing',
   venue_site: 'Venue site',

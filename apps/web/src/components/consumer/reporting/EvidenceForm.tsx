@@ -181,6 +181,8 @@ const getDaysUntil = (eventDate: string): number => {
 export interface EvidenceFormProps {
   open: boolean;
   onClose: () => void;
+  /** The step before this one, when there is one: "← Back" returns to it (more-st-evidence_m). */
+  onBack?: (() => void) | undefined;
   reportType: ReportType;
   eventId: string;
   eventDate: string;
@@ -199,6 +201,7 @@ export interface EvidenceFormProps {
 export const EvidenceForm = ({
   open,
   onClose,
+  onBack,
   reportType,
   eventId,
   eventDate,
@@ -306,6 +309,7 @@ export const EvidenceForm = ({
           onSuccess?.();
           onClose();
         }}
+        statusLabel={tokens.label}
         {...(ownReportId !== null && {
           // Back to the form with what they wrote, so they can file again.
           onWithdraw: async () => {
@@ -347,7 +351,7 @@ export const EvidenceForm = ({
               {copy.eyebrow}
             </span>
             <button
-              onClick={onClose}
+              onClick={onBack ?? onClose}
               style={{
                 fontFamily: 'JetBrains Mono, monospace',
                 fontSize: 9,
@@ -360,7 +364,7 @@ export const EvidenceForm = ({
                 cursor: 'pointer',
               }}
             >
-              {copy.cancelButton}
+              {copy.backButton}
             </button>
           </div>
           <h2
@@ -807,9 +811,11 @@ function AlreadyReported({
   onClose,
   onSeeReport,
   onWithdraw,
+  statusLabel,
 }: {
   open: boolean;
   onClose: () => void;
+  statusLabel: string;
   onSeeReport: () => void;
   onWithdraw?: () => Promise<void>;
 }) {
@@ -918,7 +924,7 @@ function AlreadyReported({
           margin: 0,
         }}
       >
-        {copy.body}
+        {copy.body(statusLabel)}
       </p>
       {withdrawFailed && (
         <p

@@ -89,6 +89,44 @@ describe('EvidenceForm confirm threshold', () => {
   });
 });
 
+describe('EvidenceForm back link', () => {
+  it('reads ← Back and returns to the step before when there is one', () => {
+    const onBack = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <EvidenceForm
+        open
+        onClose={onClose}
+        onBack={onBack}
+        reportType="cancelled"
+        eventId="event-1"
+        eventDate="2026-11-20"
+        eventTitle="The Grouch"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: copy.backButton }));
+    expect(copy.backButton).toBe('← Back');
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes when there is no step before', () => {
+    const onClose = vi.fn();
+    render(
+      <EvidenceForm
+        open
+        onClose={onClose}
+        reportType="cancelled"
+        eventId="event-1"
+        eventDate="2026-11-20"
+        eventTitle="The Grouch"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: copy.backButton }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('EvidenceForm second report', () => {
   const alreadyCopy = copy.alreadyReported;
 
@@ -123,6 +161,10 @@ describe('EvidenceForm second report', () => {
 
   it('shows Already reported instead of the raw 409 message', async () => {
     await fileAgain('report-9');
+    // The board names the status: "Your Cancelled report is still waiting".
+    expect(
+      screen.getByText(/^Your Cancelled report is still waiting on fans\./),
+    ).toBeTruthy();
     expect(screen.getByText(alreadyCopy.heading)).toBeTruthy();
     expect(
       screen.queryByText(
