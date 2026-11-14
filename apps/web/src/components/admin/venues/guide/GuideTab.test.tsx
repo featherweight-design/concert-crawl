@@ -334,9 +334,10 @@ describe('GuideTab edit panel', () => {
     });
     opener.focus();
     fireEvent.click(opener);
-    expect(document.activeElement).toBe(
-      screen.getByRole('textbox', { name: COPY.section.parking }),
-    );
+    const field = screen.getByRole('textbox', { name: COPY.section.parking });
+    expect(document.activeElement).toBe(field);
+    // Desktop keeps the drawn 13.5px.
+    expect(field.style.fontSize).toBe('13.5px');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('side-panel')).toBeNull();
     expect(document.activeElement).toBe(opener);
@@ -403,5 +404,10 @@ describe('GuideTab on the phone', () => {
     fireEvent.click(row);
     expect(screen.getByTestId('admin-sheet')).toBeTruthy();
     expect(screen.queryByTestId('side-panel')).toBeNull();
+    // 16px, so iOS Safari doesn't zoom into the autofocused field.
+    expect(
+      screen.getByRole('textbox', { name: COPY.section.parking }).style
+        .fontSize,
+    ).toBe('16px');
   });
 });
