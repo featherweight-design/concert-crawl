@@ -105,6 +105,12 @@ export const ShareSheet = ({
   // outcome first, and a cached image can fire `onLoad` before the effect
   // runs, wiping a result that was correct.
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // The poster PNG fetched ahead of a Share… tap, tagged with its URL so a
+  // file for another shape or theme is never handed over. See the prefetch.
+  const [posterFile, setPosterFile] = useState<{
+    url: string;
+    file: File;
+  } | null>(null);
 
   // The sheet stays mounted while `open` toggles (ShareButton renders it
   // unconditionally), so every piece of state here outlives a close unless it
@@ -117,6 +123,8 @@ export const ShareSheet = ({
     setRatio(DEFAULT_SHARE_RATIO);
     setPreview('loading');
     setPreviewUrl(null);
+    // The PNG is a few hundred KB held only for the next Share… tap.
+    setPosterFile(null);
   }, [open]);
 
   // Memoised because the destination callbacks depend on it: rebuilt every
@@ -188,20 +196,26 @@ export const ShareSheet = ({
   // and awaiting a multi-second render first spends it (the Passport's
   // "worked once, then couldn't share", #1446). Skipped where the platform
   // cannot take a file, since the share is the link alone there anyway.
+  //
+  // Started only once the preview <img> has loaded that same URL, so the fetch
+  // is answered from the HTTP cache (the route is cacheable with an ETag)
+  // rather than racing the img into a second multi-second render on a cold
+  // cache. Aborted when the shape or theme changes and on close; a result for
+  // an aborted request is dropped.
   const fileName = posterFileName(event);
-  const wantsFile = open && canShareFiles(caps);
-  const [posterFile, setPosterFile] = useState<{
-    url: string;
-    file: File;
-  } | null>(null);
+  const wantsFile = open && preview === 'ready' && canShareFiles(caps);
   useEffect(() => {
     if (!wantsFile) return;
-    let cancelled = false;
-    void fetchPosterFile(imageUrl, fileName).then((file) => {
-      if (!cancelled && file !== null) setPosterFile({ url: imageUrl, file });
+    const controller = new AbortController();
+    void fetchPosterFile(imageUrl, fileName, {
+      signal: controller.signal,
+    }).then((file) => {
+      if (!controller.signal.aborted && file !== null) {
+        setPosterFile({ url: imageUrl, file });
+      }
     });
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [wantsFile, imageUrl, fileName]);
 
@@ -379,7 +393,7 @@ export const ShareSheet = ({
             {COPY.destinations.systemShare}
           </button>
         )}
-        <div className="mt-2.5 flex gap-2">
+        <div className="mt-2 flex gap-2">
           <a
             href={imageUrl}
             download={fileName}

@@ -131,18 +131,16 @@ describe('canShareFiles', () => {
 describe('fetchPosterFile', () => {
   it('turns the PNG into a named file', async () => {
     const fetchImpl = vi.fn(async () => pngResponse());
-    const file = await fetchPosterFile(
-      '/share/x/story',
-      'poster.png',
+    const file = await fetchPosterFile('/share/x/story', 'poster.png', {
       fetchImpl,
-    );
+    });
     expect(file?.name).toBe('poster.png');
     expect(file?.type).toBe('image/png');
   });
 
   it('resolves null on a failed render', async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 502 }));
-    expect(await fetchPosterFile('/x', 'p.png', fetchImpl)).toBeNull();
+    expect(await fetchPosterFile('/x', 'p.png', { fetchImpl })).toBeNull();
   });
 
   it('resolves null rather than throwing when offline', async () => {
@@ -150,7 +148,37 @@ describe('fetchPosterFile', () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error('offline');
     });
-    expect(await fetchPosterFile('/x', 'p.png', fetchImpl)).toBeNull();
+    expect(await fetchPosterFile('/x', 'p.png', { fetchImpl })).toBeNull();
+  });
+
+  it('passes the signal on and drops a response that lands after an abort', async () => {
+    const controller = new AbortController();
+    const fetchImpl = vi.fn(async () => {
+      controller.abort();
+      return pngResponse();
+    });
+    const file = await fetchPosterFile('/x', 'p.png', {
+      fetchImpl,
+      signal: controller.signal,
+    });
+    expect(file).toBeNull();
+    expect(fetchImpl).toHaveBeenCalledWith('/x', { signal: controller.signal });
+  });
+
+  it('treats an aborted request as quiet, not as a failure', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const controller = new AbortController();
+    const fetchImpl = vi.fn(async () => {
+      controller.abort();
+      throw Object.assign(new Error('aborted'), { name: 'AbortError' });
+    });
+    expect(
+      await fetchPosterFile('/x', 'p.png', {
+        fetchImpl,
+        signal: controller.signal,
+      }),
+    ).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
   });
 });
 

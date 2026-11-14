@@ -200,7 +200,7 @@ describe('<ShareSheet />', () => {
 
     // Resolves only for the shapes listed; any other shape stays in flight.
     const stubFetch = (ready: string[]) => {
-      const fetchMock = vi.fn((url: string) =>
+      const fetchMock = vi.fn((url: string, _init?: RequestInit) =>
         ready.some((shape) => url.includes(`/${shape}`))
           ? Promise.resolve({
               ok: true,
@@ -214,10 +214,13 @@ describe('<ShareSheet />', () => {
     const flush = () =>
       act(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
 
+    const loadPreview = () => fireEvent.load(screen.getByRole('img'));
+
     it('hands the PNG fetched ahead of the click to the OS sheet', async () => {
       const fetchMock = stubFetch(['story']);
       const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
       mount({ capabilities: { share, canShare: () => true } });
+      loadPreview();
       await waitFor(() => expect(fetchMock).toHaveBeenCalled());
       await flush();
       fireEvent.click(screen.getByRole('button', { name: 'Share…' }));
@@ -225,10 +228,95 @@ describe('<ShareSheet />', () => {
       expect(share.mock.calls[0]?.[0]?.files).toHaveLength(1);
     });
 
+    // On a cold cache a fetch racing the <img> would render the poster twice;
+    // waiting for the img means the fetch is answered from the HTTP cache.
+    it('waits for the preview to load before fetching the same URL', () => {
+      const fetchMock = stubFetch(['story']);
+      mount({
+        capabilities: { share: async () => undefined, canShare: () => true },
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+      loadPreview();
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/share/${EVENT_ID}/story?theme=jade`,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+
+    it('aborts the previous shape and ignores what it returns', async () => {
+      let land: (() => void) | undefined;
+      const fetchMock = vi.fn(
+        (_url: string, _init?: RequestInit) =>
+          new Promise((resolve) => {
+            land = () =>
+              resolve({
+                ok: true,
+                blob: async () => new Blob([new Uint8Array([0x89])]),
+              });
+          }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
+      mount({ capabilities: { share, canShare: () => true } });
+      loadPreview();
+      const signal = fetchMock.mock.calls[0]?.[1]?.signal;
+      fireEvent.click(screen.getByRole('button', { name: 'Square' }));
+      expect(signal?.aborted).toBe(true);
+
+      // The story response lands anyway (a fetch that ignored its signal).
+      land?.();
+      await flush();
+      fireEvent.click(screen.getByRole('button', { name: 'Story' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Share…' }));
+      expect(share.mock.calls[0]?.[0]?.files).toBeUndefined();
+    });
+
+    it('aborts the prefetch on close', () => {
+      const fetchMock = stubFetch([]);
+      const sheet = (open: boolean) => (
+        <ShareSheet
+          open={open}
+          onClose={() => {}}
+          event={poster}
+          handle={null}
+          capabilities={{ share: async () => undefined, canShare: () => true }}
+        />
+      );
+      const { rerender } = render(sheet(true));
+      loadPreview();
+      const signal = fetchMock.mock.calls[0]?.[1]?.signal;
+      rerender(sheet(false));
+      expect(signal?.aborted).toBe(true);
+    });
+
+    it('drops the fetched file on close', async () => {
+      stubFetch(['story']);
+      const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
+      const sheet = (open: boolean) => (
+        <ShareSheet
+          open={open}
+          onClose={() => {}}
+          event={poster}
+          handle={null}
+          capabilities={{ share, canShare: () => true }}
+        />
+      );
+      const { rerender } = render(sheet(true));
+      loadPreview();
+      await flush();
+      rerender(sheet(false));
+      rerender(sheet(true));
+      // Same URL as before the close, but the preview has not landed again,
+      // so the file from the last session must be gone.
+      fireEvent.click(screen.getByRole('button', { name: 'Share…' }));
+      expect(share.mock.calls[0]?.[0]?.files).toBeUndefined();
+    });
+
     it("never hands over another shape's file", async () => {
       stubFetch(['story']);
       const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
       mount({ capabilities: { share, canShare: () => true } });
+      loadPreview();
       await flush();
       fireEvent.click(screen.getByRole('button', { name: 'Square' }));
       fireEvent.click(screen.getByRole('button', { name: 'Share…' }));
@@ -277,9 +365,11 @@ describe('<ShareSheet />', () => {
     it('heads the sheet with the SHARE THIS SHOW eyebrow and a labelled ×', () => {
       mount();
       const dialog = screen.getByRole('dialog');
-      expect(
-        within(dialog).getAllByText('Share this show').length,
-      ).toBeGreaterThanOrEqual(1);
+      // Exactly two: the sr-only dialog title and the visible eyebrow, so
+      // dropping the eyebrow fails here.
+      const matches = within(dialog).getAllByText('Share this show');
+      expect(matches).toHaveLength(2);
+      expect(matches.filter((node) => node.tagName === 'H2')).toHaveLength(1);
       const close = screen.getByRole('button', { name: 'Close' });
       expect(document.activeElement).toBe(close);
     });
