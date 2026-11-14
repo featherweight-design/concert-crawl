@@ -162,6 +162,14 @@ describe('SourceTab — How we read it', () => {
     expect(screen.getByText(COPY.read.feedId.hints.aeg)).toBeTruthy();
   });
 
+  it('names in the feed subtitle exactly the sellers it offers', () => {
+    phone = true;
+    render(<SourceTab venue={venue} />);
+    expect(
+      screen.getByText('VenuePilot, AEG or Live Nation. Fastest, no LLM cost.'),
+    ).toBeTruthy();
+  });
+
   it('has no Don’t crawl radio, on desktop or phone', () => {
     for (const isPhone of [false, true]) {
       phone = isPhone;

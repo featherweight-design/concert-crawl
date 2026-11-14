@@ -215,7 +215,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
   const feedSub =
     !phone && draft.seller !== null
       ? COPY.read.modes.feed.subNamed(sellerName(draft.seller), draft.feedId)
-      : COPY.read.modes.feed.sub;
+      : COPY.read.modes.feed.sub(FEED_SELLERS.map(sellerName));
 
   const calendarPage = (
     <div>
