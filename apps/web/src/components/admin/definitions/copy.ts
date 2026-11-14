@@ -4199,6 +4199,12 @@ export const ADMIN_COPY = {
     venueCount: (count: number) =>
       count === 1 ? '1 venue' : `${count} venues`,
     statusesPicked: (count: number) => `${count} statuses`,
+    // Past's status menu (`36/past-status-menu-d`).
+    pastStatusHint: 'Pick more than one; the chip counts them.',
+    // Past's footer (`36/past-d`): the dates the loaded shows span.
+    pastShowing: (span: string) => `Showing ${span} · newest first`,
+    separator: ' · ',
+    loadOlder: 'Load older',
     // The picked chip's accessible name: the pick alone doesn't say which
     // filter it is.
     venuePickedLabel: (pick: string) => `Venue: ${pick}`,
@@ -4240,7 +4246,6 @@ export const ADMIN_COPY = {
     phoneNoPrice: 'No price',
     watching: (count: number) => `${count.toLocaleString('en-US')} Watching`,
     went: (count: number) => `${count.toLocaleString('en-US')} went`,
-    pastNote: 'Past shows stay for Concerts and stamps.',
     loadMoreFailed: 'Couldn’t load more shows.',
     empty: {
       title: 'No shows match',

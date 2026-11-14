@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   EMPTY_FILTERS,
   MAX_VENUE_FILTER,
+  PAST_STATUS_FILTER_OPTIONS,
   STATUS_CHIP,
+  STATUS_FILTER_OPTIONS,
   apiParams,
+  dateSpan,
   eventsListHref,
   filtersFromParams,
   filtersToParams,
@@ -78,15 +81,46 @@ describe('page URL and filters', () => {
     expect(MAX_VENUE_FILTER).toBe(50);
   });
 
-  it('drops the upcoming-only filters on Past, which draws none', () => {
+  it('keeps venue and past statuses on Past, dropping No price, Hidden and upcoming statuses (36/past-d)', () => {
     expect(
-      filtersFromParams(params(`when=past&q=fuzz&venueIds=${V1}&noPrice=1`)),
-    ).toEqual({ ...EMPTY_FILTERS, when: 'past', query: 'fuzz' });
+      filtersFromParams(
+        params(
+          `when=past&q=fuzz&venueIds=${V1}&statuses=played,soldout,delisted&noPrice=1&hidden=1`,
+        ),
+      ),
+    ).toEqual({
+      ...EMPTY_FILTERS,
+      when: 'past',
+      query: 'fuzz',
+      venueIds: [V1],
+      statuses: ['played', 'delisted'],
+    });
+    // Played is a Past status only.
+    expect(
+      filtersFromParams(params('statuses=played,soldout')).statuses,
+    ).toEqual(['soldout']);
+  });
+
+  it('offers only past statuses on Past, in the board’s order, and leaves Upcoming’s alone', () => {
+    expect(PAST_STATUS_FILTER_OPTIONS).toEqual([
+      'played',
+      'cancelled',
+      'postponed',
+      'delisted',
+    ]);
+    expect(STATUS_FILTER_OPTIONS).toEqual([
+      'available',
+      'soldout',
+      'postponed',
+      'cancelled',
+      'delisted',
+    ]);
   });
 
   it('round-trips through the URL, leaving defaults out', () => {
     for (const query of [
       'q=FKJ&when=past',
+      `when=past&venueIds=${V1}&statuses=played,postponed`,
       `q=FKJ&venueIds=${V1}&statuses=soldout,delisted&hidden=1`,
     ]) {
       const filters = filtersFromParams(params(query));
@@ -142,18 +176,31 @@ describe('apiParams', () => {
     });
   });
 
-  it('sends only the side, the search and the page on Past', () => {
+  it('sends venues and statuses on Past, but never No price or Hidden', () => {
     const filters = {
       ...EMPTY_FILTERS,
       when: 'past',
       venueIds: [V1],
+      statuses: ['played', 'postponed'],
       noPrice: true,
+      hidden: true,
     } satisfies EventFilters;
     expect(Object.fromEntries(apiParams(filters, 0, 25))).toEqual({
       when: 'past',
+      venueIds: V1,
+      statuses: 'played,postponed',
       limit: '25',
       offset: '0',
     });
+  });
+});
+
+describe('dateSpan', () => {
+  it('writes the footer’s span as 36/past-d does', () => {
+    expect(dateSpan('2026-11-04', '2026-11-08')).toBe('Nov 4–8');
+    expect(dateSpan('2026-10-30', '2026-11-08')).toBe('Oct 30–Nov 8');
+    expect(dateSpan('2026-11-08', '2026-11-08')).toBe('Nov 8');
+    expect(dateSpan('nonsense', '2026-11-08')).toBeNull();
   });
 });
 

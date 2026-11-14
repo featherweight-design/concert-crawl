@@ -19,9 +19,8 @@ export const isEventListStatus = (value: unknown): value is EventListStatus =>
   (EVENT_LIST_STATUSES as readonly string[]).includes(value);
 
 /**
- * The Any status popover's rows, in `06/status-filter`'s order. Moved waits
- * for Hugh (4b#1), and Played is a Past status, where the board draws no
- * status filter.
+ * Upcoming's Any status popover rows, in `06/status-filter`'s order. Moved
+ * waits for Hugh (4b#1); Played is a Past status.
  */
 export const STATUS_FILTER_OPTIONS = [
   'available',
@@ -32,8 +31,23 @@ export const STATUS_FILTER_OPTIONS = [
 ] as const;
 export type FilterStatus = (typeof STATUS_FILTER_OPTIONS)[number];
 
-export const isFilterStatus = (value: string): value is FilterStatus =>
-  (STATUS_FILTER_OPTIONS as readonly string[]).includes(value);
+/** Past's Any status menu rows, in `36/past-status-menu-d`'s order. */
+export const PAST_STATUS_FILTER_OPTIONS = [
+  'played',
+  'cancelled',
+  'postponed',
+  'delisted',
+] as const;
+
+/** The statuses a side's filter offers. */
+export const statusFilterOptions = (when: When): readonly EventListStatus[] =>
+  when === 'past' ? PAST_STATUS_FILTER_OPTIONS : STATUS_FILTER_OPTIONS;
+
+/** A guard for one side's statuses, so a URL never carries the other's. */
+export const isFilterStatusFor =
+  (when: When) =>
+  (value: string): value is EventListStatus =>
+    statusFilterOptions(when).some((status) => status === value);
 
 /** Each status's chip on the fan `StatusChip` (admin rule 3). */
 export const STATUS_CHIP: Record<EventListStatus, ShowStatusChip> = {
@@ -51,7 +65,8 @@ export interface EventFilters {
   query: string;
   when: When;
   venueIds: string[];
-  statuses: FilterStatus[];
+  /** Only the side's own statuses (`statusFilterOptions`). */
+  statuses: EventListStatus[];
   noPrice: boolean;
   hidden: boolean;
 }
@@ -88,24 +103,24 @@ export const MAX_VENUE_FILTER = 50;
 
 /**
  * The page's URL (`/admin/events?q=&when=past&venueIds=&statuses=&noPrice=1&hidden=1`)
- * as filters. Past draws no venue, status, No price or Hidden chips
- * (`06/past-shows`), so on Past those are dropped rather than applied unseen.
+ * as filters. Past draws venue and status filters but no No price or Hidden
+ * chips (`36/past-d`), so on Past those two are dropped rather than applied
+ * unseen, as is a status the side doesn't offer.
  */
 export const filtersFromParams = (
   params: Pick<URLSearchParams, 'get'>,
 ): EventFilters => {
   const when: When = params.get('when') === 'past' ? 'past' : 'upcoming';
-  const query = (params.get('q') ?? '').trim();
-  if (when === 'past') return { ...EMPTY_FILTERS, when, query };
+  const past = when === 'past';
   return {
-    query,
+    query: (params.get('q') ?? '').trim(),
     when,
     venueIds: csv(params.get('venueIds'))
       .filter((id) => UUID.test(id))
       .slice(0, MAX_VENUE_FILTER),
-    statuses: csv(params.get('statuses')).filter(isFilterStatus),
-    noPrice: flag(params.get('noPrice')),
-    hidden: flag(params.get('hidden')),
+    statuses: csv(params.get('statuses')).filter(isFilterStatusFor(when)),
+    noPrice: !past && flag(params.get('noPrice')),
+    hidden: !past && flag(params.get('hidden')),
   };
 };
 
@@ -113,14 +128,12 @@ export const filtersFromParams = (
 export const filtersToParams = (filters: EventFilters): URLSearchParams => {
   const params = new URLSearchParams();
   if (filters.query.trim() !== '') params.set('q', filters.query.trim());
-  if (filters.when === 'past') {
-    params.set('when', 'past');
-    return params;
-  }
+  if (filters.when === 'past') params.set('when', 'past');
   if (filters.venueIds.length > 0)
     params.set('venueIds', filters.venueIds.join(','));
   if (filters.statuses.length > 0)
     params.set('statuses', filters.statuses.join(','));
+  if (filters.when === 'past') return params;
   if (filters.noPrice) params.set('noPrice', '1');
   if (filters.hidden) params.set('hidden', '1');
   return params;
@@ -144,11 +157,11 @@ export const apiParams = (
   const params = new URLSearchParams();
   if (filters.query.trim() !== '') params.set('query', filters.query.trim());
   params.set('when', filters.when);
+  if (filters.venueIds.length > 0)
+    params.set('venueIds', filters.venueIds.join(','));
+  if (filters.statuses.length > 0)
+    params.set('statuses', filters.statuses.join(','));
   if (filters.when === 'upcoming') {
-    if (filters.venueIds.length > 0)
-      params.set('venueIds', filters.venueIds.join(','));
-    if (filters.statuses.length > 0)
-      params.set('statuses', filters.statuses.join(','));
     if (filters.noPrice) params.set('noPrice', 'true');
     if (filters.hidden) params.set('hidden', 'true');
   }
@@ -179,6 +192,36 @@ export const showCount = (
   chosen.length === 0
     ? unticked
     : chosen.reduce((sum, key) => sum + countOf(key), 0);
+
+const MONTH_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const monthDay = (date: string): { month: string; day: string } | null => {
+  const match = MONTH_DAY.exec(date);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  // Noon UTC of that calendar day, so the month cannot slip across a zone.
+  const at = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day), 12),
+  );
+  return {
+    month: at.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
+    day: String(Number(day)),
+  };
+};
+
+/**
+ * The dates a page of past shows spans, as `36/past-d`'s footer writes them:
+ * "Nov 4–8", "Oct 30–Nov 8", or "Nov 8" for one day. Null for a bad date.
+ */
+export const dateSpan = (oldest: string, newest: string): string | null => {
+  const from = monthDay(oldest);
+  const to = monthDay(newest);
+  if (from === null || to === null) return null;
+  if (oldest === newest) return `${to.month} ${to.day}`;
+  return from.month === to.month
+    ? `${from.month} ${from.day}–${to.day}`
+    : `${from.month} ${from.day}–${to.month} ${to.day}`;
+};
 
 const dollars = (value: string | null): string | null => {
   if (value === null || value.trim() === '') return null;

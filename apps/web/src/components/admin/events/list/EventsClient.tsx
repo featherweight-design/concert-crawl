@@ -27,14 +27,16 @@ import {
   EVENT_LIST_STATUSES,
   MAX_VENUE_FILTER,
   STATUS_CHIP,
-  STATUS_FILTER_OPTIONS,
+  dateSpan,
   eventsListHref,
   filtersFromParams,
   hasFilters,
-  isFilterStatus,
+  isFilterStatusFor,
+  statusFilterOptions,
   type EventFilters,
   type When,
 } from './events-rules';
+import { PastStatusMenu } from './PastStatusMenu';
 import {
   ChipCount,
   ClearMark,
@@ -44,6 +46,7 @@ import {
 } from './FilterPicker';
 
 const COPY = ADMIN_COPY.eventsList;
+const RUNS_COPY = ADMIN_COPY.venueRuns;
 
 /** `A3/09/load-more`: "Showing 25 of N", Load 25 more. */
 export const EVENTS_PAGE_SIZE = 25;
@@ -58,7 +61,8 @@ interface Loaded {
 
 /**
  * 4b-1 Events (`06/events`, `06/events-mobile`, `06/past-shows`, with the
- * filters of `06/venue-filter` and `06/status-filter`). Every filter lives in
+ * filters of `06/venue-filter` and `06/status-filter`; Past's filters and
+ * footer from addendum 6 `36/past-d`, `36/past-status-menu-d`, `36/past-m`). Every filter lives in
  * the URL, so a filtered list can be linked and reloaded; the rows load in
  * the browser with the admin's token. Add a show lands in 4b-3.
  */
@@ -452,13 +456,24 @@ export const EventsClient = () => {
           0,
         )}
         selected={filters.statuses}
-        options={STATUS_FILTER_OPTIONS.map((status) => ({
+        options={statusFilterOptions(filters.when).map((status) => ({
           key: status,
           label: COPY.status[status],
           count: shownCounts.byStatus[status] ?? 0,
         }))}
+        menu={
+          past ? (
+            <PastStatusMenu
+              selected={filters.statuses}
+              onPick={(statuses) => navigate({ ...filters, statuses })}
+            />
+          ) : undefined
+        }
         onApply={(keys) =>
-          navigate({ ...filters, statuses: keys.filter(isFilterStatus) })
+          navigate({
+            ...filters,
+            statuses: keys.filter(isFilterStatusFor(filters.when)),
+          })
         }
       />
     ),
@@ -466,10 +481,9 @@ export const EventsClient = () => {
     hidden: toggleChip('hidden', shownCounts.hidden),
   });
 
-  // Past draws none of these (`06/past-shows`). On Upcoming they wait for
-  // this side's first counts, which the skeleton below covers.
-  const filterChips =
-    past || counts === undefined ? null : filterChipsFor(counts);
+  // They wait for this side's first counts, which the skeleton below covers.
+  // Past draws only venue and status (`36/past-d`, `36/past-m`).
+  const filterChips = counts === undefined ? null : filterChipsFor(counts);
 
   // Desktop draws one row: search, the side, a rule, then the filters. The
   // phone stacks search over a scrolling chip row in the board's order
@@ -479,12 +493,15 @@ export const EventsClient = () => {
       {searchBox}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
         {whenChips}
-        {filterChips && [
-          filterChips.noPrice,
-          filterChips.hidden,
-          filterChips.venue,
-          filterChips.status,
-        ]}
+        {filterChips &&
+          (past
+            ? [filterChips.venue, filterChips.status]
+            : [
+                filterChips.noPrice,
+                filterChips.hidden,
+                filterChips.venue,
+                filterChips.status,
+              ])}
       </div>
     </div>
   ) : (
@@ -506,14 +523,87 @@ export const EventsClient = () => {
           />
           {filterChips.venue}
           {filterChips.status}
-          {filterChips.noPrice}
-          {filterChips.hidden}
+          {!past && filterChips.noPrice}
+          {!past && filterChips.hidden}
         </>
       )}
     </div>
   );
 
+  // `36/past-d`: "Showing Nov 4–8 · newest first · Load older"; `36/past-m`
+  // draws Load older alone, centred. Loading and a failure are undrawn, so
+  // they follow `LoadMoreFooter`: its words while loading, its alert after.
+  const pastFooter = (shownPage: EventListPage) => {
+    const more = shownPage.rows.length < shownPage.total;
+    const state = pending ? 'loading' : loadState;
+    const newest = shownPage.rows[0]?.date;
+    const oldest = shownPage.rows.at(-1)?.date;
+    const span =
+      newest === undefined || oldest === undefined
+        ? null
+        : dateSpan(oldest, newest);
+    const loadOlder = more && (
+      <button
+        type="button"
+        aria-disabled={state === 'loading' || undefined}
+        onClick={() => {
+          if (state !== 'loading') void onLoadMore();
+        }}
+        style={{
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          font: 'inherit',
+          fontWeight: 600,
+          color: state === 'loading' ? 'var(--fg-muted)' : 'var(--signal)',
+          cursor: state === 'loading' ? 'default' : 'pointer',
+        }}
+      >
+        {state === 'loading' ? RUNS_COPY.loading : COPY.loadOlder}
+      </button>
+    );
+    const failure = state === 'failed' && (
+      <span role="alert" style={{ color: 'var(--danger)' }}>
+        {COPY.loadMoreFailed}
+      </span>
+    );
+    if (isPhone)
+      return more || failure ? (
+        <div
+          data-testid="events-load-more"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 6,
+            padding: '14px 0',
+            fontSize: 13,
+          }}
+        >
+          {failure}
+          {loadOlder}
+        </div>
+      ) : null;
+    return (
+      <div
+        data-testid="events-load-more"
+        style={{
+          padding: '12px 18px',
+          borderTop: '1px solid var(--border)',
+          fontSize: 12.5,
+          color: 'var(--fg-subtle)',
+        }}
+      >
+        {span !== null && COPY.pastShowing(span)}
+        {span !== null && more && COPY.separator}
+        {loadOlder}
+        {failure && <span style={{ marginLeft: 12 }}>{failure}</span>}
+      </div>
+    );
+  };
+
   const footer = (shownPage: EventListPage) => {
+    if (past) return pastFooter(shownPage);
     const shown = shownPage.rows.length;
     return (
       <div style={{ padding: isPhone ? '0 0 12px' : '0 18px 14px' }}>
@@ -528,7 +618,6 @@ export const EventsClient = () => {
           // Nothing more loads while a load for these filters is in flight.
           state={pending ? 'loading' : loadState}
           onLoadMore={() => void onLoadMore()}
-          note={past ? COPY.pastNote : undefined}
           failedLabel={COPY.loadMoreFailed}
           testId="events-load-more"
         />

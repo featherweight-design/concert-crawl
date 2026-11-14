@@ -139,6 +139,61 @@ describe('EventsList on desktop', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('opens the past-show editor from the whole past row, a real link with the chevron drawn for hover (36/past-d)', () => {
+    render(
+      <EventsList
+        when="past"
+        rows={[
+          row({ title: 'Japanese Breakfast', status: 'played', wentCount: 14 }),
+        ]}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Japanese Breakfast' });
+    expect(link).toHaveAttribute('href', '/admin/events/evt-1/edit');
+    // Stretched over the row, which is its containing block.
+    expect(link.className).toContain('after:inset-0');
+    const dataRow = screen.getByTestId('event-row');
+    expect(dataRow).toHaveStyle({ position: 'relative' });
+    expect(dataRow.className).toContain('group');
+    // The chevron waits for hover or focus, and is never read out.
+    const chevron = within(dataRow).getByTestId('row-chevron');
+    expect(chevron.getAttribute('class')).toContain('group-hover:opacity-100');
+    expect(chevron).toHaveAttribute('aria-hidden', 'true');
+    // Keyboard: in the tab order, and nothing else in the row to press.
+    link.focus();
+    expect(link).toHaveFocus();
+    expect(within(dataRow).getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('keeps an upcoming row unlinked, with its ⋯ and no chevron', () => {
+    render(<EventsList when="upcoming" rows={[row({})]} />);
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByTestId('row-chevron')).toBeNull();
+  });
+
+  it('says No new date yet under a postponed past show only (36/past-d)', () => {
+    render(
+      <EventsList
+        when="past"
+        rows={[
+          row({ id: 'evt-6', title: 'Ninth Key', status: 'postponed' }),
+          row({ id: 'evt-7', title: 'Turnstile', status: 'cancelled' }),
+        ]}
+      />,
+    );
+    const lines = screen.getAllByTestId('no-new-date');
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toHaveTextContent(ADMIN_COPY.eventEdit.postponed.noDate);
+    expect(lines[0]?.style.fontSize).toBe('11.5px');
+    cleanup();
+
+    render(
+      <EventsList when="upcoming" rows={[row({ status: 'postponed' })]} />,
+    );
+    expect(screen.queryByTestId('no-new-date')).toBeNull();
+  });
+
   it('offers View on the venue’s site only when the row has a venue page', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     render(
@@ -270,5 +325,43 @@ describe('EventsList on the phone', () => {
       'href',
       '/admin/events/evt-4/edit',
     );
+  });
+
+  it('makes the whole past card the link to the past-show editor, by keyboard too (36/past-m)', () => {
+    setPhone(true);
+    render(
+      <EventsList
+        when="past"
+        rows={[
+          row({
+            id: 'evt-5',
+            title: 'Pink Fuzz',
+            status: 'played',
+            wentCount: 3,
+          }),
+          row({
+            id: 'evt-6',
+            title: 'Ninth Key',
+            status: 'postponed',
+            priceMin: null,
+          }),
+        ]}
+      />,
+    );
+    const list = screen.getByRole('list', { name: COPY.title });
+    const [card, postponed] = within(list).getAllByRole('listitem');
+    const link = within(card as HTMLElement).getByRole('link');
+    expect(link).toHaveAttribute('href', '/admin/events/evt-5/edit');
+    expect(link).toHaveTextContent('Pink Fuzz');
+    expect(link).toHaveTextContent(COPY.went(3));
+    expect(link).toHaveTextContent(COPY.status.played);
+    link.focus();
+    expect(link).toHaveFocus();
+    expect(screen.queryByRole('button')).toBeNull();
+    // A past card with no price draws —, and the amber line under Postponed.
+    const late = within(postponed as HTMLElement);
+    expect(late.getByText(COPY.none)).toBeInTheDocument();
+    expect(late.queryByText(COPY.phoneNoPrice)).toBeNull();
+    expect(late.getByTestId('no-new-date')).toBeInTheDocument();
   });
 });

@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Calendar, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import {
+  Calendar,
+  ChevronRight,
+  ExternalLink,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { RowMenu, useIsPhone } from '@/components/admin/primitives';
 import { StatusChip } from '@/components/consumer/StatusChip';
@@ -17,6 +23,19 @@ import { STATUS_CHIP, formatPrice, type When } from './events-rules';
 
 const COPY = ADMIN_COPY.eventsList;
 const HIDE_COPY = ADMIN_COPY.eventEdit.hide;
+const NO_NEW_DATE = ADMIN_COPY.eventEdit.postponed.noDate;
+
+/**
+ * A past row's title link, stretched over the whole row (as Crawl runs'
+ * rows are), with keyboard focus ringing the row rather than the title.
+ */
+const ROW_LINK =
+  "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-[var(--focus)]";
+/** A past row tints on hover or focus, and only then shows its chevron. */
+const ROW_HOVER =
+  'group hover:bg-[var(--surface-2)] focus-within:bg-[var(--surface-2)]';
+const CHEVRON_ON_HOVER =
+  'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100';
 
 const MONO: CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
@@ -240,6 +259,44 @@ const EventMenu = ({
   );
 };
 
+/**
+ * The status chip, and under a postponed show on Past (its date has passed
+ * with no new one) "No new date yet" in amber (`36/past-d`, `36/past-m`).
+ */
+const StatusCell = ({
+  row,
+  past,
+  align,
+}: {
+  row: EventListRow;
+  past: boolean;
+  align: 'flex-start' | 'flex-end';
+}) =>
+  past && row.status === 'postponed' ? (
+    <span
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: align,
+        gap: 3,
+      }}
+    >
+      <EventStatusChip row={row} />
+      <span
+        data-testid="no-new-date"
+        style={{
+          fontSize: 11.5,
+          whiteSpace: 'nowrap',
+          color: 'var(--warning)',
+        }}
+      >
+        {NO_NEW_DATE}
+      </span>
+    </span>
+  ) : (
+    <EventStatusChip row={row} />
+  );
+
 const watchingText = (row: EventListRow): string =>
   row.hidden ? COPY.none : row.watchingCount.toLocaleString('en-US');
 
@@ -293,7 +350,8 @@ const DesktopTable = ({
         <col style={{ width: 164 }} />
         <col style={{ width: 132 }} />
         <col style={{ width: past ? 96 : 84 }} />
-        {!past && <col style={{ width: 52 }} />}
+        {/* Upcoming's ⋯; Past's 16px chevron (`36/past-d`) with its padding. */}
+        <col style={{ width: past ? 44 : 52 }} />
       </colgroup>
       <thead>
         <tr>
@@ -305,28 +363,47 @@ const DesktopTable = ({
           <th style={th}>
             {past ? COPY.columns.concerts : COPY.columns.watching}
           </th>
-          {!past && <th style={th} aria-hidden="true" />}
+          <th style={th} aria-hidden="true" />
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => {
           const price = formatPrice(row.priceMin, row.priceMax);
+          const titleStyle: CSSProperties = {
+            ...ellipsis,
+            fontSize: 13.5,
+            fontWeight: 600,
+            color: 'var(--fg)',
+          };
           return (
-            <tr key={row.id} data-testid="event-row">
+            <tr
+              key={row.id}
+              data-testid="event-row"
+              // On Past the whole row opens the past-show editor through the
+              // title's stretched link (`36/past-d`); 06/past-shows' no-⋯
+              // stands, so the row holds nothing else to press.
+              className={past ? ROW_HOVER : undefined}
+              style={past ? { position: 'relative' } : undefined}
+            >
               <td style={{ ...td, paddingLeft: 18 }}>
                 <DateTile date={row.date} />
               </td>
               <td style={td}>
-                <div
-                  style={{
-                    ...ellipsis,
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                    color: 'var(--fg)',
-                  }}
-                >
-                  {row.title}
-                </div>
+                {past ? (
+                  <Link
+                    href={editEventHref(row.id)}
+                    className={ROW_LINK}
+                    style={{
+                      ...titleStyle,
+                      display: 'block',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {row.title}
+                  </Link>
+                ) : (
+                  <div style={titleStyle}>{row.title}</div>
+                )}
                 {row.hidden && (
                   <div style={{ display: 'flex', marginTop: 2 }}>
                     <HiddenTag row={row} />
@@ -337,7 +414,7 @@ const DesktopTable = ({
                 <VenueLine row={row} size={24} gap={8} />
               </td>
               <td style={td}>
-                <EventStatusChip row={row} />
+                <StatusCell row={row} past={past} align="flex-start" />
               </td>
               <td
                 style={{
@@ -361,7 +438,18 @@ const DesktopTable = ({
               >
                 {past ? wentText(row) : watchingText(row)}
               </td>
-              {!past && (
+              {past ? (
+                <td style={{ ...td, paddingRight: 18 }}>
+                  <ChevronRight
+                    data-testid="row-chevron"
+                    size={14}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                    className={CHEVRON_ON_HOVER}
+                    style={{ display: 'block', color: 'var(--fg-muted)' }}
+                  />
+                </td>
+              ) : (
                 <td style={{ ...td, textAlign: 'right', paddingRight: 14 }}>
                   <EventMenu row={row} onHide={onHide} />
                 </td>
@@ -385,6 +473,9 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
     : row.hidden
       ? null
       : COPY.watching(row.watchingCount);
+  // `36/past-m` draws the past card a little differently from
+  // `06/events-mobile`: one-line title, venue 3px under it, price 13.5/700
+  // (— when none), "N went" 12px muted.
   const body = (
     <>
       <DateTile date={row.date} />
@@ -394,7 +485,7 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: 6,
+          gap: past ? 3 : 6,
         }}
       >
         <div
@@ -403,10 +494,14 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
             fontWeight: 700,
             lineHeight: 1.3,
             color: 'var(--fg)',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            ...(past
+              ? ellipsis
+              : {
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }),
           }}
         >
           {row.title}
@@ -425,54 +520,66 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
-          gap: 5,
+          gap: past ? 6 : 5,
           textAlign: 'right',
         }}
       >
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: price === null ? 500 : 600,
-            fontVariantNumeric: 'tabular-nums',
-            whiteSpace: 'nowrap',
-            color: price === null ? 'var(--fg-muted)' : 'var(--fg)',
-          }}
-        >
-          {price ?? COPY.phoneNoPrice}
-        </span>
+        {past ? (
+          <span
+            style={{
+              fontSize: 13.5,
+              fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap',
+              color: 'var(--fg)',
+            }}
+          >
+            {price ?? COPY.none}
+          </span>
+        ) : (
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: price === null ? 500 : 600,
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap',
+              color: price === null ? 'var(--fg-muted)' : 'var(--fg)',
+            }}
+          >
+            {price ?? COPY.phoneNoPrice}
+          </span>
+        )}
         {countLine !== null && (
           <span
             style={{
-              fontSize: 11.5,
+              fontSize: past ? 12 : 11.5,
               whiteSpace: 'nowrap',
-              color: 'var(--fg-subtle)',
+              color: past ? 'var(--fg-muted)' : 'var(--fg-subtle)',
             }}
           >
             {countLine}
           </span>
         )}
-        <EventStatusChip row={row} />
+        <StatusCell row={row} past={past} align="flex-end" />
       </div>
     </>
   );
-  const cardStyle: CSSProperties = {
-    display: 'flex',
-    gap: 12,
-    padding: '14px 0',
-    color: 'inherit',
-    textDecoration: 'none',
-  };
+  // Every card opens the editor; a past show's is the past-show editor
+  // (`36/past-m`: the whole card is the link).
   return (
     <li style={{ borderBottom: '1px solid var(--border)' }}>
-      {/* A past card does not open the editor: how a past show reaches its
-          edit view is undrawn (held for Design). */}
-      {past ? (
-        <div style={cardStyle}>{body}</div>
-      ) : (
-        <Link href={editEventHref(row.id)} style={cardStyle}>
-          {body}
-        </Link>
-      )}
+      <Link
+        href={editEventHref(row.id)}
+        style={{
+          display: 'flex',
+          gap: 12,
+          padding: past ? '12px 0' : '14px 0',
+          color: 'inherit',
+          textDecoration: 'none',
+        }}
+      >
+        {body}
+      </Link>
     </li>
   );
 };
@@ -480,7 +587,8 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
 /**
  * The rows of `06/events` (desktop table) and `06/events-mobile` (cards, no
  * ⋯: a card opens the editor), and on Past `06/past-shows` (CONCERTS in place
- * of WATCHING, no ⋯).
+ * of WATCHING, no ⋯) with addendum 6's `36/past-d` and `36/past-m`: the whole
+ * row or card opens the past-show editor.
  */
 export const EventsList = ({
   rows,
