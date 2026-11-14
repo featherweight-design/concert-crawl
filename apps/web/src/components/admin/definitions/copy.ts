@@ -3364,14 +3364,11 @@ export const ADMIN_COPY = {
       filtersLabel: 'Filter the log',
       anyone: 'Anyone',
       anyPage: 'Any page',
-      whoLabel: 'Who',
-      whereLabel: 'Page',
       today: 'Today',
       columns: { when: 'WHEN', who: 'WHO', what: 'WHAT', where: 'WHERE' },
       footer:
         'Every admin change is kept, with who made it. Each row links to the thing it changed.',
       emptyTitle: 'No changes yet today',
-      emptyBody: 'Pick another day, or anyone, to see earlier changes.',
       system: 'System',
       noPage: '—',
       // A target that has since been deleted: the API sends no name for it.

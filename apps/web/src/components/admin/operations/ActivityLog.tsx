@@ -1,15 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@clerk/nextjs';
 import { List } from 'lucide-react';
-import {
-  AUDIT_AREAS,
-  type AuditArea,
-  type AuditLogItem,
-} from '@concert-crawl/types';
+import type { AuditLogItem } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { CouldntLoad, PersonAvatar } from '@/components/admin/primitives';
 import { pill } from '@/components/admin/crawl-runs/RunsList';
@@ -24,9 +20,6 @@ import {
 import { ActivityLogRowsSkeleton } from './ActivityLogSkeleton';
 
 const COPY = ADMIN_COPY.operations.log;
-
-const isArea = (value: string): value is AuditArea =>
-  AUDIT_AREAS.some((area) => area === value);
 
 const MONO_HEAD: CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
@@ -220,32 +213,32 @@ const EmptyDay = () => (
     >
       <List size={24} strokeWidth={1.7} aria-hidden />
     </div>
+    {/* The board's body names a day picker that isn't built, so it waits. */}
     <div style={{ fontSize: 17, fontWeight: 800 }}>{COPY.emptyTitle}</div>
-    <div style={{ fontSize: 13, color: 'var(--fg-muted)', lineHeight: 1.5 }}>
-      {COPY.emptyBody}
-    </div>
   </div>
 );
 
-const selectStyle = (on: boolean): CSSProperties => ({
+/**
+ * A filter pill drawn as text (`07/activity-log`): the board draws Anyone and
+ * Today highlighted and Any page not. No menu is drawn for any of them, and
+ * the drawn filter popover (`06/venue-filter`, `FilterPicker`) is a
+ * multi-select with per-option counts this log has no source for, so they
+ * stay static until a menu is drawn.
+ */
+const staticPill = (on: boolean): CSSProperties => ({
   ...pill(on),
-  appearance: 'none',
-  WebkitAppearance: 'none',
+  cursor: 'default',
 });
 
 /**
  * The Activity log tab: today's admin changes (Mountain Time), newest first.
  * The day is read whole, up to the cap, so there is no Load more and no day
- * picker (Design item 37). The filters re-read the day from the API.
+ * picker (Design item 37).
  */
 export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   const { getToken } = useAuth();
-  const [handle, setHandle] = useState('');
-  const [area, setArea] = useState<AuditArea | ''>('');
   const [rows, setRows] = useState<AuditLogItem[] | null>(null);
   const [failed, setFailed] = useState(false);
-  // Anyone's choices: the admins seen today, kept while a filter narrows it.
-  const [handles, setHandles] = useState<string[]>([]);
 
   // Only the newest read may write: a slow older one must not overwrite it.
   const latest = useRef(0);
@@ -258,32 +251,17 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
       const next = await readLogDay(getToken, {
         since: day.start,
         until: day.end,
-        ...(handle ? { actorHandle: handle } : {}),
-        ...(area ? { area } : {}),
       });
       if (mine !== latest.current) return;
       setRows(next);
-      if (!handle) {
-        const seen = next
-          .filter((item) => item.actorKind === 'admin')
-          .map((item) => item.actor)
-          .filter((actor) => !actor.includes(' '));
-        setHandles([...new Set(seen)].sort());
-      }
     } catch {
       if (mine === latest.current) setFailed(true);
     }
-  }, [getToken, handle, area]);
+  }, [getToken]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  const handleChoices = useMemo(
-    () =>
-      handle && !handles.includes(handle) ? [...handles, handle] : handles,
-    [handle, handles],
-  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -294,37 +272,10 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
           aria-label={COPY.filtersLabel}
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
         >
-          <select
-            aria-label={COPY.whoLabel}
-            value={handle}
-            onChange={(evt) => setHandle(evt.target.value)}
-            style={selectStyle(handle !== '')}
-          >
-            <option value="">{COPY.anyone}</option>
-            {handleChoices.map((choice) => (
-              <option key={choice} value={choice}>
-                @{choice}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label={COPY.whereLabel}
-            value={area}
-            onChange={(evt) => {
-              const next = evt.target.value;
-              setArea(isArea(next) ? next : '');
-            }}
-            style={selectStyle(area !== '')}
-          >
-            <option value="">{COPY.anyPage}</option>
-            {AUDIT_AREAS.map((key) => (
-              <option key={key} value={key}>
-                {AREA_LABELS[key]}
-              </option>
-            ))}
-          </select>
+          <span style={staticPill(true)}>{COPY.anyone}</span>
+          <span style={staticPill(false)}>{COPY.anyPage}</span>
           {/* The day is always today until a day picker is drawn. */}
-          <span style={pill(true)}>{COPY.today}</span>
+          <span style={staticPill(true)}>{COPY.today}</span>
         </div>
       )}
       {failed ? (
