@@ -662,6 +662,47 @@ describe('EventEdit past show (B+ addendum 6 item 36)', () => {
     );
   });
 
+  it('moves a passed show to its new date before marking it sold out', async () => {
+    // The PATCH holds until released, so the order is proven, not assumed.
+    let release: (value: unknown) => void = () => undefined;
+    patch.mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    post.mockResolvedValue({});
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'postponed' }}
+        today="2026-11-20"
+      />,
+    );
+    fireEvent.click(screen.getByLabelText(COPY.passed.newDate));
+    fireEvent.click(screen.getByRole('button', { name: 'Fri, Nov 27, 2026' }));
+    fireEvent.click(screen.getByTestId('status-pill-soldout'));
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith(
+        '/v1/admin/events/evt-1',
+        'token',
+        expect.objectContaining({ date: '2026-11-27' }),
+      ),
+    );
+    // Still a past date until the PATCH lands: no sold-out call yet.
+    expect(post).not.toHaveBeenCalled();
+    release({});
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        '/v1/admin/events/evt-1/sold-out',
+        'token',
+        {},
+      ),
+    );
+    const patchOrder = patch.mock.invocationCallOrder[0] ?? Infinity;
+    const postOrder = post.mock.invocationCallOrder[0] ?? -Infinity;
+    expect(patchOrder).toBeLessThan(postOrder);
+  });
+
   it('never sends a sale write on a played show', async () => {
     patch.mockResolvedValue({});
     render(
