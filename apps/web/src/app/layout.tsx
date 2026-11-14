@@ -18,6 +18,7 @@ import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios';
 import { siteOrigin } from '@/lib/share/site-origin';
 import { BRAND_PAPER } from '@/lib/definitions/brand';
 import { startupImageLinks } from '@/lib/pwa/startup-images';
+import { LAUNCH_DETECT } from '@/lib/pwa/launch';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -164,6 +165,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <head>
           {/* Blocking script: runs before paint to apply saved/system theme */}
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+          {/* Marks a cold start of the installed app before the first paint, so
+              the launch overlay is on screen, and its CSS animation running,
+              in the first frame (lib/pwa/launch.ts). Inline for the same
+              reason as the script above. */}
+          <script dangerouslySetInnerHTML={{ __html: LAUNCH_DETECT }} />
         </head>
         <body className="min-h-dvh bg-bg text-fg font-sans antialiased">
           <ServiceWorkerRegistration />
