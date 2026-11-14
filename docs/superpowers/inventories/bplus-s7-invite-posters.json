@@ -29,10 +29,10 @@
   "rows": [
     {
       "id": "posters",
-      "label": "/admin/invite-codes/posters: default",
+      "label": "/admin/people/invite-codes/posters: default",
       "steps": [
         {
-          "goto": "/admin/invite-codes/posters",
+          "goto": "/admin/people/invite-codes/posters",
           "wait": "[data-testid=\"posters-tab\"]",
           "settle": 2000
         }
