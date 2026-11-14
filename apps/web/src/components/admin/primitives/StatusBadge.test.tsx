@@ -34,3 +34,29 @@ describe('StatusBadge filled', () => {
     expect(chip.querySelector('span')?.style.boxShadow).not.toBe('');
   });
 });
+
+describe('StatusBadge size="tile"', () => {
+  it('is the Health boards’ 22px pill at 11.5px, 0 9px, with a plain dot', () => {
+    render(
+      <StatusBadge kind="danger" dot size="tile">
+        Missed
+      </StatusBadge>,
+    );
+    const chip = screen.getByText('Missed');
+    expect(chip.style.height).toBe('22px');
+    expect(chip.style.boxSizing).toBe('border-box');
+    expect(chip.style.fontSize).toBe('11.5px');
+    expect(chip.style.padding).toBe('0px 9px');
+    expect(chip.style.borderRadius).toBe('999px');
+    expect(chip.querySelector('span')?.style.width).toBe('6px');
+    expect(chip.querySelector('span')?.style.boxShadow).toBe('');
+  });
+
+  it('leaves the default size unchanged', () => {
+    render(<StatusBadge kind="danger">Failed</StatusBadge>);
+    const chip = screen.getByText('Failed');
+    expect(chip.style.height).toBe('');
+    expect(chip.style.fontSize).toBe('11px');
+    expect(chip.style.padding).toBe('2px 8px');
+  });
+});

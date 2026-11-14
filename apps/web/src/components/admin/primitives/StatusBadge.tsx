@@ -30,6 +30,12 @@ interface StatusBadgeProps {
    * misrepresent the element as an image.
    */
   'aria-label'?: string;
+  /**
+   * `tile` is the Health boards' pill (`03/tiles-in-each-state`,
+   * `03/health-desktop` Emails row): 22px high, `0 9px`, 11.5px, a plain
+   * dot. Only the Health tiles and the Emails row use it.
+   */
+  size?: 'default' | 'tile';
 }
 
 export const StatusBadge = ({
@@ -40,11 +46,13 @@ export const StatusBadge = ({
   children,
   title,
   'aria-label': ariaLabel,
+  size = 'default',
 }: StatusBadgeProps) => {
   const colors = KIND_COLORS[kind];
   const isMono = variant === 'mono' || mono;
   const isOutline = variant === 'outline';
   const isFilled = variant === 'filled';
+  const isTile = size === 'tile';
 
   return (
     <span
@@ -54,9 +62,10 @@ export const StatusBadge = ({
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
-        padding: isFilled ? '4px 10px' : '2px 8px',
+        ...(isTile && { height: 22, boxSizing: 'border-box' as const }),
+        padding: isTile ? '0 9px' : isFilled ? '4px 10px' : '2px 8px',
         borderRadius: 999,
-        fontSize: isFilled ? 12 : 11,
+        fontSize: isTile ? 11.5 : isFilled ? 12 : 11,
         fontWeight: 600,
         fontFamily: isMono
           ? "'JetBrains Mono', monospace"
@@ -71,7 +80,7 @@ export const StatusBadge = ({
             : colors.bg,
         border: isFilled ? 'none' : `1px solid ${colors.border}`,
         whiteSpace: 'nowrap',
-        lineHeight: '16px',
+        lineHeight: isTile ? 1 : '16px',
       }}
     >
       {dot && (
@@ -82,9 +91,11 @@ export const StatusBadge = ({
             borderRadius: '50%',
             background: colors.fg,
             flexShrink: 0,
-            boxShadow: isFilled
-              ? undefined
-              : `0 0 0 3px color-mix(in oklab, ${colors.fg} 22%, transparent)`,
+            // The tile boards draw a plain dot, with no ring.
+            boxShadow:
+              isFilled || isTile
+                ? undefined
+                : `0 0 0 3px color-mix(in oklab, ${colors.fg} 22%, transparent)`,
           }}
         />
       )}
