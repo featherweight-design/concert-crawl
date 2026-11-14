@@ -233,6 +233,9 @@ export const SidePanel = (props: SidePanelProps) => {
         bottom: 0,
         zIndex: 40,
         gap: 20,
+        // The dynamic viewport, so a browser's collapsing toolbar never hides
+        // the bottom of the panel (see viewport-shell.test.ts).
+        maxHeight: `calc(100dvh - ${content.top}px)`,
         overflowY: 'auto',
       }}
     >
