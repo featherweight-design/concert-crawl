@@ -257,16 +257,24 @@ const SaveBar = ({
 }) => (
   <div
     data-testid="event-edit-save-bar"
+    // Pinned to the bottom of the content area at its full width, as drawn:
+    // `marginTop: auto` drops it to the bottom of a short page, `sticky` holds
+    // it there on a long one, and the negative margins cancel the shell's
+    // padding (desktop 24px 28px; phone 0 16px) so it meets both edges.
     style={{
       position: 'sticky',
       bottom: 0,
+      marginTop: 'auto',
+      marginInline: phone ? -16 : -28,
+      marginBottom: phone ? 0 : -24,
       display: 'flex',
       alignItems: 'center',
       gap: 12,
       minHeight: 64,
-      padding: phone ? '10px 0' : '0 4px',
+      padding: phone ? '10px 16px' : '0 28px',
       background: 'var(--bg)',
       borderTop: '1px solid var(--border)',
+      zIndex: 1,
     }}
   >
     {!phone && (
@@ -427,7 +435,13 @@ export const EventEdit = ({
   return (
     <div
       data-testid="event-edit"
-      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      // Fills the content area, so the Save bar can sit at its bottom.
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        minHeight: '100%',
+      }}
     >
       <Header detail={detail} phone={phone} onMerge={() => setMerging(true)} />
       <div

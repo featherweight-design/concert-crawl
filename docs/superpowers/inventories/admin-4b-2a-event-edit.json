@@ -29,6 +29,8 @@
           "expectStatus": 200,
           "wait": "[data-testid=\"event-edit\"]"
         },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 3000 },
         { "fill": "#event-edit-title", "text": "Violet Grohl (late show)" },
         { "settle": 400 }
       ]
