@@ -34,7 +34,7 @@ describe('(main) error boundary (addendum-2 §18, error-in-app-m)', () => {
     const page = screen.getByTestId('standalone-error');
     expect(page.getAttribute('data-in-app')).toBe('true');
     expect(page.querySelector('header')).toBeNull();
-    expect(page.style.minHeight).toBe('');
+    expect(page.getAttribute('style') ?? '').not.toContain('100dvh');
   });
 
   it('carries the standalone page’s error, Tell us card and error ID', () => {

@@ -1,6 +1,12 @@
 'use client';
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
@@ -113,6 +119,35 @@ const BrokenMark = () => (
   </div>
 );
 
+/**
+ * The throw can unmount the control that had focus, which drops focus to
+ * <body> and leaves a screen reader silent. The heading takes focus on mount,
+ * without scrolling, so the page announces itself.
+ */
+const Heading = () => {
+  const ref = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    ref.current?.focus({ preventScroll: true });
+  }, []);
+
+  return (
+    <h1
+      ref={ref}
+      tabIndex={-1}
+      className="cc-se-heading"
+      style={{
+        margin: 0,
+        fontWeight: 900,
+        letterSpacing: '-0.04em',
+        lineHeight: 1.1,
+      }}
+    >
+      {copy.errorHeading}
+    </h1>
+  );
+};
+
 const ErrorIdChip = ({ errorId }: { errorId: string }) => {
   const [copied, setCopied] = useState(false);
 
@@ -201,7 +236,8 @@ const SECONDARY_STYLE: CSSProperties = {
  * 900px the signed-in page splits as the desktop boards draw it: the copy and
  * the chip on the left, a 440px card on the right, vertically centred; the
  * signed-out page stays one centred column with the buttons in a row.
- * `!important` on the desktop button rules only: the phone styles are inline.
+ * `!important` only where a rule overrides an inline style (the desktop
+ * buttons, the in-app phone margins and Sign out size).
  */
 const LAYOUT_CSS = `
 /* Addendum-4 section 3, the same definition as globals.css: this page cannot
@@ -235,11 +271,25 @@ const LAYOUT_CSS = `
 .cc-se-heading { font-size: 30px; }
 .cc-se-actions { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 4px; margin-top: 12px; }
 .cc-se-try { width: 100%; min-height: 52px; border-radius: 16px; font-size: 17px; }
+[data-testid='standalone-error'] { padding: 24px 20px 48px; }
 /* In the app shell on a phone (addendum-2 18-error-page/error-in-app-m): the
-   app header stands where the logo bar was, and the mark sits 26px under it.
-   From 900px the page is the standalone one, unchanged. */
+   app header stands where the logo bar was, the mark sits 26px under it, and
+   the board's own sizes and rhythm apply. The 80px foot is not the board's
+   24px: the (main) layout reserves no space for the fixed 52px bottom nav
+   (each page in the shell carries its own pb-20), so this page clears it
+   itself. From 900px, where the nav is hidden, every rule here falls away and
+   the page is the standalone one, unchanged. */
 @media (max-width: 899px) {
-  .cc-se-grid[data-in-app='true'] { padding-top: 0; }
+  [data-testid='standalone-error'][data-in-app='true'] { padding: 26px 16px 80px; }
+  .cc-se-grid[data-in-app='true'] { padding-top: 0; row-gap: 26px; }
+  .cc-se-grid[data-in-app='true'] .cc-se-chip { margin-top: 0; }
+  .cc-se-grid[data-in-app='true'] .cc-se-copy { gap: 0; }
+  .cc-se-grid[data-in-app='true'] .cc-se-eyebrow { margin-top: 18px !important; font-size: 9.5px !important; letter-spacing: 0.16em !important; }
+  .cc-se-grid[data-in-app='true'] .cc-se-heading { font-size: 28px; margin-top: 8px !important; }
+  .cc-se-grid[data-in-app='true'] .cc-se-body { margin-top: 10px !important; font-size: 14.5px !important; max-width: 320px; }
+  .cc-se-grid[data-in-app='true'] .cc-se-actions { gap: 10px; margin-top: 20px; }
+  .cc-se-grid[data-in-app='true'] .cc-se-try { min-height: 48px; font-size: 15px; border-radius: 12px; }
+  .cc-se-grid[data-in-app='true'] .cc-se-second { font-size: 14px !important; }
 }
 @media (min-width: 900px) {
   .cc-se-grid { max-width: 1100px; padding-top: 96px; row-gap: 0; }
@@ -290,19 +340,13 @@ export interface StandaloneErrorProps {
   inApp?: boolean | undefined;
 }
 
-// The standalone page owns the whole viewport and paints its own ground.
+// The standalone page owns the whole viewport and paints its own ground. In
+// the shell, the page's ambient ground shows through instead. Padding for both
+// lives in LAYOUT_CSS, so the in-app phone frame can stop at 900px.
 const STANDALONE_FRAME: CSSProperties = {
   minHeight: '100dvh',
-  padding: '24px 20px 48px',
   background:
     'radial-gradient(120% 60% at 0% 0%, color-mix(in oklch, var(--accent) 14%, transparent), transparent 60%), var(--bg)',
-};
-
-// Inside the shell the page's ambient ground shows through. 26px under the app
-// header and 16px gutters as drawn; the 80px foot clears the fixed bottom nav,
-// as every page in the shell does (see PHONE_SHELL_CLASS).
-const IN_APP_FRAME: CSSProperties = {
-  padding: '26px 16px 80px',
 };
 
 export const StandaloneError = ({
@@ -316,7 +360,7 @@ export const StandaloneError = ({
     data-testid="standalone-error"
     data-in-app={inApp ? 'true' : undefined}
     style={{
-      ...(inApp ? IN_APP_FRAME : STANDALONE_FRAME),
+      ...(inApp ? undefined : STANDALONE_FRAME),
       boxSizing: 'border-box',
       color: 'var(--fg)',
       fontFamily: 'var(--font-ui, system-ui, sans-serif)',
@@ -336,6 +380,7 @@ export const StandaloneError = ({
       <div className="cc-se-copy">
         <BrokenMark />
         <p
+          className="cc-se-eyebrow"
           style={{
             margin: '16px 0 0',
             fontFamily: 'var(--font-mono, ui-monospace, monospace)',
@@ -348,18 +393,9 @@ export const StandaloneError = ({
         >
           {copy.eyebrow}
         </p>
-        <h1
-          className="cc-se-heading"
-          style={{
-            margin: 0,
-            fontWeight: 900,
-            letterSpacing: '-0.04em',
-            lineHeight: 1.1,
-          }}
-        >
-          {copy.errorHeading}
-        </h1>
+        <Heading />
         <p
+          className="cc-se-body"
           style={{
             margin: 0,
             fontSize: 15,
