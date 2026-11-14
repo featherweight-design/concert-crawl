@@ -1,5 +1,10 @@
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { VENUE_TABS } from '@/lib/admin/venue-tabs';
+import {
+  CONTENT_GUTTER_Y,
+  PAGE_MAX_WIDTH,
+  VENUE_PAGE_GAP,
+} from '@/components/admin/shell/content-pane';
 
 const CARD_LINES = ['90%', '76%', '62%', '48%'];
 
@@ -40,9 +45,11 @@ export default function VenueDetailLoading() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 16,
-        maxWidth: 1080,
-        paddingBottom: 32,
+        // The loaded page's column (`VenueDetailsClient`): its 18 gap, width
+        // cap and bottom gutter, so the header and tabs don't jump on load.
+        gap: VENUE_PAGE_GAP,
+        maxWidth: PAGE_MAX_WIDTH,
+        paddingBottom: CONTENT_GUTTER_Y,
       }}
     >
       <SkeletonBlock height={150} radius={16} />

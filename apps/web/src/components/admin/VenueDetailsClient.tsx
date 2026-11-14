@@ -24,6 +24,7 @@ import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import {
   CONTENT_GUTTER_Y,
   PAGE_MAX_WIDTH,
+  VENUE_PAGE_GAP,
 } from '@/components/admin/shell/content-pane';
 
 interface Props {
@@ -197,7 +198,7 @@ export function VenueDetailsClient({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 18,
+        gap: VENUE_PAGE_GAP,
         maxWidth: PAGE_MAX_WIDTH,
         // `details-d` draws 24 between the last card and the pinned bar,
         // which now sits past this column, at the end of the pane.

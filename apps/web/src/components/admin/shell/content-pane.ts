@@ -6,3 +6,5 @@ export const CONTENT_GUTTER_X = 28;
 export const CONTENT_GUTTER_Y = 24;
 /** The widest a venue page's column runs (`VenueDetailsClient`). */
 export const PAGE_MAX_WIDTH = 1080;
+/** The gap between a venue page's header, tabs and panel; its skeleton too. */
+export const VENUE_PAGE_GAP = 18;
