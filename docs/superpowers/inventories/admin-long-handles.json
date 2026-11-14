@@ -27,7 +27,7 @@
       "label": "Invite codes, personal-code label",
       "steps": [
         {
-          "goto": "/admin/invite-codes",
+          "goto": "/admin/people/invite-codes",
           "wait": "[data-testid='invite-codes-list']",
           "settle": 800
         }
@@ -38,7 +38,7 @@
       "label": "A personal code's panel byline",
       "steps": [
         {
-          "goto": "/admin/invite-codes",
+          "goto": "/admin/people/invite-codes",
           "wait": "[data-testid='invite-codes-list']",
           "settle": 800
         },
