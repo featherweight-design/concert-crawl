@@ -109,8 +109,11 @@ describe('StandaloneError', () => {
       render(<StandaloneError errorId="1" onRetry={vi.fn()} />);
       const page = screen.getByTestId('standalone-error');
       expect(page.querySelector('header')).not.toBeNull();
-      expect(page.style.minHeight).toBe('100dvh');
-      expect(page.style.background).toContain('var(--bg)');
+      // The style attribute, not `page.style`: jsdom's parser may drop a
+      // `dvh` length or a `color-mix()` ground it does not understand.
+      const style = page.getAttribute('style') ?? '';
+      expect(style).toContain('100dvh');
+      expect(style).toContain('var(--bg)');
       expect(page.hasAttribute('data-in-app')).toBe(false);
     });
 
@@ -121,10 +124,58 @@ describe('StandaloneError', () => {
       expect(
         screen.queryByRole('link', { name: copy.homeLinkLabel }),
       ).toBeNull();
-      expect(page.style.minHeight).toBe('');
-      expect(page.style.background).toBe('');
+      const style = page.getAttribute('style') ?? '';
+      expect(style).not.toContain('100dvh');
+      expect(style).not.toContain('var(--bg)');
       expect(page.getAttribute('data-in-app')).toBe('true');
     });
+
+    it('in-app phone rules stop at 900px, so desktop is the standalone page', () => {
+      const { container } = render(
+        <StandaloneError inApp errorId="1" onRetry={vi.fn()} />,
+      );
+      const css = container.querySelector('style')?.textContent ?? '';
+      const phone = css.slice(
+        css.indexOf('@media (max-width: 899px)'),
+        css.indexOf('@media (min-width: 900px)'),
+      );
+      // The board's frame, sizes and rhythm, phone only.
+      expect(phone).toContain('padding: 26px 16px 80px');
+      expect(phone).toContain('row-gap: 26px');
+      expect(phone).toContain('font-size: 28px');
+      expect(phone).toContain(
+        'min-height: 48px; font-size: 15px; border-radius: 12px',
+      );
+      expect(phone).toContain(
+        'font-size: 9.5px !important; letter-spacing: 0.16em !important',
+      );
+      expect(phone).toContain('font-size: 14.5px !important; max-width: 320px');
+      expect(phone).toContain('font-size: 14px !important');
+      // No in-app rule reaches the desktop block.
+      const desktop = css.slice(css.indexOf('@media (min-width: 900px)'));
+      expect(desktop).not.toContain('data-in-app');
+      // The standalone frame padding holds at every width outside the phone
+      // in-app rule.
+      expect(css).toContain(
+        "[data-testid='standalone-error'] { padding: 24px 20px 48px; }",
+      );
+    });
+  });
+
+  describe('focus', () => {
+    // A throw can unmount the focused control; the heading takes focus so
+    // the page announces itself instead of leaving focus on <body>.
+    it.each([false, true])(
+      'moves focus to the heading on mount (inApp: %s)',
+      (inApp) => {
+        render(<StandaloneError inApp={inApp} errorId="1" onRetry={vi.fn()} />);
+        const heading = screen.getByRole('heading', {
+          name: copy.errorHeading,
+        });
+        expect(heading.getAttribute('tabindex')).toBe('-1');
+        expect(document.activeElement).toBe(heading);
+      },
+    );
 
     it('in-app keeps the error, the card and the error ID as the standalone page draws them', () => {
       const onSignOut = vi.fn();
