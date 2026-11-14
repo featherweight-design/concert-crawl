@@ -500,13 +500,23 @@ submissionsRouter.delete('/:id', clerkAuth, requireAuth, async (ctx) => {
   // price, and it vanished (write skew); and a counter filed concurrently
   // could be missed, reopening a price with an update pending.
   const parentId = submission.disputedSubmissionId;
-  await db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
     if (parentId !== null) await lockParent(tx, parentId);
     const [locked] = await tx
       .select({ status: priceSubmissions.status })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.id, id))
       .for('update');
+    // A price that other rows point at (the original of a price check, live or
+    // archived, which updates and the price that replaced it reference) is
+    // part of that check's record. The foreign key refuses the delete, which
+    // used to surface as a 500; refuse it up front instead.
+    const [referencedBy] = await tx
+      .select({ id: priceSubmissions.id })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.disputedSubmissionId, id))
+      .limit(1);
+    if (referencedBy !== undefined) return 'in_price_check' as const;
     await tx.delete(priceSubmissions).where(eq(priceSubmissions.id, id));
     // Withdrawing the last pending update on a price closes its check, so the
     // price goes back to live. Only a still-pending update counts: deleting
@@ -527,6 +537,16 @@ submissionsRouter.delete('/:id', clerkAuth, requireAuth, async (ctx) => {
         );
       }
     }
+    return 'withdrawn' as const;
   });
+  if (outcome === 'in_price_check') {
+    return ctx.json(
+      {
+        success: false,
+        error: 'This price is part of a price check and cannot be withdrawn.',
+      },
+      409,
+    );
+  }
   return ctx.body(null, 204);
 });
