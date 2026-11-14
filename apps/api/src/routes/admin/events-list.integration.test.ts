@@ -468,6 +468,7 @@ describe('GET /v1/admin/events/:id (Event edit fields)', () => {
     expect(body.data).toMatchObject({
       submittedPriceCount: 1,
       mySubmissionId: null,
+      mySubmission: null,
       priceRetrievedAt: '2026-11-10T15:00:00.000Z',
     });
   });
@@ -491,13 +492,17 @@ describe('GET /v1/admin/events/:id (Event edit fields)', () => {
     });
     await seedUserEvent('fan_1', event.id, { status: 'watching' });
     await seedPriceSubmission(event.id, 'fan_1');
-    const mine = await seedPriceSubmission(event.id, ADMIN_USER_ID);
+    const mine = await seedPriceSubmission(event.id, ADMIN_USER_ID, {
+      priceMin: '12.00',
+      priceMax: '15.00',
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       headers: HEADERS,
     });
     const body = (await res.json()) as { data: Record<string, unknown> };
     expect(body.data).toMatchObject({
+      mySubmission: { id: mine.id, priceMin: '12.00', priceMax: '15.00' },
       id: event.id,
       listStatus: 'available',
       hiddenReason: null,
