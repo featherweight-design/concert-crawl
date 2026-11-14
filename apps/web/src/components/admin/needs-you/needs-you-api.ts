@@ -66,6 +66,8 @@ export interface EventFacts {
   description: string | null;
   confidence: number | null;
   autoApproveBar: number | null;
+  priceMin: string | null;
+  priceMax: string | null;
 }
 
 /** What a price check item adds (prices are the API's numeric strings). */
@@ -276,6 +278,8 @@ const eventFactsFrom = (value: Record<string, unknown>): EventFacts => ({
   description: textOf(value['description']),
   confidence: numberOf(value['confidence']),
   autoApproveBar: numberOf(value['autoApproveBar']),
+  priceMin: textOf(value['priceMin']),
+  priceMax: textOf(value['priceMax']),
 });
 
 const priceFactsFrom = (value: Record<string, unknown>): PriceFacts => ({

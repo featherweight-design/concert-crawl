@@ -3,7 +3,12 @@
 import { ExternalLink } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { editEventHref } from '@/lib/admin/edit-event-link';
-import { metaDate, metaTime, whenChipOf } from '../needs-you-rules';
+import {
+  metaDate,
+  metaTime,
+  priceRangeOf,
+  whenChipOf,
+} from '../needs-you-rules';
 import type { PanelProps } from './panel-props';
 import {
   AnswerButtons,
@@ -45,6 +50,7 @@ export const EventPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
   ]
     .filter((part) => part !== null)
     .join(' · ');
+  const price = facts ? priceRangeOf(facts.priceMin, facts.priceMax) : null;
   const rows = [
     ...(facts?.artist
       ? [{ label: PANEL.event.artist, value: facts.artist }]
@@ -53,6 +59,7 @@ export const EventPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
     ...(row.venueName
       ? [{ label: PANEL.event.where, value: row.venueName }]
       : []),
+    ...(price ? [{ label: PANEL.event.price, value: price }] : []),
   ];
 
   return (

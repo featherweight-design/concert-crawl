@@ -87,6 +87,28 @@ describe('Needs you sources and ranking', () => {
     expect(devices).toContain(null);
   });
 
+  it('carries the listed price through the shared tier loader, null with none', async () => {
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const priced = await seedLowConfidence(venue.id, 'Priced Act', inDays(5));
+    const unpriced = await seedLowConfidence(venue.id, 'Bare Act', inDays(6));
+    await seedUserProfile('price-user');
+    await seedPriceSubmission(priced.id, 'price-user', {
+      priceMin: '25',
+      status: 'corroborated',
+      corroborationCount: 2,
+    });
+    const items = await listNeedsYou({
+      kind: 'event-low-confidence',
+      now: now(),
+    });
+    const priceOf = (id: string) => {
+      const item = items.find((one) => one.key === lowKey(id));
+      return item?.kind === 'event-low-confidence' ? item.priceMin : undefined;
+    };
+    expect(priceOf(priced.id)).toMatch(/^25(\.00)?$/);
+    expect(priceOf(unpriced.id)).toBeNull();
+  });
+
   it('breaks a date tie by watchers', async () => {
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
     const date = inDays(7);
