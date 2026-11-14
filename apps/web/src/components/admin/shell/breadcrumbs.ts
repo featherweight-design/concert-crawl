@@ -66,6 +66,15 @@ export function buildBreadcrumbs(
       { label: ADMIN_COPY.eventsList.pastCrumb, view: true },
     ];
   }
+  // `07/activity-log`: "Operations / {tab}"; the phone header keeps
+  // "Operations" with the tab under it (`07/activity-log-mobile`). Feedback is
+  // the only tab so far; the old `/admin/feedback` route only redirects here.
+  if (pathname === '/admin/operations') {
+    return [
+      { label: item.label, href: item.href },
+      { label: ADMIN_COPY.operations.tabs.feedback, subtitle: true },
+    ];
+  }
   if (isSectionRoot(item, pathname)) return [{ label: item.label }];
   // `07/invite-codes`: "People / Invite codes", and Posters beside it.
   const peopleTab = PEOPLE_TABS.get(pathname);

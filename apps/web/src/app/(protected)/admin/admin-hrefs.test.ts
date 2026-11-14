@@ -19,12 +19,8 @@ import { describe, expect, it } from 'vitest';
 const SRC = join(import.meta.dirname, '..', '..', '..');
 const APP = join(SRC, 'app');
 
-/**
- * Literals that are not links. Each names why.
- * - `/admin/operations`: the sidebar's active-state prefix for the Operations
- *   section (`shell/nav.ts`), which has no index page of its own.
- */
-const NOT_LINKS = new Set(['/admin/operations']);
+/** Literals that are not links. Each names why. (None today.) */
+const NOT_LINKS = new Set<string>([]);
 
 const DYNAMIC = ':param';
 

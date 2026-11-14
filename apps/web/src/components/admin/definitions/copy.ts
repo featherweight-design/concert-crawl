@@ -2223,11 +2223,7 @@ export const ADMIN_COPY = {
   },
 
   feedback: {
-    eyebrow: 'operations · users',
     title: 'Feedback',
-    subtitle:
-      'Inbox for in-app feedback (and Sentry, soon email). Triage: mark read, flag for investigation, open a GH issue, or archive.',
-    unreadBadgeSuffix: 'unread',
     statusChips: {
       all: 'All',
       unread: 'Unread',
@@ -3367,6 +3363,17 @@ export const ADMIN_COPY = {
       notFound: 'Not found',
       details: 'Details',
     },
+  },
+
+  // `07/activity-log`: Operations' shell. The Activity log and Emails tabs
+  // join `tabs` when they are built.
+  operations: {
+    title: 'Operations',
+    subtitle: 'Feedback, the emails we send, and a log of every admin change',
+    tabsLabel: 'Operations sections',
+    tabs: { feedback: 'Feedback' },
+    // The tab's count is a bare number on screen; this reads it out.
+    unreadCountLabel: (count: number) => `${count} unread`,
   },
 
   featureFlags: {

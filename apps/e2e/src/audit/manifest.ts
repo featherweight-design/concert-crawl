@@ -9,7 +9,7 @@
  * structurally valid at import time — a bad entry will throw loudly
  * before the sweep runner can start.
  *
- * The admin-feedback entry includes an expand-first-card interaction that
+ * The admin-operations entry (the Feedback tab) includes an expand-first-card interaction that
  * surfaces the motivating mobile-layout bug (CONTEXT column hidden on mobile).
  *
  * These routes reference stable staging data seeded by `pnpm db:seed:staging`:
@@ -109,8 +109,8 @@ const manifest: AuditManifest = validateManifest([
     auth: 'user',
   },
   {
-    id: 'admin-feedback',
-    path: '/admin/feedback',
+    id: 'admin-operations',
+    path: '/admin/operations',
     tags: ['admin'],
     auth: 'admin',
     interactions: [

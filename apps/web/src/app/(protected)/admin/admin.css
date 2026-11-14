@@ -405,6 +405,18 @@
   }
 }
 
+/* The Operations skeleton's title and subtitle bars (operations/loading.tsx).
+   The phone header carries the title, so the phone draws only the tabs and
+   list, as the page does. Matches ADMIN_PHONE_MAX_WIDTH. */
+.operations-skeleton-head {
+  display: flex;
+}
+@media (max-width: 720px) {
+  .operations-skeleton-head {
+    display: none;
+  }
+}
+
 /* Health (admin 1c). Desktop is 03/health-desktop, the phone 03/health-mobile;
    copy that differs renders twice and the breakpoint picks one. Between 720
    and 1100 the boards draw nothing (gap G14): tiles go 2 by 2, columns stack. */

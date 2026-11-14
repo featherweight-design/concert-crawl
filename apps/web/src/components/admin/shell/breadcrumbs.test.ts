@@ -45,6 +45,15 @@ describe('buildBreadcrumbs', () => {
     ]);
   });
 
+  // `07/activity-log` draws "Operations / {tab}".
+  it('puts the Operations tab under Operations', () => {
+    const operations = { label: 'Operations', href: '/admin/operations' };
+    expect(buildBreadcrumbs('/admin/operations')).toEqual([
+      operations,
+      { label: 'Feedback', subtitle: true },
+    ]);
+  });
+
   it('keeps a person under People / Details', () => {
     expect(buildBreadcrumbs('/admin/people/user_1')).toEqual([
       { label: 'People', href: '/admin/people' },
