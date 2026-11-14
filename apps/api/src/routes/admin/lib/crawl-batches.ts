@@ -19,6 +19,7 @@ import type {
   CrawlStatus,
   UsualNightly,
 } from '@concert-crawl/types';
+import { createHash } from 'node:crypto';
 import { addDays, denverDate } from './needs-you/keys.js';
 
 /** Triggers by one person closer together than this are one by-hand batch. */
@@ -57,24 +58,40 @@ export interface BatchTriggerInput {
 }
 
 /**
- * A by-hand key from a URL (`run:<epoch>`) carries no actor: it names the
- * by-hand batch that started in that second, whoever queued it.
+ * A by-hand key from a URL (`run:<epoch>:<tag>`) carries no Clerk id, only
+ * `actorTag`'s short hash of it. A bare `run:<epoch>` (no tag) still works:
+ * it names the first by-hand batch that started in that second.
  */
 export type ParsedBatchKey =
   | { kind: 'nightly'; night: string }
-  | { kind: 'by_hand'; actor: string | null; epoch: number };
+  | {
+      kind: 'by_hand';
+      actor: string | null;
+      epoch: number;
+      tag?: string | null;
+    };
 
 const NIGHT_KEY = /^nightly:(\d{4}-\d{2}-\d{2})$/;
 const BY_HAND_KEY = /^by_hand:(.{1,255}):(\d{1,12})$/;
-const RUN_KEY = /^run:(\d{1,12})$/;
+const RUN_KEY = /^run:(\d{1,12})(?::([0-9a-f]{8}))?$/;
 
 export const nightlyKey = (night: string): string => `nightly:${night}`;
 
 const epochOf = (at: Date): number => Math.floor(at.getTime() / 1000);
 
+/**
+ * Tells two actors' batches in one second apart in a link key, without
+ * putting the Clerk id in a URL: the first 8 hex of its SHA-256.
+ */
+export const actorTag = (actor: string | null): string =>
+  createHash('sha256')
+    .update(actor ?? 'unknown')
+    .digest('hex')
+    .slice(0, 8);
+
 /** True when `batch` is the one the parsed key names. */
 export const batchMatchesKey = (
-  batch: Pick<CrawlBatchDetail, 'key' | 'kind' | 'startedAt'>,
+  batch: Pick<CrawlBatchDetail, 'key' | 'kind' | 'startedAt' | 'actor'>,
   key: string,
   parsed: ParsedBatchKey,
 ): boolean => {
@@ -84,7 +101,8 @@ export const batchMatchesKey = (
     parsed.actor === null &&
     batch.kind === 'by_hand' &&
     batch.startedAt !== null &&
-    epochOf(new Date(batch.startedAt)) === parsed.epoch
+    epochOf(new Date(batch.startedAt)) === parsed.epoch &&
+    ((parsed.tag ?? null) === null || parsed.tag === actorTag(batch.actor))
   );
 };
 
@@ -118,7 +136,12 @@ export const parseBatchKey = (key: string): ParsedBatchKey | null => {
   }
   const run = RUN_KEY.exec(key);
   if (run?.[1] !== undefined) {
-    return { kind: 'by_hand', actor: null, epoch: Number(run[1]) };
+    return {
+      kind: 'by_hand',
+      actor: null,
+      epoch: Number(run[1]),
+      tag: run[2] ?? null,
+    };
   }
   return null;
 };
@@ -258,6 +281,12 @@ export interface GroupInput {
   runs: readonly BatchRunInput[];
   triggers: readonly BatchTriggerInput[];
   now: Date;
+  /**
+   * Derive Didn't start from this night on even when the input has no
+   * earlier nightly: for a read window with history behind it, whose oldest
+   * nights may simply have had no runs.
+   */
+  didntStartFrom?: string | undefined;
 }
 
 /** Every batch in the input, newest first. */
@@ -265,6 +294,7 @@ export const groupCrawlBatches = ({
   runs,
   triggers,
   now,
+  didntStartFrom,
 }: GroupInput): CrawlBatchDetail[] => {
   const triggerRunIds = new Set(
     triggers.flatMap((trigger) =>
@@ -340,8 +370,12 @@ export const groupCrawlBatches = ({
     });
   }
 
-  // Didn't start: a night after the first one we have, with no scheduled run.
-  const firstNight = [...nights.keys()].sort()[0];
+  // Didn't start: a night after the first one we have (or didntStartFrom),
+  // with no scheduled run.
+  const firstNight = [
+    ...nights.keys(),
+    ...(didntStartFrom === undefined ? [] : [didntStartFrom]),
+  ].sort()[0];
   if (firstNight !== undefined) {
     const today = denverDate(now);
     const lastDue =
@@ -432,7 +466,7 @@ export const groupCrawlBatches = ({
         retried: false,
         didntStart: false,
         costUsd: costOf(burstRuns),
-        linkKey: `run:${epochOf(first.createdAt)}`,
+        linkKey: `run:${epochOf(first.createdAt)}:${actorTag(actor)}`,
         crawlAll: isCrawlAll(burst),
         venueName:
           venueIds.size === 1

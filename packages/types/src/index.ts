@@ -629,7 +629,10 @@ export interface CrawlBatch {
   costUsd: number;
   /**
    * The key a URL carries, with no Clerk id in it: `nightly:YYYY-MM-DD`, or
-   * `run:<epoch s>` for a by-hand batch. GET /batches/:key takes either.
+   * `run:<epoch s>:<tag>` for a by-hand batch, the tag being 8 hex of a hash
+   * of the actor so two admins' batches in one second stay apart.
+   * GET /batches/:key takes either. A bare `run:<epoch s>` is also accepted,
+   * but when two actors started a batch in that second it opens the first.
    */
   linkKey: string;
   /**

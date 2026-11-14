@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ESTIMATE_NIGHTS,
+  actorTag,
   batchMatchesKey,
   groupCrawlBatches,
   parseBatchKey,
@@ -386,17 +387,17 @@ describe('groupCrawlBatches: by hand', () => {
       {
         crawlAll: false,
         venueName: 'Venue t5',
-        linkKey: `run:${Date.parse('2026-11-12T18:00:00Z') / 1000}`,
+        linkKey: `run:${Date.parse('2026-11-12T18:00:00Z') / 1000}:${actorTag('user_a')}`,
       },
       {
         crawlAll: false,
         venueName: null,
-        linkKey: `run:${Date.parse('2026-11-12T17:00:00Z') / 1000}`,
+        linkKey: `run:${Date.parse('2026-11-12T17:00:00Z') / 1000}:${actorTag('user_a')}`,
       },
       {
         crawlAll: true,
         venueName: null,
-        linkKey: `run:${Date.parse('2026-11-12T16:00:00Z') / 1000}`,
+        linkKey: `run:${Date.parse('2026-11-12T16:00:00Z') / 1000}:${actorTag('user_a')}`,
       },
     ]);
   });
@@ -496,19 +497,51 @@ describe('parseBatchKey', () => {
     expect(parseBatchKey('')).toBeNull();
   });
 
-  it('reads a link key with no actor, which names a by-hand batch by its second', () => {
-    const parsed = parseBatchKey('run:1794000000');
-    expect(parsed).toEqual({ kind: 'by_hand', actor: null, epoch: 1794000000 });
-    if (parsed === null) throw new Error('expected a key');
+  it('reads a link key with no Clerk id, which names a by-hand batch by its second and actor tag', () => {
     const batch = {
       key: 'by_hand:user_a:1794000000',
       kind: 'by_hand' as const,
+      actor: 'user_a',
       startedAt: new Date(1794000000 * 1000 + 400).toISOString(),
     };
-    expect(batchMatchesKey(batch, 'run:1794000000', parsed)).toBe(true);
-    expect(
-      batchMatchesKey({ ...batch, startedAt: null }, 'run:1794000000', parsed),
-    ).toBe(false);
+    const other = {
+      ...batch,
+      key: 'by_hand:user_b:1794000000',
+      actor: 'user_b',
+    };
+    const tagged = `run:1794000000:${actorTag('user_a')}`;
+    const parsed = parseBatchKey(tagged);
+    expect(parsed).toEqual({
+      kind: 'by_hand',
+      actor: null,
+      epoch: 1794000000,
+      tag: actorTag('user_a'),
+    });
+    if (parsed === null) throw new Error('expected a key');
+    expect(actorTag('user_a')).toMatch(/^[0-9a-f]{8}$/);
+    expect(batchMatchesKey(batch, tagged, parsed)).toBe(true);
+    expect(batchMatchesKey(other, tagged, parsed)).toBe(false);
+    expect(batchMatchesKey({ ...batch, startedAt: null }, tagged, parsed)).toBe(
+      false,
+    );
+
+    // The bare second, kept for old links, takes either actor's batch.
+    const bare = parseBatchKey('run:1794000000');
+    if (bare === null) throw new Error('expected a key');
+    expect(batchMatchesKey(other, 'run:1794000000', bare)).toBe(true);
     expect(parseBatchKey('run:soon')).toBeNull();
+    expect(parseBatchKey('run:1794000000:user_a')).toBeNull();
+  });
+
+  it('derives Didn’t start from didntStartFrom when the input has no earlier night', () => {
+    const batches = groupCrawlBatches({
+      runs: [run('a', '2026-11-11T10:10:00Z')],
+      triggers: [],
+      now: NOW,
+      didntStartFrom: '2026-11-08',
+    });
+    expect(
+      batches.filter((batch) => batch.didntStart).map((batch) => batch.night),
+    ).toEqual(['2026-11-12', '2026-11-10', '2026-11-09', '2026-11-08']);
   });
 });
