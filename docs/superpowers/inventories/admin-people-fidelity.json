@@ -1,0 +1,108 @@
+{
+  "feature": "Admin · People, person page and Invite codes fidelity (P47-13 PR A)",
+  "note": "Boards: design_handoff_admin_redesign/boards/07-people-flags-operations/people, people-no-results, person, person-mobile, invite-codes, invite-codes-none, reactivate-a-code, role-changed-with-undo, loading-*. CONTACT_SHEET_ROLE=admin. Read-only walk: no role change, revoke or reactivate is sent. Empty People and empty Invite codes are reached by routing the list call to an empty body. Skeletons, the Undo toast and the revoked-on line have no on-demand trigger without a write, so they are pinned by unit tests (people-fidelity.test.tsx, codes-fidelity.test.tsx).",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 740,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "people",
+      "label": "People list",
+      "steps": [
+        {
+          "goto": "/admin/people",
+          "wait": "main a[href^='/admin/people/']",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "people-empty",
+      "label": "People, no results (list routed empty)",
+      "steps": [
+        {
+          "route": "**/v1/admin/people?**",
+          "status": 200,
+          "body": {
+            "success": true,
+            "data": {
+              "people": [],
+              "total": 0,
+              "counts": {},
+              "truncated": false
+            }
+          }
+        },
+        {
+          "goto": "/admin/people",
+          "wait": "text=Nobody matches",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "person",
+      "label": "Person page (first person in the list)",
+      "steps": [
+        {
+          "goto": "/admin/people",
+          "wait": "main a[href^='/admin/people/']",
+          "settle": 800
+        },
+        {
+          "click": "main a[href^='/admin/people/'] >> nth=0"
+        },
+        {
+          "wait": "[data-testid='person-menu']",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "codes",
+      "label": "Invite codes",
+      "steps": [
+        {
+          "goto": "/admin/invite-codes",
+          "wait": "[data-testid='invite-codes-list']",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "codes-none",
+      "label": "Invite codes, none (list routed empty)",
+      "steps": [
+        {
+          "route": "**/v1/admin/invite-codes**",
+          "status": 200,
+          "body": {
+            "success": true,
+            "data": []
+          }
+        },
+        {
+          "goto": "/admin/invite-codes",
+          "wait": "text=No invite codes yet",
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}
