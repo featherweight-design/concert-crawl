@@ -81,6 +81,7 @@ const venue = (slug: string, name: string, upcomingCount: number) =>
     lng: null,
     upcomingCount,
     guide: null,
+    shortName: null,
   }) satisfies VenuePublic;
 
 const VENUES: VenuePublic[] = [

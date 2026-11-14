@@ -102,6 +102,7 @@ const venue: VenueWithCrawlHealth = {
   id: 'venue-1',
   name: 'Test Venue',
   slug: 'test-venue',
+  shortName: null,
   websiteUrl: 'https://testvenue.example.com',
   city: 'Denver',
   timezone: 'America/Denver',
