@@ -21,17 +21,19 @@ const ADMIN_TIER = 'GA';
  * price on a show that already has a fan price; Hugh, 2026-11-14, board
  * 06/edit-price-desktop).
  *
- * The listed price is the single source's tier headline (resolveDisplayPrice),
- * which prefers the cheaper of two prices on the same trust, so a replacement
- * has to retire the prices it replaces. In one transaction:
- * - an open Price check on the show refuses it ('contest_lockout'), as every
- *   price writer does;
- * - every corroborated price in the admin's tier is archived with
- *   REPLACED_BY_ADMIN_REASON. The rows are kept as history, and a fan's own
- *   list still reads them as corroborated (fanStoredStatus), so nobody is
- *   told;
- * - the admin's price goes in corroborated, carrying the source of the
- *   price it replaces, so its trust rank is unchanged;
+ * The listed price is the cheapest headline across every tier on the show
+ * (resolveDisplayPrice), which prefers the cheaper of two prices on the same
+ * trust, so a replacement has to retire every price it could lose to. In one
+ * transaction:
+ * - every corroborated price on the show, in every tier, is locked first,
+ *   then an open Price check on the show refuses it ('contest_lockout'), as
+ *   every price writer does. Locking first means a check that commits
+ *   concurrently is seen rather than missed;
+ * - those corroborated prices are archived with REPLACED_BY_ADMIN_REASON.
+ *   The rows are kept as history, and a fan's own list still reads them as
+ *   corroborated (fanStoredStatus), so nobody is told;
+ * - the admin's price goes in corroborated, in tier GA, carrying the source
+ *   of the newest price it replaces, so its trust rank is unchanged;
  * - `events.ticket_price_*` follow for legacy readers only; fan surfaces
  *   read the single source.
  *
@@ -45,6 +47,25 @@ export const replaceListedPrice = async (
   priceMax: string | null,
 ): Promise<ReplacePriceResult> =>
   db.transaction(async (tx) => {
+    // Lock first: a Price check opened on one of these rows waits on the
+    // lock, so the lockout read below sees one that commits concurrently.
+    const replaced = await tx
+      .select({
+        id: priceSubmissions.id,
+        vendor: priceSubmissions.vendor,
+        howFound: priceSubmissions.howFound,
+        sourceCategory: priceSubmissions.sourceCategory,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, eventId),
+          eq(priceSubmissions.status, 'corroborated'),
+        ),
+      )
+      .orderBy(sql`${priceSubmissions.updatedAt} DESC`)
+      .for('update');
+
     const [lockout] = await tx
       .select({ id: priceSubmissions.id })
       .from(priceSubmissions)
@@ -62,24 +83,6 @@ export const replaceListedPrice = async (
       )
       .limit(1);
     if (lockout) return { ok: 'contest_lockout' as const };
-
-    const replaced = await tx
-      .select({
-        id: priceSubmissions.id,
-        vendor: priceSubmissions.vendor,
-        howFound: priceSubmissions.howFound,
-        sourceCategory: priceSubmissions.sourceCategory,
-      })
-      .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.eventId, eventId),
-          eq(priceSubmissions.tier, ADMIN_TIER),
-          eq(priceSubmissions.status, 'corroborated'),
-        ),
-      )
-      .orderBy(sql`${priceSubmissions.updatedAt} DESC`)
-      .for('update');
 
     const [event] = await tx
       .select({
