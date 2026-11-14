@@ -148,7 +148,8 @@ describe('PriceCard', () => {
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
   });
 
-  it('holds Edit price on the admin’s price while a Price check is open', () => {
+  it('keeps Edit price enabled over the admin’s disputed price; a 409 shows the Price check line', async () => {
+    replaceListedPrice.mockRejectedValue({ status: 409 });
     render(
       <PriceCard
         detail={{
@@ -165,7 +166,11 @@ describe('PriceCard', () => {
         onSaved={vi.fn()}
       />,
     );
-    expect(screen.getByTestId('event-edit-price-edit')).toBeDisabled();
+    const button = screen.getByTestId('event-edit-price-edit');
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    fireEvent.click(screen.getByText(`edit sheet ${DETAIL.priceMin ?? ''}`));
+    await vi.waitFor(() => expect(saveResults).toEqual([COPY.priceCheckOpen]));
   });
 
   it('opens a new price, one show only, on a show with no price', () => {
