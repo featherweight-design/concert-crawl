@@ -44,8 +44,12 @@ describe('VenueGrid', () => {
     expect(failed).toHaveTextContent('3rd failure · auto-paused');
     expect(within(failed).getByRole('link')).toHaveAttribute(
       'href',
-      '/admin/venues/junkyard',
+      '/admin/venues/junkyard?tab=runs',
     );
+    // OK cells open the Runs tab too.
+    expect(
+      within(screen.getByTestId('venue-grid-ok')).getAllByRole('link')[0],
+    ).toHaveAttribute('href', '/admin/venues/bluebird?tab=runs');
     expect(screen.getByTestId('venue-grid-paused')).toHaveTextContent(
       'LevittPaused',
     );
@@ -59,6 +63,31 @@ describe('VenueGrid', () => {
       'href',
       '/admin/crawl',
     );
+  });
+
+  it.each([
+    [[], 'Worst first. Every venue opens its own page on the Runs tab.'],
+    [
+      ['Junkyard'],
+      'Worst first. Every venue opens its own page on the Runs tab. Only Junkyard is in Needs you.',
+    ],
+    [
+      ['Junkyard', 'Levitt'],
+      'Worst first. Every venue opens its own page on the Runs tab. Junkyard and Levitt are in Needs you.',
+    ],
+    [
+      ['Junkyard', 'Levitt', 'Ogden'],
+      'Worst first. Every venue opens its own page on the Runs tab. 3 venues are in Needs you.',
+    ],
+  ])('footer with %j in Needs you', (inNeedsYou, footer) => {
+    render(
+      <VenueGrid
+        crawlRunsHref="/admin/crawl"
+        groups={{ failed: [], paused: [], quiet: [], ok: [cell('Ogden')] }}
+        inNeedsYou={inNeedsYou}
+      />,
+    );
+    expect(screen.getByTestId('venue-grid-footer').textContent).toBe(footer);
   });
 
   it('skips empty groups', () => {

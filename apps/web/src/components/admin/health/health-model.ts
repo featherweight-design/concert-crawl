@@ -1,4 +1,9 @@
-import type { CrawlRun, DailyCost, Venue } from '@concert-crawl/types';
+import {
+  scheduledCrawlAt,
+  type CrawlRun,
+  type DailyCost,
+  type Venue,
+} from '@concert-crawl/types';
 import { deriveVenueStatusChips } from '@/lib/admin/venue-status';
 import { formatCost } from '@/components/admin/primitives/utils';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -146,15 +151,70 @@ export const summarizeCrawl = (
 };
 
 /**
- * Built states only: "Running" and "Didn't run" wait on 1d, and off-season
- * "Quiet" is open. Any failure reads "N failed" (gap G1 asks where the line is).
+ * Built states only: "Running" waits on 1d, and off-season "Quiet" is open.
+ * Any failure reads "N failed" (gap G1 asks where the line is). `missed` is
+ * the nightly that never started (`03/tiles-in-each-state`, "Didn't run"); it
+ * outranks by-hand runs in the same window, since the job itself did not run.
  */
-export type CrawlTileState = 'onTime' | 'failed' | 'noRuns';
+export type CrawlTileState = 'onTime' | 'failed' | 'noRuns' | 'missed';
 
-export const crawlTileState = (summary: CrawlSummary): CrawlTileState => {
+export const crawlTileState = (
+  summary: CrawlSummary,
+  missedAt: string | null = null,
+): CrawlTileState => {
+  if (missedAt !== null) return 'missed';
   if (summary.total === 0) return 'noRuns';
   return summary.failed > 0 ? 'failed' : 'onTime';
 };
+
+/** The Mountain Time date (`YYYY-MM-DD`) a last-night window covers. */
+export const windowNight = (window: Window): string => {
+  const { year, month, day } = mtParts(new Date(window.start));
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${year}-${pad(month)}-${pad(day)}`;
+};
+
+/** The newest nightly batch, as `/v1/admin/crawl/batches` reports it. */
+export interface NightlyBatch {
+  night: string | null;
+  didntStart: boolean;
+}
+
+/**
+ * When last night's crawl was due, ISO, if it never started; else null. Only
+ * the batch for the window's own night counts: an older miss is not "last
+ * night", and before the API's deadline tonight is not due yet.
+ */
+export const missedCrawlAt = (
+  newest: NightlyBatch | null,
+  window: Window,
+): string | null =>
+  newest?.didntStart === true &&
+  newest.night !== null &&
+  newest.night === windowNight(window)
+    ? scheduledCrawlAt(newest.night)
+    : null;
+
+/**
+ * Last night's failed venues that have an open `venue-failing` item: the
+ * crawl tile's "The {m} new failures are in Needs you" (1c Q5).
+ */
+export const newFailuresInNeedsYou = (
+  failed: GridCell[],
+  failingVenueIds: ReadonlySet<string>,
+): number => failed.filter((cell) => failingVenueIds.has(cell.id)).length;
+
+/**
+ * The grid's Failed and Paused venues that are in Needs you (failing or
+ * blocked), worst group first: the footer's "Only {name} is in Needs you."
+ */
+export const gridVenuesInNeedsYou = (
+  groups: Record<GridGroup, GridCell[]>,
+  venueIds: ReadonlySet<string>,
+): string[] =>
+  [...groups.failed, ...groups.paused]
+    .filter((cell) => venueIds.has(cell.id))
+    .map((cell) => cell.name);
 
 export interface MonthToDate {
   year: number;

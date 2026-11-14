@@ -4,15 +4,96 @@ import {
   costTile,
   crawlTileState,
   formatUsd,
+  gridVenuesInNeedsYou,
   groupVenues,
   lastNightWindow,
+  missedCrawlAt,
   monthSeries,
   monthToDate,
+  newFailuresInNeedsYou,
   summarizeCrawl,
+  windowNight,
   type CostTileState,
+  type GridCell,
   type GridVenue,
   type HealthStatusRow,
 } from './health-model';
+
+describe('Missed (the nightly never started)', () => {
+  // Nov 12 2026, 10:00 MT: last night is Nov 12.
+  const lastNight = lastNightWindow(new Date('2026-11-12T17:00:00Z'));
+  const empty = {
+    ok: 0,
+    total: 0,
+    failed: 0,
+    finishedAt: null,
+    shows: 0,
+    added: 0,
+  };
+
+  it('names the window’s Mountain Time night', () => {
+    expect(windowNight(lastNight)).toBe('2026-11-12');
+    // Before the cron hour, last night is yesterday.
+    expect(windowNight(lastNightWindow(new Date('2026-11-12T08:00:00Z')))).toBe(
+      '2026-11-11',
+    );
+  });
+
+  it('is the night’s real scheduled minute when last night didn’t start', () => {
+    expect(
+      missedCrawlAt({ night: '2026-11-12', didntStart: true }, lastNight),
+    ).toBe('2026-11-12T09:07:00.000Z');
+  });
+
+  it.each([
+    ['a night that ran', { night: '2026-11-12', didntStart: false }],
+    ['an older miss', { night: '2026-11-11', didntStart: true }],
+    ['no night', { night: null, didntStart: true }],
+    ['a failed read', null],
+  ])('is null for %s', (_, batch) => {
+    expect(missedCrawlAt(batch, lastNight)).toBeNull();
+  });
+
+  it('outranks every other crawl state', () => {
+    const at = '2026-11-12T09:07:00.000Z';
+    expect(crawlTileState(empty, at)).toBe('missed');
+    expect(crawlTileState({ ...empty, total: 2, failed: 1 }, at)).toBe(
+      'missed',
+    );
+    expect(crawlTileState(empty, null)).toBe('noRuns');
+  });
+});
+
+describe('Needs you lines', () => {
+  const cellOf = (id: string): GridCell => ({
+    id,
+    name: id[0]?.toUpperCase() + id.slice(1),
+    failures: 1,
+    autoPaused: false,
+  });
+  const groups = {
+    failed: [cellOf('junkyard'), cellOf('ogden')],
+    paused: [cellOf('levitt')],
+    quiet: [cellOf('summit')],
+    ok: [cellOf('bluebird')],
+  };
+
+  it('counts only last night’s failures with an open venue-failing item', () => {
+    expect(
+      newFailuresInNeedsYou(groups.failed, new Set(['junkyard', 'levitt'])),
+    ).toBe(1);
+    expect(newFailuresInNeedsYou(groups.failed, new Set())).toBe(0);
+  });
+
+  it('names the Failed and Paused venues in Needs you, worst first', () => {
+    expect(
+      gridVenuesInNeedsYou(
+        groups,
+        new Set(['levitt', 'ogden', 'summit', 'bluebird']),
+      ),
+    ).toEqual(['Ogden', 'Levitt']);
+  });
+});
 
 const iso = (ms: number) => new Date(ms).toISOString();
 const windowOf = (now: string) => {

@@ -75,7 +75,19 @@ export const ADMIN_COPY = {
         finishedPhone: (time: string, added: string) =>
           `${time} · ${added} new`,
         failed: (count: number) => `${count} failed.`,
+        // `03/tiles-in-each-state`: the failures that reached Needs you last
+        // night. Only the plural is drawn; the singular is copy-review's.
+        newInNeedsYou: (count: number) =>
+          count === 1
+            ? 'The new failure is in Needs you.'
+            : `The ${count} new failures are in Needs you.`,
         noRuns: 'No runs last night.',
+        // The nightly never started. The board's cause clause ("GitHub Actions
+        // error") has no source, so it is dropped (1c Q3); the time is the
+        // night's own scheduled minute.
+        missedValue: 'Didn’t run',
+        missed: (time: string) => `The ${time} job never started.`,
+        missedPill: 'Missed',
         onTime: 'On time',
         failedPill: (count: number) => `${count} failed`,
       },
@@ -128,7 +140,15 @@ export const ADMIN_COPY = {
         `${ordinal(count)} failure${autoPaused ? ' · auto-paused' : ''}`,
       paused: 'Paused',
       pageUnchanged: 'Page unchanged',
-      footer: 'Worst first. Every venue opens its own page.',
+      footer: 'Worst first. Every venue opens its own page on the Runs tab.',
+      // The board draws one venue ("Only Junkyard is in Needs you."); two and
+      // more are copy-review's. None drops the sentence.
+      inNeedsYou: (names: string[]) =>
+        names.length === 1
+          ? `Only ${names[0]} is in Needs you.`
+          : names.length === 2
+            ? `${names[0]} and ${names[1]} are in Needs you.`
+            : `${names.length} venues are in Needs you.`,
       empty: 'No venue ran last night.',
     },
     cost: {
@@ -172,9 +192,9 @@ export const ADMIN_COPY = {
     site: {
       title: 'The site',
       emails: 'Emails',
-      lastSent: (time: string, hours: number) =>
-        `Last ${hours} h · last sent ${time}`,
-      noneSent: (hours: number) => `Last ${hours} h · none sent`,
+      // `03/health-desktop`: "Resend · last sent 8:02 AM". None sent is undrawn.
+      lastSent: (time: string) => `Resend · last sent ${time}`,
+      noneSent: (hours: number) => `Resend · none sent in ${hours} h`,
       sending: 'Sending',
       failed: (count: number) => `${count} failed`,
       quiet: 'Quiet',

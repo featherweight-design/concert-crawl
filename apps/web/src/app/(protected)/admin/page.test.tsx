@@ -97,6 +97,25 @@ describe('/admin Health page', () => {
     await expect(AdminHealthPage()).resolves.not.toBeNull();
   });
 
+  it('reads the newest nightly and the venue Needs you items', async () => {
+    answer();
+    const { default: AdminHealthPage } = await import('./page');
+    await AdminHealthPage();
+    for (const path of [
+      '/v1/admin/crawl/batches?kind=nightly&limit=1',
+      '/v1/admin/needs-you?kind=venue-failing',
+      '/v1/admin/needs-you?kind=venue-blocked',
+    ]) {
+      expect(mockGet).toHaveBeenCalledWith(path, 'token');
+    }
+  });
+
+  it('still renders when the nightly and Needs you reads fail', async () => {
+    answer(['/v1/admin/crawl/batches', '/v1/admin/needs-you']);
+    const { default: AdminHealthPage } = await import('./page');
+    await expect(AdminHealthPage()).resolves.not.toBeNull();
+  });
+
   it('does not load the undrawn triage block', async () => {
     answer();
     const { default: AdminHealthPage } = await import('./page');

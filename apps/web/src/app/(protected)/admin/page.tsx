@@ -25,16 +25,23 @@ import {
 import {
   artistsTile,
   costTile,
+  gridVenuesInNeedsYou,
   groupVenues,
   lastNightWindow,
+  missedCrawlAt,
   monthSeries,
   monthTotal,
   monthToDate,
+  newFailuresInNeedsYou,
   previousMonth,
   summarizeCrawl,
   type ArtistCounts,
   type HealthStatusRow,
 } from '@/components/admin/health/health-model';
+import {
+  fetchNeedsYouVenueIds,
+  fetchNewestNightly,
+} from '@/components/admin/health/health-reads';
 
 /**
  * Health (admin 1c-2): `03/health-desktop` and `03/health-mobile`. The tiles'
@@ -62,33 +69,51 @@ export default async function AdminHealthPage() {
     });
 
   const lastNight = lastNightWindow(now);
-  const [status, venues, costs, settings, artists, delivery, needsYou, done] =
-    await Promise.all([
-      load<HealthStatusRow[]>('/v1/admin/crawl/status'),
-      load<Venue[]>('/v1/admin/venues'),
-      // The window ends today (MT), so this many days reaches back to the 1st
-      // of last month: this month to date, and last month whole for the panel.
-      load<AdminDailyCosts>(`/v1/admin/costs/daily?days=${costWindowDays}`),
-      load<AdminSettings>('/v1/admin/settings'),
-      load<ArtistCounts>('/v1/admin/artists/counts'),
-      load<AdminEmailDelivery>('/v1/admin/notifications/delivery'),
-      // One count for the summary and the button (G11), so they never disagree.
-      fetchNeedsYouDecisions(token).catch((err: unknown) => {
-        console.error('[admin] failed to load the Needs you count:', err);
+  const [
+    status,
+    venues,
+    costs,
+    settings,
+    artists,
+    delivery,
+    needsYou,
+    done,
+    newestNightly,
+    failingIds,
+    blockedIds,
+  ] = await Promise.all([
+    load<HealthStatusRow[]>('/v1/admin/crawl/status'),
+    load<Venue[]>('/v1/admin/venues'),
+    // The window ends today (MT), so this many days reaches back to the 1st
+    // of last month: this month to date, and last month whole for the panel.
+    load<AdminDailyCosts>(`/v1/admin/costs/daily?days=${costWindowDays}`),
+    load<AdminSettings>('/v1/admin/settings'),
+    load<ArtistCounts>('/v1/admin/artists/counts'),
+    load<AdminEmailDelivery>('/v1/admin/notifications/delivery'),
+    // One count for the summary and the button (G11), so they never disagree.
+    fetchNeedsYouDecisions(token).catch((err: unknown) => {
+      console.error('[admin] failed to load the Needs you count:', err);
+      return null;
+    }),
+    // Done for you degrades its own panel: a night's log failing to load must
+    // not take the tiles down with it.
+    apiClient
+      .get<AuditLogItem[]>(
+        `/v1/admin/audit-log?actor=system&since=${encodeURIComponent(new Date(lastNight.start).toISOString())}&limit=${DONE_AUDIT_LIMIT}`,
+        token,
+      )
+      .catch((err: unknown) => {
+        console.error('[admin] failed to load Done for you:', err);
         return null;
       }),
-      // Done for you degrades its own panel: a night's log failing to load must
-      // not take the tiles down with it.
-      apiClient
-        .get<AuditLogItem[]>(
-          `/v1/admin/audit-log?actor=system&since=${encodeURIComponent(new Date(lastNight.start).toISOString())}&limit=${DONE_AUDIT_LIMIT}`,
-          token,
-        )
-        .catch((err: unknown) => {
-          console.error('[admin] failed to load Done for you:', err);
-          return null;
-        }),
-    ]);
+    // The crawl tile's Missed, and the Needs you lines: each degrades alone.
+    fetchNewestNightly(token),
+    fetchNeedsYouVenueIds(token, 'venue-failing'),
+    fetchNeedsYouVenueIds(token, 'venue-blocked'),
+  ]);
+
+  const groups = groupVenues(status, venues, lastNight);
+  const failing = new Set(failingIds ?? []);
 
   const budgetUsd = settings.llmMonthlyBudgetUsd;
   // Summed from this month's own days, not `costs.totalUsd`: if the API's
@@ -112,12 +137,18 @@ export default async function AdminHealthPage() {
         settings={settings}
         lastMonthUsd={monthTotal(costs.days, lastMonth)}
         delivery={delivery}
+        missedAt={missedCrawlAt(newestNightly, lastNight)}
+        newInNeedsYou={newFailuresInNeedsYou(groups.failed, failing)}
       />
       <div className="health-columns">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <VenueGrid
-            groups={groupVenues(status, venues, lastNight)}
+            groups={groups}
             crawlRunsHref={navItem('crawl-runs').href}
+            inNeedsYou={gridVenuesInNeedsYou(
+              groups,
+              new Set([...failing, ...(blockedIds ?? [])]),
+            )}
           />
           <CostByDay
             series={series}
