@@ -54,8 +54,12 @@ const SIGNAL_TO_ACCENT_ROW =
 const TILE =
   'flex h-16 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border text-[13px] transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)]';
 
-const GHOST_PILL =
-  'flex h-[38px] min-w-0 flex-1 cursor-pointer items-center justify-center rounded-full border border-border-strong bg-transparent px-3 text-[15px] font-bold text-fg';
+// Drawn 38px tall. The ::after is positioned against the 36px padding box
+// (inside the 1px borders) and reaches 4px past it top and bottom, so the hit
+// area is 44px without a 44px visible box. The 10px row gap above absorbs it.
+const GHOST_PILL_HIT =
+  "after:absolute after:-inset-y-[4px] after:inset-x-0 after:content-['']";
+const GHOST_PILL = `relative flex h-[38px] min-w-0 flex-1 cursor-pointer items-center justify-center rounded-full border border-border-strong bg-transparent px-3 text-[15px] font-bold text-fg ${GHOST_PILL_HIT}`;
 
 export interface ShareSheetProps {
   open: boolean;
