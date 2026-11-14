@@ -1,0 +1,45 @@
+{
+  "feature": "Admin Events · Moved status",
+  "note": "Hugh's ruling 4b#1 (2026-11-14). Boards: addendum-5 02-events-status-chips/events-statuschip-d and -m (the MOVED chip on the row), and 06-events-artists-prices/status-filter (Moved between Cancelled and No longer listed). CONTACT_SHEET_ROLE=admin. Needs one upcoming show with an inbound event_redirects row whose reason is 'moved'. By hand: the Event edit status picker (04-event-edit/listed-again draws Moved there; it is derived and not settable, so it waits on Design).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "list-moved-chip",
+      "label": "/admin/events (the MOVED chip on its row)",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"venue-filter-chip\"]",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "filter-open",
+      "label": "Any status popover with Moved in its place",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"status-filter-chip\"]"
+        },
+        { "click": "[data-testid=\"status-filter-chip\"]", "settle": 400 },
+        { "wait": "[data-testid=\"status-filter\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "filter-moved-picked",
+      "label": "/admin/events?statuses=moved",
+      "steps": [
+        {
+          "goto": "/admin/events?statuses=moved",
+          "wait": "[data-testid=\"status-filter-clear\"]",
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}
