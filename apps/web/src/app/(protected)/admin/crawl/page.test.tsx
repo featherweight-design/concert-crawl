@@ -22,7 +22,7 @@ vi.mock('@/lib/api', () => ({
 }));
 vi.mock('@/components/admin/crawl/CrawlSplitView', () => ({
   CrawlSplitView: () => null,
-  CrawlRunAllButton: () => null,
+  CrawlAllButton: () => null,
 }));
 vi.mock('@/components/admin/crawl/IssuesBanner', () => ({
   IssuesBanner: () => null,

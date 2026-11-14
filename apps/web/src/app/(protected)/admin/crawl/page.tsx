@@ -6,7 +6,7 @@ import { apiClient } from '@/lib/api';
 import { StatCard, SectionHead } from '@/components/admin/primitives';
 import {
   CrawlSplitView,
-  CrawlRunAllButton,
+  CrawlAllButton,
 } from '@/components/admin/crawl/CrawlSplitView';
 import type { InspectorTab } from '@/components/admin/crawl/InspectorTabs';
 import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner';
@@ -209,7 +209,8 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         eyebrow={ADMIN_COPY.crawlPage.sectionEyebrow}
         title={ADMIN_COPY.crawlPage.sectionTitle}
         subtitle={ADMIN_COPY.crawlPage.sectionSubtitle}
-        actions={<CrawlRunAllButton />}
+        actions={<CrawlAllButton />}
+        actionsFullWidthOnPhone
       />
 
       <IssuesBanner
