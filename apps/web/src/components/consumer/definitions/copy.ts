@@ -1655,7 +1655,6 @@ export const CONSUMER_COPY = {
   // Bottom sheet for confirming a pending price submission
   corroborationSheet: {
     eyebrow: 'Confirm price',
-    cancelButton: 'Cancel',
     heading: (floor: number, ceiling?: number) =>
       ceiling != null && ceiling > floor
         ? `Did you also see $${floor}–$${ceiling}?`
@@ -1715,7 +1714,9 @@ export const CONSUMER_COPY = {
           : `Your $${floor} is pending.`,
       // How many more fans it needs, from the data, not a fixed two.
       waitingNotice: (others: number) =>
-        `Your submission is pending. You can't confirm your own price, but ${others} other ${others === 1 ? 'fan' : 'fans'} can.`,
+        others <= 0
+          ? "Your submission is pending. You can't confirm your own price, and the confirms it needs are in."
+          : `Your submission is pending. You can't confirm your own price, but ${others} other ${others === 1 ? 'fan' : 'fans'} can.`,
       editButton: 'Edit submission',
       withdrawButton: 'Withdraw',
     },

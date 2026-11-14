@@ -57,7 +57,7 @@ const pendingTokens = (
     // The community card is drawn in the theme's signal, not the old fixed
     // azure (B+ more-p-check_m).
     return {
-      color: 'var(--signal)',
+      color: 'var(--price-text-signal)',
       bg: `color-mix(in oklab, var(--signal) 10%, var(--surface-1))`,
       border: `color-mix(in oklab, var(--signal) 38%, var(--border))`,
     };
@@ -102,9 +102,10 @@ export interface CorroborationSheetProps {
   isSelfLocked?: boolean;
   onClose: () => void;
   onConfirm: (method: ApiConfirmMethod) => void;
+  /** The self-locked sheet's Withdraw. Without it the button is not drawn. */
   onWithdraw?: () => void;
   onSubmitUpdate: () => void;
-  /** The self-locked sheet's Edit; without it Edit falls back to onSubmitUpdate. */
+  /** The self-locked sheet's Edit. Without it the button is not drawn. */
   onEdit?: () => void;
 }
 
@@ -298,6 +299,8 @@ interface VerifyOptionProps {
   label: string;
   description: string;
   isSelected: boolean;
+  /** The one option in the Tab order: the selected one, else the first. */
+  tabbable: boolean;
   accentColor: string;
   onSelect: (method: VerifyMethod) => void;
 }
@@ -307,6 +310,7 @@ const VerifyOption = ({
   label,
   description,
   isSelected,
+  tabbable,
   accentColor,
   onSelect,
 }: VerifyOptionProps) => {
@@ -314,7 +318,8 @@ const VerifyOption = ({
     <div
       role="radio"
       aria-checked={isSelected}
-      tabIndex={0}
+      // Roving tab stop: the group is one Tab stop, arrows move within it.
+      tabIndex={tabbable ? 0 : -1}
       onClick={() => onSelect(method)}
       onKeyDown={(evt) => {
         if (evt.key === 'Enter' || evt.key === ' ') {
@@ -599,43 +604,50 @@ export const CorroborationSheet = ({
               gap: 10,
             }}
           >
-            <button
-              type="button"
-              onClick={onEdit ?? onSubmitUpdate}
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--border-strong)',
-                borderRadius: 999,
-                height: 44,
-                padding: '0 22px',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 700,
-                fontSize: 15,
-                color: 'var(--fg-muted)',
-                cursor: 'pointer',
-              }}
-            >
-              {copy.selfLocked.editButton}
-            </button>
-            <button
-              type="button"
-              onClick={onWithdraw ?? onClose}
-              style={{
-                background: 'transparent',
-                border:
-                  '1px solid color-mix(in oklab, var(--warning) 60%, transparent)',
-                borderRadius: 999,
-                height: 44,
-                padding: '0 22px',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 700,
-                fontSize: 15,
-                color: 'var(--warning)',
-                cursor: 'pointer',
-              }}
-            >
-              {copy.selfLocked.withdrawButton}
-            </button>
+            {/* Each button is drawn only with its own handler: neither falls
+                back to something else (a Withdraw that only closed the sheet
+                would look like it worked). */}
+            {onEdit && (
+              <button
+                type="button"
+                onClick={onEdit}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: 999,
+                  height: 44,
+                  padding: '0 22px',
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 700,
+                  fontSize: 15,
+                  color: 'var(--fg-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                {copy.selfLocked.editButton}
+              </button>
+            )}
+            {onWithdraw && (
+              <button
+                type="button"
+                onClick={onWithdraw}
+                style={{
+                  background: 'transparent',
+                  border:
+                    '1px solid color-mix(in oklab, var(--warning) 60%, transparent)',
+                  borderRadius: 999,
+                  height: 44,
+                  padding: '0 22px',
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 700,
+                  fontSize: 15,
+                  color: 'var(--price-text-warning)',
+                  cursor: 'pointer',
+                }}
+              >
+                {copy.selfLocked.withdrawButton}
+              </button>
+            )}
           </div>
         ) : (
           /* Fresh state footer: Confirm CTA + escape link + disclaimer */
@@ -688,7 +700,9 @@ export const CorroborationSheet = ({
               }}
             >
               {copy.escapeLead}{' '}
-              <span style={{ fontWeight: 800, color: 'var(--signal)' }}>
+              <span
+                style={{ fontWeight: 800, color: 'var(--price-text-signal)' }}
+              >
                 {copy.escapeAction}
               </span>
             </button>
@@ -741,7 +755,7 @@ export const CorroborationSheet = ({
               }}
             >
               {copy.selfLocked.waitingNotice(
-                Math.max(1, submission.needed - submission.confirms),
+                submission.needed - submission.confirms,
               )}
             </span>
           </div>
@@ -752,14 +766,42 @@ export const CorroborationSheet = ({
               role="radiogroup"
               aria-label={copy.verifyOptionsAriaLabel}
               style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+              onKeyDown={(evt) => {
+                const step =
+                  evt.key === 'ArrowDown' || evt.key === 'ArrowRight'
+                    ? 1
+                    : evt.key === 'ArrowUp' || evt.key === 'ArrowLeft'
+                      ? -1
+                      : 0;
+                if (step === 0) return;
+                const radios = Array.from(
+                  evt.currentTarget.querySelectorAll<HTMLElement>(
+                    '[role="radio"]',
+                  ),
+                );
+                const from = radios.findIndex(
+                  (radio) => radio === document.activeElement,
+                );
+                const next =
+                  radios[(from + step + radios.length) % radios.length];
+                if (from === -1 || !next) return;
+                evt.preventDefault();
+                next.focus();
+                next.click();
+              }}
             >
-              {verifyOptions.map((opt) => (
+              {verifyOptions.map((opt, index) => (
                 <VerifyOption
                   key={opt.method}
                   method={opt.method}
                   label={opt.label}
                   description={opt.description}
                   isSelected={selectedMethod === opt.method}
+                  tabbable={
+                    selectedMethod === null
+                      ? index === 0
+                      : selectedMethod === opt.method
+                  }
                   accentColor={accentColor}
                   onSelect={setSelectedMethod}
                 />
