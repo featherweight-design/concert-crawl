@@ -1,3 +1,17 @@
+# [1.454.0](https://github.com/featherweight-design/concert-crawl/compare/v1.453.0...v1.454.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** drop the duplicate copy import after the rebase ([6d10649](https://github.com/featherweight-design/concert-crawl/commit/6d1064960c8f7b1fd5ef16774342e42f1be31456))
+* **web:** address the pending cards review ([23ad231](https://github.com/featherweight-design/concert-crawl/commit/23ad231835f07d3bf84c30e8117cd023d0fefec8))
+
+
+### Features
+
+* **admin:** lead the price-check panel with the ticket page and draw its cards ([7a33c93](https://github.com/featherweight-design/concert-crawl/commit/7a33c937909a9fa992c0d90dd46e47cf0b31a107))
+* **web:** the pending status cards as one attribution line, with the drawn footer and Confirm ([f61b6f7](https://github.com/featherweight-design/concert-crawl/commit/f61b6f7cce5adfd506116885333122a459a6ecbf))
+
 # [1.453.0](https://github.com/featherweight-design/concert-crawl/compare/v1.452.0...v1.453.0) (2026-11-14)
 
 
