@@ -49,7 +49,7 @@ export default function VenueLoading() {
         <BackChip top={56} fallbackHref="/events" />
       </div>
 
-      <div className="relative -mt-10 flex-1 pb-24 sm:pb-10">
+      <div className="relative -mt-10 flex-1 pb-24 lg:pb-10">
         <div className="mx-auto flex w-full max-w-[880px] flex-col px-[18px] sm:px-8">
           <SkeletonBlock width={80} height={20} />
           <div className="mt-3">

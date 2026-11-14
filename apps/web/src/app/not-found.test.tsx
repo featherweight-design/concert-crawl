@@ -62,7 +62,7 @@ describe('global not-found', () => {
     render(<GlobalNotFound />);
     const surface = screen.getByTestId('not-found-surface');
     const classes = surface.className.split(/\s+/);
-    expect(classes).toContain('max-sm:pb-20');
+    expect(classes).toContain('max-lg:pb-20');
     expect(classes).toContain('pb-12');
     expect(surface.style.paddingBottom).toBe('');
   });

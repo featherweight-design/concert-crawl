@@ -174,7 +174,7 @@ export const PublicEventDetail = ({
       <PublicEventView eventId={event.id} />
 
       <div className="flex-1">
-        <div className="mx-auto w-full max-w-[824px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
+        <div className="mx-auto w-full max-w-[824px] box-border px-[18px] sm:px-8 pb-24 lg:pb-16 pt-5">
           {/* The same status card as the signed-in page, read-only: no
               Watching action (B+ addendum 3). A No longer listed show gets the
               NLL card through it. Renders nothing for a live show. */}

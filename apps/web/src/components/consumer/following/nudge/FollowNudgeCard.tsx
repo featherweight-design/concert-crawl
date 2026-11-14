@@ -261,7 +261,7 @@ export const FollowNudgeCard = ({
     <div
       role="status"
       aria-label={COPY.ariaLabel}
-      className="fixed inset-x-4 bottom-[72px] z-[70] mx-auto max-w-[420px] sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[400px]"
+      className="fixed inset-x-4 bottom-[72px] z-[70] mx-auto max-w-[420px] lg:inset-x-auto lg:bottom-5 lg:right-5 lg:w-[400px]"
     >
       {card}
     </div>

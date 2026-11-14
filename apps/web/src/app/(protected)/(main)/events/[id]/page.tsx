@@ -358,7 +358,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
       </EventStage>
 
       <div className="flex-1">
-        <div className="mx-auto w-full max-w-[824px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
+        <div className="mx-auto w-full max-w-[824px] box-border px-[18px] sm:px-8 pb-24 lg:pb-16 pt-5">
           {/* Commit block — directly under title (#70). One card, per the
               handoff's CommitBlockV2: the commitment and the watch strip are
               two halves of the same decision, so they share a border rather

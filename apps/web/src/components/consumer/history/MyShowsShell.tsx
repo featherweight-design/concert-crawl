@@ -23,7 +23,7 @@ import { MyShowsTabs, type MyShowsTab } from './MyShowsTabs';
 
 /** The shared column. Concerts' rail needs the 960 at lg, so all three take it. */
 export const MY_SHOWS_COLUMN_CLASS =
-  'mx-auto flex w-full max-w-[880px] flex-1 flex-col px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8 lg:max-w-[960px]';
+  'mx-auto flex w-full max-w-[880px] flex-1 flex-col px-4 pb-20 pt-4 sm:px-8 lg:pb-10 sm:pt-8 lg:max-w-[960px]';
 
 const TAB_FOR_PREFIX: readonly (readonly [string, MyShowsTab])[] = [
   ['/watching', 'watching'],
