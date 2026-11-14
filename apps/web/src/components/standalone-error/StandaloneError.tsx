@@ -37,40 +37,52 @@ const Logo = () => (
       textDecoration: 'none',
       color: 'var(--fg)',
       fontWeight: 800,
-      fontSize: 20,
-      letterSpacing: '-0.03em',
+      fontSize: 16,
+      letterSpacing: '-0.02em',
     }}
   >
-    <svg
-      width="32"
-      height="32"
-      viewBox="0 0 96 96"
+    <span
       aria-hidden
-      focusable="false"
+      style={{
+        display: 'inline-flex',
+        flex: 'none',
+        borderRadius: 7,
+        overflow: 'hidden',
+        border: '1px solid var(--border)',
+      }}
     >
-      <rect width="96" height="96" rx="16" fill="var(--bg)" />
-      <circle cx="72" cy="24" r="20" fill="var(--accent)" opacity="0.22" />
-      <circle cx="72" cy="24" r="12" fill="var(--accent)" opacity="0.42" />
-      <circle cx="72" cy="24" r="7" fill="var(--signal)" />
-      {[
-        [14, 76, 1.5],
-        [24, 70, 2],
-        [34, 64, 2.5],
-        [42, 58, 3],
-        [50, 50, 4],
-        [58, 42, 5],
-        [66, 32, 6],
-      ].map(([cx, cy, radius], idx) => (
-        <circle
-          key={cx}
-          cx={cx}
-          cy={cy}
-          r={radius}
-          fill="var(--signal)"
-          opacity={0.35 + idx * 0.09}
-        />
-      ))}
-    </svg>
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 96 96"
+        aria-hidden
+        focusable="false"
+        style={{ display: 'block' }}
+      >
+        <rect width="96" height="96" rx="16" fill="var(--bg)" />
+        <circle cx="72" cy="24" r="20" fill="var(--accent)" opacity="0.22" />
+        <circle cx="72" cy="24" r="12" fill="var(--accent)" opacity="0.42" />
+        <circle cx="72" cy="24" r="7" fill="var(--signal)" />
+        {[
+          [14, 76, 1.5],
+          [24, 70, 2],
+          [34, 64, 2.5],
+          [42, 58, 3],
+          [50, 50, 4],
+          [58, 42, 5],
+          [66, 32, 6],
+        ].map(([cx, cy, radius], idx) => (
+          <circle
+            key={cx}
+            cx={cx}
+            cy={cy}
+            r={radius}
+            fill="var(--signal)"
+            opacity={0.35 + idx * 0.09}
+          />
+        ))}
+      </svg>
+    </span>
     <span>
       {copy.wordmarkLead}
       <span style={{ color: 'var(--accent)' }}>{copy.wordmarkTail}</span>
@@ -82,6 +94,7 @@ const Logo = () => (
 const BrokenMark = () => (
   <div
     aria-hidden
+    className="cc-se-mark"
     style={{
       width: 72,
       height: 72,
@@ -94,7 +107,7 @@ const BrokenMark = () => (
       border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
     }}
   >
-    <svg width="49" height="49" viewBox="0 0 96 96" focusable="false">
+    <svg width="100%" height="68%" viewBox="0 0 96 96" focusable="false">
       <circle cx="72" cy="24" r="20" fill="var(--danger)" opacity="0.22" />
       <circle cx="72" cy="24" r="12" fill="var(--danger)" opacity="0.42" />
       <circle cx="72" cy="24" r="7" fill="var(--surface-2)" />
@@ -155,6 +168,24 @@ const Heading = ({
   );
 };
 
+/** The board's copy mark: two overlapping rounded squares, 12px. */
+const CopyIcon = () => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 12 12"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.2"
+    aria-hidden
+    focusable="false"
+    style={{ display: 'block' }}
+  >
+    <rect x="4" y="4" width="7" height="7" rx="1.5" />
+    <path d="M8 4V2.5A1.5 1.5 0 0 0 6.5 1h-4A1.5 1.5 0 0 0 1 2.5v4A1.5 1.5 0 0 0 2.5 8H4" />
+  </svg>
+);
+
 const ErrorIdChip = ({
   errorId,
   buttonRef,
@@ -202,18 +233,20 @@ const ErrorIdChip = ({
         ref={buttonRef}
         onClick={onCopy}
         aria-label={`${copy.copyErrorId}: ${errorId}`}
+        className="cc-se-copy-btn"
         style={{
-          minHeight: 44,
-          padding: '0 14px',
+          position: 'relative',
+          minHeight: 28,
+          padding: '0 10px',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 10,
-          borderRadius: 12,
+          gap: 8,
+          borderRadius: 8,
           border: '1px solid var(--border-strong)',
           background: 'var(--surface-1)',
           color: 'var(--fg-muted)',
           fontFamily: 'inherit',
-          fontSize: 15,
+          fontSize: 11.5,
           cursor: 'pointer',
           maxWidth: '100%',
           overflowWrap: 'anywhere',
@@ -221,7 +254,7 @@ const ErrorIdChip = ({
       >
         {errorId}
         <span aria-live="polite" style={{ fontSize: 11 }}>
-          {copied ? copy.copiedErrorId : '⧉'}
+          {copied ? copy.copiedErrorId : <CopyIcon />}
         </span>
       </button>
     </div>
@@ -282,9 +315,11 @@ const LAYOUT_CSS = `
 .cc-se-grid[data-split='true'] { grid-template-areas: 'copy' 'aside' 'chip'; }
 .cc-se-aside { grid-area: aside; width: 100%; }
 .cc-se-chip { grid-area: chip; margin-top: 12px; }
+/* The drawn chip is 28px; the touch target stays 44 via the pseudo-element. */
+.cc-se-copy-btn::before { content: ''; position: absolute; inset: -8px -4px; }
 .cc-se-heading { font-size: 30px; }
 .cc-se-actions { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 4px; margin-top: 12px; }
-.cc-se-try { width: 100%; min-height: 52px; border-radius: 16px; font-size: 17px; }
+.cc-se-try { width: 100%; min-height: 48px; border-radius: 12px; font-size: 16px; }
 [data-testid='standalone-error'] { padding: 24px 20px 48px; }
 /* In the app shell on a phone (addendum-2 18-error-page/error-in-app-m): the
    app header stands where the logo bar was, the mark sits 26px under it, and
@@ -323,7 +358,8 @@ const LAYOUT_CSS = `
   .cc-se-chip { margin-top: 28px; }
   .cc-se-copy p { max-width: 410px; }
   .cc-se-actions { flex-direction: row; justify-content: center; gap: 10px; width: auto; margin-top: 16px; }
-  .cc-se-try { width: auto; min-height: 48px; padding: 0 28px; border-radius: 14px; font-size: 15px; }
+  .cc-se-try { width: auto; min-height: 48px; padding: 0 28px; border-radius: 12px; font-size: 15px; }
+  .cc-se-mark { width: 88px !important; height: 88px !important; border-radius: 26px !important; }
   .cc-se-second {
     min-height: 48px; padding: 0 24px !important; border-radius: 14px;
     border: 1px solid var(--border-strong) !important;
@@ -370,7 +406,9 @@ export interface StandaloneErrorProps {
 const STANDALONE_FRAME: CSSProperties = {
   minHeight: '100dvh',
   background:
-    'radial-gradient(120% 60% at 0% 0%, color-mix(in oklch, var(--accent) 14%, transparent), transparent 60%), var(--bg)',
+    // err-m / err-d: a violet glow top-left, a cyan glow bottom-right, and a
+    // bg-elevated to bg wash underneath.
+    'radial-gradient(120% 60% at 0% 0%, color-mix(in oklch, var(--accent) 14%, transparent), transparent 60%), radial-gradient(100% 50% at 100% 100%, color-mix(in oklch, var(--signal) 9%, transparent), transparent 60%), linear-gradient(180deg, var(--bg-elevated), var(--bg))',
 };
 
 export const StandaloneError = ({
@@ -439,7 +477,7 @@ export const StandaloneError = ({
             style={{
               border: 'none',
               background:
-                'linear-gradient(90deg, var(--signal), var(--cta-end))',
+                'linear-gradient(135deg, var(--signal), var(--cta-end))',
               boxShadow:
                 '0 8px 28px -10px color-mix(in oklch, var(--signal) 55%, transparent)',
               color: 'var(--fg-on-accent)',
