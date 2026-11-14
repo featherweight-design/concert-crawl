@@ -9,6 +9,7 @@ import {
   estimatedLineWidth,
   fitLine,
   fitLineSize,
+  graphemes,
   SHARE_GENRE_HEX,
   shareChip,
   shareCountdown,
@@ -180,6 +181,32 @@ describe('fitLine (Square and Wide one-line name)', () => {
     expect(text.endsWith('…')).toBe(true);
     expect(text.startsWith('Tommy C')).toBe(true);
     expect(estimatedLineWidth(text, size)).toBeLessThanOrEqual(SQUARE_WIDTH);
+  });
+});
+
+describe('fitLine at grapheme boundaries', () => {
+  // At the 72px floor the 936px box keeps 17 graphemes before the ellipsis.
+  const pad = 'A'.repeat(16);
+
+  it('handles an empty name', () => {
+    expect(fitLine('', 122, 936, 72)).toEqual({ size: 122, text: '' });
+    expect(fitLine('   ', 122, 936, 72)).toEqual({ size: 122, text: '' });
+  });
+
+  it.each([
+    ['a flag', '🇺🇸'],
+    ['a ZWJ sequence', '👩‍🎤'],
+    ['an astral emoji', '🎸'],
+  ])('never cuts inside %s at the cut point', (_label, glyph) => {
+    const { text } = fitLine(`${pad}${glyph}${'B'.repeat(30)}`, 122, 936, 72);
+    expect(text).toBe(`${pad}${glyph}…`);
+  });
+
+  it('counts a grapheme as one character when sizing', () => {
+    expect(graphemes('🇺🇸👩‍🎤x')).toHaveLength(3);
+    expect(fitLineSize('🇺🇸'.repeat(5), 122, 936, 72)).toBe(
+      fitLineSize('AAAAA', 122, 936, 72),
+    );
   });
 });
 
