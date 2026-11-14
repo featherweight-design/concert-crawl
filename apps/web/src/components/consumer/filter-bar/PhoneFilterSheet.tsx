@@ -48,6 +48,7 @@ import { useDraftLensCount } from './useDraftLensCount';
 import { useDraftShowCount } from './useDraftShowCount';
 import { VenueOptionGrid } from './VenueOptionGrid';
 import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
+import { venueTileCaption } from '@/components/consumer/venue-guide/lib';
 
 const copy = CONSUMER_COPY.filterBar;
 
@@ -583,10 +584,10 @@ export function PhoneFilterSheet({
                     fontWeight: on ? 700 : 500,
                   }}
                 >
-                  {/* The board's short labels ("Cervantes'") have no field
-                      behind them, so the full name wraps to two lines
-                      (ruling, 2026-11-12). */}
-                  {venue.name}
+                  {/* Addendum 4 item 4 A (`04/where-tiles-m`): the admin's
+                      short name ("Cervantes'"), else the full name in the
+                      2-line clamp. The checkbox keeps the full name. */}
+                  {venueTileCaption(venue.name, venue.shortName)}
                 </span>
               </button>
             );

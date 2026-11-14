@@ -40,6 +40,17 @@ export const venueShortName = (
 };
 
 /**
+ * The caption under a small venue tile (B+ addendum 4, item 4 A,
+ * `04/where-tiles-m`): the short name an admin set, else the full name, which
+ * the caller clamps to two lines. Never the heuristic above: a tile with no
+ * short name shows the whole name.
+ */
+export const venueTileCaption = (
+  name: string,
+  storedShortName: string | null | undefined,
+): string => storedShortName?.trim() || name;
+
+/**
  * The chip keys a published guide has no authored (or honestly placeheld) row
  * for, excluding accessibility — accessibility is the publish gate and always
  * renders, so it can never be "still gathering".

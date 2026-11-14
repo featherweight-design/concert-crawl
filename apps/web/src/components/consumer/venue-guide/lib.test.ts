@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { unauthoredChipKeys, venueShortName } from './lib';
+import { unauthoredChipKeys, venueShortName, venueTileCaption } from './lib';
+
+describe('venueTileCaption', () => {
+  it('uses the stored short name, trimmed', () => {
+    expect(venueTileCaption('Red Rocks Amphitheatre', ' Red Rocks ')).toBe(
+      'Red Rocks',
+    );
+  });
+
+  it('falls back to the whole name, never the shortening heuristic', () => {
+    expect(venueTileCaption('Mission Ballroom Amphitheatre', null)).toBe(
+      'Mission Ballroom Amphitheatre',
+    );
+    expect(venueTileCaption('The Roxy', '   ')).toBe('The Roxy');
+    expect(venueTileCaption('The Roxy', undefined)).toBe('The Roxy');
+  });
+});
 
 describe('venueShortName', () => {
   it('strips a leading definite article', () => {
