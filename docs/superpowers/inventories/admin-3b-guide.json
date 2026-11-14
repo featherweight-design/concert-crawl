@@ -32,7 +32,7 @@
           "wait": "[data-testid=\"guide-row-accessibility\"]"
         },
         { "settle": 2000 },
-        { "clickRole": "button", "name": "^Write Accessibility$" },
+        { "clickRole": "button", "name": "^Write Accessibility" },
         { "wait": "[data-testid=\"guide-counter\"]" },
         { "settle": 1500 }
       ]
@@ -51,7 +51,7 @@
           "wait": "[data-testid=\"guide-row-insider_tip\"]"
         },
         { "settle": 2000 },
-        { "clickRole": "button", "name": "^Write Insider tip$" },
+        { "clickRole": "button", "name": "^Write Insider tip" },
         { "wait": "[data-testid=\"guide-counter\"]" },
         { "settle": 1500 }
       ]

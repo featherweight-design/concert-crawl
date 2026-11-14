@@ -206,7 +206,8 @@ export const GuideEditPanel = ({
           color: 'var(--fg)',
           padding: '10px 12px',
           fontFamily: 'inherit',
-          fontSize: 13.5,
+          // 16px on the phone, so iOS Safari doesn't zoom into the field.
+          fontSize: phone ? 16 : 13.5,
           lineHeight: 1.5,
           resize: 'vertical',
           opacity: draft.cantDocument ? 0.5 : 1,
