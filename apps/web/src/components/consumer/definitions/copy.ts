@@ -2004,6 +2004,8 @@ export const CONSUMER_COPY = {
     // `{tier}` is the stored tier: GA, Reserved, VIP, Pit, Lawn.
     allIn: '{tier} · all-in',
     faceValue: 'face value · no fees',
+    // The letter tile for `Other` (plan default): no seller, no initial.
+    otherTile: '?',
   },
 
   // ── Shareable cards (#72) ───────────────────────────────────────

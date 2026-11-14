@@ -153,6 +153,61 @@ describe('buildWhereItsSoldRows', () => {
     expect(buildWhereItsSoldRows(sameSeller)).toEqual([]);
   });
 
+  it('leads with box office when the API sends it first (its real trust order)', () => {
+    const rows = buildWhereItsSoldRows(
+      boardEvent({
+        priceSubmissionId: 'vbo',
+        priceByTier: [
+          block('GA', headline('vbo', 'VenueBoxOffice', '38.00', 'boxoffice'), {
+            alternates: [
+              {
+                submissionId: 'tm',
+                priceMin: '45.00',
+                priceMax: null,
+                vendor: 'Ticketmaster',
+                sourceCategory: 'standard',
+              },
+            ],
+          }),
+        ],
+        priceAlternates: [
+          {
+            id: 'tm',
+            tier: 'GA',
+            vendor: 'Ticketmaster',
+            priceMin: '45.00',
+            priceMax: null,
+            sourceCategory: 'standard',
+          },
+          {
+            id: 'axs',
+            tier: 'GA',
+            vendor: 'AXS',
+            priceMin: '47.00',
+            priceMax: null,
+            sourceCategory: 'standard',
+          },
+        ],
+      }),
+    );
+    expect(rows.map((row) => row.id)).toEqual(['vbo', 'tm', 'axs']);
+    expect(rows[0]?.tier).toBe('GA');
+  });
+
+  it('lists only the alternates when the primary is missing from priceByTier', () => {
+    // No per-tier row to read its tier and amount from, and the event row's
+    // scalar price is never read, so the primary is left out.
+    const rows = buildWhereItsSoldRows(
+      boardEvent({ priceSubmissionId: 'gone' }),
+    );
+    expect(rows.map((row) => row.id)).toEqual(['axs', 'vbo']);
+    expect(
+      buildWhereItsSoldRows(boardEvent({ priceByTier: null })).map(
+        (row) => row.id,
+      ),
+    ).toEqual(['axs', 'vbo']);
+  });
+
   it('is empty for a sold-out or cancelled show, and with no prices', () => {
     expect(
       buildWhereItsSoldRows(boardEvent({ priceStatus: 'soldout' })),
@@ -197,7 +252,7 @@ describe('WhereItsSoldCard', () => {
     expect(lines).toContain('VIP · all-in');
   });
 
-  it('points each › at that price’s own card by its id, never off-site', () => {
+  it('scrolls each › to the price card holding the prices, never off-site', () => {
     render(
       <>
         <WhereItsSoldAnchors rows={buildWhereItsSoldRows(boardEvent())} />
@@ -236,7 +291,7 @@ describe('WhereItsSoldCard', () => {
     const other = screen
       .getAllByTestId('where-its-sold-row')
       .find((row) => row.textContent?.includes('Somewhere else'));
-    expect(other?.textContent).toBe('SSomewhere elseGA · all-in$45–$60');
+    expect(other?.textContent).toBe('?Somewhere elseGA · all-in$45–$60');
   });
 
   it('renders nothing with no rows', () => {

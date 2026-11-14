@@ -9,7 +9,7 @@
 import type { EventDetailResponse, Tier } from '@concert-crawl/types';
 
 export interface WhereItsSoldRow {
-  /** The submission id: the row's key and its link to that price's card. */
+  /** The submission id: the row's key and its anchor on the price card. */
   id: string;
   vendor: string;
   tier: Tier;
