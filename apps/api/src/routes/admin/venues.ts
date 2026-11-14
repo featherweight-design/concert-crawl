@@ -1339,8 +1339,9 @@ Respond with only valid JSON, no markdown, no extra text.`;
     );
 
     // The call is paid whatever the reply holds, so its cost is recorded
-    // before any parsing can bail out.
-    await recordAboutCost(id, message.usage);
+    // before any parsing can bail out. Off the request path: the draft never
+    // waits on the ledger, and the write catches and logs its own failure.
+    void recordAboutCost(id, message.usage);
 
     const textBlock = message.content.find((block) => block.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {
