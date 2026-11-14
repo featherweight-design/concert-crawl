@@ -1,3 +1,19 @@
+# [1.451.0](https://github.com/featherweight-design/concert-crawl/compare/v1.450.0...v1.451.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** filter not_ok crawl batches by the shared RESULT rule ([88ecacc](https://github.com/featherweight-design/concert-crawl/commit/88ecaccbd68f6e04616b32e8503a6168e64e9f49))
+* **web:** correct the artist band measurement comment ([829bc34](https://github.com/featherweight-design/concert-crawl/commit/829bc34d172ec123f3df0f515db1bb2bb1a1e22f))
+* **web:** keep the People skeletons' breakpoint hiding working ([9774ce8](https://github.com/featherweight-design/concert-crawl/commit/9774ce839be1a23713e19f77b416ed7cdcf555aa))
+* **web:** the Add sheet search field steps its type size at the shared desktop line ([e15432e](https://github.com/featherweight-design/concert-crawl/commit/e15432e2f922278f6cc08c5716c70c95d69a2647))
+
+
+### Features
+
+* **web:** hold the Event, Venue and Artist layouts to 1023 ([5140e72](https://github.com/featherweight-design/concert-crawl/commit/5140e72c6cb54d1d053f3a74292e0799807e390e))
+* **web:** match the admin People and Invite codes pages to the boards ([3278109](https://github.com/featherweight-design/concert-crawl/commit/32781090975e8745e27e0e8b48d814cbf21e1446))
+
 # [1.450.0](https://github.com/featherweight-design/concert-crawl/compare/v1.449.0...v1.450.0) (2026-11-14)
 
 
