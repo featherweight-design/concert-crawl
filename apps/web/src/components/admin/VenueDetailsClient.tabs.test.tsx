@@ -426,13 +426,14 @@ describe('VenueDetailsClient — the pure tab shell', () => {
       target: { value: 'Boulder' },
     });
     expect(screen.getAllByRole('button', { name: SAVE_LABEL })).toHaveLength(1);
-
-    // No other tab brings a Save of its own: at most Details' one.
+    // The old page bar's button read "Save changes": on no tab, hidden
+    // panels included, does it come back.
+    const oldBar = () =>
+      screen.queryAllByRole('button', { name: /save changes/i, hidden: true });
+    expect(oldBar()).toHaveLength(0);
     for (const key of ['overview', 'runs', 'source', 'guide'] as const) {
       fireEvent.click(screen.getByRole('tab', { name: TABS[key] }));
-      expect(
-        screen.queryAllByRole('button', { name: SAVE_LABEL }).length,
-      ).toBeLessThanOrEqual(1);
+      expect(oldBar()).toHaveLength(0);
     }
   });
 
