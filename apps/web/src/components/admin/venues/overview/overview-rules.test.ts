@@ -14,6 +14,7 @@ import {
   offSinceLine,
   runBars,
   runOutcome,
+  runOutcomeKey,
   runSentence,
   runWhen,
 } from './overview-rules';
@@ -68,6 +69,34 @@ describe('runOutcome', () => {
     expect(runOutcome({ status: 'skipped', reason: 'crawl_paused' })).toBe(
       RUN.skipped,
     );
+  });
+
+  // `A3/09/run-result-chips`: the reason wins over the stored status.
+  it.each([
+    ['failed', 'blocked_http', RUN.blocked],
+    ['skipped', 'robots_disallowed', RUN.robots],
+    ['skipped', 'robots_unreachable', RUN.robots],
+    ['skipped', 'robots_crawl_delay', RUN.robots],
+    ['failed', 'llm_account', RUN.notRun],
+    ['failed', 'no_events_found', RUN.failed],
+    ['failed', 'calendar_not_found', RUN.failed],
+    ['failed', 'error', RUN.failed],
+    ['partial', 'no_events_found', RUN.partial],
+  ] as const)('a %s run with reason %s reads %s', (status, reason, word) => {
+    expect(runOutcome({ status, reason })).toBe(word);
+  });
+
+  it('keys each outcome for its chip', () => {
+    expect(runOutcomeKey({ status: 'failed', reason: 'blocked_http' })).toBe(
+      'blocked',
+    );
+    expect(
+      runOutcomeKey({ status: 'skipped', reason: 'robots_disallowed' }),
+    ).toBe('robots');
+    expect(runOutcomeKey({ status: 'failed', reason: 'llm_account' })).toBe(
+      'notRun',
+    );
+    expect(runOutcomeKey({ status: 'partial', reason: null })).toBe('partial');
   });
 
   it('offers Re-crawl anyway only on an unchanged skip', () => {

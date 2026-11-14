@@ -290,7 +290,8 @@ const Actions = ({
  * One run's detail (`07/a-runs-detail`, `G2/run-detail-sheet`): the chip,
  * "{date} · {time} · {duration} · {cost}", the summary, the pages it fetched
  * with the first failure marked, and Inspect page and Compare. Desktop is a
- * 440 overlay side panel; the phone a bottom sheet. Shared with 1d's Crawl
+ * 440 overlay side panel; the phone a bottom sheet titled "{date} · {time}"
+ * and the chip, with the summary as the body's first line. Shared with 1d's Crawl
  * runs page, so it reads only the run and its last full run.
  *
  * HOLD: HOW WE READ IT, "usually 90–120", This is normal, the page timeout
@@ -322,10 +323,27 @@ export const RunDetailPanel = ({
       data-testid="run-detail"
       style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
-      {summary.body !== null && (
-        <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
-          {summary.body}
-        </p>
+      {phone ? (
+        // The phone sheet's title is the date; the summary is the body's
+        // first line, muted (`G2/run-detail-sheet`).
+        <div
+          data-testid="run-detail-summary"
+          style={{
+            fontSize: 13.5,
+            lineHeight: 1.5,
+            color: 'var(--fg-muted)',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          <p style={{ margin: 0 }}>{summary.title}</p>
+          {summary.body !== null && <p style={{ margin: 0 }}>{summary.body}</p>}
+        </div>
+      ) : (
+        summary.body !== null && (
+          <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
+            {summary.body}
+          </p>
+        )
       )}
       <div>
         <div style={{ marginBottom: 8 }}>
@@ -349,10 +367,12 @@ export const RunDetailPanel = ({
   );
 
   if (phone) {
+    // `G2/run-detail-sheet`: "Nov 9 · 3:02 AM" and the chip, no meta line.
+    const when = runWhen(run.createdAt);
     return (
       <AdminSheet
         onClose={onClose}
-        label={summary.title}
+        label={when}
         title={
           <span
             style={{
@@ -362,11 +382,10 @@ export const RunDetailPanel = ({
               gap: 8,
             }}
           >
-            <span>{summary.title}</span>
+            <span>{when}</span>
             <RunChip run={run} />
           </span>
         }
-        subtitle={meta}
       >
         {body}
       </AdminSheet>
