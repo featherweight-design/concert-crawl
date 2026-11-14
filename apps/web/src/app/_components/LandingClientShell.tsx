@@ -122,7 +122,7 @@ export default function LandingClientShell({
 
   const ctaBlock = (
     <>
-      <div className="flex flex-col gap-3 md:flex-row">
+      <div className="flex flex-col gap-3 lg:flex-row">
         {ctaBrowse}
         {ctaSignUp}
       </div>
@@ -200,11 +200,11 @@ export default function LandingClientShell({
 
       {/* Main content — single column on mobile, two-column grid on desktop */}
       <main
-        className="flex-1 flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-x-16 md:gap-y-10"
+        className="flex-1 flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-16 lg:gap-y-10"
         style={{ padding: '24px 22px 48px' }}
       >
         {/* Hero text — left column on desktop, first block on mobile */}
-        <div className="md:col-start-1 md:row-start-1">
+        <div className="lg:col-start-1 lg:row-start-1">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <h1
               style={{
@@ -240,7 +240,7 @@ export default function LandingClientShell({
         </div>
 
         {/* Poster stack + the see-all rail — right column on desktop */}
-        <div className="flex flex-col items-center gap-1 md:col-start-2 md:row-start-1 md:row-span-2 md:items-end">
+        <div className="flex flex-col items-center gap-1 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:items-end">
           <LandingPosterAnimation
             mode="stack"
             shows={shows}
@@ -251,7 +251,7 @@ export default function LandingClientShell({
         </div>
 
         {/* CTAs — one instance, reflowed rather than duplicated per breakpoint */}
-        <div className="flex flex-col gap-[10px] md:col-start-1 md:row-start-2">
+        <div className="flex flex-col gap-[10px] lg:col-start-1 lg:row-start-2">
           {ctaBlock}
         </div>
       </main>

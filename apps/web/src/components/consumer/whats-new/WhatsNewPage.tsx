@@ -74,11 +74,11 @@ export function WhatsNewPage({ cards }: { cards: FeatureCard[] }) {
 
   return (
     <>
-      <main className="mx-auto w-full max-w-[1064px] px-4 pb-28 pt-3 sm:px-8 sm:pt-12">
-        <div className="sm:hidden">
+      <main className="mx-auto w-full max-w-[1064px] px-4 pb-28 pt-3 lg:px-8 lg:pt-12">
+        <div className="lg:hidden">
           <BackChip inline fallbackHref="/events" />
         </div>
-        <div className="mb-1.5 mt-3 flex items-center gap-2.5 sm:mt-0">
+        <div className="mb-1.5 mt-3 flex items-center gap-2.5 lg:mt-0">
           <span
             aria-hidden
             className="h-1.5 w-1.5 rounded-full bg-signal"
@@ -88,7 +88,7 @@ export function WhatsNewPage({ cards }: { cards: FeatureCard[] }) {
             {COPY.eyebrow}
           </span>
         </div>
-        <h1 className="mb-2 mt-1 text-[40px] font-black leading-[1.02] tracking-[-0.04em] text-fg sm:text-[52px]">
+        <h1 className="mb-2 mt-1 text-[40px] font-black leading-[1.02] tracking-[-0.04em] text-fg lg:text-[52px]">
           {COPY.titleLead}
           <span
             style={{
@@ -104,7 +104,7 @@ export function WhatsNewPage({ cards }: { cards: FeatureCard[] }) {
         </h1>
         <p className="mb-8 mt-0 text-base text-fg-muted">
           {COPY.sub}{' '}
-          <span className="hidden sm:inline">
+          <span className="hidden lg:inline">
             {COPY.feedbackLead}{' '}
             <button
               type="button"

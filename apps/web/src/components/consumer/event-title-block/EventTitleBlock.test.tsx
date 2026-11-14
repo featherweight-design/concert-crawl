@@ -144,8 +144,8 @@ describe('EventTitleBlock', () => {
     const centeredClasses = [
       'items-center',
       'text-center',
-      'sm:items-start',
-      'sm:text-left',
+      'lg:items-start',
+      'lg:text-left',
     ];
     const { rerender } = render(
       <EventTitleBlock
@@ -461,7 +461,7 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
       );
       const slot = screen.getByTestId('title-nll-chip');
       expect(slot.className).toContain('hidden');
-      expect(slot.className).toContain('sm:flex');
+      expect(slot.className).toContain('lg:flex');
       expect(slot.style.marginBottom).toBe('9px');
       expect(slot.textContent).toBe('No longer listed');
       // Over the photo wash the chip steps up: a visible grey border (50%) and

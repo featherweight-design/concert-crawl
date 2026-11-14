@@ -33,7 +33,7 @@ export default async function MePage() {
         <SpotifyReturnFlow />
       </Suspense>
       {/* Mobile (< sm) */}
-      <div className="sm:hidden">
+      <div className="lg:hidden">
         <SettingsRoute
           profile={profile}
           submissions={submissions}
@@ -42,7 +42,7 @@ export default async function MePage() {
         />
       </div>
       {/* Desktop (sm+) */}
-      <div className="hidden sm:block">
+      <div className="hidden lg:block">
         <SettingsRouteDesktop
           profile={profile}
           submissions={submissions}

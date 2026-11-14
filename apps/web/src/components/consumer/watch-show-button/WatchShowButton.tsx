@@ -403,7 +403,7 @@ export function WatchShowButton({
           // target rather than a bare 28px square with text beside it.
           // No ring of its own: the strip container draws one on
           // `focus-within`, outside the clip that would crop this one.
-          className="flex w-full min-h-[50px] cursor-pointer items-center gap-3 border-0 bg-transparent px-[10px] py-2 text-left focus-visible:outline-none disabled:cursor-default disabled:opacity-60 sm:min-h-[52px]"
+          className="flex w-full min-h-[50px] cursor-pointer items-center gap-3 border-0 bg-transparent px-[10px] py-2 text-left focus-visible:outline-none disabled:cursor-default disabled:opacity-60 lg:min-h-[52px]"
         >
           <span
             aria-hidden

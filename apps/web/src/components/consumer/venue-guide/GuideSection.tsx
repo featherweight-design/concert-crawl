@@ -65,7 +65,7 @@ export const GuideSection = ({
   ];
 
   const chipRows = (
-    <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-7">
+    <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-7">
       {accessibility !== undefined &&
         (accessibility.isPlaceholder ||
         accessibility.body.trim().length === 0 ? (

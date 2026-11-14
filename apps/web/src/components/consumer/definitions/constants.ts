@@ -28,10 +28,10 @@ export const SHELF_CARD_WIDE = { width: 180, height: 288 } as const;
  * source asset can move the card.
  */
 export const SHELF_CARD_BOX_CLASS =
-  'w-[148px] h-[271px] sm:w-[180px] sm:h-[288px]';
+  'w-[148px] h-[271px] lg:w-[180px] lg:h-[288px]';
 
 /** Gap between cards: the boards' 11 at phone widths and 15 from `sm` up. */
-export const SHELF_RAIL_GAP_CLASS = 'gap-[11px] sm:gap-[15px]';
+export const SHELF_RAIL_GAP_CLASS = 'gap-[11px] lg:gap-[15px]';
 
 /**
  * The card rails scroll sideways and only sideways. `overflow-x: auto` alone

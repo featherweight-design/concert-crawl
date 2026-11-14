@@ -230,7 +230,7 @@ export const ShareAppSheet = ({
           the backdrop or a drag, all of which BottomSheet owns. */}
         <div
           aria-hidden="true"
-          className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-sm bg-border-strong sm:hidden"
+          className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-sm bg-border-strong lg:hidden"
         />
         {/* BottomSheet's own close sits first in the row above; the eyebrow is
           pulled up into that row, and ignores the pointer so the close and the
@@ -283,7 +283,7 @@ export const ShareAppSheet = ({
         <div
           role="status"
           aria-live="polite"
-          className="max-sm:pb-[max(26px,env(safe-area-inset-bottom))]"
+          className="max-lg:pb-[max(26px,env(safe-area-inset-bottom))]"
         >
           {status === 'copied' && (
             <span className="sr-only">{SHARE_COPY.copyLinkDone}</span>

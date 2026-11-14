@@ -81,7 +81,7 @@ export function InviteLanding({
       {/* The screen's one ambient glow (B+ rule 1), behind the card fan. */}
       <div
         aria-hidden
-        className="right-[-20%] top-[28%] md:right-[-6%] md:top-[12%]"
+        className="right-[-20%] top-[28%] lg:right-[-6%] lg:top-[12%]"
         style={{
           position: 'absolute',
           width: 'min(110vw, 760px)',
@@ -96,7 +96,7 @@ export function InviteLanding({
         // Below 360 the lockup and the beta pill share one row, as the 320
         // board draws it (addendum 2, 15-320px/invite-320): 16px sides and a
         // 16px wordmark.
-        className="px-[22px] pt-5 max-[360px]:px-4 md:px-12 md:pt-7"
+        className="px-[22px] pt-5 max-[360px]:px-4 lg:px-12 lg:pt-7"
         style={{
           position: 'relative',
           display: 'flex',
@@ -130,7 +130,7 @@ export function InviteLanding({
           <BetaPill />
           <Link
             href="/sign-in"
-            className={`hidden md:inline-flex items-center ${FOCUS_RING}`}
+            className={`hidden lg:inline-flex items-center ${FOCUS_RING}`}
             style={{
               minHeight: 44,
               padding: '0 6px',
@@ -146,15 +146,15 @@ export function InviteLanding({
       </header>
 
       <main
-        className="flex flex-1 flex-col gap-7 px-[22px] pb-12 pt-6 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-x-12 md:px-12 md:pt-10"
+        className="flex flex-1 flex-col gap-7 px-[22px] pb-12 pt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center lg:gap-x-12 lg:px-12 lg:pt-10"
         style={{ position: 'relative' }}
       >
-        <div className="flex flex-col gap-4 md:col-start-1 md:row-start-1">
+        <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
           <h1
             // Sized to the boards (xcheck row 38): inv-mob sets the headline at
             // about 11.3vw (44px at 390, so 36px at 320); inv-desk at about
             // 5.55vw, 80px at its 1440 frame, which is the cap.
-            className="[font-size:clamp(36px,11.3vw,60px)] md:[font-size:clamp(52px,5.55vw,80px)]"
+            className="[font-size:clamp(36px,11.3vw,60px)] lg:[font-size:clamp(52px,5.55vw,80px)]"
             style={{
               margin: 0,
               fontWeight: 900,
@@ -165,7 +165,7 @@ export function InviteLanding({
             {LANDING_COPY.hero.headingLine1}
             <br />
             {LANDING_COPY.hero.headingLine2}
-            <br className="max-md:hidden" />{' '}
+            <br className="max-lg:hidden" />{' '}
             <span
               style={{
                 background: INVITE_GRADIENT,
@@ -191,11 +191,11 @@ export function InviteLanding({
           </p>
         </div>
 
-        <div className="-mx-[22px] md:col-start-2 md:row-span-2 md:row-start-1 md:mx-0">
+        <div className="-mx-[22px] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mx-0">
           <ShowFan shows={shows} />
         </div>
 
-        <div className="flex flex-col gap-4 md:col-start-1 md:row-start-2 md:max-w-[480px]">
+        <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-2 lg:max-w-[480px]">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <span style={{ ...MONO_CAPS, color: 'var(--fg-subtle)' }}>
               {COPY.eyebrow}
@@ -203,13 +203,13 @@ export function InviteLanding({
             <InviteCodeField />
           </div>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 lg:flex">
             <span style={{ fontSize: 14, color: 'var(--fg-muted)' }}>
               {COPY.noCode}
             </span>
             {waitlistChip}
           </div>
-          <div className="flex flex-col gap-4 md:hidden">
+          <div className="flex flex-col gap-4 lg:hidden">
             <div className="[&>button]:w-full">{waitlistChip}</div>
             <p
               style={{
@@ -235,16 +235,16 @@ export function InviteLanding({
           </div>
 
           {venues !== null && venues.length > 0 && (
-            <div className="mt-3 flex flex-col items-center gap-3 md:items-start">
+            <div className="mt-3 flex flex-col items-center gap-3 lg:items-start">
               {/* 6px gaps, as both boards space the row: twelve 30px tiles
                   (426px) fit the 480px column on one line. It still wraps in a
                   narrower column (768-1100), which no board draws. */}
-              <div className="flex flex-wrap justify-center gap-1.5 md:justify-start">
+              <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">
                 {venues.slice(0, DESKTOP_TILES).map((venue, index) => (
                   <span
                     key={venue.slug}
                     className={
-                      index >= PHONE_TILES ? 'max-md:hidden' : undefined
+                      index >= PHONE_TILES ? 'max-lg:hidden' : undefined
                     }
                   >
                     <VenueTile

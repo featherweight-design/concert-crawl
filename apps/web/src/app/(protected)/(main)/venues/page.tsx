@@ -26,7 +26,7 @@ export default async function VenuesPage() {
   const venues = await fetchVenues(token);
 
   return (
-    <div className="mx-auto w-full max-w-[1120px] px-[18px] pb-24 pt-4 sm:px-8 sm:pt-[48px]">
+    <div className="mx-auto w-full max-w-[1120px] px-[18px] pb-24 pt-4 lg:px-8 lg:pt-[48px]">
       {venues.length === 0 ? (
         <>
           <div
