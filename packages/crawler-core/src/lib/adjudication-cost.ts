@@ -1,6 +1,10 @@
 import type { TokenUsage } from '../types.js';
 import type { Adjudicator } from './derive-artists.js';
-import { adjudicateEventWithUsage } from './extractors/llm.js';
+import { calculateCost } from './cost.js';
+import {
+  AdjudicationResponseError,
+  adjudicateEventWithUsage,
+} from './extractors/llm.js';
 import { LLM_EXTRACTION_MODEL } from './llm-models.js';
 import { recordLlmCost } from './record-llm-cost.js';
 
@@ -20,12 +24,16 @@ import { recordLlmCost } from './record-llm-cost.js';
 // counts each adjudication dollar exactly once.
 
 export interface AdjudicationCost {
-  /** An Adjudicator that adds each answered call's usage to the batch. */
+  /**
+   * An Adjudicator that adds each billed call's usage to the batch, including
+   * a call whose answer was malformed (AdjudicationResponseError), which it
+   * then rethrows.
+   */
   adjudicate: Adjudicator;
-  /** Adds one call's usage, for a caller that makes the call itself. */
-  add: (usage: TokenUsage) => void;
   /** Calls whose usage was added so far. */
   readonly calls: number;
+  /** The batch's dollar cost so far, at the adjudicator model's rates. */
+  readonly costUsd: number;
   /**
    * Writes the batch's row and returns its dollar cost, or null when there
    * was nothing to write or the write failed. Never throws: losing a ledger
@@ -55,14 +63,22 @@ export function createAdjudicationCost(): AdjudicationCost {
 
   return {
     adjudicate: async (input) => {
-      const { verdict, usage: callUsage } =
-        await adjudicateEventWithUsage(input);
-      add(callUsage);
-      return verdict;
+      try {
+        const { verdict, usage: callUsage } =
+          await adjudicateEventWithUsage(input);
+        add(callUsage);
+        return verdict;
+      } catch (err) {
+        if (err instanceof AdjudicationResponseError) add(err.usage);
+        throw err;
+      }
     },
-    add,
     get calls() {
       return calls;
+    },
+    get costUsd() {
+      // The adjudicator sends the extractor's model (extractors/llm.ts).
+      return calculateCost(usage, LLM_EXTRACTION_MODEL);
     },
     record: async (metadata) => {
       if (recorded || calls === 0) return null;
@@ -77,10 +93,14 @@ export function createAdjudicationCost(): AdjudicationCost {
         });
       } catch (err) {
         console.warn(
+          // The usage and dollars go in the line so a lost row can be
+          // re-entered by hand from the log.
           JSON.stringify({
             event: 'crawler.adjudication_cost_record_failed',
             ...metadata,
             calls,
+            usage,
+            costUsd: calculateCost(usage, LLM_EXTRACTION_MODEL),
             error: String(err),
           }),
         );
