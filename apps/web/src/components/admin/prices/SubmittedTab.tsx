@@ -15,6 +15,7 @@ import {
   useIsPhone,
   type RowMenuItem,
 } from '@/components/admin/primitives';
+import { editEventHref } from '@/lib/admin/edit-event-link';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { refusedStatus } from '../invite-codes/codes-api';
 import { EditPricePanel } from './EditPricePanel';
@@ -278,7 +279,7 @@ export const SubmittedTab = () => {
         icon: Calendar,
         label: COPY.menu.openShow.label,
         hint: COPY.menu.openShow.hint,
-        onSelect: () => router.push(`/admin/events/${row.eventId}`),
+        onSelect: () => router.push(editEventHref(row.eventId)),
       },
       {
         key: 'ticket',

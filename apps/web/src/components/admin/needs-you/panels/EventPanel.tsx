@@ -2,6 +2,7 @@
 
 import { ExternalLink } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { editEventHref } from '@/lib/admin/edit-event-link';
 import { metaDate, metaTime, whenChipOf } from '../needs-you-rules';
 import type { PanelProps } from './panel-props';
 import {
@@ -102,7 +103,7 @@ export const EventPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
         extra={
           facts?.eventId ? (
             <LinkButton
-              href={`/admin/events/${facts.eventId}`}
+              href={editEventHref(facts.eventId)}
               testId="edit-event"
               icon={<ExternalLink size={14} aria-hidden />}
             >
