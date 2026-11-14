@@ -98,6 +98,18 @@ describe('<PosterCard /> (B+ share card) renders through satori', () => {
     expect(digest(buffer)).not.toBe(digest(await render('square', null)));
   }, 30_000);
 
+  // A cut name draws as two runs (text, then an untracked U+2026), which
+  // satori only accepts inside a flex box.
+  it.each(SHARE_RATIOS)(
+    'draws a long, cut name at %s',
+    async (ratio) => {
+      const long = { ...baseCard, artist: 'An Evening with Tommy Cash Now' };
+      const buffer = await render(ratio, null, long);
+      expect(buffer.subarray(0, 4)).toEqual(PNG_MAGIC);
+    },
+    30_000,
+  );
+
   it('is deterministic: identical input yields byte-identical output', async () => {
     const photo = await photoPromise;
     expect(digest(await render('square', photo))).toBe(

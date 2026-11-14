@@ -12,8 +12,11 @@ import {
 import { ShareWordmark } from '@/components/consumer/share/ShareWordmark';
 import {
   fitLine,
+  metaMaxChars,
+  NAME_ELLIPSIS,
   shareMetaLines,
   storyNameText,
+  type FittedLine,
   type ShareCard,
   type ShareChip,
 } from '@/lib/share/share-layout';
@@ -341,14 +344,20 @@ export const PosterCard = ({
   const metrics = SC_METRICS[ratio];
   const textWidth = width - metrics.textLeft - metrics.textRight;
   const [chipGap, nameGap, metaGap, ruleGap] = metrics.gaps;
-  const name =
+  const name: FittedLine =
     ratio === 'story'
       ? {
           size: metrics.name,
           text: storyNameText(card.artist, metrics.name, textWidth),
+          cut: false,
         }
       : fitLine(card.artist, metrics.name, textWidth, metrics.nameFloor);
   const nameSize = name.size;
+  const metaLines = shareMetaLines(
+    card,
+    ratio,
+    metaMaxChars(textWidth, metrics.meta),
+  );
 
   return (
     <div
@@ -430,7 +439,16 @@ export const PosterCard = ({
               : { display: 'flex', whiteSpace: 'nowrap', lineHeight: 1 }),
           }}
         >
-          {name.text}
+          {/* A cut name ends in one U+2026 glyph, untracked: the name's
+              negative tracking otherwise spaces its dots apart. */}
+          {name.cut ? (
+            <>
+              <span>{name.text}</span>
+              <span style={{ letterSpacing: 0 }}>{NAME_ELLIPSIS}</span>
+            </>
+          ) : (
+            name.text
+          )}
         </div>
         <div
           style={{
@@ -439,7 +457,7 @@ export const PosterCard = ({
             marginTop: nameGap,
           }}
         >
-          {shareMetaLines(card, ratio).map((line) => (
+          {metaLines.map((line) => (
             <div
               key={line}
               style={{

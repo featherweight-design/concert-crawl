@@ -6,7 +6,10 @@ import {
   SQUARE_DATE_STACK,
 } from '@/components/consumer/share/definitions/ratios';
 import {
-  estimatedLineWidth,
+  fittedLineWidth,
+  metaMaxChars,
+  NAME_ELLIPSIS,
+  nameWidthEm,
   fitLine,
   fitLineSize,
   graphemes,
@@ -163,50 +166,115 @@ describe('fitLine (Square and Wide one-line name)', () => {
   // The Square text box: 1080 minus 72 each side.
   const SQUARE_WIDTH = 936;
 
+  // The Wide text box: 1200 minus 573 and 48.
+  const WIDE_WIDTH = 579;
+
   it('keeps a name that fits whole', () => {
     expect(fitLine('IDLES', 122, SQUARE_WIDTH, 72)).toEqual({
       size: 122,
       text: 'IDLES',
+      cut: false,
     });
   });
 
-  it('cuts a name too long at the floor, and the cut text with its ellipsis fits', () => {
-    const { size, text } = fitLine(
+  it('measures with Inter 900’s own advances (M wider than i)', () => {
+    expect(nameWidthEm('MMMM')).toBeGreaterThan(nameWidthEm('iiii') * 2.5);
+  });
+
+  // The cut used to leave ~250px empty: a flat 0.7em per letter is far wider
+  // than Inter 900's mixed case.
+  it.each([
+    ['Square', SQUARE_WIDTH],
+    ['Wide', WIDE_WIDTH],
+  ])(
+    'fills at least 85%% of the %s box before cutting a 30-character name',
+    (_label, width) => {
+      const name = 'An Evening with Tommy Cash Now';
+      expect(name).toHaveLength(30);
+      const line = fitLine(
+        name,
+        width === SQUARE_WIDTH ? 122 : 84,
+        width,
+        width === SQUARE_WIDTH ? 72 : 52,
+      );
+      expect(line.cut).toBe(true);
+      expect(fittedLineWidth(line)).toBeGreaterThanOrEqual(width * 0.85);
+      expect(fittedLineWidth(line)).toBeLessThanOrEqual(width);
+    },
+  );
+
+  it('cuts to text without the ellipsis; the card draws one U+2026 glyph', () => {
+    const line = fitLine(
       'Tommy Cash and the Lowrider Orchestra',
       122,
       SQUARE_WIDTH,
       72,
     );
-    expect(size).toBe(72);
-    expect(text.endsWith('…')).toBe(true);
-    expect(text.startsWith('Tommy C')).toBe(true);
-    expect(estimatedLineWidth(text, size)).toBeLessThanOrEqual(SQUARE_WIDTH);
+    expect(line).toMatchObject({ size: 72, cut: true });
+    expect(line.text.startsWith('Tommy Cash and the')).toBe(true);
+    expect(line.text).not.toMatch(/[.…]$/);
+    expect(NAME_ELLIPSIS).toBe('…');
+    expect([...NAME_ELLIPSIS]).toHaveLength(1);
   });
 });
 
 describe('fitLine at grapheme boundaries', () => {
-  // At the 72px floor the 936px box keeps 17 graphemes before the ellipsis.
-  const pad = 'A'.repeat(16);
-
   it('handles an empty name', () => {
-    expect(fitLine('', 122, 936, 72)).toEqual({ size: 122, text: '' });
-    expect(fitLine('   ', 122, 936, 72)).toEqual({ size: 122, text: '' });
+    expect(fitLine('', 122, 936, 72)).toEqual({
+      size: 122,
+      text: '',
+      cut: false,
+    });
+    expect(fitLine('   ', 122, 936, 72)).toEqual({
+      size: 122,
+      text: '',
+      cut: false,
+    });
   });
 
+  // Wherever the cut lands, what is kept is whole graphemes of the name.
   it.each([
     ['a flag', '🇺🇸'],
     ['a ZWJ sequence', '👩‍🎤'],
     ['an astral emoji', '🎸'],
-  ])('never cuts inside %s at the cut point', (_label, glyph) => {
-    const { text } = fitLine(`${pad}${glyph}${'B'.repeat(30)}`, 122, 936, 72);
-    expect(text).toBe(`${pad}${glyph}…`);
+  ])('never cuts inside %s', (_label, glyph) => {
+    for (let at = 8; at <= 24; at += 1) {
+      const name = `${'a'.repeat(at)}${glyph}${'b'.repeat(30)}`;
+      const { text } = fitLine(name, 122, 936, 72);
+      const kept = graphemes(text);
+      expect(kept).toEqual(graphemes(name).slice(0, kept.length));
+    }
   });
 
   it('counts a grapheme as one character when sizing', () => {
     expect(graphemes('🇺🇸👩‍🎤x')).toHaveLength(3);
-    expect(fitLineSize('🇺🇸'.repeat(5), 122, 936, 72)).toBe(
-      fitLineSize('AAAAA', 122, 936, 72),
-    );
+  });
+});
+
+describe('meta line keeps the city (🔸 undrawn on the board)', () => {
+  const source = {
+    date: { weekday: 'FRI', month: 'NOV', day: '13' },
+    showTime: '9:00 PM',
+    venue: 'The Oriental Theater at Tejon Street',
+    city: 'Denver',
+  };
+
+  it('shortens the venue and ends on the city', () => {
+    expect(shareMetaLines(source, 'story', 26)).toEqual([
+      'FRI NOV 13 · 9:00 PM',
+      'THE ORIENTAL THE… · DENVER',
+    ]);
+  });
+
+  it('does the same on Square’s single line, within the box', () => {
+    const [line] = shareMetaLines(source, 'square', 42);
+    expect(line).toMatch(/… · DENVER$/);
+    expect(line?.startsWith('FRI NOV 13 · 9:00 PM · THE ')).toBe(true);
+    expect(graphemes(line ?? '')).toHaveLength(42);
+  });
+
+  it('counts a mono meta character at 0.68em', () => {
+    expect(metaMaxChars(936, 32)).toBe(43);
   });
 });
 
