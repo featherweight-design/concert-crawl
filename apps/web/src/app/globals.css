@@ -120,6 +120,7 @@
     --price-text-warning: color-mix(in oklab, var(--warning) 80%, var(--fg));
     --price-text-signal: color-mix(in oklab, var(--signal) 85%, var(--fg));
     --price-text-accent: color-mix(in oklab, var(--accent) 82%, var(--fg));
+    --price-text-danger: color-mix(in oklab, var(--danger) 80%, var(--fg));
   }
 
   * {
