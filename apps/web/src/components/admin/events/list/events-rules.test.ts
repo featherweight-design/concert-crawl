@@ -112,6 +112,7 @@ describe('page URL and filters', () => {
       'soldout',
       'postponed',
       'cancelled',
+      'moved',
       'delisted',
     ]);
   });
