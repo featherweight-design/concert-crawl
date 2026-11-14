@@ -1,0 +1,47 @@
+{
+  "feature": "Admin venue Details tab · Short name on the Look card (addendum 4 item 4 A, addendum 5)",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: design/design_handoff_bplus_redesign/addendum-5/boards/06-venue-details/details-d (desktop) and details-m (phone). The sheet never saves (that would write the shared scratch venue): the read state, then a typed value showing the save bar, then 21 characters showing the over-cap error after Save is pressed (refused client-side, nothing sent).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 2300, "touch": true },
+    { "label": "phone", "width": 390, "height": 2200, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 1200 }
+  ],
+  "rows": [
+    {
+      "id": "look-short-name",
+      "label": "Details, the Look card with Short name (Bluebird Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "wait": "input[id$='-shortName']"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "look-short-name-typed",
+      "label": "Details, a short name typed (save bar shows)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "wait": "input[id$='-shortName']"
+        },
+        { "fill": "input[id$='-shortName']", "text": "Bluebird" },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "look-short-name-too-long",
+      "label": "Details, 21 characters refused on Save",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "wait": "input[id$='-shortName']"
+        },
+        { "fill": "input[id$='-shortName']", "text": "Bluebird Theater Colf" },
+        { "clickRole": "button", "name": "^Save$" },
+        { "settle": 1500 }
+      ]
+    }
+  ]
+}
