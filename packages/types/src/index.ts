@@ -2085,6 +2085,87 @@ export const AUDIT_AREAS = [
 
 export type AuditArea = (typeof AUDIT_AREAS)[number];
 
+/**
+ * Every audit action the Activity log has a sentence for. The web's sentence
+ * table (`ADMIN_COPY.operations.log.sentences`) is pinned to this list by a
+ * test, so the two never drift; the API validates the log search's `actions`
+ * against it (addendum 6 #37, PR C).
+ */
+export const AUDIT_ACTION_KEYS = [
+  'artist.match.update',
+  'artist.match.confirm_auto',
+  'artist.match.auto',
+  'artist.name.update',
+  'artist.name.unlock',
+  'artist.name.lock',
+  'artist.reports.dismiss',
+  'artist.visibility.update',
+  'contest.resolve',
+  'contest.defer',
+  'crawl.daily_cron',
+  'crawl.trigger',
+  'crawl.trigger_all',
+  'event.auto_cancel.stale',
+  'event.bulk_auto_approve',
+  'event.bulk_delete',
+  'event.bulk_mark_as_concert',
+  'event.bulk_mark_non_concert',
+  'event.bulk_unverify',
+  'event.delete',
+  'event.drift_duplicates_merged',
+  'event.fill_from_merge',
+  'event.merge',
+  'event.report.resolve',
+  'event.sold_out.mark',
+  'event.sold_out.clear',
+  'event.update',
+  'event.verify',
+  'feature_flag.toggle',
+  'feedback.update',
+  'invite_code.create',
+  'invite_code.edit',
+  'invite_code.reactivate',
+  'invite_code.revoke',
+  'needs_you.answer',
+  'needs_you.undo',
+  'needs_you.snooze',
+  'needs_you.unsnooze',
+  'notification.test_email',
+  'price.promoted',
+  'price.pipeline.run',
+  'price.submission.admin_add',
+  'price.submission.edit_price',
+  'price.submission.reject',
+  'price.submission.update',
+  'price.settings.update',
+  'settings.update',
+  'user.email_shown',
+  'user.role.update',
+  'user.seeded',
+  'user.sessions_revoked',
+  'user.test_account.set',
+  'venue.create',
+  'venue.update',
+  'venue.delete',
+  'venue.remove',
+  'venue.hide',
+  'venue.show',
+  'venue.crawl_pause',
+  'venue.crawl_resume',
+  'venue.crawl_auto_paused',
+  'venue.crawl_auto_resumed',
+  'venue.crawl_blocked',
+  'venue.fault.acknowledge',
+  'venue.fault.unacknowledge',
+  'venue.guide.save',
+  'venue.guide.publish',
+  'venue.guide.unpublish',
+  'venue.platform_changed',
+  'venue.platform_probe',
+] as const;
+
+export type AuditActionKey = (typeof AUDIT_ACTION_KEYS)[number];
+
 export type AuditTargetKind =
   | 'event'
   | 'venue'

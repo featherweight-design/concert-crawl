@@ -282,6 +282,71 @@ describe('GET /v1/admin/audit-log?search=', () => {
     ]);
   });
 
+  it('drops a leading @, and finds system actors by their id', async () => {
+    await seedUserProfile('sub-1', { handle: 'sam' });
+    await seedTargeted('sub-1', 'venue.update', null, mt('2026-11-10', 9));
+    await seedTargeted(
+      'system:crawler',
+      'event.drift_duplicates_merged',
+      null,
+      mt('2026-11-10', 10),
+    );
+    expect(await actionsFor('@sam')).toEqual(['venue.update']);
+    expect(await actionsFor('crawler')).toEqual([
+      'event.drift_duplicates_merged',
+    ]);
+  });
+
+  it('finds a deleted target by the name its metadata kept', async () => {
+    await testDb.insert(auditLog).values({
+      actorId: ME,
+      action: 'venue.delete',
+      targetId: '00000000-0000-4000-8000-000000000000',
+      metadata: { name: 'Bluebird Theater' },
+      createdAt: mt('2026-11-10', 9),
+    });
+    expect(await actionsFor('bluebird')).toEqual(['venue.delete']);
+  });
+
+  // The web matches typed words against its sentence table and sends the
+  // keys whose sentences match ("paused" for venue.crawl_pause).
+  it('ORs the action keys the web matched', async () => {
+    await seedTargeted(ME, 'venue.crawl_pause', null, mt('2026-11-10', 9));
+    await seedTargeted(ME, 'venue.update', null, mt('2026-11-10', 10));
+    const { data } = await get<AuditLogItem[]>(
+      '?search=paused&actions=venue.crawl_pause',
+    );
+    expect(data.map((row) => row.action)).toEqual(['venue.crawl_pause']);
+    // Keys alone, with no words (a search that only names a verb).
+    const keysOnly = await get<AuditLogItem[]>('?actions=venue.update');
+    expect(keysOnly.data.map((row) => row.action)).toEqual(['venue.update']);
+  });
+
+  it('refuses an unknown action key, and more than 200', async () => {
+    expect(
+      (await app.request('/v1/admin/audit-log?actions=venue.nope')).status,
+    ).toBe(400);
+    const many = Array.from({ length: 201 }, () => 'venue.update').join(',');
+    expect(
+      (await app.request(`/v1/admin/audit-log?actions=${many}`)).status,
+    ).toBe(400);
+  });
+
+  it('applies the search to the Anyone counts', async () => {
+    await seedUserProfile(ME, { handle: 'huey' });
+    await seedUserProfile('sub-1', { handle: 'sam' });
+    const venue = await seedVenue({ name: 'Levitt Pavilion' });
+    await seedTargeted('sub-1', 'venue.update', venue.id, mt('2026-11-10', 9));
+    await seedTargeted('sub-1', 'venue.update', null, mt('2026-11-10', 10));
+    const { data } = await get<AuditLogActor[]>(
+      '/actors?day=2026-11-10&search=levitt',
+    );
+    // Only the row naming Levitt counts; @huey isn't staff here and made none.
+    expect(data).toEqual([
+      expect.objectContaining({ handle: 'sam', count: 1, role: null }),
+    ]);
+  });
+
   it('treats % and _ as plain characters', async () => {
     await seedTargeted(ME, 'venue.update', null, mt('2026-11-10', 9));
     expect(await actionsFor('%')).toEqual([]);

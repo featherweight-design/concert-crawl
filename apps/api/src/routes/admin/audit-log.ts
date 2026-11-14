@@ -20,13 +20,17 @@ import {
   artists,
   auditLog,
   db,
+  eventReports,
   events,
   inviteCodes,
+  priceSubmissions,
   userProfiles,
   venues,
 } from '@concert-crawl/db';
+import { FEATURE_FLAGS } from '@concert-crawl/entitlements';
 import { containsPattern } from '../../lib/escape-like.js';
 import {
+  AUDIT_ACTION_KEYS,
   AUDIT_AREAS,
   type AuditLogActor,
   type AuditLogItem,
@@ -71,6 +75,24 @@ const areaSchema = z
   .pipe(z.array(z.enum(AUDIT_AREAS)).optional())
   .optional();
 
+/**
+ * The action keys whose sentences the typed search matches (addendum 6 #37,
+ * PR C): the web matches the words against its sentence table, which only it
+ * has, and sends the keys. `?actions=a,b` or repeated. At most 200 values,
+ * and an unknown key is a 400, never ignored.
+ */
+const actionsSchema = z
+  .union([z.string(), z.array(z.string())])
+  .transform((value) =>
+    (Array.isArray(value) ? value : [value])
+      .flatMap((part) => part.split(','))
+      .map((part) => part.trim())
+      .filter((part) => part !== ''),
+  )
+  .pipe(z.array(z.enum(AUDIT_ACTION_KEYS)).max(200))
+  .transform((keys) => (keys.length === 0 ? undefined : [...new Set(keys)]))
+  .optional();
+
 /** "Search the log": trimmed, 1 to 100 characters; blank is no search. */
 const searchQuerySchema = z
   .string()
@@ -86,6 +108,7 @@ const querySchema = z
     actorHandle: handleQuerySchema,
     area: areaSchema,
     search: searchQuerySchema,
+    actions: actionsSchema,
     since: z.iso.datetime().optional(),
     // Exclusive: `since` and `until` a day apart are that day's rows.
     until: z.iso.datetime().optional(),
@@ -137,8 +160,17 @@ auditLogAdminRouter.get(
   '/',
   zValidator('query', querySchema, validationHook),
   async (ctx) => {
-    const { actor, actorHandle, area, search, since, until, limit, cursor } =
-      ctx.req.valid('query');
+    const {
+      actor,
+      actorHandle,
+      area,
+      search,
+      actions,
+      since,
+      until,
+      limit,
+      cursor,
+    } = ctx.req.valid('query');
 
     let after: { at: Date; id: string } | null = null;
     if (cursor !== undefined) {
@@ -164,7 +196,7 @@ auditLogAdminRouter.get(
       .where(
         and(
           actorKindFilter(actor),
-          searchFilter(search),
+          searchFilter(search, actions),
           // The joined profile's handle, so a system row never matches.
           actorHandle === undefined
             ? undefined
@@ -242,20 +274,50 @@ const mtDays = (startDay: string, endDay: string) =>
 
 /**
  * "Search the log" (addendum 6 #37, PR C): a parameterized, escaped ILIKE
- * over what a row says. The action key ("venue.crawl.pause" for "Paused
- * crawling"), the actor's handle, and the name of what it changed: a venue,
- * show, artist, person, invite code or feature flag, looked up by
- * `target_id` as the log names them (lib/audit-targets.ts). A price's row
- * keys a submission, so it is found by its action and actor instead.
- * Expects the list's join on the actor's profile.
+ * over what a row says, plus the action keys whose sentences the web matched
+ * (`actions`; the sentences live only in the web's copy). A row matches on:
+ * its action key; the actor's handle or system id; the name of what it
+ * changed, looked up by `target_id` as lib/audit-targets.ts names it (a
+ * venue, show, artist, person, invite code, a report's or a price's show, or
+ * a feature flag's label); or its metadata, which keeps a deleted target's
+ * name. A leading `@` is dropped, as handles show with one.
+ * Expects the caller's join on the actor's profile.
  */
-const searchFilter = (search: string | undefined) => {
-  if (search === undefined) return undefined;
-  const pattern = containsPattern(search);
+const searchFilter = (
+  search: string | undefined,
+  actions: readonly string[] | undefined,
+) => {
+  if (search === undefined && actions === undefined) return undefined;
+  const byAction =
+    actions === undefined ? undefined : inArray(auditLog.action, [...actions]);
+  if (search === undefined) return byAction;
+  const words = search.replace(/^@/, '');
+  if (words === '') return byAction;
+  const pattern = containsPattern(words);
+  const lowered = words.toLowerCase();
+  const flagTargets = Object.entries(FEATURE_FLAGS)
+    .filter(
+      ([key, flag]) =>
+        key.toLowerCase().includes(lowered) ||
+        flag.label.toLowerCase().includes(lowered),
+    )
+    .map(([key]) => `feature_flag:${key}`);
   const targetIn = (ids: SQL) => sql`${auditLog.targetId} IN (${ids})`;
   return or(
+    byAction,
     ilike(auditLog.action, pattern),
+    ilike(auditLog.actorId, pattern),
     ilike(userProfiles.handle, pattern),
+    sql`${auditLog.metadata}::text ILIKE ${pattern}`,
+    flagTargets.length === 0
+      ? undefined
+      : inArray(auditLog.targetId, flagTargets),
+    targetIn(
+      sql`SELECT ${eventReports.id}::text FROM ${eventReports} INNER JOIN ${events} ON ${events.id} = ${eventReports.eventId} WHERE ${events.title} ILIKE ${pattern}`,
+    ),
+    targetIn(
+      sql`SELECT ${priceSubmissions.id}::text FROM ${priceSubmissions} INNER JOIN ${events} ON ${events.id} = ${priceSubmissions.eventId} WHERE ${events.title} ILIKE ${pattern}`,
+    ),
     targetIn(
       sql`SELECT ${venues.id}::text FROM ${venues} WHERE ${venues.name} ILIKE ${pattern}`,
     ),
@@ -268,12 +330,11 @@ const searchFilter = (search: string | undefined) => {
     targetIn(
       sql`SELECT ${inviteCodes.id}::text FROM ${inviteCodes} WHERE ${inviteCodes.code} ILIKE ${pattern}`,
     ),
-    // A person's row keys their Clerk id; a flag's keys `feature_flag:<key>`.
-    // The subquery's own FROM shadows the outer join on the actor's profile.
+    // A person's row keys their Clerk id. The subquery's own FROM shadows
+    // the outer join on the actor's profile.
     targetIn(
       sql`SELECT ${userProfiles.userId} FROM ${userProfiles} WHERE ${userProfiles.handle} ILIKE ${pattern}`,
     ),
-    sql`${auditLog.targetId} ILIKE ${`feature_flag:${pattern}`}`,
   );
 };
 
@@ -292,6 +353,7 @@ const daysQuerySchema = z.object({
   actorHandle: handleQuerySchema,
   area: areaSchema,
   search: searchQuerySchema,
+  actions: actionsSchema,
 });
 
 // GET /v1/admin/audit-log/days?month=YYYY-MM — the MT days of that month with
@@ -300,7 +362,8 @@ auditLogAdminRouter.get(
   '/days',
   zValidator('query', daysQuerySchema, validationHook),
   async (ctx) => {
-    const { month, actor, actorHandle, area, search } = ctx.req.valid('query');
+    const { month, actor, actorHandle, area, search, actions } =
+      ctx.req.valid('query');
     const first = `${month}-01`;
     // The 1st of the next month: day 32 of any month lands in the next one.
     const next = `${addDays(first, 32).slice(0, 7)}-01`;
@@ -314,7 +377,7 @@ auditLogAdminRouter.get(
         and(
           mtDays(first, next),
           actorKindFilter(actor),
-          searchFilter(search),
+          searchFilter(search, actions),
           actorHandle === undefined
             ? undefined
             : eq(userProfiles.handle, actorHandle),
@@ -332,8 +395,11 @@ auditLogAdminRouter.get(
 const actorsQuerySchema = z.object({
   // The MT day the counts are for; today when absent.
   day: z.iso.date().optional(),
-  // The page filter, so a count matches the rows picking that person shows.
+  // The page filter and the search, so a count matches the rows picking that
+  // person shows.
   area: areaSchema,
+  search: searchQuerySchema,
+  actions: actionsSchema,
 });
 
 // GET /v1/admin/audit-log/actors?day=YYYY-MM-DD — the Anyone menu: every
@@ -357,6 +423,8 @@ auditLogAdminRouter.get(
           count: sql<number>`count(*)::int`,
         })
         .from(auditLog)
+        // The search reads the actor's handle, as the list's does.
+        .leftJoin(userProfiles, eq(userProfiles.userId, auditLog.actorId))
         .where(
           and(
             mtDays(day, addDays(day, 1)),
@@ -364,6 +432,7 @@ auditLogAdminRouter.get(
             query.area === undefined
               ? undefined
               : auditAreaFilter(query.area, auditLog.action),
+            searchFilter(query.search, query.actions),
           ),
         )
         .groupBy(auditLog.actorId),
