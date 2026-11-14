@@ -1,5 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { deviceSummary, reportPage } from './report-context';
+import {
+  deviceSummary,
+  hasClientSession,
+  isReportableId,
+  mintClientErrorId,
+  reportPage,
+} from './report-context';
+
+describe('mintClientErrorId', () => {
+  it('passes the id shape the route and API accept, and differs each time', () => {
+    const id = mintClientErrorId();
+    expect(id).toMatch(/^c-[0-9a-z]{10}$/);
+    expect(isReportableId(id)).toBe(true);
+    expect(mintClientErrorId()).not.toBe(id);
+  });
+});
+
+describe('hasClientSession (__client_uat)', () => {
+  it.each([
+    ['', false],
+    ['__client_uat=0', false],
+    ['__client_uat=', false],
+    ['__client_uat=abc', false],
+    ['__client_uat=-5', false],
+    ['__client_uat_dev=1700000000', false],
+    ['__client_uat=1700000000', true],
+    ['theme=x; __client_uat=1700000000; other=1', true],
+  ])('%j → %s', (cookie, expected) => {
+    expect(hasClientSession(cookie)).toBe(expected);
+  });
+});
 
 describe('reportPage', () => {
   it('keeps the path and drops the query and hash', () => {

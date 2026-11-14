@@ -1,92 +1,125 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/nextjs';
-import { useAuth } from '@clerk/nextjs';
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { ErrorReportForm } from './ErrorReportForm';
+
+import { StandaloneError } from '@/components/standalone-error/StandaloneError';
 import { ErrorTellUsCard } from './ErrorTellUsCard';
+import { mintClientErrorId } from './lib/report-context';
+
+interface ClientErrorIds {
+  /** Shown in the chip and sent as the report's `digest`. */
+  clientId: string;
+  /** The Sentry event, when Sentry is on. */
+  sentryEventId: string | undefined;
+}
 
 // The same error instance can reach a boundary more than once (a remount, a
-// development double effect), and must file one Sentry event. A retry that
-// throws again throws a new error, which is a new event, as it should be.
-const captured = new WeakMap<Error, string>();
+// development double effect), and must file one Sentry event under one id. A
+// retry that throws again throws a new error, which gets a new id and a new
+// event, as it should.
+const minted = new WeakMap<Error, ClientErrorIds>();
 
 /**
- * The id the team can find this failure by. A server throw arrives with a
+ * The ids the team can find a browser throw by. A server throw arrives with a
  * `digest` and was already reported by instrumentation's onRequestError, so
- * only a browser throw is captured here, once.
+ * only a browser throw is captured here, once, tagged with the minted id so a
+ * report can be matched to its event.
  */
-const eventIdFor = (error: Error & { digest?: string }): string | undefined => {
+const clientIdsFor = (
+  error: Error & { digest?: string },
+): ClientErrorIds | undefined => {
   if (error.digest) return undefined;
-  const seen = captured.get(error);
+  const seen = minted.get(error);
   if (seen !== undefined) return seen;
-  const eventId = Sentry.captureException(error);
-  // With Sentry off (local, or no DSN) the id is minted but nothing is sent,
-  // so a report must not point the team at an event that does not exist.
-  if (!Sentry.isEnabled()) return undefined;
-  captured.set(error, eventId);
-  return eventId;
+  const clientId = mintClientErrorId();
+  const eventId = Sentry.captureException(error, {
+    tags: { error_id: clientId },
+  });
+  const ids = {
+    clientId,
+    // With Sentry off (local, or no DSN) the event id is minted but nothing is
+    // sent, so a report must not point the team at an event that does not
+    // exist. The client id still shows: it is ours, not Sentry's.
+    sentryEventId: Sentry.isEnabled() ? eventId : undefined,
+  };
+  minted.set(error, ids);
+  return ids;
 };
 
+interface ErrorReportProps {
+  error: Error & { digest?: string };
+  /** The boundary's `useErrorBoundaryRetry(reset)`. */
+  onRetry: () => void;
+  /**
+   * Whether the visitor is signed in, as the boundary can tell: Clerk's
+   * `useAuth` in a route boundary, the `__client_uat` cookie in
+   * `global-error`, which has no ClerkProvider. Signed in gets the Tell us card.
+   */
+  signedIn: boolean;
+  /**
+   * Signed in with a way to sign out (a route boundary): the second action is
+   * Sign out. Without it (`global-error`) it is Go home.
+   */
+  onSignOut?: (() => void) | undefined;
+  /** Inside the (main) app layout: see `StandaloneError`. */
+  inApp?: boolean | undefined;
+}
+
 /**
- * What every error boundary adds under its own buttons: the browser throw
- * reported to Sentry, and, for a signed-in visitor, a quiet way to tell us
- * what happened. Self-contained so each boundary keeps its own look.
+ * The error page every error boundary draws (12-error-page, addendum-2 §18):
+ * the standalone page, with the Tell us card for a signed-in visitor. It owns
+ * the page-level states the card can cause: a 401 on send switches the page to
+ * the signed-out layout (no card, Go home), and Done on a refused report
+ * closes the card, keeps the error ID and puts focus on it. No Clerk hook
+ * here, so `global-error` can use it.
  */
 export const ErrorReport = ({
   error,
-  variant = 'link',
-}: {
-  error: Error & { digest?: string };
-  /**
-   * `card` is the Tell us card of the standalone error page (12-error-page);
-   * `link` is the quiet "Tell us what happened" link that opens a form, for a
-   * boundary with no card in its design.
-   */
-  variant?: 'link' | 'card';
-}) => {
-  const { isSignedIn } = useAuth();
-  const [reporting, setReporting] = useState(false);
-  const [sentryEventId, setSentryEventId] = useState<string | undefined>();
+  onRetry,
+  signedIn,
+  onSignOut,
+  inApp,
+}: ErrorReportProps) => {
+  const [clientIds, setClientIds] = useState<ClientErrorIds | undefined>();
+  const [sessionLost, setSessionLost] = useState(false);
+  const [cardClosed, setCardClosed] = useState(false);
+  const errorIdRef = useRef<HTMLButtonElement>(null);
 
+  // Minted after mount, not during render: a server-rendered boundary always
+  // has a digest, and a random id in render would not survive hydration.
   useEffect(() => {
-    setSentryEventId(eventIdFor(error));
+    setClientIds(clientIdsFor(error));
   }, [error]);
 
-  if (isSignedIn !== true) return null;
+  // Done (or a 401 switching the page to signed out) unmounts the card, so
+  // focus goes to the error ID it pointed at, never to <body>.
+  useEffect(() => {
+    if (cardClosed || sessionLost) errorIdRef.current?.focus();
+  }, [cardClosed, sessionLost]);
 
-  if (variant === 'card') {
-    return (
-      <ErrorTellUsCard digest={error.digest} sentryEventId={sentryEventId} />
-    );
-  }
+  // `digest` has two meanings on this page and in the report: the server's
+  // digest for a server throw, or, only when there is none, the id minted
+  // here for a browser throw. A server digest is never replaced.
+  const errorId = error.digest ? error.digest : clientIds?.clientId;
+  const signedInNow = signedIn && !sessionLost;
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setReporting(true)}
-        style={{
-          minHeight: 44,
-          padding: '0 8px',
-          border: 'none',
-          background: 'none',
-          color: 'var(--fg-muted)',
-          fontFamily: 'var(--font-ui)',
-          fontSize: 13,
-          textDecoration: 'underline',
-          cursor: 'pointer',
-        }}
-      >
-        {CONSUMER_COPY.error.reportLink}
-      </button>
-      <ErrorReportForm
-        open={reporting}
-        onClose={() => setReporting(false)}
-        digest={error.digest}
-        sentryEventId={sentryEventId}
-      />
-    </>
+    <StandaloneError
+      errorId={errorId}
+      errorIdRef={errorIdRef}
+      onRetry={onRetry}
+      onSignOut={signedInNow ? onSignOut : undefined}
+      inApp={inApp}
+    >
+      {signedInNow && !cardClosed ? (
+        <ErrorTellUsCard
+          digest={errorId}
+          sentryEventId={clientIds?.sentryEventId}
+          onSignedOut={() => setSessionLost(true)}
+          onDone={() => setCardClosed(true)}
+        />
+      ) : null}
+    </StandaloneError>
   );
 };

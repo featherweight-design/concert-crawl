@@ -1,23 +1,17 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useAuth, useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
-import {
-  BrowseInstead,
-  CREWS_COPY,
-  DimmedMark,
-  InviteBody,
-  InviteEyebrow,
-  InviteShell,
-  InviteTitle,
-  primaryButtonStyle,
-} from '@/components/consumer/crews';
-import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 import { ErrorReport } from '@/components/consumer/error-report';
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
 /**
- * Our failure, stated as ours. Deliberately not the expired or retired dead
- * end: those are normal outcomes of a link, and this is the connection.
+ * The invite landing's failure: the bare error page (addendum-3 row 19, this
+ * route is outside (main)), the same one `(protected)/error.tsx` draws. An
+ * invite is often opened signed out, and then it is the signed-out layout: no
+ * card, no Sign out, Go home.
  */
 export default function CrewJoinError({
   error,
@@ -26,6 +20,9 @@ export default function CrewJoinError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { isSignedIn } = useAuth();
+  const { signOut } = useClerk();
+  const router = useRouter();
   const onRetry = useErrorBoundaryRetry(reset);
 
   useEffect(() => {
@@ -33,27 +30,11 @@ export default function CrewJoinError({
   }, [error]);
 
   return (
-    <InviteShell>
-      <DimmedMark />
-      <div className="flex max-w-[340px] flex-col items-center gap-[9px]">
-        <InviteEyebrow tone="warning">
-          {CREWS_COPY.net.errInviteEyebrow}
-        </InviteEyebrow>
-        <InviteTitle>{CREWS_COPY.net.errInviteTitle}</InviteTitle>
-        <InviteBody>{CREWS_COPY.net.errInviteBody}</InviteBody>
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={onRetry}
-          className="cursor-pointer"
-          style={primaryButtonStyle}
-        >
-          {CREWS_COPY.net.retry}
-        </button>
-        <BrowseInstead />
-      </div>
-      <ErrorReport error={error} />
-    </InviteShell>
+    <ErrorReport
+      error={error}
+      onRetry={onRetry}
+      signedIn={isSignedIn === true}
+      onSignOut={() => void signOut(() => router.push('/'))}
+    />
   );
 }

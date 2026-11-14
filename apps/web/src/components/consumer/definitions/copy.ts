@@ -1215,29 +1215,12 @@ export const CONSUMER_COPY = {
     errorIdLabel: 'Error ID',
     copyErrorId: 'Copy error ID',
     copiedErrorId: 'Copied',
-    // The quiet way in to a problem report, under the buttons.
-    reportLink: 'Tell us what happened',
   },
 
   // ── Problem report (from an error page) ─────────────────────────
   // Asks what broke while it is fresh. Lands in admin feedback as a bug, with
   // the error's id so the team can find the matching report.
   errorReport: {
-    ariaLabel: 'Tell us what happened',
-    title: 'Tell us what happened',
-    whatLabel: 'What happened?',
-    whatPlaceholder: 'The page went blank after I…',
-    doingLabel: 'What were you doing?',
-    doingHint: 'Optional',
-    attach:
-      'We add the page you were on, your device, and the error code if there was one.',
-    send: 'Send',
-    sending: 'Sending…',
-    sentTitle: 'Sent. Thank you.',
-    sentBody: 'We read every one.',
-    close: 'Close',
-    failed: "Couldn't send that. Your words are still here.",
-    retry: 'Try again',
     // The Tell us card under the error (12-error-page): prompt, form, sending,
     // sent and failed.
     card: {
@@ -1278,6 +1261,14 @@ export const CONSUMER_COPY = {
       savedHeading: 'Saved on this device',
       edit: 'Edit',
       sendAgain: 'Send again',
+      // Refused (addendum-2 18-error-page/error-report-refused-m): a rate
+      // limit or a rejection. Not saved, not retried. The rail reuses
+      // failedEyebrow with this code.
+      refusedTag: 'LIMIT',
+      refusedHeading: 'Not sent.',
+      refusedBody:
+        'We couldn’t take this report, so it isn’t saved. If it keeps happening, the error ID below is all we need.',
+      done: 'Done',
     },
   },
 

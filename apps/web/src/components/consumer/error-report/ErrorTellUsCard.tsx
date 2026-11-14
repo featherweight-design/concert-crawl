@@ -10,17 +10,27 @@ import {
   isReportableId,
   reportPage,
 } from './lib/report-context';
-import { sendErrorReport } from './lib/send-report';
+import { classifyReportFailure, sendErrorReport } from './lib/send-report';
 
 const copy = CONSUMER_COPY.errorReport.card;
 const NOTE_MAX = 900;
 
-type CardState = 'prompt' | 'form' | 'sending' | 'sent' | 'failed';
+type CardState = 'prompt' | 'form' | 'sending' | 'sent' | 'failed' | 'refused';
 
 // The desktop boards draw the card smaller than the phone's: a 20px heading and
 // 34px chips (a mouse needs no 44px target). `!important` only where the phone
-// size is inline.
+// size is inline. The first rule is the `sheet-edge` utility's own definition
+// (globals.css), repeated because `global-error` replaces the root layout and
+// never loads globals.css; in the app it draws exactly what the class does.
 const CARD_CSS = `
+[data-testid='error-tell-us-card'] {
+  border: 1.5px solid transparent;
+  border-bottom-width: 0;
+  background:
+    linear-gradient(var(--sheet-bg, var(--surface-1)), var(--sheet-bg, var(--surface-1))) padding-box,
+    linear-gradient(to bottom, transparent 0, transparent 20px, var(--sheet-bg, var(--surface-1)) 72px) border-box,
+    linear-gradient(90deg, var(--signal), var(--accent)) border-box;
+}
 @media (min-width: 900px) {
   [data-testid='error-tell-us-card'] { padding: 18px !important; border-radius: 20px !important; margin-top: 0 !important; }
   .cc-tu-h { font-size: 20px !important; }
@@ -29,18 +39,33 @@ const CARD_CSS = `
 `;
 
 interface ErrorTellUsCardProps {
-  /** The server's digest for a server-side throw. */
+  /**
+   * The error ID: the server's digest for a server-side throw, or the id the
+   * page minted for a client-side throw (see `ErrorReport`).
+   */
   digest?: string | undefined;
   /** The browser's Sentry event for a client-side throw. */
   sentryEventId?: string | undefined;
+  /**
+   * The send came back 401: the session is gone. The report is already saved
+   * for the next signed-in launch; the page switches to its signed-out layout,
+   * which has no card. Without it the card shows its failed state instead.
+   */
+  onSignedOut?: (() => void) | undefined;
+  /**
+   * Done on the refused state: the page closes the card and keeps the error
+   * ID (addendum-3 row 17). Without it the card goes back to its prompt.
+   */
+  onDone?: (() => void) | undefined;
 }
 
 // "Safari on iPhone" reads "iPhone · Safari" on the board.
 const deviceLabel = (summary: string): string =>
   summary.replace(/^(.+) on (.+)$/, '$2 · $1');
 
+// The fallbacks are for `global-error`, which has no next/font variables.
 const MONO: CSSProperties = {
-  fontFamily: 'var(--font-mono)',
+  fontFamily: 'var(--font-mono, ui-monospace, monospace)',
   fontSize: 11,
   letterSpacing: '0.16em',
   textTransform: 'uppercase',
@@ -91,12 +116,15 @@ const QUIET_BUTTON: CSSProperties = {
  * were doing with one tap, an optional note, and lists what it attaches. It
  * files the report through the same-origin `/api/error-report`, which forwards
  * it to the `/v1/feedback` the old "Tell us what happened" form used, so the
- * card itself needs no Clerk hook. A failed send is kept on the device and
- * sent the next time the app opens.
+ * card itself needs no Clerk hook. A send that failed for a passing reason
+ * (or a lost session) is kept on the device and sent the next time the app
+ * opens; a refused one (429 or another rejection) is not kept.
  */
 export const ErrorTellUsCard = ({
   digest,
   sentryEventId,
+  onSignedOut,
+  onDone,
 }: ErrorTellUsCardProps) => {
   const pathname = usePathname() ?? '';
   const [state, setState] = useState<CardState>('prompt');
@@ -109,10 +137,15 @@ export const ErrorTellUsCard = ({
   // Set by Edit: the failed card's button unmounts, so focus has to be sent on
   // to the form's heading or it drops to the page.
   const [focusForm, setFocusForm] = useState(false);
+  // Whether the copy on the device is this card's report (saved by a failed
+  // send), so a refused Send again can drop it without touching a report some
+  // other error page saved.
+  const savedHere = useRef(false);
 
   const page = reportPage(pathname);
-  // The chip shows whichever id the failure has: a server throw's digest, or
-  // the browser throw's Sentry event. An id of another shape is left off.
+  // The list shows whichever id the failure has: the error ID (a server
+  // throw's digest or the page's minted id), else the browser throw's Sentry
+  // event. An id of another shape is left off.
   const shownId = [digest, sentryEventId].find(isReportableId);
 
   useEffect(() => {
@@ -125,9 +158,12 @@ export const ErrorTellUsCard = ({
     setFocusForm(false);
   }, [focusForm, state]);
 
-  // Sent and failed replace the form, so focus follows to the new heading.
+  // Sent, failed and refused replace the form, so focus follows to the new
+  // heading.
   useEffect(() => {
-    if (state === 'sent' || state === 'failed') headingRef.current?.focus();
+    if (state === 'sent' || state === 'failed' || state === 'refused') {
+      headingRef.current?.focus();
+    }
   }, [state]);
 
   const send = async () => {
@@ -137,17 +173,41 @@ export const ErrorTellUsCard = ({
     try {
       await sendErrorReport(draft, navigator.userAgent);
       clearPendingReport();
+      savedHere.current = false;
       setState('sent');
     } catch (err) {
       console.error('[error report] send failed', err);
-      // Every failure still shows the failed state, whose copy says the report
-      // is saved and sent on the next open, so it is saved, as before. A
-      // refused one is tried once by that flush, then dropped.
-      // TODO(U4 PR 2): refused gets its own state ("Not sent.", not saved)
-      // and signed-out switches the page's layout.
+      const failure = classifyReportFailure(err);
+      if (failure === 'refused') {
+        // Not saved and not retried: the same report gets the same answer.
+        // "It isn't saved" must hold, so a copy this card saved on an earlier
+        // failed try goes too; anything another page saved stays.
+        if (savedHere.current) {
+          clearPendingReport();
+          savedHere.current = false;
+        }
+        setState('refused');
+        return;
+      }
+      // Transient, or the session is gone: kept for the next signed-in launch.
       savePendingReport(draft);
+      savedHere.current = true;
+      if (failure === 'signed-out' && onSignedOut) {
+        onSignedOut();
+        return;
+      }
       setState('failed');
     }
+  };
+
+  const done = () => {
+    if (onDone) {
+      onDone();
+      return;
+    }
+    setDoing(null);
+    setNote('');
+    setState('prompt');
   };
 
   const tag =
@@ -163,11 +223,17 @@ export const ErrorTellUsCard = ({
             label: copy.failedTag,
             color: 'var(--danger)',
           }
-        : {
-            eyebrow: copy.eyebrow,
-            label: state === 'prompt' ? copy.tagOptional : copy.tagOpen,
-            color: 'var(--accent)',
-          };
+        : state === 'refused'
+          ? {
+              eyebrow: copy.failedEyebrow,
+              label: copy.refusedTag,
+              color: 'var(--warning)',
+            }
+          : {
+              eyebrow: copy.eyebrow,
+              label: state === 'prompt' ? copy.tagOptional : copy.tagOpen,
+              color: 'var(--accent)',
+            };
 
   return (
     <section
@@ -204,13 +270,26 @@ export const ErrorTellUsCard = ({
         </svg>
         <span
           aria-hidden
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 8,
-            background: tag.color,
-            boxShadow: `0 0 8px ${tag.color}`,
-          }}
+          style={
+            state === 'refused'
+              ? {
+                  // Board error-report-refused-m: a 6px warning dot in a 3px
+                  // ring of the same colour at 20%, not the glow.
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  flex: 'none',
+                  background: tag.color,
+                  boxShadow: `0 0 0 3px color-mix(in srgb, ${tag.color} 20%, transparent)`,
+                }
+              : {
+                  width: 8,
+                  height: 8,
+                  borderRadius: 8,
+                  background: tag.color,
+                  boxShadow: `0 0 8px ${tag.color}`,
+                }
+          }
         />
         <span style={{ color: 'var(--fg-muted)' }}>{tag.eyebrow}</span>
         <span
@@ -317,6 +396,7 @@ export const ErrorTellUsCard = ({
                 // Editing means the saved copy is about to be replaced; it
                 // must not go out on its own if the edit is abandoned.
                 clearPendingReport();
+                savedHere.current = false;
                 setFocusForm(true);
                 setState('form');
               }}
@@ -334,6 +414,54 @@ export const ErrorTellUsCard = ({
               }}
             >
               {copy.sendAgain}
+            </button>
+          </div>
+        </div>
+      ) : state === 'refused' ? (
+        <div style={{ marginTop: 16 }}>
+          <h2
+            ref={headingRef}
+            tabIndex={-1}
+            className="cc-tu-h"
+            style={{
+              margin: 0,
+              fontSize: 26,
+              fontWeight: 900,
+              letterSpacing: '-0.03em',
+            }}
+          >
+            {copy.refusedHeading}
+          </h2>
+          <p
+            style={{
+              margin: '6px 0 0',
+              color: 'var(--fg-muted)',
+              fontSize: 15,
+              lineHeight: 1.5,
+            }}
+          >
+            {copy.refusedBody}
+          </p>
+          <div
+            style={{
+              marginTop: 16,
+              display: 'flex',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <button
+              type="button"
+              onClick={done}
+              style={{
+                ...GRADIENT_BUTTON,
+                minHeight: 46,
+                background: 'transparent',
+                border: '1px solid var(--border-strong)',
+                color: 'var(--fg)',
+                fontWeight: 700,
+              }}
+            >
+              {copy.done}
             </button>
           </div>
         </div>
@@ -485,7 +613,7 @@ export const ErrorTellUsCard = ({
                     <dd
                       style={{
                         margin: 0,
-                        fontFamily: 'var(--font-mono)',
+                        fontFamily: 'var(--font-mono, ui-monospace, monospace)',
                         color: 'var(--fg-muted)',
                         overflowWrap: 'anywhere',
                         textAlign: 'right',

@@ -12,82 +12,99 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const refresh = vi.fn();
+const push = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh }),
+  useRouter: () => ({ refresh, push }),
   usePathname: () => '/crew/join/secret-invite-token',
 }));
 
 import CrewJoinError from './error';
-import { CREWS_COPY } from '@/components/consumer/crews';
 
-// The boundary's report link reads the session; a signed-out visitor sees none.
-const session = { isSignedIn: false, getToken: async () => 'token' };
-vi.mock('@clerk/nextjs', () => ({ useAuth: () => session }));
+const copy = CONSUMER_COPY.error;
+const card = CONSUMER_COPY.errorReport.card;
+
+// An invite is often opened signed out.
+const session = { isSignedIn: false };
+const signOut = vi.fn();
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => session,
+  useClerk: () => ({ signOut }),
+}));
 vi.mock('@sentry/nextjs', () => ({
   captureException: () => 'evt',
   isEnabled: () => true,
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  session.isSignedIn = false;
+  vi.unstubAllGlobals();
+});
 beforeEach(() => {
   refresh.mockReset();
+  signOut.mockReset();
+  localStorage.clear();
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
-describe('crew join error boundary (#1226)', () => {
-  it('states the failure as ours and offers both a retry and a way out', () => {
+describe('crew join error boundary', () => {
+  it('signed out: the bare error page, no card, no Sign out, Go home', () => {
     const reset = vi.fn();
-    render(<CrewJoinError error={new Error('boom')} reset={reset} />);
+    render(
+      <CrewJoinError
+        error={Object.assign(new Error('boom'), { digest: '4471' })}
+        reset={reset}
+      />,
+    );
 
     expect(
-      screen.getByText(CREWS_COPY.net.errInviteEyebrow),
+      screen.getByRole('heading', { name: copy.errorHeading }),
     ).toBeInTheDocument();
+    expect(screen.getByTestId('standalone-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('error-tell-us-card')).toBeNull();
     expect(
-      screen.getByRole('heading', { name: CREWS_COPY.net.errInviteTitle }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(CREWS_COPY.net.errInviteBody)).toBeInTheDocument();
+      screen.queryByRole('button', { name: copy.signOutButton }),
+    ).toBeNull();
+    expect(screen.getByText(copy.signedOutBody)).toBeInTheDocument();
+    expect(screen.queryByText(copy.errorBody)).toBeNull();
     expect(
-      screen.getByRole('link', { name: CREWS_COPY.linkDead.browse }),
-    ).toBeInTheDocument();
+      screen.getByRole('link', { name: copy.goHomeButton }),
+    ).toHaveAttribute('href', '/');
+    expect(screen.getByText('4471')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: CREWS_COPY.net.retry }));
+    fireEvent.click(screen.getByRole('button', { name: copy.tryAgainButton }));
     // Both halves: `reset()` alone re-renders against the same cached, failed
     // RSC payload and lands straight back here.
     expect(refresh).toHaveBeenCalled();
     expect(reset).toHaveBeenCalled();
   });
 
+  it('signed in: the Tell us card and Sign out, as (protected)/error.tsx draws', () => {
+    session.isSignedIn = true;
+    render(<CrewJoinError error={new Error('x')} reset={vi.fn()} />);
+
+    expect(screen.getByTestId('error-tell-us-card')).toBeInTheDocument();
+    expect(screen.getByText(copy.errorBody)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: copy.signOutButton }));
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
   // The landing's path carries the invite token, a capability. A report filed
   // from here must never store it.
   it('files a report from the invite landing without the token', async () => {
     session.isSignedIn = true;
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: () => ({
-        matches: false,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        addListener: () => {},
-        removeListener: () => {},
-      }),
-    });
     const fetchMock = vi.fn(async (_url: string, _init: { body: string }) => ({
       ok: true,
+      type: 'basic',
     }));
     vi.stubGlobal('fetch', fetchMock);
-    try {
-      render(<CrewJoinError error={new Error('x')} reset={vi.fn()} />);
-      fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-      fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-        target: { value: 'Blank' },
-      });
-      fireEvent.click(screen.getAllByText(CONSUMER_COPY.errorReport.send)[0]!);
-      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-      const body = fetchMock.mock.calls[0]?.[1]?.body ?? '';
-      expect(body).not.toContain('secret-invite-token');
-    } finally {
-      session.isSignedIn = false;
-      vi.unstubAllGlobals();
-    }
+    render(<CrewJoinError error={new Error('x')} reset={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Searching' }));
+    fireEvent.click(screen.getByRole('button', { name: `${card.send} →` }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = fetchMock.mock.calls[0]?.[1]?.body ?? '';
+    expect(body).not.toContain('secret-invite-token');
   });
 });
