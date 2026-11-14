@@ -2574,7 +2574,7 @@ export const ADMIN_COPY = {
       matchingShow: 'MATCHING SHOW',
       whatMovingDoes: 'WHAT MOVING DOES',
       likelyCause: 'LIKELY CAUSE',
-      lastRuns: 'LAST 4 RUNS',
+      lastRuns: 'LAST 14 RUNS',
       lastSeen: 'Last seen',
       match: 'Match',
       blockedChip: (status: string) => `Blocked: ${status}`,
@@ -2712,6 +2712,9 @@ export const ADMIN_COPY = {
         autoPaused: (failures: number) => `Auto-paused: ${failures} failures`,
         runShows: (count: number) =>
           `${count} ${count === 1 ? 'show' : 'shows'}`,
+        askVenue: 'Ask the venue',
+        askVenueLine:
+          'Ask the venue arrives with Add a venue. Until then, write to them from your own mail.',
         robotsTxt: 'robots.txt',
         robotsResult: {
           yes: 'Blocks the crawler',

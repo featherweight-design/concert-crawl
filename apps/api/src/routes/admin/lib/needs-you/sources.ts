@@ -486,7 +486,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
       .sort(
         (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
       )
-      .slice(0, 5)
+      .slice(0, 14)
       .map((run) => ({
         at: run.createdAt.toISOString(),
         status: run.status,

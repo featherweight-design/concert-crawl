@@ -644,13 +644,13 @@ const runWord = (run: RunLine): { word: string; tone: string } => {
   };
 };
 
-/** The last four runs, newest first, each with its Mountain Time day. */
+/** The last fourteen runs, newest first, each with its Mountain Time day. */
 export const lastRunsOf = (
   row: Pick<QueueRow, 'lastRuns'>,
 ): { day: string; status: string; tone: string; detail: string | null }[] =>
   [...row.lastRuns]
     .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
-    .slice(0, 4)
+    .slice(0, 14)
     .flatMap((run) => {
       const day = mountainDay(run.at);
       const { word, tone } = runWord(run);

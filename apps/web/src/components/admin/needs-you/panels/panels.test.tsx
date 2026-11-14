@@ -169,7 +169,7 @@ describe('VenuePanel', () => {
       screen.getByText('Junkyard stopped crawling after 3 failures'),
     ).toBeInTheDocument();
     expect(screen.getByText('LIKELY CAUSE')).toBeInTheDocument();
-    expect(screen.getByText('LAST 4 RUNS')).toBeInTheDocument();
+    expect(screen.getByText('LAST 14 RUNS')).toBeInTheDocument();
     const runs = screen.getByTestId('last-runs');
     expect(runs.textContent).toMatch(/Nov 11.*Nov 9.*Nov 8/);
     expect(runs).toHaveTextContent('OK');
@@ -258,6 +258,27 @@ describe('VenuePanel', () => {
     expect(
       screen.getByText('The Ogden refused our crawler'),
     ).toBeInTheDocument();
+  });
+
+  it('draws Ask the venue disabled, with why, on a blocked venue only', () => {
+    open(
+      row({
+        key: 'venue-blocked:v1',
+        kind: 'venue-blocked',
+        venueName: 'The Ogden',
+        evidence: [{ label: 'HTTP status', value: '429' }],
+        answers: [answer({ slug: 're_crawl_once', label: 'Re-crawl once' })],
+      }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Ask the venue' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(/Ask the venue arrives with Add a venue\./),
+    ).toBeInTheDocument();
+    cleanup();
+    open(failing);
+    expect(screen.queryByRole('button', { name: 'Ask the venue' })).toBeNull();
   });
 });
 

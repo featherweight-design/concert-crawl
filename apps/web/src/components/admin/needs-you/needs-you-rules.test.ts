@@ -147,7 +147,7 @@ describe('panel helpers', () => {
     ).toBe('Is “Purpose Progression” a concert?');
   });
 
-  it('keeps the four newest runs and the status words', () => {
+  it('keeps the fourteen newest runs and the status words', () => {
     const runs = ['01', '02', '03', '04', '05'].map((day) => ({
       at: `2026-11-${day}T12:00:00Z`,
       status: day === '05' ? 'success' : 'failed',
@@ -160,7 +160,19 @@ describe('panel helpers', () => {
       'Nov 4',
       'Nov 3',
       'Nov 2',
+      'Nov 1',
     ]);
+    // Past fourteen, the oldest fall off.
+    expect(
+      lastRunsOf({
+        lastRuns: Array.from({ length: 16 }, (_, index) => ({
+          at: `2026-10-${String(index + 1).padStart(2, '0')}T12:00:00Z`,
+          status: 'failed',
+          errorMessage: null,
+          eventsFound: 0,
+        })),
+      }),
+    ).toHaveLength(14);
     expect(listed[0]?.status).toBe('OK');
     expect(listed[1]?.status).toBe('Failed');
     // An OK run says how many shows it found; a failed one has no detail.
