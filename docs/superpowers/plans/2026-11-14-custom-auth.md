@@ -18,7 +18,7 @@ Auth. Every code PR gets `/code-review medium` plus the risk checklist under `##
 3. **The `ended` invite state** (`CodeEnded.tsx`, live, no board): restyle on the new primitives from `code-expired-m`. A 🔸 row in that PR's table. Same for `invalid_format` and `server_error` (gap 7).
 4. **Password-step button.** The board says "Sign in"; `signInWithClerk` clicks a button named exactly "Continue" on both steps. Build to the board. The cutover PR changes the fixture to accept either name (`/^(continue|sign in)$/i`), so the contact-sheet sign-in works before and after.
 5. **Intent card data** (`useSignInRedirect` sends only `redirect_url`). A small server loader resolves the return path to its subject: `/events/<id>` to the show, `/artists/<slug>` to the artist, `/crew/join/<token>` to the crew host. Anything else, including `/crews/<id>`, My shows, Settings, Notifications and the tier or price intents, gets the board's "Sign in to keep going" card (gap 11). Names only, from public data. Adds a `follow` verb to `lib/auth/intent.ts` (`INTENT_ACTIONS` is `['watch']` today; gap 10).
-6. **Toast against `ReturnStrip` and `ReturnSeamReplay`.** The board's toast ("You're watching {show}.") replaces the strip for a replayed `watch` or `follow`; the strip stays for plain returns. **Needs the orchestrator's ack before PR 8**; if it is wrong, it is one line to Design.
+6. **Toast against `ReturnStrip` and `ReturnSeamReplay`.** The board's toast ("You're watching {show}.") replaces the strip for a replayed `watch` or `follow`; the strip stays for plain returns. Ruled yes by the orchestrator on 2026-11-14, as was the route nesting in decision 1.
 7. **Venue row count** (gap 12): the landing's `venueCount` source, through a cached loader (the auth page stays dynamic; see `fwd:caching`).
 8. **Release notes:** none for the swap (a replacement, not a feature). Copy still goes through `copy-review` in every PR that touches a copy file.
 9. **README's "invite-code divergence"** is stale: main already accepts custom 4 to 20 character codes (`isInviteCodeShape`). `COPY.md`'s `inv.description` note is stale for the same reason.
@@ -78,7 +78,7 @@ Checks per build PR: no copy reveals whether an account exists, consent is untic
 
 ## Open
 
-- Decision 6 (toast against strip) needs the orchestrator's ack before PR 8.
+- PR 1 (the spike) waits for Hugh to confirm the staging instance settings above.
 - Whether legal acceptance is already on in the staging and production instances (Hugh's step 5).
 - The spike may move gap 4's answer (lockout wording under Strict); if it does, that is a one-line change to PR 3.
 
