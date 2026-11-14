@@ -1,3 +1,25 @@
+# [1.459.0](https://github.com/featherweight-design/concert-crawl/compare/v1.458.0...v1.459.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** harden the admin audit log filters and target names ([41e3724](https://github.com/featherweight-design/concert-crawl/commit/41e372474be7de5344fe900cb92a0afce4cb75ac))
+* **api:** offer show older when duplicate rows fill the past window ([5c1d5af](https://github.com/featherweight-design/concert-crawl/commit/5c1d5af72c83f0c5343dc6c1af06cf75ce38a7c0))
+* **web:** copy-review the submitted prices strings ([8c013cf](https://github.com/featherweight-design/concert-crawl/commit/8c013cfff951cea17b439f6aa05ff46263794ffd))
+* **web:** keep passport tiles at 56 and rename the pager copy ([f254873](https://github.com/featherweight-design/concert-crawl/commit/f2548730ddaf47e3c7340870401c96cdf18a5f54))
+* **web:** keep the submitted prices chips unclipped and the back link on one line ([18683ec](https://github.com/featherweight-design/concert-crawl/commit/18683ec0dd892bc46e8675067a23b2c90cb98843))
+* **web:** measure full-width scripts and combining marks in the hero fit ([dd89096](https://github.com/featherweight-design/concert-crawl/commit/dd89096de44249d04f472554f55cc0d4eeb8f08d))
+
+
+### Features
+
+* **api:** filter the admin audit log by handle, area and day, and name each target ([340614d](https://github.com/featherweight-design/concert-crawl/commit/340614d7828a685a76d13fa50f44eaf85237a3bd))
+* **web:** empty filter state on submitted prices ([a072c52](https://github.com/featherweight-design/concert-crawl/commit/a072c52a99811f71d0441124abeccb7bf198aa83))
+* **web:** hero fit by measure, ruled venue nouns and a Light back chip ([e1a97b5](https://github.com/featherweight-design/concert-crawl/commit/e1a97b52ef406f35a3f8b01bc1078eb8b924fda0))
+* **web:** passport counts its stamps, widens the book and plain empty title ([39828b2](https://github.com/featherweight-design/concert-crawl/commit/39828b21555c37f6ab13546cd7def52c0d3e16ea))
+* **web:** show older past shows on the artist page, the next 50 at a time ([a9f9b40](https://github.com/featherweight-design/concert-crawl/commit/a9f9b40cef2853dbaa4dd87a84bcf67d1aad507a))
+* **web:** submitted prices page matches the boards ([4b3e3ea](https://github.com/featherweight-design/concert-crawl/commit/4b3e3ea9a7e1989cc768fb92a8f01e6ca0a36701))
+
 # [1.458.0](https://github.com/featherweight-design/concert-crawl/compare/v1.457.0...v1.458.0) (2026-11-14)
 
 
