@@ -65,11 +65,14 @@ describe('StatusBadge size="tile"', () => {
     expect(STATUS_BADGE_TILE_FONT_SIZE).toBe(
       'var(--status-badge-tile-size, 11.5px)',
     );
-    const phoneTiles =
-      /@media \(max-width: 720px\) \{[^@]*?\.health-tiles \{([^}]*)\}/.exec(
-        ADMIN_CSS,
-      )?.[1] ?? '';
-    expect(phoneTiles).toContain('--status-badge-tile-size: 11px;');
+    // The one rule that sets it is a .health-tiles rule, and the nearest
+    // @media above it is the phone query.
+    const at = ADMIN_CSS.search(
+      /\.health-tiles \{[^}]*--status-badge-tile-size: 11px;/,
+    );
+    expect(at).toBeGreaterThan(-1);
+    const mediaAbove = ADMIN_CSS.slice(0, at).match(/@media[^{]*\{/g) ?? [];
+    expect(mediaAbove.at(-1)).toBe('@media (max-width: 720px) {');
     // Set nowhere else, so every other caller keeps the default.
     expect(ADMIN_CSS.match(/--status-badge-tile-size:/g)).toHaveLength(1);
   });

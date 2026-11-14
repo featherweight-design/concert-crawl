@@ -58,7 +58,8 @@ describe('<SiteCard />', () => {
     // `03/health-desktop`'s Emails row, on the shared StatusBadge.
     expect(screen.getByText('Resend · last sent 8:02 AM')).toBeTruthy();
     const row = screen.getByTestId('site-card-emails');
-    expect(row.style.padding).toBe('8px 0');
+    // jsdom serialises the 0 with its unit.
+    expect(row.style.padding).toBe('8px 0px');
     expect(screen.getByText(copy.site.sending).style.borderRadius).toBe(
       '999px',
     );
