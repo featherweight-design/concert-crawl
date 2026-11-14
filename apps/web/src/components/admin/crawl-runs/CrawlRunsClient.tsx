@@ -171,16 +171,19 @@ export const CrawlRunsClient = () => {
       failedLabel={COPY.loadMoreFailed}
       testId="crawl-runs-load-more"
       padding={isPhone ? '12px 0' : '12px 18px'}
+      // The phone's last card draws the rule already: one 1px line.
+      rule={!isPhone}
     />
   );
 
   const header = <CrawlRunsHeader nextCrawlAt={nextCrawlAt} />;
-  const gap = isPhone ? 12 : 16;
 
-  // The first load is `A3/09/loading-runs-d` whole: blank pill bars too.
+  // The first load is `A3/09/loading-runs-d` whole: blank pill bars too. The
+  // page's gaps come from admin.css by the breakpoint, not useIsPhone, so
+  // the first paint on a phone is already 12.
   if (loaded === null && !failed) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+      <div className="crawl-runs-page">
         {header}
         <BatchesSkeleton />
       </div>
@@ -210,12 +213,12 @@ export const CrawlRunsClient = () => {
   );
 
   // The phone board: 12 from the header to Crawl all and on to the filter,
-  // 8 from the filter to the list (`A3/09/runs-filters-m`).
+  // 8 from the filter to the list (`A3/09/runs-filters-m`), in admin.css.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+    <div className="crawl-runs-page">
       {header}
       {filters}
-      <div style={isPhone ? { marginTop: -4 } : undefined}>{content}</div>
+      <div className="crawl-runs-content">{content}</div>
     </div>
   );
 };

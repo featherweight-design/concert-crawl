@@ -9,7 +9,7 @@ import {
  */
 export default function AdminCrawlLoading() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="crawl-runs-page">
       <CrawlRunsHeader />
       <BatchesSkeleton />
     </div>
