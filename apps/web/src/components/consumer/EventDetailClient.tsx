@@ -62,6 +62,7 @@ import {
   type ProvenanceCTAKind,
 } from '@/components/consumer/price-region';
 import { decidePriceRegion } from '@/components/consumer/price-region/lib/decision-tree';
+import { buildWhereItsSoldRows } from '@/components/consumer/where-its-sold/rows';
 import { resolvePendingKind } from '@/components/consumer/lib/price-source-kind';
 import { corroborationConfirmsRequired } from '@/lib/confirms-required';
 
@@ -393,6 +394,13 @@ export function EventDetailPriceBlock({
   // Only announce the gate once Clerk has resolved; before that a signed-in
   // visitor would briefly get the sign-up accessible name (#1247).
   const priceGateSignedOut = authLoaded && !isSignedIn;
+  // Where it's sold (B+ TS3, plan Q5) replaces the price card's seller
+  // alternates: while it lists them, the price card keeps its headline and
+  // tiers but not those rows, so no seller shows twice on the page.
+  const vendorAlternates =
+    buildWhereItsSoldRows(event).length > 0
+      ? null
+      : (event.priceAlternates ?? null);
   const [activeCorroborationId, setActiveCorroborationId] = useState<
     string | null
   >(null);
@@ -998,7 +1006,7 @@ export function EventDetailPriceBlock({
           priceObservedAt={event.priceObservedAt ?? null}
           priceApprovalKind={event.priceApprovalKind ?? null}
           priceApprovedAt={event.priceApprovedAt ?? null}
-          priceAlternates={event.priceAlternates ?? null}
+          priceAlternates={vendorAlternates}
           onSubmitPrice={() => setSubmitPriceOpen(true)}
         />
         <div className="mt-3">
@@ -1722,7 +1730,8 @@ export function EventDetailPriceBlock({
       kind: headlineKind,
     };
 
-    const alternateRows = alternates.map((alt) => ({
+    // Empty while Where it's sold lists these sellers (see vendorAlternates).
+    const alternateRows = (vendorAlternates ?? []).map((alt) => ({
       tier: 'General Admission',
       vendor: alt.vendor ?? 'Community',
       floor: parseFloat(alt.priceMin),
@@ -2115,7 +2124,7 @@ export function EventDetailPriceBlock({
         priceSubmissionId={event.priceSubmissionId ?? null}
         priceApprovalKind={event.priceApprovalKind ?? null}
         priceApprovedAt={event.priceApprovedAt ?? null}
-        priceAlternates={event.priceAlternates ?? null}
+        priceAlternates={vendorAlternates}
         // The API counts the live submission's fan confirms; the community
         // card reads them as "N fans confirmed" (more-p-price_states).
         priceConfirmsCount={event.priceConfirmsCount ?? null}

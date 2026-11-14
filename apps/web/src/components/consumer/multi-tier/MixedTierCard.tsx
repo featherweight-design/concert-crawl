@@ -117,28 +117,33 @@ export const MixedTierCard = ({ headline, alternates }: MixedTierCardProps) => {
         {'seen on ' + displayVendor(headline.vendor)}
       </div>
 
-      {/* Other tiers section — always rendered */}
-      <div style={{ marginTop: '12px' }}>
-        <Eyebrow>{copy.otherTiersEyebrow}</Eyebrow>
-        {alternates.map((alt, idx) => {
-          const base = {
-            tier: alt.tier,
-            vendor: alt.vendor,
-            floor: alt.floor,
-            kind: alt.kind,
-            ...(alt.ceiling !== undefined ? { ceiling: alt.ceiling } : {}),
-          };
-          const rowProps: TierAlternateRowProps = alt.pending
-            ? {
-                ...base,
-                pending: true,
-                confirms: alt.confirms,
-                needed: alt.needed,
-              }
-            : base;
-          return <TierAlternateRow key={`${alt.tier}-${idx}`} {...rowProps} />;
-        })}
-      </div>
+      {/* Other tiers section. Omitted with no rows: on the event page its
+          seller rows move to Where it's sold, which leaves none. */}
+      {alternates.length > 0 && (
+        <div style={{ marginTop: '12px' }}>
+          <Eyebrow>{copy.otherTiersEyebrow}</Eyebrow>
+          {alternates.map((alt, idx) => {
+            const base = {
+              tier: alt.tier,
+              vendor: alt.vendor,
+              floor: alt.floor,
+              kind: alt.kind,
+              ...(alt.ceiling !== undefined ? { ceiling: alt.ceiling } : {}),
+            };
+            const rowProps: TierAlternateRowProps = alt.pending
+              ? {
+                  ...base,
+                  pending: true,
+                  confirms: alt.confirms,
+                  needed: alt.needed,
+                }
+              : base;
+            return (
+              <TierAlternateRow key={`${alt.tier}-${idx}`} {...rowProps} />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

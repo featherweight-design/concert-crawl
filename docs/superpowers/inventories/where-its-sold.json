@@ -1,6 +1,6 @@
 {
   "feature": "U15 PR C · Where it's sold vendor card on the event page",
-  "note": "Board: design/design_handoff_bplus_redesign/screens/06-states/bp-s-tiers_board.jpg (VENDORS column). Needs CC_VENDORS_EVENT_ID: an upcoming, not sold-out event with corroborated prices at two or more sellers, none under a Price check. The Neon scratch-contact-sheet branch had none on 2026-11-14 (its only two-seller event is a past show), so the id must come from staging or a fixture before this sheet runs. Hand-walked: a one-seller event shows no card; Other reads Somewhere else with a range (unit-tested); tapping a row's › scrolls to the price card.",
+  "note": "Board: design/design_handoff_bplus_redesign/screens/06-states/bp-s-tiers_board.jpg (VENDORS column). Needs CC_VENDORS_EVENT_ID: an upcoming, not sold-out event with corroborated prices at two or more sellers, none under a Price check. The Neon scratch-contact-sheet branch had none on 2026-11-14 (its only two-seller event is a past show), so the id must come from staging or a fixture before this sheet runs. Hand walk pending: staging after merge, on the first multi-seller event.",
   "widths": [
     { "label": "xs", "width": 320, "height": 900, "touch": true },
     { "label": "phone", "width": 390, "height": 900, "touch": true },
@@ -21,7 +21,7 @@
     },
     {
       "id": "vendor-row-target",
-      "label": "Tapping a row's › lands on that price's card",
+      "label": "Tapping a row's › scrolls to the price card holding the prices",
       "steps": [
         {
           "goto": "/events/${CC_VENDORS_EVENT_ID}",

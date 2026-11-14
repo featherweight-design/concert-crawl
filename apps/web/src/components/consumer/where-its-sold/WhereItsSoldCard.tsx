@@ -5,9 +5,10 @@
 // tile, the seller in Inter bold, a "GA · all-in" / "face value · no fees"
 // line, the price right-aligned in bold and a ›.
 //
-// The › opens that price's own card on this page (an in-page anchor named by
-// the submission id). There is no per-seller URL to send anyone to, so the
-// row never links out (Design item 34).
+// The › scrolls to the price card holding the prices (an in-page anchor named
+// by the submission id, placed at the top of the price slot). There is no
+// per-seller URL to send anyone to, so the row never links out (Design
+// item 34).
 
 import {
   CONSUMER_COPY,
@@ -31,6 +32,12 @@ const EYEBROW_ID = 'where-its-sold-eyebrow';
 export const sellerName = (vendor: string): string =>
   vendor === 'Other' ? VENDOR_PICKER_COPY.vendors.Other : displayVendor(vendor);
 
+/** The tile's letter: the seller's initial, or "?" for an unnamed seller. */
+export const sellerTile = (vendor: string): string =>
+  vendor === 'Other'
+    ? copy.otherTile
+    : sellerName(vendor).charAt(0).toUpperCase();
+
 /**
  * The line under the seller: box office is face value, the rest all-in.
  * Design item 40 (⏸): the board draws no resale line, so resale reuses
@@ -43,8 +50,8 @@ export const sellerLine = (row: WhereItsSoldRow): string =>
     : copy.allIn.replace('{tier}', row.tier);
 
 /**
- * One empty anchor per listed price, placed at the top of the price slot so
- * a row's › lands on the card that holds that price.
+ * One empty anchor per listed price, all at the top of the price slot, so a
+ * row's › scrolls to the price card holding the prices.
  */
 export function WhereItsSoldAnchors({ rows }: { rows: WhereItsSoldRow[] }) {
   return (
@@ -72,7 +79,8 @@ export function WhereItsSoldCard({ rows }: { rows: WhereItsSoldRow[] }) {
         borderRadius: '16px',
         background: 'var(--surface-1)',
         border: '1px solid var(--border)',
-        padding: '22px 18px 0',
+        // The board leaves about 16px under the last row.
+        padding: '22px 18px 16px',
       }}
     >
       <div id={EYEBROW_ID} style={{ paddingBottom: '10px' }}>
@@ -117,7 +125,7 @@ export function WhereItsSoldCard({ rows }: { rows: WhereItsSoldRow[] }) {
                     fontSize: '11px',
                   }}
                 >
-                  {name.charAt(0).toUpperCase()}
+                  {sellerTile(row.vendor)}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span
