@@ -2,6 +2,25 @@ import { describe, expect, it } from 'vitest';
 import type { BatchRunInput } from '../crawl-batches.js';
 import { lastNightlyFact } from './all-clear-facts.js';
 
+const run = (
+  id: string,
+  at: string,
+  over: Partial<BatchRunInput> = {},
+): BatchRunInput => ({
+  id,
+  venueId: `venue-${id}`,
+  venueName: `Venue ${id}`,
+  status: 'success',
+  reason: null,
+  eventsFound: 10,
+  eventsInserted: 2,
+  durationMs: 30_000,
+  llmCostUsd: null,
+  errorMessage: null,
+  createdAt: new Date(at),
+  ...over,
+});
+
 describe('lastNightlyFact', () => {
   it('reads OK of total from the latest nightly', () => {
     const fact = lastNightlyFact({
