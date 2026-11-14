@@ -206,7 +206,9 @@ export const listAdminEvents = async (query: EventListQuery, today: string) => {
           venueId: events.venueId,
           venueName: venues.name,
           venueSlug: venues.slug,
-          // The listing we crawled, for the row menu's "View on the venue's site".
+          // For the row menu's "View on the venue's site": the show's own page,
+          // else the calendar page it was crawled from.
+          eventUrl: events.eventUrl,
           sourceUrl: events.sourceUrl,
           status,
           hidden: events.hiddenFromConsumer,

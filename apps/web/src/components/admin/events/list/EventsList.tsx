@@ -9,7 +9,6 @@ import { RowMenu, useIsPhone } from '@/components/admin/primitives';
 import { StatusChip } from '@/components/consumer/StatusChip';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { editEventHref } from '@/lib/admin/edit-event-link';
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { DateTile } from '../../prices/MissingTab';
 import type { EventListRow } from './events-api';
@@ -93,13 +92,13 @@ const VenueLine = ({
 
 /**
  * The row's ⋯ (`06/event-menu`). Only the lines whose action exists today:
- * View on the venue's site shows when the row has a safe http(s) listing URL;
- * Open the crawl run is dropped (4b#3); Merge lands in 4b-4, and Hide and
- * Delete with their dialogs.
+ * View on the venue's site shows when the row has a safe venue page
+ * (`venueUrl`); Open the crawl run is dropped (4b#3); Merge lands in 4b-4,
+ * and Hide and Delete with their dialogs.
  */
 const EventMenu = ({ row }: { row: EventListRow }) => {
   const router = useRouter();
-  const { sourceUrl } = row;
+  const { venueUrl } = row;
   return (
     <RowMenu
       label={COPY.menu.label(row.title)}
@@ -121,7 +120,7 @@ const EventMenu = ({ row }: { row: EventListRow }) => {
             window.open(eventCanonicalPath(row.id), '_blank', 'noopener');
           },
         },
-        ...(isSafeHttpUrl(sourceUrl)
+        ...(venueUrl
           ? [
               {
                 key: 'view-venue',
@@ -129,7 +128,7 @@ const EventMenu = ({ row }: { row: EventListRow }) => {
                 label: COPY.menu.viewVenue,
                 hint: COPY.menu.viewVenueHint,
                 onSelect: () => {
-                  window.open(sourceUrl, '_blank', 'noopener');
+                  window.open(venueUrl, '_blank', 'noopener');
                 },
               },
             ]

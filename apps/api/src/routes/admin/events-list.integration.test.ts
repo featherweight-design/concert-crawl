@@ -52,6 +52,7 @@ interface ListBody {
       watchingCount: number;
       wentCount: number | null;
       venueSlug: string | null;
+      eventUrl: string | null;
       sourceUrl: string | null;
     }[];
     total: number;
@@ -89,7 +90,8 @@ describe('GET /v1/admin/events/list', () => {
       artist: 'Available Act',
       date: dayOffset(3),
       ticketPriceMin: '45.00',
-      sourceUrl: 'https://redrocks.example/shows/available-act',
+      eventUrl: 'https://redrocks.example/shows/available-act',
+      sourceUrl: 'https://redrocks.example/calendar',
     });
     const soldOut = await seedEvent(red.id, {
       artist: 'Sold Out Act',
@@ -132,7 +134,8 @@ describe('GET /v1/admin/events/list', () => {
       status: 'available',
       watchingCount: 2,
       wentCount: null,
-      sourceUrl: 'https://redrocks.example/shows/available-act',
+      eventUrl: 'https://redrocks.example/shows/available-act',
+      sourceUrl: 'https://redrocks.example/calendar',
     });
     expect(byTitle.get('Test Show — Hidden Act')).toMatchObject({
       status: 'available',
