@@ -97,6 +97,18 @@ const settingsChange = (
 };
 
 /**
+ * Where a `price.settings.update` left the Prices page's toggle. The API
+ * writes that action when a save sends only the toggle, so the row says what
+ * it was set to even when the value did not change (a repeat tap).
+ */
+const approveAfter = (meta: Record<string, unknown> | null): boolean | null => {
+  const after = meta?.['after'];
+  if (typeof after !== 'object' || after === null) return null;
+  const on: unknown = Reflect.get(after, 'approvePricesMyself');
+  return typeof on === 'boolean' ? on : null;
+};
+
+/**
  * A row in plain words, from its action key, its target's name and the
  * metadata the writer kept. An action this build has no sentence for reads as
  * its key made readable ("venue.thing_done" → "Venue thing done").
@@ -114,6 +126,7 @@ export const sentenceFor = (item: AuditLogItem): Sentence => {
             range: priceRange(meta),
             role: text(meta?.['role']),
             settings: settingsChange(meta),
+            approve: approveAfter(meta),
           })
         : entry;
   if (item.target === null) {

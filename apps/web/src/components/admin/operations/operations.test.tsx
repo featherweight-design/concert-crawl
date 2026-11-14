@@ -419,6 +419,7 @@ const WRITTEN_ACTIONS = [
   'price.submission.edit_price',
   'price.submission.reject',
   'price.submission.update',
+  'price.settings.update',
   'settings.update',
   'user.email_shown',
   'user.role.update',
@@ -510,6 +511,41 @@ describe('sentences', () => {
         target: { kind: 'artist', name: 'Wilco', href: null },
       },
       'Unlocked the name of Wilco',
+    ],
+    // price.settings.update (a save of only the Prices toggle) reads where the
+    // toggle ended up, even on a repeat tap that changed nothing.
+    [
+      {
+        action: 'price.settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: {
+          before: { ...SETTINGS, approvePricesMyself: true },
+          after: { ...SETTINGS, approvePricesMyself: true },
+        },
+      },
+      'Turned Approve every price myself on',
+    ],
+    [
+      {
+        action: 'price.settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: {
+          before: { ...SETTINGS, approvePricesMyself: true },
+          after: { ...SETTINGS, approvePricesMyself: false },
+        },
+      },
+      'Turned Approve every price myself off',
+    ],
+    [
+      {
+        action: 'price.settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: null,
+      },
+      'Changed the price settings',
     ],
     // settings.update reads the fields its before and after differ in.
     [
