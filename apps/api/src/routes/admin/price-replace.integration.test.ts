@@ -131,6 +131,50 @@ describe('POST /v1/admin/prices/events/:eventId/replace', () => {
     expect(Number(ga?.headline?.priceMin)).toBe(14);
   });
 
+  it('replaces the cheapest headline across every tier, archiving each tier’s fan price', async () => {
+    await testDb
+      .delete(priceSubmissions)
+      .where(eq(priceSubmissions.eventId, eventId));
+    const [ga, vip] = await Promise.all([
+      seedPriceSubmission(eventId, FAN_A, {
+        tier: 'GA',
+        priceMin: '40',
+        status: 'corroborated',
+      }),
+      seedPriceSubmission(eventId, FAN_B, {
+        tier: 'VIP',
+        priceMin: '25',
+        status: 'corroborated',
+      }),
+    ]);
+
+    asAdmin();
+    expect((await replace(eventId, '35', null)).status).toBe(201);
+
+    authState.current = null;
+    const detail = detailBody.parse(
+      await (await app.request(`/v1/events/${eventId}`)).json(),
+    );
+    const headlines = (detail.data.priceByTier ?? []).flatMap((block) =>
+      block.headline === null ? [] : [Number(block.headline.priceMin)],
+    );
+    expect(Math.min(...headlines)).toBe(35);
+
+    const fans = await testDb
+      .select({
+        id: priceSubmissions.id,
+        status: priceSubmissions.status,
+        archivedReason: priceSubmissions.archivedReason,
+      })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.eventId, eventId));
+    for (const id of [ga.id, vip.id]) {
+      const row = fans.find((fan) => fan.id === id);
+      expect(row?.status).toBe('archived');
+      expect(row?.archivedReason).toBe(REPLACED_BY_ADMIN_REASON);
+    }
+  });
+
   it('archives the fan prices it replaces, keeps them, and enters the admin price corroborated', async () => {
     asAdmin();
     expect((await replace(eventId, '14', '20')).status).toBe(201);
