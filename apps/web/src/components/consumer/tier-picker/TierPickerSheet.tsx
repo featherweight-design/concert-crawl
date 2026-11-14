@@ -2,7 +2,7 @@
 
 // The tier picker surface — the `tier-picker-on-tap` locked surface from
 // @concert-crawl/entitlements, rendered in the shared ModalShell (bottom
-// sheet <640px, centered modal above). Desktop shows a row of cards;
+// sheet <1024px, centered modal above). Desktop shows a row of cards;
 // mobile shows the collapsed-summary accordion (one row expanded).
 // Gifted / role-comped users get the GiftedThankYou panel instead of
 // cards. Selecting a paid tier from the free state swaps the content to

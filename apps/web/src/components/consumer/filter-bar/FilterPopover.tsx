@@ -161,7 +161,7 @@ export function FilterPopover({
     }
     const popover = popoverRef.current;
     // Under `sm` the popover is `hidden` and the sheet opens instead. Browse
-    // only opens it from 1024 (`open={isDesktop}`); Venues still does from 640.
+    // only opens it from 1024 (`open={isDesktop}`); Venues does too.
     if (!popover || window.getComputedStyle(popover).display === 'none') {
       return;
     }

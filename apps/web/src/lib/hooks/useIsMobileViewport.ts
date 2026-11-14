@@ -1,7 +1,7 @@
 'use client';
 
-// Shared <640px check — same matchMedia pattern as ModalShell and
-// TierPickerSheet, keyed to the Tailwind sm: breakpoint. This is the canonical
+// Shared phone-range check (under 1024px) — same matchMedia pattern as
+// ModalShell and TierPickerSheet, keyed to MOBILE_VIEWPORT_QUERY. This is the canonical
 // helper for a sheet-vs-popover split — prefer it over a fresh matchMedia call
 // so the breakpoint can't drift. Several surfaces still read the query directly
 // and have not been migrated.

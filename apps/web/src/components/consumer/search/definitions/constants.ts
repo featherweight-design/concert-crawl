@@ -13,8 +13,8 @@ export const SEARCH_FOLLOW_ICON_ONLY_QUERY = '(max-width: 359px)';
 
 /**
  * Where the results list becomes the two-column desktop layout (list plus
- * explainer rail) and the follow controls step up from `sm` to `md`. Keyed to
- * Tailwind's `md:`, which is what the grid classes below use.
+ * explainer rail) and the follow controls step up. The shared desktop line,
+ * 1024px (tablet holds the phone layout).
  */
 export const SEARCH_DESKTOP_QUERY = DESKTOP_VIEWPORT_QUERY;
 
