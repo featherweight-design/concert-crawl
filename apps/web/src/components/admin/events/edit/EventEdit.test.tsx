@@ -123,9 +123,8 @@ describe('EventEdit', () => {
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
     fireEvent.change(titleInput(), { target: { value: 'New title' } });
     fireEvent.click(screen.getByTestId('event-edit-save'));
-    expect(
-      await screen.findByText(COPY.saveFailed.saved(DETAIL.title)),
-    ).toBeInTheDocument();
+    // The toast wraps the saved line with its own words, so match a fragment.
+    expect(await screen.findByText(/The title is still/)).toBeInTheDocument();
     expect(titleInput()).toHaveValue(DETAIL.title);
   });
 
@@ -151,8 +150,10 @@ describe('EventEdit', () => {
     expect(screen.getByLabelText(COPY.show.date)).toHaveValue('Sat, Nov 14');
     expect(screen.getByTestId('event-edit-menu')).toBeInTheDocument();
     // Date and Show side by side, as drawn, then Doors.
-    const show = screen.getByLabelText(COPY.show.showTime);
-    const doors = screen.getByLabelText(COPY.show.doors);
+    // "Show" also names the card, so take the time field by its id.
+    const show = document.getElementById('event-edit-show-time');
+    const doors = document.getElementById('event-edit-doors');
+    if (show === null || doors === null) throw new Error('fields missing');
     expect(
       show.compareDocumentPosition(doors) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
