@@ -46,7 +46,7 @@ export interface PassportContentProps {
 }
 
 const Shell = ({ children }: { children: React.ReactNode }) => (
-  <main className="mx-auto w-full max-w-[1040px] flex-1 px-4 pb-20 pt-4 sm:px-8 lg:pb-10 sm:pt-8">
+  <main className="mx-auto w-full max-w-[1040px] flex-1 px-4 pb-20 pt-4 lg:px-8 lg:pb-10 lg:pt-8">
     {children}
   </main>
 );

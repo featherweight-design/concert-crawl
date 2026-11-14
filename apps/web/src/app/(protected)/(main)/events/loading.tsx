@@ -31,7 +31,7 @@ export default async function EventsLoading() {
     // full-bleed (-mx-4) on mobile, and the browse page's horizontal overflow
     // regression (#33) came from exactly that row.
     // 1088 mirrors page.tsx: the B+ 1040 column plus its gutters.
-    <main className="mx-auto w-full max-w-[1088px] flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 lg:pb-6">
+    <main className="mx-auto w-full max-w-[1088px] flex-1 overflow-x-clip px-4 pb-20 pt-4 lg:px-6 lg:pb-6">
       {/* One shelf slot, as on the page: the follow shelf holds it for every
           list view the server can answer for, and the Spotify taste shelf
           only when the follow seed comes back unknown, which the hint below
