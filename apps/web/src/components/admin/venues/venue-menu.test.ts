@@ -189,10 +189,16 @@ describe('venueMenuItems icons (A3/03/venue-menu-states)', () => {
     expect(icons['take-down']).toBe(X);
   });
 
-  it('a hidden venue: Show is the eye, Delete and Take down are X, no crawl row', () => {
+  it('a hidden venue: Show is the eye, Resume the arrows, Delete and Take down are X', () => {
     const icons = iconsOf({ crawlPausedAt: '2026-10-28T18:00:00.000Z' });
-    expect(Object.keys(icons)).toEqual(['show', 'delete', 'take-down']);
+    expect(Object.keys(icons)).toEqual([
+      'show',
+      'resume',
+      'delete',
+      'take-down',
+    ]);
     expect(icons.show).toBe(Eye);
+    expect(icons.resume).toBe(RefreshCw);
     expect(icons.delete).toBe(X);
     expect(icons['take-down']).toBe(X);
   });
