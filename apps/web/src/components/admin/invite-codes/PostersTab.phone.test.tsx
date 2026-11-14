@@ -210,6 +210,9 @@ describe('Posters on a phone (07/posters-mobile)', () => {
     renderTab();
     expect(screen.queryByTestId('poster-enlarged')).toBeNull();
     const opener = screen.getByRole('button', { name: 'Enlarge' });
+    // jsdom's click does not focus; a real tap does, and the hook returns focus
+    // to whatever held it on open.
+    opener.focus();
     fireEvent.click(opener);
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAccessibleName(/^Night · /);
