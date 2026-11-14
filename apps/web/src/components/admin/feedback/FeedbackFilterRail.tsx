@@ -3,25 +3,11 @@
 import { Inbox, AlertCircle, Flag, SquarePen, Check, X } from 'lucide-react';
 import { MonoLabel } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import type { AdminFeedbackStatus } from '@concert-crawl/types';
 
-export type FeedbackStatusFilter =
-  | 'all'
-  | 'unread'
-  | 'read'
-  | 'flagged'
-  | 'issue_opened'
-  | 'resolved'
-  | 'archived';
+export type FeedbackStatusFilter = AdminFeedbackStatus | 'all';
 
-interface StatusCounts {
-  all: number;
-  unread: number;
-  read: number;
-  flagged: number;
-  issue_opened: number;
-  resolved: number;
-  archived: number;
-}
+type StatusCounts = Record<FeedbackStatusFilter, number>;
 
 export type FeedbackSource = 'feedback_surface' | 'sentry' | 'email';
 

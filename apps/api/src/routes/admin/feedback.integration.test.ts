@@ -23,7 +23,7 @@ import type {
   AdminFeedbackStatus,
   FeedbackCategory,
 } from '@concert-crawl/types';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { createApp } from '../../app.js';
 import { clearTables, seedUserProfile } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -191,6 +191,48 @@ describe('admin feedback (integration)', () => {
       expect(res.data.resolvedBy).toBeNull();
       expect(res.data.resolvedAt).not.toBeNull();
       expect(JSON.stringify(res.data)).not.toContain(ADMIN_ID);
+    });
+
+    it('audits a resolve then a reopen as two status transitions', async () => {
+      setAuth('admin');
+      const id = await seedFeedback('flagged');
+
+      await patch(id, { status: 'resolved' });
+      await patch(id, { status: 'unread' });
+
+      const audits = await testDb
+        .select({ metadata: auditLog.metadata })
+        .from(auditLog)
+        .where(eq(auditLog.action, 'feedback.update'))
+        .orderBy(asc(auditLog.createdAt));
+      expect(audits.map((audit) => audit.metadata)).toEqual([
+        { status: { from: 'flagged', to: 'resolved' }, resolved: 'resolved' },
+        { status: { from: 'resolved', to: 'unread' }, resolved: 'reopened' },
+      ]);
+    });
+
+    it('treats re-sending the current status as no transition', async () => {
+      setAuth('admin');
+      const resolvedAt = new Date('2026-11-01T00:00:00Z');
+      const id = await seedFeedback('resolved', 'bug', {
+        resolvedBy: 'user_first_admin',
+        resolvedAt,
+      });
+
+      const res = await patch(id, { status: 'resolved', adminNotes: 'same' });
+      expect(res.status).toBe(200);
+      expect(res.data.status).toBe('resolved');
+      expect(res.data.adminNotes).toBe('same');
+
+      const row = await readRow(id);
+      expect(row?.resolvedBy).toBe('user_first_admin');
+      expect(row?.resolvedAt?.toISOString()).toBe(resolvedAt.toISOString());
+
+      const [audit] = await testDb
+        .select()
+        .from(auditLog)
+        .where(eq(auditLog.action, 'feedback.update'));
+      expect(audit?.metadata).toBeNull();
     });
 
     it('returns 404 for an unknown id', async () => {

@@ -16,6 +16,7 @@ import {
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
+import { isRecord } from '../../lib/is-record.js';
 
 const feedbackIdSchema = z.object({ id: idSchema });
 
@@ -57,47 +58,55 @@ const resolvedTransition = (
   return null;
 };
 
+const itemColumns = {
+  id: feedback.id,
+  userId: feedback.userId,
+  pageUrl: feedback.pageUrl,
+  category: feedback.category,
+  message: feedback.message,
+  metadata: feedback.metadata,
+  status: feedback.status,
+  adminNotes: feedback.adminNotes,
+  issueUrl: feedback.issueUrl,
+  createdAt: feedback.createdAt,
+  resolvedAt: feedback.resolvedAt,
+};
+
+type ItemRow = Pick<typeof feedback.$inferSelect, keyof typeof itemColumns>;
+
 /**
- * Feedback rows with `resolvedBy` as the resolver's handle, never the Clerk
+ * The wire shape, with `resolvedBy` as the resolver's handle, never the Clerk
  * id (admin redesign rule 7). A resolver with no profile reads as null.
+ * `AdminFeedbackItem.metadata` is typed as an object, so a non-object jsonb
+ * value (never written by the feedback endpoint) reads as null.
  */
+const toItem = (
+  { metadata, ...row }: ItemRow,
+  resolvedByHandle: string | null,
+): AdminFeedbackItem => ({
+  ...row,
+  metadata: isRecord(metadata) ? metadata : null,
+  createdAt: row.createdAt.toISOString(),
+  resolvedBy: resolvedByHandle,
+  resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+});
+
 const selectItems = async (
   where: SQL | undefined,
   limit: number,
 ): Promise<AdminFeedbackItem[]> => {
   const rows = await db
-    .select({
-      id: feedback.id,
-      userId: feedback.userId,
-      pageUrl: feedback.pageUrl,
-      category: feedback.category,
-      message: feedback.message,
-      metadata: feedback.metadata,
-      status: feedback.status,
-      adminNotes: feedback.adminNotes,
-      issueUrl: feedback.issueUrl,
-      createdAt: feedback.createdAt,
-      resolvedByHandle: userProfiles.handle,
-      resolvedAt: feedback.resolvedAt,
-    })
+    .select({ ...itemColumns, resolvedByHandle: userProfiles.handle })
     .from(feedback)
     .leftJoin(userProfiles, eq(userProfiles.userId, feedback.resolvedBy))
     .where(where)
     .orderBy(desc(feedback.createdAt), desc(feedback.id))
     .limit(limit);
 
-  return rows.map(({ resolvedByHandle, metadata, ...row }) => ({
-    ...row,
-    metadata: isRecord(metadata) ? metadata : null,
-    createdAt: row.createdAt.toISOString(),
-    resolvedBy: resolvedByHandle ?? null,
-    resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
-  }));
+  return rows.map(({ resolvedByHandle, ...row }) =>
+    toItem(row, resolvedByHandle ?? null),
+  );
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export const feedbackAdminRouter = new Hono<AdminVariables>();
 
@@ -172,12 +181,18 @@ feedbackAdminRouter.patch(
         .for('update');
       if (!current) return null;
 
+      // Re-sending the current status is not a transition: no audit status
+      // entry, and resolved_by/at stay as they are.
+      const nextStatus =
+        body.status !== undefined && body.status !== current.status
+          ? body.status
+          : undefined;
       const transition =
-        body.status === undefined
+        nextStatus === undefined
           ? null
-          : resolvedTransition(current.status, body.status);
+          : resolvedTransition(current.status, nextStatus);
 
-      await tx
+      const [row] = await tx
         .update(feedback)
         .set({
           ...(body.status !== undefined && { status: body.status }),
@@ -194,9 +209,28 @@ feedbackAdminRouter.patch(
             resolvedAt: null,
           }),
         })
-        .where(eq(feedback.id, id));
+        .where(eq(feedback.id, id))
+        .returning({ ...itemColumns, resolvedBy: feedback.resolvedBy });
+      if (!row) return null;
 
-      return { from: current.status, transition };
+      // The resolver's handle costs a read only when there is a resolver.
+      const { resolvedBy, ...itemRow } = row;
+      let resolvedByHandle: string | null = null;
+      if (resolvedBy !== null) {
+        const [profile] = await tx
+          .select({ handle: userProfiles.handle })
+          .from(userProfiles)
+          .where(eq(userProfiles.userId, resolvedBy))
+          .limit(1);
+        resolvedByHandle = profile?.handle ?? null;
+      }
+
+      return {
+        from: current.status,
+        nextStatus,
+        transition,
+        item: toItem(itemRow, resolvedByHandle),
+      };
     });
 
     if (!outcome) {
@@ -206,14 +240,13 @@ feedbackAdminRouter.patch(
     ctx.set('auditAction', 'feedback.update');
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', actor.userId);
-    if (body.status !== undefined) {
+    if (outcome.nextStatus !== undefined) {
       ctx.set('auditMeta', {
-        status: { from: outcome.from, to: body.status },
+        status: { from: outcome.from, to: outcome.nextStatus },
         ...(outcome.transition !== null && { resolved: outcome.transition }),
       });
     }
 
-    const [updated] = await selectItems(eq(feedback.id, id), 1);
-    return ctx.json({ success: true, data: updated });
+    return ctx.json({ success: true, data: outcome.item });
   },
 );
