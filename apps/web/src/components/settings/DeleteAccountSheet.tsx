@@ -7,6 +7,7 @@ import { deleteAccount } from '@/lib/users';
 import { useModalDialog } from '@/lib/hooks/useModalDialog';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { DESKTOP_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
 const DANGER_COPY = SETTINGS_COPY.dangerZone;
@@ -41,7 +42,7 @@ export function DeleteAccountSheet({
   const isArmed = inputValue === 'DELETE';
 
   useEffect(() => {
-    const mql = window.matchMedia('(min-width: 640px)');
+    const mql = window.matchMedia(DESKTOP_VIEWPORT_QUERY);
     setIsDesktop(mql.matches);
     const handler = (ev: MediaQueryListEvent) => setIsDesktop(ev.matches);
     mql.addEventListener('change', handler);

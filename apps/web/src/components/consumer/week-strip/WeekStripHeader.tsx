@@ -44,12 +44,12 @@ const STYLE_CONTENT = [
   // close path. On the phone it sits over the bottom nav (z-40), as the sheet
   // does.
   '.cjp-catch{position:fixed;inset:0;z-index:30;cursor:pointer}',
-  '@media (max-width:639.98px){.cjp-catch{z-index:45;background:var(--scrim);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}}',
+  '@media (max-width:1023.98px){.cjp-catch{z-index:45;background:var(--scrim);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}}',
   // Positioner: a left-anchored popover on desktop, a bottom sheet on the
   // phone (B+ `cal_jump_m`). CSS media query only, so the two models stay
   // SSR-safe with no JS viewport branch.
   '.cjp-pos{position:absolute;top:44px;left:0;z-index:40}',
-  '@media (max-width:639.98px){.cjp-pos{position:fixed;top:auto;left:0;right:0;bottom:0;z-index:50}}',
+  '@media (max-width:1023.98px){.cjp-pos{position:fixed;top:auto;left:0;right:0;bottom:0;z-index:50}}',
 ].join('\n');
 
 const ensureStyles = (): void => {

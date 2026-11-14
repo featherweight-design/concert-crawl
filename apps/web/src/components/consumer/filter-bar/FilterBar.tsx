@@ -72,6 +72,7 @@ import { FilterSegment } from './FilterSegment';
 import { SegmentDivider } from './ChipDivider';
 import { VenueOptionGrid } from './VenueOptionGrid';
 import { VibeOptionGrid, VibeShowButton } from './VibeOptionGrid';
+import { DESKTOP_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 const copy = CONSUMER_COPY.filterBar;
 
@@ -110,7 +111,7 @@ const PHONE_PILL_HEIGHT = 38;
 
 // Addendum-3 rule 1 (header-640, header-900): the segmented bar needs 1024 to
 // fit; under it the phone chips row stands in.
-export const DESKTOP_QUERY = '(min-width: 1024px)';
+export const DESKTOP_QUERY = DESKTOP_VIEWPORT_QUERY;
 
 /** Where and Vibe lists written but not yet back from the server. */
 type PendingLists = Partial<Record<FilterKey, readonly string[]>>;

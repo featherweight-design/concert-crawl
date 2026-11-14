@@ -9,6 +9,7 @@ import {
   CREW_EDGE_BACKGROUND,
   CREW_PANEL,
 } from './crew-surface';
+import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 interface ModalShellProps {
   open: boolean;
@@ -69,7 +70,7 @@ export function ModalShell({
   }, []);
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)');
+    const mql = window.matchMedia(MOBILE_VIEWPORT_QUERY);
     setIsMobile(mql.matches);
     const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
     mql.addEventListener('change', handler);

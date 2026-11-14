@@ -6,6 +6,7 @@ import { runMotion } from '@/lib/motion';
 import { LANDING_COPY } from '../definitions/copy';
 import type { InviteShow } from './definitions/types';
 import { MONO_CAPS } from './definitions/styles';
+import { DESKTOP_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 const COPY = LANDING_COPY.invite;
 
@@ -18,7 +19,7 @@ const MS_PER_ITEM = 4000;
 const MIN_ITEMS_PER_HALF = 8;
 
 /** The strip only shows from `md` up; below it nothing animates. */
-const TICKER_VIEWPORT_QUERY = '(min-width: 768px)';
+const TICKER_VIEWPORT_QUERY = DESKTOP_VIEWPORT_QUERY;
 
 function TickerItem({ show }: { show: InviteShow }) {
   return (

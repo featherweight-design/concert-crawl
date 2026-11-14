@@ -40,6 +40,7 @@ import type {
   TierCta,
   TierKey,
 } from './definitions/types';
+import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 const HEADER_COPY = TIER_PICKER_COPY.header;
 
@@ -212,7 +213,7 @@ export const TierPickerSheet = ({
 
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)');
+    const mql = window.matchMedia(MOBILE_VIEWPORT_QUERY);
     setIsMobile(mql.matches);
     const listener = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
     mql.addEventListener('change', listener);

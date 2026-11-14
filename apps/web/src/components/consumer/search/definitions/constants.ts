@@ -1,3 +1,5 @@
+import { DESKTOP_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
+
 // Search-surface tuning values. DATA, not copy.
 
 /**
@@ -6,6 +8,7 @@
  * spec names, so a 320px row keeps the name legible instead of ellipsising it
  * down to two characters beside a "Follow" label.
  */
+
 export const SEARCH_FOLLOW_ICON_ONLY_QUERY = '(max-width: 359px)';
 
 /**
@@ -13,7 +16,7 @@ export const SEARCH_FOLLOW_ICON_ONLY_QUERY = '(max-width: 359px)';
  * explainer rail) and the follow controls step up from `sm` to `md`. Keyed to
  * Tailwind's `md:`, which is what the grid classes below use.
  */
-export const SEARCH_DESKTOP_QUERY = '(min-width: 768px)';
+export const SEARCH_DESKTOP_QUERY = DESKTOP_VIEWPORT_QUERY;
 
 /** The rail column width. Locked by the handoff's `minmax(0,1fr) 320px`. */
 export const SEARCH_RAIL_WIDTH = 320;

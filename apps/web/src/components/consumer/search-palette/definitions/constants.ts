@@ -1,3 +1,5 @@
+import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
+
 /**
  * The standalone search page, and `SearchLink`'s no-JS fallback.
  *
@@ -5,6 +7,7 @@
  * `/artists` index route, and `/following` is deliberately not under
  * `/artists/...` because middleware lists `/artists(.*)` as public-once-launched.
  */
+
 export const SEARCH_HREF = '/search';
 
 /**
@@ -12,4 +15,4 @@ export const SEARCH_HREF = '/search';
  * rather than the floating ⌘K card: a 660px card has no room on a phone.
  * `ModalShell`'s sheet breakpoint, so the two modal families switch together.
  */
-export const PALETTE_SHEET_QUERY = '(max-width: 639px)';
+export const PALETTE_SHEET_QUERY = MOBILE_VIEWPORT_QUERY;
