@@ -18,10 +18,11 @@ describe('buildBreadcrumbs', () => {
     );
   });
 
-  it('links the section above a venue detail page', () => {
+  it('holds the venue-name slot with "…" until the page names it', () => {
+    // `07/loading-venue-page` draws "Venues / …" while the venue loads.
     expect(buildBreadcrumbs('/admin/venues/abc123')).toEqual([
       { label: 'Venues', href: '/admin/venues' },
-      { label: 'Edit venue' },
+      { label: '…' },
     ]);
   });
 

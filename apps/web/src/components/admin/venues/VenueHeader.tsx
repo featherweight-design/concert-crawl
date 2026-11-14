@@ -17,12 +17,22 @@ import { crawlingLabel } from './venue-list-rules';
 import { headerLine, recrawlOff, viewOnSiteHref } from './venue-header-rules';
 import type { Recrawl, RecrawlState } from './useRecrawl';
 import { VenueMenu, type VenueMenuFailure } from './VenueMenu';
+import {
+  VENUE_HEADER_BUTTON_HEIGHT,
+  VENUE_HEADER_CHIPS_GAP,
+  VENUE_HEADER_LINE_HEIGHT,
+  VENUE_HEADER_NAME_SIZE,
+  VENUE_HEADER_NEIGHBORHOOD_GAP,
+  VENUE_HEADER_NEIGHBORHOOD_SIZE,
+  VENUE_HEADER_PHONE_STACK_GAP,
+  VENUE_HEADER_TILE,
+} from './venue-header-geometry';
 
 const COPY = ADMIN_COPY.venueHeader;
 
 /** The header's 36px buttons (`A3/03/re-crawl-states`). */
 const BUTTON: CSSProperties = {
-  height: 36,
+  height: VENUE_HEADER_BUTTON_HEIGHT,
   padding: '0 12px',
   borderRadius: 9,
   fontSize: 13,
@@ -100,6 +110,7 @@ export const VenueHeader = ({
   recrawl: Recrawl;
 }) => {
   const isPhone = useIsPhone();
+  const form = isPhone ? 'phone' : 'desktop';
   const [failure, setFailure] = useState<VenueMenuFailure | null>(null);
   // While any menu change runs, the toast's Try again holds rather than
   // swallowing a press.
@@ -121,7 +132,7 @@ export const VenueHeader = ({
           display: 'flex',
           flexDirection: isPhone ? 'column' : 'row',
           alignItems: isPhone ? 'stretch' : 'center',
-          gap: isPhone ? 12 : 16,
+          gap: isPhone ? VENUE_HEADER_PHONE_STACK_GAP : 16,
         }}
       >
         <div
@@ -137,14 +148,15 @@ export const VenueHeader = ({
             <VenueTile
               slug={venue.slug}
               name={venue.name}
-              size={isPhone ? 48 : 56}
+              size={VENUE_HEADER_TILE[form]}
             />
           </span>
           <div style={{ minWidth: 0 }}>
             <h1
               style={{
                 margin: 0,
-                fontSize: isPhone ? 22 : 26,
+                fontSize: VENUE_HEADER_NAME_SIZE[form],
+                lineHeight: VENUE_HEADER_LINE_HEIGHT,
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 color: 'var(--fg)',
@@ -156,9 +168,10 @@ export const VenueHeader = ({
             {isPhone && venue.neighborhood && (
               <div
                 style={{
-                  fontSize: 12.5,
+                  fontSize: VENUE_HEADER_NEIGHBORHOOD_SIZE,
+                  lineHeight: VENUE_HEADER_LINE_HEIGHT,
                   color: 'var(--fg-muted)',
-                  marginTop: 2,
+                  marginTop: VENUE_HEADER_NEIGHBORHOOD_GAP,
                 }}
               >
                 {venue.neighborhood}
@@ -170,7 +183,7 @@ export const VenueHeader = ({
                 alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: isPhone ? 6 : 8,
-                marginTop: 6,
+                marginTop: VENUE_HEADER_CHIPS_GAP,
               }}
             >
               <VenueStatus venue={venue} crawlingLabel={crawlingLabel(venue)} />

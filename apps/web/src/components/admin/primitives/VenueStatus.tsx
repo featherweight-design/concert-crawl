@@ -5,6 +5,7 @@ import {
   type VenueOnSite,
 } from '@/lib/admin/venue-status';
 import type { Venue } from '@concert-crawl/types';
+import { VENUE_STATUS_CHIP_HEIGHT } from './geometry';
 
 const copy = ADMIN_COPY.venueStatus;
 
@@ -51,7 +52,7 @@ const Chip = ({
       display: 'inline-flex',
       alignItems: 'center',
       gap: 6,
-      height: 22,
+      height: VENUE_STATUS_CHIP_HEIGHT,
       padding: '0 9px',
       borderRadius: 999,
       fontSize: 11.5,

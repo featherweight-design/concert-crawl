@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties, KeyboardEvent, ReactNode, RefObject } from 'react';
+import { UNDERLINE_TAB_HEIGHT } from './geometry';
 
 export interface AdminTab<K extends string> {
   key: K;
@@ -86,7 +87,7 @@ const tabStyle = (
       }
     : {
         flexShrink: 0,
-        height: 40,
+        height: UNDERLINE_TAB_HEIGHT,
         padding: phone ? '0 10px' : '0 14px',
         fontSize: phone ? 13.5 : 14,
         fontWeight: 600,

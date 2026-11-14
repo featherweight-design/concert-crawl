@@ -16,7 +16,9 @@ const subLabelFor = (item: NavItem, pathname: string): string => {
     // The tool's crumb reads from its page title so the two cannot drift.
     return ADMIN_COPY.robotsAudit.page.title;
   }
-  if (item.key === 'venues') return ADMIN_COPY.shell.crumbs.editVenue;
+  // A venue's own name replaces this once its page sets the title; until
+  // then the slot holds the board's placeholder (`07/loading-venue-page`).
+  if (item.key === 'venues') return ADMIN_COPY.shell.crumbs.venuePending;
   if (pathname === '/admin/invite-codes/posters') {
     return ADMIN_COPY.inviteCodes.poster.tabs.posters;
   }
