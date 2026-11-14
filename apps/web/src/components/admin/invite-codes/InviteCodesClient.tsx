@@ -41,7 +41,11 @@ import {
 } from './code-rules';
 import { MONO } from './code-styles';
 import { InviteCodesRowsSkeleton } from './InviteCodesSkeleton';
-import { RowMenu, type RowMenuItem } from '@/components/admin/primitives';
+import {
+  RowMenu,
+  TRUNCATE,
+  type RowMenuItem,
+} from '@/components/admin/primitives';
 import { MENU_ICONS } from './code-menu-icons';
 import { CodePanel } from './CodePanel';
 import { EditCodePanel } from './EditCodePanel';
@@ -335,7 +339,15 @@ export function InviteCodesClient({ origin }: { origin: string }) {
                 </span>
               </span>
               {codeLabel(row) && (
-                <span style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
+                // "Personal · @handle": a long handle ends in an ellipsis.
+                <span
+                  data-testid="invite-code-row-label"
+                  style={{
+                    ...TRUNCATE,
+                    fontSize: 12.5,
+                    color: 'var(--fg-muted)',
+                  }}
+                >
                   {codeLabel(row)}
                 </span>
               )}

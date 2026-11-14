@@ -120,6 +120,18 @@ describe('PriceChecksTab on the phone', () => {
     );
   });
 
+  it('wraps a long deciding handle inside its column', async () => {
+    setPhone(true);
+    render(<PriceChecksTab />);
+    const tabs = await screen.findByTestId('price-checks-views');
+    fireEvent.click(
+      within(tabs).getByRole('tab', { name: `${COPY.views.resolved} 17` }),
+    );
+    const decided = await screen.findByTestId('resolved-decided-by');
+    expect(decided.style.minWidth).toBe('0px');
+    expect(decided.style.overflowWrap).toBe('anywhere');
+  });
+
   it('puts Use before Keep, as ruled (A3 4d #20)', async () => {
     setPhone(true);
     render(<PriceChecksTab />);
