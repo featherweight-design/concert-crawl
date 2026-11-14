@@ -502,7 +502,12 @@ describe('GET /v1/admin/events/:id (Event edit fields)', () => {
     });
     const body = (await res.json()) as { data: Record<string, unknown> };
     expect(body.data).toMatchObject({
-      mySubmission: { id: mine.id, priceMin: '12.00', priceMax: '15.00' },
+      mySubmission: {
+        id: mine.id,
+        priceMin: '12.00',
+        priceMax: '15.00',
+        status: mine.status,
+      },
       id: event.id,
       listStatus: 'available',
       hiddenReason: null,

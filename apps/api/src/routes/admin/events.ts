@@ -619,8 +619,9 @@ eventsAdminRouter.patch(
 );
 
 // GET /v1/admin/events/:id — single event for the admin editor surface.
-// Same projection as the list endpoint so the editor can hydrate every
-// section from a single payload.
+// The list endpoint's projection plus the editor-only fields (the admin's
+// own price, `mySubmissionId` and `mySubmission`), so the editor hydrates
+// every section from a single payload.
 eventsAdminRouter.get(
   '/:id',
   zValidator('param', eventIdSchema, validationHook),
@@ -696,6 +697,8 @@ eventsAdminRouter.get(
         id: priceSubmissions.id,
         priceMin: priceSubmissions.priceMin,
         priceMax: priceSubmissions.priceMax,
+        // Pending, corroborated or disputed: says which route can edit it.
+        status: priceSubmissions.status,
       })
       .from(priceSubmissions)
       .where(
