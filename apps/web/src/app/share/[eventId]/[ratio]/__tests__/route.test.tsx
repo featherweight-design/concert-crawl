@@ -193,7 +193,8 @@ describe('GET /share/[eventId]/[ratio]', () => {
     expect(second.status).toBe(304);
   }, 30_000);
 
-  it('varies the ETag by ratio and theme', async () => {
+  // The B+ card is theme-independent, so a theme must not split the cache.
+  it('varies the ETag by ratio but not by theme', async () => {
     const story = await call(`http://localhost/share/${EVENT_ID}/story`, {
       eventId: EVENT_ID,
       ratio: 'story',
@@ -206,8 +207,8 @@ describe('GET /share/[eventId]/[ratio]', () => {
       `http://localhost/share/${EVENT_ID}/story?theme=jade`,
       { eventId: EVENT_ID, ratio: 'story' },
     );
-    const tags = [story, square, jade].map((res) => res.headers.get('ETag'));
-    expect(new Set(tags).size).toBe(3);
+    expect(story.headers.get('ETag')).not.toBe(square.headers.get('ETag'));
+    expect(jade.headers.get('ETag')).toBe(story.headers.get('ETag'));
   }, 30_000);
 
   // The mint's contentHash only moves with `state`, so a corrected artist or a
@@ -260,6 +261,43 @@ describe('GET /share/[eventId]/[ratio]', () => {
       ratio: 'link',
     });
     expect(response.status).toBe(200);
+    // Usually transient, so held for a minute, and tagged apart from a card
+    // that drew its photo.
+    expect(response.headers.get('Cache-Control')).toBe(
+      'public, max-age=60, s-maxage=60',
+    );
+    expect(response.headers.get('ETag')).toMatch(/:f"$/);
+  }, 30_000);
+
+  it('draws a photo that loads, under the full cache life', async () => {
+    const jpeg = await readFile(
+      path.resolve(
+        __dirname,
+        '../../../../../../../../design/design_handoff_bplus_redesign/screens/07-more-screens/more-r3-share_shapes.jpg',
+      ),
+    );
+    const diskFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) =>
+        new URL(String(input)).hostname === 'photos.example.com'
+          ? new Response(jpeg, { status: 200 })
+          : diskFetch(input, init),
+    );
+    getMock.mockResolvedValue({
+      ...event,
+      artistPhotoUrl: 'https://photos.example.com/toki.jpg',
+    });
+    const response = await call(`http://localhost/share/${EVENT_ID}/square`, {
+      eventId: EVENT_ID,
+      ratio: 'square',
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe(
+      'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
+    );
+    expect(response.headers.get('ETag')).toMatch(/:p"$/);
+    const body = Buffer.from(await response.arrayBuffer());
+    expect(body.subarray(0, 4)).toEqual(PNG_MAGIC);
   }, 30_000);
 
   // "4 DAYS AWAY" is only true until the venue's midnight: the tag moves with

@@ -48,35 +48,73 @@ export const resolveShareHandle = (raw: string | undefined): string | null => {
 export const SHARE_CACHE_CONTROL =
   'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
 
-/** Seconds left in `now`'s calendar day on the venue's wall clock. */
+/**
+ * A card drawn with IdentityArt because its photo failed to load. The failure
+ * is usually transient, so it is held for a minute rather than a day.
+ */
+export const SHARE_FALLBACK_CACHE_CONTROL = 'public, max-age=60, s-maxage=60';
+
+/** The venue's wall clock at `at`, read back as if it were UTC. */
+const wallClockMs = (at: number, timezone: string): number => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  }).formatToParts(at);
+  const read = (type: string): number =>
+    Number(parts.find((part) => part.type === type)?.value ?? '0');
+  return Date.UTC(
+    read('year'),
+    read('month') - 1,
+    read('day'),
+    read('hour'),
+    read('minute'),
+    read('second'),
+  );
+};
+
+/**
+ * Seconds from `now` to the venue's next midnight, as a real instant: on a
+ * DST day the local day is 23 or 25 hours long, so "86,400 minus the seconds
+ * elapsed" is an hour off. Tomorrow's 00:00 is resolved to UTC through the
+ * zone's offset at that moment (US changes happen at 2am, never at midnight).
+ */
 export const secondsUntilLocalMidnight = (
   now: Date,
   timezone: string,
 ): number => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    hourCycle: 'h23',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-  }).formatToParts(now);
-  const read = (type: string): number =>
-    Number(parts.find((part) => part.type === type)?.value ?? '0');
-  const elapsed = read('hour') * 3600 + read('minute') * 60 + read('second');
-  return Math.max(60, 86_400 - elapsed);
+  const wall = new Date(wallClockMs(now.getTime(), timezone));
+  const midnightWall = Date.UTC(
+    wall.getUTCFullYear(),
+    wall.getUTCMonth(),
+    wall.getUTCDate() + 1,
+  );
+  let instant = midnightWall;
+  for (let pass = 0; pass < 2; pass += 1) {
+    instant = midnightWall - (wallClockMs(instant, timezone) - instant);
+  }
+  return Math.max(0, Math.ceil((instant - now.getTime()) / 1000));
 };
 
 /**
  * A card with a countdown ("4 DAYS AWAY") is only true until the venue's
  * midnight, so no cache may hold it past then, and there is no
- * stale-while-revalidate: a stale serve would be yesterday's count. Every
- * other card keeps the locked header.
+ * stale-while-revalidate: a stale serve would be yesterday's count. A card
+ * whose photo failed is held for a minute. Every other card keeps the locked
+ * header.
  */
 export const shareCacheControl = (
   countdown: string | null,
   timezone: string,
   now: Date = new Date(),
+  photoMissing = false,
 ): string => {
+  if (photoMissing) return SHARE_FALLBACK_CACHE_CONTROL;
   if (countdown === null) return SHARE_CACHE_CONTROL;
   const ttl = secondsUntilLocalMidnight(now, timezone);
   return `public, max-age=${Math.min(3600, ttl)}, s-maxage=${Math.min(86_400, ttl)}`;
@@ -110,7 +148,6 @@ export type ParsedShareRequest =
       eventId: string;
       ratio: ShareRatio;
       theme: ThemeName;
-      tokens: Record<string, string>;
       handle: string | null;
     }
   | { ok: false; reason: string };
@@ -118,7 +155,8 @@ export type ParsedShareRequest =
 /**
  * The ratio is a hard reject and the theme is a soft fallback, deliberately:
  * the ratio determines the artboard, so guessing produces a card at the wrong
- * dimensions for whatever asked for it. A theme only tints one pill.
+ * dimensions for whatever asked for it. The B+ card is theme-independent, so
+ * the theme is still validated (old links carry it) but draws nothing.
  */
 export const parseShareRequest = (
   params: ShareRequestParams,
@@ -129,13 +167,12 @@ export const parseShareRequest = (
   if (!isShareRatio(params.ratio)) {
     return { ok: false, reason: 'unknown ratio' };
   }
-  const { theme, tokens } = resolveThemeTokens(params.theme);
+  const { theme } = resolveThemeTokens(params.theme);
   return {
     ok: true,
     eventId: params.eventId,
     ratio: params.ratio,
     theme,
-    tokens,
     handle: resolveShareHandle(params.by),
   };
 };

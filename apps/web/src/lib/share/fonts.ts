@@ -22,12 +22,18 @@ export interface ShareFontSpec {
 /**
  * Inter carries every non-mono string on the poster: 900 for the artist title,
  * 700 for the wordmark and state pill, 400 for the tagline and handle.
- * JetBrains Mono 700 is the date/time stamp only.
+ * JetBrains Mono 700 is the date/time stamp and the countdown; 400 is the
+ * B+ card's lighter mono (the genre chip and the meta lines).
  */
 export const SHARE_FONTS: readonly ShareFontSpec[] = [
   { name: 'Inter', assetPath: '/fonts/share/inter-400.ttf', weight: 400 },
   { name: 'Inter', assetPath: '/fonts/share/inter-700.ttf', weight: 700 },
   { name: 'Inter', assetPath: '/fonts/share/inter-900.ttf', weight: 900 },
+  {
+    name: 'JetBrains Mono',
+    assetPath: '/fonts/share/jbmono-400.ttf',
+    weight: 400,
+  },
   {
     name: 'JetBrains Mono',
     assetPath: '/fonts/share/jbmono-700.ttf',

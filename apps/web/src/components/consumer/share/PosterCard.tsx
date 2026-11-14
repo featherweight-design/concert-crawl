@@ -47,7 +47,10 @@ export interface PosterCardProps {
   photo: string | null;
 }
 
+/** The date block and countdown: the boards' heavier mono. */
 const MONO = { fontFamily: 'JetBrains Mono', fontWeight: 700 } as const;
+/** The genre chip and meta lines: the boards' lighter mono. */
+const MONO_LIGHT = { fontFamily: 'JetBrains Mono', fontWeight: 400 } as const;
 
 /** Photo or IdentityArt, filling a fixed box. */
 const Art = ({
@@ -185,7 +188,7 @@ const Chip = ({ chip, ratio }: { chip: ShareChip; ratio: ShareRatio }) => {
   return (
     <div
       style={{
-        ...MONO,
+        ...MONO_LIGHT,
         display: 'flex',
         alignItems: 'center',
         alignSelf: 'flex-start',
@@ -386,7 +389,7 @@ export const PosterCard = ({ card, ratio, photo }: PosterCardProps) => {
             <div
               key={line}
               style={{
-                ...MONO,
+                ...MONO_LIGHT,
                 ...oneLine,
                 fontSize: metrics.meta,
                 lineHeight: 1.45,
