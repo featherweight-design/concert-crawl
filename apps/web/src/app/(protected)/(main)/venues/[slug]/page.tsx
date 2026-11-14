@@ -117,7 +117,7 @@ export default async function VenueProfilePage({
             )}
             <h1
               data-testid="venue-name"
-              className="col-start-2 row-start-2 min-w-0 text-[30px] text-fg lg:text-[44px]"
+              className="col-start-2 row-start-2 min-w-0 break-words text-[30px] text-fg lg:text-[44px]"
               style={{
                 fontFamily: 'var(--font-ui)',
                 fontWeight: 900,
