@@ -38,24 +38,14 @@ export const MODEL_RATES = {
 
 export type PricedModelId = keyof typeof MODEL_RATES;
 
-const isPricedModel = (model: string): model is PricedModelId =>
-  Object.hasOwn(MODEL_RATES, model);
-
 /**
  * The dollar cost of one call's usage at `model`'s rates.
  *
- * An unpriced model throws rather than pricing at zero or at another model's
- * rate: either would quietly understate spend, which is the defect this table
- * fixes. The parameter type already rejects an unpriced id at compile time
- * for every caller passing its call's model constant, so the throw only fires
- * for a string that bypassed the type.
+ * `model` is typed to the priced ids, so an unpriced model is a compile error
+ * rather than a cost of zero or another model's rate. Every caller passes the
+ * constant its call sends (llm-models.ts), never an untyped string.
  */
 export function calculateCost(usage: TokenUsage, model: PricedModelId): number {
-  if (!isPricedModel(model)) {
-    throw new Error(
-      `No rates for model "${String(model)}": add it to MODEL_RATES in cost.ts`,
-    );
-  }
   const rates = MODEL_RATES[model];
   return (
     usage.inputTokens * rates.input +

@@ -155,9 +155,6 @@ const ToolInputSchema = z.object({
 
 type NormalizedEventRow = z.infer<typeof NormalizedEventSchema>;
 
-// Shared with the callers that price this module's usage (llm-models.ts).
-const MODEL = LLM_EXTRACTION_MODEL;
-
 // Output token budget for the save_events tool call. Haiku 4.5 supports
 // up to 64K output. The prior cap of 16384 was hit silently by Red Rocks
 // (148 events × ~6 required fields per event + descriptions) on 2026-06-25:
@@ -397,7 +394,7 @@ export async function extractWithLlm(
   // (`content`, `stop_reason`, `usage`) that `messages.create()` did —
   // no downstream logic has to change.
   const stream = client.messages.stream({
-    model: MODEL,
+    model: LLM_EXTRACTION_MODEL,
     max_tokens: MAX_OUTPUT_TOKENS,
     tools: [SAVE_EVENTS_TOOL],
     tool_choice: { type: 'tool', name: 'save_events' },
@@ -760,7 +757,7 @@ export const adjudicateEventWithUsage = async ({
   const client = new Anthropic();
 
   const response = await client.messages.create({
-    model: MODEL,
+    model: LLM_EXTRACTION_MODEL,
     max_tokens: 1024,
     tools: [ADJUDICATE_TOOL],
     tool_choice: { type: 'tool', name: 'adjudicate_event' },
