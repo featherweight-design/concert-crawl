@@ -1073,7 +1073,7 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
 
   it('sets a tour name on an event that has none', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-09-01' });
+    const event = await seedEvent(venue.id, { date: futureDate(7) });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
@@ -1090,7 +1090,7 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
 
   it('trims surrounding whitespace before storing', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-09-02' });
+    const event = await seedEvent(venue.id, { date: futureDate(8) });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
@@ -1107,7 +1107,7 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
   it('clears to NULL (not an empty string) when given a blank value', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-09-03',
+      date: futureDate(9),
       tourName: 'Old Tour',
     });
 
@@ -1128,7 +1128,7 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
   it('clears to NULL when given an explicit null', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-09-04',
+      date: futureDate(10),
       tourName: 'Old Tour',
     });
 
@@ -1149,7 +1149,7 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
   it('leaves tourName untouched when the PATCH omits the field', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-09-05',
+      date: futureDate(11),
       tourName: 'Keep Me Tour',
     });
 
@@ -1195,7 +1195,7 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
 
   it('writes an event.update audit row for a tour-name edit', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-09-08' });
+    const event = await seedEvent(venue.id, { date: futureDate(12) });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
@@ -1245,7 +1245,10 @@ describe('PATCH /v1/admin/events/:id — retiring a promoted status report', () 
 
   it('rejects the promoted cancelled report when an admin moves the show off cancelled', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { status: 'cancelled' });
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      status: 'cancelled',
+    });
     const report = await seedEventReport(event.id, 'fan_reporter', {
       status: 'cancelled',
       resolution: 'promoted',
@@ -1268,7 +1271,10 @@ describe('PATCH /v1/admin/events/:id — retiring a promoted status report', () 
 
   it('keeps the promoted report when the status does not change', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { status: 'postponed' });
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      status: 'postponed',
+    });
     const report = await seedEventReport(event.id, 'fan_reporter', {
       status: 'postponed',
       resolution: 'promoted',
@@ -1298,7 +1304,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   it('clears firstMissingAt when given { firstMissingAt: null } (Dismiss)', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-01',
+      date: futureDate(7),
       firstMissingAt: new Date('2026-06-15T03:00:00Z'),
       lastSeenAt: new Date('2026-06-14T03:00:00Z'),
       verified: true,
@@ -1323,7 +1329,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   it('transitions status from upcoming to postponed (Mark postponed)', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-02',
+      date: futureDate(8),
       verified: true,
       status: 'upcoming',
     });
@@ -1345,7 +1351,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   it('transitions status to cancelled (Mark cancelled)', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-03',
+      date: futureDate(9),
       verified: true,
       status: 'upcoming',
     });
@@ -1383,7 +1389,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   it('fans out watch.cancelled to status=watching users when PATCH flips status to cancelled', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-05',
+      date: futureDate(10),
       verified: true,
       status: 'upcoming',
     });
@@ -1412,7 +1418,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
     // is the marker, so the second cancel is a new key.
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-05',
+      date: futureDate(10),
       verified: true,
       status: 'upcoming',
     });
@@ -1438,7 +1444,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   it('fans out watch.postponed on PATCH status flip to postponed', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-06',
+      date: futureDate(11),
       verified: true,
       status: 'upcoming',
     });
@@ -1462,7 +1468,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   it('fans out watch.postponed on PATCH date change alone (no status change)', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-07',
+      date: futureDate(12),
       verified: true,
       status: 'upcoming',
     });
@@ -1472,7 +1478,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({ date: '2026-08-14' }),
+      body: JSON.stringify({ date: futureDate(19) }),
     });
     expect(res.status).toBe(200);
 
@@ -1490,7 +1496,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
     // gate, which wouldn't exercise the dedup guarantee).
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-08',
+      date: futureDate(13),
       verified: true,
       status: 'upcoming',
     });
@@ -1501,7 +1507,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
       headers: ADMIN_HEADERS,
       body: JSON.stringify({
         status: 'upcoming',
-        date: '2026-08-08',
+        date: futureDate(13),
       }),
     });
     expect(res.status).toBe(200);
@@ -1521,7 +1527,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   it('does not fan out watch.postponed on a date change to an already-cancelled event', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
-      date: '2026-08-09',
+      date: futureDate(14),
       verified: true,
       status: 'cancelled',
     });
@@ -1532,7 +1538,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({ date: '2026-08-15' }),
+      body: JSON.stringify({ date: futureDate(20) }),
     });
     expect(res.status).toBe(200);
 
@@ -2068,6 +2074,130 @@ describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
     };
     const titles = body.data.map((row) => row.title).sort();
     expect(titles).toEqual(['Hidden Show', 'Visible Show']);
+  });
+});
+
+// Admin 4a-3b: "past rows accept only `hiddenFromConsumer`, and anything else
+// returns 409 `past_locked`." Past is dated before today in Denver.
+describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  const patch = (id: string, body: Record<string, unknown>) =>
+    app.request(`/v1/admin/events/${id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify(body),
+    });
+
+  const auditRowsFor = (id: string) =>
+    testDb
+      .select({ action: auditLog.action })
+      .from(auditLog)
+      .where(eq(auditLog.targetId, id));
+
+  it('refuses a title change on a past show, leaves the row alone and audits nothing', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      title: 'Played Show',
+    });
+
+    const res = await patch(event.id, { title: 'Rewritten' });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
+    const [row] = await testDb
+      .select({ title: events.title, updatedAt: events.updatedAt })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.title).toBe('Played Show');
+    expect(row?.updatedAt).toEqual(event.updatedAt);
+    expect(await auditRowsFor(event.id)).toEqual([]);
+  });
+
+  it('refuses a date change that would move a past show into the future', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: futureDate(-7) });
+
+    const res = await patch(event.id, { date: futureDate(14) });
+
+    expect(res.status).toBe(409);
+    const [row] = await testDb
+      .select({ date: events.date })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.date).toBe(event.date);
+  });
+
+  it('accepts hiddenFromConsumer alone on a past show and audits it', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: futureDate(-7) });
+
+    const res = await patch(event.id, { hiddenFromConsumer: true });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: true,
+      data: { hiddenFromConsumer: true },
+    });
+    expect(await auditRowsFor(event.id)).toEqual([{ action: 'event.update' }]);
+  });
+
+  it('refuses hiddenFromConsumer sent with another field on a past show', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      status: 'upcoming',
+    });
+
+    const res = await patch(event.id, {
+      hiddenFromConsumer: true,
+      status: 'cancelled',
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
+    const [row] = await testDb
+      .select({
+        hiddenFromConsumer: events.hiddenFromConsumer,
+        status: events.status,
+      })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row).toEqual({ hiddenFromConsumer: false, status: 'upcoming' });
+    expect(await auditRowsFor(event.id)).toEqual([]);
+  });
+
+  it('still edits an upcoming show', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: futureDate(7) });
+
+    const res = await patch(event.id, {
+      title: 'New Title',
+      status: 'postponed',
+      hiddenFromConsumer: true,
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: true,
+      data: {
+        title: 'New Title',
+        status: 'postponed',
+        hiddenFromConsumer: true,
+      },
+    });
+    expect(await auditRowsFor(event.id)).toEqual([{ action: 'event.update' }]);
+  });
+
+  it('still returns 404 for an unknown id', async () => {
+    const res = await patch('00000000-0000-4000-8000-000000000000', {
+      title: 'Nobody',
+    });
+    expect(res.status).toBe(404);
   });
 });
 
