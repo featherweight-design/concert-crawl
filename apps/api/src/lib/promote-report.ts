@@ -1,8 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { db, eventReports, events } from '@concert-crawl/db';
 import { endDelisting } from '@concert-crawl/db/upcoming-events';
-import type { DbTransaction } from './db-executor.js';
-import { lockEventSaleState, PastLockedError } from './past-lock.js';
+import { lockEventRow, PastLockedError } from './past-lock.js';
 import {
   closeReportAsMoot,
   lockPendingReport,
@@ -34,36 +33,19 @@ export interface PromoteReportResult {
 }
 
 /**
- * Whether a cancelled or postponed promotion is news: the show's status
- * differs, or the show was delisted. A delisted show was cancelled silently by
- * the stale sweep (B+ A5), so a confirmed cancellation of it is news: watchers
- * were never told. Read under the event's row lock.
- */
-const statusChanges = async (
-  tx: DbTransaction,
-  eventId: string,
-  status: 'cancelled' | 'postponed',
-): Promise<boolean> => {
-  const [row] = await tx
-    .select({ status: events.status, delistedAt: events.delistedAt })
-    .from(events)
-    .where(eq(events.id, eventId))
-    .limit(1);
-  return row?.status !== status || row.delistedAt !== null;
-};
-
-/**
  * Promote a pending report so the show reads as it says: sold out, cancelled
  * or postponed. The one write for an admin resolving a report as promoted and
  * a fan report reaching its confirm threshold.
  *
- * Runs in one transaction under the event's row lock (lockEventSaleState),
+ * Runs in one transaction under the event's row lock (lockEventRow),
  * then the report's. Throws EventNotFoundError for a missing event. Under the
  * locks:
  * - a report already resolved is left alone ('already_resolved');
  * - a past show throws PastLockedError for `onPast: 'refuse'`, or closes the
  *   report as moot for 'close': a show that has played is history, whatever
- *   the report says;
+ *   the report says. The one exception is a cancelled report on a postponed
+ *   show whose date passed, which "stays Postponed until you set the new date
+ *   or mark it cancelled" (addendum 6): it promotes as on an upcoming show;
  * - a sold-out, when another sold-out is already live, closes as moot rather
  *   than tripping migration 0032's one-live-sold-out index, and nobody hears
  *   again;
@@ -79,7 +61,7 @@ export async function promoteReport(
   options: { onPast: OnPastShow; adminNote?: string | null },
 ): Promise<PromoteReportResult> {
   return db.transaction(async (tx): Promise<PromoteReportResult> => {
-    const state = await lockEventSaleState(tx, eventId);
+    const show = await lockEventRow(tx, eventId);
     if (!(await lockPendingReport(tx, reportId))) {
       return {
         outcome: 'already_resolved',
@@ -96,7 +78,9 @@ export async function promoteReport(
         }),
       );
 
-    if (state === 'past') {
+    const cancelsPostponedPast =
+      status === 'cancelled' && show.status === 'postponed';
+    if (show.state === 'past' && !cancelsPostponedPast) {
       if (options.onPast === 'refuse') throw new PastLockedError();
       return moot(MOOT_NOTE.pastShow);
     }
@@ -113,7 +97,11 @@ export async function promoteReport(
       if (live) return moot(MOOT_NOTE.alreadySoldOut);
       isRealTransition = true;
     } else {
-      isRealTransition = await statusChanges(tx, eventId, status);
+      // News when the status differs, or the show was delisted: a delisted
+      // show was cancelled silently by the stale sweep (B+ A5), so watchers
+      // were never told. Read under the lock, so two reports promoted at
+      // once can never both see the old status.
+      isRealTransition = show.status !== status || show.delistedAt !== null;
       await tx
         .update(events)
         // A confirmed status replaces the sweep's No longer listed.

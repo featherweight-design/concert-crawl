@@ -332,8 +332,10 @@ eventsAdminRouter.patch(
     }
 
     let updated: typeof eventReports.$inferSelect | undefined;
-    // A second sold-out on a show already sold out closes as moot (rejected)
-    // instead of promoting, and tells nobody.
+    // Sold-out, cancelled and postponed promote through promoteReport. Here a
+    // past show refuses (409) rather than closing, so `closedAsMoot` can only
+    // mean a second sold-out on a show already sold out: it closes as moot
+    // (rejected) instead of promoting, and tells nobody.
     let closedAsMoot = false;
     if (resolution === 'promoted' && report.status !== 'available') {
       let promotion: Awaited<ReturnType<typeof promoteReport>>;
