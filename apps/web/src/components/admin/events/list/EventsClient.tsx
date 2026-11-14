@@ -578,7 +578,15 @@ export const EventsClient = () => {
         overflow: 'hidden',
       }}
     >
-      <EventsList rows={page.rows} when={filters.when} />
+      <EventsList
+        rows={page.rows}
+        when={filters.when}
+        // Saves, then reloads, so the row's tag and the Hidden count agree.
+        onHide={async (row) => {
+          await api.hide(row.id);
+          void load();
+        }}
+      />
       {footer(page)}
     </div>
   );
