@@ -14,6 +14,7 @@ import {
 } from '@/lib/share/share-layout';
 import {
   SHARE_CACHE_CONTROL,
+  SHARE_FALLBACK_CACHE_CONTROL,
   secondsUntilLocalMidnight,
   shareCacheControl,
 } from '@/lib/share/share-request';
@@ -190,7 +191,38 @@ describe('shareCacheControl (the day count is part of the cache life)', () => {
     );
   });
 
+  // A 23-hour day: 01:30 MST on 2026-03-08 is 21.5 real hours from midnight.
+  it('measures a spring-forward day in real time', () => {
+    expect(
+      secondsUntilLocalMidnight(new Date('2026-03-08T08:30:00Z'), TZ),
+    ).toBe(77_400);
+  });
+
+  // A 25-hour day: 01:30 MDT (the first one) on 2026-11-01 is 23.5 hours out.
+  it('measures a fall-back day in real time', () => {
+    expect(
+      secondsUntilLocalMidnight(new Date('2026-11-01T07:30:00Z'), TZ),
+    ).toBe(84_600);
+  });
+
+  it('never overshoots the midnight it counts to', () => {
+    const lastSecond = new Date('2026-11-10T06:59:59Z');
+    expect(secondsUntilLocalMidnight(lastSecond, TZ)).toBe(1);
+    expect(shareCacheControl('TODAY', TZ, lastSecond)).toBe(
+      'public, max-age=1, s-maxage=1',
+    );
+  });
+
   it('keeps the locked header for a card with no countdown', () => {
     expect(shareCacheControl(null, TZ, now)).toBe(SHARE_CACHE_CONTROL);
+  });
+
+  it('holds a card whose photo failed for a minute only', () => {
+    expect(shareCacheControl(null, TZ, now, true)).toBe(
+      SHARE_FALLBACK_CACHE_CONTROL,
+    );
+    expect(shareCacheControl('4 DAYS AWAY', TZ, now, true)).toBe(
+      'public, max-age=60, s-maxage=60',
+    );
   });
 });

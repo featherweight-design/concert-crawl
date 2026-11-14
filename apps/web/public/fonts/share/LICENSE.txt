@@ -7,9 +7,9 @@ fonts, and `next/font/google` output is not reachable from a route handler.
     SIL Open Font License, Version 1.1
     https://github.com/rsms/inter
 
-  jbmono-700.ttf
+  jbmono-400.ttf, jbmono-700.ttf
     JetBrains Mono — Copyright (c) 2020 The JetBrains Mono Project Authors
-    SIL Open Font License, Version 1.1
+    SIL Open Font License, Version 1.1 (full text in OFL.txt, from upstream)
     https://github.com/JetBrains/JetBrainsMono
 
 Both are licensed under the SIL Open Font License 1.1, which permits bundling
