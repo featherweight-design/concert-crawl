@@ -1,3 +1,11 @@
+# [1.475.0](https://github.com/featherweight-design/concert-crawl/compare/v1.474.1...v1.475.0) (2026-11-14)
+
+
+### Features
+
+* **web:** caption Where tiles with the venue's short name ([6caf7c5](https://github.com/featherweight-design/concert-crawl/commit/6caf7c50971bbb388c5e5663664396a944aa84f7))
+* **web:** set a venue's short name on the Look card ([4f1d64c](https://github.com/featherweight-design/concert-crawl/commit/4f1d64c788c589e6584bf114c95cb06b64a2868e))
+
 ## [1.474.1](https://github.com/featherweight-design/concert-crawl/compare/v1.474.0...v1.474.1) (2026-11-14)
 
 
