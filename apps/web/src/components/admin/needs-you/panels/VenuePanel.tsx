@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { AdminButton } from '@/components/admin/primitives';
 import { venueTabHref } from '@/lib/admin/venue-tabs';
 import {
   causeText,
@@ -37,17 +38,25 @@ const RunRows = ({ row }: Pick<PanelProps, 'row'>) => {
             key={`${run.day}-${index}`}
             style={{
               display: 'grid',
-              gridTemplateColumns: '56px 64px minmax(0, 1fr)',
+              gridTemplateColumns: '54px 70px minmax(0, 1fr)',
               gap: 8,
-              padding: '10px 0',
+              padding: '8px 0',
               fontSize: 13,
-              borderTop: index === 0 ? 'none' : '1px solid var(--border)',
+              // A rule under every row, the last included (`venue-auto-paused`).
+              borderBottom: '1px solid var(--border)',
             }}
           >
-            <span style={{ color: 'var(--fg-muted)' }}>{run.day}</span>
             <span
               style={{
-                fontWeight: 700,
+                color: 'var(--fg-muted)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {run.day}
+            </span>
+            <span
+              style={{
+                fontWeight: 600,
                 color: run.tone,
               }}
             >
@@ -158,8 +167,26 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
         row={row}
         busy={busy}
         note={blocked ? PANEL.venue.blockedNote : PANEL.venue.failingNote}
+        // A blocked venue leads with Ask the venue, drawn disabled until Add a
+        // venue ships it (`10/venue-blocked-before-3c`).
         extra={
-          !blocked && row.venueId ? (
+          blocked ? (
+            <>
+              <AdminButton variant="outline" disabled fullWidth>
+                {PANEL.venue.askVenue}
+              </AdminButton>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  color: 'var(--fg-muted)',
+                }}
+              >
+                {PANEL.venue.askVenueLine}
+              </p>
+            </>
+          ) : !blocked && row.venueId ? (
             <Link
               href={venueTabHref(row.venueId, 'source')}
               data-testid="check-source"

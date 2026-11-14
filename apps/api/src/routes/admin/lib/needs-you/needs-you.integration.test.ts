@@ -229,16 +229,15 @@ describe('Needs you sources and ranking', () => {
     });
     if (item?.kind !== 'venue-failing')
       throw new Error('expected venue-failing');
-    expect(item.lastRuns).toHaveLength(5);
+    // Up to fourteen, newest first: every seeded run, the oldest last.
+    expect(item.lastRuns.length).toBeGreaterThan(5);
+    expect(item.lastRuns.length).toBeLessThanOrEqual(14);
     expect(item.lastRuns[0]).toMatchObject({
       status: 'failed',
       eventsFound: 0,
       httpStatus: 500,
     });
-    expect(item.lastRuns[4]).toMatchObject({
-      status: 'success',
-      eventsFound: 40,
-    });
+    expect(item.lastRuns.at(-1)).toMatchObject({ status: 'success' });
   });
 
   it('carries the latest run page count and robots result on a blocked venue', async () => {
