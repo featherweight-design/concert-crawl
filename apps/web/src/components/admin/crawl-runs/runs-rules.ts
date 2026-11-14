@@ -4,6 +4,7 @@ import {
   LAST_RUNS,
   isUnchanged,
   runOutcome,
+  runOutcomeKey,
   runReasonLine,
   runSentence,
   shortDate,
@@ -63,9 +64,16 @@ export const hasMore = (returned: number, asked: number): boolean =>
 export const RUN_FILTERS = ['all', 'notOk'] as const;
 export type RunFilter = (typeof RUN_FILTERS)[number];
 
-/** Not OK: anything but a run that read shows or found the page unchanged. */
-export const isNotOk = (run: Pick<RunRow, 'status' | 'reason'>): boolean =>
-  run.status !== 'success' && !isUnchanged(run);
+/**
+ * Not OK: anything but a run that read shows, found the page unchanged, or
+ * was Not run. Not run is the account-wide LLM refusal, which
+ * `09/run-result-chips` draws grey as "not a venue failure", and Design's
+ * Not OK is the amber and red outcomes (addendum-3 1d row 4).
+ */
+export const isNotOk = (run: Pick<RunRow, 'status' | 'reason'>): boolean => {
+  const key = runOutcomeKey(run);
+  return key !== 'success' && key !== 'unchanged' && key !== 'notRun';
+};
 
 export const filterRuns = <T extends Pick<RunRow, 'status' | 'reason'>>(
   runs: readonly T[],

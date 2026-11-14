@@ -15,6 +15,7 @@ import {
   LoadMoreFooter,
   RunFilters,
   RunListRow,
+  RUNS_LIST_DESKTOP_GRID,
   RunsFilterEmpty,
   type LoadMoreState,
 } from '@/components/admin/crawl-runs/RunsList';
@@ -285,9 +286,9 @@ export const RunsTab = ({
                   listStyle: 'none',
                   margin: 0,
                   padding: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: phone ? 0 : 4,
+                  ...(phone
+                    ? { display: 'flex', flexDirection: 'column' }
+                    : RUNS_LIST_DESKTOP_GRID),
                 }}
               >
                 {shown.map((run) => (

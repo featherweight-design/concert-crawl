@@ -84,6 +84,21 @@ export const runOutcomeKey = (
 };
 
 /**
+ * Each run outcome's tone, as drawn (`A3/09/run-result-chips`). The run chip
+ * and Needs you's LAST 4 RUNS both read it, so the two can't disagree.
+ */
+export const RUN_OUTCOME_TONE: Record<RunOutcomeKey, string> = {
+  success: 'var(--success)',
+  unchanged: 'var(--fg-subtle)',
+  partial: 'var(--warning)',
+  failed: 'var(--danger)',
+  blocked: 'var(--danger)',
+  skipped: 'var(--fg-subtle)',
+  robots: 'var(--warning)',
+  notRun: 'var(--fg-subtle)',
+};
+
+/**
  * The big outcome word: OK, Unchanged, Partial, Failed, Blocked, Skipped,
  * robots.txt or Not run, in `venuesList.latestRun`'s words.
  */

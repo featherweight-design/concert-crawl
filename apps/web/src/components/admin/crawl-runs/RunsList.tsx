@@ -91,11 +91,30 @@ export const RunFilters = ({
 
 /**
  * The desktop row's columns (`04/venue-runs`): date over time, the chip,
- * the line, duration, cost. The chip column fits the widest chip,
- * "Unchanged" with its dot (about 87px at the badge's 11px), so every line
- * starts at the same x.
+ * the line, duration, cost. The board's 78px chip column only ever holds
+ * "Skipped"; on the 22px venue chip "Unchanged" outruns it, so the chip
+ * column is `max-content`. The list owns the grid and every row is a
+ * subgrid of it, so the column is as wide as the widest chip loaded and
+ * every line still starts at one x. The line is `minmax(0, 1fr)`, so it
+ * takes the squeeze at the desktop min width.
  */
-const DESKTOP_COLUMNS = '56px 92px minmax(0, 1fr) 46px 44px';
+const DESKTOP_COLUMNS = '56px max-content minmax(0, 1fr) 46px 44px';
+
+/** The desktop runs list: the grid every row subgrids (`04/venue-runs`). */
+export const RUNS_LIST_DESKTOP_GRID: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: DESKTOP_COLUMNS,
+  columnGap: 12,
+  rowGap: 4,
+};
+
+/** A row's share of the list grid: every column, on the list's tracks. */
+const SUBGRID_ROW: CSSProperties = {
+  display: 'grid',
+  gridColumn: '1 / -1',
+  gridTemplateColumns: 'subgrid',
+  columnGap: 12,
+};
 
 const cell = (width: number, align: 'left' | 'right'): CSSProperties => ({
   display: 'block',
@@ -143,7 +162,7 @@ export const RunListRow = ({
     </span>
   );
   return (
-    <li>
+    <li style={phone ? undefined : SUBGRID_ROW}>
       <button
         type="button"
         data-testid="run-row"
@@ -151,16 +170,11 @@ export const RunListRow = ({
         aria-label={COPY.rowLabel(date, time, runOutcome(run), line)}
         onClick={onSelect}
         style={{
-          // Desktop is a fixed grid so every row's line starts at one x,
-          // whatever its chip; phone keeps its flex row.
+          // Desktop rows subgrid the list's columns so every row's line
+          // starts at one x, whatever its chip; phone keeps its flex row.
           ...(phone
-            ? { display: 'flex', alignItems: 'flex-start' }
-            : {
-                display: 'grid',
-                gridTemplateColumns: DESKTOP_COLUMNS,
-                alignItems: 'center',
-              }),
-          gap: phone ? 10 : 12,
+            ? { display: 'flex', alignItems: 'flex-start', gap: 10 }
+            : { ...SUBGRID_ROW, alignItems: 'center' }),
           width: '100%',
           minWidth: 0,
           padding: phone ? '11px 0' : '10px 12px',

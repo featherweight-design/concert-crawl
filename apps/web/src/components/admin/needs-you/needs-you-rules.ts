@@ -11,6 +11,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { Kind } from '@/components/admin/primitives/KindLabel';
 import { RUN_STATUSES } from '@/components/admin/venues/overview/overview-data';
 import {
+  RUN_OUTCOME_TONE,
   runOutcome,
   runOutcomeKey,
 } from '@/components/admin/venues/overview/overview-rules';
@@ -609,34 +610,39 @@ const isRunStatus = (status: string): status is CrawlStatus =>
 
 /**
  * The word a run wears, through the one reason-first mapping the run chips
- * use (`runOutcomeKey`), so a 403 reads Blocked here as it does on the chip.
- * A status this build doesn't know shows as sent.
+ * use (`runOutcomeKey`), so a 403 reads Blocked here as it does on the chip,
+ * in the chip's tone (`RUN_OUTCOME_TONE`): Not run grey, robots.txt amber.
+ * A grey word reads in the muted ink, as the chip's does. A status this
+ * build doesn't know shows as sent, in danger.
  */
-const runWord = (run: RunLine): { word: string; ok: boolean } => {
-  if (!isRunStatus(run.status)) return { word: run.status, ok: false };
+const runWord = (run: RunLine): { word: string; tone: string } => {
+  if (!isRunStatus(run.status)) {
+    return { word: run.status, tone: RUN_OUTCOME_TONE.failed };
+  }
   const outcome = { status: run.status, reason: run.reason ?? null };
+  const tone = RUN_OUTCOME_TONE[runOutcomeKey(outcome)];
   return {
     word: runOutcome(outcome),
-    ok: runOutcomeKey(outcome) === 'success',
+    tone: tone === 'var(--fg-subtle)' ? 'var(--fg-muted)' : tone,
   };
 };
 
 /** The last four runs, newest first, each with its Mountain Time day. */
 export const lastRunsOf = (
   row: Pick<QueueRow, 'lastRuns'>,
-): { day: string; status: string; ok: boolean; detail: string | null }[] =>
+): { day: string; status: string; tone: string; detail: string | null }[] =>
   [...row.lastRuns]
     .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
     .slice(0, 4)
     .flatMap((run) => {
       const day = mountainDay(run.at);
-      const { word, ok } = runWord(run);
+      const { word, tone } = runWord(run);
       return day
         ? [
             {
               day,
               status: word,
-              ok,
+              tone,
               // A failed run says why; an OK one says how many shows it found.
               detail:
                 run.errorMessage ??

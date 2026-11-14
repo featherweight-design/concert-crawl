@@ -48,7 +48,7 @@ const RunRows = ({ row }: Pick<PanelProps, 'row'>) => {
             <span
               style={{
                 fontWeight: 700,
-                color: run.ok ? 'var(--success)' : 'var(--danger)',
+                color: run.tone,
               }}
             >
               {run.status}

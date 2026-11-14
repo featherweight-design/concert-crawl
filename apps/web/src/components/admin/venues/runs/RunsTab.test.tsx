@@ -174,12 +174,19 @@ describe('RunsTab', () => {
     expect(rows()[2]!.textContent).toContain('Failed: timed out');
   });
 
-  it('lays desktop rows on one fixed grid so every line starts at one x', () => {
+  it('lays desktop rows on the list grid so every line starts at one x', () => {
     renderTab();
-    const columns = rows().map((row) => row.style.gridTemplateColumns);
-    expect(rows()[0]!.style.display).toBe('grid');
-    expect(new Set(columns).size).toBe(1);
-    expect(columns[0]).toContain('92px');
+    // The list owns the columns; the chip column fits the widest chip
+    // ("Unchanged" outran the old 92px), and every row subgrids it.
+    const list = screen.getByTestId('runs-list');
+    expect(list.style.display).toBe('grid');
+    expect(list.style.gridTemplateColumns).toContain('max-content');
+    expect(list.style.gridTemplateColumns).not.toContain('92px');
+    for (const row of rows()) {
+      expect(row.style.display).toBe('grid');
+      expect(row.style.gridTemplateColumns).toBe('subgrid');
+      expect(row.parentElement!.style.gridTemplateColumns).toBe('subgrid');
+    }
   });
 
   it('keeps phone rows as a flex row', () => {
