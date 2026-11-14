@@ -117,6 +117,33 @@ describe('PinnedSaveBar', () => {
     expect(save.style.height).toBe('44px');
   });
 
+  it('pins across the content pane and holds its height in the page', () => {
+    render(
+      <PinnedSaveBar
+        {...props({
+          look: {
+            gap: 10,
+            padding: '0 28px',
+            messageStyle: {},
+            discardVariant: 'ghost',
+            pane: { height: 64 },
+            barStyle: { borderRadius: 0 },
+          },
+        })}
+      />,
+    );
+    const bar = screen.getByTestId('bar');
+    expect(bar.style.position).toBe('fixed');
+    expect(bar.style.left).toBe('232px');
+    expect(bar.style.right).toBe('0px');
+    expect(bar.style.bottom).toBe('0px');
+    expect(bar.style.height).toBe('64px');
+    expect(bar.style.borderRadius).toBe('0px');
+    expect(bar.previousElementSibling?.getAttribute('style')).toContain(
+      'height: 64px',
+    );
+  });
+
   it('keeps one row when not stacked', () => {
     render(<PinnedSaveBar {...props()} />);
     const bar = screen.getByTestId('bar');

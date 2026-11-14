@@ -40,7 +40,21 @@ export const DetailsSaveBar = ({
     onSave={onSave}
     look={{
       gap: phone ? 8 : 10,
-      padding: phone ? '12px 16px 24px' : '13px 16px',
+      padding: phone ? '12px 16px 24px' : '0 28px',
+      // `details-d` runs the bar across the whole content pane, 64 tall, with
+      // a top rule only and the panel colour at 85%.
+      ...(phone
+        ? {}
+        : {
+            pane: { height: 64 },
+            barStyle: {
+              border: 'none',
+              borderTop: '1px solid var(--border)',
+              borderRadius: 0,
+              background:
+                'color-mix(in srgb, var(--bg-elevated) 85%, transparent)',
+            },
+          }),
       messageStyle: { fontSize: 12.5, color: 'var(--warning)', flex: 1 },
       discardVariant: 'ghost',
       // `details-m` draws both buttons 42 tall and Save at 14px; `details-d`
