@@ -1,3 +1,19 @@
+# [1.457.0](https://github.com/featherweight-design/concert-crawl/compare/v1.456.0...v1.457.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** give the Vibe pills a 44px hit area ([6ddd9bf](https://github.com/featherweight-design/concert-crawl/commit/6ddd9bfa91d92f153ddf3c6e4104cbce43ca6a2e))
+* **web:** keep the menu focus halo inside the popover and visible in forced colours ([9db24c8](https://github.com/featherweight-design/concert-crawl/commit/9db24c82cd16b161a23b49a303a76419d1df2f2c))
+* **web:** put For on the show only in the artist search subtitle ([46b7447](https://github.com/featherweight-design/concert-crawl/commit/46b7447065ff57c4224d2cf97ebbf6d66b21b12b))
+
+
+### Features
+
+* **web:** add the Not artists footnote and the desktop wrong-photo subtitle ([5448a01](https://github.com/featherweight-design/concert-crawl/commit/5448a016785090819417182a0c678e83265a6b01))
+* **web:** phone Vibe full list as wrapping genre pills ([53d757e](https://github.com/featherweight-design/concert-crawl/commit/53d757ea1d8e6ddb6278e3ec1ea878170333e23d))
+* **web:** the concerts row menu and remove confirm match the boards ([237dccf](https://github.com/featherweight-design/concert-crawl/commit/237dccf7e637ea9eb2f0645b8806ca07a9e9650a))
+
 # [1.456.0](https://github.com/featherweight-design/concert-crawl/compare/v1.455.0...v1.456.0) (2026-11-14)
 
 
