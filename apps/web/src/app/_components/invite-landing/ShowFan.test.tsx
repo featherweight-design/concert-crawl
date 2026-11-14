@@ -112,16 +112,18 @@ describe('ShowFan', () => {
     expect(drops[2]).toBeCloseTo(21 / 165, 3);
   });
 
-  it('draws the TONIGHT pill fixed #FF7BD4 on #070A1A, no theme token', () => {
+  it('draws the TONIGHT pill #FF7BD4 on #070A1A, with Light overrides by variable', () => {
     const { container } = render(
       <ShowFan shows={[{ ...show('a', null), tonight: true }]} />,
     );
     const pill = [...container.querySelectorAll<HTMLElement>('span')].find(
       (node) => node.style.borderRadius === '999px',
     );
-    expect(pill?.style.background).toContain('rgb(255, 123, 212)');
-    expect(pill?.style.color).toBe('rgb(7, 10, 26)');
-    expect(pill?.getAttribute('style')).not.toContain('var(--');
+    // jsdom drops a `var()` colour, so read the declared fallbacks from the
+    // attribute: the dark-theme values stay the board's, Light overrides them.
+    const style = pill?.getAttribute('style') ?? '';
+    expect(style).toContain('var(--invite-tonight-bg, #FF7BD4)');
+    expect(style).toContain('var(--invite-tonight-fg, #070A1A)');
   });
 
   it('keeps the scrim fixed dark, with no theme token', () => {
