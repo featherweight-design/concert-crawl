@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
+import { StateCard } from '@/components/consumer/empty-state/StateCard';
 import { SubmissionItem } from './SubmissionItem';
 import {
   SUBMISSION_FILTERS,
@@ -93,6 +95,24 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
           {SETTINGS_COPY.submissionsNewestFirst}
         </span>
       </div>
+
+      {months.length === 0 && (
+        // A filter with no rows: the one empty pattern, not a blank page
+        // (`bp-s-empty_search_m`).
+        <StateCard
+          role="status"
+          icon={<SlidersHorizontal size={26} strokeWidth={1.75} />}
+          eyebrow={SETTINGS_COPY.submissionsFilterEmpty.eyebrow}
+          title={SETTINGS_COPY.submissionsFilterEmpty.title(
+            SETTINGS_COPY.submissionFilters[filter],
+          )}
+          body={SETTINGS_COPY.submissionsFilterEmpty.body}
+          action={{
+            label: SETTINGS_COPY.submissionsFilterEmpty.action,
+            onClick: () => setFilter('all'),
+          }}
+        />
+      )}
 
       {months.map((month) => (
         <section key={month.key} className="flex flex-col gap-2.5">

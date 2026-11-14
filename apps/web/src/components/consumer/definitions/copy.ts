@@ -1577,6 +1577,13 @@ export const CONSUMER_COPY = {
     },
     // The sort note at the right end of the filter row (desktop only).
     submissionsNewestFirst: 'Newest first',
+    // A filter with no rows: the shared state card (`bp-s-empty_search_m`).
+    submissionsFilterEmpty: {
+      eyebrow: 'No matches',
+      title: (label: string): string => `Nothing under ${label}.`,
+      body: 'Switch filters to see your other prices.',
+      action: 'Show all',
+    },
     submissionDisputed: 'Someone disputed this. Tap to see what they saw.',
 
     // ── EditProfileForm ───────────────────────────────────────────
