@@ -337,7 +337,8 @@ describe('EventEdit Status card', () => {
   it('edits the date on the Show card, and locks it on a past show', async () => {
     patch.mockResolvedValue({});
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sat, Nov 14, 2026' }));
+    // The field is named by its label, not the date it shows.
+    fireEvent.click(screen.getByLabelText(COPY.show.date));
     fireEvent.click(screen.getByRole('button', { name: 'Sun, Nov 15, 2026' }));
     expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('event-edit-save'));
