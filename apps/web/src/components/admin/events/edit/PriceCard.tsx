@@ -62,10 +62,14 @@ export const PriceCard = ({
       detail.mySubmission.status === 'corroborated')
       ? detail.mySubmission
       : null;
-  // A new price goes in only where the show has none (the add route refuses a
-  // priced show). An admin price over a listed one is held for Hugh, so the
-  // button is drawn but off there (`06/edit-price-desktop`).
-  const canEdit = mine !== null || detail.priceMin === null;
+  // Always on (`06/edit-price-desktop`). With the admin's own price it edits
+  // that; on a show with none it adds one; over a fan's listed price it
+  // replaces it, as the admin's own, without telling the fans (Hugh,
+  // 2026-11-14).
+  const replacing = mine === null && detail.priceMin !== null;
+  // The admin's own price under an open Price check waits for the check (the
+  // server refuses any price write on the show while one is open).
+  const lockedByCheck = detail.mySubmission?.status === 'disputed';
   const close = () => setOpen(false);
 
   return (
@@ -96,13 +100,13 @@ export const PriceCard = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <AdminButton
             data-testid="event-edit-price-edit"
-            disabled={!canEdit}
+            disabled={lockedByCheck}
             onClick={() => setOpen(true)}
             style={{
               ...TINT_BUTTON,
               height: 32,
               padding: '0 12px',
-              ...(!canEdit && { opacity: 0.5, cursor: 'not-allowed' }),
+              ...(lockedByCheck && { opacity: 0.5, cursor: 'not-allowed' }),
             }}
           >
             {COPY.edit}
@@ -127,24 +131,32 @@ export const PriceCard = ({
       <div style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
         {past ? ADMIN_COPY.eventEdit.past.priceRecord : COPY.note}
       </div>
-      {open && mine !== null && (
+      {open && (mine !== null || replacing) && (
         <EditPricePanel
           single
           row={{
             title: detail.title,
             venueName: detail.venueName,
             date: detail.date,
-            priceMin: mine.priceMin,
-            priceMax: mine.priceMax,
+            priceMin: mine?.priceMin ?? detail.priceMin ?? '',
+            priceMax: mine !== null ? mine.priceMax : detail.priceMax,
           }}
           onClose={close}
           onSave={async (priceMin, priceMax) => {
             try {
-              await submittedApi(getToken).editPrice(
-                mine.id,
-                priceMin,
-                priceMax,
-              );
+              if (mine !== null) {
+                await submittedApi(getToken).editPrice(
+                  mine.id,
+                  priceMin,
+                  priceMax,
+                );
+              } else {
+                await submittedApi(getToken).replaceListedPrice(
+                  detail.id,
+                  priceMin,
+                  priceMax,
+                );
+              }
             } catch (err) {
               const status = refusedStatus(err);
               return status === 409 || status === 404

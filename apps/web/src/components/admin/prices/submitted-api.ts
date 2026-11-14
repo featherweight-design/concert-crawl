@@ -137,6 +137,21 @@ export const submittedApi = (getToken: GetToken) => ({
     };
   },
 
+  /**
+   * Replace a show's listed fan price with the admin's own (`POST
+   * /v1/admin/prices/events/:eventId/replace`, the event editor's Edit price).
+   */
+  replaceListedPrice: async (
+    eventId: string,
+    priceMin: string,
+    priceMax: string | null,
+  ): Promise<void> => {
+    await call(getToken, `/v1/admin/prices/events/${eventId}/replace`, {
+      method: 'POST',
+      body: { priceMin, priceMax },
+    });
+  },
+
   /** Correct a waiting or published price (`PATCH .../:id/price`). */
   editPrice: async (
     id: string,

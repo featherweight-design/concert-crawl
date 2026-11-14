@@ -12,10 +12,12 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 const editPrice = vi.fn();
+const replaceListedPrice = vi.fn();
 const addPrice = vi.fn();
 vi.mock('@/components/admin/prices/submitted-api', () => ({
   submittedApi: () => ({
     editPrice: (...args: unknown[]) => editPrice(...args),
+    replaceListedPrice: (...args: unknown[]) => replaceListedPrice(...args),
   }),
 }));
 vi.mock('@/components/admin/prices/prices-api', () => ({
@@ -80,6 +82,7 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
   }));
   editPrice.mockReset();
+  replaceListedPrice.mockReset();
   addPrice.mockReset();
 });
 afterEach(cleanup);
@@ -105,16 +108,27 @@ describe('PriceCard', () => {
     );
   });
 
-  it('holds Edit price on a priced show the admin has no price on', () => {
+  it('replaces a fan’s listed price with the admin’s own (06/edit-price-desktop)', async () => {
+    const onSaved = vi.fn();
     render(
       <PriceCard
         detail={DETAIL}
         phone={false}
         past={false}
-        onSaved={vi.fn()}
+        onSaved={onSaved}
       />,
     );
-    expect(screen.getByTestId('event-edit-price-edit')).toBeDisabled();
+    replaceListedPrice.mockResolvedValue(undefined);
+    const button = screen.getByTestId('event-edit-price-edit');
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    // The sheet opens on the listed price.
+    fireEvent.click(screen.getByText(`edit sheet ${DETAIL.priceMin ?? ''}`));
+    await vi.waitFor(() =>
+      expect(replaceListedPrice).toHaveBeenCalledWith(DETAIL.id, '14', null),
+    );
+    expect(editPrice).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
   });
 
   it('holds Edit price on the admin’s price while a Price check is open', () => {
