@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { buildBreadcrumbs, type Crumb } from './breadcrumbs';
@@ -98,8 +99,34 @@ export const AdminTopbar = () => {
 /** Phone: the page title and your avatar, which opens the user menu. */
 export const AdminPhoneHeader = ({ user }: { user: AdminShellUser }) => {
   const crumbs = useCrumbs();
+  const { phoneBack } = usePageTitle();
   // A view crumb (Events / Past) keeps the page's own title on the phone.
   const title = [...crumbs].reverse().find((crumb) => !crumb.view)?.label ?? '';
+  // A page whose board draws "‹ Parent" (the venue page) shows that instead:
+  // its own header carries the name, so the title bar would repeat it.
+  if (phoneBack) {
+    return (
+      <nav
+        data-testid="admin-phone-back"
+        style={{ padding: '12px 16px 0', marginBottom: 12 }}
+      >
+        <Link
+          href={phoneBack.href}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+            textDecoration: 'none',
+          }}
+        >
+          <ChevronLeft size={14} strokeWidth={1.8} aria-hidden />
+          {phoneBack.label}
+        </Link>
+      </nav>
+    );
+  }
   return (
     <header
       style={{
