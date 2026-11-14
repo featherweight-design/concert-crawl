@@ -1,3 +1,21 @@
+# [1.445.0](https://github.com/featherweight-design/concert-crawl/compare/v1.444.0...v1.445.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** bound the failure streak at the latest reset and keep the start line off the phone ([e7c3d07](https://github.com/featherweight-design/concert-crawl/commit/e7c3d079219a638ecd15405285960921aa510fc6))
+* **admin:** re-read the queue after a partial batch approval and fix the panel's review findings ([60d37fd](https://github.com/featherweight-design/concert-crawl/commit/60d37fdb5d87543568d90e54d84817644e6ea80c))
+* **admin:** refresh the queue quietly after a partial batch approval ([46eba8e](https://github.com/featherweight-design/concert-crawl/commit/46eba8e237f9c01332e4b95f4aab27b1227c4564))
+* **web:** address the update sheet review ([d6456e4](https://github.com/featherweight-design/concert-crawl/commit/d6456e4f5cb4c47aad4924e85908b6cda3d594d2))
+
+
+### Features
+
+* **admin:** open a price batch as a docked panel on desktop ([04fe4e7](https://github.com/featherweight-design/concert-crawl/commit/04fe4e7b1eeff2e99b7c32d20dec41aeaef418d7))
+* **api:** send the last full run and the failure streak on the admin venues list ([b943ad7](https://github.com/featherweight-design/concert-crawl/commit/b943ad79e6df823a125e9fcbdeceec31c7b7f7ae))
+* **web:** name the reader, the unchanged date, the failure streak and the re-crawl start ([d211d58](https://github.com/featherweight-design/concert-crawl/commit/d211d58c90861f4ee514cbfad90fefc640aa9683))
+* **web:** the price check update sheet as the B+ boards draw it ([3c95442](https://github.com/featherweight-design/concert-crawl/commit/3c954421646c3c759f2e108e50f39ae07fd21033))
+
 # [1.444.0](https://github.com/featherweight-design/concert-crawl/compare/v1.443.0...v1.444.0) (2026-11-14)
 
 
