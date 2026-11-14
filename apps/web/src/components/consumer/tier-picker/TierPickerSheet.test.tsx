@@ -288,42 +288,6 @@ describe('TierPickerSheet — logged out', () => {
     expect(signInLink.getAttribute('href')).toBe('/sign-in');
   });
 
-  // One gate, several reaches: an "I'm going!" tap is a reach for Concerts, so
-  // the Watching wording would name the wrong feature.
-  it('names Concerts when opened from the going CTA', () => {
-    render(
-      <TierPickerSheet
-        open
-        onClose={vi.fn()}
-        planState={planState('logged-out')}
-        scaRegion
-        entry="logged-out-going"
-      />,
-    );
-    const going = TIER_PICKER_COPY.header.loggedOut['logged-out-going'];
-    expect(screen.getByText(going.title)).toBeTruthy();
-    expect(
-      screen.queryByText(TIER_PICKER_COPY.header.loggedOut.default.title),
-    ).toBeNull();
-  });
-
-  it('names submitted prices when opened from the price form', () => {
-    render(
-      <TierPickerSheet
-        open
-        onClose={vi.fn()}
-        planState={planState('logged-out')}
-        scaRegion
-        entry="logged-out-price"
-      />,
-    );
-    const price = TIER_PICKER_COPY.header.loggedOut['logged-out-price'];
-    expect(screen.getByText(price.title)).toBeTruthy();
-    expect(
-      screen.queryByText(TIER_PICKER_COPY.header.loggedOut.default.title),
-    ).toBeNull();
-  });
-
   it('tier CTAs route to sign-up', () => {
     renderSheet(planState('logged-out'));
     fireEvent.click(
@@ -373,52 +337,6 @@ describe('TierPickerSheet — mobile accordion', () => {
     expect(premiumToggle.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(premiumToggle);
     expect(premiumToggle.getAttribute('aria-expanded')).toBe('true');
-  });
-
-  it('opens on initialTier instead of the plan-derived default (#1284)', () => {
-    mobileViewport = true;
-    render(
-      <TierPickerSheet
-        open
-        onClose={vi.fn()}
-        planState={planState('free')}
-        scaRegion
-        entry="post-signup"
-        initialTier="premium"
-      />,
-    );
-    const premiumToggle = screen.getByRole('button', {
-      name: new RegExp(TIER_PICKER_COPY.tiers.premium.tagline),
-    });
-    expect(premiumToggle.getAttribute('aria-expanded')).toBe('true');
-    const freeToggle = screen.getByRole('button', {
-      name: new RegExp(TIER_PICKER_COPY.tiers.free.tagline),
-    });
-    expect(freeToggle.getAttribute('aria-expanded')).toBe('false');
-  });
-
-  it('falls back to the default when initialTier is not on screen (#1284)', () => {
-    // The param is visitor-editable and Founder stops rendering once its
-    // window closes, so a tier that is not shown must not leave every row
-    // collapsed.
-    mobileViewport = true;
-    mockUseFounderWindow.mockReturnValue({
-      data: { state: 'closed', seatsTotal: 100, seatsRemaining: 0 },
-    });
-    render(
-      <TierPickerSheet
-        open
-        onClose={vi.fn()}
-        planState={planState('free')}
-        scaRegion
-        entry="post-signup"
-        initialTier="founder"
-      />,
-    );
-    const freeToggle = screen.getByRole('button', {
-      name: new RegExp(TIER_PICKER_COPY.tiers.free.tagline),
-    });
-    expect(freeToggle.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('shows the mobile footer rail', () => {

@@ -50,18 +50,17 @@ interface HeaderVariant {
   sub: string;
 }
 
-// One surface serving several reaches, on both sides of auth. Signed out, an
-// entry without its own variant falls back to the Watching wording; signed in
-// it falls back to the generic "Pick a lane", which is what an account-menu
-// open should read as. Resolved in ONE place so the eyebrow, the title and the
-// sub can never be drawn from three different variants.
+// One surface serving more than one reach. Signed out (a plan that has not
+// resolved) it reads the Watching wording whatever the entry; signed in, an
+// entry without its own variant falls back to the generic "Pick a lane", which
+// is what an account-menu open should read as. Resolved in ONE place so the
+// eyebrow, the title and the sub can never be drawn from three different
+// variants.
 function headerFor(entry: PickerEntry, loggedOut: boolean): HeaderVariant {
-  const variants: Partial<Record<PickerEntry, HeaderVariant>> = loggedOut
-    ? HEADER_COPY.loggedOut
-    : HEADER_COPY.signedIn;
-  return (
-    variants[entry] ?? (loggedOut ? HEADER_COPY.loggedOut.default : HEADER_COPY)
-  );
+  if (loggedOut) return HEADER_COPY.loggedOut.default;
+  const variants: Partial<Record<PickerEntry, HeaderVariant>> =
+    HEADER_COPY.signedIn;
+  return variants[entry] ?? HEADER_COPY;
 }
 
 export interface TierPickerSheetProps {
@@ -73,19 +72,10 @@ export interface TierPickerSheetProps {
   scaRegion: boolean;
   // Where the picker was opened from; picks the header copy (headerFor).
   entry: PickerEntry;
-  /**
-   * Where the free tier's Sign up CTA goes. Defaults to bare `/sign-up`; a
-   * caller with a pending action passes a URL that carries it through auth so
-   * the tour can hand it back afterwards (#794).
-   */
-  signUpHref?: string | undefined;
-  /**
-   * Which tier's card opens expanded, overriding the plan-derived default.
-   * Set when reopening on the tier a visitor picked before signing up (#1284);
-   * ignored when that tier is not among the visible ones.
-   */
-  initialTier?: TierKey | null | undefined;
 }
+
+/** Where the free tier's Sign up CTA goes. */
+const SIGN_UP_HREF = '/sign-up';
 
 interface CheckoutContext {
   tierKey: Exclude<TierKey, 'free'>;
@@ -202,8 +192,6 @@ export const TierPickerSheet = ({
   planState,
   scaRegion,
   entry,
-  signUpHref = '/sign-up',
-  initialTier = null,
 }: TierPickerSheetProps) => {
   const router = useRouter();
   const { getToken } = useAuth();
@@ -235,10 +223,7 @@ export const TierPickerSheet = ({
   useEffect(() => {
     if (!open) return;
     const shown = visibleTiers(windowView.state, state);
-    const preselected = shown.some((tier) => tier.key === initialTier)
-      ? initialTier
-      : null;
-    setExpandedTier(preselected ?? defaultExpandedTier(shown, state));
+    setExpandedTier(defaultExpandedTier(shown, state));
     // Reset the accordion each time the sheet opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -314,7 +299,7 @@ export const TierPickerSheet = ({
         // there is an account to charge (#1284). Free carries nothing: signing
         // up is the whole of what its CTA promises.
         router.push(
-          appendPendingTier(signUpHref, isPaidTier(tierKey) ? tierKey : null),
+          appendPendingTier(SIGN_UP_HREF, isPaidTier(tierKey) ? tierKey : null),
         );
         return;
       }
@@ -362,7 +347,7 @@ export const TierPickerSheet = ({
         })();
       }
     },
-    [getToken, router, abandonSubscription, signUpHref],
+    [getToken, router, abandonSubscription],
   );
 
   // Founder post-claim seat reveal (#781 §3.3) — replaces the sheet after

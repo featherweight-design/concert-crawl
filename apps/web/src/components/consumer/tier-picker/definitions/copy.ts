@@ -7,9 +7,9 @@ export const TIER_PICKER_COPY = {
     eyebrow: 'Upgrade · pick a lane',
     title: 'Pick a lane.',
     sub: "We run on infrastructure, not VC money. Subscriptions cover what costs us money to run. That's it.",
-    // Keyed by the entry point that opened the picker, so the gate names the
-    // thing the visitor just reached for. `default` covers every signed-out
-    // entry that isn't a specific feature reach.
+    // The signed-out header: what shows when the picker has no plan to read
+    // yet (the logged-out shape). A signed-out tap goes to sign-in now, so only
+    // `default` remains.
     loggedOut: {
       default: {
         eyebrow: 'Watching · free with an account',
@@ -17,41 +17,6 @@ export const TIER_PICKER_COPY = {
         sub:
           'Watching is free. It just needs an account to save to. Start on Free; ' +
           'pick a lane later if you ever want to chip in.',
-      },
-      'logged-out-going': {
-        eyebrow: 'Concerts · free with an account',
-        title: 'Keep a record of every show you go to.',
-        sub:
-          "Saying you're going is free. It just needs an account to save to. " +
-          'Start on Free; pick a lane later if you ever want to chip in.',
-      },
-      'logged-out-follow': {
-        eyebrow: 'Following · free with an account',
-        title: 'Never miss the next one they book.',
-        sub:
-          'Following is free. It just needs an account to save to. ' +
-          'Start on Free; pick a lane later if you ever want to chip in.',
-      },
-      'logged-out-price': {
-        eyebrow: 'Submitted prices · free with an account',
-        title: 'Tell everyone what it actually cost.',
-        sub:
-          'Submitting a price is free. It just needs an account to attach it to. ' +
-          'Start on Free; pick a lane later if you ever want to chip in.',
-      },
-      'logged-out-artist-report': {
-        eyebrow: 'Artist reports · free with an account',
-        title: 'Help us match the right artist.',
-        sub:
-          'Reporting is free. It just needs an account to stand behind it. ' +
-          'Start on Free; pick a lane later if you ever want to chip in.',
-      },
-      'logged-out-report': {
-        eyebrow: 'Status reports · free with an account',
-        title: 'Let the room know before they go.',
-        sub:
-          'Reporting is free. It just needs an account to stand behind it. ' +
-          'Start on Free; pick a lane later if you ever want to chip in.',
       },
     },
     // Keyed the same way, for the reaches a SIGNED-IN visitor can hit. Only
