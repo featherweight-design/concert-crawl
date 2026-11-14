@@ -269,7 +269,7 @@ export const CreateCrewSheet = ({
           className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg disabled:cursor-default"
           style={{
             background: canSubmit
-              ? 'linear-gradient(90deg, var(--signal), var(--accent))'
+              ? 'linear-gradient(90deg, var(--signal), var(--cta-end))'
               : 'var(--surface-2)',
             boxShadow: canSubmit
               ? '0 8px 26px -10px color-mix(in srgb, var(--signal) 70%, transparent)'

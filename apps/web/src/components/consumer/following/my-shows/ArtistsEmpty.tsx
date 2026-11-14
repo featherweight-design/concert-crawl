@@ -11,7 +11,7 @@
 
 import Link from 'next/link';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
-import { MY_SHOWS_GRADIENT } from '@/components/consumer/history/definitions/constants';
+import { MY_SHOWS_CTA_GRADIENT } from '@/components/consumer/history/definitions/constants';
 import { MyShowsEmptyCard } from '@/components/consumer/history/MyShowsEmptyCard';
 import { PASSPORT_CTA_GLOW } from '@/components/consumer/passport/definitions/styles';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
@@ -29,7 +29,7 @@ const primaryStyle = {
   minHeight: 44,
   padding: '12px 24px',
   borderRadius: 14,
-  backgroundImage: MY_SHOWS_GRADIENT,
+  backgroundImage: MY_SHOWS_CTA_GRADIENT,
   color: 'var(--fg-on-accent)',
   fontFamily: 'var(--font-ui)',
   fontSize: 15,

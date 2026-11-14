@@ -38,6 +38,8 @@ const inviteUrl = (token: string): string => {
 const shortLink = (): string => inviteUrl('').replace(/^https?:\/\//, '');
 
 const GRADIENT = 'linear-gradient(90deg, var(--signal), var(--accent))';
+// The filled Copy link button; GRADIENT stays for the expiry bar's fill.
+const CTA_GRADIENT = 'linear-gradient(90deg, var(--signal), var(--cta-end))';
 
 const ghost: React.CSSProperties = {
   minHeight: 44,
@@ -326,7 +328,7 @@ export const InviteSheet = ({
                     flex: 1,
                     minHeight: 48,
                     fontSize: 15,
-                    background: copied ? 'transparent' : GRADIENT,
+                    background: copied ? 'transparent' : CTA_GRADIENT,
                     border: copied ? ghost.border : 'none',
                     color: copied ? 'var(--signal)' : 'var(--fg-on-accent)',
                     boxShadow: copied
