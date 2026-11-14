@@ -83,6 +83,7 @@ describe('countsFrom', () => {
       soldout: 0,
       postponed: 1,
       cancelled: 0,
+      moved: 0,
       delisted: 0,
       played: 0,
     };
@@ -91,9 +92,12 @@ describe('countsFrom', () => {
 
   it('keeps only the statuses it knows, with counts', () => {
     expect(
-      countsFrom(counts({ byStatus: { soldout: 3, moved: 2, played: 'x' } }))
-        ?.byStatus,
-    ).toEqual({ soldout: 3 });
+      countsFrom(
+        counts({
+          byStatus: { soldout: 3, moved: 2, rescheduled: 4, played: 'x' },
+        }),
+      )?.byStatus,
+    ).toEqual({ soldout: 3, moved: 2 });
   });
 
   it('fails on a missing count or a malformed venue, so the page says Couldn’t load', () => {
