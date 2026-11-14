@@ -613,6 +613,13 @@ export interface CrawlBatchDetail extends CrawlBatch {
 /** Why Crawl all leaves a venue out (blocked wins, then paused, hidden, unverified). */
 export type CrawlAllSkipReason = 'blocked' | 'paused' | 'hidden' | 'unverified';
 
+/** The average span and LLM cost (to the cent) of recent nightly crawls. */
+export interface UsualNightly {
+  durationMs: number;
+  costUsd: number;
+  nights: number;
+}
+
 /** GET /v1/admin/crawl/estimate: what the Crawl all confirm says first. */
 export interface CrawlAllEstimate {
   /** Every venue not removed. */
@@ -624,7 +631,7 @@ export interface CrawlAllEstimate {
    * The average of recent nightly crawls, or null with no history (the
    * confirm then drops its time and cost line).
    */
-  usual: { durationMs: number; costUsd: number; nights: number } | null;
+  usual: UsualNightly | null;
 }
 
 // CrawlRun — represents the JSON-serialized API response shape.

@@ -24,6 +24,7 @@ import {
   type BatchTriggerInput,
 } from './lib/crawl-batches.js';
 import { crawlAllSkipReason } from './lib/crawl-all.js';
+import { addDays, denverDate } from './lib/needs-you/keys.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // A run row's error text is the whole message the crawl threw; the list only
@@ -158,7 +159,12 @@ crawlBatchesAdminRouter.get('/estimate', async (ctx) => {
     total: venueRows.length,
     eligible: venueRows.length - skipped.length,
     skipped,
-    usual: usualNightly({ ...window, now }),
+    // The window starts mid-night, so its first date is partial.
+    usual: usualNightly({
+      ...window,
+      now,
+      firstNight: addDays(denverDate(from), 1),
+    }),
   };
   return ctx.json({ success: true, data: estimate });
 });
