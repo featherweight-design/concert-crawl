@@ -127,7 +127,7 @@ describe('GET /v1/admin/audit-log/actors', () => {
 
   it('lists staff and that day’s actors with counts, you first', async () => {
     setAuth('admin');
-    await seedUserProfile(ME, { handle: 'huey', avatarColor: 'pulse' });
+    await seedUserProfile(ME, { handle: 'huey', avatarColor: 'signal' });
     await seedUserProfile('sub-1', { handle: 'sam' });
     await seedUserProfile('sub-2', { handle: 'alex' });
     await seedUserProfile('former', { handle: 'zed' });
@@ -147,7 +147,7 @@ describe('GET /v1/admin/audit-log/actors', () => {
     expect(data).toEqual([
       {
         handle: 'huey',
-        avatarColor: 'pulse',
+        avatarColor: 'signal',
         avatarSecondColor: null,
         count: 0,
         you: true,
@@ -187,8 +187,8 @@ describe('GET /v1/admin/audit-log rows', () => {
     setAuth('admin');
     await seedUserProfile(ME, {
       handle: 'huey',
-      avatarColor: 'pulse',
-      avatarSecondColor: 'drip',
+      avatarColor: 'signal',
+      avatarSecondColor: 'accent',
     });
     await seedRow(ME, new Date(Date.now() - 60_000));
     await seedRow('system:crawler', new Date());
@@ -196,7 +196,7 @@ describe('GET /v1/admin/audit-log rows', () => {
     const { data } = await get<AuditLogItem[]>('');
     expect(data.map((row) => row.actorAvatar)).toEqual([
       null,
-      { avatarColor: 'pulse', avatarSecondColor: 'drip' },
+      { avatarColor: 'signal', avatarSecondColor: 'accent' },
     ]);
   });
 });
