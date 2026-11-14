@@ -430,15 +430,25 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   const [actorsFailed, setActorsFailed] = useState(false);
   useEffect(() => {
     const ctrl = new AbortController();
+    // Another day's counts never stand in for this one's.
+    setActors([]);
     setActorsFailed(false);
-    readLogActors(getToken, day, area ?? undefined, ctrl.signal)
-      .then((next) => {
+    void (async () => {
+      try {
+        const next = await readLogActors(
+          getToken,
+          day,
+          area ?? undefined,
+          ctrl.signal,
+        );
         if (!ctrl.signal.aborted) setActors(next);
-      })
-      .catch(() => {
+      } catch (err) {
+        if (ctrl.signal.aborted) return;
         // The menu still offers Anyone; it says the list didn't load.
-        if (!ctrl.signal.aborted) setActorsFailed(true);
-      });
+        console.warn('[admin] Activity log: the Anyone list failed', err);
+        setActorsFailed(true);
+      }
+    })();
     return () => ctrl.abort();
   }, [getToken, day, area]);
 
@@ -454,7 +464,7 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
       if (mine !== current.current) return;
       setShown(page);
     } catch {
-      // An aborted read (an unmount, or a newer day) is not a failure.
+      // An aborted read (an unmount, a newer day or filter) is not a failure.
       if (mine !== current.current || mine.signal.aborted) return;
       setFailed(true);
     }
@@ -491,7 +501,8 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
       if (mine === current.current) moreBusy.current = false;
     }
   };
-  // A new day's read drops any Load more still running for the old one.
+  // A new read (another day, person or page) drops any Load more still
+  // running for the old one.
   useEffect(() => {
     moreBusy.current = false;
   }, [load]);
