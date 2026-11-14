@@ -96,6 +96,25 @@ describe('GET /v1/history/past-shows', () => {
     expect(data.nextCursor).toBeNull();
   });
 
+  // The Add sheet frames each row's art in the lead genre.
+  it('returns the lead genre, or null when the show has none', async () => {
+    const venue = await seedVenue();
+    const rock = await seedEvent(venue.id, {
+      artist: 'Rocker',
+      date: '2026-06-01',
+      genre: ['Rock', 'Indie'],
+    });
+    const plain = await seedEvent(venue.id, {
+      artist: 'Plain',
+      date: '2026-06-02',
+      genre: null,
+    });
+    const data = await getList();
+    const byId = new Map(data.rows.map((row) => [row.eventId, row.genre]));
+    expect(byId.get(rock.id)).toBe('Rock');
+    expect(byId.get(plain.id)).toBeNull();
+  });
+
   // The crawler can keep several rows for one night; listing each would let a
   // reader stamp the same night twice, and `total` would count rows.
   describe('one row per night', () => {

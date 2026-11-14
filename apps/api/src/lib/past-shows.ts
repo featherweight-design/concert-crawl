@@ -198,6 +198,7 @@ export const loadPastShows = async ({
       venueName: venues.name,
       venueSlug: venues.slug,
       date: events.date,
+      genre: events.genre,
       attendingAt: userEvents.attendingAt,
     })
     .from(events)
@@ -222,6 +223,7 @@ export const loadPastShows = async ({
     venueSlug: row.venueSlug,
     date: row.date,
     dateLabel: dateLabel(row.date),
+    genre: row.genre?.[0] ?? null,
     attendingAt: row.attendingAt?.toISOString() ?? null,
   }));
 

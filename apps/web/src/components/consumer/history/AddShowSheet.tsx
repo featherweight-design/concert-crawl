@@ -12,6 +12,8 @@ import { BottomSheet } from '@/components/pwa/BottomSheet';
 import { Panel } from '@/components/consumer/image-slot';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { WentPill } from '@/components/consumer/went-pill/WentPill';
+import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
+import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePastShows } from '@/lib/queries/use-past-shows';
 import { HISTORY_COPY } from './definitions/copy';
@@ -86,12 +88,23 @@ const ShowRow = ({ row }: { row: PastShowRow }) => (
     data-testid="add-show-item"
     className="flex items-center gap-3 border-t border-[var(--border)] py-2.5 first:border-t-0"
   >
-    <Panel
-      surface="artist"
-      name={row.artist}
-      photoUrl={row.artistPhotoUrl}
-      size={44}
-    />
+    {/* The lead genre rings the art, as every other row does (B+ rule 2). */}
+    <span
+      data-testid="add-show-image-ring"
+      className="block shrink-0 overflow-hidden rounded-[10px]"
+      style={{
+        width: 44,
+        height: 44,
+        boxShadow: genreRing(genreColor(row.genre) ?? NEUTRAL_GENRE_COLOR),
+      }}
+    >
+      <Panel
+        surface="artist"
+        name={row.artist}
+        photoUrl={row.artistPhotoUrl}
+        size={44}
+      />
+    </span>
     <span className="min-w-0 flex-1">
       <span
         className="block truncate text-[14.5px] font-bold"
