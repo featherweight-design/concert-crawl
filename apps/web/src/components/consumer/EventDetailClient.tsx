@@ -834,6 +834,39 @@ export function EventDetailPriceBlock({
               setActiveCorroborationId(null);
               setSubmitPriceOpen(true);
             }}
+            // The viewer's own price opens the sheet in its self-locked
+            // state: Edit and Withdraw, as the price card's own do.
+            isSelfLocked={activeAtt.pending.isSubmitter}
+            onEdit={() => {
+              setActiveCorroborationId(null);
+              setPreselectedTier(activeAtt.tier);
+              setSubmitPriceEditMode(true);
+              setSubmitPriceOpen(true);
+            }}
+            onWithdraw={() => {
+              const withdrawnId = activeAtt.pending.id;
+              setActiveCorroborationId(null);
+              void (async () => {
+                const token = await getToken();
+                if (!token) return;
+                try {
+                  const res = await fetch(
+                    `${API_URL}/v1/submissions/${withdrawnId}`,
+                    {
+                      method: 'DELETE',
+                      headers: { Authorization: `Bearer ${token}` },
+                    },
+                  );
+                  if (res.ok) {
+                    router.refresh();
+                  } else {
+                    console.error('Withdraw failed', res.status);
+                  }
+                } catch (err) {
+                  console.error('Withdraw failed', err);
+                }
+              })();
+            }}
           />
         )}
       </>
@@ -1848,6 +1881,45 @@ export function EventDetailPriceBlock({
             onSubmitUpdate={() => {
               setActiveCorroborationId(null);
               setSubmitPriceOpen(true);
+            }}
+            // The viewer's own price opens the sheet in its self-locked
+            // state: Edit and Withdraw, as the price card's own do.
+            isSelfLocked={activeCorroboration.isSubmitter}
+            onEdit={() => {
+              setActiveCorroborationId(null);
+              setPreselectedTier(
+                isTierValue(activeCorroboration.tier)
+                  ? activeCorroboration.tier
+                  : null,
+              );
+              setSubmitPriceEditMode(true);
+              setSubmitPriceOpen(true);
+            }}
+            onWithdraw={() => {
+              const withdrawnId = activeCorroboration.id;
+              setActiveCorroborationId(null);
+              void (async () => {
+                const token = await getToken();
+                if (!token) return;
+                try {
+                  const res = await fetch(
+                    `${API_URL}/v1/submissions/${withdrawnId}`,
+                    {
+                      method: 'DELETE',
+                      headers: { Authorization: `Bearer ${token}` },
+                    },
+                  );
+                  if (res.ok) {
+                    setLocalSubmissions((prev) =>
+                      prev.filter((item) => item.id !== withdrawnId),
+                    );
+                  } else {
+                    console.error('Withdraw failed', res.status);
+                  }
+                } catch (err) {
+                  console.error('Withdraw failed', err);
+                }
+              })();
             }}
           />
         )}

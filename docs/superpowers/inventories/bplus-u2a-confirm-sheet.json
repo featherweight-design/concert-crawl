@@ -1,0 +1,32 @@
+{
+  "feature": "U2a · Price confirm sheet (B+ rail, detail card, radio, self-locked state)",
+  "note": "Spec-fidelity package U2, confirm half. Needs CC_PENDING_EVENT_ID: an upcoming event with a pending price from another account (the audit user must not be its submitter). Boards (design/design_handoff_bplus_redesign/screens/): confirm = 08-prices-and-status/more-p-check_m (phone) and more-p-check_d (desktop), 06-states/bp-s-confirm_price_m; self-locked = 06-states/bp-s-confirm_self_m (needs a pending price the audit user submitted; walked by hand). The selected option's and the CTA's accent is held for Design: the 08 board draws pink and the 06 board green. Electric only; the audit account's saved theme must be Electric.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "rows": [
+    {
+      "id": "confirm-sheet",
+      "label": "Confirm price sheet, one option picked",
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"pending-confirm\"]"
+        },
+        { "settle": 3000 },
+        { "click": "[data-testid=\"pending-confirm\"]" },
+        { "waitDialog": "^Corroborate price submission$" },
+        { "wait": "[data-testid=\"confirm-rail\"]" },
+        { "clickRole": "radio", "name": "^Same vendor" },
+        { "settle": 800 }
+      ]
+    }
+  ]
+}

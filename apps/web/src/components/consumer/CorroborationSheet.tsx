@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { CheckGlyph, LockGlyph, PendingTrustPill } from './glyphs';
+import { Users } from 'lucide-react';
+import { CheckGlyph, PendingTrustPill } from './glyphs';
+import { PriceRailMark } from './price-rail/PriceRailMark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
@@ -24,8 +26,21 @@ const formatTimeAgo = (isoDate: string): string => {
 };
 
 // ── Color constants ──────────────────────────────────────────────
+// HELD FOR DESIGN: the selected option's and the CTA's accent. The 08 board
+// (more-p-check_m) draws it pink and the 06 board (bp-s-confirm_price_m) draws
+// it green, and no ruling picks one, so it stays the azure it is on main.
 const AZURE = 'oklch(0.62 0.12 240)';
 const GOLD = 'oklch(0.66 0.14 78)';
+
+const RAIL_TEXT = {
+  fontFamily: 'JetBrains Mono, monospace',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase' as const,
+  color: 'var(--fg-muted)',
+  whiteSpace: 'nowrap' as const,
+};
 
 // ── Token shape ──────────────────────────────────────────────────
 interface PendingTokens {
@@ -39,10 +54,12 @@ const pendingTokens = (
   kind: 'community' | 'boxoffice' | 'resale',
 ): PendingTokens => {
   if (kind !== 'boxoffice') {
+    // The community card is drawn in the theme's signal, not the old fixed
+    // azure (B+ more-p-check_m).
     return {
-      color: AZURE,
-      bg: `color-mix(in oklab, ${AZURE} 6%, var(--surface-1))`,
-      border: `color-mix(in oklab, ${AZURE} 32%, var(--border))`,
+      color: 'var(--signal)',
+      bg: `color-mix(in oklab, var(--signal) 10%, var(--surface-1))`,
+      border: `color-mix(in oklab, var(--signal) 38%, var(--border))`,
     };
   }
 
@@ -87,6 +104,8 @@ export interface CorroborationSheetProps {
   onConfirm: (method: ApiConfirmMethod) => void;
   onWithdraw?: () => void;
   onSubmitUpdate: () => void;
+  /** The self-locked sheet's Edit; without it Edit falls back to onSubmitUpdate. */
+  onEdit?: () => void;
 }
 
 // ── Sub-component: SubmissionDetailCard ──────────────────────────
@@ -116,30 +135,11 @@ const SubmissionDetailCard = ({
   const tokens = pendingTokens(kind);
 
   const byNode = (() => {
-    if (submitter === null) {
-      return (
-        <span
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '10px',
-            color: 'var(--fg-muted)',
-          }}
-        >
-          {copy.vendorLabel === 'VENDOR'
-            ? copy.viaAnonymous
-            : copy.viaAnonymous}
-        </span>
-      );
-    }
+    // Both take the row's Inter value style; the handle stays out of session
+    // capture.
+    if (submitter === null) return <span>{copy.viaAnonymous}</span>;
     return (
-      <span
-        className="ph-no-capture"
-        style={{
-          fontFamily: 'JetBrains Mono, monospace',
-          fontSize: '10px',
-          color: 'var(--fg-muted)',
-        }}
-      >
+      <span className="ph-no-capture">
         {copy.viaHandlePrefix}
         {submitter.handle}
       </span>
@@ -148,15 +148,17 @@ const SubmissionDetailCard = ({
 
   const labelStyle = {
     fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '9px',
+    fontSize: '10px',
     color: 'var(--fg-subtle)',
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.06em',
+    letterSpacing: '0.1em',
   };
   const valueStyle = {
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '10px',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 600,
+    fontSize: '14px',
     color: 'var(--fg)',
+    textAlign: 'right' as const,
   };
 
   return (
@@ -164,70 +166,87 @@ const SubmissionDetailCard = ({
       style={{
         background: tokens.bg,
         border: `1px solid ${tokens.border}`,
-        borderRadius: '12px',
+        borderRadius: '16px',
         overflow: 'hidden',
       }}
     >
       <div
         style={{
-          padding: '12px 14px',
+          padding: '14px 16px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '10px',
         }}
       >
-        {/* Price + tier + chip */}
+        {/* Price and tier left, the trust pill top right (B+ more-p-check_m) */}
         <div
           style={{
             display: 'flex',
-            alignItems: 'baseline',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
             gap: '10px',
-            flexWrap: 'wrap',
           }}
         >
-          <span
+          <div
             style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 800,
-              fontSize: '30px',
-              color: 'var(--fg)',
-              letterSpacing: '-0.025em',
-              lineHeight: 1.05,
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '10px',
+              flexWrap: 'wrap',
             }}
           >
-            {ceiling !== undefined && ceiling > floor
-              ? `$${floor}–$${ceiling}`
-              : `$${floor}`}
-          </span>
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '11px',
-              color: 'var(--fg-muted)',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              fontWeight: 700,
-            }}
-          >
-            {tier}
-          </span>
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 800,
+                fontSize: '30px',
+                color: 'var(--fg)',
+                letterSpacing: '-0.025em',
+                lineHeight: 1.05,
+              }}
+            >
+              {ceiling !== undefined && ceiling > floor
+                ? `$${floor}–$${ceiling}`
+                : `$${floor}`}
+            </span>
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '11px',
+                color: 'var(--fg-muted)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+              }}
+            >
+              {tier}
+            </span>
+          </div>
           <PendingTrustPill kind={kind} />
         </div>
 
-        {/* VENDOR / BY / WHEN rows */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'auto 1fr',
-            gap: '4px 12px',
-          }}
-        >
-          <span style={labelStyle}>{copy.vendorLabel}</span>
-          <span style={valueStyle}>{vendorDisplayName(vendor)}</span>
-          <span style={labelStyle}>{copy.byLabel}</span>
-          <span style={valueStyle}>{byNode}</span>
-          <span style={labelStyle}>{copy.whenLabel}</span>
-          <span style={valueStyle}>{formatTimeAgo(submittedAt)}</span>
+        {/* VENDOR / BY / WHEN: hairline-divided rows, values right-aligned */}
+        <div>
+          {[
+            [copy.vendorLabel, vendorDisplayName(vendor)],
+            [copy.byLabel, byNode],
+            [copy.whenLabel, formatTimeAgo(submittedAt)],
+          ].map(([label, value]) => (
+            <div
+              key={label as string}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                padding: '8px 0',
+                borderTop: `1px solid ${tokens.border}`,
+              }}
+            >
+              <span style={labelStyle}>{label}</span>
+              <span style={valueStyle}>{value}</span>
+            </div>
+          ))}
         </div>
 
         {/* Box-office face-value note */}
@@ -307,8 +326,8 @@ const VerifyOption = ({
         display: 'flex',
         alignItems: 'flex-start',
         gap: '12px',
-        padding: '12px 14px',
-        borderRadius: '10px',
+        padding: '14px 16px',
+        borderRadius: '14px',
         border: isSelected
           ? `1.5px solid ${accentColor}`
           : '1px solid var(--border)',
@@ -319,39 +338,33 @@ const VerifyOption = ({
         transition: 'border-color 0.12s, background 0.12s',
       }}
     >
-      {/* Radio dot */}
+      {/* Radio: a ring, with an inner dot when selected (B+ more-p-check_m) */}
       <div
+        data-testid="verify-radio"
         style={{
-          width: '16px',
-          height: '16px',
+          width: '18px',
+          height: '18px',
           borderRadius: '50%',
           flexShrink: 0,
-          marginTop: '2px',
+          marginTop: '1px',
           border: isSelected
             ? `2px solid ${accentColor}`
-            : '1.5px solid var(--border)',
-          background: isSelected ? accentColor : 'transparent',
+            : '1.5px solid var(--border-strong)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
         {isSelected && (
-          <svg
-            width="9"
-            height="7"
-            viewBox="0 0 9 7"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M1 3.5L3.5 6L8 1"
-              stroke="var(--fg-on-accent)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <span
+            data-testid="verify-radio-dot"
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: accentColor,
+            }}
+          />
         )}
       </div>
 
@@ -392,6 +405,7 @@ export const CorroborationSheet = ({
   onConfirm,
   onWithdraw,
   onSubmitUpdate,
+  onEdit,
 }: CorroborationSheetProps) => {
   const { isLoaded, isSignedIn } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<VerifyMethod | null>(
@@ -399,6 +413,9 @@ export const CorroborationSheet = ({
   );
 
   const accentColor = submission.kind === 'boxoffice' ? GOLD : AZURE;
+  // The rail's dot and code: the accent while confirmable, amber when the
+  // viewer's own price (bp-s-confirm_self_m).
+  const stateColor = isSelfLocked ? 'var(--warning)' : accentColor;
 
   const isBoxOfficeSubmission = submission.kind === 'boxoffice';
 
@@ -463,41 +480,80 @@ export const CorroborationSheet = ({
       sheetHeight="tall"
       header={
         <>
+          {/* The rail (B+ bp-s-confirm_price_m, bp-s-confirm_self_m): the mark,
+              a state dot, the sheet's name, a hairline, the state's code, and
+              a close tile. The state colour is the accent while confirmable
+              and amber when the price is the viewer's own. */}
           <div
+            data-testid="confirm-rail"
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 10,
+              gap: 10,
+              marginBottom: 14,
             }}
           >
+            <PriceRailMark />
             <span
+              aria-hidden="true"
               style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: 9,
-                color: 'var(--fg-subtle)',
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.08em',
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                flexShrink: 0,
+                background: stateColor,
+                boxShadow: `0 0 0 3px color-mix(in oklab, ${stateColor} 22%, transparent)`,
               }}
+            />
+            <span style={RAIL_TEXT}>{copy.eyebrow}</span>
+            <span
+              aria-hidden="true"
+              style={{
+                flex: 1,
+                height: 1,
+                background: 'var(--border)',
+              }}
+            />
+            <span
+              data-testid="confirm-rail-status"
+              style={{ ...RAIL_TEXT, color: stateColor }}
             >
-              {copy.eyebrow}
+              {isSelfLocked
+                ? copy.selfLocked.railTag
+                : copy.status(submission.confirms, submission.needed)}
             </span>
             <button
               type="button"
               onClick={onClose}
+              aria-label={copy.closeAriaLabel}
               style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: 9,
-                color: 'var(--fg-subtle)',
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.08em',
-                background: 'none',
-                border: 'none',
-                padding: '4px 0',
+                width: 30,
+                height: 30,
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 9,
+                border: '1px solid var(--border-strong)',
+                background: 'transparent',
+                color: 'var(--fg-muted)',
                 cursor: 'pointer',
               }}
             >
-              {copy.cancelButton}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M2 2l8 8M10 2l-8 8"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -512,7 +568,9 @@ export const CorroborationSheet = ({
                 lineHeight: 1.1,
               }}
             >
-              {copy.heading(submission.floor, submission.ceiling)}
+              {isSelfLocked
+                ? copy.selfLocked.heading(submission.floor, submission.ceiling)
+                : copy.heading(submission.floor, submission.ceiling)}
             </h2>
             {!isSelfLocked && (
               <p
@@ -543,18 +601,18 @@ export const CorroborationSheet = ({
           >
             <button
               type="button"
-              onClick={onSubmitUpdate}
+              onClick={onEdit ?? onSubmitUpdate}
               style={{
-                background: 'var(--surface-1)',
+                background: 'transparent',
                 border: '1px solid var(--border-strong)',
-                borderRadius: 10,
+                borderRadius: 999,
                 height: 44,
+                padding: '0 22px',
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 700,
-                fontSize: 13.5,
-                color: 'var(--fg)',
+                fontSize: 15,
+                color: 'var(--fg-muted)',
                 cursor: 'pointer',
-                width: '100%',
               }}
             >
               {copy.selfLocked.editButton}
@@ -564,15 +622,16 @@ export const CorroborationSheet = ({
               onClick={onWithdraw ?? onClose}
               style={{
                 background: 'transparent',
-                border: '1px solid var(--warning)',
-                borderRadius: 10,
+                border:
+                  '1px solid color-mix(in oklab, var(--warning) 60%, transparent)',
+                borderRadius: 999,
                 height: 44,
+                padding: '0 22px',
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 700,
-                fontSize: 13.5,
+                fontSize: 15,
                 color: 'var(--warning)',
                 cursor: 'pointer',
-                width: '100%',
               }}
             >
               {copy.selfLocked.withdrawButton}
@@ -628,7 +687,10 @@ export const CorroborationSheet = ({
                 lineHeight: 1.4,
               }}
             >
-              {copy.escapeLink}
+              {copy.escapeLead}{' '}
+              <span style={{ fontWeight: 800, color: 'var(--signal)' }}>
+                {copy.escapeAction}
+              </span>
             </button>
           </div>
         )
@@ -653,26 +715,34 @@ export const CorroborationSheet = ({
         {isSelfLocked ? (
           /* Self-locked waiting notice */
           <div
+            data-testid="self-locked-notice"
             style={{
-              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
-              border: '1px dashed var(--border-strong)',
-              borderRadius: 10,
-              padding: '12px 14px',
+              background: 'color-mix(in oklab, var(--warning) 6%, transparent)',
+              border:
+                '1px dashed color-mix(in oklab, var(--warning) 55%, transparent)',
+              borderRadius: 14,
+              padding: '14px 16px',
               display: 'flex',
               alignItems: 'flex-start',
-              gap: 10,
+              gap: 12,
             }}
           >
-            <LockGlyph size={14} />
+            <Users
+              size={18}
+              aria-hidden="true"
+              style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 2 }}
+            />
             <span
               style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: 9,
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 15,
                 color: 'var(--fg-muted)',
-                lineHeight: 1.5,
+                lineHeight: 1.45,
               }}
             >
-              {copy.selfLocked.waitingNotice}
+              {copy.selfLocked.waitingNotice(
+                Math.max(1, submission.needed - submission.confirms),
+              )}
             </span>
           </div>
         ) : (
@@ -696,13 +766,11 @@ export const CorroborationSheet = ({
               ))}
             </div>
 
-            {/* Honesty disclaimer */}
-            <div
+            {/* Honesty line: plain, centred and quiet (B+ more-p-check_m) */}
+            <p
               style={{
-                padding: '10px 12px',
-                background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
-                border: '1px solid var(--border)',
-                borderRadius: 10,
+                margin: 0,
+                textAlign: 'center',
                 fontFamily: 'Inter, system-ui',
                 fontSize: 12,
                 color: 'var(--fg-subtle)',
@@ -711,7 +779,7 @@ export const CorroborationSheet = ({
               }}
             >
               {copy.honestyDisclaimer}
-            </div>
+            </p>
           </>
         )}
       </div>
