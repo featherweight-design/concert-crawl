@@ -149,9 +149,12 @@ export const ShareSheet = ({
     [capabilities],
   );
 
-  // The poster is tinted by whatever theme the app is currently wearing.
-  // Without this the route silently falls back to its default and the card a
-  // Jade user shares comes back Electric.
+  // `theme` stays on the URL only because the route on main still tints the
+  // pre-B+ poster by it. The B+ card (U12 PR A) is theme-independent: once it
+  // lands, the theme no longer changes the image and the param is kept only so
+  // old ?theme= links stay valid. Drop it from the URL then (it splits one
+  // image into up to 9 identical CDN copies), not before, or a Jade user's
+  // pre-B+ card comes back Electric.
   const { theme } = useTheme();
   const imageUrl = posterImageUrl({
     eventId: event.id,
