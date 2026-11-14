@@ -20,6 +20,7 @@ import {
   CouldntLoadPage,
   DOCKED_PANEL_WIDTH,
   SaveFailedToast,
+  useIsNarrowDesktop,
   useIsPhone,
 } from '@/components/admin/primitives';
 import { CONTENT_GUTTER_X } from '@/components/admin/shell/content-pane';
@@ -103,6 +104,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const router = useRouter();
   const api = useMemo(() => needsYouApi(getToken), [getToken]);
   const isPhone = useIsPhone();
+  // Too narrow to dock the panel beside the list: it overlays, so the list
+  // keeps its full width (SidePanel makes the same call).
+  const narrowDesktop = useIsNarrowDesktop();
 
   const [rows, setRows] = useState<QueueRow[] | null>(null);
   const [count, setCount] = useState<NeedsYouCount | null>(null);
@@ -471,7 +475,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           flexDirection: 'column',
           gap: 16,
           marginRight:
-            selectedRow && !isPhone
+            selectedRow && !isPhone && !narrowDesktop
               ? DOCKED_PANEL_WIDTH - CONTENT_GUTTER_X
               : undefined,
         }}
