@@ -1,3 +1,22 @@
+# [1.474.0](https://github.com/featherweight-design/concert-crawl/compare/v1.473.0...v1.474.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** drop the merge source capture the rebase left unused ([40084f3](https://github.com/featherweight-design/concert-crawl/commit/40084f3c77d164a06023f105a5634155829a21de))
+* **crawler:** never erase a typed link, skip cancelled merge targets, keep locked bills unprojected ([7bc6eae](https://github.com/featherweight-design/concert-crawl/commit/7bc6eae5ba52aa81f15b4eca2f361b61955bb348))
+* **crawler:** re-check the lineup lock when the duplicate-night fill writes a bill ([6b1db46](https://github.com/featherweight-design/concert-crawl/commit/6b1db46cb1cabb7b0044ce7b9666bd98fd7fd885))
+* **crawler:** route merged listings past a stale read, drop cross-venue ones, quiet manual rows ([24d57c8](https://github.com/featherweight-design/concert-crawl/commit/24d57c88cf032c711f777d0ae22a99d0d7eec5ae))
+* **web:** address the Emails tab review ([fa58dc4](https://github.com/featherweight-design/concert-crawl/commit/fa58dc4d6b0e922850599a4f5178b3909dc3c051))
+* **web:** log Emails tab failures and clear a stale send toast ([6647166](https://github.com/featherweight-design/concert-crawl/commit/6647166231eca6170358e9c7ea7bb8a6f0f2197a))
+* **web:** tighten the Emails chip names to three words ([c3cb92a](https://github.com/featherweight-design/concert-crawl/commit/c3cb92ad8cb8eb3912f5dead4d7be38de249c957))
+
+
+### Features
+
+* **crawler:** manual shows, lineup lock and merged-listing routing (admin 4a-1) ([2f80828](https://github.com/featherweight-design/concert-crawl/commit/2f80828154bc9be11143c5ffb04bbdf870d68103))
+* **web:** add the Emails tab to Operations and retire Settings ([d4781ab](https://github.com/featherweight-design/concert-crawl/commit/d4781ab52de155ce3908e8b3ba3f1bde001a9b48))
+
 # [1.473.0](https://github.com/featherweight-design/concert-crawl/compare/v1.472.0...v1.473.0) (2026-11-14)
 
 
