@@ -12,6 +12,7 @@ import { BottomSheet } from '@/components/pwa/BottomSheet';
 import { Panel } from '@/components/consumer/image-slot';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { WentPill } from '@/components/consumer/went-pill/WentPill';
+import { SheetToastProvider } from '@/components/consumer/went-pill/SheetToast';
 import { slotRadiusFor } from '@/components/consumer/image-slot/lib/slot-metrics';
 import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
@@ -414,238 +415,242 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
       handle
       edgeFromSm
     >
-      {/* Pinned: the title, search and chips stay put while the list scrolls
+      {/* The sheet's own toast: above its bottom edge, cleared when it closes
+          (README 40). The went pills inside ask for it by context. */}
+      <SheetToastProvider open={open}>
+        {/* Pinned: the title, search and chips stay put while the list scrolls
           (README 44), and the keyboard shrinks the list, not this. */}
-      <div className="flex shrink-0 flex-col pt-2">
-        <span
-          aria-hidden="true"
-          className="text-[25px] font-black leading-[1.1]"
-          style={{ color: 'var(--fg)', letterSpacing: '-0.025em' }}
-        >
-          {COPY.title}
-        </span>
-        <p
-          className="m-0 mt-1.5 text-[13.5px] leading-[1.45]"
-          style={{ color: 'var(--fg-muted)' }}
-        >
-          {COPY.subtitle}
-        </p>
-
-        <label
-          className="mt-3.5 flex h-[46px] items-center gap-2.5 rounded-xl border-[1.5px] px-3.5 focus-within:border-[var(--signal)]"
-          style={{
-            borderColor: 'var(--border-strong)',
-            background: 'var(--bg)',
-            color: 'var(--fg-subtle)',
-          }}
-        >
-          <SearchIcon />
-          <input
-            type="search"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder={COPY.searchPlaceholder}
-            aria-label={COPY.searchPlaceholder}
-            className="min-w-0 flex-1 border-0 bg-transparent text-base outline-none lg:text-[15px]"
-            style={{ color: 'var(--fg)' }}
-          />
-          {text !== '' && (
-            <button
-              type="button"
-              onClick={() => setText('')}
-              aria-label={COPY.clearSearch}
-              className="cursor-pointer border-0 bg-transparent p-1 text-[18px] leading-none"
-              style={{ color: 'var(--fg-subtle)' }}
-            >
-              ×
-            </button>
-          )}
-        </label>
-
-        {/* A button group with `aria-pressed`: radio semantics would promise
-            arrow-key movement these chips do not have. The chip is drawn 32px
-            tall; a pseudo-element stretches its hit area to 44px. */}
-        <div
-          role="group"
-          aria-label={COPY.scopeAria}
-          className="mt-3 flex flex-wrap gap-1.5 pb-1"
-        >
-          {scopes.map((item) => {
-            const on = effectiveScope === item.value;
-            return (
-              <button
-                key={item.value}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setScope(item.value)}
-                className="relative inline-flex h-8 cursor-pointer before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']  items-center rounded-full border px-3 text-[13px] font-bold whitespace-nowrap"
-                style={{
-                  borderColor: on
-                    ? 'color-mix(in oklab, var(--signal) 50%, transparent)'
-                    : 'var(--border-strong)',
-                  background: on
-                    ? 'color-mix(in oklab, var(--signal) 12%, transparent)'
-                    : 'transparent',
-                  color: on ? 'var(--signal)' : 'var(--fg-muted)',
-                }}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pb-6">
-        {!searching && !scopeEmpty && (
+        <div className="flex shrink-0 flex-col pt-2">
+          <span
+            aria-hidden="true"
+            className="text-[25px] font-black leading-[1.1]"
+            style={{ color: 'var(--fg)', letterSpacing: '-0.025em' }}
+          >
+            {COPY.title}
+          </span>
           <p
-            data-testid="add-records-note"
-            className="m-0 mt-3 flex items-start gap-2.5 rounded-xl border border-dashed px-[13px] py-[11px] text-[12.5px] leading-[1.45]"
+            className="m-0 mt-1.5 text-[13.5px] leading-[1.45]"
+            style={{ color: 'var(--fg-muted)' }}
+          >
+            {COPY.subtitle}
+          </p>
+
+          <label
+            className="mt-3.5 flex h-[46px] items-center gap-2.5 rounded-xl border-[1.5px] px-3.5 focus-within:border-[var(--signal)]"
             style={{
               borderColor: 'var(--border-strong)',
-              background: 'var(--surface-1)',
-              color: 'var(--fg-muted)',
+              background: 'var(--bg)',
+              color: 'var(--fg-subtle)',
             }}
           >
-            <span style={{ color: 'var(--signal)', marginTop: 1 }}>
-              <CalendarIcon />
-            </span>
-            <span>
-              <strong style={{ color: 'var(--fg)' }}>
-                {COPY.recordsLead(SINCE)}
-              </strong>
-              {COPY.recordsRest}
-            </span>
-          </p>
-        )}
-
-        {searching && !isPending && !isError && rows.length > 0 && (
-          <span
-            data-testid="add-show-count"
-            className="mt-3 block text-[9.5px] font-bold"
-            style={{ ...mono, color: 'var(--fg-subtle)' }}
-          >
-            {COPY.resultCount(total)}
-          </span>
-        )}
-
-        {isPending ? (
-          <SkeletonRows count={SKELETON_ROWS} withLabel />
-        ) : isError && (rows.length === 0 || isPlaceholderData) ? (
-          <LoadError onRetry={() => void refetch()} />
-        ) : scopeEmpty ? (
-          <ScopeEmpty
-            scope={effectiveScope === 'follows' ? 'follows' : 'venues'}
-            onShowAll={() => setScope('all')}
-          />
-        ) : rows.length === 0 ? (
-          <div
-            data-testid="add-show-none"
-            className="flex flex-col gap-1.5 py-4"
-          >
-            <span
-              className="text-[18px] font-bold"
+            <SearchIcon />
+            <input
+              type="search"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder={COPY.searchPlaceholder}
+              aria-label={COPY.searchPlaceholder}
+              className="min-w-0 flex-1 border-0 bg-transparent text-base outline-none lg:text-[15px]"
               style={{ color: 'var(--fg)' }}
-            >
-              {COPY.emptyTitle}
-            </span>
-            <p
-              className="m-0 text-[15px] leading-[1.45]"
-              style={{ color: 'var(--fg-muted)' }}
-            >
-              {COPY.emptyBody(SINCE)}
-            </p>
-          </div>
-        ) : (
-          <>
-            {buckets.map((bucket) => (
-              <section key={bucket.key} aria-label={bucket.label}>
-                <h3
-                  className="m-0 mt-4 text-[9.5px] font-bold"
-                  style={{ ...mono, color: 'var(--fg-subtle)' }}
-                >
-                  {bucket.label}
-                </h3>
-                <ul className="m-0 mt-1 list-none p-0">
-                  {bucket.shows.map((row) => (
-                    <ShowRow key={row.eventId} row={row} />
-                  ))}
-                </ul>
-              </section>
-            ))}
-            {hasNextPage ? (
-              <ul className="m-0 list-none p-0">
-                <li ref={sentinel} aria-hidden="true" style={{ height: 1 }} />
-              </ul>
-            ) : null}
-            {isFetchingNextPage && (
-              <SkeletonRows count={PAGING_SKELETON_ROWS} />
-            )}
-            {/* A failed next page keeps the rows already loaded and offers its
-                own retry, rather than replacing the list. */}
-            {isFetchNextPageError && (
-              <div
-                role="alert"
-                className="flex flex-col items-start gap-2 py-3 text-[15px]"
-                style={{ color: 'var(--fg-muted)' }}
+            />
+            {text !== '' && (
+              <button
+                type="button"
+                onClick={() => setText('')}
+                aria-label={COPY.clearSearch}
+                className="cursor-pointer border-0 bg-transparent p-1 text-[18px] leading-none"
+                style={{ color: 'var(--fg-subtle)' }}
               >
-                <span>{COPY.loadFailed}</span>
+                ×
+              </button>
+            )}
+          </label>
+
+          {/* A button group with `aria-pressed`: radio semantics would promise
+            arrow-key movement these chips do not have. The chip is drawn 32px
+            tall; a pseudo-element stretches its hit area to 44px. */}
+          <div
+            role="group"
+            aria-label={COPY.scopeAria}
+            className="mt-3 flex flex-wrap gap-1.5 pb-1"
+          >
+            {scopes.map((item) => {
+              const on = effectiveScope === item.value;
+              return (
                 <button
+                  key={item.value}
                   type="button"
-                  onClick={() => void fetchNextPage()}
-                  className="min-h-11 cursor-pointer rounded-full border px-4 font-bold"
+                  aria-pressed={on}
+                  onClick={() => setScope(item.value)}
+                  className="relative inline-flex h-8 cursor-pointer before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']  items-center rounded-full border px-3 text-[13px] font-bold whitespace-nowrap"
                   style={{
-                    borderColor: 'var(--border-strong)',
-                    background: 'transparent',
-                    color: 'var(--fg)',
+                    borderColor: on
+                      ? 'color-mix(in oklab, var(--signal) 50%, transparent)'
+                      : 'var(--border-strong)',
+                    background: on
+                      ? 'color-mix(in oklab, var(--signal) 12%, transparent)'
+                      : 'transparent',
+                    color: on ? 'var(--signal)' : 'var(--fg-muted)',
                   }}
                 >
-                  {COPY.retry}
+                  {item.label}
                 </button>
-              </div>
-            )}
-            {!hasNextPage && (
-              <div
-                data-testid="add-show-end"
-                className="flex flex-col gap-2 pb-2 pt-3"
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pb-6">
+          {!searching && !scopeEmpty && (
+            <p
+              data-testid="add-records-note"
+              className="m-0 mt-3 flex items-start gap-2.5 rounded-xl border border-dashed px-[13px] py-[11px] text-[12.5px] leading-[1.45]"
+              style={{
+                borderColor: 'var(--border-strong)',
+                background: 'var(--surface-1)',
+                color: 'var(--fg-muted)',
+              }}
+            >
+              <span style={{ color: 'var(--signal)', marginTop: 1 }}>
+                <CalendarIcon />
+              </span>
+              <span>
+                <strong style={{ color: 'var(--fg)' }}>
+                  {COPY.recordsLead(SINCE)}
+                </strong>
+                {COPY.recordsRest}
+              </span>
+            </p>
+          )}
+
+          {searching && !isPending && !isError && rows.length > 0 && (
+            <span
+              data-testid="add-show-count"
+              className="mt-3 block text-[9.5px] font-bold"
+              style={{ ...mono, color: 'var(--fg-subtle)' }}
+            >
+              {COPY.resultCount(total)}
+            </span>
+          )}
+
+          {isPending ? (
+            <SkeletonRows count={SKELETON_ROWS} withLabel />
+          ) : isError && (rows.length === 0 || isPlaceholderData) ? (
+            <LoadError onRetry={() => void refetch()} />
+          ) : scopeEmpty ? (
+            <ScopeEmpty
+              scope={effectiveScope === 'follows' ? 'follows' : 'venues'}
+              onShowAll={() => setScope('all')}
+            />
+          ) : rows.length === 0 ? (
+            <div
+              data-testid="add-show-none"
+              className="flex flex-col gap-1.5 py-4"
+            >
+              <span
+                className="text-[18px] font-bold"
+                style={{ color: 'var(--fg)' }}
               >
-                {effectiveScope !== 'all' ? (
-                  <p
-                    className="m-0 text-[13.5px] leading-[1.45]"
-                    style={{ color: 'var(--fg-muted)' }}
+                {COPY.emptyTitle}
+              </span>
+              <p
+                className="m-0 text-[15px] leading-[1.45]"
+                style={{ color: 'var(--fg-muted)' }}
+              >
+                {COPY.emptyBody(SINCE)}
+              </p>
+            </div>
+          ) : (
+            <>
+              {buckets.map((bucket) => (
+                <section key={bucket.key} aria-label={bucket.label}>
+                  <h3
+                    className="m-0 mt-4 text-[9.5px] font-bold"
+                    style={{ ...mono, color: 'var(--fg-subtle)' }}
                   >
-                    {effectiveScope === 'venues'
-                      ? COPY.endLineVenues
-                      : COPY.endLineFollows}
-                  </p>
-                ) : searching && singleArtist ? (
-                  <p
-                    className="m-0 text-[15px]"
-                    style={{ color: 'var(--fg-muted)' }}
+                    {bucket.label}
+                  </h3>
+                  <ul className="m-0 mt-1 list-none p-0">
+                    {bucket.shows.map((row) => (
+                      <ShowRow key={row.eventId} row={row} />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+              {hasNextPage ? (
+                <ul className="m-0 list-none p-0">
+                  <li ref={sentinel} aria-hidden="true" style={{ height: 1 }} />
+                </ul>
+              ) : null}
+              {isFetchingNextPage && (
+                <SkeletonRows count={PAGING_SKELETON_ROWS} />
+              )}
+              {/* A failed next page keeps the rows already loaded and offers its
+                own retry, rather than replacing the list. */}
+              {isFetchNextPageError && (
+                <div
+                  role="alert"
+                  className="flex flex-col items-start gap-2 py-3 text-[15px]"
+                  style={{ color: 'var(--fg-muted)' }}
+                >
+                  <span>{COPY.loadFailed}</span>
+                  <button
+                    type="button"
+                    onClick={() => void fetchNextPage()}
+                    className="min-h-11 cursor-pointer rounded-full border px-4 font-bold"
+                    style={{
+                      borderColor: 'var(--border-strong)',
+                      background: 'transparent',
+                      color: 'var(--fg)',
+                    }}
                   >
-                    {COPY.resultsFooter(rows[0]?.artist ?? '', SINCE)}
-                  </p>
-                ) : (
-                  <>
-                    <span
-                      className="text-[11px] font-semibold"
-                      style={{ ...mono, color: 'var(--fg-subtle)' }}
-                    >
-                      {COPY.endDivider(SINCE_SHORT)}
-                    </span>
+                    {COPY.retry}
+                  </button>
+                </div>
+              )}
+              {!hasNextPage && (
+                <div
+                  data-testid="add-show-end"
+                  className="flex flex-col gap-2 pb-2 pt-3"
+                >
+                  {effectiveScope !== 'all' ? (
                     <p
-                      className="m-0 text-[15px] leading-[1.45]"
+                      className="m-0 text-[13.5px] leading-[1.45]"
                       style={{ color: 'var(--fg-muted)' }}
                     >
-                      {COPY.endLine}
+                      {effectiveScope === 'venues'
+                        ? COPY.endLineVenues
+                        : COPY.endLineFollows}
                     </p>
-                  </>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                  ) : searching && singleArtist ? (
+                    <p
+                      className="m-0 text-[15px]"
+                      style={{ color: 'var(--fg-muted)' }}
+                    >
+                      {COPY.resultsFooter(rows[0]?.artist ?? '', SINCE)}
+                    </p>
+                  ) : (
+                    <>
+                      <span
+                        className="text-[11px] font-semibold"
+                        style={{ ...mono, color: 'var(--fg-subtle)' }}
+                      >
+                        {COPY.endDivider(SINCE_SHORT)}
+                      </span>
+                      <p
+                        className="m-0 text-[15px] leading-[1.45]"
+                        style={{ color: 'var(--fg-muted)' }}
+                      >
+                        {COPY.endLine}
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </SheetToastProvider>
     </BottomSheet>
   );
 };

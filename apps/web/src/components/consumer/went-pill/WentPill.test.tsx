@@ -33,6 +33,7 @@ vi.mock('@/components/consumer/going/lib/attendance-toasts', () => ({
 import { GOING_COPY } from '@/components/consumer/going/definitions/copy';
 import { stampColorsFor } from '@/lib/passport/stamp';
 import { WentPill } from './WentPill';
+import { SheetToastProvider } from './SheetToast';
 
 const pill = (
   attending: boolean | null,
@@ -175,5 +176,66 @@ describe('WentPill', () => {
       `/sign-in?redirect_url=${encodeURIComponent('/history')}`,
     );
     expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  // Inside the Add sheet the toast lives in the sheet, not the house toaster.
+  describe('inside a sheet', () => {
+    const inSheet = (attending: boolean) =>
+      render(
+        <SheetToastProvider open>
+          <WentPill
+            eventId="ev1"
+            artist="Nightjar Choir"
+            venueSlug="larimer-lounge"
+            venueName="Larimer Lounge"
+            dateLabel="Jun 21, 2026"
+            attending={attending}
+            afterStamp="undo"
+          />
+        </SheetToastProvider>,
+      );
+
+    it('stamps with the venue stamp in the sheet toast, not the house toast', async () => {
+      inSheet(false);
+      fireEvent.click(screen.getByTestId('went-pill'));
+      const toast = await screen.findByTestId('sheet-toast');
+      expect(toast).toHaveTextContent(
+        GOING_COPY.toast.stamped('Nightjar Choir'),
+      );
+      expect(toast.querySelector('[data-venue-stamp]')).not.toBeNull();
+      expect(showStampedToast).not.toHaveBeenCalled();
+    });
+
+    it('names the show and offers Retry when the stamp fails, and Retry stamps again', async () => {
+      mutateAsync.mockRejectedValueOnce(new Error('down'));
+      inSheet(false);
+      fireEvent.click(screen.getByTestId('went-pill'));
+      const toast = await screen.findByTestId('sheet-toast');
+      expect(toast).toHaveTextContent(
+        GOING_COPY.toast.stampFailed('Nightjar Choir'),
+      );
+      expect(showAttendanceError).not.toHaveBeenCalled();
+      fireEvent.click(
+        screen.getByRole('button', { name: GOING_COPY.toast.retry }),
+      );
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+    });
+
+    it('raises the removed toast with Undo in the sheet when unmarked', async () => {
+      mutateAsync.mockResolvedValue({
+        going: false,
+        restore: { attendingAt: 'x', token: 't' },
+      });
+      inSheet(true);
+      fireEvent.click(screen.getByTestId('went-pill'));
+      const toast = await screen.findByTestId('sheet-toast');
+      expect(toast).toHaveTextContent(
+        GOING_COPY.toast.removed('Nightjar Choir'),
+      );
+      expect(
+        screen.getByRole('button', { name: GOING_COPY.toast.undo }),
+      ).toBeInTheDocument();
+      expect(showRemovedToast).not.toHaveBeenCalled();
+    });
   });
 });
