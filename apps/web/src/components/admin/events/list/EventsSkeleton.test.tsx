@@ -2,17 +2,17 @@
 
 import '@testing-library/jest-dom';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { EventsSkeleton } from './EventsSkeleton';
 
 afterEach(cleanup);
 
+// `__dirname`, not `import.meta.url`: under jsdom the module URL isn't a
+// file: URL, so fileURLToPath throws.
 const ADMIN_CSS = readFileSync(
-  fileURLToPath(
-    new URL('../../../../app/(protected)/admin/admin.css', import.meta.url),
-  ),
+  resolve(__dirname, '../../../../app/(protected)/admin/admin.css'),
   'utf8',
 );
 
