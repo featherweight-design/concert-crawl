@@ -1,3 +1,25 @@
+# [1.456.0](https://github.com/featherweight-design/concert-crawl/compare/v1.455.0...v1.456.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** address the polish review ([e51534f](https://github.com/featherweight-design/concert-crawl/commit/e51534fc1960e4b40833f430bc2e7e3314bd0b38))
+* **web:** drop the orphaned note and pin the crew tile colour ([0aa853f](https://github.com/featherweight-design/concert-crawl/commit/0aa853f2efbd2162d5ddd6aa129ba3a4d3e95926))
+* **web:** fire the sign-in redirect once, keep hash, route 403 through the gate ([9b244c8](https://github.com/featherweight-design/concert-crawl/commit/9b244c84e699c53ec2954102f709b5a1c2965271))
+* **web:** keep a long handle's fan chip inside the phone screen ([9c55418](https://github.com/featherweight-design/concert-crawl/commit/9c554182e76b1e74e06d440bfee9ed094d464921))
+* **web:** keep crew heading text on accent and cover the missed filled CTAs ([31b2f41](https://github.com/featherweight-design/concert-crawl/commit/31b2f4144d56509c731a426528b4dabc39b1c7c9))
+* **web:** keep long handles inside admin rows and bylines ([a113fba](https://github.com/featherweight-design/concert-crawl/commit/a113fba2dfbf1493067fef7492ce7b8ae6937eee))
+* **web:** no expanded state on the signed-out crew button ([c4b73e4](https://github.com/featherweight-design/concert-crawl/commit/c4b73e44bce8ba7dd8a2059a08d7e33de511fe9d))
+
+
+### Features
+
+* **admin:** quote only the show name in an event's panel title ([ebeddd9](https://github.com/featherweight-design/concert-crawl/commit/ebeddd988fb08368910617d7178e3c1fa041f110))
+* **web:** end filled CTA gradients on --cta-end ([c705ec4](https://github.com/featherweight-design/concert-crawl/commit/c705ec484aa38e7a35b8d4b959d85194f84c8e7c))
+* **web:** notification rows match the tab boards ([79f25b5](https://github.com/featherweight-design/concert-crawl/commit/79f25b5873e9dd6569eb3d6c70914d31a92e14d5))
+* **web:** signed-out taps go to sign-in and the tier picker is retired ([0cc0c04](https://github.com/featherweight-design/concert-crawl/commit/0cc0c04e3a422e9351605e1c836cb1aabe93821c))
+* **web:** the event, venue, artists and account polish the boards draw ([e95d3fe](https://github.com/featherweight-design/concert-crawl/commit/e95d3fe679cc493102d97131667bc1e3b93a3e85))
+
 # [1.455.0](https://github.com/featherweight-design/concert-crawl/compare/v1.454.0...v1.455.0) (2026-11-14)
 
 
