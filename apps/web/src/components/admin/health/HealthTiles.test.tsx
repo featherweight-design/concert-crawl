@@ -85,6 +85,42 @@ describe('HealthTiles', () => {
     );
     const crawl = screen.getByTestId('health-tile-crawl-failed');
     expect(within(crawl).getByText('4 failed')).toBeInTheDocument();
+    // No failure in Needs you: the line is the count alone.
+    expect(within(crawl).getByText('4 failed.')).toBeInTheDocument();
+    expect(crawl).not.toHaveTextContent('Needs you');
+  });
+
+  it.each([
+    [3, '4 failed. The 3 new failures are in Needs you.'],
+    [1, '4 failed. The new failure is in Needs you.'],
+  ])('says %i new failures are in Needs you', (count, line) => {
+    render(
+      <HealthTiles
+        {...props}
+        crawl={{ ...props.crawl, ok: 17, failed: 4 }}
+        newInNeedsYou={count}
+      />,
+    );
+    expect(screen.getByTestId('health-tile-crawl-failed')).toHaveTextContent(
+      line,
+    );
+  });
+
+  it('draws Missed when last night’s nightly never started, at its real time', () => {
+    render(
+      <HealthTiles
+        {...props}
+        crawl={{ ...props.crawl, ok: 0, total: 0 }}
+        // Nov 12 2026 is winter time: 09:07Z is 2:07 AM MST.
+        missedAt="2026-11-12T09:07:00.000Z"
+      />,
+    );
+    const crawl = screen.getByTestId('health-tile-crawl-missed');
+    expect(crawl).toHaveTextContent('Didn’t run');
+    expect(crawl).toHaveTextContent('The 2:07 AM job never started.');
+    expect(crawl).not.toHaveTextContent('GitHub');
+    const pill = within(crawl).getByText('Missed');
+    expect(pill.style.color).toBe('var(--danger)');
   });
 
   it.each([

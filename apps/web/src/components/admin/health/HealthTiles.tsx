@@ -183,6 +183,10 @@ export interface HealthTilesProps {
   settings: AdminSettings;
   lastMonthUsd: number | null;
   delivery: AdminEmailDelivery;
+  /** When last night's nightly was due, if it never started (`missedCrawlAt`). */
+  missedAt?: string | null;
+  /** Last night's failures with an open Needs you item; 0 or unknown drops the line. */
+  newInNeedsYou?: number;
 }
 
 export const HealthTiles = ({
@@ -192,8 +196,10 @@ export const HealthTiles = ({
   settings,
   lastMonthUsd,
   delivery,
+  missedAt = null,
+  newInNeedsYou = 0,
 }: HealthTilesProps) => {
-  const crawlState = crawlTileState(crawl);
+  const crawlState = crawlTileState(crawl, missedAt);
   const time = crawl.finishedAt ? formatMtTime(crawl.finishedAt) : '';
   const month = formatMonth(cost.month);
   const pace = formatUsd(cost.paceUsd);
@@ -219,14 +225,26 @@ export const HealthTiles = ({
             phone={copy.tiles.crawl.labelPhone}
           />
         }
-        value={copy.tiles.crawl.value(crawl.ok, crawl.total)}
+        value={
+          crawlState === 'missed'
+            ? copy.tiles.crawl.missedValue
+            : copy.tiles.crawl.value(crawl.ok, crawl.total)
+        }
         detail={
-          crawlState === 'noRuns' ? (
+          crawlState === 'missed' && missedAt !== null ? (
+            copy.tiles.crawl.missed(formatMtTime(missedAt))
+          ) : crawlState === 'noRuns' ? (
             copy.tiles.crawl.noRuns
           ) : crawlState === 'failed' ? (
-            // GAP G2: "The {m} new failures are in Needs you" needs "new"
-            // defined and a per-venue Needs you lookup; until then, the count.
-            copy.tiles.crawl.failed(crawl.failed)
+            // "New" is last night's failures with an open venue-failing item.
+            [
+              copy.tiles.crawl.failed(crawl.failed),
+              newInNeedsYou > 0
+                ? copy.tiles.crawl.newInNeedsYou(newInNeedsYou)
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' ')
           ) : (
             <Dual
               desk={copy.tiles.crawl.finished(
@@ -246,6 +264,10 @@ export const HealthTiles = ({
           ) : crawlState === 'failed' ? (
             <StatusBadge kind="warning" dot>
               {copy.tiles.crawl.failedPill(crawl.failed)}
+            </StatusBadge>
+          ) : crawlState === 'missed' ? (
+            <StatusBadge kind="danger" dot>
+              {copy.tiles.crawl.missedPill}
             </StatusBadge>
           ) : null
         }

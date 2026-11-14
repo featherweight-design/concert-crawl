@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { venueTabHref } from '@/lib/admin/venue-tabs';
 import { Panel } from '@/components/admin/primitives';
 import { GRID_GROUPS, type GridCell, type GridGroup } from './health-model';
 
@@ -41,11 +42,11 @@ const cellLine = (group: GridGroup, cell: GridCell): string =>
       ? copy.paused
       : copy.pageUnchanged;
 
-/** Cells open the venue's page until 3a gives it a Runs tab. */
+/** Every cell opens its venue's page on the Runs tab (`03/health-desktop`). */
 const Cell = ({ group, cell }: { group: GridGroup; cell: GridCell }) =>
   group === 'ok' ? (
     <Link
-      href={`/admin/venues/${cell.id}`}
+      href={venueTabHref(cell.id, 'runs')}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -62,7 +63,7 @@ const Cell = ({ group, cell }: { group: GridGroup; cell: GridCell }) =>
     </Link>
   ) : (
     <Link
-      href={`/admin/venues/${cell.id}`}
+      href={venueTabHref(cell.id, 'runs')}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -95,9 +96,12 @@ const Cell = ({ group, cell }: { group: GridGroup; cell: GridCell }) =>
 export const VenueGrid = ({
   groups,
   crawlRunsHref,
+  inNeedsYou = [],
 }: {
   groups: Record<GridGroup, GridCell[]>;
   crawlRunsHref: string;
+  /** Failed and Paused venues in Needs you (`gridVenuesInNeedsYou`). */
+  inNeedsYou?: string[];
 }) => {
   const shown = GRID_GROUPS.filter((key) => groups[key].length > 0);
   return (
@@ -177,12 +181,14 @@ export const VenueGrid = ({
             </section>
           ))}
           {shown.length > 0 && (
-            // GAP G13: "Only {names} is in Needs you" needs a per-venue lookup.
             <p
               className="health-desk"
+              data-testid="venue-grid-footer"
               style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-muted)' }}
             >
-              {copy.footer}
+              {inNeedsYou.length > 0
+                ? `${copy.footer} ${copy.inNeedsYou(inNeedsYou)}`
+                : copy.footer}
             </p>
           )}
         </div>

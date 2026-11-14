@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { DoneForYou } from './DoneForYou';
-import { SiteCard } from './SiteCard';
+import { SiteCard, emailState } from './SiteCard';
 
 afterEach(cleanup);
 
@@ -55,7 +55,13 @@ describe('<SiteCard />', () => {
   it('shows emails sending with the last time', () => {
     render(<SiteCard delivery={delivery} />);
     expect(screen.getByText(copy.site.sending)).toBeTruthy();
-    expect(screen.getByText('Last 24 h · last sent 8:02 AM')).toBeTruthy();
+    // `03/health-desktop`'s Emails row, on the shared StatusBadge.
+    expect(screen.getByText('Resend · last sent 8:02 AM')).toBeTruthy();
+    const row = screen.getByTestId('site-card-emails');
+    expect(row.style.padding).toBe('8px 0');
+    expect(screen.getByText(copy.site.sending).style.borderRadius).toBe(
+      '999px',
+    );
   });
 
   it('shows failures first, and a quiet window as quiet', () => {
@@ -68,6 +74,24 @@ describe('<SiteCard />', () => {
       />,
     );
     expect(screen.getByText(copy.site.quiet)).toBeTruthy();
-    expect(screen.getByText('Last 24 h · none sent')).toBeTruthy();
+    expect(screen.getByText('Resend · none sent in 24 h')).toBeTruthy();
+  });
+});
+
+describe('emailState', () => {
+  const base = {
+    lastSentAt: null,
+    sent: 0,
+    failed: 0,
+    suppressed: 0,
+    other: 0,
+    hours: 24,
+  };
+  it.each([
+    [{ ...base, sent: 3, failed: 1 }, 'danger', '1 failed'],
+    [{ ...base, sent: 3 }, 'success', 'Sending'],
+    [base, 'neutral', 'Quiet'],
+  ] as const)('reads %o as %s', (delivery, kind, label) => {
+    expect(emailState(delivery)).toEqual({ kind, label });
   });
 });
