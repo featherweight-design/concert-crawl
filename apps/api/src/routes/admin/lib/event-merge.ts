@@ -17,11 +17,6 @@ export interface MergeEventsInput {
   notifyWatchers: boolean;
   /** Matcher provenance, recorded on the `event.merge` audit row only. */
   suggestion: { reason: 'date' | 'venue' } | null | undefined;
-  /**
-   * Write the `event.merge` audit row inside the transaction (default true).
-   * A Needs you answer records the merge under its own audit action instead.
-   */
-  audit?: boolean;
 }
 
 export type MergeEventsResult =
@@ -47,7 +42,6 @@ export const mergeEvents = async ({
   actorId,
   notifyWatchers,
   suggestion,
-  audit = true,
 }: MergeEventsInput): Promise<MergeEventsResult> => {
   // Pre-flight existence checks return 404 with a clear message before we
   // open a transaction — cheaper than rolling back inside.
@@ -79,7 +73,6 @@ export const mergeEvents = async ({
     actorId,
     suggestion,
     notifyWatchers,
-    audit,
   });
 
   // After commit, mirroring the PATCH call site: the fan-out is best-effort

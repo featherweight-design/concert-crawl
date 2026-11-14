@@ -181,7 +181,6 @@ export const moved = define({
         actorId,
         notifyWatchers: true,
         suggestion: null,
-        audit: false,
       }),
       params.toEventId,
     );
@@ -201,7 +200,6 @@ export const moveTo = define({
         actorId,
         notifyWatchers: true,
         suggestion: null,
-        audit: false,
       }),
       item.moveTo.eventId,
     );
