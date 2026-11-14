@@ -56,6 +56,11 @@ interface AddPricePanelProps {
     extras: { soldOut: boolean; sourceUrl: string | null },
     next: boolean,
   ) => Promise<AddPriceOutcome>;
+  /**
+   * Opened for one show from Event edit (4b#19): no Publish and next, and no
+   * Sold out row, which lives in that page's Status card (4b#20).
+   */
+  single?: boolean;
 }
 
 /**
@@ -67,6 +72,7 @@ export const AddPricePanel = ({
   row,
   onClose,
   onSubmit,
+  single = false,
 }: AddPricePanelProps) => {
   const isPhone = useIsPhone();
   const formId = useId();
@@ -186,15 +192,17 @@ export const AddPricePanel = ({
           />
           {COPY.free}
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={soldOut}
-            disabled={busy}
-            onChange={(event) => setSoldOut(event.target.checked)}
-          />
-          {COPY.soldOut}
-        </label>
+        {!single && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={soldOut}
+              disabled={busy}
+              onChange={(event) => setSoldOut(event.target.checked)}
+            />
+            {COPY.soldOut}
+          </label>
+        )}
       </div>
       {!isPhone && (
         <>
@@ -236,21 +244,23 @@ export const AddPricePanel = ({
 
   const footer = (
     <>
+      {!single && (
+        <AdminButton
+          variant="gradient"
+          size="md"
+          disabled={busy}
+          onClick={() => void submit(true)}
+          style={{ flex: 1, height: isPhone ? 44 : 40 }}
+        >
+          {COPY.publishAndNext}
+        </AdminButton>
+      )}
       <AdminButton
-        variant="gradient"
-        size="md"
-        disabled={busy}
-        onClick={() => void submit(true)}
-        style={{ flex: 1, height: isPhone ? 44 : 40 }}
-      >
-        {COPY.publishAndNext}
-      </AdminButton>
-      <AdminButton
-        variant="outline"
+        variant={single ? 'gradient' : 'outline'}
         size="md"
         disabled={busy}
         onClick={() => void submit(false)}
-        style={{ height: isPhone ? 44 : 40 }}
+        style={{ height: isPhone ? 44 : 40, ...(single && { flex: 1 }) }}
       >
         {COPY.publish}
       </AdminButton>

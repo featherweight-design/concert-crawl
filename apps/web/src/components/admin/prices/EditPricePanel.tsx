@@ -44,7 +44,11 @@ const asTyped = (value: string | null): string => {
 };
 
 interface EditPricePanelProps {
-  row: SubmittedRow;
+  /** Only what the sheet draws, so Event edit can open it for its own price. */
+  row: Pick<
+    SubmittedRow,
+    'title' | 'venueName' | 'date' | 'priceMin' | 'priceMax'
+  >;
   onClose: () => void;
   /** Saves the two amounts; resolves with the refusal's text, or null when saved. */
   onSave: (priceMin: string, priceMax: string | null) => Promise<string | null>;
