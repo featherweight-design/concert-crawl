@@ -3,7 +3,7 @@
 /** The Details tab's building blocks: a labelled field, a two-up row, and the Look card. */
 
 import type { CSSProperties, ReactNode } from 'react';
-import { ArrowUpRight, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminCard as Card } from '@/components/admin/primitives';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
@@ -71,12 +71,8 @@ export const MapPinHint = ({
           }}
         >
           {PIN_COPY.openInMaps}
-          <ArrowUpRight
-            size={12}
-            strokeWidth={2.5}
-            aria-hidden
-            style={{ marginLeft: 3, verticalAlign: '-1px' }}
-          />
+          {/* The board writes the arrow as text, not an icon. */}
+          <span aria-hidden>{PIN_COPY.externalArrow}</span>
         </SafeExternalLink>
       </>
     )}
