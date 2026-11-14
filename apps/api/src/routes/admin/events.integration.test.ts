@@ -90,7 +90,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
 
   it('creates a promoted sold-out report and returns 201', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-04' });
+    const event = await seedEvent(venue.id, { date: futureDate(30) });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
@@ -141,7 +141,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
 
   it('defaults evidenceMethod to "other" when body is empty', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-05' });
+    const event = await seedEvent(venue.id, { date: futureDate(31) });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
@@ -158,7 +158,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
 
   it('is idempotent — second call returns 200 with the existing report', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-06' });
+    const event = await seedEvent(venue.id, { date: futureDate(32) });
 
     const first = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
@@ -207,7 +207,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
   it('returns 403 for non-admin users', async () => {
     setNonAdminAuth();
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-07' });
+    const event = await seedEvent(venue.id, { date: futureDate(33) });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
@@ -226,7 +226,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
 
   it('rejects invalid evidenceUrl (422)', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-08' });
+    const event = await seedEvent(venue.id, { date: futureDate(34) });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
@@ -238,7 +238,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
 
   it('fans out watch.soldout notifications to status=watching users only', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-08-01' });
+    const event = await seedEvent(venue.id, { date: futureDate(35) });
     const WATCHER = 'user_admin_soldout_watcher';
     const GOING = 'user_admin_soldout_going';
     await seedUserEvent(WATCHER, event.id, { status: 'watching' });
@@ -270,7 +270,7 @@ describe('POST /v1/admin/events/:id/available', () => {
 
   it('flips the active sold-out report to rejected and returns 204', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-10' });
+    const event = await seedEvent(venue.id, { date: futureDate(36) });
 
     const markRes = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
@@ -302,7 +302,7 @@ describe('POST /v1/admin/events/:id/available', () => {
 
   it('uses default admin note when no body is supplied', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-11' });
+    const event = await seedEvent(venue.id, { date: futureDate(37) });
 
     await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
@@ -329,7 +329,7 @@ describe('POST /v1/admin/events/:id/available', () => {
 
   it('returns 204 (no-op) when no active sold-out report exists', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-12' });
+    const event = await seedEvent(venue.id, { date: futureDate(38) });
 
     const res = await app.request(`/v1/admin/events/${event.id}/available`, {
       method: 'POST',
@@ -347,7 +347,7 @@ describe('POST /v1/admin/events/:id/available', () => {
 
   it('returns 403 for non-admin users', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-07-13' });
+    const event = await seedEvent(venue.id, { date: futureDate(39) });
 
     // Pre-seed an admin sold-out report so we can assert it survives a
     // forbidden call.
@@ -379,7 +379,7 @@ describe('POST /v1/admin/events/:id/available', () => {
 
   it('fans out watch.backonsale to watchers when clearing an active sold-out report', async () => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date: '2026-08-05' });
+    const event = await seedEvent(venue.id, { date: futureDate(40) });
     const WATCHER = 'user_admin_backonsale_watcher';
     await seedUserEvent(WATCHER, event.id, { status: 'watching' });
 
@@ -410,6 +410,130 @@ describe('POST /v1/admin/events/:id/available', () => {
       .from(notifications)
       .where(eq(notifications.category, 'watch.backonsale'));
     expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
+  });
+});
+
+// The PATCH's past lock (4a-3b) on the two sale-state endpoints: a show dated
+// before today in Denver, played or still postponed, is 409 `past_locked`,
+// writes nothing, audits nothing and tells no watcher. A show dated today is
+// not past.
+describe('POST /v1/admin/events/:id/sold-out and /available — past_locked', () => {
+  const WATCHER = 'user_past_lock_watcher';
+
+  beforeEach(() => {
+    setAdminAuth();
+    vi.mocked(fanoutWatchNotification).mockClear();
+    return clearTables();
+  });
+
+  const post = (id: string, action: 'sold-out' | 'available') =>
+    app.request(`/v1/admin/events/${id}/${action}`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({}),
+    });
+
+  const reportsFor = (id: string) =>
+    testDb
+      .select({
+        id: eventReports.id,
+        resolution: eventReports.resolution,
+        adminNote: eventReports.adminNote,
+      })
+      .from(eventReports)
+      .where(eq(eventReports.eventId, id));
+
+  const auditRowsFor = (id: string) =>
+    testDb
+      .select({ action: auditLog.action })
+      .from(auditLog)
+      .where(eq(auditLog.targetId, id));
+
+  const seedPastShows = async () => {
+    const venue = await seedVenue();
+    const played = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      artist: 'Played Artist',
+    });
+    const postponed = await seedEvent(venue.id, {
+      date: futureDate(-6),
+      artist: 'Postponed Artist',
+      status: 'postponed',
+    });
+    return [played, postponed];
+  };
+
+  it('refuses sold-out on a played past show and a postponed past show, writing and auditing nothing', async () => {
+    for (const event of await seedPastShows()) {
+      await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+
+      const res = await post(event.id, 'sold-out');
+
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'past_locked',
+      });
+      expect(await reportsFor(event.id)).toEqual([]);
+      expect(await auditRowsFor(event.id)).toEqual([]);
+    }
+    expect(fanoutWatchNotification).not.toHaveBeenCalled();
+    expect(await testDb.select().from(notifications)).toEqual([]);
+  });
+
+  it('refuses available on a played past show and a postponed past show, leaving its sold-out in place', async () => {
+    for (const event of await seedPastShows()) {
+      await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+      const soldOut = await seedEventReport(event.id, 'user_reporter', {
+        status: 'sold-out',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+      const before = await reportsFor(event.id);
+
+      const res = await post(event.id, 'available');
+
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'past_locked',
+      });
+      expect(await reportsFor(event.id)).toEqual(before);
+      expect(before.map((row) => [row.id, row.resolution])).toEqual([
+        [soldOut.id, 'promoted'],
+      ]);
+      expect(await auditRowsFor(event.id)).toEqual([]);
+    }
+    expect(fanoutWatchNotification).not.toHaveBeenCalled();
+    expect(await testDb.select().from(notifications)).toEqual([]);
+  });
+
+  it('still marks and clears an upcoming show, auditing each', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: futureDate(30) });
+
+    expect((await post(event.id, 'sold-out')).status).toBe(201);
+    expect((await post(event.id, 'available')).status).toBe(204);
+
+    expect((await reportsFor(event.id)).map((row) => row.resolution)).toEqual([
+      'rejected',
+    ]);
+    expect(await auditRowsFor(event.id)).toEqual([
+      { action: 'event.sold_out.mark' },
+      { action: 'event.sold_out.clear' },
+    ]);
+  });
+
+  it('does not lock a show dated today in Denver', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: todayInDenver() });
+
+    expect((await post(event.id, 'sold-out')).status).toBe(201);
+    expect((await post(event.id, 'available')).status).toBe(204);
+
+    expect((await reportsFor(event.id)).map((row) => row.resolution)).toEqual([
+      'rejected',
+    ]);
   });
 });
 
@@ -858,7 +982,7 @@ describe('GET /v1/admin/events — isSoldOut derivation', () => {
     // Use a date well in the future so it appears in the default
     // verified=false list query (which filters to today onward).
     const event = await seedEvent(venue.id, {
-      date: '2026-12-01',
+      date: futureDate(30),
       verified: false,
     });
 

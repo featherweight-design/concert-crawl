@@ -8,6 +8,7 @@ import {
   venues,
 } from '@concert-crawl/db';
 import { fanoutWatchNotification } from '@concert-crawl/push';
+import type { DbExecutor } from './db-executor.js';
 import { apiLogger } from './logger.js';
 import { activeSoldOutWhere } from './sold-out.js';
 
@@ -31,15 +32,33 @@ import { activeSoldOutWhere } from './sold-out.js';
 export async function clearSoldOut(
   eventId: string,
   note: string,
-  options: {
-    /**
-     * A fan report's filing time: only a sold-out already live then is
-     * cleared, so a report can never clear a newer sold-out it never saw.
-     */
-    filedAt?: Date;
-  } = {},
+  options: ClearSoldOutOptions = {},
 ): Promise<string[]> {
-  const cleared = await db
+  const ids = await clearSoldOutRows(db, eventId, note, options);
+  if (ids.length > 0) await notifyBackOnSale(eventId, ids);
+  return ids;
+}
+
+export interface ClearSoldOutOptions {
+  /**
+   * A fan report's filing time: only a sold-out already live then is
+   * cleared, so a report can never clear a newer sold-out it never saw.
+   */
+  filedAt?: Date;
+}
+
+/**
+ * The writes of `clearSoldOut` without the fan-out, on the given executor, so
+ * a caller can run them inside its own transaction and fan out after commit
+ * with `notifyBackOnSale`. Returns the cleared sold-out report ids, sorted.
+ */
+export async function clearSoldOutRows(
+  executor: DbExecutor,
+  eventId: string,
+  note: string,
+  options: ClearSoldOutOptions = {},
+): Promise<string[]> {
+  const cleared = await executor
     .update(eventReports)
     .set({ resolution: 'rejected', adminNote: note })
     .where(
@@ -54,7 +73,7 @@ export async function clearSoldOut(
 
   if (cleared.length === 0) return [];
 
-  await db
+  await executor
     .update(eventReports)
     .set({ resolvedAt: new Date(), resolution: 'promoted', adminNote: note })
     .where(
@@ -65,7 +84,17 @@ export async function clearSoldOut(
       ),
     );
 
-  const ids = cleared.map((row) => row.id).sort();
+  return cleared.map((row) => row.id).sort();
+}
+
+/**
+ * Tell a show's watchers it is back on sale, after the clear has committed.
+ * `ids` are the cleared sold-out report ids from `clearSoldOutRows`.
+ */
+export async function notifyBackOnSale(
+  eventId: string,
+  ids: string[],
+): Promise<void> {
   // #1064: watch.backonsale to every watcher. #1311: the cleared report(s)
   // are the transition; a report is cleared at most once, so a later sell-out
   // and re-clear names a different report and notifies again. Best-effort:
@@ -83,5 +112,4 @@ export async function clearSoldOut(
   } catch (err) {
     apiLogger.error({ err, eventId }, 'watch.backonsale fan-out failed');
   }
-  return ids;
 }
