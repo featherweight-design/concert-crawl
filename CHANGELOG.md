@@ -1,3 +1,17 @@
+# [1.430.0](https://github.com/featherweight-design/concert-crawl/compare/v1.429.0...v1.430.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** event edit review fixes ([5b00d80](https://github.com/featherweight-design/concert-crawl/commit/5b00d802098f9ed4d5e083d68a154a9da32b3d31))
+* **admin:** pin the event edit save bar to the content bottom at full width ([5826e5e](https://github.com/featherweight-design/concert-crawl/commit/5826e5e2b6feb3121e037e85f5628e7752d3ac9d))
+* **admin:** snap the event edit draft back on a fast-failing save ([500b17b](https://github.com/featherweight-design/concert-crawl/commit/500b17b2cbe69b06816e4f4ab572619c278b8394))
+
+
+### Features
+
+* **admin:** event edit page, header, show card and from the crawl (wip) ([4464fb5](https://github.com/featherweight-design/concert-crawl/commit/4464fb541ae927494caea3086e2f769718e8f8f0))
+
 # [1.429.0](https://github.com/featherweight-design/concert-crawl/compare/v1.428.1...v1.429.0) (2026-11-14)
 
 
