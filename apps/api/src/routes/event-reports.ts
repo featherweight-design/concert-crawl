@@ -442,9 +442,9 @@ eventReportsRouter.post(
       resolved = outcome !== 'already_resolved';
     } else if (confirmsCount >= threshold && report.status !== 'available') {
       // Sold-out, cancelled and postponed all promote through promoteReport,
-      // which decides under the event's and the report's row locks. A past
-      // show closes the report as moot; a sold-out on a show already sold out
-      // closes as moot too. Fan-out fires only on a real transition, read
+      // which decides under the event's and the report's row locks. It
+      // closes as moot a report on a past show, and one the show's state
+      // already answers (see above). Fan-out fires only on a real transition, read
       // under the lock, so a second cancelled report promoted after the show
       // is already cancelled (or racing the first) never spams watchers.
       let promotion: Awaited<ReturnType<typeof promoteReport>>;
