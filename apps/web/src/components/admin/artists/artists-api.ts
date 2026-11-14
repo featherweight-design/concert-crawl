@@ -37,6 +37,13 @@ export interface AdminArtistRow {
   photoUrl: string | null;
   autoMatchedAt: string | null;
   openReportCount: number;
+  /** The open reports among `openReportCount` that say the photo is wrong. */
+  wrongPhotoReportCount: number;
+  /**
+   * The matched Spotify artist's genres from the candidate snapshot; null when
+   * there is no match or no snapshot entry for it. An empty list stays empty.
+   */
+  genres: string[] | null;
   upcomingCount: number;
   watchingCount: number;
   nextShow: { date: string; venueName: string | null } | null;
@@ -68,6 +75,10 @@ const isTextOrNull = (value: unknown): value is string | null =>
   value === null || typeof value === 'string';
 const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
+const isNonNegativeInteger = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0;
+const isGenreList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every(isText);
 const isMatchStatus = (value: unknown): value is MatchStatus =>
   isText(value) && MATCH_STATUSES.includes(value);
 
@@ -76,8 +87,7 @@ const isCandidate = (value: unknown): value is ArtistCandidate =>
   isText(value['id']) &&
   isText(value['name']) &&
   isTextOrNull(value['imageUrl']) &&
-  (value['genres'] === null ||
-    (Array.isArray(value['genres']) && value['genres'].every(isText)));
+  (value['genres'] === null || isGenreList(value['genres']));
 
 const isNextShow = (value: unknown): value is AdminArtistRow['nextShow'] =>
   value === null ||
@@ -103,6 +113,7 @@ export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
     !isTextOrNull(value['photoUrl']) ||
     !isTextOrNull(value['autoMatchedAt']) ||
     !isCount(value['openReportCount']) ||
+    !isNonNegativeInteger(value['wrongPhotoReportCount']) ||
     !isCount(value['upcomingCount']) ||
     !isCount(value['watchingCount']) ||
     !isNextShow(value['nextShow'])
@@ -110,6 +121,7 @@ export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
     return null;
   }
   const candidates = value['candidates'];
+  const genres = value['genres'];
   return {
     id: value['id'],
     name: value['name'],
@@ -118,6 +130,10 @@ export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
     photoUrl: value['photoUrl'],
     autoMatchedAt: value['autoMatchedAt'],
     openReportCount: value['openReportCount'],
+    wrongPhotoReportCount: value['wrongPhotoReportCount'],
+    // Like a candidate snapshot, a malformed genre list is blanked rather than
+    // dropping the row: genres are display-only, the counts are not.
+    genres: isGenreList(genres) ? genres : null,
     upcomingCount: value['upcomingCount'],
     watchingCount: value['watchingCount'],
     nextShow: value['nextShow'],

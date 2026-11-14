@@ -3,6 +3,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   StaleRowError,
   artistsApi,
+  parseArtistRow,
   staleReason,
   type ArtistWrite,
 } from './artists-api';
@@ -140,5 +141,61 @@ describe('ADMIN_COPY.artists.matchedMeta', () => {
     [2, '2 upcoming · 2 followers'],
   ])('says %i followers as artists are counted', (count, text) => {
     expect(ADMIN_COPY.artists.matchedMeta(2, count)).toBe(text);
+  });
+});
+
+describe('parseArtistRow', () => {
+  const wire = (
+    over: Record<string, unknown> = {},
+  ): Record<string, unknown> => ({
+    id: 'a1',
+    name: 'Cashmere',
+    spotifyArtistId: 'sp1',
+    matchStatus: 'matched',
+    photoUrl: null,
+    autoMatchedAt: null,
+    openReportCount: 2,
+    wrongPhotoReportCount: 1,
+    genres: ['indie pop'],
+    upcomingCount: 1,
+    watchingCount: 0,
+    nextShow: null,
+    candidates: null,
+    ...over,
+  });
+
+  it('carries the genres and the wrong-photo count', () => {
+    expect(parseArtistRow(wire())).toMatchObject({
+      genres: ['indie pop'],
+      wrongPhotoReportCount: 1,
+    });
+  });
+
+  it.each([
+    ['null', null],
+    ['an empty list', []],
+  ])('keeps %s genres as sent', (_label, genres) => {
+    expect(parseArtistRow(wire({ genres }))?.genres).toEqual(genres);
+  });
+
+  it.each([
+    ['a string', 'indie pop'],
+    ['a list with a non-string', ['indie pop', 3]],
+    ['an object', { 0: 'indie pop' }],
+    ['a missing field', undefined],
+  ])('blanks genres sent as %s, keeping the row', (_label, genres) => {
+    const row = parseArtistRow(wire({ genres }));
+    expect(row).not.toBeNull();
+    expect(row?.genres).toBeNull();
+  });
+
+  it.each([
+    ['negative', -1],
+    ['fractional', 1.5],
+    ['a string', '1'],
+    ['null', null],
+    ['missing', undefined],
+  ])('drops a row whose wrong-photo count is %s', (_label, count) => {
+    expect(parseArtistRow(wire({ wrongPhotoReportCount: count }))).toBeNull();
   });
 });
