@@ -101,7 +101,103 @@ describe('POST /api/error-report', () => {
     expect(JSON.parse(String(init?.body))).toEqual(report);
   });
 
-  it.each([401, 422, 429, 500, 503])(
+  it('answers an upstream 401 with 502, not signed out: the session was already confirmed', async () => {
+    signedIn();
+    fetchMock.mockResolvedValue(
+      Response.json({ success: false, error: 'Unauthorized' }, { status: 401 }),
+    );
+    const POST = await importRoute();
+
+    const res = await POST(makeRequest(report));
+
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'upstream_auth',
+    });
+  });
+
+  it('passes an upstream 204 through with no body', async () => {
+    signedIn();
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    const POST = await importRoute();
+
+    const res = await POST(makeRequest(report));
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+  });
+
+  it('forwards a metadata key it does not know, unchanged', async () => {
+    signedIn();
+    fetchMock.mockResolvedValue(
+      Response.json({ success: true }, { status: 201 }),
+    );
+    const POST = await importRoute();
+    const withErrorId = {
+      ...report,
+      metadata: { ...report.metadata, errorId: 'cc-7f3a' },
+    };
+
+    const res = await POST(makeRequest(withErrorId));
+
+    expect(res.status).toBe(201);
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(String(init?.body))).toEqual(withErrorId);
+  });
+
+  it('gives the upstream call only what is left of the 7s deadline', async () => {
+    signedIn();
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    fetchMock.mockResolvedValue(
+      Response.json({ success: true }, { status: 201 }),
+    );
+    const POST = await importRoute();
+
+    await POST(makeRequest(report));
+
+    const budget = timeout.mock.calls.at(-1)?.[0];
+    expect(budget).toBeGreaterThan(0);
+    expect(budget).toBeLessThanOrEqual(7000);
+  });
+
+  it('answers 413 on a declared length over 16KB without reading the body', async () => {
+    signedIn();
+    const POST = await importRoute();
+    const req = new Request('http://localhost:3000/api/error-report', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': String(16 * 1024 + 1),
+      },
+      body: JSON.stringify(report),
+    });
+    const read = vi.spyOn(req, 'text');
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ success: false, error: 'too_large' });
+    expect(read).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('answers 413 on a body over 16KB that declares no length', async () => {
+    signedIn();
+    const POST = await importRoute();
+    const big = {
+      ...report,
+      metadata: { ...report.metadata, padding: 'x'.repeat(16 * 1024) },
+    };
+
+    const res = await POST(makeRequest(big));
+
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ success: false, error: 'too_large' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([422, 429, 500, 503])(
     'passes an upstream %i through with its body',
     async (status) => {
       signedIn();
@@ -173,8 +269,8 @@ describe('POST /api/error-report', () => {
     ['another feedback category', { ...report, category: 'idea' }],
     ['an unknown top-level key', { ...report, extra: 1 }],
     [
-      'an unknown metadata key',
-      { ...report, metadata: { ...report.metadata, screenshot: 'data:' } },
+      'another metadata source',
+      { ...report, metadata: { ...report.metadata, source: 'tab' } },
     ],
     [
       'a malformed error id',

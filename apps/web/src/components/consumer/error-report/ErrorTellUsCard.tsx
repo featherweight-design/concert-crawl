@@ -135,15 +135,16 @@ export const ErrorTellUsCard = ({
     const draft = { doing, note, digest, sentryEventId, page };
     setState('sending');
     try {
-      // TODO(U4 PR 2): branch on `classifyReportFailure` in the catch below —
-      // refused gets its own state and is not saved, signed-out switches the
-      // page's layout. Until then every failure takes the failed path, as
-      // before; the flush drops a saved report that is not transient.
       await sendErrorReport(draft, navigator.userAgent);
       clearPendingReport();
       setState('sent');
     } catch (err) {
       console.error('[error report] send failed', err);
+      // Every failure still shows the failed state, whose copy says the report
+      // is saved and sent on the next open, so it is saved, as before. A
+      // refused one is tried once by that flush, then dropped.
+      // TODO(U4 PR 2): refused gets its own state ("Not sent.", not saved)
+      // and signed-out switches the page's layout.
       savePendingReport(draft);
       setState('failed');
     }
