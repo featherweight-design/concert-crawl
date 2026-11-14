@@ -97,21 +97,50 @@ describe('admin crawl batches', () => {
     expect(body.data.every((batch) => !('runs' in batch))).toBe(true);
   });
 
-  it('keeps only batches with a failed or skipped run, and the nights that did not start, for not_ok', async () => {
+  it('keeps only what the RESULT chip calls Not OK for not_ok: amber Done, Failed and Didn’t start', async () => {
     setAuth('admin');
-    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
-    await seedRun(venue.id, nightAt(4));
-    await seedRun(venue.id, nightAt(2), {
+    const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const bluebird = await seedVenue({ name: 'Bluebird', slug: 'bluebird' });
+    const failed = { status: 'failed' as const, reason: 'timeout' as const };
+    // 8: all OK. 7: green Done with one failed venue. 6: amber, one blocked.
+    // 5: Failed, no venue read. 4: didn't start. 3: retried, every venue OK
+    // after the retry. 2: retried, still blocked after it (amber).
+    await seedRun(levitt.id, nightAt(8));
+    await seedRun(bluebird.id, nightAt(8));
+    await seedRun(levitt.id, nightAt(7));
+    await seedRun(bluebird.id, nightAt(7), failed);
+    await seedRun(levitt.id, nightAt(6));
+    await seedRun(bluebird.id, nightAt(6), {
       status: 'failed',
-      reason: 'timeout',
+      reason: 'blocked_http',
+    });
+    await seedRun(levitt.id, nightAt(5), failed);
+    await seedRun(bluebird.id, nightAt(5), failed);
+    await seedRun(levitt.id, nightAt(3), failed);
+    await seedRun(bluebird.id, nightAt(3));
+    await seedRun(levitt.id, nightAt(3, 70));
+    await seedRun(levitt.id, nightAt(2), failed);
+    await seedRun(bluebird.id, nightAt(2));
+    await seedRun(levitt.id, nightAt(2, 70), {
+      status: 'failed',
+      reason: 'blocked_http',
     });
 
     const res = await get('?kind=not_ok');
+    expect(res.status).toBe(200);
     const body: { data: CrawlBatch[] } = await res.json();
     const nights = body.data.map((batch) => batch.night);
-    expect(nights).toContain(denverDate(nightAt(2)));
-    expect(nights).toContain(denverDate(nightAt(3)));
-    expect(nights).not.toContain(denverDate(nightAt(4)));
+    for (const days of [6, 5, 4, 2]) {
+      expect(nights).toContain(denverDate(nightAt(days)));
+    }
+    for (const days of [8, 7, 3]) {
+      expect(nights).not.toContain(denverDate(nightAt(days)));
+    }
+    // The retried night is retried, and its first wave had a failure.
+    const all: { data: CrawlBatch[] } = await (await get('?kind=all')).json();
+    expect(
+      all.data.find((batch) => batch.night === denverDate(nightAt(3))),
+    ).toMatchObject({ retried: true, counts: { failed: 1 } });
   });
 
   it('groups a person’s by-hand triggers and the runs they made, apart from the nightly', async () => {
@@ -469,6 +498,52 @@ describe('admin crawl batches', () => {
       // the first page is short with history behind it.
       expect(pages[0]).toMatchObject({ data: [], hasMore: true });
       expect(pages.length).toBeGreaterThan(1);
+    });
+
+    it('fills not_ok pages with Not OK batches only, past green nights with a failure', async () => {
+      setAuth('admin');
+      const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      const bluebird = await seedVenue({ name: 'Bluebird', slug: 'bluebird' });
+      const blocked = [5, 11, 17];
+      const allFailed = [8];
+      // Green Done nights with one failed venue: they once took the pages'
+      // places and the web dropped them, leaving pages sparse or empty.
+      const greenFailed = [3, 4, 6, 9, 12, 15, 18, 20];
+      await seedNights(
+        levitt.id,
+        range(0, 30).filter((days) => days !== 8),
+      );
+      await seedNights(
+        bluebird.id,
+        range(0, 30).filter(
+          (days) => ![...blocked, ...allFailed, ...greenFailed].includes(days),
+        ),
+      );
+      await seedNights(bluebird.id, greenFailed, {
+        status: 'failed',
+        reason: 'timeout',
+      });
+      await seedNights(bluebird.id, blocked, {
+        status: 'failed',
+        reason: 'blocked_http',
+      });
+      await seedNights(levitt.id, allFailed, {
+        status: 'failed',
+        reason: 'timeout',
+      });
+      await seedNights(bluebird.id, allFailed, {
+        status: 'failed',
+        reason: 'timeout',
+      });
+
+      for (const limit of [1, 2, 3]) {
+        const { pages, keys } = await pageAll('kind=not_ok', limit);
+        expect(keys).toEqual([5, 8, 11, 17].map(nightKey));
+        // No gaps: every page before the last is full.
+        for (const page of pages.slice(0, -1)) {
+          expect(page.data).toHaveLength(limit);
+        }
+      }
     });
 
     it('shows an outage once, as Didn’t start, wherever the page edges fall', async () => {

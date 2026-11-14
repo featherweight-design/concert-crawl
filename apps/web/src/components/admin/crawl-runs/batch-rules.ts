@@ -1,4 +1,11 @@
-import { scheduledCrawlAt } from '@concert-crawl/types';
+import {
+  crawlBatchResult,
+  finalBatchCounts,
+  isNotOkBatch,
+  scheduledCrawlAt,
+  type CrawlBatchResultInput,
+  type CrawlBatchResultKey,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   shortDate,
@@ -37,23 +44,11 @@ export const crawlRunsHref = (
 };
 
 /**
- * Not OK follows the batch's RESULT chip, not its run counts: an amber Done,
- * Failed and Didn't start are Not OK; a green Done is not, whatever its
- * failed count (`07/crawl-runs-desktop`: two green "1 failed" nights, and
- * "Not OK 2"). Running isn't either: it hasn't settled.
+ * The API's `not_ok` filter applies the same shared rule (`isNotOkBatch`), so
+ * this is only a guard: while a web deploy runs ahead of the API's, an older
+ * API can still send green Done batches under Not OK.
  */
-export const isNotOkBatch = (batch: BatchStatusInput): boolean => {
-  const status = batchStatus(batch);
-  return status.key === 'done'
-    ? status.tone !== 'var(--success)'
-    : status.key !== 'running';
-};
-
-/**
- * The API's `not_ok` filter also sends green Done batches with a failed run,
- * so the list keeps only the ones the chip calls Not OK.
- */
-export const keepForFilter = <Row extends BatchStatusInput>(
+export const keepForFilter = <Row extends CrawlBatchResultInput>(
   filter: BatchFilter,
   rows: readonly Row[],
 ): Row[] => (filter === 'not_ok' ? rows.filter(isNotOkBatch) : [...rows]);
@@ -65,7 +60,7 @@ export const keepForFilter = <Row extends BatchStatusInput>(
  */
 export const notOkCountOf = (
   filter: BatchFilter,
-  rows: readonly BatchStatusInput[],
+  rows: readonly CrawlBatchResultInput[],
 ): number | null => {
   if (filter === 'not_ok') return rows.length;
   if (filter === 'all') return rows.filter(isNotOkBatch).length;
@@ -105,83 +100,15 @@ export const batchLabel = (batch: BatchRow): string => {
     : COPY.parts([what, COPY.by(batch.actorHandle)]);
 };
 
-export type BatchStatusKey = 'running' | 'didntStart' | 'failed' | 'done';
-
-export type BatchCounts = BatchRow['counts'];
-
-/** What the RESULT chip and the Not OK rule read. */
-export type BatchStatusInput = Pick<
-  BatchRow,
-  'didntStart' | 'pending' | 'counts' | 'retry' | 'venueCount'
->;
-
 /**
- * A batch's counts by venue, each venue's last result. Without a retry that
- * is the run counts. A retried night's counts hold both waves, so a venue
- * that failed at 3:00 and read OK on the retry is in both "OK" and "failed".
- * The API sends the retry's counts but not which venues it re-ran, so:
- *   - Not OK, failed and blocked are the retry's: what's still wrong after it.
- *   - Skipped is the larger of the two waves' (a paused venue skips in each).
- *   - Unchanged is both waves', capped so the counts fit the venues.
- *   - OK is the rest of the venues, so the parts always add up to them.
- */
-export const finalCounts = (
-  batch: Pick<BatchRow, 'counts' | 'retry' | 'venueCount'>,
-): BatchCounts => {
-  const { counts, retry } = batch;
-  if (retry === null) return counts;
-  const again = retry.counts;
-  const skipped = Math.max(counts.skipped - again.skipped, again.skipped);
-  const crawled = Math.max(0, batch.venueCount - skipped);
-  const notOk = Math.min(again.notOk, crawled);
-  const unchanged = Math.min(counts.unchanged, crawled - notOk);
-  return {
-    ok: crawled - notOk - unchanged,
-    notOk,
-    unchanged,
-    skipped,
-    total: crawled + skipped,
-    failed: Math.min(again.failed, notOk),
-    blocked: Math.min(again.blocked, notOk),
-  };
-};
-
-/**
- * RESULT. Didn't start (danger); Running (signal) while triggers are still
- * queued; Failed (danger, row 24) when no run read its page; else Done.
- * Done is amber only on a Blocked run (ruling: Low and Quiet wait for What's
- * normal); failures alone stay green, since they reach Needs you (row 3).
+ * RESULT, by the shared rule (`crawlBatchResult` in @concert-crawl/types, the
+ * one the API's Not OK filter reads), with the chip's colour and label.
  */
 export const batchStatus = (
-  batch: BatchStatusInput,
-): { key: BatchStatusKey; tone: string; label: string } => {
-  if (batch.didntStart) {
-    return {
-      key: 'didntStart',
-      tone: 'var(--danger)',
-      label: COPY.status.didntStart,
-    };
-  }
-  if (batch.pending > 0) {
-    return {
-      key: 'running',
-      tone: 'var(--signal)',
-      label: COPY.status.running,
-    };
-  }
-  const counts = finalCounts(batch);
-  const { ok, unchanged, notOk } = counts;
-  // The Failed rule (orchestrator ruling, 2026-11-14): a batch is Failed when
-  // no run in it read its page, i.e. no OK and no Unchanged run, and at least
-  // one Not OK run. One success or one Unchanged makes it Done.
-  if (ok === 0 && unchanged === 0 && notOk > 0) {
-    return { key: 'failed', tone: 'var(--danger)', label: COPY.status.failed };
-  }
-  return {
-    key: 'done',
-    tone: counts.blocked > 0 ? 'var(--warning)' : 'var(--success)',
-    label: COPY.status.done,
-  };
+  batch: CrawlBatchResultInput,
+): { key: CrawlBatchResultKey; tone: string; label: string } => {
+  const { key, tone } = crawlBatchResult(batch);
+  return { key, tone: `var(--${tone})`, label: COPY.status[key] };
 };
 
 /** "14 OK · 4 unchanged · 1 failed · 1 blocked", leaving out the zeros. */
@@ -205,7 +132,7 @@ const countParts = (counts: BatchRow['counts']): string[] => {
  */
 export const batchSummary = (batch: BatchRow): string => {
   if (batch.didntStart) return '';
-  const counts = finalCounts(batch);
+  const counts = finalBatchCounts(batch);
   const parts =
     batch.pending > 0
       ? [COPY.soFar(counts.total, batch.venueCount), ...countParts(counts)]

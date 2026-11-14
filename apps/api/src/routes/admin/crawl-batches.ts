@@ -8,11 +8,12 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { asc, inArray, isNull } from 'drizzle-orm';
 import { db, userProfiles, venues } from '@concert-crawl/db';
-import type {
-  CrawlAllEstimate,
-  CrawlBatch,
-  CrawlBatchDetail,
-  CrawlBatchPage,
+import {
+  isNotOkBatch,
+  type CrawlAllEstimate,
+  type CrawlBatch,
+  type CrawlBatchDetail,
+  type CrawlBatchPage,
 } from '@concert-crawl/types';
 import { validationHook } from '../../lib/validator.js';
 import { nextDailyCrawlAt } from '../../lib/crawl-schedule.js';
@@ -54,7 +55,10 @@ const matchesKind = (
 ): boolean => {
   if (kind === 'nightly') return batch.kind === 'nightly';
   if (kind === 'by_hand') return batch.kind === 'by_hand';
-  if (kind === 'not_ok') return batch.counts.notOk > 0 || batch.didntStart;
+  // The RESULT chip's rule, shared with the web: amber Done, Failed and
+  // Didn't start, read by a retried night's final counts. A green Done with
+  // a failed run is not Not OK.
+  if (kind === 'not_ok') return isNotOkBatch(batch);
   return true;
 };
 
@@ -83,8 +87,10 @@ const withHandles = async <Batch extends CrawlBatch>(
 export const crawlBatchesAdminRouter = new Hono<AdminVariables>();
 
 // The newest batches: nightly runs by Mountain Time night, by-hand bursts, and
-// any night that never started. `not_ok` keeps those with a failed or skipped
-// run, and the nights that did not start. Paged by `before`; there is no
+// any night that never started. `not_ok` keeps those the RESULT chip calls
+// Not OK (isNotOkBatch): an amber Done, Failed, and the nights that did not
+// start. Only matching batches fill a page or stop the widening. Paged by
+// `before`; there is no
 // total, since counting derived batches means grouping all of history.
 crawlBatchesAdminRouter.get(
   '/batches',
