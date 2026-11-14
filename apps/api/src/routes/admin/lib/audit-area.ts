@@ -2,6 +2,7 @@ import {
   and,
   inArray,
   not,
+  notInArray,
   or,
   sql,
   type SQL,
@@ -52,8 +53,28 @@ const AREA_BY_PREFIX = new Map<string, AuditArea>(
 export const actionPrefix = (action: string): string =>
   action.split('.', 1)[0] ?? '';
 
+/** Exact action keys filed somewhere other than their prefix says. */
+export const ACTION_AREA_OVERRIDES: Readonly<Record<string, AuditArea>> = {
+  // One venue's crawl is only ever queued from Venues: the venue page's
+  // Re-crawl (useRecrawl), the Venues bulk re-crawl and the add-venue flow
+  // (lib/actions/venues.ts). `crawl.trigger_all` stays a Crawl runs action.
+  'crawl.trigger': 'venues',
+};
+
+// A Map, so an action key like `toString` never reads the prototype.
+const AREA_BY_ACTION = new Map<string, AuditArea>(
+  Object.entries(ACTION_AREA_OVERRIDES),
+);
+
+const overriddenActions = (keep: (area: AuditArea) => boolean): string[] =>
+  [...AREA_BY_ACTION]
+    .filter(([, area]) => keep(area))
+    .map(([action]) => action);
+
 export const areaOfAction = (action: string): AuditArea | null =>
-  AREA_BY_PREFIX.get(actionPrefix(action)) ?? null;
+  AREA_BY_ACTION.get(action) ??
+  AREA_BY_PREFIX.get(actionPrefix(action)) ??
+  null;
 
 export const prefixesOfAreas = (areas: readonly AuditArea[]): string[] =>
   areas.flatMap((area) => AUDIT_AREA_PREFIXES[area]);
@@ -119,10 +140,17 @@ export const auditAreaFilter = (
   columns: AuditColumns,
 ): SQL | undefined => {
   const pricesSave = pricesSettingsSaveSql(columns);
+  // Overridden actions join their own area and leave their prefix's.
+  const overriddenIn = overriddenActions((area) => areas.includes(area));
+  const overriddenOut = overriddenActions((area) => !areas.includes(area));
   return or(
     areas.includes('prices') ? pricesSave : undefined,
+    overriddenIn.length > 0 ? inArray(columns.action, overriddenIn) : undefined,
     and(
       not(pricesSave),
+      overriddenOut.length > 0
+        ? notInArray(columns.action, overriddenOut)
+        : undefined,
       inArray(
         sql`split_part(${columns.action}, '.', 1)`,
         prefixesOfAreas(areas),
