@@ -190,8 +190,11 @@ crawlAdminRouter.post('/', async (ctx) => {
 
   // One dispatch: its run drains the rows one by one (up to the triggers
   // workflow's cap and time budget). Runs after the response; a failed
-  // dispatch leaves the rows for the next daily run.
-  dispatchCrawlerInBackground();
+  // dispatch leaves the rows for the next daily run, and reports them.
+  dispatchCrawlerInBackground({
+    triggerIds: inserted.map((row) => row.id),
+    venueIds: inserted.map((row) => row.venueId),
+  });
 
   return ctx.json(
     {

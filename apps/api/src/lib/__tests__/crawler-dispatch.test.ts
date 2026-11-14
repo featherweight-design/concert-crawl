@@ -179,6 +179,91 @@ describe('dispatchCrawlerInBackground', () => {
   });
 });
 
+describe('a dispatch that does not wake the crawler names the queued triggers', () => {
+  const queued = {
+    triggerIds: ['trigger-1', 'trigger-2'],
+    venueIds: ['venue-1', 'venue-2'],
+  };
+
+  function lastContext(): {
+    level: string;
+    extra: Record<string, unknown>;
+  } {
+    const [, context] = mockCaptureException.mock.calls.at(-1) as [
+      Error,
+      { level: string; extra: Record<string, unknown> },
+    ];
+    return context;
+  }
+
+  it('reports a refused dispatch with the trigger and venue ids, leaving them unchanged', async () => {
+    const before = structuredClone(queued);
+    fetchMock.mockResolvedValue(new Response('oops', { status: 502 }));
+    dispatchCrawlerInBackground(queued);
+    await drainBackgroundTasks();
+    expect(mockCaptureException).toHaveBeenCalledTimes(1);
+    expect(lastReported().message).toContain('Crawler dispatch failed (502)');
+    expect(lastReported().message).toContain(
+      '2 queued crawl trigger(s) stay pending and run on the next daily crawl',
+    );
+    expect(lastContext().level).toBe('error');
+    expect(lastContext().extra).toMatchObject({
+      triggerIds: ['trigger-1', 'trigger-2'],
+      venueIds: ['venue-1', 'venue-2'],
+      outcome: 'failed',
+      status: 502,
+    });
+    // The only request is the dispatch itself; nothing rewrites the rows.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(queued).toEqual(before);
+  });
+
+  it('reports a network failure with the trigger ids', async () => {
+    fetchMock.mockRejectedValue(new Error('ECONNRESET'));
+    expect(await dispatchCrawler(queued)).toBe('failed');
+    expect(lastReported().message).toContain('next daily crawl');
+    expect(lastContext().extra).toMatchObject({
+      triggerIds: queued.triggerIds,
+    });
+  });
+
+  it('reports nothing when the dispatch succeeds', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    dispatchCrawlerInBackground(queued);
+    await drainBackgroundTasks();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(mockCaptureException).not.toHaveBeenCalled();
+  });
+
+  it('reports nothing when the API is not production or staging', async () => {
+    vi.stubEnv('VERCEL_TARGET_ENV', 'preview');
+    expect(await dispatchCrawler(queued)).toBe('skipped_environment');
+    expect(mockCaptureException).not.toHaveBeenCalled();
+  });
+
+  it('reports nothing for a missing token off production and staging', async () => {
+    vi.stubEnv('CRAWLER_DISPATCH_TOKEN', '');
+    vi.stubEnv('VERCEL_TARGET_ENV', '');
+    expect(await dispatchCrawler(queued)).toBe('skipped_no_token');
+    expect(mockCaptureException).not.toHaveBeenCalled();
+  });
+
+  it('warns about a missing token on staging, naming the triggers', async () => {
+    vi.stubEnv('CRAWLER_DISPATCH_TOKEN', '');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    expect(await dispatchCrawler(queued)).toBe('skipped_no_token');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(lastReported().message).toContain(
+      'CRAWLER_DISPATCH_TOKEN is unset on the staging API',
+    );
+    expect(lastContext().level).toBe('warning');
+    expect(lastContext().extra).toMatchObject({
+      triggerIds: queued.triggerIds,
+      outcome: 'skipped_no_token',
+    });
+  });
+});
+
 describe('crawlerDispatchEnvironment', () => {
   it('ignores SENTRY_ENVIRONMENT off Vercel, so a local API never dispatches', () => {
     vi.stubEnv('VERCEL_TARGET_ENV', '');
