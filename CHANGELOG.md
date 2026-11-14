@@ -1,3 +1,19 @@
+# [1.424.0](https://github.com/featherweight-design/concert-crawl/compare/v1.423.0...v1.424.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** one snapshot, stable facet shape for the events list counts ([1068ec5](https://github.com/featherweight-design/concert-crawl/commit/1068ec543cce2051dc3dad916242cd92fa5b12e4))
+* **web:** name the phone back link's landmark, and test the title bar's return ([56a39b3](https://github.com/featherweight-design/concert-crawl/commit/56a39b3885fd1410096a9f967f0ec59fd76dff7b))
+* **web:** pin the status picker sum, hold Show N while counts reload ([f62eff3](https://github.com/featherweight-design/concert-crawl/commit/f62eff3469cd30307569cd987df4896a0f9036c7))
+* **web:** show N reads the exact faceted counts ([6bec8ef](https://github.com/featherweight-design/concert-crawl/commit/6bec8efa52459c3d9f7d346a8d6567e82b119ed4))
+* **web:** the venue page's phone header is a back link to Venues ([05038cf](https://github.com/featherweight-design/concert-crawl/commit/05038cffee50f3ade30f3579cfbb0d94c5542f18))
+
+
+### Features
+
+* **api:** exact faceted counts on the admin Events list ([ffe328c](https://github.com/featherweight-design/concert-crawl/commit/ffe328c53198f0cd63214228b2a0f334d004e341))
+
 # [1.423.0](https://github.com/featherweight-design/concert-crawl/compare/v1.422.0...v1.423.0) (2026-11-14)
 
 
