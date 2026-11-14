@@ -56,7 +56,7 @@ describe('invite-code screen shows "This code has ended"', () => {
     validateAndSetInviteCode.mockReset();
   });
 
-  it('replaces the form with the ended page, with two ways on', async () => {
+  it('replaces the form with the ended page, with two ways on and a way back', async () => {
     validateAndSetInviteCode.mockResolvedValue({ ok: false, error: 'ended' });
     window.history.replaceState(null, '', '/auth/code?code=beta-ab12-cd34');
     render(<InviteCodePage />);
@@ -75,5 +75,24 @@ describe('invite-code screen shows "This code has ended"', () => {
     // The board's "still open to everyone" is not true while the beta is
     // invite-only, so the page does not say it.
     expect(screen.queryByText(/open to everyone/i)).toBeNull();
+  });
+
+  // addendum 6 item 42: the way back is a third, quieter exit.
+  it('"Enter it" returns to the code form, empty and focused', async () => {
+    validateAndSetInviteCode.mockResolvedValue({ ok: false, error: 'ended' });
+    window.history.replaceState(null, '', '/auth/code?code=beta-ab12-cd34');
+    render(<InviteCodePage />);
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    await screen.findByText('This code has ended');
+
+    expect(screen.getByText('Have another code?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Enter it' }));
+
+    const field = await screen.findByRole('textbox');
+    expect(field).toHaveValue('');
+    expect(field).toHaveFocus();
+    // The ended code is not carried over, and the ended page is gone.
+    expect(screen.queryByText('This code has ended')).toBeNull();
+    expect(screen.queryByText(/has ended/i)).toBeNull();
   });
 });
