@@ -1,0 +1,71 @@
+{
+  "feature": "Admin V3 · Source tab and Inspect polish",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 04-venues/venue-source, phone-addendum gap-4-venue-source (source-advanced-open, source-feed-edited), 04-venues/inspect-a-fetched-page. Read-only against the scratch branch: no row saves, discards or re-crawls (Source saves are server actions, which browser mocks cannot intercept). Pending Design item 18: Automatic kept as a third Page loading segment, Reader selector kept. Walked by hand: save failed, a stored manual, robots.txt disallows.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/b1-v3-sheet",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 1400, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "read",
+      "label": "Source tab read state: pace between pages, Last checked time only, Advanced collapsed line (The Church Nightclub)",
+      "steps": [
+        {
+          "goto": "/admin/venues/281583ec-2cb0-4ea9-8623-434260687f83?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "wait": "text=between pages" },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "advanced",
+      "label": "Advanced open: Page loading with Automatic, wait-for, Reader selector (The Black Box)",
+      "steps": [
+        {
+          "goto": "/admin/venues/b87df4c9-eec1-431a-b161-5043e48bc228?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "settle": 2500 },
+        { "clickRole": "button", "name": "^Advanced" },
+        { "wait": "[data-testid=\"source-advanced\"]" },
+        { "wait": "[data-testid=\"source-advanced\"] >> text=Automatic" },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "dirty",
+      "label": "A calendar page edit raises the inline save row (desktop) and the pinned bar (phone), not saved (Hi-Dive)",
+      "steps": [
+        {
+          "goto": "/admin/venues/99dc4766-0ac5-4dba-89bc-666f70990aa4?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "settle": 2500 },
+        {
+          "fill": "[data-testid=\"venue-source\"] input[type=\"url\"]",
+          "text": "https://hi-dive.example/calendar"
+        },
+        {
+          "wait": "[data-testid=\"source-save-bar\"], [data-testid=\"source-save-row\"]"
+        },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "inspect-stopped",
+      "label": "Inspect HTML with the Stopped here marker (Sheet Paused Venue, failed run, the page before its 404)",
+      "steps": [
+        {
+          "goto": "/admin/venues/e4e87c16-2822-402e-a21a-e7b7b070e097/inspect/51d6b92c-da21-4b54-b48f-e1ad253cd273?page=30b2dd05-9db3-4a41-9afd-2e0361661eeb",
+          "wait": "[data-testid=\"inspect-line\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "tab", "name": "^HTML$" },
+        { "wait": "[data-testid=\"inspect-stopped-here\"]" },
+        { "settle": 1500 }
+      ]
+    }
+  ]
+}
