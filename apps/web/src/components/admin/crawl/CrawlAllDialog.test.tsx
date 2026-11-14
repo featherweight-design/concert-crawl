@@ -123,9 +123,13 @@ describe('CrawlAllDialog', () => {
         .getByRole('button', { name: COPY.cancel })
         .hasAttribute('disabled'),
     ).toBe(false);
-    expect(mockGet).toHaveBeenCalledWith(
-      '/v1/admin/crawl/estimate',
-      'test-token',
+    // The read waits on Clerk's token (a promise), so it lands a tick after
+    // the first render, not during it.
+    await waitFor(() =>
+      expect(mockGet).toHaveBeenCalledWith(
+        '/v1/admin/crawl/estimate',
+        'test-token',
+      ),
     );
   });
 
