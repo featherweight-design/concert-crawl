@@ -10,8 +10,23 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { PassportActions } from '../PassportActions';
+import { PassportActions as PassportActionsView } from '../PassportActions';
+import { usePassportShare } from '../lib/use-passport-share';
 import { PASSPORT_CTA_GLOW } from '../definitions/styles';
+import type { ShareCapabilities } from '@/lib/share/destinations';
+
+// The row takes its share from the hook so the phone top bar can run the same
+// one; these cases drive the pair the way `PassportContent` wires them.
+const PassportActions = ({
+  imageUrl,
+  capabilities,
+}: {
+  imageUrl: string;
+  capabilities?: ShareCapabilities;
+}) => {
+  const share = usePassportShare(imageUrl, capabilities);
+  return <PassportActionsView imageUrl={imageUrl} share={share} />;
+};
 
 const track = vi.hoisted(() => vi.fn());
 
