@@ -18,17 +18,30 @@ vi.mock('@hono/clerk-auth', () => ({
 
 import { auditLog, feedback } from '@concert-crawl/db';
 import type {
-  AdminFeedbackCounts,
   AdminFeedbackItem,
   AdminFeedbackStatus,
   FeedbackCategory,
 } from '@concert-crawl/types';
 import { asc, eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { createApp } from '../../app.js';
 import { clearTables, seedUserProfile } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 
 const app = createApp();
+
+const countsBody = z.object({
+  data: z.object({
+    unread: z.number(),
+    toRead: z.number(),
+    done: z.number(),
+    kinds: z.object({
+      bugs: z.number(),
+      ideas: z.number(),
+      venues: z.number(),
+    }),
+  }),
+});
 const ADMIN_ID = 'user_clerk_admin_feedback';
 
 function setAuth(role: 'admin' | 'user', userId = ADMIN_ID): void {
@@ -325,7 +338,7 @@ describe('admin feedback (integration)', () => {
 
       const res = await app.request('/v1/admin/feedback/counts');
       expect(res.status).toBe(200);
-      const json = (await res.json()) as { data: AdminFeedbackCounts };
+      const json = countsBody.parse(await res.json());
       expect(json.data).toEqual({
         unread: 2,
         toRead: 4,
@@ -344,14 +357,14 @@ describe('admin feedback (integration)', () => {
       await seedFeedback('archived', 'venue_suggestion');
 
       const res = await app.request('/v1/admin/feedback/counts');
-      const json = (await res.json()) as { data: AdminFeedbackCounts };
+      const json = countsBody.parse(await res.json());
       expect(json.data.kinds).toEqual({ bugs: 2, ideas: 1, venues: 0 });
     });
 
     it('is zero on an empty table', async () => {
       setAuth('admin');
       const res = await app.request('/v1/admin/feedback/counts');
-      const json = (await res.json()) as { data: AdminFeedbackCounts };
+      const json = countsBody.parse(await res.json());
       expect(json.data).toEqual({
         unread: 0,
         toRead: 0,
@@ -379,6 +392,18 @@ describe('admin feedback (integration)', () => {
       expect(venues.data.map((item) => item.category)).toEqual([
         'venue_suggestion',
       ]);
+      const ideas = await list('?kind=ideas');
+      expect(ideas.data.map((item) => item.category)).toEqual(['idea']);
+    });
+
+    it('accepts a category inside its kind', async () => {
+      setAuth('admin');
+      await seedFeedback('unread', 'bug');
+      await seedFeedback('unread', 'error_report');
+
+      const { status, data } = await list('?kind=bugs&category=error_report');
+      expect(status).toBe(200);
+      expect(data.map((item) => item.category)).toEqual(['error_report']);
     });
 
     it('searches the message case-insensitively, with LIKE metacharacters literal', async () => {
@@ -449,6 +474,7 @@ describe('admin feedback (integration)', () => {
       'kind=bugs&category=idea',
       `search=${'x'.repeat(201)}`,
       `search=${encodeURIComponent(`${' '.repeat(300)}x`)}`,
+      'search=%00',
     ])('rejects %s with 400', async (query) => {
       setAuth('admin');
       expect((await list(`?${query}`)).status).toBe(400);
