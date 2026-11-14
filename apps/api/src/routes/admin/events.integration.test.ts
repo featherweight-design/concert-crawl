@@ -40,7 +40,6 @@ vi.mock('@concert-crawl/push', async (importOriginal) => {
 
 import { canonicalizeTitle } from '@concert-crawl/crawler-core/canonical-title';
 import { fanoutWatchNotification } from '@concert-crawl/push';
-import { canonicalizeArtist } from '@concert-crawl/types';
 import { createApp } from '../../app.js';
 import {
   clearTables,
@@ -2115,7 +2114,7 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
       .from(auditLog)
       .where(eq(auditLog.targetId, id));
 
-  it('accepts title, headliner, times and a past date as corrections, stores each and audits each', async () => {
+  it('accepts title, times and a past date as corrections, stores each and audits each', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(-7),
@@ -2128,12 +2127,11 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
 
     const responses = [
       await patch(event.id, { title: 'Corrected Title' }),
-      await patch(event.id, { artist: 'Corrected Artist' }),
       await patch(event.id, { doorsTime: '18:30', showTime: '19:30' }),
       await patch(event.id, { date: correctedDate }),
     ];
 
-    expect(responses.map((res) => res.status)).toEqual([200, 200, 200, 200]);
+    expect(responses.map((res) => res.status)).toEqual([200, 200, 200]);
     const [row] = await testDb
       .select({
         title: events.title,
@@ -2147,7 +2145,7 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
       .where(eq(events.id, event.id));
     expect(row).toEqual({
       title: 'Corrected Title',
-      artist: 'Corrected Artist',
+      artist: 'Played Artist',
       doorsTime: '18:30:00',
       showTime: '19:30:00',
       date: correctedDate,
@@ -2157,8 +2155,50 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
       { action: 'event.update' },
       { action: 'event.update' },
       { action: 'event.update' },
-      { action: 'event.update' },
     ]);
+  });
+
+  it('refuses a headliner change on a past show and on a postponed past show', async () => {
+    const venue = await seedVenue();
+    const played = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      artist: 'Played Artist',
+    });
+    const postponed = await seedEvent(venue.id, {
+      date: futureDate(-6),
+      artist: 'Postponed Artist',
+      status: 'postponed',
+    });
+
+    for (const event of [played, postponed]) {
+      const res = await patch(event.id, { artist: 'Rewritten Artist' });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'past_locked',
+      });
+      const [row] = await testDb
+        .select({ artist: events.artist })
+        .from(events)
+        .where(eq(events.id, event.id));
+      expect(row?.artist).toBe(event.artist);
+      expect(await auditRowsFor(event.id)).toEqual([]);
+    }
+  });
+
+  it('refuses a correction that moves a past show to today', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: futureDate(-7) });
+
+    const res = await patch(event.id, { date: todayInDenver() });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
+    const [row] = await testDb
+      .select({ date: events.date })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.date).toBe(event.date);
   });
 
   it('tells nobody about a date or time correction on a past show', async () => {
@@ -2377,7 +2417,7 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
     expect(await auditRowsFor(event.id)).toEqual([{ action: 'event.update' }]);
   });
 
-  it('refreshes canonical_artist and canonical_title with a headliner or title correction', async () => {
+  it('refreshes canonical_title with a title correction and leaves canonical_artist alone', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(-7),
@@ -2385,10 +2425,7 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
       artist: 'Played Artist',
     });
 
-    const res = await patch(event.id, {
-      artist: 'The Corrected Band',
-      title: 'The Corrected Band Live',
-    });
+    const res = await patch(event.id, { title: 'The Corrected Band Live' });
 
     expect(res.status).toBe(200);
     const [row] = await testDb
@@ -2398,11 +2435,11 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
       })
       .from(events)
       .where(eq(events.id, event.id));
-    expect(row?.canonicalArtist).toBe(canonicalizeArtist('The Corrected Band'));
-    expect(row?.canonicalArtist).not.toBe(event.canonicalArtist);
     expect(row?.canonicalTitle).toBe(
       canonicalizeTitle('The Corrected Band Live'),
     );
+    expect(row?.canonicalTitle).not.toBe(event.canonicalTitle);
+    expect(row?.canonicalArtist).toBe(event.canonicalArtist);
   });
 
   it('returns 409 duplicate_show when a correction collides with another night at the venue', async () => {

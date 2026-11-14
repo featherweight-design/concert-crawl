@@ -1536,7 +1536,10 @@ export const ADMIN_COPY = {
       saveFailed: 'Save failed',
       // The PATCH's 409 `past_locked`.
       pastLocked:
-        'On a past show only the title, headliner, times, a past date and Hide can change. A postponed one can also get a new date or status.',
+        'On a past show only the title, times, a past date and Hide can change. A postponed one can also get a new date or status.',
+      // The PATCH's 409 `duplicate_show`.
+      duplicateShow:
+        'Another listing at this venue already has that date and time.',
     },
   },
 

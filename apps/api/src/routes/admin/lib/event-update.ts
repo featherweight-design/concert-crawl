@@ -11,7 +11,6 @@ import {
 } from '@concert-crawl/db';
 import { canonicalizeTitle } from '@concert-crawl/crawler-core/canonical-title';
 import { fanoutWatchNotification } from '@concert-crawl/push';
-import { canonicalizeArtist } from '@concert-crawl/types';
 import { activePromotedReportWhere } from '../../../lib/sold-out.js';
 
 // The body of PATCH /v1/admin/events/:id: the transition rules and the
@@ -61,9 +60,9 @@ export type EventPatch = z.input<typeof eventPatchSchema>;
  * locked field. A past show takes `hiddenFromConsumer` and the corrections
  * (B+ addendum 5 §4, addendum 6 item 36: "Title, lineup, venue and times stay
  * editable as corrections and notify nobody"); status, price and the rest stay
- * locked. A postponed past show takes the title and headliner corrections and
- * may also move its date, times and status, or it could never be rescheduled. The throw rolls the transaction back, so
- * nothing is written.
+ * locked. A postponed past show takes the title correction and may also move
+ * its date, times and status, or it could never be rescheduled. The throw
+ * rolls the transaction back, so nothing is written.
  */
 export class PastLockedError extends Error {
   constructor() {
@@ -86,17 +85,20 @@ const PAST_UNCHECKED: ReadonlySet<PatchKey> = new Set(['hiddenFromConsumer']);
 
 /**
  * Corrections every past show may make, notifying nobody (addendum 5 §4).
- * `artist` is the headliner text the PATCH carries for the lineup.
+ * `artist` is deliberately absent: it moves only `canonical_artist`, while
+ * fans read the bill from `headliners` / `canonical_headliners`, so a
+ * "corrected" headliner would change nothing a fan sees.
  */
-const PAST_CORRECTIONS: readonly PatchKey[] = ['title', 'artist'];
+const PAST_CORRECTIONS: readonly PatchKey[] = ['title'];
 
 /**
  * A played past show may change these. The date counts with the times, but
  * only to another past date: moving a played show into the future is not a
  * correction.
  *
- * Venue and lineup corrections (addendum 5 §4) land with the 4b venue/lineup
- * PATCH work, which must add them here; this PATCH has no `venueId` yet.
+ * Headliner/lineup and venue corrections (addendum 5 §4) land with the 4b
+ * lineup/venue work, which must add them here (and to the postponed set);
+ * this PATCH has no `venueId` and does not write the bill yet.
  */
 const PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
   ...PAST_UNCHECKED,
@@ -163,11 +165,10 @@ export interface UpdateEventOptions {
   /**
    * Today's date in Denver (`YYYY-MM-DD`). When given, a show dated before it
    * (the list's Past side) takes only `hiddenFromConsumer` and the
-   * corrections (title, headliner, times, a date still in the past), which
-   * fire no date-move notice; anything else is PastLockedError. A postponed
-   * one may change its title and headliner, and its date, times and status,
-   * and its watchers hear of a new date. A corrected title or headliner
-   * refreshes `canonical_title` / `canonical_artist`.
+   * corrections (title, times, a date still in the past), which fire no
+   * date-move notice; anything else is PastLockedError. A postponed one may
+   * change its title, and its date, times and status, and its watchers hear
+   * of a new date. A corrected title refreshes `canonical_title`.
    * Read from the locked row, never from the request.
    */
   lockPastBefore?: string;
@@ -206,9 +207,9 @@ export const updateEventNotifying = async (
     // correction that notifies nobody (addendum 5 §4), so it skips the
     // date-move notice below. Status transitions still compute their own.
     let dateChangeIsCorrection = false;
-    // The derived match keys a past correction refreshes alongside the text
-    // it corrects, through the crawler's own canonicalizers.
-    let canonicals: { canonicalArtist?: string; canonicalTitle?: string } = {};
+    // A past title correction refreshes the derived `canonical_title` through
+    // the crawler's own canonicalizer.
+    let canonicalTitle: string | undefined;
     if (readsPreState) {
       const rows = await tx
         .select()
@@ -243,16 +244,9 @@ export const updateEventNotifying = async (
           throw new PastLockedError();
         }
         dateChangeIsCorrection = !postponed;
-        canonicals = {
-          ...(changed.includes('artist') &&
-            typeof body.artist === 'string' && {
-              canonicalArtist: canonicalizeArtist(body.artist),
-            }),
-          ...(changed.includes('title') &&
-            typeof body.title === 'string' && {
-              canonicalTitle: canonicalizeTitle(body.title),
-            }),
-        };
+        if (changed.includes('title') && typeof body.title === 'string') {
+          canonicalTitle = canonicalizeTitle(body.title);
+        }
       }
     }
 
@@ -262,7 +256,7 @@ export const updateEventNotifying = async (
       // it ends No longer listed (B+ A5).
       .set({
         ...body,
-        ...canonicals,
+        ...(canonicalTitle !== undefined && { canonicalTitle }),
         // Clears first_missing_at too on a delisted row: otherwise the show
         // hides again right after its watchers hear, and a restore would be
         // re-cancelled by the next sweep.
