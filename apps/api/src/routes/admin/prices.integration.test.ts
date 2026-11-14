@@ -1793,6 +1793,8 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
   type Row = {
     id: string;
     handle: string | null;
+    avatarColor: string | null;
+    avatarSecondColor: string | null;
     backedBy: number;
     state: string;
     eventTitle: string | null;
@@ -1827,7 +1829,11 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
       artist: 'Big Thief',
       date: '2099-10-03',
     });
-    await seedUserProfile('user_anna', { handle: 'annab' });
+    await seedUserProfile('user_anna', {
+      handle: 'annab',
+      avatarColor: 'accent',
+      avatarSecondColor: 'success',
+    });
     const waiting = await seedPriceSubmission(waitingEvent.id, 'user_anna', {
       status: 'pending',
     });
@@ -1857,6 +1863,20 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     expect(byId.get(published.id)?.handle).toBeNull();
     expect(byId.get(published.id)?.backedBy).toBe(3);
     expect(byId.get(waiting.id)?.backedBy).toBe(1);
+  });
+
+  it("carries the fan's avatar pair, null when they have none", async () => {
+    const { waiting, published } = await seedTab();
+    const rows = await list();
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    expect(byId.get(waiting.id)).toMatchObject({
+      avatarColor: 'accent',
+      avatarSecondColor: 'success',
+    });
+    expect(byId.get(published.id)).toMatchObject({
+      avatarColor: null,
+      avatarSecondColor: null,
+    });
   });
 
   it('puts every row in exactly one state: a price with an open Price check is a price-check', async () => {

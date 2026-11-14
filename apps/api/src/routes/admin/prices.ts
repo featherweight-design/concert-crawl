@@ -521,6 +521,10 @@ pricesAdminRouter.get(
         // The fan's @handle (null when they have none); the admin UI shows
         // this, never the Clerk id.
         handle: userProfiles.handle,
+        // The fan's own avatar pair (`06/submitted-prices-mobile`), null
+        // until they pick one: the admin row draws the same face fans see.
+        avatarColor: userProfiles.avatarColor,
+        avatarSecondColor: userProfiles.avatarSecondColor,
         // Fans behind this price: the submitter plus everyone who confirmed
         // it (corroboration_count already includes the submitter).
         backedBy: priceSubmissions.corroborationCount,
