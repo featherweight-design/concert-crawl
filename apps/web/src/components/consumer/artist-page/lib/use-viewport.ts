@@ -38,11 +38,10 @@ export const useIsDesktop = (): boolean => {
 /**
  * The rendered height of `ref`, re-read whenever the element resizes.
  *
- * The band it measures is not one height: `HeroBand` steps its panel and its
- * padding at `sm`, and this page's own breakpoint is `md`, so between 640 and
- * 767px the mobile band renders a good hundred pixels taller than the constant
- * that used to stand in for it. A measurement is the only value that is right
- * at every width.
+ * The band it measures is not one height: it steps its panel and its padding
+ * at the shared desktop line (1024), and a measurement is the only value that
+ * is right at every width, whatever the constant that used to stand in for it
+ * said.
  *
  * A zero falls back rather than propagating — jsdom lays nothing out, and a
  * threshold computed from 0 would read as "already scrolled past" everywhere.
