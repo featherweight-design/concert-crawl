@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { VenueStatus } from '@/components/admin/primitives/VenueStatus';
 import { venueTabHref } from '@/lib/admin/venue-tabs';
 import {
   causeText,
@@ -15,14 +16,7 @@ import {
   statusPhrase,
 } from '../needs-you-rules';
 import type { PanelProps } from './panel-props';
-import {
-  AnswerButtons,
-  Chip,
-  ChipRow,
-  Prose,
-  RowCard,
-  Section,
-} from './panel-parts';
+import { AnswerButtons, ChipRow, Prose, RowCard, Section } from './panel-parts';
 
 const PANEL = ADMIN_COPY.needsYou.panel;
 
@@ -70,7 +64,11 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
   const blocked = row.kind === 'venue-blocked';
   const status = httpStatusOf(row);
   const failures = failuresOf(row);
-  const robots = robotsText(row.robots);
+  // "Still allows /events": the stored check, with the path we crawl.
+  const robots =
+    blocked && row.robotsTxtAllowed === true && row.robotsPath
+      ? PANEL.venue.robotsResult.allowsPath(row.robotsPath)
+      : robotsText(row.robots);
   const checked = [
     ...(robots ? [{ label: PANEL.venue.robotsTxt, value: robots }] : []),
     // Our pace is the crawler's fixed delay, not a recorded value.
@@ -102,29 +100,33 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
       </Prose>
     </Section>
   );
+  // The one shared venue status (`VenueStatus`), from the venue's stored
+  // state only. With no liveness in the payload nothing is drawn, rather than
+  // guessing Hidden. A blocked venue names its status code once the venue
+  // itself says it is blocked.
   const chips = (
     <ChipRow>
-      {row.venueLive && (
-        <Chip kind="success" dot>
-          {PANEL.venue.live}
-        </Chip>
-      )}
-      {blocked && status && (
-        <Chip kind="danger" dot>
-          {PANEL.blockedChip(status)}
-        </Chip>
-      )}
-      {!blocked && row.pausedAt && failures && (
-        <Chip kind="danger" dot>
-          {PANEL.venue.autoPaused(failures)}
-        </Chip>
-      )}
+      <VenueStatus
+        venue={{
+          active: row.venueLive === true,
+          crawlPausedAt: row.pausedAt,
+          crawlPauseReason: row.pauseReason,
+          blockedAt: row.blockedAt,
+          consecutiveFailures: failures ?? row.consecutiveFailures,
+          // Unchecked reads as allowed: only a stored refusal shows it blocked.
+          robotsTxtAllowed: row.robotsTxtAllowed ?? true,
+        }}
+        crawlingLabel={
+          blocked && status && row.blockedAt !== null
+            ? PANEL.blockedChip(status)
+            : undefined
+        }
+      />
     </ChipRow>
   );
   return (
     <>
-      {(row.venueLive || (blocked && status) || (row.pausedAt && failures)) &&
-        chips}
+      {row.venueLive !== null && chips}
       {blocked ? (
         <>
           <Section label={PANEL.whatHappened}>

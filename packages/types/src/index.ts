@@ -2114,6 +2114,16 @@ export type NeedsYouItem =
       venueLive?: boolean;
       /** When an admin paused crawling (`crawl_paused_at`, ISO), or null. */
       pausedAt?: string | null;
+      /** Why an admin paused the crawl (`crawl_pause_reason`); null for the crawler's own pause. */
+      pauseReason?: string | null;
+      /** When the venue was flagged blocked (`blocked_at`, ISO), or null. */
+      blockedAt?: string | null;
+      /** Consecutive failed crawls (`consecutive_failures`). */
+      consecutiveFailures?: number;
+      /** The stored robots.txt check (`robots_txt_allowed`): never fetched at request time. */
+      robotsTxtAllowed?: boolean | null;
+      /** The path of the page we crawl ("/events"), from the venue's stored URL. */
+      robotsPath?: string | null;
       /** Upcoming, visible, currently-seen published shows at the venue. */
       showCount?: number;
       /**
