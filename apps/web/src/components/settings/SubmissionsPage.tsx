@@ -30,17 +30,21 @@ export const SubmissionsPage = ({
 
   return (
     <>
-      <div className="flex items-center gap-4 border-b border-border bg-bg-elevated px-4 py-3.5">
+      {/* `submitted-prices-m`: the back link left, the title centred at 16px,
+          and a 60px spacer opposite the link so the title is centred on the
+          bar, in a 54px bar. */}
+      <div className="flex h-[54px] items-center justify-between border-b border-border bg-bg-elevated px-4">
         <Link
           href="/me"
-          className="shrink-0 text-[13px] font-semibold uppercase tracking-[0.06em] text-fg-muted"
+          className="w-[60px] shrink-0 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-fg-muted"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
           {SETTINGS_COPY.submissionsBack}
         </Link>
-        <h1 className="text-[17px] font-extrabold text-fg">
+        <h1 className="m-0 text-center text-[16px] font-extrabold text-fg">
           {SETTINGS_COPY.submissionsSection}
         </h1>
+        <span aria-hidden className="w-[60px] shrink-0" />
       </div>
       <div className="flex flex-col gap-5 px-4 pb-24 pt-5">
         <SubmissionStats

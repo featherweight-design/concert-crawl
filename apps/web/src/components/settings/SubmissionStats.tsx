@@ -19,7 +19,7 @@ const Tile = ({
 }) => (
   <div className="min-w-0 rounded-2xl border border-border bg-surface-1 px-3 py-3.5 min-[400px]:px-4">
     <div
-      className="text-[28px] font-black leading-none tracking-[-0.03em]"
+      className="text-[22px] font-black leading-none tracking-[-0.03em]"
       style={{ color }}
     >
       {value.toLocaleString()}

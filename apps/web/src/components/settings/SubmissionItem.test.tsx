@@ -74,4 +74,11 @@ describe('SubmissionItem closed rows', () => {
     expect(screen.getByText(/fan confirmed/)).toBeTruthy();
     expect(screen.queryByText(reasons.stale)).toBeNull();
   });
+
+  // `submitted-prices-m` draws no "+1 cred" tag on a confirmed row.
+  it('a confirmed row carries no +1 cred tag', () => {
+    render(<SubmissionItem submission={row({ status: 'confirmed' })} />);
+
+    expect(screen.queryByText(/\+1 cred/i)).toBeNull();
+  });
 });
