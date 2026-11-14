@@ -854,8 +854,15 @@ export const ADMIN_COPY = {
         },
         feed: {
           label: 'Ticketing feed',
-          // The real feeds only (A3 §3b row 1), not the board's sample list.
-          sub: 'VenuePilot, AEG or Live Nation. Fastest, no LLM cost.',
+          // The real feeds only (A3 §3b row 1), not the board's sample list:
+          // built from the sellers the tab offers, so the two never drift.
+          sub: (sellers: readonly string[]) => {
+            const last = sellers.at(-1) ?? '';
+            const rest = sellers.slice(0, -1);
+            const list =
+              rest.length > 0 ? `${rest.join(', ')} or ${last}` : last;
+            return `${list}. Fastest, no LLM cost.`;
+          },
           // Desktop shows a venue's feed read-only, seller and ID, in place
           // of the held feed fields (#175).
           subNamed: (seller: string, id: string) =>
