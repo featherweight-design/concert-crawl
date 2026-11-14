@@ -20,6 +20,7 @@ import {
 } from '@/components/admin/venues/delete-rules';
 import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl';
 import { buildUpdateVenueBody } from './build-update-venue-body';
+import { venueGuideSchema } from '@/lib/admin/venue-guide-schema';
 
 async function getToken(): Promise<string> {
   const { getToken } = await auth();
@@ -469,6 +470,24 @@ export interface SaveVenueGuidePayload {
   chips: VenueGuideChip[];
 }
 
+/**
+ * Zod at the boundary: the guide the API sent back. A body that doesn't
+ * parse is a failure, so the panel never stores a malformed guide.
+ */
+function guideResult(
+  action: string,
+  venueId: string,
+  body: unknown,
+): VenueGuideActionResult {
+  const parsed = venueGuideSchema.safeParse(body);
+  if (parsed.success) return { success: true, data: parsed.data };
+  console.error(`${action}: unexpected guide shape`, {
+    venueId,
+    issues: parsed.error.issues,
+  });
+  return { success: false };
+}
+
 export async function saveVenueGuide(
   venueId: string,
   payload: SaveVenueGuidePayload,
@@ -478,13 +497,13 @@ export async function saveVenueGuide(
     // an unhandled throw from a Server Action replaces the whole admin page
     // with Next's error screen — losing the draft the admin was typing.
     const token = await getToken();
-    const data = await apiClient.put<VenueGuide>(
+    const data = await apiClient.put<unknown>(
       `/v1/admin/venues/${venueId}/guide`,
       token,
       payload,
     );
     revalidatePath(`/admin/venues/${venueId}`);
-    return { success: true, data };
+    return guideResult('saveVenueGuide', venueId, data);
   } catch (err: unknown) {
     console.error('saveVenueGuide: failed', { venueId, err });
     // Only an ApiError carries a message the API meant for a human. Anything
@@ -504,13 +523,13 @@ export async function publishVenueGuide(
   try {
     // Inside the try — see saveVenueGuide.
     const token = await getToken();
-    const data = await apiClient.post<VenueGuide>(
+    const data = await apiClient.post<unknown>(
       `/v1/admin/venues/${venueId}/guide/publish`,
       token,
       {},
     );
     revalidatePath(`/admin/venues/${venueId}`);
-    return { success: true, data };
+    return guideResult('publishVenueGuide', venueId, data);
   } catch (err: unknown) {
     // A 400 here is the accessibility publish gate, not a malformed request —
     // the body carries no Zod issues because nothing was validated.
@@ -538,13 +557,13 @@ export async function unpublishVenueGuide(
   try {
     // Inside the try — see saveVenueGuide.
     const token = await getToken();
-    const data = await apiClient.post<VenueGuide>(
+    const data = await apiClient.post<unknown>(
       `/v1/admin/venues/${venueId}/guide/unpublish`,
       token,
       {},
     );
     revalidatePath(`/admin/venues/${venueId}`);
-    return { success: true, data };
+    return guideResult('unpublishVenueGuide', venueId, data);
   } catch (err: unknown) {
     console.error('unpublishVenueGuide: failed', { venueId, err });
     // Only an ApiError carries a message the API meant for a human. Anything

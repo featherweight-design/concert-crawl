@@ -37,7 +37,8 @@ const TipRowBody = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
-// Mirrors ChipStateDot's tones without pulling in the admin bundle.
+// The status tones (success, warning, danger), kept here so the tip never
+// pulls in the admin bundle.
 const TONE_COLOR: Record<TipTone, string | null> = {
   neutral: null,
   good: 'var(--success)',

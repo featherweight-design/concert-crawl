@@ -127,6 +127,15 @@ export const RowMenu = ({
   return (
     <div
       ref={containerRef}
+      // Escape inside the menu closes the menu only: stopping it here keeps
+      // it from a dialog's document listener (a menu in a side panel), and
+      // from the window listener below, which covers focus elsewhere.
+      onKeyDown={(evt) => {
+        if (evt.key !== 'Escape' || !isOpen) return;
+        evt.stopPropagation();
+        setOpen(null);
+        triggerRef.current?.focus();
+      }}
       style={{ position: 'relative', display: 'inline-block' }}
     >
       <button

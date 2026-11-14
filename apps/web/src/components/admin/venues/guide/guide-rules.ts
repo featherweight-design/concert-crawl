@@ -55,9 +55,12 @@ export const rowState = (
   return guide.publishedAt === null ? 'draft' : 'published';
 };
 
-/** "{N} of 8 published": the chips only, never the insider tip (row 24). */
+/**
+ * "{N} of 9 published": every row, the insider tip included. This supersedes
+ * 3b-ui-spec row 24 (the board draws "6 of 9"); the total is the row count.
+ */
 export const publishedCount = (guide: VenueGuide): number =>
-  GUIDE_CHIP_ORDER.filter((key) => rowState(guide, key) === 'published').length;
+  GUIDE_SECTIONS.filter((key) => rowState(guide, key) === 'published').length;
 
 /** The publish gate the API runs: Accessibility written, or Can't document yet. */
 export const publishBlocked = (guide: VenueGuide): boolean => {
