@@ -16,15 +16,15 @@ Canvas: https://claude.ai/artifact/FPx85FGiKrmVKStqwTE4Zb
 | 2 | Admin Events status chips | **Ruling:** README rule 3 wins, the fan `StatusChip`. `02/*` |
 | 3 | ⓘ on the past "That night" card | **Ruling:** dropped, per addendum 3 item 19. The two boards that still draw it are superseded. No board. |
 | 4 | Event edit, undrawn states | **Drawn:** venue picker, date and time pickers, picked filter chips, past show, Listed again, Add-a-show errors. `04/*` |
-| 5 | Hide from site, events | **Recommend A:** no Why chips for events. **Hugh decides.** `05/*` |
+| 5 | Hide from site, events | **Decided with Hugh (2026-11-14): A**, no Why chips for events. `05/hide-event-a-d` |
 | 6 | Venue Details: City and fallback art | **Ruling:** City is drawn (beside Neighborhood). The fallback-art preview and Roll go. `06/*` |
-| 7 | Map pin with no geocoder | **Recommend:** entered by hand, as built, with a Maps link. **Hugh decides.** `06/*`, `07/map-pin-states` |
+| 7 | Map pin with no geocoder | **Decided with Hugh (2026-11-14):** entered by hand, as built, with a Maps link. `06/*`, `07/map-pin-states` |
 | 8 | Link to the venue's own site | **Drawn:** in the venue header, for every venue. `08/venue-header-links` |
 | 9 | Settings role chips | **Drawn:** ADMIN, PROMOTER, BETA, none. `09/role-chips-m` |
-| 10 | Tablet, 640 to 1023 | **Recommend A:** the phone layout up to 1023. **Hugh decides.** `10/tablet-a` |
+| 10 | Tablet, 640 to 1023 | **Decided with Hugh (2026-11-14): A**, the phone layout up to 1023. `10/tablet-a` |
 | 11 | Phone venue page icon size | **Ruling:** about 140pt, as `10-venue-art/hero-m-redrocks`. No board. |
 | 12 | Add a venue: gap 3 and Arena | **Already answered.** Gap 3 is in the phone addendum (#175); Arena is the crescent (Hugh), built in `VenueBackdrop`. Nothing is held. |
-| 13 | Held B+ items | **Ruled** one by one below; "How prices work →" is **Hugh's**. `13/hex-patch-and-theme-mark` |
+| 13 | Held B+ items | **Ruled** one by one below; "How prices work →" **decided with Hugh (2026-11-14)**: the tour's How it works step. `13/hex-patch-and-theme-mark` |
 | 14 | Admin extras with no board | **Keep all four, drawn.** `14/*` |
 
 ## 1. Confirm-price sheet
@@ -63,7 +63,7 @@ Events store no hidden reason; the list derives "unsure" or "admin".
 - **A (recommended):** no Why chips for events (`05/hide-event-a-d`). The confirm says what fans lose and that Watchers aren't told. The list keeps the derived tag.
 - **B:** keep Why (Not a concert, Duplicate, Other), which needs a stored reason on events (`05/hide-event-b-d`).
 
-**Hugh decides.** A ships with no schema change; B is only worth it if someone will filter by the reason.
+**Decided with Hugh (2026-11-14): A.** No schema change; `05/hide-event-b-d` stays on the canvas as the option not taken.
 
 ## 6. Venue Details: City and fallback art
 
@@ -75,7 +75,7 @@ Events store no hidden reason; the list derives "unsure" or "admin".
 
 **Recommended: entered by hand, as built** (`07/map-pin-states`): one "latitude, longitude" field, an **Open the address in Maps ↗** link to copy the pin from, and the live error. Empty means no Directions link for fans. No map preview. The board's "Set from the address." is superseded.
 
-Geocoding would add an outside service and its key for about one new venue a month. **Hugh decides.**
+**Decided with Hugh (2026-11-14): by hand.** No geocoder is built.
 
 ## 8. The venue's own site
 
@@ -90,7 +90,7 @@ Geocoding would add an outside service and its key for about one new venue a mon
 - **A (recommended):** the phone layout up to 1023, desktop from 1024 (`10/tablet-a`). Bottom nav, the Filters button and sheet, one column that stops at 640 and centers. Nothing new to draw, and it fixes both clips.
 - **B:** the desktop header and filter bar from 640, which needs a compressed header and an overflowing bar drawn for every screen.
 
-**Hugh decides.** Addendum 3's "header under 1024 collapses search to an icon" applies only if B is chosen.
+**Decided with Hugh (2026-11-14): A.** Addendum 3's "header under 1024 collapses search to an icon" no longer applies: under 1024 is the phone header.
 
 ## 11. Phone venue page icon
 
@@ -104,7 +104,7 @@ Nothing is held. **Gap 3** (Add a venue start, Nobody asked yet, Gone live on ph
 
 - **Crews hex icon:** the generic crew patch where no crew exists yet (Crews empty, the empty crew lens, a stale invite). It's the crew patch (rim, weave and glow from addendum 4) holding the hex glyph in the default chord; the SVG is on `13/hex-patch-and-theme-mark`.
 - **Square Passport stamp:** round, per addendum 4 item 7, including the PNG share card.
-- **"How prices work →":** **Hugh's.** Recommended: link to the prices part of the existing How Concert Crawl works tour (`/onboarding?entry=menu`, the How it works step), so no new page. Until he rules, no link.
+- **"How prices work →":** **decided with Hugh (2026-11-14):** link to the prices part of the existing How Concert Crawl works tour (`/onboarding?entry=menu`, the How it works step). No new page.
 - **Pink mic Theme glyph:** a sketch of the live `MiniMark` (the CCMark in the active theme's tokens). **Keep `MiniMark` as built.**
 - **Low-confidence "Hidden" chip:** the bar is the **code's 0.70**; copy reads it from the constant, never a typed number. The Hidden chip shows only when the show is actually hidden from fans (`is_concert_review_needed`).
 
