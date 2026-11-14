@@ -1,3 +1,18 @@
+# [1.477.0](https://github.com/featherweight-design/concert-crawl/compare/v1.476.0...v1.477.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api,web:** keep the headliner locked on past shows; name duplicate_show ([2bce69b](https://github.com/featherweight-design/concert-crawl/commit/2bce69b4354d06a687985fdb8440e8ba1bf2996a))
+* **api:** narrow past corrections and map night collisions to 409 ([98b6cd1](https://github.com/featherweight-design/concert-crawl/commit/98b6cd18b5caae89ce680aeb1be5e4ec1686a86a))
+* **db,api:** stamp went_live_at on every live venue insert; tidy the 0116 test ([e456e7f](https://github.com/featherweight-design/concert-crawl/commit/e456e7f569cf7a5f1d8729e8c9bd8d0475ba6424))
+
+
+### Features
+
+* **api:** accept past-show corrections that notify nobody ([0f2cd0c](https://github.com/featherweight-design/concert-crawl/commit/0f2cd0cc41d59eaf753e05a401c33b25f9c290fe))
+* **db:** admin 3c schema: venue drafts, Ask the venue, hero setting, glyph, test crawls ([f72a2fa](https://github.com/featherweight-design/concert-crawl/commit/f72a2fa59446aa1f617cea1cb7ec9654147e61e6))
+
 # [1.476.0](https://github.com/featherweight-design/concert-crawl/compare/v1.475.0...v1.476.0) (2026-11-14)
 
 
