@@ -58,7 +58,8 @@ export const SectionHead = ({
           fontFamily: "'Inter', sans-serif",
           // Every admin desktop board draws the title at 28/800 with the
           // summary at 13.5 (`health-desktop` and the rest of the set).
-          fontSize: 28,
+          // 24 on the phone boards, from admin.css's `--section-head-title-size`.
+          fontSize: 'var(--section-head-title-size, 28px)',
           fontWeight: 800,
           letterSpacing: '-0.02em',
           color: 'var(--fg)',
@@ -71,7 +72,7 @@ export const SectionHead = ({
         <p
           style={{
             margin: '4px 0 0',
-            fontSize: 13.5,
+            fontSize: 'var(--section-head-sub-size, 13.5px)',
             color: 'var(--fg-muted)',
           }}
         >

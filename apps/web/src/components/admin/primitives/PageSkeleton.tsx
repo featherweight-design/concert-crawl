@@ -51,8 +51,9 @@ export const PHONE_VAR = {
 
 /**
  * The loading boards step each row's opacity down by .12 from 1 (1, .88, .76,
- * .64, .52, .40), not a smooth mask. The boards stop at six rows, so a seventh
- * and later hold at .40 rather than going on to fade out.
+ * .64, .52, .40), not a smooth mask. The boards draw up to six rows; a page
+ * that renders more (Events draws eight) holds at .40 for the rest rather than
+ * going on to fade out.
  */
 export const rowOpacity = (row: number): number =>
   Math.max(0.4, Math.round((1 - row * 0.12) * 100) / 100);
