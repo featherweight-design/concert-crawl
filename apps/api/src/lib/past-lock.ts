@@ -5,6 +5,9 @@
 // promoting a cancelled or postponed report (promoteReport), on every path:
 // the admin sold-out and available endpoints, the admin report resolve (409
 // `past_locked`) and the fan confirm threshold (the report closes as moot).
+// One exception: a postponed show whose date passed "stays Postponed until
+// you set the new date or mark it cancelled" (addendum 6), so a cancelled
+// report still promotes on it (promoteReport).
 // The admin PATCH has its own field-level lock
 // (routes/admin/lib/event-update.ts) and shares this file's definitions.
 
