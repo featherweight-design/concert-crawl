@@ -226,6 +226,26 @@ describe('DetailsTab', () => {
     expect(input(FIELDS.address).value).toBe(venue.address);
   });
 
+  // Style contract only (jsdom has no layout): Details' look on the shared
+  // PinnedSaveBar, as `details-d` and `details-m` draw it.
+  it('draws the Save bar in Details’ look on desktop and phone', () => {
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.address), { target: { value: '1 Main St' } });
+    const bar = screen.getByTestId('details-save-bar');
+    expect(bar.style.gap).toBe('10px');
+    expect(bar.style.padding).toBe('13px 16px');
+    expect(bar.style.flexWrap).toBe('');
+    expect(screen.getByText(COPY.saveBar.unsaved(1)).style.color).toBe(
+      'var(--warning)',
+    );
+    expect(
+      screen.getByRole('button', { name: COPY.saveBar.save }).style.height,
+    ).toBe('38px');
+    setPhone(true);
+    expect(bar.style.gap).toBe('8px');
+    expect(bar.style.padding).toBe('12px 16px 24px');
+  });
+
   it('saves only the changed columns, then refreshes', async () => {
     render(<DetailsTab venue={venue} />);
     fireEvent.change(input(FIELDS.mapPin.label), {

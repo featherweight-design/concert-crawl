@@ -519,6 +519,32 @@ describe('SourceTab — its own save bar', () => {
     expect(calendarInput()).toHaveProperty('value', venue.websiteUrl);
   });
 
+  // Style contract only (jsdom has no layout): Source's look on the shared
+  // PinnedSaveBar, which differs from Details' on purpose.
+  it.each([
+    [false, '10px 16px', ''],
+    [true, '10px 16px 24px', '1'],
+  ])(
+    'draws the Save bar in Source’s look (phone %s)',
+    (isPhone, padding, saveFlexGrow) => {
+      phone = isPhone;
+      render(<SourceTab venue={venue} />);
+      fireEvent.change(calendarInput(), {
+        target: { value: 'https://gothic.example/calendar' },
+      });
+      const bar = screen.getByTestId('source-save-bar');
+      expect(bar.style.gap).toBe('8px');
+      expect(bar.style.flexWrap).toBe('wrap');
+      expect(bar.style.padding).toBe(padding);
+      expect(
+        screen.getByText(COPY.saveBar.unsaved(COPY.read.title)).style.color,
+      ).toBe('var(--fg-muted)');
+      expect(
+        screen.getByRole('button', { name: COPY.saveBar.save }).style.flexGrow,
+      ).toBe(saveFlexGrow);
+    },
+  );
+
   it('a radio picked and picked back is not a change', () => {
     render(<SourceTab venue={venue} />);
     fireEvent.click(

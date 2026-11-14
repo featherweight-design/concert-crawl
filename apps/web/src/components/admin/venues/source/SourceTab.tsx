@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import type { PlatformProbeResult, Venue } from '@concert-crawl/types';
 import { updateVenue, probeVenuePlatform } from '@/lib/actions/venues';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { TAB_BAR_HEIGHT } from '@/components/admin/shell/MobileBottomBar';
 import {
   AdminButton,
-  SaveFailedToast,
+  PinnedSaveBar,
   useIsPhone,
 } from '@/components/admin/primitives';
 import {
@@ -390,30 +389,20 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
     </Card>
   );
 
-  // No Dismiss: the board draws Try again only; the next save or Discard
-  // clears it.
-  const toast =
-    failure === null ? null : (
-      <div
-        style={{ borderRadius: 12, boxShadow: '0 14px 30px rgba(0,0,0,0.45)' }}
-      >
-        <SaveFailedToast
-          title={COPY.failed.title}
-          saved={failure.saved}
-          retrying={saving}
-          {...(failure.attempt === null
-            ? {}
-            : {
-                onRetry: () => {
-                  const { attempt } = failure;
-                  if (attempt === null) return;
-                  setDraft(attempt);
-                  void save(attempt);
-                },
-              })}
-        />
-      </div>
-    );
+  const failedAttempt = failure?.attempt ?? null;
+  const barFailure =
+    failure === null
+      ? null
+      : failedAttempt === null
+        ? { title: COPY.failed.title, saved: failure.saved }
+        : {
+            title: COPY.failed.title,
+            saved: failure.saved,
+            onRetry: () => {
+              setDraft(failedAttempt);
+              void save(failedAttempt);
+            },
+          };
 
   return (
     <div
@@ -436,85 +425,31 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
         </div>
       </div>
 
-      {/* Floats 24px above the screen's bottom (above the tab bar on phone),
-          out of the page's flow (`G4/source-save-failed`). */}
-      {toast !== null && !dirty && (
-        <div
-          style={{
-            position: 'sticky',
-            bottom: phone
-              ? `calc(${TAB_BAR_HEIGHT + 24}px + env(safe-area-inset-bottom))`
-              : 24,
-            height: 0,
-            // Cancels the column's gap, so the anchor takes no room.
-            marginTop: -16,
-            zIndex: 30,
-          }}
-        >
-          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
-            {toast}
-          </div>
-        </div>
-      )}
-
-      {dirty && (
-        <div
-          data-testid="source-save-bar"
-          style={{
-            position: 'sticky',
-            bottom: 0,
-            zIndex: 30,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            flexWrap: 'wrap',
-            padding: phone ? '10px 16px 24px' : '10px 16px',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            borderRadius: phone ? 0 : 12,
-          }}
-        >
-          {/* A refusal keeps the edit, so the bar stays: float above it. */}
-          {toast !== null && (
-            <div
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 'calc(100% + 12px)',
-              }}
-            >
-              {toast}
-            </div>
-          )}
-          <span
-            style={{
-              fontSize: 12,
-              color: 'var(--fg-muted)',
-              flex: phone ? '1 0 100%' : 1,
-            }}
-          >
-            {COPY.saveBar.unsaved(COPY.read.title)}
-          </span>
-          <AdminButton
-            type="button"
-            variant="outline"
-            disabled={saving}
-            onClick={discard}
-          >
-            {COPY.saveBar.discard}
-          </AdminButton>
-          <AdminButton
-            type="button"
-            variant="gradient"
-            disabled={saving}
-            onClick={() => void save(draft)}
-            style={phone ? { flex: 1 } : undefined}
-          >
-            {saving ? COPY.saveBar.saving : COPY.saveBar.save}
-          </AdminButton>
-        </div>
-      )}
+      {/* With nothing unsaved, a failed save's toast floats 24px above the
+          screen's bottom (`G4/source-save-failed`). */}
+      <PinnedSaveBar
+        phone={phone}
+        dirty={dirty}
+        saving={saving}
+        testId="source-save-bar"
+        message={COPY.saveBar.unsaved(COPY.read.title)}
+        labels={COPY.saveBar}
+        failure={barFailure}
+        onDiscard={discard}
+        onSave={() => void save(draft)}
+        look={{
+          gap: 8,
+          wrap: true,
+          padding: phone ? '10px 16px 24px' : '10px 16px',
+          messageStyle: {
+            fontSize: 12,
+            color: 'var(--fg-muted)',
+            flex: phone ? '1 0 100%' : 1,
+          },
+          discardVariant: 'outline',
+          ...(phone ? { saveStyle: { flex: 1 } } : {}),
+        }}
+      />
     </div>
   );
 };

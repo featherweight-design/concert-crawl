@@ -41,6 +41,8 @@ export type { PageSkeletonProps } from './PageSkeleton';
 export { EmptyState } from './EmptyState';
 export { CouldntLoad } from './CouldntLoad';
 export { SaveFailedToast } from './SaveFailedToast';
+export { PinnedSaveBar } from './PinnedSaveBar';
+export type { PinnedSaveBarLook, PinnedSaveBarProps } from './PinnedSaveBar';
 export { useSnapBack } from './useSnapBack';
 export type { SnapBack } from './useSnapBack';
 export { useIsPhone, ADMIN_PHONE_MAX_WIDTH } from './useIsPhone';
