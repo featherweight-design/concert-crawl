@@ -39,7 +39,6 @@ export function AuthParts() {
       />
       <AuthBanner>{COPY.offline}</AuthBanner>
       <GoogleButton />
-      <GoogleButton busy />
       <OrDivider />
       <AuthField label="Email" type="email" placeholder="you@example.com" />
       <AuthField
@@ -80,9 +79,6 @@ export function AuthParts() {
         {COPY.consent.end}
       </ConsentCheck>
       <PrimaryButton>{COPY.parts.continue}</PrimaryButton>
-      <PrimaryButton busy busyLabel={COPY.parts.makingAccount}>
-        {COPY.parts.continue}
-      </PrimaryButton>
       <PrimaryButton done doneLabel={COPY.parts.youreIn} />
       <PrimaryButton disabled>{COPY.parts.continue}</PrimaryButton>
       <SecondaryButton emphasis>{COPY.parts.useCode}</SecondaryButton>
