@@ -18,6 +18,16 @@ const config: NextConfig = {
   // requires that job, so nothing reaches main, and so Vercel, untyped. The
   // build skips only the second pass of a check that has already gated the code.
   typescript: { ignoreBuildErrors: true },
+  // The same ceiling, one phase later: from 2026-11-14 the compile passes and
+  // the build is SIGKILLed ("Out of Memory", then NEXT_NO_ROUTES_MANIFEST) in
+  // "Collecting page data using 3 workers", where each worker imports every
+  // route module on the 8 GB Standard machine (4 cores). Two workers hold fewer
+  // route graphs at once, and webpack's memory mode trades some speed for a
+  // lower peak in the compile that precedes them.
+  experimental: {
+    cpus: 2,
+    webpackMemoryOptimizations: true,
+  },
   env: {
     // Exact Clerk script versions, so the browser skips two uncacheable
     // redirects per page load. See src/lib/clerk-scripts.ts.
