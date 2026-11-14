@@ -1,3 +1,11 @@
+## [1.441.1](https://github.com/featherweight-design/concert-crawl/compare/v1.441.0...v1.441.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** drop the restated pending clause from the self-locked notice ([e80ae5e](https://github.com/featherweight-design/concert-crawl/commit/e80ae5e8b5a655871e5327367cb22d41aecd4907))
+* **web:** say submitted prices where live copy said submission ([f14eb13](https://github.com/featherweight-design/concert-crawl/commit/f14eb13b56b96b41476dc8377b0bd34571188d96))
+
 # [1.441.0](https://github.com/featherweight-design/concert-crawl/compare/v1.440.1...v1.441.0) (2026-11-14)
 
 
