@@ -47,7 +47,7 @@ const row = (id: string) => ({
 });
 
 const renderPage = async () => {
-  const page = await AdminVenuesPage();
+  const page = await AdminVenuesPage({});
   if (page) render(page);
 };
 
