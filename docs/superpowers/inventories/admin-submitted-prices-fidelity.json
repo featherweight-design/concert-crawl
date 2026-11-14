@@ -1,10 +1,24 @@
 {
   "feature": "Admin Prices · Submitted prices fidelity (P47-9b)",
-  "note": "Boards 06-events-artists-prices/prices-submitted-prices, submitted-prices-mobile, prices-row-menu, edit-price-desktop; addendum-3 §4d #8, #12, #21. CONTACT_SHEET_ROLE=admin. Phone: search on top, filters as a segment (counts with a space), Published pill, PersonAvatar (README rule 12) beside each @handle. Desktop: unchanged chips plus the '@handle · N' fan chip from a row's ⋯ (exact handle). Edit price opens the single sheet (Cancel). Fan chip and Edit price are desktop-only (no phone row ⋯ is drawn).",
+  "note": "Boards 06-events-artists-prices/prices-submitted-prices, submitted-prices-mobile, prices-row-menu, edit-price-desktop; addendum-3 §4d #8, #12, #21. CONTACT_SHEET_ROLE=admin. Phone: search on top, filters as a segment (counts with a space), Published pill, PersonAvatar (README rule 12) beside each @handle. Desktop: unchanged chips plus the '@handle · N' fan chip from a row's ⋯ (exact handle). Edit price opens the single sheet (Cancel). Fan chip and Edit price are desktop-only (no phone row ⋯ is drawn). Rows are mocked (scratch has no handles): 4 rows incl. one with no handle.",
   "widths": [
-    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
-    { "label": "phone", "width": 390, "height": 844, "touch": true },
-    { "label": "desktop", "width": 1300, "height": 900 }
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 740,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
   ],
   "rows": [
     {
@@ -12,8 +26,91 @@
       "label": "/admin/prices?tab=submitted",
       "steps": [
         {
+          "route": "**/v1/admin/prices/submissions?count=true*",
+          "body": {
+            "success": true,
+            "data": {
+              "rows": [
+                {
+                  "id": "s1",
+                  "eventId": "e-s1",
+                  "eventTitle": "Vince Staples",
+                  "eventDate": "2026-11-19",
+                  "venueName": "Fillmore Auditorium",
+                  "ticketUrl": "https://tickets.example/s1",
+                  "priceMin": "50.00",
+                  "priceMax": "450.00",
+                  "handle": "dlo",
+                  "avatarColor": "warning",
+                  "avatarSecondColor": "accent",
+                  "backedBy": 2,
+                  "state": "published"
+                },
+                {
+                  "id": "s2",
+                  "eventId": "e-s2",
+                  "eventTitle": "Clipse & J.I.D",
+                  "eventDate": "2026-11-21",
+                  "venueName": "Red Rocks",
+                  "ticketUrl": "https://tickets.example/s2",
+                  "priceMin": "65.00",
+                  "priceMax": "495.00",
+                  "handle": "annab",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting"
+                },
+                {
+                  "id": "s3",
+                  "eventId": "e-s3",
+                  "eventTitle": "Marian Hill",
+                  "eventDate": "2026-11-22",
+                  "venueName": "Bluebird Theater",
+                  "ticketUrl": "https://tickets.example/s3",
+                  "priceMin": "44.00",
+                  "priceMax": null,
+                  "handle": null,
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 1,
+                  "state": "waiting"
+                },
+                {
+                  "id": "s4",
+                  "eventId": "e-s4",
+                  "eventTitle": "Ninth Key",
+                  "eventDate": "2026-11-27",
+                  "venueName": "Gothic Theatre",
+                  "ticketUrl": "https://tickets.example/s4",
+                  "priceMin": "35.00",
+                  "priceMax": "65.00",
+                  "handle": "theo.wav",
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 3,
+                  "state": "price-check"
+                }
+              ],
+              "total": 46
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts*",
+          "body": {
+            "success": true,
+            "data": {
+              "all": 46,
+              "waiting": 2,
+              "published": 43,
+              "priceCheck": 1
+            }
+          }
+        },
+        {
           "goto": "/admin/prices?tab=submitted",
-          "wait": "[data-testid=\"person-avatar\"], [data-testid=\"empty-state\"]",
+          "wait": "li:has-text(\"@dlo\")",
           "settle": 800
         }
       ]
@@ -24,14 +121,103 @@
       "widths": ["desktop"],
       "steps": [
         {
-          "goto": "/admin/prices?tab=submitted",
-          "wait": "[data-testid=\"person-avatar\"], [aria-haspopup=\"menu\"]"
+          "route": "**/v1/admin/prices/submissions?count=true*",
+          "body": {
+            "success": true,
+            "data": {
+              "rows": [
+                {
+                  "id": "s1",
+                  "eventId": "e-s1",
+                  "eventTitle": "Vince Staples",
+                  "eventDate": "2026-11-19",
+                  "venueName": "Fillmore Auditorium",
+                  "ticketUrl": "https://tickets.example/s1",
+                  "priceMin": "50.00",
+                  "priceMax": "450.00",
+                  "handle": "dlo",
+                  "avatarColor": "warning",
+                  "avatarSecondColor": "accent",
+                  "backedBy": 2,
+                  "state": "published"
+                },
+                {
+                  "id": "s2",
+                  "eventId": "e-s2",
+                  "eventTitle": "Clipse & J.I.D",
+                  "eventDate": "2026-11-21",
+                  "venueName": "Red Rocks",
+                  "ticketUrl": "https://tickets.example/s2",
+                  "priceMin": "65.00",
+                  "priceMax": "495.00",
+                  "handle": "annab",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting"
+                },
+                {
+                  "id": "s3",
+                  "eventId": "e-s3",
+                  "eventTitle": "Marian Hill",
+                  "eventDate": "2026-11-22",
+                  "venueName": "Bluebird Theater",
+                  "ticketUrl": "https://tickets.example/s3",
+                  "priceMin": "44.00",
+                  "priceMax": null,
+                  "handle": null,
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 1,
+                  "state": "waiting"
+                },
+                {
+                  "id": "s4",
+                  "eventId": "e-s4",
+                  "eventTitle": "Ninth Key",
+                  "eventDate": "2026-11-27",
+                  "venueName": "Gothic Theatre",
+                  "ticketUrl": "https://tickets.example/s4",
+                  "priceMin": "35.00",
+                  "priceMax": "65.00",
+                  "handle": "theo.wav",
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 3,
+                  "state": "price-check"
+                }
+              ],
+              "total": 46
+            }
+          }
         },
         {
-          "click": "li:has([data-testid=\"person-avatar\"]) [aria-haspopup=\"menu\"], tr:has([data-testid=\"person-avatar\"]) [aria-haspopup=\"menu\"], [role=\"listitem\"]:has-text(\"@\") [aria-haspopup=\"menu\"]"
+          "route": "**/v1/admin/prices/submissions/state-counts*",
+          "body": {
+            "success": true,
+            "data": {
+              "all": 46,
+              "waiting": 2,
+              "published": 43,
+              "priceCheck": 1
+            }
+          }
         },
-        { "clickRole": "menuitem", "name": "^This fan" },
-        { "wait": "text=/@\\w+ · \\d+/", "settle": 800 }
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "li:has-text(\"@dlo\") [aria-haspopup=\"menu\"]"
+        },
+        {
+          "click": "li:has-text(\"@dlo\") [aria-haspopup=\"menu\"]"
+        },
+        {
+          "clickRole": "menuitem",
+          "name": "^This fan"
+        },
+        {
+          "wait": "text=/@\\w+ · \\d+/",
+          "settle": 800
+        }
       ]
     },
     {
@@ -40,12 +226,103 @@
       "widths": ["desktop"],
       "steps": [
         {
-          "goto": "/admin/prices?tab=submitted",
-          "wait": "[aria-haspopup=\"menu\"]"
+          "route": "**/v1/admin/prices/submissions?count=true*",
+          "body": {
+            "success": true,
+            "data": {
+              "rows": [
+                {
+                  "id": "s1",
+                  "eventId": "e-s1",
+                  "eventTitle": "Vince Staples",
+                  "eventDate": "2026-11-19",
+                  "venueName": "Fillmore Auditorium",
+                  "ticketUrl": "https://tickets.example/s1",
+                  "priceMin": "50.00",
+                  "priceMax": "450.00",
+                  "handle": "dlo",
+                  "avatarColor": "warning",
+                  "avatarSecondColor": "accent",
+                  "backedBy": 2,
+                  "state": "published"
+                },
+                {
+                  "id": "s2",
+                  "eventId": "e-s2",
+                  "eventTitle": "Clipse & J.I.D",
+                  "eventDate": "2026-11-21",
+                  "venueName": "Red Rocks",
+                  "ticketUrl": "https://tickets.example/s2",
+                  "priceMin": "65.00",
+                  "priceMax": "495.00",
+                  "handle": "annab",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting"
+                },
+                {
+                  "id": "s3",
+                  "eventId": "e-s3",
+                  "eventTitle": "Marian Hill",
+                  "eventDate": "2026-11-22",
+                  "venueName": "Bluebird Theater",
+                  "ticketUrl": "https://tickets.example/s3",
+                  "priceMin": "44.00",
+                  "priceMax": null,
+                  "handle": null,
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 1,
+                  "state": "waiting"
+                },
+                {
+                  "id": "s4",
+                  "eventId": "e-s4",
+                  "eventTitle": "Ninth Key",
+                  "eventDate": "2026-11-27",
+                  "venueName": "Gothic Theatre",
+                  "ticketUrl": "https://tickets.example/s4",
+                  "priceMin": "35.00",
+                  "priceMax": "65.00",
+                  "handle": "theo.wav",
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 3,
+                  "state": "price-check"
+                }
+              ],
+              "total": 46
+            }
+          }
         },
-        { "click": "[aria-haspopup=\"menu\"]" },
-        { "clickRole": "menuitem", "name": "^Edit price" },
-        { "wait": "[role=\"dialog\"]", "settle": 600 }
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts*",
+          "body": {
+            "success": true,
+            "data": {
+              "all": 46,
+              "waiting": 2,
+              "published": 43,
+              "priceCheck": 1
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "li:has-text(\"@dlo\") [aria-haspopup=\"menu\"]"
+        },
+        {
+          "click": "li:has-text(\"@dlo\") [aria-haspopup=\"menu\"]"
+        },
+        {
+          "clickRole": "menuitem",
+          "name": "^Edit price"
+        },
+        {
+          "wait": "[role=\"dialog\"]",
+          "settle": 600
+        }
       ]
     }
   ]

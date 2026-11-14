@@ -3841,6 +3841,14 @@ export const ADMIN_COPY = {
       published: 'Published',
       'price-check': 'Price check',
     },
+    // The phone's segment (A3 4d #21): short words, as the Prices segment's
+    // phoneTabs ("Checks"), so four counted filters fit at 320.
+    phoneFilters: {
+      all: 'All',
+      waiting: 'Waiting',
+      published: 'Published',
+      'price-check': 'Checks',
+    },
     search: 'Search shows or people',
     // 4d#12: the list filtered to one fan, as a chip with the handle.
     // The count is left off until it has been counted for this fan.
