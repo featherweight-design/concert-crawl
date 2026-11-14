@@ -1,0 +1,43 @@
+{
+  "feature": "Admin · Couldn't load, list loading, Feature flags loading (P47-8 PR A)",
+  "note": "Boards: design_handoff_admin_redesign/boards/02-needs-you/couldnt-load, 07-people-flags-operations/loading-any-list-on-mobile, loading-feature-flags; addendum-3 01-snooze/couldnt-load-m; bplus addendum-2 10-admin-couldnt-load. CONTACT_SHEET_ROLE=admin. Couldn't load is reached by routing the page's own API call to a 500 (the client then renders it); the error.tsx boundary has no trigger, so it is pinned by unit tests (page name from the route, no Error ID line). Loading skeletons are hand-walked: a route delay leaves the streamed loading.tsx up only briefly, so they are pinned by unit tests too. Venues fetches on the server (page.tsx apiClient), so a browser route cannot fail it: its kept h1 is pinned by VenuesList.test.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 740,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "needs-you-couldnt-load",
+      "label": "Needs you, its call 500s",
+      "steps": [
+        {
+          "route": "**/v1/admin/needs-you",
+          "status": 500,
+          "body": {
+            "success": false
+          }
+        },
+        {
+          "goto": "/admin/needs-you",
+          "wait": "text=/Couldn.t load/",
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}

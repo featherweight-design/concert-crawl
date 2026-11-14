@@ -117,6 +117,9 @@ export const StateMessage = ({
           gap: 8,
           flexWrap: 'wrap',
           justifyContent: 'center',
+          // A var, so admin.css can stretch the row to the state's width
+          // (`01/couldnt-load-m`'s full-width buttons).
+          alignSelf: 'var(--state-message-actions-align, auto)',
         }}
       >
         {actions}

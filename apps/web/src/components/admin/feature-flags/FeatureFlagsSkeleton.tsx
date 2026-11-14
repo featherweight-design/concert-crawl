@@ -1,4 +1,5 @@
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 /** Each row's title bar width, top to bottom, as the board draws them. */
 const TITLE_WIDTHS = ['38%', '55%', '42%'] as const;
@@ -14,9 +15,11 @@ const ROW_OPACITY = [1, 0.88, 0.76] as const;
 export const FeatureFlagsSkeleton = () => (
   <div
     data-testid="feature-flags-skeleton"
+    role="status"
     aria-busy="true"
     style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
   >
+    <span className="sr-only">{ADMIN_COPY.states.loading}</span>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <SkeletonBlock width={200} height={28} radius={8} />
       <SkeletonBlock width="min(380px, 100%)" height={12} radius={6} />
