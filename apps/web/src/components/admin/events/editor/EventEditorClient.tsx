@@ -221,7 +221,7 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
       // re-armed if navigation is delayed (would otherwise allow a second
       // DELETE on the now-deleted row).
       setPendingDanger(null);
-      router.push('/admin/review?tab=all-events');
+      router.push('/admin/events');
     } catch (dangerErr) {
       const message =
         dangerErr instanceof ApiError
