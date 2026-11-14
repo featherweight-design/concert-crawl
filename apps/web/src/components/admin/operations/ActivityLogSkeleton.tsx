@@ -1,5 +1,4 @@
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
-import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 /** Each row's title bar width, top to bottom, as the board draws them. */
 const TITLE_WIDTHS = ['38%', '55%', '42%', '59%', '46%', '63%'] as const;
@@ -51,43 +50,5 @@ export const ActivityLogRowsSkeleton = () => (
         </span>
       </div>
     ))}
-  </div>
-);
-
-/**
- * `07/loading-activity-log`: the title and subtitle bars, the tab bars, the
- * filter pills, then the log card. The Emails tab and the search box are not
- * built yet, so their bars are left out. No hooks, so the route's
- * `loading.tsx` renders it on the server.
- */
-export const ActivityLogSkeleton = () => (
-  <div
-    data-testid="activity-log-skeleton"
-    role="status"
-    aria-busy="true"
-    style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-  >
-    <span className="sr-only">{ADMIN_COPY.states.loading}</span>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <SkeletonBlock width={200} height={28} radius={8} />
-      <SkeletonBlock width="min(380px, 100%)" height={12} radius={6} />
-    </div>
-    <div
-      style={{
-        display: 'flex',
-        gap: 18,
-        borderBottom: '1px solid var(--border)',
-        paddingBottom: 12,
-      }}
-    >
-      <SkeletonBlock width={90} height={14} radius={6} />
-      <SkeletonBlock width={90} height={14} radius={6} />
-    </div>
-    <div style={{ display: 'flex', gap: 8 }}>
-      {[0, 1, 2].map((pill) => (
-        <SkeletonBlock key={pill} width={92} height={32} radius={999} />
-      ))}
-    </div>
-    <ActivityLogRowsSkeleton />
   </div>
 );

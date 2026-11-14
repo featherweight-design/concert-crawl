@@ -82,12 +82,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const renderLog = () =>
-  render(<OperationsClient initialTab="log" feedbackUnread={4} />);
+const renderLog = () => render(<OperationsClient initialTab="log" />);
 
+// The Feedback tab's count and inbox are OperationsClient.test.tsx's.
 describe('Operations shell', () => {
-  it('draws Feedback (with its count) and Activity log, and no Emails', () => {
-    render(<OperationsClient initialTab="feedback" feedbackUnread={4} />);
+  it('draws Feedback and Activity log, and no Emails', () => {
+    render(<OperationsClient initialTab="feedback" />);
     expect(
       screen.getByRole('heading', { level: 1, name: COPY.title }),
     ).toBeInTheDocument();
@@ -96,25 +96,15 @@ describe('Operations shell', () => {
       'tab',
     );
     expect(tabs.map((tab) => tab.textContent)).toEqual([
-      'Feedback4',
+      'Feedback',
       'Activity log',
     ]);
     expect(screen.queryByText('Emails')).not.toBeInTheDocument();
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('renders the existing feedback page in the Feedback tab', async () => {
-    render(<OperationsClient initialTab="feedback" feedbackUnread={null} />);
-    expect(
-      await screen.findByText(ADMIN_COPY.feedback.emptyState),
-    ).toBeInTheDocument();
-    expect(fetchMock.mock.calls.map(([url]) => String(url))).toContainEqual(
-      expect.stringContaining('/v1/admin/feedback?limit=200'),
-    );
-  });
-
   it('switches to the Activity log', async () => {
-    render(<OperationsClient initialTab="feedback" feedbackUnread={0} />);
+    render(<OperationsClient initialTab="feedback" />);
     fireEvent.click(screen.getByRole('tab', { name: COPY.tabs.log }));
     expect(await screen.findByTestId('activity-log-table')).toBeInTheDocument();
   });

@@ -24,9 +24,9 @@ describe('operations loading (07/loading-activity-log)', () => {
     expect(head.style.display).toBe('');
   });
 
-  it('draws one tab pill, one per drawn tab', () => {
+  it('draws two tab pills, one per drawn tab', () => {
     render(<AdminOperationsLoading />);
-    expect(screen.getAllByTestId('operations-skeleton-tab')).toHaveLength(1);
+    expect(screen.getAllByTestId('operations-skeleton-tab')).toHaveLength(2);
     expect(screen.getByTestId('operations-skeleton-tabs').style.gap).toBe(
       '18px',
     );
