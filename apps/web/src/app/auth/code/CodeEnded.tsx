@@ -127,6 +127,7 @@ export function CodeEnded({ onEnterAnother }: { onEnterAnother: () => void }) {
             type="button"
             onClick={onEnterAnother}
             style={{
+              position: 'relative',
               padding: 0,
               border: 0,
               background: 'none',
@@ -137,6 +138,19 @@ export function CodeEnded({ onEnterAnother }: { onEnterAnother: () => void }) {
             }}
           >
             {ended.another.link}
+            {/* A 44px-tall tap area around the drawn 17px line, out of
+                layout so the board's spacing is untouched. */}
+            <span
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: -12,
+                right: -12,
+                height: 44,
+                transform: 'translateY(-50%)',
+              }}
+            />
           </button>
         </p>
       </div>
