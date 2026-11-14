@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.73.0-beta',
+    date: 'Nov 14, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'changed',
+        text: 'Sharing a show now makes a new card with the photo, the date and a countdown, in story, square or wide.',
+      },
+    ],
+  },
+  {
     version: 'v0.72.0-beta',
     date: 'Nov 14, 2026',
     headline: null,
