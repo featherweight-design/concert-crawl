@@ -207,7 +207,7 @@ describe('PassportBooklet', () => {
     swipe([300, 100], [100, 100]);
     swipe([300, 100], [100, 100]);
 
-    expect(statusOf('stack')).toBe(COPY.pageNightsSoFar(3, 11));
+    expect(statusOf('stack')).toBe(COPY.pageNights(3, 11));
   });
 
   // The two layouts group pages differently, so the booklet remembers a page,
@@ -223,7 +223,7 @@ describe('PassportBooklet', () => {
 
     swipe([300, 100], [100, 100]);
     // Phone on page 3; desktop still shows the spread that holds it.
-    expect(statusOf('stack')).toBe(COPY.pageNightsSoFar(3, 11));
+    expect(statusOf('stack')).toBe(COPY.pageNights(3, 11));
     expect(statusOf('spread')).toBe(COPY.spreadOf(2, 2));
   });
 
