@@ -15,6 +15,7 @@ import { eq } from 'drizzle-orm';
 import { events } from '@concert-crawl/db';
 import type { DbTransaction } from './db-executor.js';
 import { apiLogger } from './logger.js';
+import { NOT_ON_SALE_STATUSES } from './sold-out.js';
 import { todayInDenver } from './time.js';
 
 /** A write the past lock refuses. Thrown inside a transaction, it rolls back. */
@@ -120,9 +121,10 @@ export const lockEventForSaleWrite = async (
   const show = await lockEventRow(tx, eventId);
   if (show.state === 'past') throw new PastLockedError();
   if (show.delistedAt !== null) throw new NotOnSaleError('delisted');
-  if (show.status === 'cancelled' || show.status === 'postponed') {
-    throw new NotOnSaleError(show.status);
-  }
+  const notOnSale = NOT_ON_SALE_STATUSES.find(
+    (status) => status === show.status,
+  );
+  if (notOnSale) throw new NotOnSaleError(notOnSale);
 };
 
 /**
