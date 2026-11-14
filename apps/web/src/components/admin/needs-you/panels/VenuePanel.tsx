@@ -172,10 +172,16 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
         extra={
           blocked ? (
             <>
-              <AdminButton variant="outline" disabled fullWidth>
+              <AdminButton
+                variant="outline"
+                disabled
+                fullWidth
+                aria-describedby="ask-venue-why"
+              >
                 {PANEL.venue.askVenue}
               </AdminButton>
               <p
+                id="ask-venue-why"
                 style={{
                   margin: 0,
                   fontSize: 13,
@@ -186,7 +192,7 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
                 {PANEL.venue.askVenueLine}
               </p>
             </>
-          ) : !blocked && row.venueId ? (
+          ) : row.venueId ? (
             <Link
               href={venueTabHref(row.venueId, 'source')}
               data-testid="check-source"

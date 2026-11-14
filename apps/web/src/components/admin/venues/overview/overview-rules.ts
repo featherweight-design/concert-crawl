@@ -85,7 +85,7 @@ export const runOutcomeKey = (
 
 /**
  * Each run outcome's tone, as drawn (`A3/09/run-result-chips`). The run chip
- * and Needs you's LAST 4 RUNS both read it, so the two can't disagree.
+ * and Needs you's LAST 14 RUNS both read it, so the two can't disagree.
  */
 export const RUN_OUTCOME_TONE: Record<RunOutcomeKey, string> = {
   success: 'var(--success)',
