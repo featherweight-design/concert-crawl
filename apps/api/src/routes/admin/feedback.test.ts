@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createApp } from '../../app.js';
 
+// Auth and boundary validation only: every case here is refused before the
+// route touches the database. Reads, writes and the resolved transitions are
+// covered against a real database in feedback.integration.test.ts.
+
 const mockGetAuth = vi.fn();
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -8,42 +12,10 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => mockGetAuth(),
 }));
 
-// Spread the real module so a new drizzle-orm import elsewhere in the app
-// doesn't break this suite; only the operators it inspects are mocked.
-vi.mock('drizzle-orm', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('drizzle-orm')>()),
-  eq: vi.fn((col, val) => ({ col, val, op: 'eq' })),
-  desc: vi.fn((col) => ({ col, dir: 'desc' })),
-  and: vi.fn((...args) => ({ args, op: 'and' })),
-  asc: vi.fn((col) => ({ col, dir: 'asc' })),
-  sql: vi.fn((parts, ...vals) => ({ parts, vals })),
-}));
-
 vi.mock('@concert-crawl/db', () => ({
-  db: {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue([]),
-    update: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
-    returning: vi.fn().mockResolvedValue([]),
-    insert: vi.fn().mockReturnThis(),
-    values: vi.fn().mockReturnThis(),
-  },
-  feedback: {
-    id: 'id',
-    userId: 'userId',
-    pageUrl: 'pageUrl',
-    category: 'category',
-    message: 'message',
-    metadata: 'metadata',
-    status: 'status',
-    adminNotes: 'adminNotes',
-    issueUrl: 'issueUrl',
-    createdAt: 'createdAt',
-  },
+  db: {},
+  feedback: {},
+  userProfiles: {},
   auditLog: {},
   inviteCodes: {},
   crawlRuns: {},
@@ -53,19 +25,6 @@ vi.mock('@concert-crawl/db', () => ({
 }));
 
 const FEEDBACK_ID = '11111111-1111-1111-1111-111111111111';
-
-const mockFeedbackRow = {
-  id: FEEDBACK_ID,
-  userId: 'user_abc123',
-  pageUrl: 'https://example.com/events',
-  category: 'bug',
-  message: 'Something is broken',
-  metadata: null,
-  status: 'unread',
-  adminNotes: null,
-  issueUrl: null,
-  createdAt: new Date('2026-05-07T10:00:00Z'),
-};
 
 function adminAuth() {
   mockGetAuth.mockReturnValue({
@@ -80,6 +39,13 @@ function userAuth() {
     sessionClaims: { metadata: { role: 'user' } },
   });
 }
+
+const patch = (body: unknown) =>
+  createApp().request(`/v1/admin/feedback/${FEEDBACK_ID}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
 describe('GET /v1/admin/feedback', () => {
   beforeEach(() => {
@@ -98,61 +64,15 @@ describe('GET /v1/admin/feedback', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns 200 with feedback array', async () => {
+  it.each([
+    ['status=invalid_status'],
+    ['category=rumour'],
+    ['view=inbox'],
+    ['view='],
+    ['limit=0'],
+  ])('rejects %s with 400', async (query) => {
     adminAuth();
-    const { db } = await import('@concert-crawl/db');
-    vi.mocked(db.select().from().where().orderBy().limit).mockResolvedValueOnce(
-      [mockFeedbackRow],
-    );
-    const res = await createApp().request('/v1/admin/feedback');
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(Array.isArray(body.data)).toBe(true);
-    expect(body.data[0].id).toBe(FEEDBACK_ID);
-  });
-
-  it('filters by status when provided', async () => {
-    adminAuth();
-    const { db } = await import('@concert-crawl/db');
-    vi.mocked(db.select().from().where().orderBy().limit).mockResolvedValueOnce(
-      [mockFeedbackRow],
-    );
-    const res = await createApp().request('/v1/admin/feedback?status=unread');
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(Array.isArray(body.data)).toBe(true);
-  });
-
-  it('rejects invalid status values', async () => {
-    adminAuth();
-    const res = await createApp().request(
-      '/v1/admin/feedback?status=invalid_status',
-    );
-    expect(res.status).toBe(400);
-  });
-
-  it('filters by category alongside status', async () => {
-    adminAuth();
-    const { db } = await import('@concert-crawl/db');
-    const { and } = await import('drizzle-orm');
-    vi.mocked(db.select().from().where().orderBy().limit).mockResolvedValueOnce(
-      [mockFeedbackRow],
-    );
-    const res = await createApp().request(
-      '/v1/admin/feedback?status=unread&category=bug',
-    );
-    expect(res.status).toBe(200);
-    expect(vi.mocked(and)).toHaveBeenLastCalledWith(
-      expect.objectContaining({ col: 'status', val: 'unread' }),
-      expect.objectContaining({ col: 'category', val: 'bug' }),
-    );
-  });
-
-  it('rejects an unknown category', async () => {
-    adminAuth();
-    const res = await createApp().request('/v1/admin/feedback?category=rumour');
+    const res = await createApp().request(`/v1/admin/feedback?${query}`);
     expect(res.status).toBe(400);
   });
 });
@@ -173,18 +93,6 @@ describe('GET /v1/admin/feedback/counts', () => {
     const res = await createApp().request('/v1/admin/feedback/counts');
     expect(res.status).toBe(403);
   });
-
-  it('returns 200 with unread count', async () => {
-    adminAuth();
-    const { db } = await import('@concert-crawl/db');
-    // counts route: db.select().from().where() — no limit, where() resolves
-    vi.mocked(db.select().from().where).mockResolvedValueOnce([{ unread: 7 }]);
-    const res = await createApp().request('/v1/admin/feedback/counts');
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(typeof body.data.unread).toBe('number');
-  });
 });
 
 describe('PATCH /v1/admin/feedback/:id', () => {
@@ -194,70 +102,36 @@ describe('PATCH /v1/admin/feedback/:id', () => {
 
   it('returns 401 for unauthenticated requests', async () => {
     mockGetAuth.mockReturnValue(null);
-    const res = await createApp().request(`/v1/admin/feedback/${FEEDBACK_ID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'read' }),
-    });
-    expect(res.status).toBe(401);
+    expect((await patch({ status: 'read' })).status).toBe(401);
   });
 
   it('returns 403 for non-admin users', async () => {
     userAuth();
-    const res = await createApp().request(`/v1/admin/feedback/${FEEDBACK_ID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'read' }),
-    });
-    expect(res.status).toBe(403);
-  });
-
-  it('returns 200 and updates feedback status', async () => {
-    adminAuth();
-    const { db } = await import('@concert-crawl/db');
-    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
-      { ...mockFeedbackRow, status: 'read' },
-    ]);
-    const res = await createApp().request(`/v1/admin/feedback/${FEEDBACK_ID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'read' }),
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.data.status).toBe('read');
+    expect((await patch({ status: 'read' })).status).toBe(403);
   });
 
   it('returns 400 on empty body (no fields to update)', async () => {
     adminAuth();
-    const res = await createApp().request(`/v1/admin/feedback/${FEEDBACK_ID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    expect(res.status).toBe(400);
+    expect((await patch({})).status).toBe(400);
   });
 
-  it('returns 422 on invalid status value', async () => {
+  it('returns 400 on an invalid status value', async () => {
     adminAuth();
-    const res = await createApp().request(`/v1/admin/feedback/${FEEDBACK_ID}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'totally_invalid' }),
-    });
-    expect(res.status).toBe(400);
+    expect((await patch({ status: 'totally_invalid' })).status).toBe(400);
   });
 
-  it('returns 404 when feedback not found', async () => {
+  it('returns 400 on a view name sent as a status', async () => {
     adminAuth();
-    const { db } = await import('@concert-crawl/db');
-    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([]);
-    const res = await createApp().request(`/v1/admin/feedback/${FEEDBACK_ID}`, {
+    expect((await patch({ status: 'done' })).status).toBe(400);
+  });
+
+  it('returns 400 on a non-uuid id', async () => {
+    adminAuth();
+    const res = await createApp().request('/v1/admin/feedback/not-a-uuid', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'read' }),
     });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(400);
   });
 });

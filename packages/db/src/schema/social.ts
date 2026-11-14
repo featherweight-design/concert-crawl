@@ -33,6 +33,9 @@ export const feedbackCategoryEnum = pgEnum('feedback_category', [
   'idea',
   'praise',
   'other',
+  // 0117 (admin redesign 5d). Nothing writes these until the Phase 6 fan modal.
+  'error_report',
+  'venue_suggestion',
 ]);
 
 export const feedbackStatusEnum = pgEnum('feedback_status', [
@@ -141,6 +144,12 @@ export const feedback = pgTable('feedback', {
   status: feedbackStatusEnum('status').notNull().default('unread'),
   adminNotes: text('admin_notes'),
   issueUrl: text('issue_url'),
+  // 0117: the admin (Clerk id) who moved the item into Done, and when. Both
+  // are cleared when it is reopened. NULL on an item that reached Done before
+  // 0117. Done is `issue_opened`, `resolved` or `archived` (admin redesign
+  // decision 3).
+  resolvedBy: text('resolved_by'),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

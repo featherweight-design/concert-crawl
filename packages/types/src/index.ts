@@ -324,8 +324,18 @@ export const ER_POLICY = {
 // Notification types
 export type NotificationType = 'admin_alert' | 'user_notification';
 
-// Feedback categories
-export type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other';
+// Feedback categories. `error_report` and `venue_suggestion` (migration 0117)
+// are stored and filterable by admin; the fan modal starts sending them in
+// Phase 6, so the public POST /v1/feedback does not accept them yet.
+export const FEEDBACK_CATEGORIES = [
+  'bug',
+  'idea',
+  'praise',
+  'other',
+  'error_report',
+  'venue_suggestion',
+] as const;
+export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
 
 // Subscription tiers
 export type SubscriptionTier = 'free' | 'premium';
@@ -1788,8 +1798,47 @@ export interface HistoryResponse {
 // domain types. AdminUserEventStatus spans the full user_event_status enum, but
 // 'going' and 'interested' are legacy read-only since #70 — attendance is
 // `attendingAt`, and the only value written today is 'watching'.
-export type AdminFeedbackStatus =
-  'unread' | 'read' | 'flagged' | 'issue_opened' | 'resolved' | 'archived';
+export const ADMIN_FEEDBACK_STATUSES = [
+  'unread',
+  'read',
+  'flagged',
+  'issue_opened',
+  'resolved',
+  'archived',
+] as const;
+export type AdminFeedbackStatus = (typeof ADMIN_FEEDBACK_STATUSES)[number];
+
+// The admin feedback board's two filters (admin redesign decision 3). The enum
+// does not change; each status belongs to exactly one view.
+export type AdminFeedbackView = 'to_read' | 'done';
+export const ADMIN_FEEDBACK_VIEW_STATUSES = {
+  to_read: ['unread', 'read', 'flagged'],
+  done: ['issue_opened', 'resolved', 'archived'],
+} as const satisfies Record<AdminFeedbackView, readonly AdminFeedbackStatus[]>;
+
+/** GET /v1/admin/feedback item. */
+export interface AdminFeedbackItem {
+  id: string;
+  userId: string | null;
+  pageUrl: string;
+  category: FeedbackCategory;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  status: AdminFeedbackStatus;
+  adminNotes: string | null;
+  issueUrl: string | null;
+  createdAt: string;
+  /** Handle of the admin who moved it into Done; null when not recorded or reopened. */
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+}
+
+/** GET /v1/admin/feedback/counts. `unread` stays for the existing badge. */
+export interface AdminFeedbackCounts {
+  unread: number;
+  toRead: number;
+  done: number;
+}
 export type AdminUserEventStatus = 'going' | 'interested' | 'watching';
 
 export interface AdminUserFeedbackItem {

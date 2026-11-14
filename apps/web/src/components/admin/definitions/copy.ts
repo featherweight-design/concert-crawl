@@ -2194,6 +2194,15 @@ export const ADMIN_COPY = {
     loadingState: 'Loading…',
     emptyState: 'No feedback in this category',
     row: {
+      // Lower case to match the raw values the row showed before 0117.
+      categoryLabel: {
+        bug: 'bug',
+        idea: 'idea',
+        praise: 'praise',
+        other: 'other',
+        error_report: 'error report',
+        venue_suggestion: 'venue suggestion',
+      },
       statusLabel: {
         unread: 'Unread',
         flagged: 'Flagged',
