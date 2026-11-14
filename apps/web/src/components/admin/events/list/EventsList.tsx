@@ -1,9 +1,9 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Calendar, ExternalLink, Eye } from 'lucide-react';
+import { Calendar, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { RowMenu, useIsPhone } from '@/components/admin/primitives';
 import { StatusChip } from '@/components/consumer/StatusChip';
@@ -11,10 +11,12 @@ import { VenueTile } from '@/components/consumer/venue-glyph';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { DateTile } from '../../prices/MissingTab';
+import { HideEventDialog } from '../edit/StatusCard';
 import type { EventListRow } from './events-api';
 import { STATUS_CHIP, formatPrice, type When } from './events-rules';
 
 const COPY = ADMIN_COPY.eventsList;
+const HIDE_COPY = ADMIN_COPY.eventEdit.hide;
 
 const MONO: CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
@@ -142,47 +144,80 @@ const VenueLine = ({
  * The row's ⋯ (`06/event-menu`). Only the lines whose action exists today:
  * View on the venue's site shows when the row has a safe venue page
  * (`venueUrl`); Open the crawl run is dropped (4b#3); Merge lands in 4b-4,
- * and Hide and Delete with their dialogs.
+ * and Delete with its dialog. Hide from site… opens Event edit's Hide dialog,
+ * on a show that isn't hidden.
  */
-const EventMenu = ({ row }: { row: EventListRow }) => {
+const EventMenu = ({
+  row,
+  onHide,
+}: {
+  row: EventListRow;
+  onHide: ((row: EventListRow) => Promise<void>) | undefined;
+}) => {
   const router = useRouter();
+  const [hiding, setHiding] = useState(false);
   const { venueUrl } = row;
   return (
-    <RowMenu
-      label={COPY.menu.label(row.title)}
-      testId="event-row-menu"
-      items={[
-        {
-          key: 'edit',
-          icon: Calendar,
-          label: COPY.menu.edit,
-          hint: COPY.menu.editHint,
-          onSelect: () => router.push(editEventHref(row.id)),
-        },
-        {
-          key: 'view-fan',
-          icon: ExternalLink,
-          label: COPY.menu.viewFan,
-          hint: COPY.menu.viewFanHint,
-          onSelect: () => {
-            window.open(eventCanonicalPath(row.id), '_blank', 'noopener');
+    <>
+      {hiding && onHide !== undefined && (
+        <HideEventDialog
+          artist={row.title}
+          watchingCount={row.watchingCount}
+          onCancel={() => setHiding(false)}
+          onHide={async () => {
+            await onHide(row);
+            setHiding(false);
+          }}
+        />
+      )}
+      <RowMenu
+        label={COPY.menu.label(row.title)}
+        testId="event-row-menu"
+        items={[
+          {
+            key: 'edit',
+            icon: Calendar,
+            label: COPY.menu.edit,
+            hint: COPY.menu.editHint,
+            onSelect: () => router.push(editEventHref(row.id)),
           },
-        },
-        ...(venueUrl
-          ? [
-              {
-                key: 'view-venue',
-                icon: ExternalLink,
-                label: COPY.menu.viewVenue,
-                hint: COPY.menu.viewVenueHint,
-                onSelect: () => {
-                  window.open(venueUrl, '_blank', 'noopener');
+          {
+            key: 'view-fan',
+            icon: ExternalLink,
+            label: COPY.menu.viewFan,
+            hint: COPY.menu.viewFanHint,
+            onSelect: () => {
+              window.open(eventCanonicalPath(row.id), '_blank', 'noopener');
+            },
+          },
+          ...(venueUrl
+            ? [
+                {
+                  key: 'view-venue',
+                  icon: ExternalLink,
+                  label: COPY.menu.viewVenue,
+                  hint: COPY.menu.viewVenueHint,
+                  onSelect: () => {
+                    window.open(venueUrl, '_blank', 'noopener');
+                  },
                 },
-              },
-            ]
-          : []),
-      ]}
-    />
+              ]
+            : []),
+          ...(onHide !== undefined && !row.hidden
+            ? [
+                {
+                  key: 'hide',
+                  icon: EyeOff,
+                  label: HIDE_COPY.menu,
+                  hint: HIDE_COPY.menuHint,
+                  warning: true,
+                  onSelect: () => setHiding(true),
+                },
+              ]
+            : []),
+        ]}
+      />
+    </>
   );
 };
 
@@ -211,7 +246,17 @@ const td: CSSProperties = {
   verticalAlign: 'middle',
 };
 
-const DesktopTable = ({ rows, when }: { rows: EventListRow[]; when: When }) => {
+type OnHide = ((row: EventListRow) => Promise<void>) | undefined;
+
+const DesktopTable = ({
+  rows,
+  when,
+  onHide,
+}: {
+  rows: EventListRow[];
+  when: When;
+  onHide: OnHide;
+}) => {
   const past = when === 'past';
   return (
     <table
@@ -299,7 +344,7 @@ const DesktopTable = ({ rows, when }: { rows: EventListRow[]; when: When }) => {
               </td>
               {!past && (
                 <td style={{ ...td, textAlign: 'right', paddingRight: 14 }}>
-                  <EventMenu row={row} />
+                  <EventMenu row={row} onHide={onHide} />
                 </td>
               )}
             </tr>
@@ -421,9 +466,12 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
 export const EventsList = ({
   rows,
   when,
+  onHide,
 }: {
   rows: EventListRow[];
   when: When;
+  /** Hide from site… in a row's ⋯: saves, then reloads the list. */
+  onHide?: OnHide;
 }) => {
   const isPhone = useIsPhone();
   if (isPhone) {
@@ -441,7 +489,7 @@ export const EventsList = ({
   }
   return (
     <div data-testid="events-list">
-      <DesktopTable rows={rows} when={when} />
+      <DesktopTable rows={rows} when={when} onHide={onHide} />
     </div>
   );
 };

@@ -7,9 +7,12 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+
+const HIDE = ADMIN_COPY.eventEdit.hide;
 import type { EventListRow } from './events-api';
 
 vi.mock('next/navigation', () => ({
@@ -163,6 +166,73 @@ describe('EventsList on desktop', () => {
     );
     expect(
       screen.queryByRole('menuitem', { name: new RegExp(COPY.menu.viewVenue) }),
+    ).toBeNull();
+  });
+
+  it('hides from the ⋯ through the Hide dialog, and offers it only on a shown show', async () => {
+    const onHide = vi.fn(async () => undefined);
+    render(
+      <EventsList
+        when="upcoming"
+        rows={[row({ id: 'evt-2', title: 'Gone', hidden: true })]}
+        onHide={onHide}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('Gone') }),
+    );
+    expect(
+      screen.queryByRole('menuitem', { name: new RegExp(HIDE.menu) }),
+    ).toBeNull();
+    cleanup();
+
+    render(<EventsList when="upcoming" rows={[row({})]} onHide={onHide} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('Clipse & J.I.D') }),
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: new RegExp(HIDE.menu) }),
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent(HIDE.title('Clipse & J.I.D'));
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: new RegExp(HIDE.confirm) }),
+    );
+    await waitFor(() =>
+      expect(onHide).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'evt-1' }),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('keeps the Hide dialog open and says so when the save fails', async () => {
+    const onHide = vi.fn(async () => {
+      throw new Error('500');
+    });
+    render(<EventsList when="upcoming" rows={[row({})]} onHide={onHide} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('Clipse & J.I.D') }),
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: new RegExp(HIDE.menu) }),
+    );
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: new RegExp(HIDE.confirm),
+      }),
+    );
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('draws no Hide line without onHide', () => {
+    render(<EventsList when="upcoming" rows={[row({})]} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('Clipse & J.I.D') }),
+    );
+    expect(
+      screen.queryByRole('menuitem', { name: new RegExp(HIDE.menu) }),
     ).toBeNull();
   });
 });

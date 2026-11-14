@@ -135,6 +135,37 @@ const Pills = ({
  * action keeps it open and says so inside it, so trying again takes the same
  * deliberate press (the venue confirms' pattern).
  */
+/**
+ * Hide from site (`04/hide-from-site`, no Why row until a column exists):
+ * from the Status card's toggle, Event edit's ⋯ and the list's ⋯. `onHide`
+ * saves and closes; a failure keeps the dialog open and says so.
+ */
+export const HideEventDialog = ({
+  artist,
+  watchingCount,
+  onCancel,
+  onHide,
+}: {
+  artist: string;
+  watchingCount: number;
+  onCancel: () => void;
+  onHide: () => Promise<void>;
+}) => (
+  <EventConfirm
+    title={COPY.hide.title(artist)}
+    confirmLabel={COPY.hide.confirm}
+    confirmIcon={EyeOff}
+    danger
+    failedWhat={COPY.hide.failed}
+    failedSaved={COPY.hide.saved}
+    onCancel={onCancel}
+    act={onHide}
+  >
+    <div>{COPY.hide.body(artist, watchingCount)}</div>
+    <div style={SMALL}>{COPY.hide.foot}</div>
+  </EventConfirm>
+);
+
 const EventConfirm = ({
   title,
   confirmLabel,
@@ -505,22 +536,15 @@ export const StatusCard = ({
         </EventConfirm>
       )}
       {dialog === 'hide' && (
-        <EventConfirm
-          title={COPY.hide.title(detail.artist)}
-          confirmLabel={COPY.hide.confirm}
-          confirmIcon={EyeOff}
-          danger
-          failedWhat={COPY.hide.failed}
-          failedSaved={COPY.hide.saved}
+        <HideEventDialog
+          artist={detail.artist}
+          watchingCount={detail.watchingCount}
           onCancel={close}
-          act={async () => {
+          onHide={async () => {
             await onHidden(true);
             close();
           }}
-        >
-          <div>{COPY.hide.body(detail.artist, detail.watchingCount)}</div>
-          <div style={SMALL}>{COPY.hide.foot}</div>
-        </EventConfirm>
+        />
       )}
     </AdminCard>
   );

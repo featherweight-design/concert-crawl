@@ -198,6 +198,13 @@ export const eventsListApi = (getToken: GetToken) => ({
       counts,
     };
   },
+  /** Hide from site, from the row's ⋯ (the same PATCH as Event edit). */
+  hide: async (id: string): Promise<void> => {
+    await call(getToken, `/v1/admin/events/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: { hiddenFromConsumer: true },
+    });
+  },
 });
 
 export type EventsListApi = ReturnType<typeof eventsListApi>;
