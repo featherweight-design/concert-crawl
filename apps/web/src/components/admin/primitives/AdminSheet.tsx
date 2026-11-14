@@ -61,9 +61,7 @@ export const AdminSheet = ({
         position: 'fixed',
         inset: 0,
         zIndex: 95,
-        background: fullScreen
-          ? 'var(--bg)'
-          : 'color-mix(in srgb, var(--bg) 55%, transparent)',
+        background: fullScreen ? 'var(--bg)' : 'rgba(0,0,0,0.55)',
       }}
     >
       <div
@@ -175,7 +173,7 @@ export const AdminSheet = ({
             style={{
               display: 'flex',
               flexDirection: footerReversed ? 'column-reverse' : 'column',
-              gap: 8,
+              gap: 12,
             }}
           >
             {footer}

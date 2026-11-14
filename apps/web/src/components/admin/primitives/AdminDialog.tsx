@@ -69,7 +69,8 @@ export const AdminDialog = ({
         position: 'fixed',
         inset: 0,
         zIndex: 100,
-        background: 'rgba(0,0,0,0.5)',
+        // The drawn scrim (`07/*` confirm boards): rgba(4,6,16,.6).
+        background: 'rgba(4,6,16,0.6)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -88,7 +89,8 @@ export const AdminDialog = ({
           background: 'var(--bg-elevated)',
           // The boards draw a plain card: no coloured top stripe, no tinted ring.
           border: '1px solid var(--border-strong)',
-          borderRadius: 14,
+          borderRadius: 16,
+          boxShadow: '0 30px 60px rgba(0,0,0,0.5)',
           overflow: 'hidden',
         }}
       >

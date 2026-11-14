@@ -48,7 +48,9 @@ const VARIANT_STYLES: Record<
   },
   // The redesign's drawn call to action (`07/invite-codes` New code).
   gradient: {
-    background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+    // The drawn call to action ends on --cta-end (#de96df), not the raw accent.
+    background:
+      'linear-gradient(135deg, var(--signal), var(--cta-end, var(--accent)))',
     color: 'var(--bg)',
     border: '1px solid transparent',
     fontWeight: 700,
@@ -98,9 +100,10 @@ export const AdminButton = ({
       }}
       {...props}
     >
-      {Icon && <Icon size={14} />}
+      {/* Lucide icons at stroke 1.8: the boards draw them lighter than 2. */}
+      {Icon && <Icon size={14} strokeWidth={1.8} />}
       {children}
-      {IconRight && <IconRight size={14} />}
+      {IconRight && <IconRight size={14} strokeWidth={1.8} />}
     </button>
   );
 };
