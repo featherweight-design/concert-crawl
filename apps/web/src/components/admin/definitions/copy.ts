@@ -2883,8 +2883,29 @@ export const ADMIN_COPY = {
     // draws no reason field, so the queue states where the call was made.
     priceCheckReason: 'Decided from Needs you',
     answerFailed: {
+      // `10-needs-you-panels/panel-answer-failed` names the answer that failed
+      // ("Couldn't start the re-crawl"); the rest follow that pattern.
       title: "Couldn't save that answer",
-      saved: 'The item is still waiting.',
+      titles: {
+        still_on: "Couldn't mark it still on",
+        postponed: "Couldn't mark it postponed",
+        cancelled: "Couldn't mark it cancelled",
+        moved: "Couldn't move the show",
+        move_to: "Couldn't move the show",
+        re_crawl_now: "Couldn't start the re-crawl",
+        re_crawl_once: "Couldn't start the re-crawl",
+        keep_paused: "Couldn't keep it paused",
+        pause_crawling: "Couldn't pause crawling",
+        pick_the_right_artist: "Couldn't save the artist",
+        keep_this_match: "Couldn't keep the match",
+        no_photo: "Couldn't hide the photo",
+        not_a_concert: "Couldn't hide the event",
+        its_a_show: "Couldn't keep the event",
+        use_checked_price: "Couldn't settle the price check",
+        keep_listed_price: "Couldn't settle the price check",
+        approve_all: "Couldn't approve the prices",
+      } as Record<string, string>,
+      saved: 'The item stays here. Nothing changed.',
     },
     // A notifying answer sits behind a confirm and has no Undo (decision 2).
     confirmNotify: {

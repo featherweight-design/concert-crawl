@@ -107,6 +107,8 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     /** What is still true, as the toast says it. */
     saved: string;
     retry: () => void;
+    /** The item whose answer failed: its open panel shows the block itself. */
+    rowKey?: string;
   } | null>(null);
 
   const load = useCallback(async () => {
@@ -211,9 +213,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       );
     } catch {
       setFailure({
-        title: COPY.answerFailed.title,
+        // Names the answer that failed, as `panel-answer-failed` draws it.
+        title: COPY.answerFailed.titles[answer.slug] ?? COPY.answerFailed.title,
         saved: COPY.answerFailed.saved,
         retry: () => void runAnswer(row, answer, params),
+        rowKey: row.key,
       });
     } finally {
       setBusyKey(null);
@@ -318,6 +322,21 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const selectedRow = rows.find((row) => row.key === selected) ?? null;
   const batchRow = rows.find((row) => row.key === batchKey) ?? null;
   const allClear = rows.length === 0 && count.decisions === 0;
+  // A failed answer on the open item shows its block in the docked panel; the
+  // phone's floats above the page, and anything else rides above the list.
+  const failureInPanel =
+    failure !== null &&
+    failure.rowKey !== undefined &&
+    selectedRow?.key === failure.rowKey &&
+    !isPhone;
+  const failureToast = failure && (
+    <SaveFailedToast
+      title={failure.title}
+      saved={failure.saved}
+      onRetry={failure.retry}
+      onDismiss={() => setFailure(null)}
+    />
+  );
 
   return (
     // The inline panel is a flex sibling of the list, docked on its right, so
@@ -385,7 +404,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
               ))}
             </div>
 
-            {failure && (
+            {failure && !failureInPanel && (
               // The phone's item page covers the list, so the toast of a
               // failed answer rides above it instead of sitting underneath.
               <div
@@ -401,12 +420,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
                     : undefined
                 }
               >
-                <SaveFailedToast
-                  title={failure.title}
-                  saved={failure.saved}
-                  onRetry={failure.retry}
-                  onDismiss={() => setFailure(null)}
-                />
+                {failureToast}
               </div>
             )}
             <div
@@ -467,6 +481,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       {selectedRow && (
         <EvidenceSlot
           row={selectedRow}
+          answerFailed={failureInPanel ? failureToast : undefined}
           today={today}
           ranksFirst={rows[0]?.key === selectedRow.key}
           busy={busyKey === selectedRow.key}

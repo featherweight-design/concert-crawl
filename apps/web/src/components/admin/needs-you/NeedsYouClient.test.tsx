@@ -178,6 +178,28 @@ describe('NeedsYouClient', () => {
     expect(screen.getByText('The map will not load')).toBeInTheDocument();
   });
 
+  it('names the answer that failed and shows the block inside the open panel on desktop', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.endsWith('/needs-you/count')) return json(COUNT);
+        if (url.endsWith('/answer')) return new Response('{}', { status: 500 });
+        return json(ITEMS);
+      }),
+    );
+    render(<NeedsYouClient item={null} />);
+    const panel = await screen.findByTestId('side-panel');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Still on' }));
+    const block = await within(panel).findByRole('alert');
+    expect(block).toHaveTextContent("Couldn't mark it still on");
+    expect(block).toHaveTextContent('The item stays here. Nothing changed.');
+    // The card is still in the queue, and nothing sits above the list.
+    expect(screen.getAllByTestId('needs-you-item')).toHaveLength(2);
+    expect(
+      within(screen.getByTestId('needs-you-queue')).queryByRole('alert'),
+    ).toBeNull();
+  });
+
   it('answers a quiet answer, leaves an Undo line, and Undo takes it back', async () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');
