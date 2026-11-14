@@ -7,14 +7,25 @@ import {
   desc,
   eq,
   gte,
+  ilike,
   inArray,
   like,
   lt,
   not,
   or,
   sql,
+  type SQL,
 } from 'drizzle-orm';
-import { auditLog, db, userProfiles } from '@concert-crawl/db';
+import {
+  artists,
+  auditLog,
+  db,
+  events,
+  inviteCodes,
+  userProfiles,
+  venues,
+} from '@concert-crawl/db';
+import { containsPattern } from '../../lib/escape-like.js';
 import {
   AUDIT_AREAS,
   type AuditLogActor,
@@ -25,7 +36,7 @@ import { isRecord } from '../../lib/is-record.js';
 import { avatarColumns, avatarOf } from '../../lib/avatar.js';
 import { apiLogger } from '../../lib/logger.js';
 import { MT_TIME_ZONE, todayInDenver } from '../../lib/time.js';
-import { staffUserIds } from './people.js';
+import { staffRoles } from './people.js';
 import { addDays } from './lib/needs-you/keys.js';
 import { areaOfAction, auditAreaFilter } from './lib/audit-area.js';
 import { resolveAuditTargets } from './lib/audit-targets.js';
@@ -60,12 +71,21 @@ const areaSchema = z
   .pipe(z.array(z.enum(AUDIT_AREAS)).optional())
   .optional();
 
+/** "Search the log": trimmed, 1 to 100 characters; blank is no search. */
+const searchQuerySchema = z
+  .string()
+  .trim()
+  .max(100)
+  .optional()
+  .transform((value) => (value === '' ? undefined : value));
+
 const querySchema = z
   .object({
     actor: z.enum(['system', 'admin']).optional(),
     // One admin, by the whole handle (the same filter as Prices' `handle`).
     actorHandle: handleQuerySchema,
     area: areaSchema,
+    search: searchQuerySchema,
     since: z.iso.datetime().optional(),
     // Exclusive: `since` and `until` a day apart are that day's rows.
     until: z.iso.datetime().optional(),
@@ -117,7 +137,7 @@ auditLogAdminRouter.get(
   '/',
   zValidator('query', querySchema, validationHook),
   async (ctx) => {
-    const { actor, actorHandle, area, since, until, limit, cursor } =
+    const { actor, actorHandle, area, search, since, until, limit, cursor } =
       ctx.req.valid('query');
 
     let after: { at: Date; id: string } | null = null;
@@ -144,6 +164,7 @@ auditLogAdminRouter.get(
       .where(
         and(
           actorKindFilter(actor),
+          searchFilter(search),
           // The joined profile's handle, so a system row never matches.
           actorHandle === undefined
             ? undefined
@@ -219,6 +240,43 @@ const mtDays = (startDay: string, endDay: string) =>
     sql`${auditLog.createdAt} < (${endDay}::date::timestamp AT TIME ZONE ${mtZone()})`,
   );
 
+/**
+ * "Search the log" (addendum 6 #37, PR C): a parameterized, escaped ILIKE
+ * over what a row says. The action key ("venue.crawl.pause" for "Paused
+ * crawling"), the actor's handle, and the name of what it changed: a venue,
+ * show, artist, person, invite code or feature flag, looked up by
+ * `target_id` as the log names them (lib/audit-targets.ts). A price's row
+ * keys a submission, so it is found by its action and actor instead.
+ * Expects the list's join on the actor's profile.
+ */
+const searchFilter = (search: string | undefined) => {
+  if (search === undefined) return undefined;
+  const pattern = containsPattern(search);
+  const targetIn = (ids: SQL) => sql`${auditLog.targetId} IN (${ids})`;
+  return or(
+    ilike(auditLog.action, pattern),
+    ilike(userProfiles.handle, pattern),
+    targetIn(
+      sql`SELECT ${venues.id}::text FROM ${venues} WHERE ${venues.name} ILIKE ${pattern}`,
+    ),
+    targetIn(
+      sql`SELECT ${events.id}::text FROM ${events} WHERE ${events.title} ILIKE ${pattern}`,
+    ),
+    targetIn(
+      sql`SELECT ${artists.id}::text FROM ${artists} WHERE ${artists.name} ILIKE ${pattern}`,
+    ),
+    targetIn(
+      sql`SELECT ${inviteCodes.id}::text FROM ${inviteCodes} WHERE ${inviteCodes.code} ILIKE ${pattern}`,
+    ),
+    // A person's row keys their Clerk id; a flag's keys `feature_flag:<key>`.
+    // The subquery's own FROM shadows the outer join on the actor's profile.
+    targetIn(
+      sql`SELECT ${userProfiles.userId} FROM ${userProfiles} WHERE ${userProfiles.handle} ILIKE ${pattern}`,
+    ),
+    sql`${auditLog.targetId} ILIKE ${`feature_flag:${pattern}`}`,
+  );
+};
+
 /** The log's actor and area filters, shared by the list, days and actors. */
 const actorKindFilter = (actor: 'system' | 'admin' | undefined) => {
   const isSystem = like(auditLog.actorId, `${SYSTEM_ACTOR_PREFIX}%`);
@@ -233,6 +291,7 @@ const daysQuerySchema = z.object({
   actor: z.enum(['system', 'admin']).optional(),
   actorHandle: handleQuerySchema,
   area: areaSchema,
+  search: searchQuerySchema,
 });
 
 // GET /v1/admin/audit-log/days?month=YYYY-MM — the MT days of that month with
@@ -241,7 +300,7 @@ auditLogAdminRouter.get(
   '/days',
   zValidator('query', daysQuerySchema, validationHook),
   async (ctx) => {
-    const { month, actor, actorHandle, area } = ctx.req.valid('query');
+    const { month, actor, actorHandle, area, search } = ctx.req.valid('query');
     const first = `${month}-01`;
     // The 1st of the next month: day 32 of any month lands in the next one.
     const next = `${addDays(first, 32).slice(0, 7)}-01`;
@@ -255,6 +314,7 @@ auditLogAdminRouter.get(
         and(
           mtDays(first, next),
           actorKindFilter(actor),
+          searchFilter(search),
           actorHandle === undefined
             ? undefined
             : eq(userProfiles.handle, actorHandle),
@@ -307,14 +367,14 @@ auditLogAdminRouter.get(
           ),
         )
         .groupBy(auditLog.actorId),
-      staffUserIds().catch((err: unknown) => {
+      staffRoles().catch((err: unknown) => {
         apiLogger.warn({ err }, 'audit-log actors: staff scan failed');
-        return [];
+        return new Map<string, 'admin' | 'sub_admin'>();
       }),
     ]);
 
     const counts = new Map(counted.map((row) => [row.actorId, row.count]));
-    const ids = [...new Set([...staff, ...counts.keys()])];
+    const ids = [...new Set([...staff.keys(), ...counts.keys()])];
     const profiles =
       ids.length === 0
         ? []
@@ -337,6 +397,7 @@ auditLogAdminRouter.get(
                 ...avatarOf(row),
                 count: counts.get(row.userId) ?? 0,
                 you: row.userId === me,
+                role: staff.get(row.userId) ?? null,
               },
             ],
       )
