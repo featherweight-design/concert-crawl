@@ -221,17 +221,34 @@ export async function fetchPage(
     const session = await context.newCDPSession(page);
     const { frameTree } = await session.send('Page.getFrameTree');
     const mainFrameId = frameTree.frame.id;
-    // Resolved at the main frame's next DOMContentLoaded. Heard on this same
-    // session, so it is ordered after the paused request that registered it
+    // A followed navigation's wait to land, keyed by its chain (network id).
+    // Resolved at the main frame's next DOMContentLoaded, heard on this same
+    // session so it is ordered after the paused request that registered it
     // and never mistaken for an earlier page's (Playwright's own events, on
-    // another session, can arrive late enough to be).
-    let domContentWaiters: (() => void)[] = [];
-    session.on('Page.domContentEventFired', () => {
-      const waiters = domContentWaiters;
-      domContentWaiters = [];
-      for (const resolve of waiters) resolve();
+    // another session, can arrive late enough to be). A navigation that
+    // never commits must not hold the read for the whole settle budget, so
+    // it is also resolved when the gate refuses a later hop of the same
+    // chain, when one of its requests fails, and when the main frame stops
+    // loading (a 204, a download).
+    const commitWaiters = new Map<string, () => void>();
+    const landed = (key?: string): void => {
+      if (key === undefined) {
+        for (const resolve of commitWaiters.values()) resolve();
+        commitWaiters.clear();
+        return;
+      }
+      commitWaiters.get(key)?.();
+      commitWaiters.delete(key);
+    };
+    session.on('Page.domContentEventFired', () => landed());
+    session.on('Page.frameStoppedLoading', (event) => {
+      if (event.frameId === mainFrameId) landed();
+    });
+    session.on('Network.loadingFailed', (event) => {
+      if (event.type === 'Document') landed(event.requestId);
     });
     await session.send('Page.enable');
+    await session.send('Network.enable');
     // The URL each in-flight navigation last requested, so a redirect hop
     // knows where it came from.
     const lastHop = new Map<string, string>();
@@ -367,13 +384,19 @@ export async function fetchPage(
         // to commit before Chromium can send it, so the read below waits for
         // the page it lands on.
         if (allowed && cleared && !inGotoChain) {
-          track(
-            pendingCommits,
-            new Promise<void>((resolve) => {
-              domContentWaiters.push(resolve);
-            }),
-          );
+          const key = event.networkId ?? event.requestId;
+          // A later hop of a chain already waited for keeps that one wait.
+          if (!commitWaiters.has(key)) {
+            track(
+              pendingCommits,
+              new Promise<void>((resolve) => {
+                commitWaiters.set(key, resolve);
+              }),
+            );
+          }
         }
+        // Refused, this navigation will never land: stop waiting for it.
+        if (!allowed) landed(event.networkId ?? event.requestId);
         try {
           await (allowed
             ? session.send('Fetch.continueRequest', {
