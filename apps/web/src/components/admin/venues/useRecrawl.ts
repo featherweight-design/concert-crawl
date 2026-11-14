@@ -65,7 +65,7 @@ export const useRecrawl = (venueId: string, off: boolean) => {
   const [state, setState] = useState<RecrawlState>('idle');
   const [reason, setReason] = useState<string | null>(null);
   // When the crawler claimed the trigger, while it reads Crawling now.
-  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [runStartedAt, setRunStartedAt] = useState<string | null>(null);
   const [forVenue, setForVenue] = useState(venueId);
   const [wasOff, setWasOff] = useState(off);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -82,7 +82,7 @@ export const useRecrawl = (venueId: string, off: boolean) => {
     setForVenue(venueId);
     setState('idle');
     setReason(null);
-    setStartedAt(null);
+    setRunStartedAt(null);
   }
   if (wasOff !== off) {
     setWasOff(off);
@@ -120,7 +120,7 @@ export const useRecrawl = (venueId: string, off: boolean) => {
     timer.current = null;
     setState(next);
     setReason(why);
-    setStartedAt(null);
+    setRunStartedAt(null);
     router.refresh();
   };
 
@@ -174,7 +174,7 @@ export const useRecrawl = (venueId: string, off: boolean) => {
       return;
     }
     setState(trigger.status === 'processing' ? 'running' : 'queued');
-    setStartedAt(runningSince(trigger));
+    setRunStartedAt(runningSince(trigger));
     schedule(gen, triggerId, startedAt, 0);
   };
 
@@ -188,7 +188,7 @@ export const useRecrawl = (venueId: string, off: boolean) => {
     pending.current = { triggerId: null };
     setState('queued');
     setReason(null);
-    setStartedAt(null);
+    setRunStartedAt(null);
     let triggerId: string;
     try {
       const auth = await token();
@@ -216,7 +216,7 @@ export const useRecrawl = (venueId: string, off: boolean) => {
     state,
     reason,
     /** When a running re-crawl started (ISO); null unless Crawling now. */
-    startedAt: state === 'running' ? startedAt : null,
+    startedAt: state === 'running' ? runStartedAt : null,
     /**
      * `force` re-reads an unchanged page (Overview's Re-crawl anyway). Typed
      * `true` only, so `onClick={recrawl.start}` (an event as `force`) can't

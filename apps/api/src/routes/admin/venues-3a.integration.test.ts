@@ -115,7 +115,8 @@ describe('admin venues API, redesign 3a', () => {
         slug: 'junkyard',
         consecutiveFailures: 3,
       });
-      const at = (day: number) => new Date(`2026-11-${day}T10:00:00Z`);
+      const at = (day: number) =>
+        new Date(`2026-11-${String(day).padStart(2, '0')}T10:00:00Z`);
       await seedCrawlRun(venue.id, { status: 'success', createdAt: at(7) });
       await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(8) });
       await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(9) });
@@ -134,6 +135,71 @@ describe('admin venues API, redesign 3a', () => {
       expect(body.data[0]?.failureStreak).toEqual(
         [12, 11, 9].map((day) => at(day).toISOString()),
       );
+    });
+
+    describe('the failure streak', () => {
+      const at = (day: number) =>
+        new Date(`2026-11-${String(day).padStart(2, '0')}T10:00:00Z`);
+      const streakOf = async () => {
+        const body = (await (await json('GET', 'venues')).json()) as {
+          data: { failureStreak: string[] }[];
+        };
+        return body.data[0]?.failureStreak;
+      };
+      const isos = (days: number[]) => days.map((day) => at(day).toISOString());
+
+      it('leaves out a robots.txt disallow', async () => {
+        const venue = await seedVenue({
+          name: 'Robots',
+          slug: 'robots',
+          consecutiveFailures: 2,
+        });
+        await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(8) });
+        await seedCrawlRun(venue.id, {
+          status: 'failed',
+          reason: 'robots_disallowed',
+          createdAt: at(9),
+        });
+        await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(10) });
+        expect(await streakOf()).toEqual(isos([10, 8]));
+      });
+
+      it('sends at most five dates', async () => {
+        const venue = await seedVenue({
+          name: 'Long',
+          slug: 'long',
+          consecutiveFailures: 7,
+        });
+        for (const day of [1, 2, 3, 4, 5, 6, 7]) {
+          await seedCrawlRun(venue.id, {
+            status: 'failed',
+            createdAt: at(day),
+          });
+        }
+        expect(await streakOf()).toEqual(isos([7, 6, 5, 4, 3]));
+      });
+
+      it('stops at the latest reset: a success or an unchanged skip', async () => {
+        const venue = await seedVenue({
+          name: 'Reset',
+          slug: 'reset',
+          consecutiveFailures: 3,
+        });
+        // An earlier streak, ended by a success.
+        await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(1) });
+        await seedCrawlRun(venue.id, { status: 'success', createdAt: at(2) });
+        await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(3) });
+        await seedCrawlRun(venue.id, {
+          status: 'skipped',
+          reason: 'page_unchanged',
+          createdAt: at(4),
+        });
+        await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(5) });
+        await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(6) });
+        // Only two failed rows since the reset: the counter's third strike
+        // went unrecorded, and no earlier failure stands in for it.
+        expect(await streakOf()).toEqual(isos([6, 5]));
+      });
     });
 
     it('has no streak and no last full run for a venue that never read shows', async () => {
