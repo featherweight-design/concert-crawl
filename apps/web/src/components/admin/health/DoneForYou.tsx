@@ -72,7 +72,9 @@ export const DoneForYou = ({ rows }: { rows: DoneRow[] | null }) => (
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'var(--bg-card)',
+                    // `--bg-card` was never defined, so the chip drew bare;
+                    // the board fills it #171D3A.
+                    background: 'var(--surface-2)',
                     color: 'var(--signal)',
                   }}
                 >

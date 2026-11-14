@@ -62,7 +62,7 @@ export const HealthHeader = ({
             fontWeight: 600,
             textDecoration: 'none',
             color: 'var(--fg)',
-            background: 'var(--surface-1)',
+            background: 'var(--surface-2)',
             border: '1px solid var(--border-strong)',
           }}
         >
@@ -93,7 +93,7 @@ const Tile = ({
       minWidth: 0,
       borderRadius: 14,
       border: '1px solid var(--border)',
-      background: 'var(--bg-elevated)',
+      background: 'var(--surface-1)',
       padding: '16px 18px',
       display: 'grid',
       gridTemplateRows: '14px 36px 36px 22px',
