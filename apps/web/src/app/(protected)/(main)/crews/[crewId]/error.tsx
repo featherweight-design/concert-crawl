@@ -6,6 +6,7 @@
 // id never lands here: the page maps it to not-found, so this only ever means
 // a real failure.
 import { InAppError } from '@/components/standalone-error/InAppError';
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
 export default function CrewError({
   error,
@@ -14,10 +15,11 @@ export default function CrewError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const retry = useErrorBoundaryRetry(reset);
   return (
     <InAppError
       error={error}
-      reset={reset}
+      onRetry={retry}
       logLabel="[crews] crew home boundary"
     />
   );

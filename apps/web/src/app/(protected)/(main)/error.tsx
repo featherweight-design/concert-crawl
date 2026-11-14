@@ -9,6 +9,7 @@
 // card and the error ID are the same as the standalone page.": the standalone
 // page's desktop layout, under the app header.
 import { InAppError } from '@/components/standalone-error/InAppError';
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
 export default function MainError({
   error,
@@ -17,5 +18,6 @@ export default function MainError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <InAppError error={error} reset={reset} logLabel="[app error]" />;
+  const retry = useErrorBoundaryRetry(reset);
+  return <InAppError error={error} onRetry={retry} logLabel="[app error]" />;
 }
