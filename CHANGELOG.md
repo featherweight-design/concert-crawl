@@ -1,3 +1,15 @@
+# [1.476.0](https://github.com/featherweight-design/concert-crawl/compare/v1.475.0...v1.476.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** keep the phone header's reading order and drawn sizes ([b62483f](https://github.com/featherweight-design/concert-crawl/commit/b62483f59ca45bfc72fe306609b4ba7bc187d831))
+
+
+### Features
+
+* **web:** tag a hidden show in the event header and lift the tag's contrast ([5cb3b08](https://github.com/featherweight-design/concert-crawl/commit/5cb3b0821fbb3049f63431919ae53d19e651638c))
+
 # [1.475.0](https://github.com/featherweight-design/concert-crawl/compare/v1.474.1...v1.475.0) (2026-11-14)
 
 
