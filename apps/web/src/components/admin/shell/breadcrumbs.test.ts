@@ -12,6 +12,12 @@ describe('buildBreadcrumbs', () => {
     ]);
   });
 
+  it('names the interim Review tab by its new home', () => {
+    expect(buildBreadcrumbs('/admin/review', params('tab=all-events'))).toEqual(
+      [{ label: 'Events' }],
+    );
+  });
+
   it('links the section above a venue detail page', () => {
     expect(buildBreadcrumbs('/admin/venues/abc123')).toEqual([
       { label: 'Venues', href: '/admin/venues' },
