@@ -431,10 +431,14 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
     return () => current.current?.abort();
   }, [load]);
 
+  // Held in a ref, not read from state: two quick presses inside one render
+  // would otherwise both read the same cursor and draw its page twice.
+  const moreBusy = useRef(false);
   const loadMore = async () => {
     const from = shown?.nextCursor;
     const mine = current.current;
-    if (!from || !mine || moreState === 'loading') return;
+    if (!from || !mine || moreBusy.current) return;
+    moreBusy.current = true;
     setMoreState('loading');
     try {
       const page = await readLogPage(getToken, query(day), from, mine.signal);
@@ -449,21 +453,32 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
     } catch {
       if (mine !== current.current || mine.signal.aborted) return;
       setMoreState('failed');
+    } finally {
+      if (mine === current.current) moreBusy.current = false;
     }
   };
-
-  // A tab left open overnight: on return, a view of today moves to the new
-  // today; an earlier day stays put, with › reaching one more day.
+  // A new day's read drops any Load more still running for the old one.
   useEffect(() => {
-    const onVisible = () => {
+    moreBusy.current = false;
+  }, [load]);
+
+  // Midnight passing, whether the tab sat open or hidden: a view of today
+  // moves to the new today; an earlier day stays put, with › reaching one
+  // more day. Checked on return to the tab and once a minute.
+  useEffect(() => {
+    const check = () => {
       if (document.visibilityState !== 'visible') return;
       const now = mtToday();
       if (now === today) return;
       setToday(now);
       if (day === today) setDay(now);
     };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(check, 60_000);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', check);
+    };
   }, [day, today]);
 
   const readDays = useCallback(
