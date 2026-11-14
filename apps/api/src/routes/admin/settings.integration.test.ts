@@ -22,6 +22,10 @@ import { auditLog } from '@concert-crawl/db';
 import { createApp } from '../../app.js';
 import { clearTables } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
+import {
+  PRICE_SETTINGS_UPDATE_ACTION,
+  SETTINGS_UPDATE_ACTION,
+} from './lib/settings-audit.js';
 
 const app = createApp();
 
@@ -117,10 +121,11 @@ describe('admin settings', () => {
       updatedBy: 'admin-a',
     });
 
+    // A toggle saved on Prices is audited as a Prices action.
     const [row] = await testDb
       .select()
       .from(auditLog)
-      .where(eq(auditLog.action, 'settings.update'))
+      .where(eq(auditLog.action, PRICE_SETTINGS_UPDATE_ACTION))
       .orderBy(desc(auditLog.createdAt))
       .limit(1);
     expect(row?.actorId).toBe('admin-a');
@@ -165,7 +170,7 @@ describe('admin settings', () => {
     const [row] = await testDb
       .select()
       .from(auditLog)
-      .where(eq(auditLog.action, 'settings.update'))
+      .where(eq(auditLog.action, SETTINGS_UPDATE_ACTION))
       .orderBy(desc(auditLog.createdAt))
       .limit(1);
     expect(row?.metadata).toMatchObject({
@@ -178,6 +183,33 @@ describe('admin settings', () => {
         llmBudgetFallbackToStructured: true,
       },
     });
+  });
+
+  it('audits a save under the page its sent keys belong to, changed or not', async () => {
+    setAuth('admin');
+    const actionOf = async (body: unknown): Promise<string | undefined> => {
+      expect((await patch(body)).status).toBe(200);
+      const [row] = await testDb
+        .select({ action: auditLog.action })
+        .from(auditLog)
+        .orderBy(desc(auditLog.createdAt))
+        .limit(1);
+      return row?.action;
+    };
+
+    expect(await actionOf({ approvePricesMyself: true })).toBe(
+      PRICE_SETTINGS_UPDATE_ACTION,
+    );
+    // The toggle is already on: a save that changed nothing is still Prices.
+    expect(await actionOf({ approvePricesMyself: true })).toBe(
+      PRICE_SETTINGS_UPDATE_ACTION,
+    );
+    expect(await actionOf({ llmMonthlyBudgetUsd: 30 })).toBe(
+      SETTINGS_UPDATE_ACTION,
+    );
+    expect(
+      await actionOf({ approvePricesMyself: false, llmMonthlyBudgetUsd: 40 }),
+    ).toBe(SETTINGS_UPDATE_ACTION);
   });
 
   it('clears the budget with null', async () => {

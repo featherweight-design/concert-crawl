@@ -5,7 +5,8 @@ import { and, desc, eq, gte, like, lt, not, or, sql } from 'drizzle-orm';
 import { auditLog, db, userProfiles } from '@concert-crawl/db';
 import { AUDIT_AREAS, type AuditLogItem } from '@concert-crawl/types';
 import { handleQuerySchema, validationHook } from '../../lib/validator.js';
-import { areaOfAuditRow, auditAreaFilter, isRecord } from './lib/audit-area.js';
+import { isRecord } from '../../lib/is-record.js';
+import { areaOfAction, auditAreaFilter } from './lib/audit-area.js';
 import { resolveAuditTargets } from './lib/audit-targets.js';
 import type { AdminVariables } from './index.js';
 
@@ -129,10 +130,7 @@ auditLogAdminRouter.get(
             : eq(userProfiles.handle, actorHandle),
           area === undefined
             ? undefined
-            : auditAreaFilter(area, {
-                action: auditLog.action,
-                metadata: auditLog.metadata,
-              }),
+            : auditAreaFilter(area, auditLog.action),
           since === undefined
             ? undefined
             : gte(auditLog.createdAt, new Date(since)),
@@ -169,7 +167,7 @@ auditLogAdminRouter.get(
         actor: system ? row.actorId : (row.handle ?? ADMIN_FALLBACK_ACTOR),
         actorKind: system ? 'system' : 'admin',
         action: row.action,
-        area: areaOfAuditRow(row),
+        area: areaOfAction(row.action),
         targetId: row.targetId,
         target: targets[index] ?? null,
         metadata: isRecord(row.metadata) ? row.metadata : null,
