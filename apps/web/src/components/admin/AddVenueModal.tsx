@@ -14,7 +14,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues';
-import { AdminButton, Kbd } from '@/components/admin/primitives';
+import { AdminButton } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 function slugify(name: string): string {
@@ -728,17 +728,8 @@ export function AddVenueModal({
                   gap: 12,
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 11.5,
-                    color: 'var(--fg-muted)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <Kbd>Esc</Kbd> {ADMIN_COPY.addVenueModal.actions.escHint}
-                </span>
+                {/* The footer's left side stays empty: the hints are gone. */}
+                <span aria-hidden />
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Dialog.Close
@@ -802,18 +793,6 @@ export function AddVenueModal({
                         : submitState === 'success'
                           ? ADMIN_COPY.addVenueModal.actions.saved
                           : ADMIN_COPY.addVenueModal.actions.saveAndCrawl}
-                      {submitState === 'idle' || submitState === 'error' ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            gap: 2,
-                            opacity: 0.7,
-                          }}
-                        >
-                          <Kbd>⌘</Kbd>
-                          <Kbd>↵</Kbd>
-                        </span>
-                      ) : null}
                     </span>
                     {submitState === 'idle' || submitState === 'error' ? (
                       <ChevronRight size={13} style={{ opacity: 0.7 }} />

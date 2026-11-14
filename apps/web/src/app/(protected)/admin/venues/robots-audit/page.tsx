@@ -1,17 +1,9 @@
-import { auth, requireAdminUser } from '@/lib/auth';
-import { apiClient } from '@/lib/api';
-import type { VenueRobotsStatus } from '@concert-crawl/types';
-import { RobotsAuditClient } from '@/components/admin/venues/RobotsAuditClient';
+import { redirect } from 'next/navigation';
 
-export default async function RobotsAuditPage() {
-  await requireAdminUser();
-  const { getToken } = await auth();
-  const token = await getToken();
-  if (!token) return null;
-
-  const venues = await apiClient
-    .get<VenueRobotsStatus[]>('/v1/admin/venues/robots-audit', token)
-    .catch(() => null);
-
-  return <RobotsAuditClient venues={venues} />;
+/**
+ * The robots.txt audit lives on Venues now: the Disallowed filter and the
+ * robots column (`04/venues-desktop`). The old address keeps working.
+ */
+export default function RobotsAuditPage() {
+  redirect('/admin/venues?robots=disallowed');
 }

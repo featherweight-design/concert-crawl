@@ -1133,43 +1133,6 @@ export const ADMIN_COPY = {
     },
   },
 
-  robotsAudit: {
-    page: {
-      eyebrow: 'Venues · robots.txt',
-      title: 'robots.txt audit',
-      subtitle:
-        'Stored crawl-time robots.txt result for each active venue. Blocked or unchecked venues may need manual intervention.',
-      backButton: 'Back to venues',
-    },
-    stats: {
-      total: 'Active venues',
-      allowed: 'Allowed',
-      blocked: 'Blocked',
-      unchecked: 'Unchecked',
-    },
-    filters: {
-      all: 'All',
-      allowed: 'Allowed',
-      blocked: 'Blocked',
-      unchecked: 'Unchecked',
-      ariaLabel: 'Filter by robots.txt status',
-    },
-    table: {
-      venue: 'Venue',
-      website: 'Website',
-      status: 'robots.txt',
-      checked: 'Last checked',
-    },
-    status: {
-      allowed: 'Allowed',
-      blocked: 'Blocked',
-      unchecked: 'Unchecked',
-    },
-    neverChecked: 'Never checked',
-    empty: 'No active venues match this filter.',
-    loadError: 'Could not load the robots.txt audit. Try refreshing.',
-  },
-
   // 3b part 6: the venue page's Guide tab and its edit panel
   // (`04/venue-guide`, `04/guide-edit-a-section`). Labels are the board's.
   venueGuide: {
@@ -1377,7 +1340,6 @@ export const ADMIN_COPY = {
       saveAndCrawl: 'Save & crawl now',
       saving: 'Saving…',
       saved: 'Saved',
-      escHint: 'cancel',
     },
     errors: {
       slugInUse: 'Slug already in use — choose a different one',
@@ -3325,11 +3287,6 @@ export const ADMIN_COPY = {
         crawlRuns: (when: string) => `Last run ${when}`,
         operations: (count: number) => `${count} feedback to read`,
         operationsDescription: 'Feedback, emails, activity log',
-      },
-      // Interim row until the audit's own place is drawn (`08/more-interim-m`).
-      robotsAudit: {
-        title: 'Robots.txt audit',
-        detail: "Every venue's last robots.txt check",
       },
     },
     userMenu: {

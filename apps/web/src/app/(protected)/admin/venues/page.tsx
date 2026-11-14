@@ -7,7 +7,11 @@ import {
   type VenueListRow,
 } from '@/components/admin/venues/venue-list-rules';
 
-export default async function AdminVenuesPage() {
+export default async function AdminVenuesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireAdminUser();
   const { getToken } = await auth();
   const token = await getToken();
@@ -43,5 +47,13 @@ export default async function AdminVenuesPage() {
       }),
   ]);
 
-  return <VenuesList venues={venues} needsYou={needsYou} />;
+  // `?robots=disallowed` is the old robots.txt audit's address.
+  const robots = (await searchParams)?.['robots'];
+  return (
+    <VenuesList
+      venues={venues}
+      needsYou={needsYou}
+      initialFilter={robots === 'disallowed' ? 'disallowed' : 'all'}
+    />
+  );
 }

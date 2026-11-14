@@ -26,13 +26,6 @@ describe('buildBreadcrumbs', () => {
     ]);
   });
 
-  it('labels the robots audit tool with its own title', () => {
-    expect(buildBreadcrumbs('/admin/venues/robots-audit')).toEqual([
-      { label: 'Venues', href: '/admin/venues' },
-      { label: 'robots.txt audit' },
-    ]);
-  });
-
   // `07/invite-codes` draws "People / Invite codes"; Posters sits beside it.
   it('puts Invite codes and Posters under People', () => {
     expect(buildBreadcrumbs('/admin/people/invite-codes')).toEqual([
