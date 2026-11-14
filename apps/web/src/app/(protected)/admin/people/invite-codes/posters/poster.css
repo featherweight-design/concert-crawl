@@ -972,6 +972,200 @@
   }
 }
 
+/* Phone, from 07/posters-mobile. These classes only render when the page has
+   read the breakpoint (`useIsPhone`), so desktop never meets them. */
+.pt-page[data-phone='true'] {
+  gap: 10px;
+}
+.pt-grid[data-phone='true'] {
+  gap: 12px;
+  /* Clears the pinned bar: 12 + 46 + 24 padding and its 1px border, plus the
+     12px gap the column keeps. */
+  padding-bottom: 95px;
+}
+.pt-grid[data-phone='true'] .pt-step {
+  gap: 12px;
+}
+.pt-grid[data-phone='true'] .pt-preview {
+  order: 0;
+}
+.pt-phead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pt-plabel {
+  font:
+    600 10px/1.3 'JetBrains Mono',
+    monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+.pt-pcode {
+  margin-left: auto;
+  font:
+    600 13px/1.3 'JetBrains Mono',
+    monospace;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+}
+.pt-page .pt-pchange {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  color: var(--signal);
+}
+.pt-plooks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pt-plook {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.pt-plook[data-on='true'] {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
+    linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border))
+      border-box;
+}
+.pt-plook:focus-within {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+.pt-pthumb {
+  flex: none;
+  width: 46px;
+  height: 60px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: #f3eee4;
+}
+.pt-pthumb[data-look='night'] {
+  background: linear-gradient(160deg, var(--surface-3), var(--bg));
+}
+.pt-pcopy {
+  flex: 1;
+  min-width: 0;
+}
+.pt-pcopy b {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+.pt-pcopy small,
+.pt-pcheck small {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--fg-muted);
+}
+.pt-pcopy small {
+  margin-top: 3px;
+}
+.pt-pradio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+}
+.pt-plook[data-on='true'] .pt-pradio {
+  border-color: var(--signal);
+}
+.pt-pradio i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.pt-pcheck {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.pt-pcheck small {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: normal;
+}
+.pt-pcheck input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.pt-pbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 5px;
+}
+.pt-pbox[data-on='true'] {
+  border: 0;
+  background: var(--signal);
+  color: var(--bg);
+}
+.pt-pcheck:has(input:focus-visible) .pt-pbox {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+.pt-plist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+/* Print alone, pinned above the shell's 64px bottom bar. */
+.pt-pbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 64px;
+  z-index: 39;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.pt-page .pt-pprint {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--signal), #de96df);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--bg);
+}
+
 @media (min-width: 1024px) {
   .pt-grid {
     display: grid;

@@ -33,7 +33,7 @@ export const PeopleTabs = ({
   isPhone,
   counts,
 }: {
-  active: 'people' | 'codes';
+  active: 'people' | 'codes' | 'posters';
   isPhone: boolean;
   counts: PeopleTabCounts;
 }) => {
