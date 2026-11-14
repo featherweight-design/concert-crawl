@@ -30,6 +30,10 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
+import {
+  PRICE_SETTINGS_UPDATE_ACTION,
+  SETTINGS_UPDATE_ACTION,
+} from './lib/settings-audit.js';
 
 const app = createApp();
 
@@ -292,64 +296,36 @@ describe('GET /v1/admin/audit-log', () => {
     expect(await actions('?area=venues,crawl-runs')).toHaveLength(3);
   });
 
-  it('files a settings save by what changed, in the filter as in the column', async () => {
+  it('files a settings save under the page it was written for', async () => {
     setAuth('admin');
-    const settings = {
-      llmMonthlyBudgetUsd: 20,
-      llmBudgetWarnAtPercent: 75,
-      llmBudgetFallbackToStructured: false,
-      approvePricesMyself: false,
-    };
-    const saved = (changes: Record<string, unknown>) => ({
-      actorId: 'test-admin-1',
-      action: 'settings.update',
-      targetId: 'admin_settings',
-      metadata: { before: settings, after: { ...settings, ...changes } },
-    });
-    const [toggle, budget, mixed, unchanged, malformed, price] = await testDb
+    const [prices, health] = await testDb
       .insert(auditLog)
       .values([
-        { ...saved({ approvePricesMyself: true }), createdAt: at(6) },
-        { ...saved({ llmMonthlyBudgetUsd: 50 }), createdAt: at(5) },
-        {
-          ...saved({ approvePricesMyself: true, llmMonthlyBudgetUsd: null }),
-          createdAt: at(4),
-        },
-        { ...saved({}), createdAt: at(3) },
         {
           actorId: 'test-admin-1',
-          action: 'settings.update',
-          metadata: { before: null, after: { approvePricesMyself: true } },
+          action: PRICE_SETTINGS_UPDATE_ACTION,
+          targetId: 'admin_settings',
           createdAt: at(2),
         },
         {
-          actorId: 'system:crawler',
-          action: 'price.promoted',
+          actorId: 'test-admin-1',
+          action: SETTINGS_UPDATE_ACTION,
+          targetId: 'admin_settings',
           createdAt: at(1),
         },
       ])
       .returning({ id: auditLog.id });
 
-    const ids = async (query: string) =>
-      (await list(query)).body.data.map((row) => row.id);
+    const areaById = async (query: string) =>
+      new Map((await list(query)).body.data.map((row) => [row.id, row.area]));
 
-    expect(await ids('?area=prices')).toEqual([price?.id, toggle?.id]);
-    expect(await ids('?area=health')).toEqual([
-      malformed?.id,
-      unchanged?.id,
-      mixed?.id,
-      budget?.id,
-    ]);
-    // Both areas together is every row, once.
-    expect(await ids('?area=prices,health')).toHaveLength(6);
+    const pricesArea = await areaById('?area=prices');
+    expect(pricesArea.get(prices?.id ?? '')).toBe('prices');
+    expect(pricesArea.has(health?.id ?? '')).toBe(false);
 
-    const all = await list();
-    const areaOf = new Map(all.body.data.map((row) => [row.id, row.area]));
-    expect(areaOf.get(toggle?.id ?? '')).toBe('prices');
-    expect(areaOf.get(budget?.id ?? '')).toBe('health');
-    expect(areaOf.get(mixed?.id ?? '')).toBe('health');
-    expect(areaOf.get(unchanged?.id ?? '')).toBe('health');
-    expect(areaOf.get(malformed?.id ?? '')).toBe('health');
+    const healthArea = await areaById('?area=health');
+    expect(healthArea.get(health?.id ?? '')).toBe('health');
+    expect(healthArea.has(prices?.id ?? '')).toBe(false);
   });
 
   it('rejects an unknown area with 400', async () => {

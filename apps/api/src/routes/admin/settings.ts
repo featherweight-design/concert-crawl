@@ -12,7 +12,7 @@ import { getAuthUser } from '../../middleware/auth.js';
 import { validationHook } from '../../lib/validator.js';
 import type { AdminVariables } from './index.js';
 import {
-  SETTINGS_UPDATE_ACTION,
+  settingsSaveAction,
   type AuditedSettings,
 } from './lib/settings-audit.js';
 
@@ -128,7 +128,9 @@ settingsAdminRouter.patch(
     }
 
     const after = toSettings(row);
-    ctx.set('auditAction', SETTINGS_UPDATE_ACTION);
+    // Filed under the page the patch came from, by the keys it sent: a save
+    // that changed nothing still belongs to the page it was made on.
+    ctx.set('auditAction', settingsSaveAction(Object.keys(patch)));
     ctx.set('auditTargetId', 'admin_settings');
     ctx.set('auditActorId', userId);
     ctx.set('auditMeta', {

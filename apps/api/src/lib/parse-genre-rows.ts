@@ -1,5 +1,6 @@
 import { z, type ZodIssue } from 'zod';
 import * as Sentry from '@sentry/hono/node';
+import { isRecord } from './is-record.js';
 import { apiLogger } from './logger.js';
 
 const genreRowSchema = z.object({ genre: z.string() });
@@ -18,10 +19,6 @@ interface RowSample {
   genreValue: unknown;
   genreType: string;
   otherKeys: string[];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object';
 }
 
 function summarizeRow(row: unknown): RowSample {
