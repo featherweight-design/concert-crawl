@@ -9,8 +9,8 @@ const COPY = ADMIN_COPY.needsYou.allClear;
 /**
  * `02/all-clear`: a green check in a tile, "All clear", what you handled today
  * and the way out to Health. The board's crawl facts card (last night's crawl,
- * next crawl, snoozed venues) needs numbers the queue API does not serve, so it
- * is left to a later piece rather than made up here.
+ * next crawl, snoozed venues) needs numbers the queue API does not serve; it
+ * lands with that API in its own PR.
  */
 export const AllClear = ({ handledToday }: { handledToday: number }) => (
   <div
@@ -35,22 +35,29 @@ export const AllClear = ({ handledToday }: { handledToday: number }) => (
         justifyContent: 'center',
         color: 'var(--success)',
         background:
-          'color-mix(in srgb, var(--success) 14%, var(--bg-elevated))',
-        border: '1px solid color-mix(in srgb, var(--success) 45%, transparent)',
+          'color-mix(in srgb, var(--success) 10%, var(--bg-elevated))',
+        border: '1px solid color-mix(in srgb, var(--success) 40%, transparent)',
       }}
     >
       <Check size={30} />
     </span>
     <h2
-      style={{ margin: 0, fontSize: 26, fontWeight: 800, color: 'var(--fg)' }}
+      style={{
+        margin: 0,
+        fontSize: 22,
+        fontWeight: 800,
+        letterSpacing: '-0.02em',
+        color: 'var(--fg)',
+      }}
     >
       {COPY.title}
     </h2>
     <p
       style={{
         margin: 0,
-        maxWidth: 320,
-        fontSize: 15,
+        maxWidth: 280,
+        fontSize: 14,
+        lineHeight: 1.5,
         color: 'var(--fg-muted)',
       }}
     >
@@ -62,14 +69,14 @@ export const AllClear = ({ handledToday }: { handledToday: number }) => (
         display: 'inline-flex',
         alignItems: 'center',
         gap: 8,
-        height: 38,
-        padding: '0 16px',
-        borderRadius: 12,
+        height: 36,
+        padding: '0 14px',
+        borderRadius: 9,
         border: '1px solid var(--border-strong)',
-        background: 'var(--surface-1)',
+        background: 'var(--surface-2)',
         color: 'var(--fg)',
         fontWeight: 600,
-        fontSize: 14,
+        fontSize: 13,
         textDecoration: 'none',
       }}
     >
