@@ -39,7 +39,7 @@ export function ThemePickerInline() {
     <div
       // Two columns below 360px: three tiles at 320 leave ~90px each, which
       // truncates "Electric", "Blue Note", "Drip" and "Cedar" past reading.
-      className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:gap-3"
+      className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 lg:gap-3"
       style={{
         opacity: isSaving ? 0.7 : 1,
         transition: 'opacity var(--motion-fast) var(--motion-ease)',

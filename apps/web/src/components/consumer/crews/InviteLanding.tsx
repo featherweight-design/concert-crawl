@@ -138,7 +138,7 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
             // A handle is one unbroken word, and a 50-character one ran
             // 822px wide in a 304px column. min-w-0 lets the item shrink in
             // the flex column; anywhere lets the handle break.
-            className="ph-no-capture min-w-0 max-w-full text-[27px] [overflow-wrap:anywhere] sm:text-[30px]"
+            className="ph-no-capture min-w-0 max-w-full text-[27px] [overflow-wrap:anywhere] lg:text-[30px]"
             style={{
               margin: 0,
               fontWeight: 900,

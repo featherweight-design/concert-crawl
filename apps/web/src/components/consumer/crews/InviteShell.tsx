@@ -25,8 +25,8 @@ export const InviteShell = ({
 }) => (
   <main
     aria-label={COPY.a11y.inviteLanding}
-    className={`relative flex min-h-[100dvh] w-full flex-col items-center justify-center gap-[18px] overflow-hidden px-[22px] pb-10 pt-[70px] text-center sm:px-10 sm:pt-10 ${
-      tightGap ? '' : 'sm:gap-[22px]'
+    className={`relative flex min-h-[100dvh] w-full flex-col items-center justify-center gap-[18px] overflow-hidden px-[22px] pb-10 pt-[70px] text-center lg:px-10 lg:pt-10 ${
+      tightGap ? '' : 'lg:gap-[22px]'
     }`}
     style={{
       // The invite's page glow: a strong purple-pink wash from the top centre
@@ -38,7 +38,7 @@ export const InviteShell = ({
       fontFamily: 'var(--font-ui)',
     }}
   >
-    <div className="absolute left-0 right-0 top-[54px] flex items-center justify-center gap-2 sm:top-[22px]">
+    <div className="absolute left-0 right-0 top-[54px] flex items-center justify-center gap-2 lg:top-[22px]">
       <CCMark size={22} />
       <CCWordmark size={14} />
     </div>
@@ -63,7 +63,7 @@ export const InviteCard = ({
   children: React.ReactNode;
 }) => (
   <div
-    className="relative flex w-full max-w-[400px] flex-col items-center gap-4 px-5 pb-6 sm:max-w-[440px] sm:px-6"
+    className="relative flex w-full max-w-[400px] flex-col items-center gap-4 px-5 pb-6 lg:max-w-[440px] lg:px-6"
     style={{
       ...gradientEdgeCard,
       marginTop: INVITE_MARK_SIZE / 2,
@@ -112,7 +112,7 @@ export const InviteEyebrow = ({ tone, children }: EyebrowProps) => (
 
 export const InviteTitle = ({ children }: { children: string }) => (
   <h1
-    className="text-[25px] sm:text-[32px]"
+    className="text-[25px] lg:text-[32px]"
     style={{
       margin: 0,
       fontWeight: 900,
@@ -128,7 +128,7 @@ export const InviteTitle = ({ children }: { children: string }) => (
 
 export const InviteBody = ({ children }: { children: string }) => (
   <p
-    className="text-[13.5px] sm:text-[15px]"
+    className="text-[13.5px] lg:text-[15px]"
     style={{
       margin: 0,
       color: 'var(--fg-muted)',

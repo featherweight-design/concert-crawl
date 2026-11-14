@@ -400,7 +400,7 @@ export const DiscoveryShelf = ({
               itself, and its `overflow-hidden` finally contains them.
               `max-w-[100vw]` + `overflow-hidden` remain as belt-and-
               suspenders for any other stray overflow. */}
-          <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:-mx-1 sm:max-w-[calc(100%+0.5rem)]">
+          <div className="relative -mx-4 max-w-[100vw] overflow-hidden lg:-mx-1 lg:max-w-[calc(100%+0.5rem)]">
             {/* Not capped: the picks have no page that lists the rest, so
                 the rail keeps scrolling at every width. The scroller clips
                 both axes, so it pads 4px on every side for a card's 2px focus
@@ -408,7 +408,7 @@ export const DiscoveryShelf = ({
                 aligned with the page. */}
             <ul
               aria-label={COPY.listAria}
-              className={`flex list-none px-4 py-1 sm:px-1 ${SHELF_RAIL_SCROLL_CLASS} ${SHELF_RAIL_GAP_CLASS}`}
+              className={`flex list-none px-4 py-1 lg:px-1 ${SHELF_RAIL_SCROLL_CLASS} ${SHELF_RAIL_GAP_CLASS}`}
             >
               {data.picks.map((pick) => (
                 <TastePickCard key={pick.eventId} pick={pick} />

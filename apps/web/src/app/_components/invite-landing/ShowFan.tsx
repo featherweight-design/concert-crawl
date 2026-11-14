@@ -226,7 +226,7 @@ export function ShowFan({ shows }: { shows: InviteShow[] }) {
 
   return (
     <div
-      className="[--fan-card-w:165px] [--fan-dx:0.65] md:[--fan-card-w:250px]"
+      className="[--fan-card-w:165px] [--fan-dx:0.65] lg:[--fan-card-w:250px]"
       style={{
         position: 'relative',
         width: '100%',

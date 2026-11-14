@@ -16,7 +16,7 @@ interface AccessPlaceholderRowProps {
  */
 export const AccessPlaceholderRow = ({ first }: AccessPlaceholderRowProps) => (
   <div
-    className={`flex min-w-0 gap-3 sm:border-t-0 ${first ? '' : 'border-t border-border'}`}
+    className={`flex min-w-0 gap-3 lg:border-t-0 ${first ? '' : 'border-t border-border'}`}
     style={{ padding: '12px 0' }}
     data-testid="guide-chip-accessibility-placeholder"
   >

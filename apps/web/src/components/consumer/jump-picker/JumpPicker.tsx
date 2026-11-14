@@ -395,7 +395,7 @@ export const JumpPicker = ({
       aria-label={`${CONSUMER_COPY.jumpPickerDialogPrefix} — ${MONTHS[view.m]} ${view.y}`}
       // A bottom sheet with the B+ gradient top edge on the phone (rule 7), a
       // bordered popover from sm up.
-      className={`cjp-pop cjp-w scale focus:outline-none ${mounted ? 'cjp-in' : ''} rounded-t-[22px] [--sheet-bg:var(--bg-elevated)] max-sm:sheet-edge sm:rounded-2xl sm:border sm:border-border-strong sm:[background:var(--bg-elevated)]`}
+      className={`cjp-pop cjp-w scale focus:outline-none ${mounted ? 'cjp-in' : ''} rounded-t-[22px] [--sheet-bg:var(--bg-elevated)] max-lg:sheet-edge lg:rounded-2xl lg:border lg:border-border-strong lg:[background:var(--bg-elevated)]`}
       style={{
         boxShadow: '0 20px 50px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.3)',
         padding: '10px 18px calc(18px + env(safe-area-inset-bottom, 0px))',
@@ -412,7 +412,7 @@ export const JumpPicker = ({
         {/* drag handle: the phone sheet's affordance */}
         <div
           aria-hidden="true"
-          className="mx-auto mb-2 sm:hidden"
+          className="mx-auto mb-2 lg:hidden"
           style={{
             width: 40,
             height: 4,

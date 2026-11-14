@@ -150,7 +150,7 @@ export const EventTitleBlock = ({
 
   return (
     <div
-      className={`flex min-w-0 flex-col ${centered ? 'items-center text-center sm:items-start sm:text-left' : ''}`}
+      className={`flex min-w-0 flex-col ${centered ? 'items-center text-center lg:items-start lg:text-left' : ''}`}
       style={{ gap: ramp.gap }}
     >
       {heroDelistedChip && (
@@ -161,7 +161,7 @@ export const EventTitleBlock = ({
         <div
           aria-hidden="true"
           data-testid="title-nll-chip"
-          className="hidden sm:flex"
+          className="hidden lg:flex"
           style={{ marginBottom: 14 - ramp.gap }}
         >
           <NoLongerListedChip overArt />
@@ -173,7 +173,7 @@ export const EventTitleBlock = ({
           // The detail stage centres this row on a phone, so it is held to the
           // column's width: unbounded, a long tour line outgrew the viewport
           // and clipped at both edges. There it wraps rather than truncates.
-          className={`flex min-w-0 max-w-full items-center gap-2 ${surface === 'detail' ? 'justify-center sm:justify-start' : ''}`}
+          className={`flex min-w-0 max-w-full items-center gap-2 ${surface === 'detail' ? 'justify-center lg:justify-start' : ''}`}
           style={{ marginBottom: 1 }}
         >
           {pillBelow ? null : (

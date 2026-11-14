@@ -41,7 +41,7 @@ export const ThemeCard = ({
       aria-pressed={active}
       onClick={onClick}
       disabled={disabled}
-      className="flex min-w-0 cursor-pointer flex-col gap-2 rounded-2xl p-2.5 text-left transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 disabled:cursor-wait sm:p-3"
+      className="flex min-w-0 cursor-pointer flex-col gap-2 rounded-2xl p-2.5 text-left transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 disabled:cursor-wait lg:p-3"
       style={{
         backgroundImage: `linear-gradient(135deg, ${tokens['bg']} 40%, color-mix(in oklch, ${tokens['accent']} 16%, ${tokens['bg']}))`,
         border: active

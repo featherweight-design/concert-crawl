@@ -105,7 +105,7 @@ export const WatchersSurface = ({
               aria-controls={trigger.open ? panelId : undefined}
               onClick={trigger.toggle}
               // 44px tap target on mobile, tightened to the 28px row on desktop.
-              className="inline-flex min-h-[44px] items-center rounded-[3px] text-xs font-bold tracking-[-0.005em] text-signal hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-[28px]"
+              className="inline-flex min-h-[44px] items-center rounded-[3px] text-xs font-bold tracking-[-0.005em] text-signal hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 lg:min-h-[28px]"
               style={{ outlineColor: 'var(--focus)' }}
             >
               {trigger.open ? copy.rosterHide : copy.rosterToggle(total)}

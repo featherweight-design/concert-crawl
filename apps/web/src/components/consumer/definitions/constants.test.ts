@@ -19,9 +19,9 @@ describe('browse shelf card box', () => {
 
   it('matches the B+ desktop board (180 x 288) from sm', () => {
     expect(SHELF_CARD_WIDE).toEqual({ width: 180, height: 288 });
-    expect(SHELF_CARD_BOX_CLASS).toContain(`sm:w-[${SHELF_CARD_WIDE.width}px]`);
+    expect(SHELF_CARD_BOX_CLASS).toContain(`lg:w-[${SHELF_CARD_WIDE.width}px]`);
     expect(SHELF_CARD_BOX_CLASS).toContain(
-      `sm:h-[${SHELF_CARD_WIDE.height}px]`,
+      `lg:h-[${SHELF_CARD_WIDE.height}px]`,
     );
   });
 

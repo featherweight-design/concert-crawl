@@ -140,13 +140,13 @@ export const ShelfSkeletonHeader = ({ isTimeout }: { isTimeout: boolean }) => (
 export const ShelfSkeletonCards = () => (
   <ul
     aria-hidden
-    className={`-mx-4 flex list-none overflow-hidden px-4 py-1 sm:mx-0 sm:px-0 ${SHELF_RAIL_GAP_CLASS}`}
+    className={`-mx-4 flex list-none overflow-hidden px-4 py-1 lg:mx-0 lg:px-0 ${SHELF_RAIL_GAP_CLASS}`}
   >
     <SkeletonCard />
     <SkeletonCard />
     <SkeletonCard />
-    <SkeletonCard className="hidden sm:flex" />
-    <SkeletonCard className="hidden sm:flex" />
+    <SkeletonCard className="hidden lg:flex" />
+    <SkeletonCard className="hidden lg:flex" />
   </ul>
 );
 

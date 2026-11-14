@@ -23,10 +23,10 @@ export default async function SubmittedPricesPage() {
   return (
     <>
       <ThemeSync serverTheme={profile.theme} />
-      <div className="sm:hidden">
+      <div className="lg:hidden">
         <SubmissionsPage profile={profile} submissions={submissions} />
       </div>
-      <div className="hidden sm:block">
+      <div className="hidden lg:block">
         <SettingsRouteDesktop
           profile={profile}
           submissions={submissions}
