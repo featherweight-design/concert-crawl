@@ -295,9 +295,7 @@ describe('EventEditorClient', () => {
     const [url] = mockApiDelete.mock.calls[0] ?? [];
     expect(url).toBe('/v1/admin/events/evt-1');
     await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith(
-        '/admin/review?tab=all-events',
-      );
+      expect(mockRouterPush).toHaveBeenCalledWith('/admin/events');
     });
   });
 
