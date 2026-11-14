@@ -1,3 +1,21 @@
+# [1.444.0](https://github.com/featherweight-design/concert-crawl/compare/v1.443.0...v1.444.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** drop the past That night card's info disc as addendum 5 rules ([3be50ee](https://github.com/featherweight-design/concert-crawl/commit/3be50eef7efca89c28dad4694b56087faaf1f83c))
+* **web:** each in-app boundary calls the retry hook itself, as the sweep guard checks ([a2de9f4](https://github.com/featherweight-design/concert-crawl/commit/a2de9f4f2ae15b35de2d30f8a98744119fbf6d15))
+* **web:** error report route review fixes ([738331a](https://github.com/featherweight-design/concert-crawl/commit/738331a692bc7258e4bd66b63df406bf86c65e12))
+* **web:** in-app error to the phone board, desktop as standalone, focus on the heading ([f4f2bcd](https://github.com/featherweight-design/concert-crawl/commit/f4f2bcd9112055e0e1b3d4e16cc78d1db729b686))
+
+
+### Features
+
+* **admin:** ask for a new date or none when marking a show postponed ([2f63311](https://github.com/featherweight-design/concert-crawl/commit/2f6331184861d679a14f41f4eb4f4af1c1ca6a2b))
+* **web:** keep the app header and nav on an in-app error ([2998e1a](https://github.com/featherweight-design/concert-crawl/commit/2998e1a7f99311ae080e6e81fb8d0685758f585d))
+* **web:** send error reports through a same-origin route ([723272f](https://github.com/featherweight-design/concert-crawl/commit/723272f164da8ced5e257dc4c5d1644257c86234))
+* **web:** the Watching, Browse and Concerts daily polish as the B+ boards draw it ([cca1863](https://github.com/featherweight-design/concert-crawl/commit/cca18636b6cd4b3dc46064bf64a18d12dd7374e9))
+
 # [1.443.0](https://github.com/featherweight-design/concert-crawl/compare/v1.442.1...v1.443.0) (2026-11-14)
 
 
