@@ -34,8 +34,10 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+const { setPhoneBack } = vi.hoisted(() => ({ setPhoneBack: vi.fn() }));
+
 vi.mock('@/components/admin/shell/PageTitleContext', () => ({
-  usePageTitle: () => ({ setPageTitle: vi.fn() }),
+  usePageTitle: () => ({ setPageTitle: vi.fn(), setPhoneBack }),
 }));
 
 vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
@@ -168,6 +170,18 @@ describe('VenueDetailsClient — tabs', () => {
     cleanup();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  // venue-overview-m draws "‹ Venues" in place of the phone title bar.
+  it('asks the phone header for a back link to Venues, and clears it on leaving', () => {
+    setPhoneBack.mockReset();
+    const { unmount } = render(<VenueDetailsClient venue={venue} />);
+    expect(setPhoneBack).toHaveBeenCalledWith({
+      label: ADMIN_COPY.venuesList.title,
+      href: '/admin/venues',
+    });
+    unmount();
+    expect(setPhoneBack).toHaveBeenLastCalledWith(null);
   });
 
   it('opens on Overview, with all five panels mounted and the rest hidden', () => {

@@ -34,7 +34,7 @@ vi.mock('next/link', () => ({
 }));
 
 vi.mock('@/components/admin/shell/PageTitleContext', () => ({
-  usePageTitle: () => ({ setPageTitle: vi.fn() }),
+  usePageTitle: () => ({ setPageTitle: vi.fn(), setPhoneBack: vi.fn() }),
 }));
 
 vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
