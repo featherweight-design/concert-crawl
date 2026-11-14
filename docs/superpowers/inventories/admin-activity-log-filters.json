@@ -1,0 +1,65 @@
+{
+  "feature": "Admin · Activity log filters (addendum 6 #37 B2)",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/37-activity-log/log-filter-menus, log-filter-sheet-m, log-m. CONTACT_SHEET_ROLE=admin. Read-only: opening menus and picking a filter only reads. Search and the Sub-admin sub-line are PR C.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "log-filters-idle",
+      "label": "Activity log: Anyone and Any page idle beside the stepper",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "[data-testid='activity-log-anyone-chip']",
+          "settle": 4000
+        }
+      ]
+    },
+    {
+      "id": "log-anyone-open",
+      "label": "Anyone open (desktop menu, phone sheet)",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "[data-testid='activity-log-anyone-chip']",
+          "settle": 3000
+        },
+        { "click": "[data-testid='activity-log-anyone-chip']", "settle": 2500 }
+      ]
+    },
+    {
+      "id": "log-any-page-open",
+      "label": "Any page open (desktop menu, phone sheet)",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "[data-testid='activity-log-any-page-chip']",
+          "settle": 3000
+        },
+        {
+          "click": "[data-testid='activity-log-any-page-chip']",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "log-page-picked",
+      "label": "Venues picked: the chip with its x, the log filtered",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "[data-testid='activity-log-any-page-chip']",
+          "settle": 3000
+        },
+        {
+          "click": "[data-testid='activity-log-any-page-chip']",
+          "settle": 1500
+        },
+        { "clickRole": "button", "name": "^Venues$", "settle": 3000 }
+      ]
+    }
+  ]
+}
