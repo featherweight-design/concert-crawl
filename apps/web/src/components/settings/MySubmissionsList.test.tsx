@@ -61,6 +61,26 @@ describe('MySubmissionsList filter row', () => {
     expect(first?.getAttribute('data-ring')).toBeNull();
   });
 
+  // The state card, not a blank list under the header (`bp-s-empty_search_m`).
+  it('shows the empty card for a filter with no rows, and Show all returns', () => {
+    render(<MySubmissionsList submissions={[row]} />);
+    // One confirmed row: Pending is the third chip and has nothing in it.
+    fireEvent.click(screen.getAllByRole('button')[2] as HTMLElement);
+
+    expect(
+      screen.getByText(
+        copy.submissionsFilterEmpty.title(copy.submissionFilters.pending),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(row.artist)).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: copy.submissionsFilterEmpty.action }),
+    );
+    expect(screen.getByText(row.artist)).toBeTruthy();
+    expect(screen.queryByText(copy.submissionsFilterEmpty.body)).toBeNull();
+  });
+
   it('notes the sort order at the end of the row', () => {
     render(<MySubmissionsList submissions={[row]} />);
     expect(screen.getByText(copy.submissionsNewestFirst)).toBeTruthy();
