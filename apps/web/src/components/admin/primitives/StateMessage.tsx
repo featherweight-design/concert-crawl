@@ -14,6 +14,7 @@ export const COULDNT_LOAD_X_STROKE = 2.7;
 export const stateTileStyle = (
   tone: string,
   tinted: boolean,
+  neutral = false,
 ): CSSProperties => ({
   width: 52,
   height: 52,
@@ -22,12 +23,18 @@ export const stateTileStyle = (
   alignItems: 'center',
   justifyContent: 'center',
   color: tone,
-  background: tinted
-    ? `color-mix(in srgb, ${tone} 8%, transparent)`
-    : `color-mix(in srgb, ${tone} 10%, var(--bg-elevated))`,
-  border: tinted
-    ? `1px solid color-mix(in srgb, ${tone} 40%, transparent)`
-    : `1px solid color-mix(in srgb, ${tone} 30%, transparent)`,
+  // The empty boards (`06/events-no-results`, `07/people-no-results`) draw a
+  // plain surface tile, not a tone-tinted one.
+  background: neutral
+    ? 'var(--surface-1)'
+    : tinted
+      ? `color-mix(in srgb, ${tone} 8%, transparent)`
+      : `color-mix(in srgb, ${tone} 10%, var(--bg-elevated))`,
+  border: neutral
+    ? '1px solid var(--border)'
+    : tinted
+      ? `1px solid color-mix(in srgb, ${tone} 40%, transparent)`
+      : `1px solid color-mix(in srgb, ${tone} 30%, transparent)`,
 });
 
 /**
@@ -48,7 +55,14 @@ export const StateMessage = ({
   // Lucide's own default.
   iconStrokeWidth = 2,
   className,
+  empty = false,
 }: {
+  /**
+   * The empty-list boards' type and tile: a 17px title over a 13px line at 320
+   * wide, on a plain surface tile. The failure and not-found boards keep the
+   * default 18 / 13.5 / 400.
+   */
+  empty?: boolean;
   icon: LucideIcon;
   tone: string;
   title: string;
@@ -83,14 +97,14 @@ export const StateMessage = ({
     <span
       aria-hidden
       data-testid={`${testId}-tile`}
-      style={stateTileStyle(tone, tinted)}
+      style={stateTileStyle(tone, tinted, empty)}
     >
       <Icon size={24} strokeWidth={iconStrokeWidth} />
     </span>
     <h2
       style={{
         margin: 0,
-        fontSize: 18,
+        fontSize: empty ? 17 : 18,
         fontWeight: 800,
         color: 'var(--fg)',
       }}
@@ -101,8 +115,8 @@ export const StateMessage = ({
       <p
         style={{
           margin: 0,
-          maxWidth: 400,
-          fontSize: 13.5,
+          maxWidth: empty ? 320 : 400,
+          fontSize: empty ? 13 : 13.5,
           lineHeight: 1.5,
           color: 'var(--fg-muted)',
         }}
