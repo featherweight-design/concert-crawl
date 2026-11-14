@@ -11,6 +11,8 @@ interface PriceStackProps {
   show: EventRowShow;
   surface: RowSurface;
   narrow: boolean;
+  /** The row draws the status chip beside the name; the slot keeps the price or a dash. */
+  statusInTitle?: boolean;
 }
 
 const DeltaArrow = ({ up }: { up: boolean }) => (
@@ -39,7 +41,12 @@ const DeltaArrow = ({ up }: { up: boolean }) => (
  * the data instead would put a green "down $12" on a row where the user never
  * saved anything.
  */
-export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
+export const PriceStack = ({
+  show,
+  surface,
+  narrow,
+  statusInTitle = false,
+}: PriceStackProps) => {
   const minWidth = narrow ? 56 : 78;
   const amountSize = narrow ? 15 : 16.5;
   const status = resolveRowStatus(show.lifecycle, show.status, show.delistedAt);
@@ -53,14 +60,15 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
     </div>
   );
 
-  // Cancelled and postponed take the price slot rather than a meta chip, and
-  // that is why they can never be dropped: the slot sits outside the chip
-  // budget and outside MetaRow's fit pass. They are the one thing that names
-  // which problem the dim and the strike are gesturing at.
-  // No longer listed takes the slot exactly as Cancelled does, but in the
-  // neutral, always-dashed chip (`StatusChip` F3): it names a gap in what we
-  // know, not a confirmed state.
-  if (status === 'removed') {
+  // `statusInTitle`: the row sets the status chip beside the name
+  // (`more-st-rows_board`), so the slot keeps what a price slot says: a dash
+  // where there is nothing to buy (cancelled, sold out, no longer listed), and
+  // the price itself for a postponed show, whose tickets still stand. A caller
+  // without a title line of its own leaves it off and the chip takes the slot.
+  // The one exception is a narrow No longer listed row: its wide chip would
+  // crush the title beside it, so the row puts it under the title and asks the
+  // slot to draw it (`chipUnderTitle` in EventRow).
+  if (status === 'removed' && (narrow || !statusInTitle)) {
     return slot(
       <span data-testid="row-removed">
         <StatusChip
@@ -72,7 +80,7 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
     );
   }
 
-  if (status === 'cancelled') {
+  if (status === 'cancelled' && !statusInTitle) {
     return slot(
       <span data-testid="row-cancelled">
         <StatusChip
@@ -84,7 +92,7 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
     );
   }
 
-  if (status === 'postponed') {
+  if (status === 'postponed' && !statusInTitle) {
     return slot(
       <span data-testid="row-postponed">
         <StatusChip
@@ -96,20 +104,25 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
     );
   }
 
-  // Rule 2's one exemption: sold out spends no chip budget. Its chip sits on
-  // the title line (B+ rows board), so the price slot holds a lone dash: there
-  // is no price to buy at.
-  if (status === 'soldout') {
+  if (status === 'removed' || status === 'cancelled' || status === 'soldout') {
     return slot(
       <span
-        data-testid="row-sold-out-price"
+        data-testid={
+          status === 'soldout' ? 'row-sold-out-price' : 'row-no-price'
+        }
         style={{
           fontSize: amountSize,
           fontWeight: 600,
           color: 'var(--fg-muted)',
         }}
       >
-        <span className="sr-only">{copy.a11y.soldOutPrice}</span>
+        <span className="sr-only">
+          {status === 'soldout'
+            ? copy.a11y.soldOutPrice
+            : status === 'cancelled'
+              ? copy.a11y.cancelledPrice
+              : copy.a11y.removedPrice}
+        </span>
         <span aria-hidden>{copy.price.soldOutPlaceholder}</span>
       </span>,
     );

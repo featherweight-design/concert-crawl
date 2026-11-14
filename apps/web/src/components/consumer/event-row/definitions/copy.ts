@@ -37,6 +37,8 @@ export const EVENT_ROW_COPY = {
     postponed: CONSUMER_COPY.postponedLabel,
     removed: CONSUMER_COPY.noLongerListedLabel,
   },
+  // Line 3 of a postponed row names the missing date (`more-st-rows_board`).
+  dateTba: 'Date TBA',
   // Line 4 of a No longer listed row, in place of the chips.
   removedLine: CONSUMER_COPY.noLongerListedLine,
   // The source line that replaces it when the sweep's date is known, the same
@@ -88,6 +90,8 @@ export const EVENT_ROW_COPY = {
     priceProvenance: (label: string) => `Price source: ${label}`,
     // Replaces the sold-out price slot's placeholder dash.
     soldOutPrice: 'No price, sold out',
+    cancelledPrice: 'No price, cancelled',
+    removedPrice: 'No price, no longer listed',
     // Replaces the visible "pending" marker, so it has to say what pending
     // means rather than repeat the word.
     pendingPrice: 'Submitted price, not confirmed yet',

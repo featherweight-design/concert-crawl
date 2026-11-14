@@ -220,6 +220,30 @@ export const EventRow = ({
                   <span data-testid="row-sold-out">
                     <StatusChip status="soldout" label={copy.price.soldOut} />
                   </span>
+                ) : status === 'cancelled' ? (
+                  <span data-testid="row-cancelled">
+                    <StatusChip
+                      status="cancelled"
+                      label={copy.status.cancelled}
+                      srLabel={copy.a11y.cancelled}
+                    />
+                  </span>
+                ) : status === 'postponed' ? (
+                  <span data-testid="row-postponed">
+                    <StatusChip
+                      status="postponed"
+                      label={copy.status.postponed}
+                      srLabel={copy.a11y.postponed}
+                    />
+                  </span>
+                ) : removed && !narrow ? (
+                  <span data-testid="row-removed">
+                    <StatusChip
+                      status="removed"
+                      label={copy.status.removed}
+                      srLabel={copy.a11y.removed}
+                    />
+                  </span>
                 ) : undefined
               }
             />
@@ -239,8 +263,10 @@ export const EventRow = ({
           </Link>
           <WhenWhere
             surface={surface}
-            dateLabel={show.dateLabel}
-            timeLabel={show.timeLabel}
+            // A postponed show has no date to give: the line says so, and the
+            // old time goes with the old date.
+            dateLabel={status === 'postponed' ? copy.dateTba : show.dateLabel}
+            timeLabel={status === 'postponed' ? null : show.timeLabel}
             venueName={show.venueName}
             venueSlug={show.venueSlug}
             narrow={narrow}
@@ -288,7 +314,12 @@ export const EventRow = ({
         </div>
 
         {config.showsPrice && !chipUnderTitle && (
-          <PriceStack show={show} surface={surface} narrow={narrow} />
+          <PriceStack
+            show={show}
+            surface={surface}
+            narrow={narrow}
+            statusInTitle
+          />
         )}
 
         {/* Reserved only where the surface has an action — reserving it on
