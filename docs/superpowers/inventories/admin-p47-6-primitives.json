@@ -1,0 +1,42 @@
+{
+  "feature": "Admin P47-6 · Button kit, filled chips, plain dialogs, nav icons",
+  "note": "P47-6. CONTACT_SHEET_ROLE=admin. Boards: all 02-needs-you, 07/make-an-admin-asks-first, A3/12/sign-out-everywhere-d, 01/desktop-sidebar, 01/mobile-one-nav. Rows: a button-heavy page (Needs you panel), a desktop confirm dialog (Sign them out everywhere), the same on phone (a bottom sheet), and the shell icons (any page).",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "needs-you-panel",
+      "label": "Needs you: filled buttons, filled chips, shell icons",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-item\"]"
+        },
+        { "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 500 }
+      ]
+    },
+    {
+      "id": "sign-out-dialog",
+      "label": "Person page: Sign them out everywhere confirm",
+      "steps": [
+        { "goto": "/admin/people", "wait": "a[href^=\"/admin/people/\"]" },
+        { "click": "a[href^=\"/admin/people/\"]:visible >> nth=0" },
+        { "wait": "text=Account" },
+        { "click": "button[aria-haspopup=\"menu\"]:visible >> nth=0" },
+        { "click": "text=Sign them out everywhere" },
+        {
+          "wait": "[role=\"dialog\"], [data-testid=\"admin-sheet\"]",
+          "settle": 500
+        }
+      ]
+    },
+    {
+      "id": "venues-buttons",
+      "label": "Venues: a button-heavy list",
+      "steps": [{ "goto": "/admin/venues", "settle": 1500 }]
+    }
+  ]
+}
