@@ -153,11 +153,33 @@ describe('CorroborationSheet rail and body', () => {
     expect(onSubmitUpdate).toHaveBeenCalled();
   });
 
-  it('keeps the honesty line as plain text, not a box', () => {
+  it('keeps the honesty line as plain centred text, not a box', () => {
     renderSheet();
     const line = screen.getByText(/Only confirm if you actually checked/);
     expect(line.tagName).toBe('P');
-    expect(line.style.border).toBe('');
+    expect(line).toHaveStyle({ textAlign: 'center' });
+    // No border or ground of its own, unlike the old bordered box.
+    expect(line.style.background).toBe('');
+    expect(line.getAttribute('style')).not.toMatch(/border|padding/);
+  });
+
+  // One Tab stop for the group, arrows move within it (radiogroup pattern).
+  it('is one Tab stop, and the arrow keys move the choice', () => {
+    renderSheet();
+    const radios = screen.getAllByRole('radio');
+    expect(radios.map((radio) => radio.getAttribute('tabindex'))).toEqual([
+      '0',
+      '-1',
+      '-1',
+      '-1',
+    ]);
+    (radios[0] as HTMLElement).focus();
+    fireEvent.keyDown(radios[0] as HTMLElement, { key: 'ArrowDown' });
+    expect(radios[1]).toHaveAttribute('aria-checked', 'true');
+    expect(radios[1]).toHaveAttribute('tabindex', '0');
+    expect(radios[0]).toHaveAttribute('tabindex', '-1');
+    fireEvent.keyDown(radios[1] as HTMLElement, { key: 'ArrowUp' });
+    expect(radios[0]).toHaveAttribute('aria-checked', 'true');
   });
 });
 
@@ -205,6 +227,32 @@ describe('CorroborationSheet self-locked state (confirm_self_m)', () => {
     expect(screen.getByTestId('self-locked-notice')).toHaveTextContent(
       '2 other fans can.',
     );
+  });
+
+  it('says so when the confirms it needs are already in', () => {
+    renderSelf({ confirms: 2, needed: 2 });
+    expect(screen.getByTestId('self-locked-notice')).toHaveTextContent(
+      'the confirms it needs are in.',
+    );
+  });
+
+  // A button with no handler is not drawn: a Withdraw that only closed the
+  // sheet would look like it worked.
+  it('draws no Edit or Withdraw it has no handler for', () => {
+    render(
+      <CorroborationSheet
+        submission={submission}
+        open
+        isSelfLocked
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        onSubmitUpdate={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Edit submission' }),
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Withdraw' })).toBeNull();
   });
 
   it('wires Edit and Withdraw to their own handlers', () => {
