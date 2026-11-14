@@ -45,7 +45,11 @@ import {
   withMissingClassification,
 } from './lib/missing-events.js';
 import { idSchema } from '../../lib/id-schema.js';
-import { eventPatchSchema, updateEvent } from './lib/event-update.js';
+import {
+  eventPatchSchema,
+  PastLockedError,
+  updateEvent,
+} from './lib/event-update.js';
 import { mergeEvents } from './lib/event-merge.js';
 import { containsPattern } from '../../lib/escape-like.js';
 import { setHiddenFromConsumer, verifyEvent } from './lib/event-actions.js';
@@ -733,7 +737,20 @@ eventsAdminRouter.patch(
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
 
-    const updated = await updateEvent(id, body);
+    // A past show (dated before today in Denver, the list's Past side)
+    // accepts only `hiddenFromConsumer` (admin 4a-3b). The stored date
+    // decides, read under the row lock; a refused write is not audited.
+    let updated: Awaited<ReturnType<typeof updateEvent>>;
+    try {
+      updated = await updateEvent(id, body, {
+        lockPastBefore: todayInDenver(),
+      });
+    } catch (err) {
+      if (err instanceof PastLockedError) {
+        return ctx.json({ success: false, error: 'past_locked' } as const, 409);
+      }
+      throw err;
+    }
     if (!updated) {
       return ctx.json({ success: false, error: 'Not found' } as const, 404);
     }

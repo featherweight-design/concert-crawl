@@ -55,15 +55,52 @@ export const eventPatchSchema = z.object({
 export type EventPatch = z.input<typeof eventPatchSchema>;
 
 /**
+ * Thrown inside the update transaction when a past show's PATCH sets anything
+ * but `hiddenFromConsumer` (admin 4a-3b: "past rows accept only
+ * `hiddenFromConsumer`, and anything else returns 409 `past_locked`"). The
+ * throw rolls the transaction back, so nothing is written.
+ */
+export class PastLockedError extends Error {
+  constructor() {
+    super('past_locked');
+    this.name = 'PastLockedError';
+  }
+}
+
+/** True when the patch sets any field a past show locks. */
+const setsPastLockedField = (body: EventPatch): boolean =>
+  Object.entries(body).some(
+    ([key, value]) => key !== 'hiddenFromConsumer' && value !== undefined,
+  );
+
+export interface UpdateEventOptions {
+  /**
+   * Today's date in Denver (`YYYY-MM-DD`). When given, a show dated before it
+   * (the list's Past side) refuses every field but `hiddenFromConsumer` with
+   * PastLockedError. Read from the locked row, never from the request.
+   */
+  lockPastBefore?: string;
+}
+
+/**
  * Partial event update with the watch-update fan-out (#1107, #1311). Returns
  * the updated row, or null when the event does not exist.
  */
-export const updateEventNotifying = async (id: string, body: EventPatch) => {
+export const updateEventNotifying = async (
+  id: string,
+  body: EventPatch,
+  options: UpdateEventOptions = {},
+) => {
+  const { lockPastBefore } = options;
+  const checksPastLock =
+    lockPastBefore !== undefined && setsPastLockedField(body);
   // Only bother with the transactional pre-state lock when the PATCH
-  // actually touches status or date — every other field is edit-only
-  // and doesn't need a serialize gate.
+  // actually touches status or date (or must check the past lock) — every
+  // other field is edit-only and doesn't need a serialize gate.
   const touchesTransitionField =
-    typeof body.status === 'string' || typeof body.date === 'string';
+    typeof body.status === 'string' ||
+    typeof body.date === 'string' ||
+    checksPastLock;
 
   // #1107: read pre-state + write inside a transaction so two concurrent
   // PATCHes can't both observe the same pre-state and fan out twice.
@@ -85,6 +122,16 @@ export const updateEventNotifying = async (id: string, body: EventPatch) => {
         .for('update')
         .limit(1);
       preUpdate = rows[0];
+      // The stored date decides, so a PATCH that also moves the date
+      // cannot unlock a past show.
+      if (
+        checksPastLock &&
+        preUpdate &&
+        lockPastBefore !== undefined &&
+        preUpdate.date < lockPastBefore
+      ) {
+        throw new PastLockedError();
+      }
     }
 
     const [updated] = await tx
@@ -190,5 +237,8 @@ export const updateEventNotifying = async (id: string, body: EventPatch) => {
 };
 
 /** The event update without the fan-out count, for the callers that ignore it. */
-export const updateEvent = async (id: string, body: EventPatch) =>
-  (await updateEventNotifying(id, body))?.updated ?? null;
+export const updateEvent = async (
+  id: string,
+  body: EventPatch,
+  options: UpdateEventOptions = {},
+) => (await updateEventNotifying(id, body, options))?.updated ?? null;
