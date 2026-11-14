@@ -1692,9 +1692,14 @@ export const CONSUMER_COPY = {
     // Confirm CTA
     confirmButton: 'Confirm: same number',
 
-    // Escape link
-    escapeLink:
-      'Saw a different tier or a different price? Submit an update instead.',
+    // Escape line: the question is muted, the action is the link (B+ more-p-check_m)
+    escapeLead: 'Saw a different tier or a different price?',
+    escapeAction: 'Submit an update instead.',
+
+    // The rail's status code, right of the hairline (B+ bp-s-confirm_price_m)
+    status: (confirms: number, needed: number) =>
+      `PENDING · ${confirms}/${needed}`,
+    closeAriaLabel: 'Close',
 
     // Honesty disclaimer shown at bottom of verify options
     honestyDisclaimer:
@@ -1702,8 +1707,15 @@ export const CONSUMER_COPY = {
 
     // Self-locked state
     selfLocked: {
-      waitingNotice:
-        "Your submission is pending. You can't confirm your own price, but 2 other fans can.",
+      // The rail tag and the title (B+ bp-s-confirm_self_m)
+      railTag: 'YOURS',
+      heading: (floor: number, ceiling?: number) =>
+        ceiling != null && ceiling > floor
+          ? `Your $${floor}–$${ceiling} is pending.`
+          : `Your $${floor} is pending.`,
+      // How many more fans it needs, from the data, not a fixed two.
+      waitingNotice: (others: number) =>
+        `Your submission is pending. You can't confirm your own price, but ${others} other ${others === 1 ? 'fan' : 'fans'} can.`,
       editButton: 'Edit submission',
       withdrawButton: 'Withdraw',
     },

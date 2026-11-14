@@ -2,7 +2,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 import { CorroborationSheet } from './CorroborationSheet';
 
@@ -90,6 +90,130 @@ describe('CorroborationSheet signed-out gate (#1247)', () => {
     expect(
       screen.getByRole('radiogroup', { name: /verification method/i }),
     ).toBeInTheDocument();
+  });
+});
+
+// B+ restyle of the confirm sheet (bp-s-confirm_price_m, bp-s-confirm_self_m,
+// more-p-check_m). The selected option's and the CTA's accent is HELD FOR
+// DESIGN (08 pink vs 06 green), so nothing here pins it.
+describe('CorroborationSheet rail and body', () => {
+  beforeEach(cleanup);
+
+  it('draws the rail: mark, name, pending count and a close tile', () => {
+    const onClose = vi.fn();
+    render(
+      <CorroborationSheet
+        submission={submission}
+        open
+        onClose={onClose}
+        onConfirm={vi.fn()}
+        onSubmitUpdate={vi.fn()}
+      />,
+    );
+    const rail = screen.getByTestId('confirm-rail');
+    expect(rail).toHaveTextContent('Confirm price');
+    expect(screen.getByTestId('price-rail-mark')).toBeInTheDocument();
+    expect(screen.getByTestId('confirm-rail-status')).toHaveTextContent(
+      'PENDING · 1/3',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('draws the radio as a ring with an inner dot, not a check disc', () => {
+    renderSheet();
+    expect(screen.queryByTestId('verify-radio-dot')).toBeNull();
+    fireEvent.click(screen.getAllByRole('radio')[0] as HTMLElement);
+    expect(screen.getByTestId('verify-radio-dot')).toBeInTheDocument();
+  });
+
+  it('lists vendor, by and when as hairline rows', () => {
+    renderSheet();
+    const text = document.body.textContent ?? '';
+    expect(text.indexOf('VENDOR')).toBeLessThan(text.indexOf('BY'));
+    expect(text.indexOf('BY')).toBeLessThan(text.indexOf('WHEN'));
+    expect(screen.getByText('AXS')).toBeInTheDocument();
+    expect(screen.getByText('@someone')).toBeInTheDocument();
+  });
+
+  it('splits the escape line: a muted question and a signal action', () => {
+    const onSubmitUpdate = vi.fn();
+    render(
+      <CorroborationSheet
+        submission={submission}
+        open
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        onSubmitUpdate={onSubmitUpdate}
+      />,
+    );
+    const action = screen.getByText('Submit an update instead.');
+    expect(action).toHaveStyle({ fontWeight: '800' });
+    fireEvent.click(action);
+    expect(onSubmitUpdate).toHaveBeenCalled();
+  });
+
+  it('keeps the honesty line as plain text, not a box', () => {
+    renderSheet();
+    const line = screen.getByText(/Only confirm if you actually checked/);
+    expect(line.tagName).toBe('P');
+    expect(line.style.border).toBe('');
+  });
+});
+
+describe('CorroborationSheet self-locked state (confirm_self_m)', () => {
+  beforeEach(cleanup);
+
+  const renderSelf = (over: Partial<typeof submission> = {}) => {
+    const handlers = {
+      onWithdraw: vi.fn(),
+      onEdit: vi.fn(),
+      onSubmitUpdate: vi.fn(),
+    };
+    render(
+      <CorroborationSheet
+        submission={{ ...submission, floor: 45, ...over }}
+        open
+        isSelfLocked
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        {...handlers}
+      />,
+    );
+    return handlers;
+  };
+
+  it('says Your $45 is pending, tags the rail YOURS, and offers no confirm', () => {
+    renderSelf();
+    expect(
+      screen.getByRole('heading', { name: 'Your $45 is pending.' }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('confirm-rail-status')).toHaveTextContent(
+      'YOURS',
+    );
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(screen.queryByText(/Confirm: same number/)).toBeNull();
+  });
+
+  it('counts the other fans needed from the data, not a fixed two', () => {
+    renderSelf({ confirms: 1, needed: 2 });
+    expect(screen.getByTestId('self-locked-notice')).toHaveTextContent(
+      "You can't confirm your own price, but 1 other fan can.",
+    );
+    cleanup();
+    renderSelf({ confirms: 1, needed: 3 });
+    expect(screen.getByTestId('self-locked-notice')).toHaveTextContent(
+      '2 other fans can.',
+    );
+  });
+
+  it('wires Edit and Withdraw to their own handlers', () => {
+    const handlers = renderSelf();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit submission' }));
+    expect(handlers.onEdit).toHaveBeenCalledTimes(1);
+    expect(handlers.onSubmitUpdate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }));
+    expect(handlers.onWithdraw).toHaveBeenCalledTimes(1);
   });
 });
 
