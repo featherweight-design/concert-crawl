@@ -8,6 +8,7 @@ import {
   AUDIT_AREAS,
   AVATAR_COLORS,
   type AuditArea,
+  type AuditLogActor,
   type AuditLogItem,
   type AuditTarget,
   type AvatarColor,
@@ -130,4 +131,36 @@ export const readLogDays = async (
   )
     throw new Error('audit-log-days');
   return new Set(data);
+};
+
+const isActor = (value: unknown): value is AuditLogActor =>
+  isRecord(value) &&
+  isText(value['handle']) &&
+  isColorOrNull(value['avatarColor']) &&
+  isColorOrNull(value['avatarSecondColor']) &&
+  typeof value['count'] === 'number' &&
+  typeof value['you'] === 'boolean';
+
+/**
+ * The Anyone menu's people (`37/log-filter-menus`): every admin and
+ * sub-admin, with their changes on `day`, you first. Takes the page filter,
+ * so a count matches the rows that pick would show.
+ */
+export const readLogActors = async (
+  getToken: GetToken,
+  day: string,
+  area: AuditArea | undefined,
+  signal?: AbortSignal,
+): Promise<AuditLogActor[]> => {
+  const params = new URLSearchParams({ day });
+  if (area) params.set('area', area);
+  const body = await callEnvelope(
+    getToken,
+    `/v1/admin/audit-log/actors?${params}`,
+    signal ? { signal } : {},
+  );
+  const data = body['data'];
+  if (!Array.isArray(data) || !data.every(isActor))
+    throw new Error('audit-log-actors');
+  return data;
 };

@@ -5,12 +5,15 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@clerk/nextjs';
 import { List } from 'lucide-react';
-import type { AuditLogItem } from '@concert-crawl/types';
+import type {
+  AuditArea,
+  AuditLogActor,
+  AuditLogItem,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { CouldntLoad, PersonAvatar } from '@/components/admin/primitives';
 import {
   LoadMoreFooter,
-  pill,
   type LoadMoreState,
 } from '@/components/admin/crawl-runs/RunsList';
 import { fieldDate } from '@/components/admin/events/edit/event-detail';
@@ -19,10 +22,12 @@ import { shiftDay } from '@/components/admin/primitives/calendar';
 import { DENVER_TIME_ZONE, localDateString } from '@/lib/time';
 import {
   LOG_PAGE_SIZE,
+  readLogActors,
   readLogDays,
   readLogPage,
   type LogQuery,
 } from './activity-api';
+import { AnyoneFilter, AnyPageFilter } from './LogFilterMenus';
 import {
   DayStepper,
   PhoneDayStepper,
@@ -381,12 +386,6 @@ const EmptyDay = ({ day, today }: { day: string; today: string }) => (
   </div>
 );
 
-/**
- * A filter pill drawn as text: `37/log-day-picker-d` draws Anyone and Any page
- * idle. Their menus come with the next change (addendum 6 #37, PR B2).
- */
-const staticPill: CSSProperties = { ...pill(false), cursor: 'default' };
-
 const mtToday = () => localDateString(DENVER_TIME_ZONE);
 
 interface Shown {
@@ -406,14 +405,42 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   const [shown, setShown] = useState<Shown | null>(null);
   const [failed, setFailed] = useState(false);
   const [moreState, setMoreState] = useState<LoadMoreState>('idle');
+  // Anyone and Any page (`37/log-filter-menus`): combined with the day.
+  const [actor, setActor] = useState<string | null>(null);
+  const [area, setArea] = useState<AuditArea | null>(null);
 
   // Only the newest read may write, and starting one stops the one before:
   // its controller is the current one until the next read or the unmount.
   const current = useRef<AbortController | null>(null);
-  const query = useCallback((of: string): LogQuery => {
-    const { start, end } = mtDayWindow(of);
-    return { since: start, until: end };
-  }, []);
+  const query = useCallback(
+    (of: string): LogQuery => {
+      const { start, end } = mtDayWindow(of);
+      return {
+        since: start,
+        until: end,
+        ...(actor !== null && { actorHandle: actor }),
+        ...(area !== null && { area }),
+      };
+    },
+    [actor, area],
+  );
+
+  // The Anyone menu's people and their counts, for the day and page shown.
+  const [actors, setActors] = useState<AuditLogActor[]>([]);
+  const [actorsFailed, setActorsFailed] = useState(false);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    setActorsFailed(false);
+    readLogActors(getToken, day, area ?? undefined, ctrl.signal)
+      .then((next) => {
+        if (!ctrl.signal.aborted) setActors(next);
+      })
+      .catch(() => {
+        // The menu still offers Anyone; it says the list didn't load.
+        if (!ctrl.signal.aborted) setActorsFailed(true);
+      });
+    return () => ctrl.abort();
+  }, [getToken, day, area]);
 
   const load = useCallback(async () => {
     current.current?.abort();
@@ -488,10 +515,32 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
     };
   }, [day, today]);
 
+  // The month's dots take the same person and page, so a dot never leads to
+  // an empty day.
   const readDays = useCallback(
     (month: string, signal: AbortSignal) =>
-      readLogDays(getToken, month, {}, signal),
-    [getToken],
+      readLogDays(
+        getToken,
+        month,
+        {
+          ...(actor !== null && { actorHandle: actor }),
+          ...(area !== null && { area }),
+        },
+        signal,
+      ),
+    [getToken, actor, area],
+  );
+  const filters = (
+    <>
+      <AnyoneFilter
+        actors={actors}
+        failed={actorsFailed}
+        actor={actor}
+        isToday={day === today}
+        onActor={setActor}
+      />
+      <AnyPageFilter area={area} onArea={setArea} />
+    </>
   );
   const pickDay = (next: string) => {
     if (next <= today) setDay(next);
@@ -507,12 +556,16 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {isPhone ? (
-        <PhoneDayStepper day={day} today={today} onDay={pickDay} />
+        // `37/log-m`: the stepper, then Anyone and Any page, each a sheet.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <PhoneDayStepper day={day} today={today} onDay={pickDay} />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {filters}
+          </div>
+        </div>
       ) : (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {/* Text, not controls, so they carry no group role or label. */}
-          <span style={staticPill}>{COPY.anyone}</span>
-          <span style={staticPill}>{COPY.anyPage}</span>
+          {filters}
           <span style={{ flex: 1 }} />
           <DayStepper
             day={day}

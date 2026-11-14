@@ -3414,6 +3414,26 @@ export const ADMIN_COPY = {
       dayEnd: (day: string) => `That’s everything on ${day}.`,
       // Load more's failure, beside its Try again (`A3/09/load-more`).
       loadMoreFailed: 'Couldn’t load more changes.',
+      // `37/log-filter-menus`, `37/log-filter-sheet-m`: Anyone and Any page.
+      whoSheet: 'Who made the change',
+      // Undrawn: the Any page sheet, on the Anyone sheet's pattern.
+      pageSheet: 'Which page',
+      findAdmin: 'Find an admin',
+      you: 'You',
+      // An admin's changes on the day shown; Today's board draws "8 today".
+      changesOn: (count: number, isToday: boolean) =>
+        count === 0
+          ? isToday
+            ? 'none today'
+            : 'none that day'
+          : `${count.toLocaleString('en-US')} ${isToday ? 'today' : 'that day'}`,
+      anyoneNote: 'Every admin and sub-admin, you first.',
+      anyPageNote: 'The sidebar’s pages, in its order.',
+      pickedActor: (handle: string) => `Anyone: showing @${handle}`,
+      pickedPage: (page: string) => `Any page: showing ${page}`,
+      clearActor: 'Show anyone',
+      clearPage: 'Show any page',
+      actorsFailed: 'Couldn’t load the admins.',
       system: 'System',
       noPage: '—',
       // A target that has since been deleted (or couldn't be looked up): the
