@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { StatusBadge } from '@/components/admin/primitives';
 import { AdminButton } from '@/components/admin/primitives/AdminButton';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -16,8 +22,16 @@ import { RoleChip, roleChipTone } from './RoleChip';
 
 // P47-13 PR A: People and the person page against the 07 boards.
 
+// One getToken for every render, as Clerk's is. A fresh function per render
+// rebuilds the clients' `api` memo, which re-runs the load effect on every
+// render: each load's setState re-rendered into another load, so a fetch was
+// always in flight when the file's jsdom was torn down.
+const auth = vi.hoisted(() => ({
+  getToken: async () => 'token',
+  userId: 'user_viewer',
+}));
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: async () => 'token', userId: 'user_viewer' }),
+  useAuth: () => auth,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -261,6 +275,49 @@ describe('Person page (07/person, 07/person-mobile)', () => {
     render(<PersonClient userId="user_1" />);
     const chip = await screen.findByTestId('role-chip');
     expect(chip.style.height).toBe('22px');
+  });
+
+  it('loads once, not once per render', async () => {
+    render(<PersonClient userId="user_1" />);
+    await screen.findByTestId('person-menu');
+    const personCalls = vi
+      .mocked(fetch)
+      .mock.calls.filter(([url]) =>
+        String(url).includes('/v1/admin/people/user_1'),
+      );
+    expect(personCalls).toHaveLength(1);
+  });
+
+  it('sets no state when a load settles after unmount', async () => {
+    let reject: (reason: unknown) => void = () => {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((_resolve, fail) => {
+            reject = fail;
+          }),
+      ),
+    );
+    const failures: unknown[] = [];
+    const onError = (err: unknown) => failures.push(err);
+    process.on('unhandledRejection', onError);
+    try {
+      const { unmount } = render(<PersonClient userId="user_1" />);
+      await waitFor(() => expect(fetch).toHaveBeenCalled());
+      unmount();
+      // As at the file's teardown, where CI caught it: with no `window`, any
+      // setState throws in react-dom's update-priority read, so a set after
+      // unmount rejects the load instead of passing silently.
+      vi.stubGlobal('window', undefined);
+      reject(new Error('network down'));
+      // Let the rejection run through the client's catch.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    } finally {
+      vi.unstubAllGlobals();
+      process.off('unhandledRejection', onError);
+    }
+    expect(failures).toEqual([]);
   });
 });
 

@@ -240,14 +240,24 @@ export function PeopleClient({ code }: { code: string | null }) {
 
   useEffect(() => {
     void load();
+    // Retires the load in flight, so it never sets state after unmount.
+    return () => {
+      latest.current += 1;
+    };
   }, [load]);
 
   useEffect(() => {
+    let live = true;
     codes
       .list()
-      .then(setAllCodes)
+      .then((next) => {
+        if (live) setAllCodes(next);
+      })
       // The tab counts and the code's name are niceties; the list stands without them.
       .catch(() => undefined);
+    return () => {
+      live = false;
+    };
   }, [codes]);
 
   const pickChip = (next: Chip) => {
