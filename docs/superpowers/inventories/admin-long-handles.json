@@ -1,0 +1,50 @@
+{
+  "feature": "Admin · long handles stay inside their rows (fan chip, personal-code label, panel bylines)",
+  "note": "CONTACT_SHEET_ROLE=admin. Read-only. The local seed has a 47-character handle (@seededHandle_…) as the first person, with Submitted prices and a personal code, which is what shows the overflow. Phone widths only: desktop cells already truncated. The account sheet, Price checks' decided-by column and the reject dialog are pinned by unit tests (long-handle-overflow.test.tsx).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true }
+  ],
+  "rows": [
+    {
+      "id": "fan-chip",
+      "label": "Submitted prices filtered to the long handle",
+      "steps": [
+        {
+          "goto": "/admin/people",
+          "wait": "main a[href^='/admin/people/']",
+          "settle": 800
+        },
+        { "click": "main a[href^='/admin/people/'] >> nth=0" },
+        { "wait": "[data-testid='person-menu']", "settle": 800 },
+        { "click": "[data-testid='person-menu']" },
+        { "clickRole": "menuitem", "name": "See their Submitted prices" },
+        { "wait": "[data-testid='fan-filter']", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "codes",
+      "label": "Invite codes, personal-code label",
+      "steps": [
+        {
+          "goto": "/admin/invite-codes",
+          "wait": "[data-testid='invite-codes-list']",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "code-panel",
+      "label": "A personal code's panel byline",
+      "steps": [
+        {
+          "goto": "/admin/invite-codes",
+          "wait": "[data-testid='invite-codes-list']",
+          "settle": 800
+        },
+        { "click": "[data-testid='invite-codes-list'] li > button >> nth=0" },
+        { "wait": "text=Last used", "settle": 600 }
+      ]
+    }
+  ]
+}
