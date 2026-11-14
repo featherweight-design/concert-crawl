@@ -10,6 +10,7 @@ import {
   PendingDot,
   PRICE_EYEBROW,
   PRICE_HEADLINE_SIZE,
+  TRUST_TOKENS,
   TrustPill,
 } from './glyphs';
 
@@ -20,8 +21,10 @@ const vendorDisplayName = (vendor: string): string =>
   vendor === 'VenueBoxOffice' ? 'Venue box office' : vendor;
 
 // ── Color constants ──────────────────────────────────────────────
-const COMMUNITY_SIGNAL = 'var(--signal)'; // community tier: the theme's signal, not a fixed azure
-const GOLD = 'oklch(0.66 0.14 78)'; // box-office tier
+// The B+ trust tokens (TRUST_TOKENS): community is the theme's signal, box
+// office its warning gold.
+const COMMUNITY_SIGNAL = TRUST_TOKENS.community.tone;
+const GOLD = TRUST_TOKENS.boxoffice.tone;
 
 // ── Text colours ─────────────────────────────────────────────────
 // The board's tokens, through the --price-text-* set in globals.css: dark
@@ -80,7 +83,7 @@ const pendingTokens = (
   return {
     color: GOLD,
     // Box office pending is not on the board; its strip keeps the gold.
-    text: GOLD,
+    text: WARNING_TEXT,
     bg: `color-mix(in oklab, ${GOLD} 8%, var(--surface-1))`,
     border: `color-mix(in oklab, ${GOLD} 38%, var(--border))`,
     strip: `color-mix(in oklab, ${GOLD} 14%, transparent)`,
@@ -380,7 +383,7 @@ export const PendingCardB = ({
           }}
         >
           <Eyebrow
-            color={isBox ? tok.color : SUBTLE_TEXT}
+            color={isBox ? tok.text : SUBTLE_TEXT}
             size={PRICE_EYEBROW.size}
             tracking={PRICE_EYEBROW.tracking}
           >
@@ -436,7 +439,8 @@ export const PendingCardB = ({
                 fontFamily: 'Inter, system-ui',
                 fontWeight: 600,
                 fontSize: '12px',
-                color: tok.color,
+                // Type: the AA-safe text token, not the raw tone.
+                color: tok.text,
                 letterSpacing: '-0.005em',
               }}
             >

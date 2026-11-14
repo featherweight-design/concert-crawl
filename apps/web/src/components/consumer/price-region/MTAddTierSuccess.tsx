@@ -1,11 +1,16 @@
 'use client';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { CheckGlyph, Eyebrow } from '@/components/consumer/glyphs';
+import {
+  CheckGlyph,
+  Eyebrow,
+  TRUST_TOKENS,
+} from '@/components/consumer/glyphs';
 import type { Tier, SourceCategory } from '@concert-crawl/types';
 
 const copy = CONSUMER_COPY.priceRegion.addTierSuccess;
-const AZURE = 'oklch(0.62 0.12 240)';
+// The pending fragment is community type: the B+ signal, as text.
+const COMMUNITY_TEXT = TRUST_TOKENS.community.text;
 
 export interface MTAddTierSuccessProps {
   submittedTier: Tier;
@@ -99,7 +104,7 @@ export const MTAddTierSuccess = ({
           String(submittedPrice),
           copy.sourceLabels[submittedSourceCategory],
         )}
-        <strong style={{ color: AZURE }}>
+        <strong style={{ color: COMMUNITY_TEXT }}>
           {copy.pendingFragment(confirmsNeeded)}
         </strong>
       </div>

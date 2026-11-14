@@ -17,6 +17,7 @@ import { StillAccurateAction } from '@/components/consumer/StillAccurateAction';
 import {
   PRICE_EYEBROW,
   PRICE_HEADLINE_SIZE,
+  TRUST_TOKENS,
   TrustPill,
 } from '@/components/consumer/glyphs';
 
@@ -113,10 +114,17 @@ interface PriceDisplayProps {
 }
 
 // ── Color constants ───────────────────────────────────────────────
-const RESALE = 'var(--trust-resale)';
-const GOLD = 'oklch(0.66 0.14 78)';
-// Community color token — consumed from CSS variable so it responds to theme.
-const COMMUNITY = 'var(--trust-community)';
+// The B+ trust tokens (TRUST_TOKENS in glyphs): `tone` for fills, edges and
+// dots, `*_TEXT` for anything set as type, so Light keeps AA.
+const RESALE = TRUST_TOKENS.resale.tone;
+const RESALE_TEXT = TRUST_TOKENS.resale.text;
+const GOLD = TRUST_TOKENS.boxoffice.tone;
+const GOLD_TEXT = TRUST_TOKENS.boxoffice.text;
+const COMMUNITY = TRUST_TOKENS.community.tone;
+const COMMUNITY_TEXT = TRUST_TOKENS.community.text;
+
+/** The fees toggle's trailing mark: the board draws a text-weight ›. */
+const FEES_LINK_MARK = '›';
 
 // Addendum 4's price-states-age-trust (HTML, which wins over the JPG
 // measurements of more-p-price_states): "Submitted by" sits 4px under the
@@ -182,28 +190,6 @@ function ExternalIcon({ size = 10 }: { size?: number }) {
   );
 }
 
-function CaretIcon({ dir = 'down' }: { dir?: 'down' | 'up' }) {
-  const rot = dir === 'up' ? 180 : 0;
-  return (
-    <svg
-      width={9}
-      height={9}
-      viewBox="0 0 10 10"
-      style={{ transform: `rotate(${rot}deg)`, transition: 'transform .15s' }}
-      aria-hidden
-    >
-      <path
-        d="M2 4l3 3 3-3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
-  );
-}
-
 function CheckIcon({
   size = 10,
   color = 'currentColor',
@@ -251,11 +237,11 @@ export function TrustMark({
 
   const tint =
     kind === 'resale'
-      ? RESALE
+      ? RESALE_TEXT
       : kind === 'community'
-        ? COMMUNITY
+        ? COMMUNITY_TEXT
         : kind === 'boxoffice'
-          ? GOLD
+          ? GOLD_TEXT
           : 'var(--fg-muted)';
 
   const bg =
@@ -479,7 +465,10 @@ function VerifiedStamp({
 }
 
 // ── FeeBreakdown — collapsible ───────────────────────────────────
-function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
+// The trigger is the board's `+$9.40 fees ›` (price-states-age-trust): Inter
+// 13px bold in the signal colour. It renders only when fee data exists (the
+// standing ruling); the open panel is undrawn, so it keeps its old styling.
+export function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
   const [open, setOpen] = useState(false);
   if (!price.feeBreakdown || price.fees == null || price.fees <= 0) return null;
   const allIn = price.face + price.fees;
@@ -488,23 +477,27 @@ function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
     <div>
       <button
         type="button"
+        data-testid="fees-toggle"
+        aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
         style={{
           all: 'unset',
           cursor: 'pointer',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 5,
+          gap: 4,
           flexShrink: 0,
           whiteSpace: 'nowrap',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: 'var(--fg-muted)',
-          letterSpacing: '0.02em',
+          fontFamily: 'var(--font-ui)',
+          fontSize: 13,
+          fontWeight: 700,
+          lineHeight: 1,
+          // The board's signal, through the AA-safe text token for Light.
+          color: 'var(--price-text-signal)',
         }}
       >
         <span>{copy.priceDisplay.feesToggle(formatUSD(price.fees))}</span>
-        <CaretIcon dir={open ? 'up' : 'down'} />
+        <span aria-hidden>{FEES_LINK_MARK}</span>
       </button>
       {open && (
         <div
@@ -592,6 +585,14 @@ function AlternateSourceRow({
         : alt.sourceKind === 'boxoffice'
           ? GOLD
           : 'var(--fg-muted)';
+  const kindColor =
+    alt.sourceKind === 'resale'
+      ? RESALE_TEXT
+      : alt.sourceKind === 'community'
+        ? COMMUNITY_TEXT
+        : alt.sourceKind === 'boxoffice'
+          ? GOLD_TEXT
+          : 'var(--fg-muted)';
   const kindLabel =
     alt.sourceKind === 'resale'
       ? copy.priceDisplay.resaleLabel
@@ -629,7 +630,7 @@ function AlternateSourceRow({
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 8.5,
-          color: dotColor,
+          color: kindColor,
           letterSpacing: '0.06em',
           textTransform: 'uppercase',
           opacity: 0.75,
@@ -806,7 +807,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
         }}
       >
         {/* Verb ("Bought"/"Saw") is gold-weighted — it's the trust signal */}
-        <span style={{ color: GOLD, fontWeight: 700 }}>{actionWord}</span>
+        <span style={{ color: GOLD_TEXT, fontWeight: 700 }}>{actionWord}</span>
         {copy.priceDisplay.boxOfficeSource(prep, venueName)}
         {byLine}
         {methodSuffix}
@@ -900,7 +901,7 @@ function CommunityHandoffCard({
           position: 'absolute',
           top: 14,
           right: 14,
-          color: COMMUNITY,
+          color: COMMUNITY_TEXT,
           fontFamily: 'var(--font-mono)',
           fontSize: 9,
           fontWeight: 700,
@@ -951,7 +952,7 @@ function CommunityHandoffCard({
             fontFamily: 'var(--font-ui)',
             fontWeight: 700,
             fontSize: 14,
-            color: COMMUNITY,
+            color: COMMUNITY_TEXT,
             letterSpacing: '-0.005em',
           }}
         >
@@ -1294,7 +1295,8 @@ export function PriceDisplay({
               // The board's live BOX OFFICE eyebrow is grey like TICKETS; the
               // gold lives on the badge. Sold out drops the badge and no board
               // draws that state, so its eyebrow keeps the gold it had.
-              color: soldOut && isBoxOffice ? GOLD : 'var(--price-text-subtle)',
+              color:
+                soldOut && isBoxOffice ? GOLD_TEXT : 'var(--price-text-subtle)',
               letterSpacing: PRICE_EYEBROW.tracking,
               textTransform: 'uppercase',
             }}

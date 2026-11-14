@@ -38,7 +38,7 @@ describe('MixedTierCard', () => {
       container.querySelectorAll('div[style*="border-radius: 2.5px"]'),
     );
     const coral = dots.find((dot) =>
-      (dot as HTMLElement).style.background.includes('oklch(0.65 0.2 25)'),
+      (dot as HTMLElement).style.background.includes('var(--danger)'),
     );
     expect(coral).toBeDefined();
   });

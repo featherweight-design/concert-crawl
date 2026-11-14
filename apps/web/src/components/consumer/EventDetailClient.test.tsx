@@ -754,7 +754,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
       ),
     ).find((dot) => dot.parentElement?.textContent?.includes('Reserved'));
     expect(reservedDot).toBeDefined();
-    expect(reservedDot?.style.background).toContain('oklch(0.66 0.14 78)');
+    expect(reservedDot?.style.background).toBe('var(--warning)');
   });
 
   // Regression: the "other tiers" row for a pending-only tier took its kind
@@ -805,19 +805,19 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
         currentUserId={null}
       />,
     );
-    // TierAlternateRow's kind dot: resale is coral (JSDOM writes 0.20 as 0.2),
-    // community would be azure.
+    // TierAlternateRow's kind dot: resale is the danger tone, community would
+    // be the signal tone.
     const dots = Array.from(
       container.querySelectorAll<HTMLElement>(
         'div[style*="border-radius: 2.5px"]',
       ),
     );
-    expect(
-      dots.some((dot) => dot.style.background.includes('oklch(0.65 0.2 25)')),
-    ).toBe(true);
-    expect(
-      dots.some((dot) => dot.style.background.includes('oklch(0.62 0.12 240)')),
-    ).toBe(false);
+    expect(dots.some((dot) => dot.style.background === 'var(--danger)')).toBe(
+      true,
+    );
+    expect(dots.some((dot) => dot.style.background === 'var(--signal)')).toBe(
+      false,
+    );
   });
 
   it('STATE #7 all-tiers-pending — every tier is pending-only routes through PendingStack', () => {
