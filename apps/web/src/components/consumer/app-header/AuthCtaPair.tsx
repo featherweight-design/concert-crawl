@@ -8,7 +8,7 @@ const copy = CONSUMER_COPY.appHeader.auth;
 
 /**
  * Quiet Sign in link + filled Sign up pill, for the desktop header row. The
- * Sign in link is `hidden sm:inline-flex` because at 320px it drops to
+ * Sign in link is `hidden lg:inline-flex` because at 320px it drops to
  * `SignInRail` beneath the header — a CSS breakpoint rather than a matchMedia
  * read, so first paint never flashes the wrong arrangement.
  */
@@ -20,7 +20,7 @@ export function AuthCtaPair() {
     <div className="flex shrink-0 items-center gap-2">
       <Link
         href={copy.signInHref}
-        className="hidden h-9 items-center rounded-lg px-2.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg sm:inline-flex"
+        className="hidden h-9 items-center rounded-lg px-2.5 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg lg:inline-flex"
       >
         {copy.signIn}
       </Link>

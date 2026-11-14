@@ -21,12 +21,11 @@ export const OfflinePill = () => {
         <div
           aria-hidden="true"
           data-testid="offline-pill"
-          // One line at any width. The label reads in full on the phone bar
-          // from 360 up and from 1024 (header-1100); it is the short "Offline"
-          // under 360 (offline-pill-320) and from 640 to 1023 (addendum-3
-          // rule 1: header-640, header-900). The 640 and wider boards draw a
-          // 30px pill with 10px sides (11px at 1024+), as does the 320 board.
-          className="inline-flex h-[36px] items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface-2 px-3 text-[12px] font-semibold text-fg-muted max-[359px]:h-[30px] max-[359px]:px-2.5 sm:h-[30px] sm:px-2.5 lg:px-[11px]"
+          // One line at any width. The label reads in full from 360 up and is
+          // the short "Offline" under 360 (offline-pill-320). The phone bar
+          // holds to 1023, so the 30px pill with 11px sides is the desktop
+          // header's alone (header-1100); the 320 board draws it 30px too.
+          className="inline-flex h-[36px] items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface-2 px-3 text-[12px] font-semibold text-fg-muted max-[359px]:h-[30px] max-[359px]:px-2.5 lg:h-[30px] lg:px-[11px]"
         >
           <span
             data-testid="offline-pill-dot"
@@ -36,10 +35,8 @@ export const OfflinePill = () => {
                 '0 0 6px color-mix(in oklch, var(--warning) 60%, transparent)',
             }}
           />
-          <span className="max-[359px]:hidden sm:max-lg:hidden">
-            {OFFLINE_COPY.pillLabel}
-          </span>
-          <span className="hidden max-[359px]:inline sm:max-lg:inline">
+          <span className="max-[359px]:hidden">{OFFLINE_COPY.pillLabel}</span>
+          <span className="hidden max-[359px]:inline">
             {OFFLINE_COPY.pillLabelShort}
           </span>
         </div>

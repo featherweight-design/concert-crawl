@@ -40,11 +40,11 @@ describe('BottomSheet', () => {
     expect(dialog.className).toContain('bottom-0');
     expect(dialog.className).toContain('rounded-t-2xl');
 
-    expect(dialog.className).toContain('sm:inset-0');
-    expect(dialog.className).toContain('sm:m-auto');
-    expect(dialog.className).toContain('sm:h-fit');
-    expect(dialog.className).toContain('sm:max-w-md');
-    expect(dialog.className).toContain('sm:rounded-2xl');
+    expect(dialog.className).toContain('lg:inset-0');
+    expect(dialog.className).toContain('lg:m-auto');
+    expect(dialog.className).toContain('lg:h-fit');
+    expect(dialog.className).toContain('lg:max-w-md');
+    expect(dialog.className).toContain('lg:rounded-2xl');
   });
 
   it('closes on Escape', () => {
@@ -122,7 +122,7 @@ describe('BottomSheet', () => {
       </BottomSheet>,
     );
     const dialog = screen.getByRole('dialog');
-    expect(dialog.className).toContain('sm:max-w-md');
+    expect(dialog.className).toContain('lg:max-w-md');
     expect(dialog.className).not.toContain('--sheet-max');
     expect(dialog.style.getPropertyValue('--sheet-max')).toBe('');
   });
@@ -134,8 +134,8 @@ describe('BottomSheet', () => {
       </BottomSheet>,
     );
     const dialog = screen.getByRole('dialog');
-    expect(dialog.className).toContain('sm:max-w-[var(--sheet-max)]');
-    expect(dialog.className).not.toContain('sm:max-w-md');
+    expect(dialog.className).toContain('lg:max-w-[var(--sheet-max)]');
+    expect(dialog.className).not.toContain('lg:max-w-md');
     expect(dialog.style.getPropertyValue('--sheet-max')).toBe('480px');
   });
 
@@ -146,8 +146,8 @@ describe('BottomSheet', () => {
       </BottomSheet>,
     );
     const plain = screen.getByRole('dialog').className;
-    expect(plain).toContain('max-sm:sheet-edge');
-    expect(plain).toContain('sm:border-border');
+    expect(plain).toContain('max-lg:sheet-edge');
+    expect(plain).toContain('lg:border-border');
 
     rerender(
       <BottomSheet open onClose={() => {}} title="test" edgeFromSm>
@@ -158,8 +158,8 @@ describe('BottomSheet', () => {
     // The gradient edge now draws at every width, with no flat border to
     // cover it from sm up.
     expect(edged).toContain('sheet-edge');
-    expect(edged).not.toContain('max-sm:sheet-edge');
-    expect(edged).not.toContain('sm:border-border');
+    expect(edged).not.toContain('max-lg:sheet-edge');
+    expect(edged).not.toContain('lg:border-border');
   });
 
   it('draws the close as text when closeText is given, with no X icon', () => {
@@ -220,7 +220,7 @@ describe('BottomSheet', () => {
     );
     const sheet = screen.getByRole('dialog').className;
     expect(sheet).toContain('[--sheet-bg:var(--surface-2)]');
-    expect(sheet).toContain('sm:[--sheet-bg:var(--bg-elevated)]');
+    expect(sheet).toContain('lg:[--sheet-bg:var(--bg-elevated)]');
     expect(sheet).toContain('max-h-[calc(100dvh-40px)]');
   });
 

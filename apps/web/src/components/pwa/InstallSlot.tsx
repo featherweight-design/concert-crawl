@@ -87,7 +87,7 @@ export const InstallSlot = () => {
               strokeLinejoin="round"
             />
           </svg>
-          <span className="hidden sm:inline">{INSTALL_COPY.slotLabel}</span>
+          <span className="hidden lg:inline">{INSTALL_COPY.slotLabel}</span>
         </button>
         <button
           type="button"

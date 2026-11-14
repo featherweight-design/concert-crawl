@@ -56,7 +56,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           black-translucent standalone bar) the page starts under it. */}
       <div
         data-testid="header-mobile"
-        className="flex items-center justify-between px-4 pb-2.5 pt-[calc(1rem+env(safe-area-inset-top))] sm:hidden"
+        className="flex items-center justify-between px-4 pb-2.5 pt-[calc(1rem+env(safe-area-inset-top))] lg:hidden"
       >
         <Link href="/events" className="flex shrink-0 items-center gap-2">
           <div
@@ -89,26 +89,24 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
       {/* Sign in drops out of the 320px header row and lands here */}
       <SignInRail />
 
-      {/* ── Desktop TopNav (shown sm+) ──────────────────── */}
+      {/* ── Desktop TopNav (shown from 1024; the phone header holds to 1023) ── */}
       <div
         data-testid="header-desktop"
-        className="sticky top-0 z-40 hidden h-16 w-full items-center justify-between gap-3 border-b border-border px-4 sm:flex md:px-6 min-[900px]:gap-5 lg:px-8"
+        className="sticky top-0 z-40 hidden h-16 w-full items-center justify-between gap-5 border-b border-border px-8 lg:flex"
         style={DESKTOP_BAR_STYLE}
       >
         {/* Left: logo + nav tabs */}
-        <div className="flex min-w-0 items-center gap-3 min-[900px]:gap-5">
+        <div className="flex min-w-0 items-center gap-5">
           <Link href="/events" className="flex shrink-0 items-center gap-2.5">
             <div
               data-testid="header-mark-tile"
-              // header-640 draws the bare mark; the 900 board adds the 1px frame.
-              className="h-8 w-8 shrink-0 overflow-hidden rounded-[7px] border border-transparent min-[900px]:border-border"
+              className="h-8 w-8 shrink-0 overflow-hidden rounded-[7px] border border-border"
             >
               <CCMark size={30} />
             </div>
-            {/* 640-767 shows the mark alone (addendum-3 rule 1). */}
             <span
               data-testid="header-wordmark"
-              className="hidden text-[17px] font-extrabold tracking-[-0.02em] text-fg md:inline"
+              className="text-[17px] font-extrabold tracking-[-0.02em] text-fg"
               style={{ fontFamily: 'var(--font-ui)' }}
             >
               {copy.brand.name}
@@ -116,7 +114,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
             </span>
           </Link>
 
-          <nav className="flex min-w-0 gap-0.5 overflow-x-auto min-[900px]:gap-1.5">
+          <nav className="flex min-w-0 gap-1.5 overflow-x-auto">
             {tabs.map((tab) => {
               const isActive = isTabActive(tab, pathname);
               return (
@@ -125,7 +123,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
                   href={tab.href}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'shrink-0 whitespace-nowrap rounded-[10px] border border-transparent px-[10px] py-[8px] text-[14px] min-[900px]:px-[14px] tracking-[-0.01em]',
+                    'shrink-0 whitespace-nowrap rounded-[10px] border border-transparent px-[14px] py-[8px] text-[14px] tracking-[-0.01em]',
                     // The boards draw every tab at 14px, weight 600.
                     isActive
                       ? 'font-semibold text-fg'
@@ -145,7 +143,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
         </div>
 
         {/* Right: search bar + user avatar */}
-        <div className="flex shrink-0 items-center gap-3 min-[900px]:gap-5">
+        <div className="flex shrink-0 items-center gap-5">
           {/* Addendum-3 header-640/900/1100 draw search first, then the
               Offline pill, then the avatar. On the phone bar the slots stay
               left of the search circle. */}
@@ -153,15 +151,15 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
             onClick={() => palette?.open()}
             aria-label={copy.search.ariaLabel}
             data-testid="header-search-desktop"
-            className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center gap-2.5 rounded-[10px] border border-border bg-[color-mix(in_oklch,var(--bg-elevated)_70%,transparent)] px-3 text-fg-subtle lg:w-[280px] lg:gap-4 lg:justify-start"
+            className="flex h-[38px] w-[280px] cursor-pointer items-center justify-start gap-4 rounded-[10px] border border-border bg-[color-mix(in_oklch,var(--bg-elevated)_70%,transparent)] px-3 text-fg-subtle"
           >
             <Search size={14} strokeWidth={1.5} className="shrink-0" />
-            <span className="hidden flex-1 text-left text-[13px] lg:block">
+            <span className="flex-1 text-left text-[13px]">
               {copy.search.placeholder}
             </span>
             {/* Plain text, not a key cap (bp-account, notifications-panel-d). */}
             <span
-              className="hidden text-[10px] text-fg-subtle lg:block"
+              className="text-[10px] text-fg-subtle"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
               {copy.search.keyboardShortcut}

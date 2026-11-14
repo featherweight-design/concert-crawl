@@ -75,7 +75,7 @@ export const HeroBand = ({
   ...source
 }: HeroBandProps) => (
   <div
-    className="relative border-b border-border px-4 pb-[18px] pt-4 sm:px-[34px] sm:pb-7 sm:pt-[26px]"
+    className="relative border-b border-border px-4 pb-[18px] pt-4 lg:px-[34px] lg:pb-7 lg:pt-[26px]"
     style={{ background: bandField(name, source) }}
     data-testid="hero-band"
   >
@@ -87,18 +87,18 @@ export const HeroBand = ({
         stacks above the backdrop, which is the one thing in here that is
         absolutely placed. */}
     {(back || actions) && (
-      <div className="relative mb-3 flex items-center justify-between sm:mb-4">
+      <div className="relative mb-3 flex items-center justify-between lg:mb-4">
         <div className="flex gap-2">{back}</div>
         <div className="flex gap-2">{actions}</div>
       </div>
     )}
-    <div className="relative flex items-start gap-3.5 sm:gap-6">
+    <div className="relative flex items-start gap-3.5 lg:gap-6">
       {/* Sized in CSS rather than px because it steps at the breakpoint; the
           scale is stated so the art keeps hero density at both widths. */}
-      <div className="w-32 shrink-0 sm:w-52">
+      <div className="w-32 shrink-0 lg:w-52">
         <Panel {...source} name={name} size="100%" scale="hero" />
       </div>
-      <div className="min-w-0 flex-1 pt-0.5 sm:pt-1.5">{children}</div>
+      <div className="min-w-0 flex-1 pt-0.5 lg:pt-1.5">{children}</div>
     </div>
   </div>
 );

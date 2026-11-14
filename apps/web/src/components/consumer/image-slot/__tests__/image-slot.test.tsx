@@ -322,7 +322,7 @@ describe('<HeroBand />', () => {
     // The panel steps 128 → 208 in CSS; the column must be free to shrink or
     // the band overflows the 320px baseline.
     expect(art?.className).toContain('w-32');
-    expect(art?.className).toContain('sm:w-52');
+    expect(art?.className).toContain('lg:w-52');
     expect(type?.className).toContain('min-w-0');
     expect(type?.className).toContain('flex-1');
   });
