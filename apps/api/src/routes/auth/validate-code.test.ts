@@ -116,6 +116,44 @@ describe('POST /v1/auth/validate-code', () => {
     expect(body.error).toBe('notfound');
   });
 
+  // `code-ended-fan-m`: a code an admin revoked is "ended", not a typo hint.
+  it('returns 410 with error "ended" for a revoked code, and keeps it counted as a miss', async () => {
+    const { db } = await import('@concert-crawl/db');
+    const { refundRateLimit } = await import('../../lib/rate-limit.js');
+    vi.mocked(db.select().from(inviteCodes).where).mockResolvedValueOnce([
+      { ...mockInviteCode, revokedAt: new Date() },
+    ]);
+    const res = await app.request('/v1/auth/validate-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'BETA-3C41-8BC0' }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(410);
+    expect(body.error).toBe('ended');
+    // No refund: a guesser gains no free probes from codes that once existed.
+    expect(refundRateLimit).not.toHaveBeenCalled();
+  });
+
+  it('refuses a revoked code over the miss limit like any other miss', async () => {
+    const { db } = await import('@concert-crawl/db');
+    const { checkRateLimit } = await import('../../lib/rate-limit.js');
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({
+      allowed: true,
+      retryAfterMs: 0,
+      count: 99,
+    });
+    vi.mocked(db.select().from(inviteCodes).where).mockResolvedValueOnce([
+      { ...mockInviteCode, revokedAt: new Date() },
+    ]);
+    const res = await app.request('/v1/auth/validate-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'BETA-3C41-8BC0' }),
+    });
+    expect(res.status).toBe(429);
+  });
+
   it('returns 429 when rate limited', async () => {
     const { checkRateLimit } = await import('../../lib/rate-limit.js');
     vi.mocked(checkRateLimit).mockResolvedValueOnce({
