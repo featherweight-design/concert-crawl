@@ -1,13 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 // Deliberately no feature-flag mock and no QueryClientProvider: the animation
 // has no switch, so it must render with nothing around it.
@@ -103,30 +97,11 @@ describe('LaunchAnimation', () => {
     expect(launching()).toBe(false);
   });
 
-  // Hydration later than the animation misses its end event.
-  it('stops showing after a failsafe even if no end event comes', () => {
+  // The failsafe that clears `data-launch` is the head script's, not this
+  // component's: a document with no overlay has no component to run one.
+  it('sets no timer of its own', () => {
     vi.useFakeTimers();
-    document.documentElement.setAttribute(LAUNCH_ATTR, '1');
     render(<LaunchAnimation />);
-    act(() => {
-      vi.advanceTimersByTime(LAUNCH_MS.total);
-    });
-    expect(launching()).toBe(true);
-    act(() => {
-      vi.advanceTimersByTime(1500);
-    });
-    expect(launching()).toBe(false);
-  });
-
-  it('clears its failsafe on unmount', () => {
-    vi.useFakeTimers();
-    document.documentElement.setAttribute(LAUNCH_ATTR, '1');
-    const view = render(<LaunchAnimation />);
-    view.unmount();
-    act(() => {
-      vi.advanceTimersByTime(LAUNCH_MS.total + 2000);
-    });
-    // The timer is cleared with the component; the CSS alone ends the show.
-    expect(launching()).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -47,15 +47,10 @@ const TILE_PX = STARTUP_TILE_CSS_PX;
 const MARK_PX = 96;
 /** The full-size mark, and where the wordmark sits under it. */
 const FULL_SCALE = 4.2;
-// Safety net: the overlay stops showing even if its animation never reports an
-// end (a late hydration misses the event).
-const FAILSAFE_MS = LAUNCH_MS.total + 1500;
 
 export function LaunchAnimation() {
   useEffect(() => {
     markLaunchPlayed();
-    const failsafe = window.setTimeout(endLaunch, FAILSAFE_MS);
-    return () => window.clearTimeout(failsafe);
   }, []);
 
   return (

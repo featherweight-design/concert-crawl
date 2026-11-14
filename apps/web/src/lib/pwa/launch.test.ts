@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   LAUNCH_ATTR,
   LAUNCH_DETECT,
+  LAUNCH_END_MS,
   LAUNCH_MS,
   LAUNCH_PLAYED_KEY,
   endLaunch,
@@ -25,6 +26,7 @@ interface FakeWindow {
   sessionStorage: { getItem: (key: string) => string | null };
   innerWidth: number;
   innerHeight: number;
+  setTimeout: (callback: () => void, ms: number) => unknown;
 }
 
 // Runs the head script the way the browser does: against a window, with the
@@ -36,6 +38,7 @@ const detect = (over: Partial<FakeWindow> = {}) => {
     sessionStorage: { getItem: () => null },
     innerWidth: 390,
     innerHeight: 844,
+    setTimeout: () => 0,
     ...over,
   };
   new Function('window', 'document', LAUNCH_DETECT)(win, document);
@@ -47,6 +50,33 @@ describe('LAUNCH_DETECT', () => {
   it('marks a cold start of the installed app, with no switch to consult', () => {
     detect();
     expect(launching()).toBe(true);
+  });
+
+  // A document with no overlay (sign-in, onboarding, admin) leaves nobody to
+  // end the launch; a stale attribute would play the cover mid-session on a
+  // later client navigation into the shell.
+  it('clears data-launch by itself once the animation has had its time', () => {
+    const timers: { callback: () => void; ms: number }[] = [];
+    detect({
+      setTimeout: (callback, ms) => timers.push({ callback, ms }),
+    });
+    expect(launching()).toBe(true);
+    expect(timers).toHaveLength(1);
+    expect(timers[0]?.ms).toBe(LAUNCH_END_MS);
+    expect(LAUNCH_END_MS).toBeGreaterThan(LAUNCH_MS.total);
+    timers[0]?.callback();
+    expect(launching()).toBe(false);
+  });
+
+  // Remove the script and every other test here stays green while the bug that
+  // started this (no animation on a slow Android phone) comes straight back.
+  it('is rendered in the root layout head, ahead of any app script', () => {
+    const layout = readFileSync(
+      resolve(__dirname, '../../app/layout.tsx'),
+      'utf8',
+    );
+    const head = /<head>([\s\S]*?)<\/head>/.exec(layout)?.[1] ?? '';
+    expect(head).toContain('__html: LAUNCH_DETECT');
   });
 
   it('hands the CSS the viewport as unitless pixels', () => {
@@ -218,6 +248,17 @@ describe('launch.css', () => {
     expect(css).toContain(
       `animation: ll-dot ${LAUNCH_MS.trailStep * 2}ms linear both`,
     );
+  });
+
+  // The overlay covers the whole screen and must never hold a tap or sit under
+  // the app's own overlays.
+  it('is fixed over everything and never takes a tap', () => {
+    const rule = /\n\.launch-loader \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+    expect(rule).toContain('display: none;');
+    expect(rule).toContain('position: fixed;');
+    expect(rule).toContain('inset: 0;');
+    expect(rule).toContain('z-index: 10000;');
+    expect(rule).toContain('pointer-events: none;');
   });
 
   it('is a straight cut under reduced motion', () => {
