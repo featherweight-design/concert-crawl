@@ -75,10 +75,31 @@ export const HiddenTag = ({
           textTransform: 'uppercase',
         }}
       >
-        {COPY.hiddenReason[row.hiddenReason ?? 'admin']}
+        {COPY.hiddenTag[row.hiddenReason ?? 'admin']}
       </span>
     </span>
   ) : null;
+
+/**
+ * Event edit's header: the status chip and, for a hidden show, a Hidden chip
+ * (4b#8). The header with the list's tag isn't drawn, so it stays as built
+ * (⏸ Design gap, addendum 5 §2).
+ */
+export const StatusChips = ({
+  row,
+}: {
+  row: Pick<EventListRow, 'status' | 'hidden' | 'hiddenReason'>;
+}) => (
+  <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6 }}>
+    <ShowStatusChip row={row} />
+    {row.hidden && (
+      <StatusChip
+        status="hidden"
+        label={COPY.hiddenReason[row.hiddenReason ?? 'admin']}
+      />
+    )}
+  </span>
+);
 
 /** A table cell keeps one line; a phone card wraps the name, never cuts it. */
 const VenueLine = ({
