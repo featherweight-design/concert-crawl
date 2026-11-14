@@ -13,9 +13,13 @@ export const SignInRedirect = ({ onDone }: { onDone: () => void }) => {
   // Held in refs so the effect runs once per mount, not on every parent render.
   const go = useRef(goToSignIn);
   const done = useRef(onDone);
+  const fired = useRef(false);
   go.current = goToSignIn;
   done.current = onDone;
   useEffect(() => {
+    // StrictMode runs this twice in dev; one visit, one push.
+    if (fired.current) return;
+    fired.current = true;
     go.current();
     done.current();
   }, []);

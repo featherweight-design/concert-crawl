@@ -12,7 +12,7 @@ export const useSignInRedirect = () => {
   const router = useRouter();
   const pathname = usePathname();
   return () => {
-    const here = `${pathname}${window.location.search}`;
+    const here = `${pathname}${window.location.search}${window.location.hash}`;
     router.push(`/sign-in?redirect_url=${encodeURIComponent(here)}`);
   };
 };
