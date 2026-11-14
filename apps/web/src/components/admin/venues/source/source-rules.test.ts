@@ -263,14 +263,18 @@ describe('source mapping: the radio to columns', () => {
       base,
     );
     expect(next.extractionStrategy).not.toBe('manual');
-    // A stored manual only stays as it is; no draft that changes the reader
-    // or the mode writes it.
+    // A stored manual only stays as it is (the unchanged reader, or Detail
+    // pages, which is a platform and leaves the strategy alone); every other
+    // reader, and a feed, replaces it.
     const manual: SourceColumns = { ...base, extractionStrategy: 'manual' };
     const changed = columnsOf(
       draft({ mode, seller: 'aeg', feedId: '89', reader }),
       manual,
     );
-    if (mode === 'feed' || reader !== readerOf(manual)) {
+    const keepsStored =
+      mode === 'page' &&
+      (reader === readerOf(manual) || reader === 'detail-page');
+    if (!keepsStored) {
       expect(changed.extractionStrategy).not.toBe('manual');
     }
   });
