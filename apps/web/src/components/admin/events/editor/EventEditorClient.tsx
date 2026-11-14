@@ -18,7 +18,11 @@ import { SaveBar } from './SaveBar';
 import { EventConfirmModal } from '@/components/admin/review/all/EventConfirmModal';
 import { MergeEventDialog } from './MergeEventDialog';
 import { editEventHref } from '@/lib/admin/edit-event-link';
-import { duplicateShowMessage, pastLockedMessage } from '../past-locked';
+import {
+  duplicateShowMessage,
+  notOnSaleMessage,
+  pastLockedMessage,
+} from '../past-locked';
 
 export interface EditorEvent {
   id: string;
@@ -185,6 +189,7 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
       const message =
         pastLockedMessage(saveErr) ??
         duplicateShowMessage(saveErr) ??
+        notOnSaleMessage(saveErr) ??
         (saveErr instanceof ApiError
           ? saveErr.message
           : ADMIN_COPY.editor.saveBar.saveFailed);

@@ -1540,6 +1540,14 @@ export const ADMIN_COPY = {
       // The PATCH's 409 `duplicate_show`.
       duplicateShow:
         'Another listing at this venue already has that date and time.',
+      // POST sold-out's 409 `not_on_sale`, by reason.
+      notOnSale: {
+        cancelled: 'A cancelled show can’t be marked sold out.',
+        postponed:
+          'A postponed show can’t be marked sold out. Set its new date first.',
+        delisted: 'A show that’s no longer listed can’t be marked sold out.',
+        fallback: 'This show isn’t on sale, so it can’t be marked sold out.',
+      },
     },
   },
 
