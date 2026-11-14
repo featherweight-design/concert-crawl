@@ -253,7 +253,8 @@ describe('ArtistsClient', () => {
     await screen.findByText('Kyle Emerson', { selector: 'div' });
     expect(screen.queryByText(FOOTNOTE)).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Matched/ }));
-    await screen.findByText('Kyle Emerson', { selector: 'div' });
+    // The Matched row draws the name in its own element, so match any.
+    await screen.findAllByText('Kyle Emerson');
     expect(screen.queryByText(FOOTNOTE)).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Not artists/ }));
     const footnote = await screen.findByText(FOOTNOTE);
