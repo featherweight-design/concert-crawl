@@ -330,7 +330,8 @@ describe('EventRow — lifecycle beats the price state', () => {
     ).toBe(true);
     expect(screen.queryByTestId('row-no-price')).toBeNull();
     expect(screen.getByText(/\$\d/)).not.toBeNull();
-    expect(screen.getByText('Date TBA')).not.toBeNull();
+    // The meta line also keeps a hidden measuring copy, so there are two.
+    expect(screen.getAllByText('Date TBA').length).toBeGreaterThan(0);
   });
 
   it('reads Postponed, not Sold out, on a show that is both', () => {
