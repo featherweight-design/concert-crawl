@@ -3843,7 +3843,9 @@ export const ADMIN_COPY = {
     },
     search: 'Search shows or people',
     // 4d#12: the list filtered to one fan, as a chip with the handle.
-    fanFilter: (handle: string, count: number) => `@${handle} · ${count}`,
+    // The count is left off until it has been counted for this fan.
+    fanFilter: (handle: string, count: number | null) =>
+      count === null ? `@${handle}` : `@${handle} · ${count}`,
     clearFan: 'Clear the fan filter',
     listLabel: 'Submitted prices',
     columns: {

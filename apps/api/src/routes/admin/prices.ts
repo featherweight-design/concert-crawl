@@ -378,6 +378,16 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
 // lockout (#754) + the partial unique index keep contest rows on a
 // separate path from the regular single-submission lifecycle, so audit
 // callers needing contest visibility must use the contests endpoint.
+// "This fan's other prices" (redesign 4d#12): one fan's prices, matched on the
+// whole handle. Not the free-text `search`, whose substring match on the handle
+// would make "al" also list alice, hal and sally. A leading "@" is ignored.
+const handleQuerySchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/^@/, ''))
+  .pipe(z.string().min(1).max(100))
+  .optional();
+
 const submissionsQuerySchema = z.object({
   count: z
     .enum(['true', 'false'])
@@ -394,12 +404,14 @@ const submissionsQuerySchema = z.object({
   // "Search shows or people": the show's title, the venue's name, or the
   // fan's handle (a leading "@" is ignored).
   search: z.string().trim().min(1).max(100).optional(),
+  handle: handleQuerySchema,
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
 
 const stateCountsQuerySchema = z.object({
   search: z.string().trim().min(1).max(100).optional(),
+  handle: handleQuerySchema,
 });
 
 /** A price with a pending counter (an open Price check) filed against it. */
@@ -433,6 +445,10 @@ const searchClauseOf = (search: string): SQL | undefined => {
       : ilike(userProfiles.handle, containsPattern(handle)),
   );
 };
+
+/** One fan's prices, on the whole handle (needs the userProfiles join). */
+const handleClauseOf = (handle: string | undefined): SQL | undefined =>
+  handle === undefined ? undefined : eq(userProfiles.handle, handle);
 
 /** The WHERE clause of one filter chip. */
 const stateClause = (
@@ -488,6 +504,7 @@ pricesAdminRouter.get(
       status = 'pending',
       state,
       search,
+      handle,
       limit,
       offset,
     } = ctx.req.valid('query');
@@ -510,6 +527,7 @@ pricesAdminRouter.get(
     const whereClause = and(
       statusClause,
       searchClause,
+      handleClauseOf(handle),
       isNull(priceSubmissions.disputedSubmissionId),
     );
 
@@ -571,12 +589,13 @@ pricesAdminRouter.get(
       return ctx.json({ success: true, data: withState(rows) });
     }
 
-    // The joins only matter to the search clause, so a plain total skips them.
+    // The joins only matter to the search and handle clauses, so a plain total
+    // skips them.
     const countBase = db
       .select({ total: sql<number>`count(*)::int` })
       .from(priceSubmissions);
     const countQuery =
-      search === undefined
+      search === undefined && handle === undefined
         ? countBase.where(whereClause)
         : countBase
             .leftJoin(events, eq(priceSubmissions.eventId, events.id))
@@ -596,7 +615,8 @@ pricesAdminRouter.get(
 // chips, in one query. The four states are mutually exclusive over the same base
 // filter as the list (no contest counter rows), so Waiting + Published + Price
 // check never exceeds All (the rest are "Not used" and stale rows, under All
-// only). With `search` the chips count the matches, so they agree with the list.
+// only). With `search` the chips count the matches, so they agree with the list;
+// with `handle` they count that one fan's prices.
 pricesAdminRouter.get(
   '/submissions/state-counts',
   zValidator('query', stateCountsQuerySchema, (result, ctx) => {
@@ -605,7 +625,7 @@ pricesAdminRouter.get(
     }
   }),
   async (ctx) => {
-    const { search } = ctx.req.valid('query');
+    const { search, handle } = ctx.req.valid('query');
     const countBase = db
       .select({
         all: sql<number>`count(*)::int`,
@@ -616,7 +636,7 @@ pricesAdminRouter.get(
       .from(priceSubmissions);
     const base = isNull(priceSubmissions.disputedSubmissionId);
     const [row] =
-      search === undefined
+      search === undefined && handle === undefined
         ? await countBase.where(base)
         : await countBase
             .leftJoin(events, eq(priceSubmissions.eventId, events.id))
@@ -625,7 +645,13 @@ pricesAdminRouter.get(
               userProfiles,
               eq(priceSubmissions.userId, userProfiles.userId),
             )
-            .where(and(base, searchClauseOf(search)));
+            .where(
+              and(
+                base,
+                search === undefined ? undefined : searchClauseOf(search),
+                handleClauseOf(handle),
+              ),
+            );
     return ctx.json({
       success: true,
       data: {

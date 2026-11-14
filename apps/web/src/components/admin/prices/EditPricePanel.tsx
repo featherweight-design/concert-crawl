@@ -54,7 +54,10 @@ interface EditPricePanelProps {
   onClose: () => void;
   /** Saves the two amounts; resolves with the refusal's text, or null when saved. */
   onSave: (priceMin: string, priceMax: string | null) => Promise<string | null>;
-  /** Opened for one show from Event edit: drawn as `06/edit-price-desktop`. */
+  /**
+   * Drawn as `06/edit-price-desktop` (boxed PRICE tag, "Edit price", Cancel):
+   * how both Event edit and the Prices page's Submitted prices tab open it.
+   */
   single?: boolean;
 }
 
@@ -202,8 +205,8 @@ export const EditPricePanel = ({
   const sub = [row.venueName, row.date === null ? '' : shortDate(row.date)]
     .filter(Boolean)
     .join(' · ');
-  // `06/edit-price-desktop`: from Event edit, "Edit price" over the show,
-  // venue and day.
+  // `06/edit-price-desktop`: from Event edit or Submitted prices, "Edit price"
+  // over the show, venue and day.
   const singleMeta = [
     row.title,
     row.venueName,
