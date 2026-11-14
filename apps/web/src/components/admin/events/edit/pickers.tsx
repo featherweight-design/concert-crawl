@@ -247,9 +247,11 @@ export const DateField = ({
                     fontSize: 13,
                     fontWeight: chosen ? 700 : 500,
                     cursor: barred ? 'default' : 'pointer',
+                    // Days before today draw muted (`04/date-picker-d`),
+                    // still pickable unless barred by `min`.
                     color: chosen
                       ? 'var(--bg)'
-                      : barred
+                      : barred || iso < today
                         ? 'var(--fg-subtle)'
                         : 'var(--fg)',
                     border:
