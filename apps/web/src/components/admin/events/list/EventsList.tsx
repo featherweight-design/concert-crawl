@@ -55,7 +55,7 @@ export const HiddenTag = ({
       data-testid="hidden-tag"
       style={{
         display: 'inline-flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 5,
         minWidth: 0,
         color: 'var(--fg-subtle)',
@@ -67,10 +67,13 @@ export const HiddenTag = ({
         aria-hidden="true"
         style={{ flex: 'none', display: 'block' }}
       />
+      {/* Never cut: a narrow card wraps the tag rather than lose its reason
+          (orchestrator, 320px). */}
       <span
         style={{
           ...MONO,
-          ...ellipsis,
+          minWidth: 0,
+          lineHeight: '12px',
           fontSize: 9,
           letterSpacing: '0.1em',
           fontWeight: 600,
