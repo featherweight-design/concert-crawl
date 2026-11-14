@@ -56,6 +56,7 @@ import {
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { observeBlocking, withLockHolder } from '../../test/helpers/locks.js';
+import { setSubmissionStatus } from './lib/price-submission-status.js';
 
 const app = createApp();
 
@@ -278,6 +279,49 @@ describe('POST /v1/admin/prices/submissions/:id/approve', () => {
       expect(await statusOf(submission.id)).toBe(status);
     },
   );
+
+  it('audits the approve as a status change', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    const submission = await seedPriceSubmission(event.id, 'user_audit');
+    expect((await approve(submission.id)).status).toBe(200);
+    const [audit] = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'price.submission.update'));
+    expect(audit?.targetId).toBe(submission.id);
+    expect(audit?.metadata).toEqual({ status: 'corroborated', via: 'approve' });
+  });
+
+  it('refuses a waiting Price check counter, pointing at Price checks', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    const listed = await seedPriceSubmission(event.id, 'user_listed', {
+      status: 'corroborated',
+    });
+    const counter = await seedPriceSubmission(event.id, 'user_counter', {
+      disputedSubmissionId: listed.id,
+    });
+    const res = await approve(counter.id);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'price_check' });
+    expect(await statusOf(counter.id)).toBe('pending');
+  });
+
+  // The Needs you batch passes the same guard.
+  it('lets the batch skip a price that stopped waiting', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    const gone = await seedPriceSubmission(event.id, 'user_gone', {
+      status: 'archived',
+    });
+    expect(
+      await setSubmissionStatus(gone.id, 'corroborated', {
+        onlyIfWaiting: true,
+      }),
+    ).toEqual({ ok: 'not_waiting' });
+    expect(await statusOf(gone.id)).toBe('archived');
+  });
 
   it('refuses an id that is not a uuid, and a missing price', async () => {
     expect((await approve('nope')).status).toBe(400);
