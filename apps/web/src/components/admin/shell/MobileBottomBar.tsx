@@ -13,8 +13,9 @@ import {
   type AdminBadgeCounts,
 } from './nav';
 import { NeedsYouBadge } from './AdminSidebar';
+import { TAB_BAR_HEIGHT } from './tab-bar-height';
 
-export const TAB_BAR_HEIGHT = 64;
+export { TAB_BAR_HEIGHT };
 
 /** The phone's 4-tab bar: Needs you, Venues, Events, More. */
 export const MobileBottomBar = ({

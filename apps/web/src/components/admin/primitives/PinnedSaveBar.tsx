@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
-import { TAB_BAR_HEIGHT } from '@/components/admin/shell/MobileBottomBar';
+import { TAB_BAR_HEIGHT } from '@/components/admin/shell/tab-bar-height';
 import { AdminButton } from './AdminButton';
 import { SaveFailedToast } from './SaveFailedToast';
 
