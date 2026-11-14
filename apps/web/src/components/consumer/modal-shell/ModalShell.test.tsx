@@ -165,6 +165,137 @@ describe('ModalShell', () => {
   });
 });
 
+// Addendum 6 item 15: one rule for every sheet. The sheet stops 24px below the
+// top of the screen and taller content scrolls inside it; the rail gets a
+// hairline once the body scrolls; the pinned footer fades the body above it
+// while there is more to scroll.
+describe('ModalShell sheet rule (320 x 568)', () => {
+  beforeEach(() => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  });
+
+  const bodyOf = () => {
+    const body = screen.getByText('Content').parentElement;
+    if (body === null) throw new Error('no body');
+    return body;
+  };
+  const scrollTo = (
+    body: HTMLElement,
+    metrics: { scrollTop: number; scrollHeight: number; clientHeight: number },
+  ) => {
+    for (const [key, value] of Object.entries(metrics)) {
+      Object.defineProperty(body, key, { value, configurable: true });
+    }
+    fireEvent.scroll(body);
+  };
+
+  it('caps every sheet 24px below the top and keeps the tall and short floors', () => {
+    for (const [height, floor] of [
+      ['tall', '85%'],
+      ['short', '62%'],
+      ['fit', ''],
+    ] as const) {
+      const { unmount } = render(
+        <ModalShell
+          open
+          onClose={vi.fn()}
+          ariaLabel="Test"
+          sheetHeight={height}
+        >
+          <div>Content</div>
+        </ModalShell>,
+      );
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.style.maxHeight).toBe('calc(100% - 24px)');
+      expect(dialog.style.minHeight).toBe(floor);
+      expect(dialog.style.height).toBe('');
+      unmount();
+    }
+  });
+
+  it('pins a --surface-2 footer, 12px above and 20px plus the safe area below', () => {
+    render(
+      <ModalShell
+        open
+        onClose={vi.fn()}
+        ariaLabel="Test"
+        footer={<button>Go</button>}
+      >
+        <div>Content</div>
+      </ModalShell>,
+    );
+    const footer = screen.getByTestId('modal-footer');
+    expect(footer.style.background).toBe('var(--surface-2)');
+    expect(footer.style.padding).toContain('12px');
+    expect(footer.style.padding).toContain('20px');
+    expect(footer.style.padding).toContain('env(safe-area-inset-bottom)');
+  });
+
+  it('keeps the Crews panel colour on the footer', () => {
+    render(
+      <ModalShell
+        open
+        onClose={vi.fn()}
+        ariaLabel="Test"
+        surface="crew"
+        footer={<button>Go</button>}
+      >
+        <div>Content</div>
+      </ModalShell>,
+    );
+    expect(screen.getByTestId('modal-footer').style.background).not.toBe(
+      'var(--surface-2)',
+    );
+  });
+
+  it('draws a hairline under the rail only once the body has scrolled', () => {
+    render(
+      <ModalShell open onClose={vi.fn()} ariaLabel="Test" header={<Header />}>
+        <div>Content</div>
+      </ModalShell>,
+    );
+    const rail = screen.getByTestId('modal-rail');
+    expect(rail.dataset['scrolled']).toBe('false');
+    expect(rail.style.borderBottom).toContain('transparent');
+    scrollTo(bodyOf(), { scrollTop: 40, scrollHeight: 900, clientHeight: 300 });
+    expect(rail.dataset['scrolled']).toBe('true');
+    expect(rail.style.borderBottom).toContain('var(--border)');
+    scrollTo(bodyOf(), { scrollTop: 0, scrollHeight: 900, clientHeight: 300 });
+    expect(rail.dataset['scrolled']).toBe('false');
+  });
+
+  it('fades the body above the footer while there is more to scroll, and not at the end', () => {
+    render(
+      <ModalShell
+        open
+        onClose={vi.fn()}
+        ariaLabel="Test"
+        footer={<button>Go</button>}
+      >
+        <div>Content</div>
+      </ModalShell>,
+    );
+    expect(screen.queryByTestId('modal-fade')).toBeNull();
+    scrollTo(bodyOf(), { scrollTop: 0, scrollHeight: 900, clientHeight: 300 });
+    expect(screen.getByTestId('modal-fade')).toBeTruthy();
+    scrollTo(bodyOf(), {
+      scrollTop: 600,
+      scrollHeight: 900,
+      clientHeight: 300,
+    });
+    expect(screen.queryByTestId('modal-fade')).toBeNull();
+  });
+});
+
 // `aria-modal` tells a screen reader the rest of the page is inert; it does
 // nothing to the keyboard, so Tab used to walk straight out behind the scrim.
 describe('ModalShell focus containment', () => {

@@ -44,6 +44,60 @@ interface ModalShellProps {
   ariaDescribedBy?: string;
 }
 
+/** How far above a sheet's top edge it stops (addendum 6 item 15). */
+const SHEET_TOP_GAP = 24;
+const SHEET_MAX_HEIGHT = `calc(100% - ${SHEET_TOP_GAP}px)`;
+/** The fade above the pinned footer, tall enough to say "there is more". */
+const FADE_HEIGHT = 22;
+
+/**
+ * Whether the scrolling body has been scrolled (the rail then draws a hairline
+ * under it) and whether there is more below (the footer then draws a fade).
+ * Watches size and content changes too, so a body that grows or shrinks after
+ * a state change updates without a scroll.
+ */
+function useScrollEdges(active: boolean, isMobile: boolean) {
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const [edges, setEdges] = useState({ scrolled: false, more: false });
+
+  const measure = useCallback(() => {
+    const body = bodyRef.current;
+    if (body === null) return;
+    const scrolled = body.scrollTop > 0;
+    const more = body.scrollHeight - body.scrollTop - body.clientHeight > 1;
+    setEdges((prev) =>
+      prev.scrolled === scrolled && prev.more === more
+        ? prev
+        : { scrolled, more },
+    );
+  }, []);
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!active || body === null) return;
+    measure();
+    const observers: Array<{ disconnect: () => void }> = [];
+    if (typeof ResizeObserver !== 'undefined') {
+      const resize = new ResizeObserver(measure);
+      resize.observe(body);
+      observers.push(resize);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      const mutation = new MutationObserver(measure);
+      mutation.observe(body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+      observers.push(mutation);
+    }
+    return () => observers.forEach((observer) => observer.disconnect());
+    // The phone and desktop layouts mount different body elements.
+  }, [active, isMobile, measure]);
+
+  return { bodyRef, edges, measure };
+}
+
 export function ModalShell({
   open,
   onClose,
@@ -64,6 +118,7 @@ export function ModalShell({
   const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const drag = useSheetDrag(onClose, open);
+  const { bodyRef, edges, measure } = useScrollEdges(open && mounted, isMobile);
 
   useEffect(() => {
     setMounted(true);
@@ -141,11 +196,37 @@ export function ModalShell({
 
   if (!open || !mounted) return null;
 
-  const heightValue =
-    sheetHeight === 'tall' ? '85%' : sheetHeight === 'short' ? '62%' : 'auto';
+  // Addendum 6 item 15: the sheet stops 24px below the top of the screen and
+  // taller content scrolls inside it. `tall` and `short` keep their floors
+  // (85% and 62%), so a normal phone looks as it did; they only grow, up to
+  // the cap, when the content needs the room (a 320 x 568 phone).
+  const minHeightValue =
+    sheetHeight === 'tall'
+      ? '85%'
+      : sheetHeight === 'short'
+        ? '62%'
+        : undefined;
   const crew = surface === 'crew';
   // The drawn Crews panel is a lighter navy than the page's elevated ground.
   const panel = crew ? CREW_PANEL : 'var(--bg-elevated)';
+  // The pinned footer: --surface-2 with a hairline on top (Crews keeps its own
+  // drawn panel), and the fade above it while there is more to scroll.
+  const footerBackground = crew ? panel : 'var(--surface-2)';
+  const fade = edges.more && (
+    <div
+      aria-hidden="true"
+      data-testid="modal-fade"
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: FADE_HEIGHT,
+        pointerEvents: 'none',
+        background: `linear-gradient(to bottom, transparent, ${panel})`,
+      }}
+    />
+  );
 
   // Portalled to the body: triggers live inside clipping and transformed
   // ancestors — the filter rail scrolls horizontally, and a transformed
@@ -184,8 +265,8 @@ export function ModalShell({
             left: 0,
             right: 0,
             bottom: 0,
-            height: heightValue,
-            maxHeight: sheetHeight === 'fit' ? '85%' : undefined,
+            minHeight: minHeightValue,
+            maxHeight: SHEET_MAX_HEIGHT,
             zIndex: 100,
             borderTopLeftRadius: 22,
             borderTopRightRadius: 22,
@@ -225,28 +306,48 @@ export function ModalShell({
                 ...drag.zoneProps.style,
                 flexShrink: 0,
                 padding: '10px 16px 8px',
+                // A hairline under the rail once the body has scrolled; the
+                // border is always there (clear until then) so nothing jumps.
+                borderBottom: `1px solid ${edges.scrolled ? 'var(--border)' : 'transparent'}`,
               }}
+              data-testid="modal-rail"
+              data-scrolled={edges.scrolled ? 'true' : 'false'}
             >
               {header}
             </div>
           )}
           <div
             style={{
+              position: 'relative',
               flex: 1,
               minHeight: 0,
-              overflowY: 'auto',
-              padding: '6px 18px 18px',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            {children}
+            <div
+              ref={bodyRef}
+              onScroll={measure}
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                padding: '6px 18px 18px',
+              }}
+            >
+              {children}
+            </div>
+            {fade}
           </div>
           {(mobileFooter ?? footer) && (
             <div
+              data-testid="modal-footer"
               style={{
                 flexShrink: 0,
-                padding: '12px 18px 22px',
+                // 12px above; 20px plus the safe area below.
+                padding: '12px 18px calc(20px + env(safe-area-inset-bottom))',
                 borderTop: '1px solid var(--border)',
-                background: panel,
+                background: footerBackground,
               }}
             >
               {mobileFooter ?? footer}
@@ -318,21 +419,35 @@ export function ModalShell({
           )}
           <div
             style={{
+              position: 'relative',
               flex: 1,
               minHeight: 0,
-              overflowY: 'auto',
-              padding: '18px 22px',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            {children}
+            <div
+              ref={bodyRef}
+              onScroll={measure}
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                padding: '18px 22px',
+              }}
+            >
+              {children}
+            </div>
+            {fade}
           </div>
           {footer && (
             <div
+              data-testid="modal-footer"
               style={{
                 flexShrink: 0,
-                padding: '14px 22px 18px',
+                padding: '12px 22px 20px',
                 borderTop: '1px solid var(--border)',
-                background: panel,
+                background: footerBackground,
               }}
             >
               {footer}
