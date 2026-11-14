@@ -11,7 +11,7 @@ import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 import { PriceFetchDeferredError } from './types.js';
 import type { PipelineContext, PriceTierResult } from './types.js';
 
-// Our own floor between requests, the same 3 seconds `fetchPage` uses.
+// Our own floor before each request we make, the same 3 seconds `fetchPage` uses.
 const PRICE_FETCH_DELAY_MS = 3000;
 
 const JSON_LD_RE =

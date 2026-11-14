@@ -15,8 +15,8 @@ export const CRAWLER_USER_AGENT =
   'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)';
 
 /**
- * The crawl rules' floor: never less than 3 seconds between requests to a
- * venue, whatever its stored `crawl_delay_ms` says (the admin form once
+ * The crawl rules' floor: never less than 3 seconds before each page or API
+ * call we request from a venue, whatever its stored `crawl_delay_ms` says (the admin form once
  * accepted 1 s). Jitter is added on top of this, never taken from it.
  *
  * Here for the same reason as the user agent: the crawler enforces it, the
