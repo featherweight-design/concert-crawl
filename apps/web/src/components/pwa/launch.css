@@ -1,0 +1,240 @@
+/*
+ * The launch animation (B+ README rule 12, boards `bp-s-launch_*`).
+ *
+ * THE ONLY KEYFRAMES FILE OF ITS KIND, an exception to "nothing new joins the
+ * hand-rolled @keyframes" (Hugh's rule, CLAUDE.md Motion), ruled by the
+ * orchestrator on 2026-11-13:
+ *
+ * - The timeline is the handoff's fixed design timeline (`LAUNCH_MS`, 1040ms),
+ *   not a motion token, and its expo-out curve (0.16, 1, 0.3, 1) is not
+ *   `--motion-ease` (0.22, 0.61, 0.36, 1), so the tokens cannot express it.
+ * - It has to be on screen in the very first frame, before React hydrates: an
+ *   inline head script (`LAUNCH_DETECT`, lib/pwa/launch.ts) marks `<html
+ *   data-launch>` and writes the viewport into `--ll-w` / `--ll-h`; the overlay
+ *   is server-rendered and shown only by that attribute. Pure CSS animation
+ *   starts on the first painted frame and runs on the compositor, so a slow
+ *   phone's hydration cannot make it finish unseen. That is how the-99's
+ *   app loader works on the same phone, and why the JS (Web Animations)
+ *   version, which started after hydration, did not play on Android.
+ * - Reduced motion is a straight cut: the head script bails, and the block at
+ *   the end hides the overlay if the preference flips mid-load.
+ *
+ * Every offset below is a `LAUNCH_MS` beat over the 1040ms total, and
+ * `launch.test.ts` fails if they drift apart. The position maths is the board's
+ * 390 x 844 offsets (the core 55px right of and 102px above the centre), scaled
+ * with the viewport and clamped to 0.8 to 1.25. It matches the Web Animations
+ * version it replaced to within 0.1px at 320, 390 and 1300 wide.
+ */
+
+.launch-loader {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  /* Never holds the app: taps reach the page beneath. */
+  pointer-events: none;
+
+  --ll-vw: var(--ll-w, 390);
+  --ll-vh: var(--ll-h, 844);
+  --ll-kx: clamp(0.8, calc(var(--ll-vw) / 390), 1.25);
+  --ll-ky: clamp(0.8, calc(var(--ll-vh) / 844), 1.25);
+  /* The core on screen once the mark is full size. */
+  --ll-core-x: calc(var(--ll-vw) * 0.5px + 55px * var(--ll-kx));
+  --ll-core-y: calc(var(--ll-vh) * 0.5px - 102px * var(--ll-ky));
+  /* The mark box's top left: centred at the start (128px, the splash tile),
+     and at 4.2x where the core (72, 24 in the 96-unit art) is on its spot. */
+  --ll-start-x: calc(var(--ll-vw) * 0.5px - 64px);
+  --ll-start-y: calc(var(--ll-vh) * 0.5px - 64px);
+  --ll-full-x: calc(var(--ll-core-x) - 302.4px);
+  --ll-full-y: calc(var(--ll-core-y) - 100.8px);
+}
+
+html[data-launch] .launch-loader {
+  display: block;
+  animation: ll-root 1040ms linear forwards;
+}
+
+.launch-loader .ll-tile {
+  animation: ll-tile 1040ms linear forwards;
+}
+.launch-loader .ll-bloom {
+  left: calc(var(--ll-core-x) - 165px);
+  top: calc(var(--ll-core-y) - 165px);
+  animation: ll-bloom 1040ms linear forwards;
+}
+.launch-loader .ll-mark {
+  transform: translate(var(--ll-start-x), var(--ll-start-y)) scale(1.33333);
+  animation: ll-mark 1040ms linear forwards;
+}
+.launch-loader .ll-word {
+  animation: ll-word 1040ms linear forwards;
+}
+.launch-loader .ll-core {
+  animation: ll-core 1040ms linear forwards;
+}
+.launch-loader .ll-halo {
+  animation: ll-halo 1040ms linear forwards;
+}
+/* Each trail dot lights for two steps (2 x 32ms) from its own delay, set inline
+   from `LAUNCH_MS`: 300ms plus 32ms a dot. */
+.launch-loader .ll-dot {
+  animation: ll-dot 64ms linear both;
+}
+
+@keyframes ll-root {
+  0% {
+    opacity: 1;
+  }
+  82.6923% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ll-tile {
+  0% {
+    opacity: 1;
+  }
+  10.5769% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ll-mark {
+  0% {
+    transform: translate(var(--ll-start-x), var(--ll-start-y)) scale(1.33333);
+    opacity: 1;
+  }
+  10.5769% {
+    transform: translate(var(--ll-start-x), var(--ll-start-y)) scale(1.33333);
+    /* A keyframe's easing runs the segment that STARTS there: expo out. Written
+       out, not a var(): a var() here is dropped and the segment goes linear. */
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  34.6154% {
+    transform: translate(var(--ll-full-x), var(--ll-full-y)) scale(4.2);
+  }
+  82.6923% {
+    transform: translate(var(--ll-full-x), var(--ll-full-y)) scale(4.2);
+  }
+  100% {
+    /* The header logo's own corner (16, 15), at its 28px box. */
+    transform: translate(16px, 15px) scale(0.291667);
+  }
+}
+@keyframes ll-dot {
+  0% {
+    fill: #7ae6ff; /* fwd-allow-hex: board art colour, INK_SIGNAL */
+    transform: scale(1);
+  }
+  50% {
+    fill: #ff7bd4; /* fwd-allow-hex: board art colour, INK_ACCENT */
+    transform: scale(1.28);
+  }
+  100% {
+    fill: #7ae6ff; /* fwd-allow-hex: board art colour, INK_SIGNAL */
+    transform: scale(1);
+  }
+}
+/* The core catches the pink last, fades to blue, then pulses. */
+@keyframes ll-core {
+  0% {
+    fill: #7ae6ff; /* fwd-allow-hex: board art colour, INK_SIGNAL */
+    transform: scale(1);
+  }
+  50.3846% {
+    fill: #7ae6ff; /* fwd-allow-hex: board art colour, INK_SIGNAL */
+    transform: scale(1);
+  }
+  53.4615% {
+    fill: #ff7bd4; /* fwd-allow-hex: board art colour, INK_ACCENT */
+  }
+  56.7308% {
+    fill: #ff7bd4; /* fwd-allow-hex: board art colour, INK_ACCENT */
+  }
+  66.3462% {
+    fill: #7ae6ff; /* fwd-allow-hex: board art colour, INK_SIGNAL */
+    transform: scale(1);
+  }
+  73.0769% {
+    fill: #7ae6ff; /* fwd-allow-hex: board art colour, INK_SIGNAL */
+    transform: scale(1.4);
+  }
+  80.7692% {
+    fill: #7ae6ff; /* fwd-allow-hex: board art colour, INK_SIGNAL */
+    transform: scale(1);
+  }
+  100% {
+    fill: #7ae6ff; /* fwd-allow-hex: board art colour, INK_SIGNAL */
+    transform: scale(1);
+  }
+}
+/* The core's bloom, the one sanctioned soft glow: it rises with the pulse and
+   is gone before the mark starts to shrink. */
+@keyframes ll-bloom {
+  0% {
+    opacity: 0;
+  }
+  65.3846% {
+    opacity: 0;
+  }
+  73.0769% {
+    opacity: 0.55;
+  }
+  80.7692% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ll-halo {
+  0% {
+    transform: scale(1);
+  }
+  65.3846% {
+    transform: scale(1);
+  }
+  73.0769% {
+    transform: scale(1.2);
+  }
+  80.7692% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* The wordmark and DENVER rise in, then leave as the mark shrinks away. */
+@keyframes ll-word {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  38.4615% {
+    opacity: 0;
+    transform: translateY(14px);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  55.7692% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  82.6923% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-launch] .launch-loader {
+    display: none;
+  }
+}
