@@ -52,7 +52,16 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
 );
 
 /** `Your Passport`, with the last word in the brand gradient. */
-function PageTitle() {
+function PageTitle({ plain = false }: { plain?: boolean }) {
+  // The empty page draws "Your Passport" all in the foreground colour, no
+  // gradient word (`passport-empty-d`, `passport-empty-m`).
+  if (plain) {
+    return (
+      <h1 className="text-[34px] font-black leading-none tracking-[-0.04em] text-fg lg:text-[44px]">
+        {COPY.pageTitle}
+      </h1>
+    );
+  }
   const split = COPY.pageTitle.lastIndexOf(' ');
   const lead = COPY.pageTitle.slice(0, split + 1);
   const mark = COPY.pageTitle.slice(split + 1);
@@ -135,7 +144,7 @@ export const PassportContent = ({
         {!openBook && (
           <div data-passport-empty-layout="phone" className="lg:hidden">
             <header className="mb-6">
-              <PageTitle />
+              <PageTitle plain />
             </header>
             <div className="flex flex-col gap-8">
               <PassportEmpty />
@@ -145,7 +154,7 @@ export const PassportContent = ({
         )}
         <div
           data-passport-empty-layout="desktop"
-          className={`${openBook ? 'grid' : 'hidden lg:grid'} grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']`}
+          className={`${openBook ? 'grid' : 'hidden lg:grid'} grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']`}
         >
           <header className="flex flex-col gap-2 [grid-area:head]">
             <p
@@ -153,7 +162,7 @@ export const PassportContent = ({
             >
               {COPY.breadcrumb}
             </p>
-            <PageTitle />
+            <PageTitle plain={!openBook} />
             <p className="text-sm text-fg-muted lg:text-[15px]">{subtitle}</p>
           </header>
           <div className="min-w-0 [grid-area:book]">
@@ -186,14 +195,14 @@ export const PassportContent = ({
 
   return (
     <Shell>
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
         <header className="flex flex-col gap-2 [grid-area:head]">
           <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle lg:block">
             {COPY.breadcrumb}
           </p>
           <PageTitle />
           <p className="text-sm text-fg-muted lg:text-[15px]">
-            {COPY.pageSubtitle}
+            {COPY.statsSubtitle(stats.nights, stats.venues, pages.length)}
           </p>
         </header>
 

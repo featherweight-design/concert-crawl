@@ -5,7 +5,7 @@ import type { CollectedVenue } from '@/lib/passport/booklet';
 const COPY = CONSUMER_COPY.passport;
 
 /** Five across still fits a 320px phone. */
-const TILE_SIZE = 48;
+const TILE_SIZE = 56;
 
 interface VenuesCollectedProps {
   venues: CollectedVenue[];
@@ -42,8 +42,11 @@ export function VenuesCollected({
               style={
                 venue.collected
                   ? undefined
-                  : { filter: 'grayscale(1)', opacity: 0.32 }
+                  : { filter: 'grayscale(1)', opacity: 0.28 }
               }
+              // 56px where the row has room; below 400px the five tiles step
+              // back to 48 so a 320px phone still fits them.
+              className="inline-flex max-[399px]:scale-[0.857]"
             >
               <VenueTile
                 slug={venue.slug}

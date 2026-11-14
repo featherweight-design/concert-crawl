@@ -2078,6 +2078,25 @@ export const CONSUMER_COPY = {
     // The card is the page. This line only says what it is made of, because a
     // subtitle that re-describes the card the reader is looking at is noise.
     pageSubtitle: 'Every night you marked yourself going to, stamped.',
+    // With stamps, the subtitle counts them (`passport_book`, `passport_book_m`):
+    // "11 nights, 8 venues, three pages so far." Pages read as words to ten.
+    statsSubtitle: (nights: number, venues: number, pages: number): string => {
+      const words = [
+        'zero',
+        'one',
+        'two',
+        'three',
+        'four',
+        'five',
+        'six',
+        'seven',
+        'eight',
+        'nine',
+        'ten',
+      ];
+      const pageCount = words[pages] ?? String(pages);
+      return `${nights} ${nights === 1 ? 'night' : 'nights'}, ${venues} ${venues === 1 ? 'venue' : 'venues'}, ${pageCount} ${pages === 1 ? 'page' : 'pages'} so far.`;
+    },
     // Upcoming shows and no stamps yet (addendum 4 item 8, `passport-next-d`
     // and `passport-next-m`). The board's draft wording; `date` is "Feb 22".
     firstStampSubtitle: (date: string) =>
@@ -2113,7 +2132,7 @@ export const CONSUMER_COPY = {
     swipeForPage: (page: number): string => `Swipe for page ${page}`,
     /** The last page on a phone. The nights are the whole booklet's. */
     pageNightsSoFar: (page: number, nights: number): string =>
-      `Page ${page} · ${nights} ${nights === 1 ? 'night' : 'nights'} so far`,
+      `Page ${page} · ${nights} ${nights === 1 ? 'night' : 'nights'}`,
     jumpTo: 'Jump to',
     // Jump to buttons read `ID · 1` and `2 · 3`; these are what they announce.
     jumpIdentity: 'Identity page',
