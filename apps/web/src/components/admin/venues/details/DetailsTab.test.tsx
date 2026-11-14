@@ -867,7 +867,8 @@ describe('DetailsTab', () => {
     expect(hero.style.width).toBe('56px');
     expect(hero.style.borderRadius).toBe('12px');
     expect(screen.queryByTestId('details-look-hero-bar')).not.toBeNull();
-    expect(screen.queryByTestId('details-look-rule')).not.toBeNull();
+    // One rule after each of Icon and Hero setting, before Short name.
+    expect(screen.queryAllByTestId('details-look-rule')).toHaveLength(2);
   });
 
   it('draws the Look card as details-m on phone: 48px, radius 12, 14px titles, no rule, no hero bar', () => {
