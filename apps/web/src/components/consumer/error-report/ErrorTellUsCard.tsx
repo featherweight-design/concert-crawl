@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { useAuth } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -90,15 +89,15 @@ const QUIET_BUTTON: CSSProperties = {
 /**
  * The Tell us card under the error (12-error-page, signed in): asks what you
  * were doing with one tap, an optional note, and lists what it attaches. It
- * files the report through the same authenticated `/v1/feedback` the old
- * "Tell us what happened" form used. A failed send is kept on the device and
+ * files the report through the same-origin `/api/error-report`, which forwards
+ * it to the `/v1/feedback` the old "Tell us what happened" form used, so the
+ * card itself needs no Clerk hook. A failed send is kept on the device and
  * sent the next time the app opens.
  */
 export const ErrorTellUsCard = ({
   digest,
   sentryEventId,
 }: ErrorTellUsCardProps) => {
-  const { getToken } = useAuth();
   const pathname = usePathname() ?? '';
   const [state, setState] = useState<CardState>('prompt');
   const [doing, setDoing] = useState<string | null>(null);
@@ -136,9 +135,11 @@ export const ErrorTellUsCard = ({
     const draft = { doing, note, digest, sentryEventId, page };
     setState('sending');
     try {
-      const token = await getToken();
-      if (!token) throw new Error('signed out');
-      await sendErrorReport(token, draft, navigator.userAgent);
+      // TODO(U4 PR 2): branch on `classifyReportFailure` in the catch below —
+      // refused gets its own state and is not saved, signed-out switches the
+      // page's layout. Until then every failure takes the failed path, as
+      // before; the flush drops a saved report that is not transient.
+      await sendErrorReport(draft, navigator.userAgent);
       clearPendingReport();
       setState('sent');
     } catch (err) {

@@ -15,10 +15,9 @@ import { loadPendingReport } from './lib/pending-report';
 const copy = CONSUMER_COPY.errorReport.card;
 
 const sendErrorReport = vi.hoisted(() => vi.fn());
+// No Clerk mock: the card posts same-origin and must not need a ClerkProvider,
+// since `global-error` renders without one.
 vi.mock('./lib/send-report', () => ({ sendErrorReport }));
-vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: async () => 'token' }),
-}));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/venues/bluebird-theater?tab=x',
 }));
@@ -86,7 +85,6 @@ describe('ErrorTellUsCard', () => {
       await screen.findByRole('heading', { name: copy.sentHeading }),
     ).toBeTruthy();
     expect(sendErrorReport).toHaveBeenCalledWith(
-      'token',
       {
         doing: 'Opening a show',
         note: 'Tapped Get tickets.',

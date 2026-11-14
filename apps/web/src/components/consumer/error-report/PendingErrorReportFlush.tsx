@@ -10,14 +10,16 @@ import { flushPendingReport } from './lib/pending-report';
  * time the app opens signed in. Renders nothing.
  */
 export const PendingErrorReportFlush = () => {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const tried = useRef(false);
 
+  // Waits for a confirmed sign-in so a stored report is not spent on a 401
+  // while Clerk is still loading (a 401 drops it).
   useEffect(() => {
     if (!isLoaded || isSignedIn !== true || tried.current) return;
     tried.current = true;
-    void flushPendingReport(() => getToken(), navigator.userAgent);
-  }, [isLoaded, isSignedIn, getToken]);
+    void flushPendingReport(navigator.userAgent);
+  }, [isLoaded, isSignedIn]);
 
   return null;
 };

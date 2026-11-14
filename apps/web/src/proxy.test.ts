@@ -389,6 +389,34 @@ describe('proxy — auth gate (#841)', () => {
     expect(auth.protect).toHaveBeenCalled();
   });
 
+  it('lets a signed-out error report through so the route can answer 401 itself', async () => {
+    const { middlewareHandler } = await import('./proxy');
+
+    // Gated, a lost session 307s the POST to /sign-in, fetch follows it to a
+    // 200 HTML page, and the report reads as sent. The route checks the
+    // session and answers 401 JSON instead.
+    const req = new NextRequest('http://localhost/api/error-report', {
+      method: 'POST',
+    });
+    const auth = makeAuth(null);
+    const result = await middlewareHandler(auth, req);
+
+    expect(result).toBeUndefined();
+    expect(auth.protect).not.toHaveBeenCalled();
+  });
+
+  it('does not make paths under /api/error-report public', async () => {
+    const { middlewareHandler } = await import('./proxy');
+
+    // Exact path: a future /api/error-report/* handler stays gated by default.
+    const req = new NextRequest('http://localhost/api/error-report/all', {
+      method: 'POST',
+    });
+    const auth = makeAuth(null);
+    await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized');
+    expect(auth.protect).toHaveBeenCalled();
+  });
+
   it('lets a signed-out visitor reach the offline fallback', async () => {
     const { middlewareHandler } = await import('./proxy');
 

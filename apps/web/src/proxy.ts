@@ -47,6 +47,12 @@ const isAlwaysPublic = createRouteMatcher([
   // when that is unset — Clerk was simply the wrong gate for a non-browser
   // caller. Exact path, not a prefix.
   '/api/revalidate',
+  // The error page's Tell us send. Behind `auth.protect`, a lost session 307s
+  // this POST to /sign-in, the browser's fetch follows it to a 200 HTML page,
+  // and the report reads as sent. The route checks the session itself and
+  // answers 401 JSON, which switches the page to its signed-out layout. Exact
+  // path, not a prefix.
+  '/api/error-report',
   '/legal(.*)',
   // Every crawl request we send advertises `+https://concertcrawl.app/bot`, so
   // this page has to resolve for a venue's sysadmin who has no account and never
