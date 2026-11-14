@@ -1,9 +1,6 @@
 import { z } from 'zod';
-import type {
-  CrawlRunReason,
-  CrawlStatus,
-  NeedsYouKind,
-} from '@concert-crawl/types';
+import { CRAWL_RUN_REASONS } from '@concert-crawl/types';
+import type { CrawlStatus, NeedsYouKind } from '@concert-crawl/types';
 
 /**
  * The boundary checks on the Overview's three fetches. Each keeps only the
@@ -20,19 +17,7 @@ export const RUN_STATUSES = [
   'skipped',
 ] as const satisfies readonly CrawlStatus[];
 
-export const RUN_REASONS = [
-  'page_unchanged',
-  'crawl_paused',
-  'robots_unreachable',
-  'robots_disallowed',
-  'robots_crawl_delay',
-  'timeout',
-  'blocked_http',
-  'no_events_found',
-  'calendar_not_found',
-  'llm_account',
-  'error',
-] as const satisfies readonly CrawlRunReason[];
+export const RUN_REASONS = CRAWL_RUN_REASONS;
 
 const NEEDS_YOU_KINDS = [
   'show-dropped',

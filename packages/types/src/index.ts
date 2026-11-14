@@ -529,19 +529,23 @@ export interface VenueRobotsStatus {
 }
 
 // Why a run produced nothing. NULL on a success row, and on every row from
-// before reasons were recorded. Mirrors the `crawl_run_reason` DB enum.
-export type CrawlRunReason =
-  | 'page_unchanged'
-  | 'crawl_paused'
-  | 'robots_unreachable'
-  | 'robots_disallowed'
-  | 'robots_crawl_delay'
-  | 'timeout'
-  | 'blocked_http'
-  | 'no_events_found'
-  | 'calendar_not_found'
-  | 'llm_account'
-  | 'error';
+// before reasons were recorded. Mirrors the `crawl_run_reason` DB enum. The
+// list is runtime too, so API and web can validate without importing the DB
+// package (which API tests mock).
+export const CRAWL_RUN_REASONS = [
+  'page_unchanged',
+  'crawl_paused',
+  'robots_unreachable',
+  'robots_disallowed',
+  'robots_crawl_delay',
+  'timeout',
+  'blocked_http',
+  'no_events_found',
+  'calendar_not_found',
+  'llm_account',
+  'error',
+] as const;
+export type CrawlRunReason = (typeof CRAWL_RUN_REASONS)[number];
 
 // One page a crawl run fetched: metadata only, never the body.
 export interface CrawlRunPage {
