@@ -351,7 +351,7 @@ describe('AdminDisputePanel', () => {
     expect(body).toEqual({ reason: 'need to ask the submitter…' });
   });
 
-  it('navigates to /admin/review?tab=contests after a successful resolve', async () => {
+  it('navigates to /admin/needs-you after a successful resolve', async () => {
     mockApiGet.mockResolvedValue(buildContest());
     mockApiPost.mockResolvedValue({ success: true });
     renderWithClient(<AdminDisputePanel contestId="c1" />);
@@ -363,11 +363,11 @@ describe('AdminDisputePanel', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Keep original' }));
     await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith('/admin/review?tab=contests');
+      expect(mockRouterPush).toHaveBeenCalledWith('/admin/needs-you');
     });
   });
 
-  it('navigates to /admin/review?tab=contests after a successful defer', async () => {
+  it('navigates to /admin/needs-you after a successful defer', async () => {
     mockApiGet.mockResolvedValue(buildContest());
     mockApiPost.mockResolvedValue({ success: true });
     renderWithClient(<AdminDisputePanel contestId="c1" />);
@@ -379,7 +379,7 @@ describe('AdminDisputePanel', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Need more info' }));
     await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith('/admin/review?tab=contests');
+      expect(mockRouterPush).toHaveBeenCalledWith('/admin/needs-you');
     });
   });
 
