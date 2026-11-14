@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { PHONE_SHELL_CLASS } from '@/components/consumer/app-shell/phone-shell';
+import {
+  PHONE_COLUMN_CLASS,
+  PHONE_SHELL_CLASS,
+} from '@/components/consumer/app-shell/phone-shell';
 
 // layout.tsx loads its fonts via next/font/google, which isn't available in
 // the vitest environment; stub it so the module's viewport export imports.
@@ -65,6 +68,16 @@ describe('mobile viewport shell', () => {
     const source = readFileSync(resolve(__dirname, file), 'utf8');
     expect(source).not.toMatch(/min-h-screen|\bh-screen\b|\b100[sl]?vh\b/);
     expect(source).toMatch(/min-h-dvh|\b100dvh\b/);
+  });
+
+  // Tablet option A: from 640 the phone column stops at 640 and centres; the
+  // desktop containers take over at 1024.
+  it('caps the phone column at 640, centred, until the desktop line', () => {
+    const column = tokens(PHONE_COLUMN_CLASS);
+    expect(column).toContain('mx-auto');
+    expect(column).toContain('max-w-[640px]');
+    expect(column).toContain('lg:max-w-none');
+    expect(column).toContain('flex-1');
   });
 
   it('pads the phone shell for every live inset', () => {
