@@ -1,0 +1,56 @@
+{
+  "feature": "Admin 4b-2 part b: Event edit Status card, Postponed and Hide",
+  "note": "Plan row 4b-2, part b (docs/superpowers/plans/2026-11-13-admin-4b-events-ui.md). CONTACT_SHEET_ROLE=admin. Read-only: opens the dialogs, never presses a confirm. Boards: 06-events-artists-prices/event-edit (Status card), event-edit-mobile, event-menu; addendum-3 10-needs-you-panels/postponed-d, postponed-m; 04-venues/hide-from-site. Scratch Neon fixture: Violet Grohl (upcoming). By hand: a save failing inside each dialog (stop the API, then confirm), the delisted read-only text (needs a delisted fixture), and showing a hidden show again.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "status",
+      "label": "Status card: pills (Cancelled held), Hide from site toggle",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 2500 },
+        { "click": "[data-testid=\"status-pill-soldout\"]" },
+        { "settle": 400 }
+      ]
+    },
+    {
+      "id": "postponed",
+      "label": "Postponed: dialog on desktop, sheet on the phone; New date held",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 2500 },
+        { "click": "[data-testid=\"status-pill-postponed\"]" },
+        { "wait": "[role=\"dialog\"]", "settle": 500 }
+      ]
+    },
+    {
+      "id": "hide",
+      "label": "Hide from site: the 04/hide-from-site dialog, without the Why row",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 2500 },
+        { "click": "[data-testid=\"event-edit-status\"] [role=\"switch\"]" },
+        { "wait": "[role=\"dialog\"]", "settle": 500 }
+      ]
+    }
+  ]
+}
