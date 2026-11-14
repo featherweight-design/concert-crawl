@@ -142,6 +142,9 @@ const PanelBody = ({
   </>
 );
 
+/** The docked panel's width on the Needs you boards (`02/needs-you-desktop`). */
+export const DOCKED_PANEL_WIDTH = 440;
+
 const panelStyle = (width: number): React.CSSProperties => ({
   width,
   maxWidth: '100%',
@@ -207,6 +210,7 @@ const OverlayPanel = ({
  */
 export const SidePanel = (props: SidePanelProps) => {
   const titleId = useId();
+  const content = useContentBox();
   if (!props.inline) return <OverlayPanel {...props} />;
   return (
     <aside
@@ -215,14 +219,17 @@ export const SidePanel = (props: SidePanelProps) => {
         : { 'aria-labelledby': titleId })}
       data-testid="side-panel"
       style={{
-        ...panelStyle(props.width ?? 460),
-        // Docked beside a long list: it stays in view however far down the
-        // selected card is (the page scrolls under the 56px topbar), and
-        // scrolls on its own when taller than the screen.
-        position: 'sticky',
-        top: 0,
-        alignSelf: 'flex-start',
-        maxHeight: 'calc(100dvh - 56px)',
+        ...panelStyle(props.width ?? DOCKED_PANEL_WIDTH),
+        // `02/needs-you-desktop`: docked flush to the right edge, the full
+        // height under the topbar, with the list keeping `right: 440`. Fixed to
+        // the content area's top (the page scrolls under it), and it scrolls
+        // on its own when taller than the screen.
+        position: 'fixed',
+        top: content.top,
+        right: 0,
+        bottom: 0,
+        zIndex: 40,
+        gap: 20,
         overflowY: 'auto',
       }}
     >

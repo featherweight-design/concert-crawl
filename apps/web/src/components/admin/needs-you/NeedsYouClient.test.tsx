@@ -629,6 +629,46 @@ describe('NeedsYouClient', () => {
     );
   });
 
+  // `02/needs-you-desktop`: a borderless card, radius 12, padding 12/14, the
+  // title 14.5/700 on one line with an ellipsis; the summary 13.5.
+  it('draws the desktop card light and the title on one line', async () => {
+    render(<NeedsYouClient item={null} />);
+    const card = (await screen.findAllByTestId('needs-you-item'))[0]!;
+    expect(card.style.borderRadius).toBe('12px');
+    expect(card.style.padding).toBe('12px 14px');
+    expect(card.style.border).toContain('transparent');
+    const title = card.querySelector('h2')!;
+    expect(title.style.fontSize).toBe('14.5px');
+    expect(title.style.fontWeight).toBe('700');
+    expect(title.style.whiteSpace).toBe('nowrap');
+    expect(title.style.textOverflow).toBe('ellipsis');
+    expect(
+      document.querySelector<HTMLElement>('header p')!.style.fontSize,
+    ).toBe('13.5px');
+  });
+
+  // `02/needs-you-mobile`: radius 14, padding 14, a hairline border, the title
+  // 15/700 wrapping at 1.3, the summary 12.5.
+  it('draws the phone card as the mobile board does', async () => {
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    render(<NeedsYouClient item={null} />);
+    const card = (await screen.findAllByTestId('needs-you-item'))[0]!;
+    expect(card.style.borderRadius).toBe('14px');
+    expect(card.style.padding).toBe('14px');
+    expect(card.style.border).not.toContain('transparent');
+    const title = card.querySelector('h2')!;
+    expect(title.style.fontSize).toBe('15px');
+    expect(title.style.lineHeight).toBe('1.3');
+    expect(title.style.whiteSpace).toBe('');
+    expect(
+      document.querySelector<HTMLElement>('header p')!.style.fontSize,
+    ).toBe('12.5px');
+  });
+
   it('draws the loaded title 28/800 at -0.02em', async () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');

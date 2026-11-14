@@ -20,6 +20,7 @@ export const EmptyState = ({
 }) => (
   <StateMessage
     testId="empty-state"
+    empty
     role="status"
     icon={icon}
     tone="var(--signal)"

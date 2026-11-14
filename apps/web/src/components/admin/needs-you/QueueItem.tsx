@@ -66,10 +66,17 @@ export const QueueItem = ({
       onClick={onSelect}
       style={{
         cursor: 'pointer',
-        padding: isPhone ? 18 : '14px 16px',
-        borderRadius: isPhone ? 20 : 14,
+        // `needs-you-desktop`: a borderless card, radius 12, padding 12/14,
+        // gap 7. `needs-you-mobile`: a hairline border, radius 14, padding 14.
+        // The desktop border stays 1px but transparent so the selected ring
+        // does not move the card.
+        padding: isPhone ? 14 : '12px 14px',
+        borderRadius: isPhone ? 14 : 12,
         background: 'var(--surface-1)',
-        border: selected ? '1px solid transparent' : '1px solid var(--border)',
+        border:
+          selected || !isPhone
+            ? '1px solid transparent'
+            : '1px solid var(--border)',
         ...(selected
           ? {
               background:
@@ -79,7 +86,7 @@ export const QueueItem = ({
         opacity: busy ? 0.6 : 1,
         display: 'flex',
         flexDirection: 'column',
-        gap: isPhone ? 10 : 6,
+        gap: 7,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -87,7 +94,7 @@ export const QueueItem = ({
         {when && (
           <span
             style={{
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 600,
               color: when.soon ? 'var(--accent)' : 'var(--fg-muted)',
             }}
@@ -98,7 +105,7 @@ export const QueueItem = ({
         <span style={{ flex: 1 }} />
         <span
           style={{
-            fontSize: 12.5,
+            fontSize: isPhone ? 11.5 : 12,
             color: isUrgent(row.kind) ? 'var(--danger)' : 'var(--fg-subtle)',
           }}
         >
@@ -123,20 +130,38 @@ export const QueueItem = ({
       <h2
         style={{
           margin: 0,
-          fontSize: isPhone ? 20 : 16,
-          fontWeight: 800,
+          // Desktop: 14.5/700 on one line with an ellipsis. Phone: 15/700,
+          // wrapping, line height 1.3.
+          fontSize: isPhone ? 15 : 14.5,
+          fontWeight: 700,
+          lineHeight: isPhone ? 1.3 : undefined,
           letterSpacing: '-0.01em',
           color: 'var(--fg)',
+          ...(isPhone
+            ? {}
+            : {
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }),
         }}
       >
         {row.title}
       </h2>
       {meta && (
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}>
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-muted)' }}>
           {meta}
         </p>
       )}
-      <p style={{ margin: 0, fontSize: 14, color: 'var(--fg)' }}>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 13,
+          lineHeight: isPhone ? 1.45 : undefined,
+          color: 'var(--fg)',
+          opacity: 0.86,
+        }}
+      >
         {whatOf(row)}
       </p>
       <div
@@ -149,23 +174,26 @@ export const QueueItem = ({
             : undefined,
           flexWrap: 'wrap',
           alignItems: 'center',
-          gap: 8,
-          marginTop: 4,
+          gap: 6,
+          marginTop: 2,
         }}
       >
         {buttons.map((answer) => (
           <AdminButton
             key={answer.slug}
             variant="outline"
+            size={isPhone ? 'md' : 'sm'}
             disabled={busy}
             data-testid="needs-you-answer"
             data-slug={answer.slug}
             onClick={() => onAnswer(answer)}
-            style={
+            style={{
+              // 28h/12.5 on desktop, 36h/13 side by side on the phone.
+              ...(isPhone ? { height: 36, fontSize: 13 } : { fontSize: 12.5 }),
               // The board tints the lead answer cyan. Only the answer the API
               // suggests is tinted: its order is not a ranking, so the first
               // drawn is not implied to be a recommendation.
-              answer.suggested
+              ...(answer.suggested
                 ? {
                     color: 'var(--signal)',
                     background:
@@ -173,8 +201,8 @@ export const QueueItem = ({
                     borderColor:
                       'color-mix(in srgb, var(--signal) 40%, transparent)',
                   }
-                : undefined
-            }
+                : {}),
+            }}
           >
             {cardLabelOf(row, answer)}
           </AdminButton>
@@ -190,12 +218,18 @@ export const QueueItem = ({
             style={{
               ...MONO,
               gridColumn: isPhone ? '1 / -1' : undefined,
-              padding: '6px 8px',
+              // The third answer: a quiet 12.5/600 text button, 28h
+              // (30h centred on the phone).
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: isPhone ? 30 : 28,
+              padding: '0 8px',
               border: 'none',
               background: 'transparent',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 600,
               color: 'var(--fg-muted)',
             }}
@@ -214,9 +248,13 @@ export const QueueItem = ({
             style={{
               ...MONO,
               gridColumn: isPhone ? '1 / -1' : undefined,
-              padding: '6px 8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: isPhone ? 30 : 28,
+              padding: '0 8px',
               textAlign: 'center',
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 600,
               color: 'var(--fg-muted)',
               textDecoration: 'none',

@@ -66,4 +66,14 @@ describe('SidePanel', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByTestId('side-panel')).toBeInTheDocument();
   });
+
+  // `02/needs-you-desktop`: docked flush right, full height, 440 wide.
+  it('docks the inline panel flush to the right edge at 440 and full height', () => {
+    renderPanel({ inline: true });
+    const panel = screen.getByTestId('side-panel');
+    expect(panel.style.position).toBe('fixed');
+    expect(panel.style.right).toBe('0px');
+    expect(panel.style.bottom).toBe('0px');
+    expect(panel.style.width).toBe('440px');
+  });
 });
