@@ -346,7 +346,9 @@ describe('NeedsYouClient', () => {
   it('opens the first item on desktop, once, and leaves it shut after a close', async () => {
     render(<NeedsYouClient item={null} />);
     const panel = await screen.findByTestId('side-panel');
-    expect(panel).toHaveTextContent('Olive Jones w/ Zoe Stroupe');
+    expect(panel).toHaveTextContent(
+      'Olive Jones dropped off Globe Hall’s calendar',
+    );
     expect(replaceMock).toHaveBeenCalledWith(
       '/admin/needs-you?item=show-dropped%3Ae1',
       { scroll: false },
