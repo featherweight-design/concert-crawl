@@ -514,7 +514,7 @@ describe('EventEdit Status card', () => {
     expect(screen.getByTestId('status-past')).toHaveTextContent(
       `Sat Nov 14 · ${COPY.past.went(18)}`,
     );
-    expect(screen.getByText(COPY.past.noStatus)).toBeInTheDocument();
+    expect(screen.getByText(COPY.past.noStatus('played'))).toBeInTheDocument();
     // Hide from site still works on a past show.
     expect(
       screen.getByRole('switch', { name: COPY.status.hide }),
@@ -592,6 +592,92 @@ describe('EventEdit past show (B+ addendum 6 item 36)', () => {
     expect(
       screen.getByRole('button', { name: COPY.saveBar.discard }),
     ).toBeInTheDocument();
+  });
+
+  it('words a past cancelled show as in the past, not played', () => {
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'cancelled' }}
+        today="2026-11-20"
+      />,
+    );
+    expect(screen.getByTestId('event-edit-banner')).toHaveTextContent(
+      COPY.past.bannerNotPlayed,
+    );
+    expect(
+      screen.getByText(COPY.past.noStatus('cancelled')),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(COPY.past.banner)).toBeNull();
+    expect(screen.queryByText(COPY.past.noStatus('played'))).toBeNull();
+  });
+
+  it('words a past delisted show as in the past, not played', () => {
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'delisted' }}
+        today="2026-11-20"
+      />,
+    );
+    expect(screen.getByTestId('event-edit-banner')).toHaveTextContent(
+      COPY.past.bannerNotPlayed,
+    );
+    expect(
+      screen.getByText(COPY.past.noStatus('delisted')),
+    ).toBeInTheDocument();
+    // A past show never offers Listed again: the pills are gone.
+    expect(screen.queryByTestId('listed-again')).toBeNull();
+  });
+
+  it('holds a passed postponed show’s sale pills until it has a new date', async () => {
+    patch.mockResolvedValue({});
+    post.mockResolvedValue({});
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'postponed', isSoldOut: true }}
+        today="2026-11-20"
+      />,
+    );
+    const available = screen.getByTestId('status-pill-available');
+    const soldout = screen.getByTestId('status-pill-soldout');
+    expect(available).toHaveAttribute('aria-disabled', 'true');
+    expect(soldout).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(available);
+    fireEvent.click(soldout);
+    // Nothing drafted: no Save, no status write, no sold-out call.
+    expect(screen.getByTestId('event-edit-save')).toBeDisabled();
+    // A title fix saves alone, with no status and no sale endpoint.
+    fireEvent.change(titleInput(), { target: { value: 'Other' } });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        title: 'Other',
+      }),
+    );
+    expect(post).not.toHaveBeenCalled();
+    // A new date frees them.
+    fireEvent.click(screen.getByLabelText(COPY.passed.newDate));
+    fireEvent.click(screen.getByRole('button', { name: 'Fri, Nov 27, 2026' }));
+    expect(screen.getByTestId('status-pill-available')).not.toHaveAttribute(
+      'aria-disabled',
+    );
+  });
+
+  it('never sends a sale write on a played show', async () => {
+    patch.mockResolvedValue({});
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'played', isSoldOut: true }}
+        today="2026-11-20"
+      />,
+    );
+    fireEvent.change(titleInput(), { target: { value: 'Other' } });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        title: 'Other',
+      }),
+    );
+    expect(post).not.toHaveBeenCalled();
   });
 
   it('keeps a passed postponed show on the upcoming editor, asking for its new date', async () => {

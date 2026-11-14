@@ -1,0 +1,45 @@
+{
+  "feature": "Admin Event edit · past-show corrections and the postponed show whose date passed (B+ addendum 6 item 36, addendum 5 §4)",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: design/design_handoff_bplus_redesign/addendum-6/boards/36-past-shows/past-show-m, postponed-passed-d (PR #590's branch until merged) and addendum-5 04/past-show-d. Never saves. Played past show: Campground (d37fd885). Postponed past its date: scratch 'strongboi' (efa3498d). The edited row types a title correction to show the Save bar; nothing is sent.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 1800, "touch": true },
+    { "label": "phone", "width": 390, "height": 1800, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 1100 }
+  ],
+  "rows": [
+    {
+      "id": "past-show",
+      "label": "Past show, read state with the banner",
+      "steps": [
+        {
+          "goto": "/admin/events/d37fd885-5e1b-4965-97ff-5ce700e8710d",
+          "wait": "[data-testid=\"event-edit-header\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "past-show-edited",
+      "label": "Past show, a title correction typed (Save bar)",
+      "steps": [
+        {
+          "goto": "/admin/events/d37fd885-5e1b-4965-97ff-5ce700e8710d",
+          "wait": "#event-edit-title"
+        },
+        { "fill": "#event-edit-title", "text": "Campground (corrected)" },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "postponed-passed",
+      "label": "Postponed show whose date passed",
+      "steps": [
+        {
+          "goto": "/admin/events/efa3498d-d8ab-4b9d-9c4f-25e67517da9c",
+          "wait": "[data-testid=\"event-edit-header\"]",
+          "settle": 2500
+        }
+      ]
+    }
+  ]
+}
