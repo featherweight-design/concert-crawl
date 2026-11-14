@@ -109,7 +109,7 @@ Concert Crawl's emails redrawn in the B+ language: the invite, the weekly digest
 
 ## Questions for Hugh
 
-1. **Light by default, or dark everywhere like today?** Recommended: light inline with Electric in dark mode. Gmail's apps recolor dark emails on their own, and every client that strips styles still gets a finished light email. Dark everywhere looks more like the app in clients that leave it alone, but risks muddy results in Gmail.
-2. **Code in the subject line?** Recommended: no. It's faster to read from a notification, but it puts the code on lock screens; autofill reads it from the body anyway.
-3. **A mailing address in the digest footer.** CAN-SPAM asks for a physical postal address on commercial mail, and a weekly digest that sells tickets may count. Recommended: add Featherweight Design, LLC's mailing address (a PO box or registered agent address is fine) to the digest footer only. The boards show `{mailing address}` until you pick one.
-4. **Reply-to.** Recommended: the invite and the digest reply to a real inbox you read (beta testers reply with feedback); the code emails stay no-reply.
+1. **Light by default, or dark everywhere like today?** **DECIDED (Hugh, 2026-11-14): light by default, Electric in dark mode.** Recommended: light inline with Electric in dark mode. Gmail's apps recolor dark emails on their own, and every client that strips styles still gets a finished light email. Dark everywhere looks more like the app in clients that leave it alone, but risks muddy results in Gmail.
+2. **Code in the subject line?** **DECIDED (Hugh, 2026-11-14): no.** Recommended: no. It's faster to read from a notification, but it puts the code on lock screens; autofill reads it from the body anyway.
+3. **A mailing address in the digest footer.** **Open: Hugh is taking it to engineering.** CAN-SPAM asks for a physical postal address on commercial mail, and a weekly digest that sells tickets may count. Recommended: add Featherweight Design, LLC's mailing address (a PO box or registered agent address is fine) to the digest footer only. The boards show `{mailing address}` until you pick one.
+4. **Reply-to.** **Open: Hugh is taking it to engineering.** Recommended: the invite and the digest reply to a real inbox you read (beta testers reply with feedback); the code emails stay no-reply.
