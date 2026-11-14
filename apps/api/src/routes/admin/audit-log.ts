@@ -15,7 +15,7 @@ import {
 } from 'drizzle-orm';
 import { auditLog, db, userProfiles } from '@concert-crawl/db';
 import { AUDIT_AREAS, type AuditLogItem } from '@concert-crawl/types';
-import { validationHook } from '../../lib/validator.js';
+import { handleQuerySchema, validationHook } from '../../lib/validator.js';
 import {
   areaOfAction,
   prefixesOfAreas,
@@ -32,38 +32,45 @@ export const auditLogAdminRouter = new Hono<AdminVariables>();
 const SYSTEM_ACTOR_PREFIX = 'system:';
 const ADMIN_FALLBACK_ACTOR = 'an admin';
 
-// One admin, by the whole handle; a leading "@" is ignored. The same shape as
-// Prices' `handle` filter.
-const actorHandleSchema = z
-  .string()
-  .trim()
-  .transform((value) => value.replace(/^@/, ''))
-  .pipe(z.string().min(1).max(100))
-  .optional();
-
 // One or many pages: `?area=venues,people` or `?area=venues&area=people`.
-// Any name outside the closed list is a 400, never silently no filter.
+// Any name outside the closed list is a 400, never silently no filter; an
+// empty value (`?area=`, `?area=,`) is no filter. Repeats are collapsed, and
+// the closed enum bounds the list, so there is no separate max.
 const areaSchema = z
   .union([z.string(), z.array(z.string())])
-  .transform((value) =>
-    (Array.isArray(value) ? value : [value])
-      .flatMap((part) => part.split(','))
-      .map((part) => part.trim())
-      .filter((part) => part !== ''),
-  )
-  .pipe(z.array(z.enum(AUDIT_AREAS)).min(1).max(AUDIT_AREAS.length))
+  .transform((value) => {
+    const parts = [
+      ...new Set(
+        (Array.isArray(value) ? value : [value])
+          .flatMap((part) => part.split(','))
+          .map((part) => part.trim())
+          .filter((part) => part !== ''),
+      ),
+    ];
+    return parts.length === 0 ? undefined : parts;
+  })
+  .pipe(z.array(z.enum(AUDIT_AREAS)).optional())
   .optional();
 
-const querySchema = z.object({
-  actor: z.enum(['system', 'admin']).optional(),
-  actorHandle: actorHandleSchema,
-  area: areaSchema,
-  since: z.iso.datetime().optional(),
-  // Exclusive: `since` and `until` a day apart are that day's rows.
-  until: z.iso.datetime().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-  cursor: z.string().min(1).max(200).optional(),
-});
+const querySchema = z
+  .object({
+    actor: z.enum(['system', 'admin']).optional(),
+    // One admin, by the whole handle (the same filter as Prices' `handle`).
+    actorHandle: handleQuerySchema,
+    area: areaSchema,
+    since: z.iso.datetime().optional(),
+    // Exclusive: `since` and `until` a day apart are that day's rows.
+    until: z.iso.datetime().optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    cursor: z.string().min(1).max(200).optional(),
+  })
+  .refine(
+    ({ since, until }) =>
+      since === undefined ||
+      until === undefined ||
+      Date.parse(until) > Date.parse(since),
+    { path: ['until'], message: 'until must be after since' },
+  );
 
 // Keyset cursor over (created_at, id), both newest first. Postgres keeps
 // microseconds and a JS Date keeps milliseconds, so rows are ordered and

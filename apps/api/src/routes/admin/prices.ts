@@ -43,6 +43,7 @@ import { apiLogger } from '../../lib/logger.js';
 import { runBackgroundTask } from '../../lib/background-tasks.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
+import { handleQuerySchema } from '../../lib/validator.js';
 import { setSubmissionStatus } from './lib/price-submission-status.js';
 import { containsPattern } from '../../lib/escape-like.js';
 import { editSubmissionPrice } from './lib/price-edit.js';
@@ -380,13 +381,8 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
 // callers needing contest visibility must use the contests endpoint.
 // "This fan's other prices" (redesign 4d#12): one fan's prices, matched on the
 // whole handle. Not the free-text `search`, whose substring match on the handle
-// would make "al" also list alice, hal and sally. A leading "@" is ignored.
-const handleQuerySchema = z
-  .string()
-  .trim()
-  .transform((value) => value.replace(/^@/, ''))
-  .pipe(z.string().min(1).max(100))
-  .optional();
+// would make "al" also list alice, hal and sally. The shared
+// `handleQuerySchema` ignores a leading "@" and lowercases.
 
 const submissionsQuerySchema = z.object({
   count: z

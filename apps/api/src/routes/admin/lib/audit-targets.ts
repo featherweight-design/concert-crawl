@@ -10,6 +10,7 @@ import {
   venues,
 } from '@concert-crawl/db';
 import { FEATURE_FLAGS, isFeatureFlagKey } from '@concert-crawl/entitlements';
+import { createLogger } from '@concert-crawl/logger';
 import {
   AUDIT_AREAS,
   type AuditArea,
@@ -32,7 +33,7 @@ export const AUDIT_AREA_PREFIXES: Readonly<
   events: ['event'],
   artists: ['artist'],
   // A Price check (`contest.*`) is a tab of Prices.
-  prices: ['price', 'price_submission', 'contest'],
+  prices: ['price', 'contest'],
   // Invite codes are a tab of People.
   people: ['user', 'invite_code'],
   'feature-flags': ['feature_flag'],
@@ -97,7 +98,6 @@ const LOOKUP_BY_PREFIX: Readonly<Record<string, Lookup>> = {
   invite_code: 'invite-code',
   feature_flag: 'feature-flag',
   price: 'submission',
-  price_submission: 'submission',
   // A Price check's id is its parent submission's id.
   contest: 'contest',
 };
@@ -160,17 +160,53 @@ const uuidsFor = (refs: readonly TargetRef[], lookups: Lookup[]): string[] => [
   ),
 ];
 
+const logger = createLogger('admin:audit-log');
+
+type AuditTargetRow = { action: string; targetId: string | null };
+
 /**
  * Names and links each row's target, one query per kind of thing (never one
  * per row). Only what the admin pages already show is read: titles, names, a
  * code, a person's handle. A target whose row is gone resolves to null name
  * and href with its kind kept.
+ *
+ * Naming a target never fails the list: a lookup that errors is logged and
+ * its rows get `target: null` (unknown, not gone), and any other failure in
+ * here nulls every target.
  */
 export async function resolveAuditTargets(
-  rows: readonly { action: string; targetId: string | null }[],
+  rows: readonly AuditTargetRow[],
+): Promise<(AuditTarget | null)[]> {
+  try {
+    return await resolveTargets(rows);
+  } catch (err) {
+    logger.warn({ err }, 'audit-log target resolution failed');
+    return rows.map(() => null);
+  }
+}
+
+async function resolveTargets(
+  rows: readonly AuditTargetRow[],
 ): Promise<(AuditTarget | null)[]> {
   const refs = rows.map((row) => targetRefOf(row.action, row.targetId));
   const present = refs.filter((ref): ref is TargetRef => ref !== null);
+
+  // Lookups whose query errored: their rows degrade to `target: null`.
+  const failed = new Set<Lookup>();
+  const guarded = async <Row>(
+    lookups: readonly Lookup[],
+    ids: readonly string[],
+    run: () => Promise<Row[]>,
+  ): Promise<Row[]> => {
+    if (ids.length === 0) return [];
+    try {
+      return await run();
+    } catch (err) {
+      for (const lookup of lookups) failed.add(lookup);
+      logger.warn({ err, lookups }, 'audit-log target lookup failed');
+      return [];
+    }
+  };
 
   const eventIds = uuidsFor(present, ['event', 'price-event']);
   const reportIds = uuidsFor(present, ['event-report']);
@@ -193,54 +229,54 @@ export async function resolveAuditTargets(
     submissionRows,
     personRows,
   ] = await Promise.all([
-    eventIds.length === 0
-      ? []
-      : db
-          .select({ id: events.id, title: events.title })
-          .from(events)
-          .where(inArray(events.id, eventIds)),
-    reportIds.length === 0
-      ? []
-      : db
-          .select({
-            id: eventReports.id,
-            eventId: events.id,
-            title: events.title,
-          })
-          .from(eventReports)
-          .innerJoin(events, eq(events.id, eventReports.eventId))
-          .where(inArray(eventReports.id, reportIds)),
-    venueIds.length === 0
-      ? []
-      : db
-          .select({ id: venues.id, name: venues.name })
-          .from(venues)
-          .where(inArray(venues.id, venueIds)),
-    artistIds.length === 0
-      ? []
-      : db
-          .select({ id: artists.id, name: artists.name })
-          .from(artists)
-          .where(inArray(artists.id, artistIds)),
-    codeIds.length === 0
-      ? []
-      : db
-          .select({ id: inviteCodes.id, code: inviteCodes.code })
-          .from(inviteCodes)
-          .where(inArray(inviteCodes.id, codeIds)),
-    submissionIds.length === 0
-      ? []
-      : db
-          .select({ id: priceSubmissions.id, title: events.title })
-          .from(priceSubmissions)
-          .innerJoin(events, eq(events.id, priceSubmissions.eventId))
-          .where(inArray(priceSubmissions.id, submissionIds)),
-    personIds.length === 0
-      ? []
-      : db
-          .select({ userId: userProfiles.userId, handle: userProfiles.handle })
-          .from(userProfiles)
-          .where(inArray(userProfiles.userId, personIds)),
+    guarded(['event', 'price-event'], eventIds, () =>
+      db
+        .select({ id: events.id, title: events.title })
+        .from(events)
+        .where(inArray(events.id, eventIds)),
+    ),
+    guarded(['event-report'], reportIds, () =>
+      db
+        .select({
+          id: eventReports.id,
+          eventId: events.id,
+          title: events.title,
+        })
+        .from(eventReports)
+        .innerJoin(events, eq(events.id, eventReports.eventId))
+        .where(inArray(eventReports.id, reportIds)),
+    ),
+    guarded(['venue'], venueIds, () =>
+      db
+        .select({ id: venues.id, name: venues.name })
+        .from(venues)
+        .where(inArray(venues.id, venueIds)),
+    ),
+    guarded(['artist'], artistIds, () =>
+      db
+        .select({ id: artists.id, name: artists.name })
+        .from(artists)
+        .where(inArray(artists.id, artistIds)),
+    ),
+    guarded(['invite-code'], codeIds, () =>
+      db
+        .select({ id: inviteCodes.id, code: inviteCodes.code })
+        .from(inviteCodes)
+        .where(inArray(inviteCodes.id, codeIds)),
+    ),
+    guarded(['submission', 'contest'], submissionIds, () =>
+      db
+        .select({ id: priceSubmissions.id, title: events.title })
+        .from(priceSubmissions)
+        .innerJoin(events, eq(events.id, priceSubmissions.eventId))
+        .where(inArray(priceSubmissions.id, submissionIds)),
+    ),
+    guarded(['person'], personIds, () =>
+      db
+        .select({ userId: userProfiles.userId, handle: userProfiles.handle })
+        .from(userProfiles)
+        .where(inArray(userProfiles.userId, personIds)),
+    ),
   ]);
 
   const eventTitles = new Map(eventRows.map((row) => [row.id, row.title]));
@@ -320,7 +356,7 @@ export async function resolveAuditTargets(
   };
 
   return refs.map((ref) => {
-    if (ref === null) return null;
+    if (ref === null || failed.has(ref.lookup)) return null;
     const found = named(ref);
     return found === null
       ? { kind: ref.kind, name: null, href: null }
