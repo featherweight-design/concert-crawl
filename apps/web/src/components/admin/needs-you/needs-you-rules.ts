@@ -576,8 +576,17 @@ export const panelTitleOf = (row: QueueRow): string => {
         ? PANEL.artist.title(row.reportCount, row.title)
         : row.title;
     }
-    case 'event-low-confidence':
-      return PANEL.event.title(row.title);
+    case 'event-low-confidence': {
+      // The board quotes the show's own name ("The Purpose Progression"), not
+      // the whole listing title with the headliner in front of it.
+      const artist = row.eventFacts?.artist?.trim();
+      const prefix = artist ? `${artist}: ` : null;
+      return PANEL.event.title(
+        prefix && row.title.startsWith(prefix)
+          ? row.title.slice(prefix.length)
+          : row.title,
+      );
+    }
     case 'price-check': {
       const facts = row.priceFacts;
       const price = facts

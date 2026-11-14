@@ -76,7 +76,7 @@ export const EventPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
             style={{
               margin: 0,
               padding: '12px 14px',
-              borderRadius: 14,
+              borderRadius: 12,
               border: '1px solid var(--border)',
               background: 'var(--surface-1)',
               fontFamily: 'var(--font-mono, monospace)',
