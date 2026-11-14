@@ -53,6 +53,7 @@ const row = (over: Partial<PastShowRow> = {}): PastShowRow => ({
   venueSlug: 'gothic-theatre',
   date: '2026-11-07',
   dateLabel: 'Sat, Nov 7',
+  genre: null,
   attendingAt: null,
   ...over,
 });
@@ -113,6 +114,31 @@ describe('AddShowSheet', () => {
     expect(screen.getByText('Gothic Theatre')).toHaveClass('truncate');
     expect(screen.getByText(/Sat, Nov 7/)).toHaveClass('shrink-0');
     expect(screen.getAllByTestId('went-pill')).toHaveLength(1);
+  });
+
+  it("rings each row's art in its lead genre, and keeps a plain ring without one", () => {
+    usePastShows.mockReturnValue(
+      result({
+        data: {
+          pages: [
+            {
+              rows: [
+                row({ genre: 'Rock' }),
+                row({ eventId: 'ev2', artist: 'Plain', genre: null }),
+              ],
+              total: 2,
+              nextCursor: null,
+            },
+          ],
+        },
+      }),
+    );
+    setup();
+    const [ringed, plain] = screen.getAllByTestId('add-show-image-ring');
+    // A genre draws the ring and its glow; none draws the ring alone.
+    expect(ringed?.style.boxShadow).toContain('20px');
+    expect(plain?.style.boxShadow).not.toContain('20px');
+    expect(plain?.style.boxShadow).toContain('1.25px');
   });
 
   it('shows skeleton rows while the first page loads', () => {

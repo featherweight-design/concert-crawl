@@ -1731,6 +1731,7 @@ export interface PastShowRow {
   venueSlug: string;
   date: string; // YYYY-MM-DD
   dateLabel: string; // "Mon, Oct 20"
+  genre: string | null; // the lead genre, drives the art's ring
   attendingAt: string | null; // the caller's own stamp, null if not marked
 }
 
