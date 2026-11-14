@@ -455,6 +455,7 @@ export function PersonClient({ userId }: { userId: string }) {
           title={COPY.signOut.title(name)}
           body={COPY.signOut.body(name)}
           confirmLabel={COPY.signOut.confirm}
+          confirmIcon={MENU_ICONS.signOut}
           confirmVariant="gradient"
           buttonSize="large"
           pending={signingOut === 'busy'}

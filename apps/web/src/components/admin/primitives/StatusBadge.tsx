@@ -2,7 +2,11 @@ import { KIND_COLORS, type StatusKind } from './utils';
 
 interface StatusBadgeProps {
   kind?: StatusKind;
-  variant?: 'soft' | 'outline' | 'mono';
+  /**
+   * `filled` is the panel boards' chip: a 14% tint of the kind's colour, no
+   * ring, 12px, with a plain (unringed) dot.
+   */
+  variant?: 'soft' | 'outline' | 'mono' | 'filled';
   /**
    * Orthogonal mono-font flag. When true, applies mono-font sizing
    * regardless of variant — this lets a caller combine `variant="outline"`
@@ -40,6 +44,7 @@ export const StatusBadge = ({
   const colors = KIND_COLORS[kind];
   const isMono = variant === 'mono' || mono;
   const isOutline = variant === 'outline';
+  const isFilled = variant === 'filled';
 
   return (
     <span
@@ -49,9 +54,9 @@ export const StatusBadge = ({
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
-        padding: '2px 8px',
+        padding: isFilled ? '4px 10px' : '2px 8px',
         borderRadius: 999,
-        fontSize: 11,
+        fontSize: isFilled ? 12 : 11,
         fontWeight: 600,
         fontFamily: isMono
           ? "'JetBrains Mono', monospace"
@@ -59,8 +64,12 @@ export const StatusBadge = ({
         letterSpacing: isMono ? '0.04em' : '-0.005em',
         textTransform: isMono ? 'lowercase' : undefined,
         color: colors.fg,
-        background: isOutline ? 'transparent' : colors.bg,
-        border: `1px solid ${colors.border}`,
+        background: isFilled
+          ? `color-mix(in srgb, ${colors.fg} 14%, transparent)`
+          : isOutline
+            ? 'transparent'
+            : colors.bg,
+        border: isFilled ? 'none' : `1px solid ${colors.border}`,
         whiteSpace: 'nowrap',
         lineHeight: '16px',
       }}
@@ -73,7 +82,9 @@ export const StatusBadge = ({
             borderRadius: '50%',
             background: colors.fg,
             flexShrink: 0,
-            boxShadow: `0 0 0 3px color-mix(in oklab, ${colors.fg} 22%, transparent)`,
+            boxShadow: isFilled
+              ? undefined
+              : `0 0 0 3px color-mix(in oklab, ${colors.fg} 22%, transparent)`,
           }}
         />
       )}

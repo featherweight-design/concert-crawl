@@ -86,8 +86,8 @@ export const AdminDialog = ({
           width,
           maxWidth: '100%',
           background: 'var(--bg-elevated)',
-          borderTop: `3px solid ${accent}`,
-          border: `1px solid color-mix(in oklab, ${accent} 30%, transparent)`,
+          // The boards draw a plain card: no coloured top stripe, no tinted ring.
+          border: '1px solid var(--border-strong)',
           borderRadius: 14,
           overflow: 'hidden',
         }}
@@ -129,12 +129,11 @@ export const AdminDialog = ({
         </div>
         <div
           style={{
-            padding: '14px 24px',
-            borderTop: '1px solid var(--border)',
+            // No ruled footer band on the boards: the buttons sit on the card.
+            padding: '4px 24px 22px',
             display: 'flex',
             gap: 8,
             justifyContent: 'flex-end',
-            background: 'var(--surface-1)',
           }}
         >
           {footer}
