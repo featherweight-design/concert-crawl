@@ -431,6 +431,31 @@ export const DisputedPriceCard = ({
         currentVendor={vendor}
         currentTier={tier}
         onSuccess={handleSuccess}
+        // The success screen draws this same card with the viewer's own update
+        // as the pending one: anonymous, the real time, Withdraw in the footer
+        // (B9b slice two, a6 rulings 30-33).
+        renderPreview={(update, onWithdraw) => (
+          <DisputedPriceCard
+            floor={floor}
+            {...(ceiling != null ? { ceiling } : {})}
+            tier={tier}
+            vendor={vendor}
+            kind={kind}
+            submitter={submitter}
+            liveSubmittedAt={liveSubmittedAt}
+            confirmsCount={confirmsCount}
+            disputer={null}
+            disputeFloor={update.floor}
+            {...(update.ceiling != null
+              ? { disputeCeiling: update.ceiling }
+              : {})}
+            disputedAt={update.createdAt}
+            eventId={eventId}
+            disputedSubmissionId={disputedSubmissionId}
+            viewerAction="withdraw"
+            onWithdraw={onWithdraw}
+          />
+        )}
       />
     </>
   );

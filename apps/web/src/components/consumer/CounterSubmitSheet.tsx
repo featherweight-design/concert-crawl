@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { SPNumberField } from './SPNumberField';
 import { ChipGroup } from './ChipGroup';
-import { ArrowGlyph } from './glyphs';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { PriceRailMark } from '@/components/consumer/price-rail/PriceRailMark';
+import { displayVendor } from '@/components/consumer/vendor-display';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -29,6 +30,14 @@ const isValidHowFound = (value: string): value is HowFound =>
 
 type SheetState = 'form' | 'submitting' | 'success' | 'error';
 
+/** The update the viewer just filed, as the POST returns it. */
+export interface SubmittedUpdate {
+  id: string;
+  floor: number;
+  ceiling: number | undefined;
+  createdAt: string;
+}
+
 export interface CounterSubmitSheetProps {
   open: boolean;
   onClose: () => void;
@@ -40,10 +49,18 @@ export interface CounterSubmitSheetProps {
   /**
    * The checked price's tier, when the page knows it. A price update always
    * lands in the checked price's slot (the API copies its tier and vendor), so
-   * the sheet names that slot instead of asking for one.
+   * the sheet shows that slot locked instead of asking for one.
    */
   currentTier?: Tier | null;
   onSuccess?: () => void;
+  /**
+   * Draws the pending update on the success screen (the board's preview card).
+   * The page owns the card, so the sheet never imports it back.
+   */
+  renderPreview?: (
+    update: SubmittedUpdate,
+    onWithdraw: () => void,
+  ) => ReactNode;
 }
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
@@ -51,14 +68,9 @@ const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 interface FormErrors {
   floor?: string;
   ceiling?: string;
-  howFound?: string;
 }
 
-const validateForm = (
-  floor: string,
-  ceiling: string,
-  howFound: string | null,
-): FormErrors => {
+const validateForm = (floor: string, ceiling: string): FormErrors => {
   const errors: FormErrors = {};
   const floorNum = Number(floor);
 
@@ -77,9 +89,27 @@ const validateForm = (
     }
   }
 
-  if (!howFound) errors.howFound = 'Tell us how you found out.';
-
   return errors;
+};
+
+// The POST answers `{ success, data: row }`. Only what the preview needs is read.
+const readSubmitted = (body: unknown): SubmittedUpdate | null => {
+  if (typeof body !== 'object' || body === null || !('data' in body)) {
+    return null;
+  }
+  const row: unknown = body.data;
+  if (typeof row !== 'object' || row === null) return null;
+  if (!('id' in row) || typeof row.id !== 'string') return null;
+  if (!('priceMin' in row) || typeof row.priceMin !== 'number') return null;
+  const ceiling =
+    'priceMax' in row && typeof row.priceMax === 'number'
+      ? row.priceMax
+      : undefined;
+  const createdAt =
+    'createdAt' in row && typeof row.createdAt === 'string'
+      ? row.createdAt
+      : new Date().toISOString();
+  return { id: row.id, floor: row.priceMin, ceiling, createdAt };
 };
 
 export function CounterSubmitSheet({
@@ -92,6 +122,7 @@ export function CounterSubmitSheet({
   currentVendor,
   currentTier = null,
   onSuccess,
+  renderPreview,
 }: CounterSubmitSheetProps) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
@@ -101,19 +132,16 @@ export function CounterSubmitSheet({
   const [ceiling, setCeiling] = useState('');
   const [howFound, setHowFound] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+  const [submitted, setSubmitted] = useState<SubmittedUpdate | null>(null);
 
-  const subtitle =
+  const priceText =
     currentCeiling != null
-      ? copy.subtitleWithRange(
-          currentFloor,
-          currentCeiling,
-          currentTier,
-          currentVendor,
-        )
-      : copy.subtitleFloorOnly(currentFloor, currentTier, currentVendor);
+      ? `$${currentFloor}–$${currentCeiling}`
+      : `$${currentFloor}`;
+  const vendorName = displayVendor(currentVendor);
 
   const handleSubmit = useCallback(async () => {
-    const errors = validateForm(floor, ceiling, howFound);
+    const errors = validateForm(floor, ceiling);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -152,6 +180,7 @@ export function CounterSubmitSheet({
             'Submission failed',
         );
       }
+      setSubmitted(readSubmitted(await res.json().catch(() => null)));
       router.refresh();
       setSheetState('success');
     } catch (err) {
@@ -184,96 +213,68 @@ export function CounterSubmitSheet({
     setCeiling('');
     setHowFound(null);
     setFieldErrors({});
+    setSubmitted(null);
     onClose();
   }, [onClose]);
 
+  // Withdrawing from the success screen deletes the update just filed and
+  // closes the sheet (a6 ruling 33).
+  const handleWithdraw = useCallback(() => {
+    if (!submitted) return;
+    void (async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const res = await fetch(`${API_URL}/v1/submissions/${submitted.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          console.error('CounterSubmitSheet: withdraw failed', res.status);
+          return;
+        }
+        router.refresh();
+        handleClose();
+      } catch (err) {
+        console.error('CounterSubmitSheet: withdraw failed', err);
+      }
+    })();
+  }, [submitted, getToken, router, handleClose]);
+
+  const canSubmit = howFound !== null && sheetState === 'form';
+
   const headerNode = (
-    <>
-      <p
-        style={{
-          margin: 0,
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9,
-          fontWeight: 700,
-          color: 'var(--fg-subtle)',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {copy.eyebrow}
-      </p>
-      <p
-        style={{
-          margin: '4px 0 0',
-          fontFamily: 'var(--font-ui)',
-          fontSize: 24,
-          fontWeight: 900,
-          color: 'var(--fg)',
-          letterSpacing: '-0.025em',
-          lineHeight: 1.15,
-        }}
-      >
-        {copy.heading}
-      </p>
-      <p
-        style={{
-          margin: '6px 0 0',
-          fontFamily: 'var(--font-ui)',
-          fontSize: 13.5,
-          color: 'var(--fg-muted)',
-          lineHeight: 1.5,
-        }}
-      >
-        {subtitle}
-      </p>
-    </>
+    <SheetHeader
+      state={sheetState}
+      priceText={priceText}
+      vendorName={vendorName}
+      onClose={handleClose}
+    />
   );
 
   const footerNode =
     sheetState === 'form' || sheetState === 'submitting' ? (
       <>
-        <button
-          type="button"
+        <GradientButton
           onClick={handleSubmit}
-          disabled={sheetState === 'submitting'}
-          style={{
-            all: 'unset',
-            cursor: sheetState === 'submitting' ? 'not-allowed' : 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            height: 48,
-            width: '100%',
-            boxSizing: 'border-box',
-            background: 'var(--signal)',
-            color: 'var(--fg-on-accent)',
-            borderRadius: 10,
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 800,
-            fontSize: 14.5,
-            letterSpacing: '-0.005em',
-            opacity: sheetState === 'submitting' ? 0.45 : 1,
-            transition: 'opacity .12s',
-          }}
+          disabled={!canSubmit}
+          busy={sheetState === 'submitting'}
         >
-          <ArrowGlyph size={13} />
           {sheetState === 'submitting'
             ? copy.submittingButton
             : copy.submitButton}
-        </button>
+        </GradientButton>
         <p
           style={{
-            marginTop: '10px',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '9px',
+            margin: '10px 0 0',
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12,
             color: 'var(--fg-subtle)',
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
+            lineHeight: 1.45,
             textAlign: 'center',
           }}
         >
-          {copy.footerDisclaimer}
+          {copy.honestyFootnote}
         </p>
       </>
     ) : undefined;
@@ -301,11 +302,22 @@ export function CounterSubmitSheet({
       open={open}
       onClose={handleClose}
       ariaLabel={copy.heading}
-      sheetHeight="tall"
+      sheetHeight={
+        sheetState === 'form' || sheetState === 'submitting' ? 'tall' : 'fit'
+      }
       header={headerNode}
       footer={footerNode}
     >
-      {sheetState === 'success' && <SuccessState onClose={handleSuccess} />}
+      {sheetState === 'success' && (
+        <SuccessState
+          onClose={handleSuccess}
+          preview={
+            submitted && renderPreview
+              ? renderPreview(submitted, handleWithdraw)
+              : null
+          }
+        />
+      )}
 
       {sheetState === 'error' && (
         <ErrorState onReset={handleReset} onClose={handleClose} />
@@ -316,77 +328,66 @@ export function CounterSubmitSheet({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 20,
+            gap: 16,
             opacity: sheetState === 'submitting' ? 0.6 : 1,
             pointerEvents: sheetState === 'submitting' ? 'none' : 'auto',
           }}
         >
-          {/* Price fields */}
+          {/* The checked price's slot, locked: the two numbers must compare. */}
           <div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 12,
-              }}
-            >
-              <SPNumberField
-                id="counter-floor"
-                label={copy.floorLabel}
-                value={floor}
-                onChange={setFloor}
-                placeholder={copy.floorPlaceholder}
-                required
-                error={fieldErrors.floor}
-              />
-              <SPNumberField
-                id="counter-ceiling"
-                label={copy.ceilingLabel}
-                value={ceiling}
-                onChange={setCeiling}
-                placeholder={copy.ceilingPlaceholder}
-                error={fieldErrors.ceiling}
-              />
+            <div style={{ display: 'flex', gap: 10 }}>
+              {currentTier !== null && (
+                <LockedField label={copy.tierLabel} value={currentTier} />
+              )}
+              <LockedField label={copy.vendorLabel} value={vendorName} />
             </div>
             <p
               style={{
-                fontFamily: 'Inter, system-ui',
-                fontSize: '11.5px',
+                margin: '6px 0 0',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 12,
                 color: 'var(--fg-subtle)',
                 lineHeight: 1.4,
-                margin: '8px 0 0',
               }}
             >
-              {copy.ceilingHint}
+              {copy.lockedNote}
             </p>
           </div>
 
-          {/* How found chips */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 12,
+            }}
+          >
+            <SPNumberField
+              id="counter-floor"
+              look="board"
+              label={copy.floorLabel}
+              value={floor}
+              onChange={setFloor}
+              placeholder={copy.floorPlaceholder}
+              required
+              error={fieldErrors.floor}
+            />
+            <SPNumberField
+              id="counter-ceiling"
+              look="board"
+              label={copy.ceilingLabel}
+              value={ceiling}
+              onChange={setCeiling}
+              placeholder={copy.ceilingPlaceholder}
+              error={fieldErrors.ceiling}
+            />
+          </div>
+
           <ChipGroup
             label={copy.howFoundLabel}
             options={HOW_FOUND_OPTIONS}
             value={howFound}
             onChange={setHowFound}
-            error={fieldErrors.howFound}
           />
-
-          {/* Honesty disclaimer */}
-          <div
-            style={{
-              borderRadius: 10,
-              border: '1px solid var(--border)',
-              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
-              padding: '10px 12px',
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 9,
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.04em',
-              lineHeight: 1.6,
-              textTransform: 'uppercase' as const,
-            }}
-          >
-            {copy.honestyFootnote}
-          </div>
         </div>
       )}
     </ModalShell>
@@ -395,64 +396,261 @@ export function CounterSubmitSheet({
 
 // ── Sub-views ────────────────────────────────────────────────────────────────
 
-function SuccessState({ onClose }: { onClose: () => void }) {
-  const copy = CONSUMER_COPY.counterSubmitSheet;
+const MONO_RAIL = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 9.5,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+} as const;
+
+// The rail (more-st-counter_m, more-st-counter_done_m): the mark tile, a dot
+// with an amber ring, the state word, a hairline, the state's code and a boxed
+// close. The error rail is --danger (a6 ruling 36); the others are amber.
+function SheetHeader({
+  state,
+  priceText,
+  vendorName,
+  onClose,
+}: {
+  state: SheetState;
+  priceText: string;
+  vendorName: string;
+  onClose: () => void;
+}) {
+  const isError = state === 'error';
+  const isSent = state === 'success';
+  const tone = isError ? 'var(--danger)' : 'var(--warning)';
+  const word = isError
+    ? copy.railError
+    : isSent
+      ? copy.railSent
+      : copy.railOpen;
+  const code = isError
+    ? copy.railErrorCode
+    : isSent
+      ? copy.railSentCode
+      : copy.railOpenCode;
+  const heading = isError
+    ? copy.errorHeading
+    : isSent
+      ? copy.successHeading
+      : copy.heading;
+
   return (
-    <div
+    <div data-testid="counter-rail-header">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <PriceRailMark />
+        <span
+          aria-hidden="true"
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            flexShrink: 0,
+            background: tone,
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${tone} 20%, transparent)`,
+          }}
+        />
+        <span
+          style={{
+            ...MONO_RAIL,
+            fontWeight: 600,
+            color: 'var(--fg-muted)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {word}
+        </span>
+        <span
+          aria-hidden="true"
+          style={{ flex: 1, height: 1, background: 'var(--border)' }}
+        />
+        <span
+          data-testid="counter-rail-code"
+          style={{ ...MONO_RAIL, fontWeight: 700, color: tone }}
+        >
+          {code}
+        </span>
+        <button
+          type="button"
+          aria-label={copy.closeAria}
+          onClick={onClose}
+          style={{
+            all: 'unset',
+            cursor: 'pointer',
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            boxSizing: 'border-box',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            color: 'var(--fg-muted)',
+            border: '1px solid var(--border-strong)',
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M4 4l8 8M12 4l-8 8"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <p
+        style={{
+          margin: '18px 0 0',
+          fontFamily: 'var(--font-ui)',
+          fontSize: 25,
+          fontWeight: 900,
+          color: 'var(--fg)',
+          letterSpacing: '-0.025em',
+          lineHeight: 1.15,
+        }}
+      >
+        {heading}
+      </p>
+      <p
+        style={{
+          margin: '6px 0 0',
+          fontFamily: 'var(--font-ui)',
+          fontSize: 13.5,
+          color: 'var(--fg-muted)',
+          lineHeight: 1.45,
+        }}
+      >
+        {isError ? (
+          copy.errorBody
+        ) : isSent ? (
+          copy.successBody
+        ) : (
+          <>
+            {copy.subtitleLead}
+            <b style={{ color: 'var(--fg)' }}>{priceText}</b>
+            {copy.subtitleTail(vendorName)}
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+// A slot the viewer cannot change: dashed, quiet, with a check on the right.
+function LockedField({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <span
+        style={{
+          display: 'block',
+          marginBottom: 6,
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: 'var(--fg-muted)',
+        }}
+      >
+        {label}
+      </span>
+      <div
+        data-testid="counter-locked-field"
+        style={{
+          height: 42,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '0 12px',
+          borderRadius: 12,
+          background: 'var(--bg)',
+          border: '1px dashed var(--border-strong)',
+          fontFamily: 'var(--font-ui)',
+          fontSize: 15,
+          fontWeight: 700,
+          color: 'var(--fg-muted)',
+        }}
+      >
+        <span className="min-w-0 flex-1 truncate">{value}</span>
+        <svg
+          aria-hidden="true"
+          width="11"
+          height="11"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--fg-subtle)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ flexShrink: 0 }}
+        >
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// Every filled button on the price sheets is the signal-to-pink gradient at
+// radius 12, no glyph (more-st-counter_m, more-st-counter_done_m).
+function GradientButton({
+  children,
+  onClick,
+  disabled = false,
+  busy = false,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  busy?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-busy={busy || undefined}
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
-        padding: '8px 0',
+        all: 'unset',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 48,
+        width: '100%',
+        boxSizing: 'border-box',
+        background: 'linear-gradient(90deg, var(--signal), var(--cta-end))',
+        color: 'var(--fg-on-accent)',
+        borderRadius: 12,
+        fontFamily: 'var(--font-ui)',
+        fontWeight: 800,
+        fontSize: 15,
+        letterSpacing: '-0.005em',
+        boxShadow: disabled ? 'none' : '0 12px 32px -16px var(--signal)',
+        opacity: disabled ? 0.45 : 1,
+        transition: 'opacity .12s',
       }}
     >
-      <p
-        style={{
-          margin: 0,
-          fontSize: 30,
-          fontWeight: 900,
-          letterSpacing: '-0.035em',
-          lineHeight: 1.0,
-          color: 'var(--fg)',
-        }}
-      >
-        {copy.successHeading}
-      </p>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 14,
-          color: 'var(--fg-muted)',
-          lineHeight: 1.55,
-          letterSpacing: '-0.005em',
-        }}
-      >
-        {copy.successBody}
-      </p>
-      <button
-        type="button"
-        onClick={onClose}
-        style={{
-          all: 'unset',
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: 48,
-          width: '100%',
-          boxSizing: 'border-box',
-          background: 'var(--signal)',
-          color: 'var(--fg-on-accent)',
-          borderRadius: 10,
-          fontFamily: 'var(--font-ui)',
-          fontWeight: 800,
-          fontSize: 14.5,
-          letterSpacing: '-0.005em',
-          marginTop: 4,
-        }}
-      >
+      {children}
+    </button>
+  );
+}
+
+function SuccessState({
+  onClose,
+  preview,
+}: {
+  onClose: () => void;
+  preview: ReactNode;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {preview}
+      <GradientButton onClick={onClose}>
         {copy.successBackButton}
-      </button>
+      </GradientButton>
     </div>
   );
 }
@@ -464,92 +662,32 @@ function ErrorState({
   onReset: () => void;
   onClose: () => void;
 }) {
-  const copy = CONSUMER_COPY.counterSubmitSheet;
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
-        padding: '8px 0',
-      }}
-    >
-      <p
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <GradientButton onClick={onReset}>
+        {copy.errorTryAgainButton}
+      </GradientButton>
+      <button
+        type="button"
+        onClick={onClose}
         style={{
-          margin: 0,
-          fontSize: 30,
-          fontWeight: 900,
-          letterSpacing: '-0.035em',
-          lineHeight: 1.0,
-          color: 'var(--fg)',
-        }}
-      >
-        {copy.errorHeading}
-      </p>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 14,
+          all: 'unset',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 44,
+          width: '100%',
+          boxSizing: 'border-box',
           color: 'var(--fg-muted)',
-          lineHeight: 1.55,
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 700,
+          fontSize: 13,
           letterSpacing: '-0.005em',
         }}
       >
-        {copy.errorBody}
-      </p>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          marginTop: 4,
-        }}
-      >
-        <button
-          type="button"
-          onClick={onReset}
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 48,
-            width: '100%',
-            boxSizing: 'border-box',
-            background: 'var(--signal)',
-            color: 'var(--fg-on-accent)',
-            borderRadius: 10,
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 800,
-            fontSize: 14.5,
-            letterSpacing: '-0.005em',
-          }}
-        >
-          {copy.errorTryAgainButton}
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 44,
-            width: '100%',
-            boxSizing: 'border-box',
-            color: 'var(--fg-muted)',
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 700,
-            fontSize: 13,
-            letterSpacing: '-0.005em',
-          }}
-        >
-          {copy.errorCloseButton}
-        </button>
-      </div>
+        {copy.errorCloseButton}
+      </button>
     </div>
   );
 }

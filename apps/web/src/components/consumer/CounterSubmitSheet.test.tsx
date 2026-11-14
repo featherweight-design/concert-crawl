@@ -25,6 +25,23 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh }),
 }));
 
+const renderSheetWithPreview = () =>
+  render(
+    <CounterSubmitSheet
+      open
+      onClose={vi.fn()}
+      eventId="evt-1"
+      disputedSubmissionId="sub-1"
+      currentFloor={40}
+      currentVendor="AXS"
+      renderPreview={(update, onWithdraw) => (
+        <button type="button" onClick={onWithdraw}>
+          {`preview ${update.floor}`}
+        </button>
+      )}
+    />,
+  );
+
 const renderSheet = () =>
   render(
     <CounterSubmitSheet
@@ -122,7 +139,16 @@ describe('CounterSubmitSheet slot', () => {
         currentTier="VIP"
       />,
     );
-    expect(screen.getByText(/\$40 on AXS \(VIP\)/)).toBeInTheDocument();
+    const fields = screen.getAllByTestId('counter-locked-field');
+    expect(fields.map((field) => field.textContent)).toEqual(['VIP', 'AXS']);
+    expect(
+      screen.getByText(/same tier and vendor as the listed price/i),
+    ).toBeInTheDocument();
+  });
+
+  it('bolds the listed price in the subtitle', () => {
+    renderSheet();
+    expect(screen.getByText('$40').tagName).toBe('B');
   });
 
   it('posts without a tier or vendor', async () => {
@@ -138,6 +164,120 @@ describe('CounterSubmitSheet slot', () => {
       priceMin: 55,
       howFound: 'bought_myself',
       disputedSubmissionId: 'sub-1',
+    });
+  });
+});
+
+// The B+ counter sheet (more-st-counter_m, more-st-counter_done_m).
+describe('CounterSubmitSheet rail and states', () => {
+  it('draws the open rail with the mark, an amber code and a boxed close', () => {
+    renderSheet();
+    expect(screen.getByTestId('price-rail-mark')).toBeInTheDocument();
+    expect(screen.getByText('Price update')).toBeInTheDocument();
+    expect(screen.getByTestId('counter-rail-code')).toHaveTextContent('Open');
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+  });
+
+  it('keeps Submit disabled until a way of finding out is picked', () => {
+    renderSheet();
+    const submitButton = screen.getByRole('button', { name: 'Submit update' });
+    expect(submitButton).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /saw the listing/i }));
+    expect(submitButton).toBeEnabled();
+  });
+
+  it('puts the honesty footnote under the button, not in a box above it', () => {
+    renderSheet();
+    const note = screen.getByText(/intentionally false reports/i);
+    const button = screen.getByRole('button', { name: 'Submit update' });
+    expect(
+      button.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('draws the sent rail and the preview once the update is filed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                id: 'new-1',
+                priceMin: 55,
+                priceMax: null,
+                createdAt: new Date().toISOString(),
+              },
+            }),
+          ),
+      ),
+    );
+    renderSheetWithPreview();
+    fillRequiredFields();
+    submit();
+
+    expect(await screen.findByText('Update submitted.')).toBeInTheDocument();
+    expect(screen.getByText('Got it · Submitted')).toBeInTheDocument();
+    expect(screen.getByTestId('counter-rail-code')).toHaveTextContent('Sent');
+    expect(screen.getByText('preview 55')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Back to show' }),
+    ).toBeInTheDocument();
+  });
+
+  it('withdraws the new update from the success screen and closes', async () => {
+    const onClose = vi.fn();
+    const fetchMock = vi.fn(
+      async (_url: string, init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data:
+              init?.method === 'DELETE' ? null : { id: 'new-1', priceMin: 55 },
+          }),
+        ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <CounterSubmitSheet
+        open
+        onClose={onClose}
+        eventId="evt-1"
+        disputedSubmissionId="sub-1"
+        currentFloor={40}
+        currentVendor="AXS"
+        renderPreview={(update, onWithdraw) => (
+          <button type="button" onClick={onWithdraw}>
+            {`preview ${update.floor}`}
+          </button>
+        )}
+      />,
+    );
+    fillRequiredFields();
+    submit();
+    fireEvent.click(await screen.findByText('preview 55'));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const del = fetchMock.mock.calls.find(
+      ([, init]) => init?.method === 'DELETE',
+    );
+    expect(del?.[0]).toMatch(/\/v1\/submissions\/new-1$/);
+  });
+
+  it('draws the error rail in the danger colour', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 500 })),
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    renderSheet();
+    fillRequiredFields();
+    submit();
+
+    expect(await screen.findByText("Didn't go through.")).toBeInTheDocument();
+    expect(screen.getByTestId('counter-rail-code')).toHaveStyle({
+      color: 'var(--danger)',
     });
   });
 });

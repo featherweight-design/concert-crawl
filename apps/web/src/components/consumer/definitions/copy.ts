@@ -1775,29 +1775,34 @@ export const CONSUMER_COPY = {
   // ── CounterSubmitSheet ──────────────────────────────────────────
   // Bottom sheet for submitting a counter/update to an existing price submission
   counterSubmitSheet: {
-    eyebrow: 'Price update',
+    // The rail (more-st-counter_m, more-st-counter_done_m): a status word, then
+    // the state's code on the right.
+    railOpen: 'Price update',
+    railOpenCode: 'Open',
+    railSent: 'Got it · Submitted',
+    railSentCode: 'Sent',
+    railError: 'Price update',
+    railErrorCode: 'Not sent',
+    closeAria: 'Close',
     heading: 'Update the price.',
-    // The tier names the slot the update lands in; it's left out when unknown.
-    subtitleWithRange: (
-      floor: number,
-      ceiling: number,
-      tier: string | null,
-      vendor: string,
-    ) =>
-      `Currently listed: $${floor}–$${ceiling} on ${vendor}${tier ? ` (${tier})` : ''}. Your update goes pending until another fan confirms.`,
-    subtitleFloorOnly: (floor: number, tier: string | null, vendor: string) =>
-      `Currently listed: $${floor} on ${vendor}${tier ? ` (${tier})` : ''}. Your update goes pending until another fan confirms.`,
-    floorLabel: 'Floor price',
-    floorPlaceholder: '35',
-    ceilingLabel: 'Ceiling price (optional)',
-    ceilingPlaceholder: '75',
+    // "Currently listed: **$44** on Ticketmaster. …" — the price is bold, so the
+    // line comes in three parts.
+    subtitleLead: 'Currently listed: ',
+    subtitleTail: (vendor: string) =>
+      ` on ${vendor}. Your update goes pending until another fan confirms.`,
+    // The tier and vendor are the checked price's own, shown locked.
+    tierLabel: 'Tier',
+    vendorLabel: "Where it's listed",
+    lockedNote:
+      'Same tier and vendor as the listed price, so the two numbers compare.',
+    floorLabel: 'Floor',
+    floorPlaceholder: '',
+    ceilingLabel: 'Ceiling',
+    ceilingPlaceholder: 'optional',
     howFoundLabel: 'How you found out *',
-    ceilingHint: 'Optional. Helps fans know the full price range.',
-    honestyDisclaimer: 'By submitting, you confirm this is accurate.',
-    // Fine print under the submit form's honesty disclaimer
+    // Fine print centred under the submit button.
     honestyFootnote:
       'By submitting you confirm this is accurate to the best of your knowledge. Intentionally false reports may result in account suspension.',
-    footerDisclaimer: 'Your update goes pending until another fan confirms.',
     submitButton: 'Submit update',
     submittingButton: 'Submitting…',
     cancelButton: 'Cancel',
