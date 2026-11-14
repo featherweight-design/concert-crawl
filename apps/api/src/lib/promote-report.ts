@@ -46,6 +46,9 @@ export interface PromoteReportResult {
  *   the report says. The one exception is a cancelled report on a postponed
  *   show whose date passed, which "stays Postponed until you set the new date
  *   or mark it cancelled" (addendum 6): it promotes as on an upcoming show;
+ * - a postponed or sold-out report on a show already cancelled (not merely
+ *   delisted), or a sold-out on a postponed show, closes as moot: nothing
+ *   changes and nobody hears;
  * - a sold-out, when another sold-out is already live, closes as moot rather
  *   than tripping migration 0032's one-live-sold-out index, and nobody hears
  *   again;
@@ -83,6 +86,21 @@ export async function promoteReport(
     if (show.state === 'past' && !cancelsPostponedPast) {
       if (options.onPast === 'refuse') throw new PastLockedError();
       return moot(MOOT_NOTE.pastShow);
+    }
+
+    // A confirmed cancellation is final: a postponed or sold-out report on a
+    // cancelled show changes nothing and tells nobody. A delisted show reads
+    // `cancelled` too, but only by the stale sweep (No longer listed, B+ A5),
+    // so its reports still promote.
+    const confirmedCancelled =
+      show.status === 'cancelled' && show.delistedAt === null;
+    if (status !== 'cancelled' && confirmedCancelled) {
+      return moot(MOOT_NOTE.showCancelled);
+    }
+    // A sold-out on a postponed show has no live sale to sell out; the
+    // show's own status already tells watchers more.
+    if (status === 'sold-out' && show.status === 'postponed') {
+      return moot(MOOT_NOTE.showPostponed);
     }
 
     let isRealTransition: boolean;

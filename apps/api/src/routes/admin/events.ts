@@ -334,9 +334,11 @@ eventsAdminRouter.patch(
 
     let updated: typeof eventReports.$inferSelect | undefined;
     // Sold-out, cancelled and postponed promote through promoteReport. Here a
-    // past show refuses (409) rather than closing, so `closedAsMoot` can only
-    // mean a second sold-out on a show already sold out: it closes as moot
-    // (rejected) instead of promoting, and tells nobody.
+    // past show refuses (409) rather than closing, so `closedAsMoot` means the
+    // report changed nothing on a live show: a second sold-out on a show
+    // already sold out, a postponed or sold-out report on a cancelled show, or
+    // a sold-out on a postponed one. It closes as moot (rejected) and tells
+    // nobody.
     let closedAsMoot = false;
     if (resolution === 'promoted' && report.status !== 'available') {
       let promotion: Awaited<ReturnType<typeof promoteReport>>;
@@ -359,6 +361,9 @@ eventsAdminRouter.patch(
       ({ report: updated, isRealTransition } = promotion);
       closedAsMoot = promotion.outcome === 'moot';
     } else {
+      // Matched on `resolved_at IS NULL`, so a reject or needs-more-info
+      // never writes over a report a fan threshold promoted after the read
+      // above; that report keeps the already-resolved answer.
       [updated] = await db
         .update(eventReports)
         .set({
@@ -366,8 +371,11 @@ eventsAdminRouter.patch(
           resolution,
           adminNote: adminNote ?? null,
         })
-        .where(eq(eventReports.id, reportId))
+        .where(
+          and(eq(eventReports.id, reportId), isNull(eventReports.resolvedAt)),
+        )
         .returning();
+      if (!updated) return alreadyResolved();
     }
 
     if (resolution === 'promoted') {

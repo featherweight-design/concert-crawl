@@ -12,11 +12,13 @@ type ReportRow = typeof eventReports.$inferSelect;
  */
 export type OnPastShow = 'refuse' | 'close';
 
-/** Why a fan sale report closed without changing anything. */
+/** Why a report closed as moot, without changing anything. */
 export const MOOT_NOTE = {
   pastShow: 'show already played',
   alreadySoldOut: 'already sold out',
   nothingToClear: 'no live sold-out to clear',
+  showCancelled: 'show already cancelled',
+  showPostponed: 'show is postponed',
 } as const;
 
 /**

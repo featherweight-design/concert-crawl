@@ -63,11 +63,16 @@ describe('cancelled and postponed reports under the shared write', () => {
     return day.toISOString().slice(0, 10);
   };
 
-  const seedShow = async (date: string, status?: 'postponed') => {
+  const seedShow = async (
+    date: string,
+    status?: 'postponed' | 'cancelled',
+    delistedAt?: Date,
+  ) => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date,
       ...(status && { status }),
+      ...(delistedAt && { delistedAt }),
     });
     eventId = event.id;
     await seedUserEvent(WATCHER, eventId, { status: 'watching' });
@@ -322,5 +327,135 @@ describe('cancelled and postponed reports under the shared write', () => {
       expect(await showStatus()).toBe('postponed');
       expect(await noticesSent()).toEqual([]);
     });
+  });
+
+  // A confirmed cancellation is final, and a postponed show has no sale to
+  // sell out: such reports close as moot and tell nobody, on both paths.
+  describe('reports a cancelled or postponed show makes moot', () => {
+    const closedMoot = (adminNote: string) => ({
+      resolvedAt: expect.any(Date),
+      resolution: 'rejected',
+      adminNote,
+    });
+
+    const cases = [
+      {
+        name: 'a postponed report on a cancelled show',
+        show: 'cancelled',
+        report: 'postponed',
+        note: 'show already cancelled',
+      },
+      {
+        name: 'a sold-out report on a cancelled show',
+        show: 'cancelled',
+        report: 'sold-out',
+        note: 'show already cancelled',
+      },
+      {
+        name: 'a sold-out report on a postponed show',
+        show: 'postponed',
+        report: 'sold-out',
+        note: 'show is postponed',
+      },
+    ] as const;
+
+    for (const { name, show, report: reportStatus, note } of cases) {
+      it(`closes ${name} as moot at the fan threshold`, async () => {
+        await seedShow(daysFromToday(30), show);
+        const report = await seedEventReport(eventId, 'user_reporter', {
+          status: reportStatus,
+        });
+
+        await confirmToThreshold(report.id);
+
+        expect(await reportState(report.id)).toEqual(closedMoot(note));
+        expect(await showStatus()).toBe(show);
+        expect(await noticesSent()).toEqual([]);
+      });
+
+      it(`closes ${name} as moot on an admin promote`, async () => {
+        await seedShow(daysFromToday(30), show);
+        const report = await seedEventReport(eventId, 'user_reporter', {
+          status: reportStatus,
+        });
+
+        const res = await adminPromote(report.id);
+
+        expect(res.status).toBe(200);
+        expect(await reportState(report.id)).toEqual(closedMoot(note));
+        expect(await showStatus()).toBe(show);
+        expect(await noticesSent()).toEqual([]);
+      });
+    }
+
+    it('still promotes a postponed report on a show the sweep delisted', async () => {
+      await seedShow(daysFromToday(30), 'cancelled', new Date());
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'postponed',
+      });
+
+      const res = await adminPromote(report.id);
+
+      expect(res.status).toBe(200);
+      expect((await reportState(report.id))?.resolution).toBe('promoted');
+      expect(await showStatus()).toBe('postponed');
+    });
+  });
+
+  // A reject or needs-more-info never writes over a report resolved after
+  // the route's first read (by a fan threshold, say).
+  describe('an admin reject racing a promotion', () => {
+    it.each(['rejected', 'needs-more-info'] as const)(
+      'answers already resolved, and keeps the promotion, for %s',
+      async (resolution) => {
+        await seedShow(daysFromToday(30));
+        const report = await seedEventReport(eventId, 'user_reporter', {
+          status: 'cancelled',
+        });
+        authState.current = {
+          userId: 'admin_user',
+          sessionClaims: { metadata: { role: 'admin' } },
+        };
+
+        // A committing transaction holds the report's row lock while the
+        // reject starts: its first (unlocked) read sees the report pending,
+        // and its write waits on the lock. The transaction then promotes the
+        // report and commits, as a fan threshold would.
+        let pending: Promise<Response> | undefined;
+        let waited = false;
+        await db.transaction(async (tx) => {
+          await tx
+            .select({ id: eventReports.id })
+            .from(eventReports)
+            .where(eq(eventReports.id, report.id))
+            .for('update');
+          pending = app.request(
+            `/v1/admin/events/reports/${report.id}/resolve`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: 'Bearer test-token',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ resolution }),
+            },
+          );
+          pending.catch((err: unknown) => {
+            console.error('admin reject failed', err);
+          });
+          waited = await waitForWaiters(1);
+          await tx
+            .update(eventReports)
+            .set({ resolvedAt: new Date(), resolution: 'promoted' })
+            .where(eq(eventReports.id, report.id));
+        });
+        if (!pending) throw new Error('the reject was never sent');
+        const res = await pending;
+
+        expect(waited).toBe(true);
+        expect(res.status).toBe(400);
+        expect((await reportState(report.id))?.resolution).toBe('promoted');
+      },
+    );
   });
 });
