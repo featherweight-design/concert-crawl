@@ -8,20 +8,58 @@ import {
   PendingTrustPill,
 } from '@/components/consumer/glyphs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import type { Tier } from '@concert-crawl/types';
+import type { PriceCheckViewerAction, Tier } from '@concert-crawl/types';
 
 const copy = CONSUMER_COPY.disputedPriceCard;
 
 // ── Helper ────────────────────────────────────────────────────────
 
-const formatTimeAgo = (isoDate: string): string => {
+// The strip draws the age bare ("3h", more-st-disputes_board); the line under
+// the headline keeps "ago".
+const formatAge = (isoDate: string): string => {
   const diffMs = Date.now() - new Date(isoDate).getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 60) return `${diffMins}m`;
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${Math.floor(diffHours / 24)}d ago`;
+  if (diffHours < 24) return `${diffHours}h`;
+  return `${Math.floor(diffHours / 24)}d`;
 };
+
+const formatTimeAgo = (isoDate: string): string => `${formatAge(isoDate)} ago`;
+
+const priceText = (floor: number, ceiling?: number | null): string =>
+  ceiling != null
+    ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
+    : `$${Math.round(floor)}`;
+
+// A signal-to-accent hairline: the card's own ground sits on the padding box
+// and the gradient shows through the transparent 1px border (the same trick
+// the sheet edges use).
+const GRADIENT_STROKE = {
+  border: '1px solid transparent',
+  background:
+    'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, ' +
+    'linear-gradient(135deg, var(--signal), var(--accent)) border-box',
+} as const;
+
+// A muted mono label on the footer's left, as the board draws "YOUR PRICE".
+const FOOTER_LABEL = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 9,
+  fontWeight: 700,
+  color: 'var(--fg-subtle)',
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
+  flexShrink: 0,
+} as const;
+
+const FOOTER_TEXT = {
+  fontFamily: 'var(--font-ui)',
+  fontSize: 13,
+  color: 'var(--fg-muted)',
+  lineHeight: 1.4,
+  minWidth: 0,
+} as const;
 
 // ── Props ─────────────────────────────────────────────────────────
 
@@ -47,8 +85,8 @@ export interface DisputedPriceCardProps {
   // coral CounterPointerLink rendered inside PendingCardB.
   counterSubmissionId?: string | null;
 
-  // Engagement-signal pill. When 'defer', a quiet warning chip near the
-  // dashed update strip surfaces CONSUMER_COPY.priceRegion.adminDeferPillLabel
+  // Engagement-signal pill. When 'defer', an accent-outlined chip under the
+  // meta line surfaces CONSUMER_COPY.priceRegion.adminDeferPillLabel
   // ("Admin requested more info"). Sourced from
   // EventDetailResponse.counterSubmission.lastAdminActionKind.
   lastAdminActionKind?: 'defer' | null;
@@ -63,6 +101,17 @@ export interface DisputedPriceCardProps {
    * swaps itself for the tier picker when there is no session.
    */
   signedOut?: boolean;
+
+  /**
+   * What the viewer can do on this price (B+ B9), decided by the server:
+   * 'submit_update' (anyone else, signed-out included) shows the "Submit an
+   * update" link; 'none' (the viewer submitted the price) shows the note that
+   * an admin will pick one; 'withdraw' (the viewer has an update pending) shows
+   * "Waiting on review" and a Withdraw link.
+   */
+  viewerAction?: PriceCheckViewerAction;
+  /** Called by the Withdraw link; the parent owns the DELETE and the refresh. */
+  onWithdraw?: () => void;
 
   onUpdateSuccess?: () => void;
 }
@@ -87,6 +136,8 @@ export const DisputedPriceCard = ({
   eventId,
   disputedSubmissionId,
   signedOut = false,
+  viewerAction = 'submit_update',
+  onWithdraw,
   onUpdateSuccess,
 }: DisputedPriceCardProps) => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -104,158 +155,100 @@ export const DisputedPriceCard = ({
     onUpdateSuccess?.();
   }, [onUpdateSuccess]);
 
-  const timeAgo = formatTimeAgo(disputedAt);
-
-  // Build the attribution text
-  const attributionText = disputer
-    ? disputeCeiling != null
-      ? `@${disputer.handle} ${copy.strip.sawVerb} $${disputeFloor}–$${disputeCeiling} · ${timeAgo}`
-      : `@${disputer.handle} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`
-    : disputeCeiling != null
-      ? `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor}–$${disputeCeiling} · ${timeAgo}`
-      : `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`;
-
-  // Build the live price headline
-  const headlineStr =
-    ceiling != null
-      ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
-      : `$${Math.round(floor)}`;
+  const disputerLabel = disputer
+    ? `@${disputer.handle}`
+    : copy.strip.anonymousLabel;
 
   // Anchor target for the coral CounterPointerLink rendered inside
   // PendingCardB. Falls back to the disputed parent ID if the counter ID
   // wasn't passed — keeps the anchor non-broken for legacy callers.
   const anchorId = `counter-${counterSubmissionId ?? disputedSubmissionId}`;
 
+  const footerLink = {
+    all: 'unset',
+    cursor: 'pointer',
+    fontFamily: 'var(--font-ui)',
+    fontWeight: 800,
+    fontSize: 14,
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+    lineHeight: 1.2,
+  } as const;
+
   return (
     <>
       {/* Card */}
       <div
         id={anchorId}
+        data-testid="disputed-price-card"
         style={{
-          borderRadius: 12,
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
+          borderRadius: 14,
           overflow: 'hidden',
+          ...GRADIENT_STROKE,
         }}
       >
         {/* Dashed update strip */}
         <div
           style={{
             padding: '9px 14px',
-            background: 'color-mix(in oklab, var(--fg-muted) 8%, transparent)',
-            borderBottom: '1px dashed var(--border-strong)',
+            background:
+              'color-mix(in oklab, var(--warning) 6%, var(--surface-1))',
+            borderBottom:
+              '1px dashed color-mix(in oklab, var(--warning) 45%, transparent)',
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
             gap: 10,
           }}
         >
-          {/* Left side: badge + attribution */}
-          <div
+          {/* "update pending": an amber outline pill, no fill */}
+          <span
             style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
+              border:
+                '1px solid color-mix(in oklab, var(--warning) 70%, transparent)',
+              borderRadius: 5,
+              padding: '3px 7px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              fontWeight: 700,
+              color: 'var(--price-text-warning)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              lineHeight: 1,
+            }}
+          >
+            {copy.strip.badgeLabel}
+          </span>
+
+          {/* "@rae saw $52 · 3h": names the reader, so analytics skips it */}
+          <span
+            className="ph-no-capture"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
               minWidth: 0,
             }}
           >
-            {/* "update pending" badge */}
-            <span
-              style={{
-                background:
-                  'color-mix(in oklab, var(--fg-muted) 14%, transparent)',
-                borderRadius: 4,
-                padding: '2px 6px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
-                fontWeight: 700,
-                color: 'var(--fg)',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                lineHeight: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <svg
-                width="9"
-                height="9"
-                viewBox="0 0 10 10"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M1 7.5 C2.5 7.5 2.5 4 4 4 C5.5 4 5.5 6 7 6 L9 2.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M7 2.5 L9 2.5 L9 4.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {copy.strip.badgeLabel}
-            </span>
-
-            {/* Attribution text: names the reader, so analytics skips it */}
-            <span
-              className="ph-no-capture"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9.5,
-                color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {attributionText}
-            </span>
-          </div>
-
-          {/* Admin-defer pill (LOCKED §9 — engagement signal) */}
-          {lastAdminActionKind === 'defer' && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 8px',
-                borderRadius: 999,
-                background:
-                  'color-mix(in oklab, var(--warning) 10%, transparent)',
-                color: 'var(--warning)',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 9,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                fontWeight: 700,
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {CONSUMER_COPY.priceRegion.adminDeferPillLabel}
-            </span>
-          )}
+            {disputerLabel} {copy.strip.sawVerb}{' '}
+            <strong style={{ color: 'var(--fg)', fontWeight: 800 }}>
+              {priceText(disputeFloor, disputeCeiling)}
+            </strong>{' '}
+            · {formatAge(disputedAt)}
+          </span>
         </div>
 
         {/* Main price area */}
-        <div style={{ padding: '14px 14px 12px' }}>
+        <div style={{ padding: '14px 14px 12px', position: 'relative' }}>
           {/* Eyebrow */}
           <Eyebrow>{copy.body.ticketsLabel}</Eyebrow>
 
-          {/* Headline row: price + tier + chip */}
+          {/* Headline row: "$44 → $52?" with the trust pill pinned right */}
           <div
             style={{
               marginTop: 6,
@@ -267,61 +260,56 @@ export const DisputedPriceCard = ({
           >
             <span
               style={{
+                display: 'inline-flex',
+                alignItems: 'baseline',
+                gap: 10,
                 fontFamily: 'var(--font-ui)',
                 fontWeight: 800,
-                fontSize: 28,
-                color: 'var(--fg)',
+                fontSize: 32,
                 letterSpacing: '-0.025em',
                 lineHeight: 1.05,
               }}
             >
-              {headlineStr}
-            </span>
-            {tier !== null && (
+              <span style={{ color: 'var(--fg)' }}>
+                {priceText(floor, ceiling)}
+              </span>
               <span
+                aria-hidden="true"
                 style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 700,
-                  fontSize: 11,
-                  color: 'var(--fg-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
+                  color: 'var(--fg-subtle)',
+                  display: 'inline-flex',
+                  alignSelf: 'center',
                 }}
               >
-                {tier}
+                <ArrowGlyph size={16} />
               </span>
-            )}
-            <PendingTrustPill kind={kind} />
+              <span
+                data-testid="proposed-price"
+                style={{ color: 'var(--price-text-warning)' }}
+              >
+                {priceText(disputeFloor, disputeCeiling)}?
+              </span>
+            </span>
+            <span style={{ marginLeft: 'auto', alignSelf: 'center' }}>
+              <PendingTrustPill kind={kind} />
+            </span>
           </div>
 
-          {/* Vendor line */}
+          {/* Meta line: tier · seen on vendor · Submitted by @x · N fans */}
           <div
             style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--fg-muted)',
-              letterSpacing: '0.04em',
               marginTop: 6,
-            }}
-          >
-            {copy.body.seenOnPrefix} {vendor}
-          </div>
-
-          {/* Attribution line */}
-          <div
-            style={{
-              marginTop: 8,
-              fontFamily: 'Inter, system-ui',
-              fontSize: 12,
+              fontFamily: 'var(--font-ui)',
+              fontSize: 13,
               color: 'var(--fg-muted)',
-              letterSpacing: '-0.005em',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              flexWrap: 'wrap',
+              lineHeight: 1.4,
             }}
           >
-            <span>{copy.body.submittedByPrefix}</span>
+            {tier !== null && <span>{tier} · </span>}
+            <span>
+              {copy.body.seenOnPrefix} {vendor}
+            </span>
+            <span> · {copy.body.submittedByPrefix} </span>
             {submitter !== null ? (
               <span className="ph-no-capture" style={{ fontWeight: 700 }}>
                 @{submitter.handle}
@@ -331,68 +319,93 @@ export const DisputedPriceCard = ({
                 {copy.strip.anonymousLabel}
               </span>
             )}
-            <span style={{ opacity: 0.5 }}>·</span>
-            <span>{formatTimeAgo(liveSubmittedAt)}</span>
-            <span style={{ opacity: 0.5 }}>·</span>
-            <span>{copy.body.fansConfirmed(confirmsCount)}</span>
+            <span>
+              {' '}
+              · {formatTimeAgo(liveSubmittedAt)} ·{' '}
+              {copy.body.fansConfirmed(confirmsCount)}
+            </span>
           </div>
+
+          {/* Admin-defer pill (LOCKED §9, engagement signal): an
+              accent-outlined chip under the meta line */}
+          {lastAdminActionKind === 'defer' && (
+            <span
+              style={{
+                display: 'inline-block',
+                marginTop: 10,
+                padding: '4px 8px',
+                borderRadius: 6,
+                border:
+                  '1px solid color-mix(in oklab, var(--accent) 70%, transparent)',
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                lineHeight: 1,
+              }}
+            >
+              {CONSUMER_COPY.priceRegion.adminDeferPillLabel}
+            </span>
+          )}
         </div>
 
-        {/* Footer */}
+        {/* Footer: three views, decided by the server (viewerAction) */}
         <div
+          data-testid="disputed-footer"
+          data-viewer-action={viewerAction}
           style={{
-            padding: '10px 14px',
+            padding: '12px 14px',
             borderTop: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: 8,
+            gap: 12,
           }}
         >
-          {/* Copy before button */}
-          <span
-            style={{
-              fontFamily: 'Inter, system-ui',
-              fontSize: '12px',
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.04em',
-              flexShrink: 1,
-              minWidth: 0,
-            }}
-          >
-            {copy.footer.preButtonCopy}
-          </span>
+          {viewerAction === 'none' && (
+            <>
+              <span style={FOOTER_LABEL}>{copy.footer.yourPriceLabel}</span>
+              <span style={{ ...FOOTER_TEXT, flex: 1 }}>
+                {copy.footer.submitterNote}
+              </span>
+            </>
+          )}
 
-          {/* Submit an update button */}
-          <button
-            type="button"
-            onClick={handleOpenSheet}
-            {...(signedOut
-              ? { 'aria-label': copy.footer.ariaButtonLabelSignedOut }
-              : {})}
-            style={{
-              all: 'unset',
-              cursor: 'pointer',
-              background: 'transparent',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 8,
-              padding: '7px 12px',
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 700,
-              fontSize: 12.5,
-              color: 'var(--fg)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              lineHeight: 1,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            {copy.footer.buttonLabel}
-            <ArrowGlyph size={11} />
-          </button>
+          {viewerAction === 'withdraw' && (
+            <>
+              <span style={FOOTER_LABEL}>{copy.footer.yourUpdateLabel}</span>
+              <span style={{ ...FOOTER_TEXT, flex: 1 }}>
+                {copy.footer.waitingNote}
+              </span>
+              <button
+                type="button"
+                onClick={onWithdraw}
+                style={{ ...footerLink, color: 'var(--price-text-warning)' }}
+              >
+                {copy.footer.withdrawButton}
+              </button>
+            </>
+          )}
+
+          {viewerAction === 'submit_update' && (
+            <>
+              <span style={FOOTER_TEXT}>{copy.footer.preButtonCopy}</span>
+              <button
+                type="button"
+                onClick={handleOpenSheet}
+                {...(signedOut
+                  ? { 'aria-label': copy.footer.ariaButtonLabelSignedOut }
+                  : {})}
+                style={{ ...footerLink, color: 'var(--price-text-signal)' }}
+              >
+                {copy.footer.buttonLabel}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

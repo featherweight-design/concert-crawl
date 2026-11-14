@@ -1755,6 +1755,14 @@ export const CONSUMER_COPY = {
       buttonLabel: 'Submit an update',
       // Same announced-not-drawn gate as the submit card (#1247).
       ariaButtonLabelSignedOut: 'Submit an update: sign up to submit a price',
+      // The two submitters' views (more-st-disputes_board, "The two
+      // submitters"): the original submitter has nothing to do, the fan with
+      // an update pending can take it back.
+      yourPriceLabel: 'Your price',
+      submitterNote: 'Someone saw a different number. An admin will pick one.',
+      yourUpdateLabel: 'Your update',
+      waitingNote: 'Waiting on review.',
+      withdrawButton: 'Withdraw',
     },
   },
 
