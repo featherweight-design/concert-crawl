@@ -37,12 +37,15 @@ vi.mock('./people.js', async (importOriginal) => ({
   },
 }));
 
-import { auditLog } from '@concert-crawl/db';
+import { auditLog, inviteCodes } from '@concert-crawl/db';
 import type { AuditLogActor, AuditLogItem } from '@concert-crawl/types';
 import { createApp } from '../../app.js';
 import {
   clearTables,
+  seedArtist,
   seedEvent,
+  seedEventReport,
+  seedPriceSubmission,
   seedUserProfile,
   seedVenue,
 } from '../../test/helpers/seed.js';
@@ -345,6 +348,67 @@ describe('GET /v1/admin/audit-log?search=', () => {
     expect(data).toEqual([
       expect.objectContaining({ handle: 'sam', count: 1, role: null }),
     ]);
+  });
+
+  it("finds an artist, a code, a flag's label, and a report's or a price's show", async () => {
+    const artist = await seedArtist({ name: 'Cashmere' });
+    const [code] = await testDb
+      .insert(inviteCodes)
+      .values({ code: 'SHARED1', createdBy: ME })
+      .returning();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { title: 'Ninth Key' });
+    const report = await seedEventReport(event.id, ME);
+    const price = await seedPriceSubmission(event.id, ME);
+    await seedTargeted(
+      ME,
+      'artist.name.update',
+      artist.id,
+      mt('2026-11-10', 9),
+    );
+    await seedTargeted(
+      ME,
+      'invite_code.edit',
+      code?.id ?? null,
+      mt('2026-11-10', 10),
+    );
+    await seedTargeted(
+      ME,
+      'feature_flag.toggle',
+      'feature_flag:crews',
+      mt('2026-11-10', 11),
+    );
+    await seedTargeted(
+      ME,
+      'event.report.resolve',
+      report.id,
+      mt('2026-11-10', 12),
+    );
+    await seedTargeted(
+      ME,
+      'price.submission.reject',
+      price.id,
+      mt('2026-11-10', 13),
+    );
+
+    expect(await actionsFor('cashm')).toEqual(['artist.name.update']);
+    expect(await actionsFor('shared')).toEqual(['invite_code.edit']);
+    expect(await actionsFor('Crews')).toEqual(['feature_flag.toggle']);
+    expect(await actionsFor('ninth')).toEqual([
+      'price.submission.reject',
+      'event.report.resolve',
+    ]);
+  });
+
+  it("matches metadata's values, never its key names", async () => {
+    await testDb.insert(auditLog).values({
+      actorId: ME,
+      action: 'venue.update',
+      metadata: { venueId: 'abc', on: true },
+      createdAt: mt('2026-11-10', 9),
+    });
+    expect(await actionsFor('venueid')).toEqual([]);
+    expect(await actionsFor('abc')).toEqual(['venue.update']);
   });
 
   it('treats % and _ as plain characters', async () => {

@@ -308,7 +308,9 @@ const searchFilter = (
     ilike(auditLog.action, pattern),
     ilike(auditLog.actorId, pattern),
     ilike(userProfiles.handle, pattern),
-    sql`${auditLog.metadata}::text ILIKE ${pattern}`,
+    // The metadata's top-level values only, never its key names or JSON
+    // punctuation, so "id" or "true" doesn't match every row with metadata.
+    sql`EXISTS (SELECT 1 FROM jsonb_each_text(CASE WHEN jsonb_typeof(${auditLog.metadata}) = 'object' THEN ${auditLog.metadata} ELSE '{}'::jsonb END) AS kept WHERE kept.value ILIKE ${pattern})`,
     flagTargets.length === 0
       ? undefined
       : inArray(auditLog.targetId, flagTargets),
