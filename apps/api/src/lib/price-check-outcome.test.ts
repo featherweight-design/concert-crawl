@@ -17,6 +17,7 @@ const row = (
   priceMin: '44',
   priceMax: null,
   disputedSubmissionId: null,
+  archivedReason: 'Price is correct',
   updatedAt: daysAgo(1),
   ...over,
 });
@@ -107,9 +108,35 @@ describe('pickPriceCheckOutcome', () => {
     ).toBeNull();
   });
 
-  it('ignores a row stamped in the future', () => {
+  it('ignores a row stamped well in the future', () => {
     expect(
-      pick([row('old', { updatedAt: daysAgo(-1) })], { disputed: 'old' }),
+      pick([row('old', { updatedAt: daysAgo(-1) })], {
+        disputed: 'old',
+        updatedAt: daysAgo(-1),
+      }),
+    ).toBeNull();
+  });
+
+  // updatedAt is the database's clock, now is the API host's: a decision a
+  // few seconds old can read as slightly ahead.
+  it('keeps a decision that reads a few seconds ahead of the API clock', () => {
+    const ahead = new Date(NOW.getTime() + 5_000);
+    expect(
+      pick([row('old', { updatedAt: ahead })], {
+        disputed: 'old',
+        updatedAt: ahead,
+      })?.outcome,
+    ).toBe('updated');
+  });
+
+  it('does not read an update archived by a fan-confirm win as a price that held', () => {
+    expect(
+      pick([
+        row('loser', {
+          disputedSubmissionId: 'live',
+          archivedReason: 'Superseded by price check update abc',
+        }),
+      ]),
     ).toBeNull();
   });
 });

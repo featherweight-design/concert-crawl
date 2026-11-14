@@ -28,6 +28,7 @@ import {
   count,
   desc,
   eq,
+  gte,
   ilike,
   inArray,
   lte,
@@ -70,7 +71,10 @@ import {
   pickHeadlinesByTier,
 } from '../lib/price-aggregation/index.js';
 import { narrowLastAdminAction } from '../lib/last-admin-action.js';
-import { pickPriceCheckOutcome } from '../lib/price-check-outcome.js';
+import {
+  PRICE_CHECK_OUTCOME_DAYS,
+  pickPriceCheckOutcome,
+} from '../lib/price-check-outcome.js';
 import {
   compareLeadingCounters,
   currentPriceCondition,
@@ -1076,6 +1080,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           priceMin: priceSubmissions.priceMin,
           priceMax: priceSubmissions.priceMax,
           disputedSubmissionId: priceSubmissions.disputedSubmissionId,
+          archivedReason: priceSubmissions.archivedReason,
           updatedAt: priceSubmissions.updatedAt,
         })
         .from(priceSubmissions)
@@ -1083,6 +1088,14 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           and(
             eq(priceSubmissions.eventId, id),
             eq(priceSubmissions.status, 'archived'),
+            // Older decisions are dropped in the picker anyway; keep them out
+            // of the read.
+            gte(
+              priceSubmissions.updatedAt,
+              new Date(
+                Date.now() - (PRICE_CHECK_OUTCOME_DAYS + 1) * 86_400_000,
+              ),
+            ),
             or(
               eq(priceSubmissions.disputedSubmissionId, legacyPrimary.id),
               legacyPrimary.disputedSubmissionId !== null
