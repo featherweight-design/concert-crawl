@@ -489,8 +489,8 @@ export async function saveVenueGuide(
     console.error('saveVenueGuide: failed', { venueId, err });
     // Only an ApiError carries a message the API meant for a human. Anything
     // else — an expired getToken(), a network fault — would put raw auth or
-    // infra strings in front of the admin, so the component falls back to
-    // GUIDE_COPY.status.saveError and the string stays in copy.ts.
+    // infra strings in front of the admin, so the Guide panel shows its own
+    // save-failed copy and the string stays in copy.ts.
     return {
       success: false,
       ...(err instanceof ApiError ? { error: err.message } : {}),
@@ -523,8 +523,8 @@ export async function publishVenueGuide(
     console.error('publishVenueGuide: unexpected error', { venueId, err });
     // Only an ApiError carries a message the API meant for a human. Anything
     // else — an expired getToken(), a network fault — would put raw auth or
-    // infra strings in front of the admin, so the component falls back to
-    // GUIDE_COPY.status.saveError and the string stays in copy.ts.
+    // infra strings in front of the admin, so the Guide panel shows its own
+    // save-failed copy and the string stays in copy.ts.
     return {
       success: false,
       ...(err instanceof ApiError ? { error: err.message } : {}),
@@ -549,8 +549,8 @@ export async function unpublishVenueGuide(
     console.error('unpublishVenueGuide: failed', { venueId, err });
     // Only an ApiError carries a message the API meant for a human. Anything
     // else — an expired getToken(), a network fault — would put raw auth or
-    // infra strings in front of the admin, so the component falls back to
-    // GUIDE_COPY.status.saveError and the string stays in copy.ts.
+    // infra strings in front of the admin, so the Guide panel shows its own
+    // save-failed copy and the string stays in copy.ts.
     return {
       success: false,
       ...(err instanceof ApiError ? { error: err.message } : {}),
