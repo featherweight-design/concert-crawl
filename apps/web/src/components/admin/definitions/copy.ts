@@ -2935,7 +2935,6 @@ export const ADMIN_COPY = {
     },
     // `02/snooze-menu`.
     snooze: {
-      trigger: 'Snooze',
       menuLabel: 'Snooze this decision',
       oneDay: 'Snooze 1 day',
       oneDaySub: 'Back tomorrow at 8 AM.',
@@ -2973,10 +2972,10 @@ export const ADMIN_COPY = {
         'show-moved': 'Show moved',
         'venue-failing': 'Crawl failing',
         'venue-blocked': 'Venue blocked',
-        artist: 'Artist photo reports',
+        artist: 'Photo reports',
         'event-low-confidence': 'Not sure it’s a concert',
         'price-check': 'Price check',
-        'price-batch': 'A batch of prices',
+        'price-batch': 'Price batch',
         bug: 'Bug report',
       } as const,
       failed: "Couldn't snooze that",
