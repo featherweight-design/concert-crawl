@@ -1,5 +1,6 @@
 import type { FetchLog } from './fetch-log.js';
-import type { Browser } from 'playwright';
+import type { Browser, CDPSession } from 'playwright';
+import { errors as playwrightErrors } from 'playwright';
 import { createLogger } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 
@@ -33,6 +34,20 @@ async function assertVisitedAllowed(from: string, to: string): Promise<void> {
     );
     throw new RobotsDisallowedError(to, from);
   }
+}
+
+// goto()'s navigation budget, and how often the clock that enforces it with
+// the gate's waits taken out checks the time.
+const NAVIGATION_TIMEOUT_MS = 60_000;
+const CLOCK_TICK_MS = 250;
+
+// The fields of CDP's Fetch.requestPaused event the navigation gate reads.
+interface PausedRequest {
+  requestId: string;
+  request: { url: string };
+  frameId: string;
+  networkId?: string;
+  redirectedRequestId?: string;
 }
 
 function canonicalRequestUrl(url: string): string {
@@ -92,24 +107,125 @@ export async function fetchPage(
   // (a navigation timeout, a reset connection) is recorded and one that did is not
   // recorded twice.
   let recorded = false;
+  let cdp: CDPSession | undefined;
   try {
     const page = await context.newPage();
 
     console.log(JSON.stringify({ event: 'fetch.start', url }));
 
-    // A navigation the page starts itself (a script or meta refresh sending it
-    // elsewhere) is a new request we choose to make, so it clears robots.txt
-    // and its pacing first. Server redirects inside goto() never reach a
-    // route handler in Playwright, so those are checked against the redirect
-    // chain below. A skip (robots.txt unreachable, Crawl-delay over the cap)
-    // is kept and rethrown, so the run records a skip rather than a failure.
-    // Only the first request for `url` is goto()'s own; a reload or refresh
-    // back to it later is a new request and goes through the gate too.
-    // `url` as the browser reports it: `https://venue.example` comes back as
-    // `https://venue.example/`, and the fragment is never sent.
+    // Two interceptors split the work. page.route (below) aborts every iframe
+    // document and lets everything else through untouched. The main frame's
+    // documents are gated in Chromium's own network stack instead, through a
+    // CDP Fetch session paused at the Request stage, because that is the
+    // only place a server redirect hop can be stopped BEFORE it is sent:
+    // Chromium follows redirects inside goto() without re-entering
+    // page.route, but it does pause each hop here (`redirectedRequestId`
+    // set). A hop, or a navigation the page starts itself (a script or meta
+    // refresh), clears robots.txt and waits its pacing, then Chromium sends
+    // it with its own TLS and headers. A declined one is failed with
+    // BlockedByClient and never requested.
+    //
+    // A disallow or a skip (robots.txt unreachable, Crawl-delay over the
+    // cap) is kept and rethrown, so the run records it as such rather than
+    // as a blocked-by-client failure. Only the first request for `url` is
+    // goto()'s own, already paced above; a reload or refresh back to it later
+    // goes through the gate too. `url` as the browser reports it:
+    // `https://venue.example` comes back as `https://venue.example/`, and the
+    // fragment is never sent. Chromium only: newCDPSession throws elsewhere.
     const startUrl = canonicalRequestUrl(url);
-    let navigationSkip: CrawlSkipError | null = null;
+    let navigationError: Error | null = null;
     let initialRequestSeen = false;
+    // Time spent clearing a hop (robots.txt and the pacing wait) is ours, not
+    // the site's, so the navigation clock below stops while it runs. A count,
+    // because a hop and a page-started navigation can be paused together.
+    let gatesOpen = 0;
+    let gatingSince = 0;
+    let gatedMs = 0;
+    const gateStarted = (): void => {
+      if (gatesOpen++ === 0) gatingSince = Date.now();
+    };
+    const gateEnded = (): void => {
+      if (--gatesOpen === 0) gatedMs += Date.now() - gatingSince;
+    };
+
+    cdp = await context.newCDPSession(page);
+    const session = cdp;
+    const { frameTree } = await session.send('Page.getFrameTree');
+    const mainFrameId = frameTree.frame.id;
+    // The URL each in-flight navigation last requested, so a redirect hop
+    // knows where it came from.
+    const lastHop = new Map<string, string>();
+
+    // Whether a paused main-frame document may be sent. Throws on a disallow,
+    // a skip, or anything unexpected; the caller fails the request.
+    const mayContinue = async (event: PausedRequest): Promise<void> => {
+      const { requestId, request } = event;
+      // An iframe document is left to page.route, which aborts it. Gating it
+      // here too would spend a robots lookup and a pacing wait on a request
+      // that is about to be refused anyway.
+      if (event.frameId !== mainFrameId) return;
+      const hopKey = event.networkId ?? requestId;
+      const from = lastHop.get(hopKey) ?? page.url();
+      lastHop.set(hopKey, request.url);
+      if (
+        !initialRequestSeen &&
+        event.redirectedRequestId === undefined &&
+        request.url === startUrl
+      ) {
+        initialRequestSeen = true;
+        return;
+      }
+      gateStarted();
+      try {
+        await clearRedirect(from, request.url, crawlDelayMs);
+      } catch (err) {
+        console.log(
+          JSON.stringify({
+            event: 'fetch.navigation_disallowed',
+            url,
+            from,
+            to: request.url,
+            redirect: event.redirectedRequestId !== undefined,
+          }),
+        );
+        throw err;
+      } finally {
+        gateEnded();
+      }
+    };
+
+    // Every paused request is answered, continued or failed, whatever
+    // happens, so none is left to hang until the navigation times out.
+    session.on('Fetch.requestPaused', (event) => {
+      void (async () => {
+        let allowed = false;
+        try {
+          await mayContinue(event);
+          allowed = true;
+        } catch (err) {
+          navigationError ??=
+            err instanceof Error ? err : new Error(String(err));
+        }
+        try {
+          await (allowed
+            ? session.send('Fetch.continueRequest', {
+                requestId: event.requestId,
+              })
+            : session.send('Fetch.failRequest', {
+                requestId: event.requestId,
+                errorReason: 'BlockedByClient',
+              }));
+        } catch {
+          // The page or context closed under the paused request: the
+          // request died with it, so there is nothing left to answer.
+        }
+      })();
+    });
+    await session.send('Fetch.enable', {
+      patterns: [
+        { urlPattern: '*', resourceType: 'Document', requestStage: 'Request' },
+      ],
+    });
 
     await page.route('**/*', async (route) => {
       const request = route.request();
@@ -132,28 +248,11 @@ export async function fetchPage(
         await route.abort('blockedbyclient');
         return;
       }
-      if (!initialRequestSeen && request.url() === startUrl) {
-        initialRequestSeen = true;
-        await route.continue();
-        return;
-      }
-      try {
-        await clearRedirect(page.url(), request.url(), crawlDelayMs);
-        await route.continue();
-      } catch (err) {
-        if (err instanceof CrawlSkipError) navigationSkip = err;
-        console.log(
-          JSON.stringify({
-            event: 'fetch.navigation_disallowed',
-            url,
-            to: request.url(),
-          }),
-        );
-        await route.abort('blockedbyclient');
-      }
+      // The main frame's documents are gated by the CDP session above.
+      await route.continue();
     });
     const throwIfSkipped = (): void => {
-      if (navigationSkip) throw navigationSkip;
+      if (navigationError) throw navigationError;
     };
 
     // Every main-frame URL the page loaded, server redirect hops included
@@ -185,21 +284,48 @@ export async function fetchPage(
     // When a CSS selector is provided, use domcontentloaded for navigation
     // (fast connection) then let waitForSelector handle SPA render timing —
     // avoids networkidle/load timeouts on pages with persistent third-party requests.
-    const response = await page
-      .goto(url, {
+    //
+    // goto()'s own timeout would count the pacing waits between redirect
+    // hops against the site, so it is off and this clock enforces the same
+    // 60 s of navigation time with the gate's time taken out. It throws
+    // Playwright's own TimeoutError, which crawl.ts classifies by name.
+    let clockTimer: ReturnType<typeof setTimeout> | undefined;
+    const navigationClock = new Promise<never>((_resolve, reject) => {
+      const startedAt = Date.now();
+      const tick = (): void => {
+        const now = Date.now();
+        const gating = gatesOpen > 0 ? now - gatingSince : 0;
+        if (now - startedAt - gatedMs - gating >= NAVIGATION_TIMEOUT_MS) {
+          reject(
+            new playwrightErrors.TimeoutError(
+              `page.goto: Timeout ${NAVIGATION_TIMEOUT_MS}ms exceeded (pacing waits excluded) navigating to "${url}"`,
+            ),
+          );
+          return;
+        }
+        clockTimer = setTimeout(tick, CLOCK_TICK_MS);
+      };
+      clockTimer = setTimeout(tick, CLOCK_TICK_MS);
+    });
+    const response = await Promise.race([
+      page.goto(url, {
         waitUntil: waitForSelector ? 'domcontentloaded' : waitUntil,
-        timeout: 60_000,
-      })
+        timeout: 0,
+      }),
+      navigationClock,
+    ])
       .catch((err: unknown) => {
         throwIfSkipped();
         throw err;
-      });
+      })
+      .finally(() => clearTimeout(clockTimer));
 
     const finalStatus = response?.status() ?? httpStatus;
 
     // Every hop of a server redirect, and where it landed, must be a URL
-    // robots.txt lets us fetch. Playwright follows redirects before we can
-    // intervene, so a disallowed hop means we discard the page unread.
+    // robots.txt lets us fetch. The gate above should already have refused a
+    // disallowed hop before it was sent; this is the backstop, so a hop that
+    // somehow got past it still means we discard the page unread.
     const hops: string[] = [];
     for (
       let request = response?.request().redirectedFrom() ?? null;
@@ -328,6 +454,9 @@ export async function fetchPage(
     }
     throw err;
   } finally {
+    // Detaching ends Fetch interception, so any request still paused is
+    // released before the context goes; a session already gone is fine.
+    await cdp?.detach().catch(() => undefined);
     await context.close();
   }
 }
