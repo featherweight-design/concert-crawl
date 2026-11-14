@@ -19,6 +19,7 @@ import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
 import { queueVenueCrawl } from './lib/crawl-trigger.js';
 import { venueRemovedBody } from './lib/venue-hide.js';
+import { crawlAllSkipReason } from './lib/crawl-all.js';
 
 const logger = createLogger('admin:crawl');
 
@@ -124,24 +125,25 @@ function parseAlertMetadata(
 
 export const crawlAdminRouter = new Hono<AdminVariables>();
 
-// POST /v1/admin/crawl — queue crawl triggers for all active + verified venues
-// that have not blocked us. A blocked venue is re-tried only by a person
-// queueing it on its own, the same exclusion the daily pass applies.
+// POST /v1/admin/crawl — queue crawl triggers for every venue Crawl all takes
+// (lib/crawl-all.ts: active, verified, not blocked, not paused). The estimate
+// route counts by the same rule, so the confirm's numbers are these.
 crawlAdminRouter.post('/', async (ctx) => {
-  const activeVenues = await db
-    .select({ id: venues.id })
+  const candidates = await db
+    .select({
+      id: venues.id,
+      active: venues.active,
+      verified: venues.verified,
+      blockedAt: venues.blockedAt,
+      crawlPausedAt: venues.crawlPausedAt,
+    })
     .from(venues)
-    .where(
-      and(
-        eq(venues.active, true),
-        eq(venues.verified, true),
-        isNull(venues.blockedAt),
-        isNull(venues.crawlPausedAt),
-        // Removal also hides and pauses, but a removed venue is never
-        // crawled whatever those columns say.
-        isNull(venues.removedAt),
-      ),
-    );
+    // Removal also hides and pauses, but a removed venue is never crawled
+    // whatever those columns say.
+    .where(isNull(venues.removedAt));
+  const activeVenues = candidates.filter(
+    (venue) => crawlAllSkipReason(venue) === null,
+  );
 
   if (activeVenues.length === 0) {
     return ctx.json({ success: true, data: { triggerIds: [], count: 0 } }, 202);

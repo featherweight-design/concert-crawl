@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ESTIMATE_NIGHTS,
   groupCrawlBatches,
   parseBatchKey,
+  usualNightly,
   type BatchRunInput,
   type BatchTriggerInput,
 } from './crawl-batches.js';
@@ -19,6 +21,7 @@ const run = (
   eventsFound: 10,
   eventsInserted: 2,
   durationMs: 30_000,
+  llmCostUsd: null,
   errorMessage: null,
   createdAt: new Date(at),
   ...over,
@@ -140,6 +143,83 @@ describe('groupCrawlBatches: nightly', () => {
     ];
     expect(together?.retried).toBe(false);
     expect(retried?.retried).toBe(true);
+  });
+});
+
+describe('usualNightly: the Crawl all estimate', () => {
+  // A night of two runs: 10:00Z start, the second starts 20 min later and
+  // takes 30 s, so the night spans 20.5 min.
+  const night = (
+    date: string,
+    cost = 0.4,
+    over: Partial<BatchRunInput> = {},
+  ) => [
+    run(`${date}-a`, `${date}T10:00:00Z`, { llmCostUsd: cost, ...over }),
+    run(`${date}-b`, `${date}T10:20:00Z`, { llmCostUsd: cost, ...over }),
+  ];
+
+  it('averages the span and the summed LLM cost of each night', () => {
+    const usual = usualNightly({
+      runs: [...night('2026-11-10', 0.4), ...night('2026-11-11', 0.2)],
+      triggers: [],
+      now: NOW,
+    });
+    expect(usual).toEqual({
+      durationMs: 20.5 * 60 * 1000,
+      costUsd: expect.closeTo(0.6, 5),
+      nights: 2,
+    });
+  });
+
+  it('is null with no nightly history', () => {
+    expect(usualNightly({ runs: [], triggers: [], now: NOW })).toBeNull();
+  });
+
+  it('leaves out by-hand runs, retried nights and a night not over yet', () => {
+    // 11:00Z on Nov 12 is 4 AM Mountain, before the 6 AM deadline.
+    const early = new Date('2026-11-12T11:00:00Z');
+    const usual = usualNightly({
+      runs: [
+        ...night('2026-11-10'),
+        // Retried: a second wave three hours later.
+        run('r1', '2026-11-11T10:00:00Z', { llmCostUsd: 5 }),
+        run('r2', '2026-11-11T13:30:00Z', { llmCostUsd: 5 }),
+        // Tonight, still running.
+        run('t1', '2026-11-12T10:00:00Z', { llmCostUsd: 5 }),
+        // By hand: its trigger points at it.
+        run('h1', '2026-11-10T18:00:00Z', { llmCostUsd: 5 }),
+      ],
+      triggers: [trigger('x', '2026-11-10T17:59:00Z', { crawlRunId: 'h1' })],
+      now: early,
+    });
+    expect(usual?.nights).toBe(1);
+    expect(usual?.costUsd).toBeCloseTo(0.8, 5);
+  });
+
+  it(`takes the newest ${ESTIMATE_NIGHTS} nights only`, () => {
+    const dates = Array.from(
+      { length: ESTIMATE_NIGHTS + 2 },
+      (_, index) => `2026-11-${String(index + 1).padStart(2, '0')}`,
+    );
+    const usual = usualNightly({
+      runs: dates.flatMap((date, index) =>
+        // The two oldest nights cost far more, so taking them would show.
+        night(date, index < 2 ? 10 : 0.1),
+      ),
+      triggers: [],
+      now: NOW,
+    });
+    expect(usual?.nights).toBe(ESTIMATE_NIGHTS);
+    expect(usual?.costUsd).toBeCloseTo(0.2, 5);
+  });
+
+  it('reads a run with no cost as free', () => {
+    const usual = usualNightly({
+      runs: night('2026-11-10', 0, { llmCostUsd: null }),
+      triggers: [],
+      now: NOW,
+    });
+    expect(usual?.costUsd).toBe(0);
   });
 });
 

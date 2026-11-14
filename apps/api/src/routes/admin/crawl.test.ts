@@ -49,7 +49,7 @@ vi.mock('@concert-crawl/db', () => {
   };
   return {
     db,
-    venues: { blockedAt: 'venues.blocked_at' },
+    venues: { id: 'venues.id', blockedAt: 'venues.blocked_at' },
     crawlRuns: {},
     crawlRunPages: {},
     crawlTriggers: {},
@@ -62,6 +62,14 @@ vi.mock('@concert-crawl/db', () => {
 const VENUE_ID = '00000000-0000-0000-0000-000000000001';
 const RUN_ID = '00000000-0000-0000-0000-000000000002';
 const TRIGGER_ID = '00000000-0000-0000-0000-000000000003';
+// A venue Crawl all takes (lib/crawl-all.ts).
+const ELIGIBLE = {
+  id: VENUE_ID,
+  active: true,
+  verified: true,
+  blockedAt: null,
+  crawlPausedAt: null,
+};
 
 const mockVenue = {
   id: VENUE_ID,
@@ -153,21 +161,37 @@ describe('Admin crawl routes', () => {
       expect(body.data.count).toBe(0);
     });
 
-    it('leaves out venues that blocked us', async () => {
+    it('queues only the venues Crawl all takes: not blocked, paused, hidden or unverified', async () => {
       adminAuth();
       const { db } = await import('@concert-crawl/db');
-      const { isNull } = await import('drizzle-orm');
-      vi.mocked(db.select().from().where).mockResolvedValueOnce([]);
-      await createApp().request('/v1/admin/crawl', { method: 'POST' });
-      expect(isNull).toHaveBeenCalledWith('venues.blocked_at');
+      const skipped = (id: string, over: object) => ({
+        ...ELIGIBLE,
+        id,
+        ...over,
+      });
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([
+        skipped('blocked', { blockedAt: new Date() }),
+        skipped('paused', { crawlPausedAt: new Date() }),
+        skipped('hidden', { active: false }),
+        skipped('unverified', { verified: false }),
+        ELIGIBLE,
+      ]);
+      vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+        { id: TRIGGER_ID, venueId: VENUE_ID },
+      ]);
+      const { inArray } = await import('drizzle-orm');
+      vi.mocked(inArray).mockClear();
+      const res = await createApp().request('/v1/admin/crawl', {
+        method: 'POST',
+      });
+      expect(res.status).toBe(202);
+      expect(inArray).toHaveBeenCalledWith('venues.id', [VENUE_ID]);
     });
 
     it('returns 202 with triggerIds when active venues exist', async () => {
       adminAuth();
       const { db } = await import('@concert-crawl/db');
-      vi.mocked(db.select().from().where).mockResolvedValueOnce([
-        { id: VENUE_ID },
-      ]);
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([ELIGIBLE]);
       vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
         { id: TRIGGER_ID, venueId: VENUE_ID },
       ]);
@@ -187,9 +211,7 @@ describe('Admin crawl routes', () => {
     it('persists force=true on every trigger when the body sets force=true', async () => {
       adminAuth();
       const { db } = await import('@concert-crawl/db');
-      vi.mocked(db.select().from().where).mockResolvedValueOnce([
-        { id: VENUE_ID },
-      ]);
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([ELIGIBLE]);
       vi.mocked(db.insert({}).values).mockClear();
       vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
         { id: TRIGGER_ID, venueId: VENUE_ID },
@@ -211,9 +233,7 @@ describe('Admin crawl routes', () => {
     it('defaults force=false for an empty application/json body', async () => {
       adminAuth();
       const { db } = await import('@concert-crawl/db');
-      vi.mocked(db.select().from().where).mockResolvedValueOnce([
-        { id: VENUE_ID },
-      ]);
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([ELIGIBLE]);
       vi.mocked(db.insert({}).values).mockClear();
       vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
         { id: TRIGGER_ID, venueId: VENUE_ID },
@@ -233,9 +253,7 @@ describe('Admin crawl routes', () => {
     it('defaults force=false when the body fails schema validation', async () => {
       adminAuth();
       const { db } = await import('@concert-crawl/db');
-      vi.mocked(db.select().from().where).mockResolvedValueOnce([
-        { id: VENUE_ID },
-      ]);
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([ELIGIBLE]);
       vi.mocked(db.insert({}).values).mockClear();
       vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
         { id: TRIGGER_ID, venueId: VENUE_ID },

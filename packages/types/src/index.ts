@@ -610,6 +610,23 @@ export interface CrawlBatchDetail extends CrawlBatch {
   runs: CrawlBatchRun[];
 }
 
+/** Why Crawl all leaves a venue out (blocked wins, then paused, hidden, unverified). */
+export type CrawlAllSkipReason = 'blocked' | 'paused' | 'hidden' | 'unverified';
+
+/** GET /v1/admin/crawl/estimate: what the Crawl all confirm says first. */
+export interface CrawlAllEstimate {
+  /** Every venue not removed. */
+  total: number;
+  /** The venues Crawl all would queue. */
+  eligible: number;
+  skipped: { venueId: string; name: string; reason: CrawlAllSkipReason }[];
+  /**
+   * The average of recent nightly crawls, or null with no history (the
+   * confirm then drops its time and cost line).
+   */
+  usual: { durationMs: number; costUsd: number; nights: number } | null;
+}
+
 // CrawlRun — represents the JSON-serialized API response shape.
 // 'in_progress' is a virtual status used during async crawl execution (not persisted to DB).
 export interface CrawlRun {
