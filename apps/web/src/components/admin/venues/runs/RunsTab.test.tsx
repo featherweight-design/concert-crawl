@@ -195,6 +195,28 @@ describe('RunsTab', () => {
     expect(rows()[0]!.style.display).toBe('flex');
   });
 
+  it('ellipsises a long error to one line on the phone, the row’s name keeping it whole', () => {
+    vi.stubGlobal('matchMedia', matchMediaStub(true));
+    const sqlError =
+      'Failed query: insert into "events" ("id", "venue_id", "title") values ($1, $2, $3) on conflict do nothing';
+    renderTab([
+      row({
+        id: 'run-sql',
+        status: 'failed',
+        reason: null,
+        eventsFound: 0,
+        eventsInserted: 0,
+        errorMessage: `${sqlError}\nparams: 1,2,3`,
+      }),
+    ]);
+    const runRow = rows()[0]!;
+    const line = within(runRow).getByText(sqlError, { exact: false });
+    expect(line.style.whiteSpace).toBe('nowrap');
+    expect(line.style.overflow).toBe('hidden');
+    expect(line.style.textOverflow).toBe('ellipsis');
+    expect(runRow.getAttribute('aria-label')).toContain(sqlError);
+  });
+
   it('Not OK keeps the runs that weren’t, and counts them', () => {
     renderTab();
     const notOk = screen.getByRole('button', { name: /^Not OK/ });

@@ -281,7 +281,12 @@ export const RunListRow = ({
                 fontSize: 12.5,
                 lineHeight: 1.4,
                 color: 'var(--fg-muted)',
-                overflowWrap: 'anywhere',
+                // `04/venue-runs-mobile` draws each line on one row and no
+                // long error, so a Failed run's error ellipsises as desktop's
+                // does. The row's accessible name and the detail keep it whole.
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {line}
