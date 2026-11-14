@@ -219,14 +219,36 @@ describe('fetchPage — navigation timeout', () => {
     }
   });
 
-  it('detaches the CDP session when the context closes', async () => {
+  it('never continues a hop still pending at teardown, and closes rather than detaches', async () => {
     const cdp = makeMockCdp();
-    await fetchPage(
-      'https://example.com',
-      makeMockBrowser(makeMockPage(), cdp),
-      0,
+    let release: ((allowed: boolean) => void) | undefined;
+    isAllowedSpy.mockImplementation(async (url: string) =>
+      url.endsWith('/events')
+        ? new Promise<boolean>((resolve) => {
+            release = resolve;
+          })
+        : true,
     );
-    expect(cdp.session.detach).toHaveBeenCalled();
+    let hop: Promise<Verdict> | undefined;
+    const page = makeMockPage({
+      // The last read before teardown: a meta refresh pauses here and is
+      // still being checked when fetchPage closes the context.
+      content: vi.fn(async () => {
+        hop = cdp.pause({ url: 'https://example.com/events' });
+        return '<html><body>loaded</body></html>';
+      }) as unknown as Page['content'],
+    });
+    const browser = makeMockBrowser(page, cdp);
+
+    await fetchPage('https://example.com', browser, 0);
+    const context = (await vi.mocked(browser.newContext).mock.results[0]
+      ?.value) as BrowserContext;
+    expect(context.close).toHaveBeenCalled();
+    release?.(true);
+
+    await expect(hop).resolves.toBe('fail');
+    expect(cdp.answered('Fetch.continueRequest')).toEqual([]);
+    expect(cdp.session.detach).not.toHaveBeenCalled();
   });
 
   it('passes the waitUntil strategy to page.goto when no selector is provided', async () => {
@@ -497,34 +519,48 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     expect(cdp.answered('Fetch.continueRequest')).toEqual(['req-1']);
   });
 
+  // Runs fetchPage and calls `during` from content(), the last read before
+  // teardown, so the gate is still open; returns what `during` returned.
+  async function duringFetch<T>(
+    cdp: ReturnType<typeof makeMockCdp>,
+    during: () => Promise<T>,
+  ): Promise<T> {
+    let out: { value: T } | undefined;
+    const page = makeMockPage({
+      content: vi.fn(async () => {
+        out = { value: await during() };
+        return '<html><body>loaded</body></html>';
+      }) as unknown as Page['content'],
+    });
+    await fetchPage('https://example.com', makeMockBrowser(page, cdp), 0);
+    if (!out) throw new Error('content() was never read');
+    return out.value;
+  }
+
   it("continues goto()'s own request for a bare-origin URL with no lookup or wait", async () => {
     const cdp = makeMockCdp();
-    await fetchPage(
-      'https://example.com',
-      makeMockBrowser(makeMockPage(), cdp),
-      0,
-    );
-    isAllowedSpy.mockClear();
-    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    let setTimeoutSpy: ReturnType<typeof vi.spyOn> | undefined;
+    const verdict = await duringFetch(cdp, async () => {
+      isAllowedSpy.mockClear();
+      setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+      const answer = await cdp.pause({ url: 'https://example.com/' });
+      setTimeoutSpy.mockRestore();
+      return answer;
+    });
 
-    await expect(cdp.pause({ url: 'https://example.com/' })).resolves.toBe(
-      'continue',
-    );
+    expect(verdict).toBe('continue');
     expect(isAllowedSpy).not.toHaveBeenCalled();
     expect(setTimeoutSpy).not.toHaveBeenCalled();
   });
 
   it('gates a later navigation back to the starting URL', async () => {
     const cdp = makeMockCdp();
-    await fetchPage(
-      'https://example.com',
-      makeMockBrowser(makeMockPage(), cdp),
-      0,
-    );
-    await cdp.pause({ url: 'https://example.com/' }); // goto()'s own request
-    isAllowedSpy.mockClear();
-    // A reload: must clear robots.txt and pacing.
-    await cdp.pause({ url: 'https://example.com/' });
+    await duringFetch(cdp, async () => {
+      await cdp.pause({ url: 'https://example.com/' }); // goto()'s own request
+      isAllowedSpy.mockClear();
+      // A reload: must clear robots.txt and pacing.
+      return cdp.pause({ url: 'https://example.com/' });
+    });
 
     expect(isAllowedSpy).toHaveBeenCalledWith(
       'https://example.com/',
@@ -532,37 +568,67 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     );
   });
 
-  it('fails a main-frame navigation the page starts to a disallowed URL', async () => {
+  it('blocks a disallowed navigation the page starts after goto() and still returns the page', async () => {
     const cdp = makeMockCdp();
-    await fetchPage(
-      'https://example.com',
-      makeMockBrowser(makeMockPage(), cdp),
-      0,
+    const listeners: Record<string, (arg: unknown) => void> = {};
+    let verdict: Verdict | undefined;
+    const page = makeMockPage({
+      on: vi.fn((event: string, fn: (arg: unknown) => void) => {
+        listeners[event] = fn;
+      }) as unknown as Page['on'],
+      // A script navigates once the page has loaded. Playwright still
+      // reports the request it raised, though Chromium never sends it.
+      waitForSelector: vi.fn(async () => {
+        listeners.request?.({
+          isNavigationRequest: () => true,
+          frame: () => 'main-frame',
+          url: () => 'https://example.com/private/x.html',
+        });
+        verdict = await cdp.pause({
+          url: 'https://example.com/private/x.html',
+        });
+        return null;
+      }) as unknown as Page['waitForSelector'],
+    });
+    isAllowedSpy.mockImplementation(
+      async (url: string) => !url.includes('/private/'),
     );
-    isAllowedSpy.mockResolvedValueOnce(false);
 
-    await expect(
-      cdp.pause({ url: 'https://example.com/private' }),
-    ).resolves.toBe('fail');
+    const result = await fetchPage(
+      'https://example.com',
+      makeMockBrowser(page, cdp),
+      0,
+      'networkidle',
+      '.event-card',
+    );
+
+    expect(verdict).toBe('fail');
+    // Aborted, not BlockedByClient: Chromium keeps the loaded page rather
+    // than commit its error page over it.
+    expect(cdp.send).toHaveBeenCalledWith('Fetch.failRequest', {
+      requestId: expect.any(String),
+      errorReason: 'Aborted',
+    });
+    expect(cdp.answered('Fetch.continueRequest')).toEqual([]);
+    expect(result.html).toBe('<html><body>loaded</body></html>');
   });
 
   it('leaves an iframe document to page.route, with no lookup or wait', async () => {
     const cdp = makeMockCdp();
-    await fetchPage(
-      'https://example.com',
-      makeMockBrowser(makeMockPage(), cdp),
-      0,
-    );
-    isAllowedSpy.mockClear();
-    crawlDelaySpy.mockClear();
-    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
-
-    await expect(
-      cdp.pause({
+    let setTimeoutSpy: ReturnType<typeof vi.spyOn> | undefined;
+    const verdict = await duringFetch(cdp, async () => {
+      isAllowedSpy.mockClear();
+      crawlDelaySpy.mockClear();
+      setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+      const answer = await cdp.pause({
         url: 'https://ads.example/private/frame.html',
         frameId: 'child-frame-id',
-      }),
-    ).resolves.toBe('continue');
+      });
+      setTimeoutSpy.mockRestore();
+      return answer;
+    });
+
+    expect(verdict).toBe('continue');
     expect(isAllowedSpy).not.toHaveBeenCalled();
     expect(crawlDelaySpy).not.toHaveBeenCalled();
     expect(setTimeoutSpy).not.toHaveBeenCalled();
@@ -580,21 +646,17 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
 
   it('swallows an answer to a request whose page already closed', async () => {
     const cdp = makeMockCdp();
-    await fetchPage(
-      'https://example.com',
-      makeMockBrowser(makeMockPage(), cdp),
-      0,
-    );
-    cdp.send.mockRejectedValue(
-      new Error('Target page, context or browser has been closed'),
-    );
-
-    cdp.pause({ url: 'https://example.com/' }).catch(() => undefined);
-    await vi.waitFor(() =>
-      expect(cdp.send).toHaveBeenLastCalledWith('Fetch.continueRequest', {
-        requestId: expect.any(String),
-      }),
-    );
+    await duringFetch(cdp, async () => {
+      cdp.send.mockRejectedValue(
+        new Error('Target page, context or browser has been closed'),
+      );
+      cdp.pause({ url: 'https://example.com/' }).catch(() => undefined);
+      await vi.waitFor(() =>
+        expect(cdp.send).toHaveBeenLastCalledWith('Fetch.continueRequest', {
+          requestId: expect.any(String),
+        }),
+      );
+    });
     // No unhandled rejection: vitest would fail the run on one.
   });
 
