@@ -430,6 +430,91 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
   });
 });
 
+describe('fetchPage — iframe documents', () => {
+  type Handler = (route: Route) => Promise<void>;
+
+  const routeFor = (
+    url: string,
+    { navigation = true, frame = 'child-frame' } = {},
+  ) =>
+    ({
+      request: () => ({
+        isNavigationRequest: () => navigation,
+        frame: () => frame,
+        url: () => url,
+      }),
+      continue: vi.fn().mockResolvedValue(undefined),
+      abort: vi.fn().mockResolvedValue(undefined),
+    }) as unknown as Route;
+
+  async function handlerOf(page: Page): Promise<Handler> {
+    await fetchPage('https://example.com', makeMockBrowser(page), 0);
+    return vi.mocked(page.route).mock.calls[0]?.[1] as Handler;
+  }
+
+  it('aborts an iframe document before it is requested, and the page still loads', async () => {
+    let handler: Handler | undefined;
+    const frame = routeFor('https://ads.example/private/frame.html');
+    const page = makeMockPage({
+      route: vi.fn(async (_pattern: string, fn: Handler) => {
+        handler = fn;
+      }) as unknown as Page['route'],
+      goto: vi.fn(async () => {
+        await handler?.(frame);
+        return makeResponse(200);
+      }) as unknown as Page['goto'],
+    });
+
+    const result = await fetchPage(
+      'https://example.com',
+      makeMockBrowser(page),
+      0,
+    );
+
+    expect(frame.abort).toHaveBeenCalledWith('blockedbyclient');
+    expect(frame.continue).not.toHaveBeenCalled();
+    expect(result.html).toBe('<html><body>loaded</body></html>');
+  });
+
+  it('aborts every iframe document, robots.txt allowed or not, without a lookup or a wait', async () => {
+    const handler = await handlerOf(makeMockPage());
+    isAllowedSpy.mockClear();
+    crawlDelaySpy.mockClear();
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    const frames = [
+      routeFor('https://www.youtube.example/embed/abc'),
+      routeFor('https://example.com/widget'),
+      routeFor('https://maps.example/embed', { frame: 'nested-frame' }),
+    ];
+
+    for (const frame of frames) await handler(frame);
+
+    for (const frame of frames) {
+      expect(frame.abort).toHaveBeenCalledWith('blockedbyclient');
+      expect(frame.continue).not.toHaveBeenCalled();
+    }
+    expect(isAllowedSpy).not.toHaveBeenCalled();
+    expect(crawlDelaySpy).not.toHaveBeenCalled();
+    expect(setTimeoutSpy).not.toHaveBeenCalled();
+  });
+
+  it('leaves subresources and the main frame as they were', async () => {
+    const handler = await handlerOf(makeMockPage());
+    isAllowedSpy.mockClear();
+
+    const script = routeFor('https://cdn.example/app.js', {
+      navigation: false,
+    });
+    await handler(script);
+    const start = routeFor('https://example.com/', { frame: 'main-frame' });
+    await handler(start);
+
+    expect(script.continue).toHaveBeenCalled();
+    expect(start.continue).toHaveBeenCalled();
+    expect(isAllowedSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('fetchPageHttp', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
