@@ -2131,7 +2131,7 @@ export const CONSUMER_COPY = {
     nextPageWaiting: 'Next page is waiting',
     swipeForPage: (page: number): string => `Swipe for page ${page}`,
     /** The last page on a phone. The nights are the whole booklet's. */
-    pageNightsSoFar: (page: number, nights: number): string =>
+    pageNights: (page: number, nights: number): string =>
       `Page ${page} · ${nights} ${nights === 1 ? 'night' : 'nights'}`,
     jumpTo: 'Jump to',
     // Jump to buttons read `ID · 1` and `2 · 3`; these are what they announce.

@@ -199,7 +199,7 @@ function BookletView({
   const status = stack
     ? following?.[0] !== undefined
       ? COPY.swipeForPage(leafNumber(following[0]))
-      : COPY.pageNightsSoFar(
+      : COPY.pageNights(
           lastLeaf === undefined ? 1 : Math.max(1, leafNumber(lastLeaf)),
           stats.nights,
         )

@@ -22,7 +22,7 @@ describe('passport copy', () => {
   });
 
   it('reads the phone pager as "Page 3 · 11 nights", without "so far"', () => {
-    expect(COPY.pageNightsSoFar(3, 11)).toBe('Page 3 · 11 nights');
-    expect(COPY.pageNightsSoFar(1, 1)).toBe('Page 1 · 1 night');
+    expect(COPY.pageNights(3, 11)).toBe('Page 3 · 11 nights');
+    expect(COPY.pageNights(1, 1)).toBe('Page 1 · 1 night');
   });
 });
