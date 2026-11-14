@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { useContentBox } from './useContentBox';
 import { useDialogKeyboard } from './useDialogKeyboard';
+import { useIsNarrowDesktop } from './useIsPhone';
 
 export interface SidePanelProps {
   onClose: () => void;
@@ -211,7 +212,9 @@ const OverlayPanel = ({
 export const SidePanel = (props: SidePanelProps) => {
   const titleId = useId();
   const content = useContentBox();
-  if (!props.inline) return <OverlayPanel {...props} />;
+  const narrow = useIsNarrowDesktop();
+  // A desktop too narrow to dock the panel beside the list overlays it instead.
+  if (!props.inline || narrow) return <OverlayPanel {...props} />;
   return (
     <aside
       {...(props.label
