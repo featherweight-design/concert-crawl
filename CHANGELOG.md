@@ -1,3 +1,17 @@
+# [1.479.0](https://github.com/featherweight-design/concert-crawl/compare/v1.478.0...v1.479.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api,db:** keep a merged-away show in the audit for Needs you merges ([5636928](https://github.com/featherweight-design/concert-crawl/commit/5636928ef02779bf76e27ea861eefe0b74735439))
+* **db:** drop the unread source return; assert one event.merge row ([a5c11d3](https://github.com/featherweight-design/concert-crawl/commit/a5c11d37d9a0d2ed59664ed3bb3477e476deefab))
+* **web:** address the past Events list review ([9a073d2](https://github.com/featherweight-design/concert-crawl/commit/9a073d2e7ad69a54cbf3f4db10120ffaa7dff90b))
+
+
+### Features
+
+* **web:** filter past shows and open them from the whole Events row ([7bdf820](https://github.com/featherweight-design/concert-crawl/commit/7bdf820988ddb7a47e4c9dd84ae334c6891e94fd))
+
 # [1.478.0](https://github.com/featherweight-design/concert-crawl/compare/v1.477.0...v1.478.0) (2026-11-14)
 
 
