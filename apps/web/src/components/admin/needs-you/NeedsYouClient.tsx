@@ -362,12 +362,28 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
             </div>
 
             {failure && (
-              <SaveFailedToast
-                title={failure.title}
-                saved={failure.saved}
-                onRetry={failure.retry}
-                onDismiss={() => setFailure(null)}
-              />
+              // The phone's item page covers the list, so the toast of a
+              // failed answer rides above it instead of sitting underneath.
+              <div
+                style={
+                  isPhone && selectedRow
+                    ? {
+                        position: 'fixed',
+                        left: 16,
+                        right: 16,
+                        bottom: 'calc(120px + env(safe-area-inset-bottom))',
+                        zIndex: 100,
+                      }
+                    : undefined
+                }
+              >
+                <SaveFailedToast
+                  title={failure.title}
+                  saved={failure.saved}
+                  onRetry={failure.retry}
+                  onDismiss={() => setFailure(null)}
+                />
+              </div>
             )}
             <div
               data-testid="needs-you-queue"

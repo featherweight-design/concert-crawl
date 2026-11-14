@@ -101,6 +101,7 @@ export const EvidenceSlot = ({
             ? { id: row.venueId, name: row.venueName }
             : null
         }
+        busy={busy}
         onClose={onClose}
         onSnooze={onSnooze}
         onNotUseful={row.venueId ? onNotUseful : undefined}

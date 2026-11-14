@@ -1,0 +1,60 @@
+{
+  "feature": "Admin P47-2 · Needs you phone item page",
+  "note": "P47-2 PR 2. CONTACT_SHEET_ROLE=admin. Phone only: the item page is the phone's (desktop keeps the docked panel, covered by admin-2b-needs-you). Boards: 02-needs-you/an-item-mobile, addendum-3 01-snooze/item-menu-m, 10-needs-you-panels/venue-failing-m, price-check-m. Every other kind's phone page is in admin-2b-needs-you (rows panel-*).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true }
+  ],
+  "rows": [
+    {
+      "id": "item-page",
+      "label": "An item as a full page, answers pinned",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-item\"]"
+        },
+        { "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"phone-item-page\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "item-menu",
+      "label": "The item's ⋯ sheet",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-item\"]"
+        },
+        { "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"phone-item-more\"]" },
+        { "click": "[data-testid=\"phone-item-more\"]" },
+        { "wait": "[data-testid=\"admin-sheet\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "venue-failing",
+      "label": "Venue failing item (venue-failing-m)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"venue-failing:\"]"
+        },
+        { "click": "[data-item-key^=\"venue-failing:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"phone-item-page\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "price-check",
+      "label": "Price check item (price-check-m)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"price-check:\"]"
+        },
+        { "click": "[data-item-key^=\"price-check:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"phone-item-page\"]", "settle": 400 }
+      ]
+    }
+  ]
+}
