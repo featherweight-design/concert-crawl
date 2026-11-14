@@ -8,13 +8,13 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { StatusBadge } from '@/components/admin/primitives';
+import { StatusBadge, Toast } from '@/components/admin/primitives';
 import { AdminButton } from '@/components/admin/primitives/AdminButton';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { InviteCodesRowsSkeleton } from '../invite-codes/InviteCodesSkeleton';
 import { PeopleClient } from './PeopleClient';
 import { PersonClient } from './PersonClient';
-import { Account, Toast, type AccountProps } from './PersonParts';
+import { Account, type AccountProps } from './PersonParts';
 import { PeopleSkeleton } from './PeopleSkeleton';
 import { PersonSkeleton } from './PersonSkeleton';
 import { roleCaption } from './person-rules';
@@ -360,7 +360,7 @@ describe('SH50: the email note (07/email-revealed)', () => {
 describe('SH50: the Undo toast (07/role-changed-with-undo)', () => {
   it('centres under the content column on desktop (left 232, right 0)', () => {
     render(<Toast title="@mira.k is now Member" body={null} />);
-    const toast = screen.getByTestId('person-toast');
+    const toast = screen.getByTestId('admin-toast');
     expect(toast.style.left).toBe('232px');
     expect(toast.style.right).toBe('0px');
   });
@@ -368,7 +368,7 @@ describe('SH50: the Undo toast (07/role-changed-with-undo)', () => {
   it('keeps 16px sides on the phone', () => {
     setPhone(true);
     render(<Toast title="@mira.k is now Member" body={null} />);
-    const toast = screen.getByTestId('person-toast');
+    const toast = screen.getByTestId('admin-toast');
     expect(toast.style.left).toBe('16px');
     expect(toast.style.right).toBe('16px');
   });

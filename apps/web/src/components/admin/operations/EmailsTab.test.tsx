@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { EmailsTab } from './EmailsTab';
@@ -57,19 +58,19 @@ afterEach(cleanup);
 describe('EmailsTab', () => {
   it('lists every email the API sends, named from copy or its own label', async () => {
     render(<EmailsTab isPhone={false} />);
-    const group = await screen.findByRole('radiogroup', {
+    const group = await screen.findByRole('group', {
       name: COPY.chipsLabel,
     });
     expect(group).toBeInTheDocument();
     expect(
-      screen.getByRole('radio', { name: COPY.names.crawl_failure }),
-    ).toHaveAttribute('aria-checked', 'true');
+      screen.getByRole('button', { name: COPY.names.crawl_failure }),
+    ).toHaveAttribute('aria-pressed', 'true');
     expect(
-      screen.getByRole('radio', { name: COPY.names.invite_code }),
-    ).toBeInTheDocument();
+      screen.getByRole('button', { name: COPY.names.invite_code }),
+    ).toHaveAttribute('aria-pressed', 'false');
     // An email this build has no name for shows the API's label.
     expect(
-      screen.getByRole('radio', { name: 'Brand new email' }),
+      screen.getByRole('button', { name: 'Brand new email' }),
     ).toBeInTheDocument();
     expect(screen.getByText(COPY.note)).toBeInTheDocument();
   });
@@ -81,7 +82,7 @@ describe('EmailsTab', () => {
     expect(frame).toHaveAttribute('sandbox', 'allow-same-origin');
 
     fireEvent.click(
-      screen.getByRole('radio', { name: COPY.names.invite_code }),
+      screen.getByRole('button', { name: COPY.names.invite_code }),
     );
     expect(await screen.findByTestId('email-preview-text')).toHaveTextContent(
       'Text of invite_code',
@@ -112,7 +113,7 @@ describe('EmailsTab', () => {
     );
   });
 
-  it('says why a test did not go out, with Try again', async () => {
+  it('says which setting is missing, with no Try again', async () => {
     mockPost.mockResolvedValueOnce({
       sent: false,
       reason: 'missing_admin_email',
@@ -125,6 +126,76 @@ describe('EmailsTab', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(COPY.sendFailedTitle);
     expect(alert).toHaveTextContent(COPY.sendFailedBody.missing_admin_email);
+    expect(
+      within(alert).queryByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    ).toBeNull();
+  });
+
+  it("passes on Resend's reason and offers Try again", async () => {
+    mockPost
+      .mockResolvedValueOnce({
+        sent: false,
+        reason: 'send_failed',
+        error: { name: 'validation_error', message: 'Domain not verified' },
+      })
+      .mockResolvedValueOnce({
+        sent: true,
+        resendId: 'r2',
+        sentTo: 'h***@x.y',
+      });
+    render(<EmailsTab isPhone={false} />);
+    await screen.findByTestId('email-preview-frame');
+
+    fireEvent.click(screen.getByRole('button', { name: COPY.sendTest }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      COPY.sendFailedWith(
+        COPY.sendFailedBody.send_failed,
+        'Domain not verified',
+      ),
+    );
+    fireEvent.click(
+      within(alert).getByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    );
+    await waitFor(() => expect(mockPost).toHaveBeenCalledTimes(2));
+  });
+
+  it("retries only the preview when its Couldn't load is pressed", async () => {
+    mockGet.mockImplementation(async (path: string) => {
+      if (path.endsWith('/options')) return OPTIONS;
+      throw new Error('preview down');
+    });
+    render(<EmailsTab isPhone={false} />);
+    const failed = await screen.findByTestId('couldnt-load');
+    serve();
+    const listCalls = () =>
+      mockGet.mock.calls.filter(([path]) => String(path).endsWith('/options'))
+        .length;
+    const before = listCalls();
+
+    fireEvent.click(
+      within(failed).getByRole('button', {
+        name: ADMIN_COPY.states.couldntLoad.tryAgain,
+      }),
+    );
+
+    expect(
+      await screen.findByTestId('email-preview-frame'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: COPY.chipsLabel })).toBeVisible();
+    expect(listCalls()).toBe(before);
+  });
+
+  it('says so when the API lists no emails', async () => {
+    mockGet.mockImplementation(async () => []);
+    render(<EmailsTab isPhone={false} />);
+    expect(await screen.findByText(COPY.emptyTitle)).toBeInTheDocument();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it("shows Couldn't load when the list fails, and Try again reloads it", async () => {
@@ -137,9 +208,7 @@ describe('EmailsTab', () => {
         name: ADMIN_COPY.states.couldntLoad.tryAgain,
       }),
     );
-    await waitFor(() =>
-      expect(screen.getByRole('radiogroup')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByRole('group')).toBeInTheDocument());
   });
 
   it('puts Send me a test under the preview on the phone, with no note', async () => {

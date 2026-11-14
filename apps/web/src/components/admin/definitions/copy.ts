@@ -3351,12 +3351,18 @@ export const ADMIN_COPY = {
       sendFailedTitle: "Couldn't send the test",
       sendFailedBody: {
         missing_api_key:
-          'RESEND_API_KEY is not set on the API. Nothing was sent.',
+          'RESEND_API_KEY is not set on the API. Set it in Render and redeploy.',
         missing_admin_email:
-          'ADMIN_EMAIL is not set on the API. Nothing was sent.',
+          'ADMIN_EMAIL is not set on the API. Set it in Render and redeploy.',
         send_failed: 'Resend refused it. Nothing was sent.',
         request: 'The request failed. Nothing was sent.',
       },
+      // The reason, then the provider's own words.
+      sendFailedWith: (reason: string, detail: string) =>
+        `${reason} Resend said: ${detail}`,
+      // Only when the API lists no emails at all; the boards draw no list
+      // without emails.
+      emptyTitle: 'No emails to show',
     },
     log: {
       anyone: 'Anyone',

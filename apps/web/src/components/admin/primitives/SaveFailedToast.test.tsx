@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { SaveFailedToast } from './SaveFailedToast';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { Toast } from '../people/PersonParts';
+import { Toast } from './Toast';
 
 const LONG = '@' + 'x'.repeat(60);
 

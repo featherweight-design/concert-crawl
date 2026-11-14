@@ -13,10 +13,11 @@ import { apiClient } from '@/lib/api';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   CouldntLoad,
+  EmptyState,
   SaveFailedToast,
   Spinner,
+  Toast,
 } from '@/components/admin/primitives';
-import { Toast } from '@/components/admin/people/PersonParts';
 
 const COPY = ADMIN_COPY.operations.emails;
 const NAMES = new Map<string, string>(Object.entries(COPY.names));
@@ -30,14 +31,27 @@ const SENT_TOAST_MS = 6000;
 
 type FailureKey = keyof typeof COPY.sendFailedBody;
 
+/** A failure worth trying again; a missing setting is not. */
+const RETRYABLE: ReadonlySet<FailureKey> = new Set(['send_failed', 'request']);
+
 type Load<T> =
   { kind: 'loading' } | { kind: 'failed' } | { kind: 'ready'; data: T };
 
-type Send =
+type SendState =
   | { kind: 'idle' }
   | { kind: 'sending' }
   | { kind: 'sent'; to: string; subject: string }
-  | { kind: 'failed'; reason: FailureKey };
+  | { kind: 'failed'; reason: FailureKey; detail: string | null };
+
+/** The provider's own words on a failed send, when the API passed them on. */
+const errorMessageOf = (error: unknown): string | null =>
+  error !== null &&
+  typeof error === 'object' &&
+  'message' in error &&
+  typeof error.message === 'string' &&
+  error.message.trim() !== ''
+    ? error.message
+    : null;
 
 const nameOf = (option: AdminTestEmailOption) =>
   NAMES.get(option.key) ?? option.label;
@@ -96,11 +110,22 @@ const EmailFrame = ({
   title: string;
 }) => {
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const observerRef = useRef<ResizeObserver | null>(null);
   const [height, setHeight] = useState(320);
+  // Sized to the email on load, and again whenever it reflows (a narrower
+  // window, a turned phone), so it is never clipped.
   const fit = () => {
     const body = frameRef.current?.contentDocument?.body;
-    if (body) setHeight(body.scrollHeight + 16);
+    if (!body) return;
+    const measure = () => setHeight(body.scrollHeight + 16);
+    measure();
+    observerRef.current?.disconnect();
+    if (typeof ResizeObserver !== 'undefined') {
+      observerRef.current = new ResizeObserver(measure);
+      observerRef.current.observe(body);
+    }
   };
+  useEffect(() => () => observerRef.current?.disconnect(), []);
   if (preview.html.trim() === '') {
     return (
       <div
@@ -145,8 +170,10 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
   const [preview, setPreview] = useState<Load<AdminEmailPreview>>({
     kind: 'loading',
   });
-  const [send, setSend] = useState<Send>({ kind: 'idle' });
-  const [attempt, setAttempt] = useState(0);
+  const [send, setSend] = useState<SendState>({ kind: 'idle' });
+  // Separate, so a preview's Try again leaves the list in place.
+  const [listAttempt, setListAttempt] = useState(0);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
 
   const get = useCallback(
     async <T,>(path: string): Promise<T> => {
@@ -177,7 +204,7 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
     return () => {
       cancelled = true;
     };
-  }, [get, isLoaded, attempt]);
+  }, [get, isLoaded, listAttempt]);
 
   useEffect(() => {
     if (picked === null) return;
@@ -193,7 +220,7 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
     return () => {
       cancelled = true;
     };
-  }, [get, picked, attempt]);
+  }, [get, picked, previewAttempt]);
 
   // The sent toast leaves on its own.
   useEffect(() => {
@@ -226,19 +253,27 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
                   ? preview.data.subject
                   : '',
             }
-          : { kind: 'failed', reason: result.reason },
+          : {
+              kind: 'failed',
+              reason: result.reason,
+              detail: errorMessageOf(result.error),
+            },
       );
     } catch {
-      setSend({ kind: 'failed', reason: 'request' });
+      setSend({ kind: 'failed', reason: 'request', detail: null });
     }
   };
 
-  const retry = () => setAttempt((count) => count + 1);
-
   if (options.kind === 'failed') {
     return (
-      <CouldntLoad page={ADMIN_COPY.operations.tabs.emails} onRetry={retry} />
+      <CouldntLoad
+        page={ADMIN_COPY.operations.tabs.emails}
+        onRetry={() => setListAttempt((count) => count + 1)}
+      />
     );
+  }
+  if (options.kind === 'ready' && options.data.length === 0) {
+    return <EmptyState title={COPY.emptyTitle} />;
   }
   if (options.kind === 'loading') {
     return (
@@ -300,7 +335,7 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
       }}
     >
       <div
-        role="radiogroup"
+        role="group"
         aria-label={COPY.chipsLabel}
         data-testid="emails-chips"
         style={{
@@ -319,8 +354,7 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
             <button
               key={option.key}
               type="button"
-              role="radio"
-              aria-checked={on}
+              aria-pressed={on}
               data-testid={`emails-chip-${option.key}`}
               onClick={() => setPicked(option.key)}
               style={chipStyle(on)}
@@ -354,8 +388,18 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
       {send.kind === 'failed' && (
         <SaveFailedToast
           title={COPY.sendFailedTitle}
-          body={COPY.sendFailedBody[send.reason]}
-          onRetry={() => void sendTest()}
+          body={
+            send.detail === null
+              ? COPY.sendFailedBody[send.reason]
+              : COPY.sendFailedWith(
+                  COPY.sendFailedBody[send.reason],
+                  send.detail,
+                )
+          }
+          // A missing setting fails the same way every time: no Try again.
+          {...(RETRYABLE.has(send.reason)
+            ? { onRetry: () => void sendTest() }
+            : {})}
           onDismiss={() => setSend({ kind: 'idle' })}
         />
       )}
@@ -371,7 +415,7 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
         {preview.kind === 'failed' ? (
           <CouldntLoad
             page={pickedOption ? nameOf(pickedOption) : undefined}
-            onRetry={retry}
+            onRetry={() => setPreviewAttempt((count) => count + 1)}
           />
         ) : (
           <div
