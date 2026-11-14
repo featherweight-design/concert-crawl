@@ -1,3 +1,20 @@
+# [1.458.0](https://github.com/featherweight-design/concert-crawl/compare/v1.457.0...v1.458.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** cut the bug device line by code point ([c6e4a9b](https://github.com/featherweight-design/concert-crawl/commit/c6e4a9b61d583c10aeb0e3e9309071329b39e9d5))
+* **api:** let a postponed past show be rescheduled, and ignore unchanged fields in the past lock ([1530853](https://github.com/featherweight-design/concert-crawl/commit/1530853632ce6c4e43e3c7c3fdab32eb04f2c4c5))
+* **web:** keep focus and announce sending on the tell us card ([8c3362a](https://github.com/featherweight-design/concert-crawl/commit/8c3362a51e8ebd559e51665bb36aaa70b6ca49b8))
+
+
+### Features
+
+* **admin:** show the reporter's device on a bug and tick Resolve ([f99da38](https://github.com/featherweight-design/concert-crawl/commit/f99da389574b82f12bcce3dfd039f6bad541c14c))
+* **api:** add tier and id to event price alternates ([c0d15c6](https://github.com/featherweight-design/concert-crawl/commit/c0d15c60931081c79c5ab0b899c74ce2521c14fd))
+* **api:** refuse edits to a past show's fields with 409 past_locked ([b5fff77](https://github.com/featherweight-design/concert-crawl/commit/b5fff77c90baaa05b8841a659a0cf1104678be41))
+* **web:** error page and tell us card match the boards ([4212c16](https://github.com/featherweight-design/concert-crawl/commit/4212c1649d0b7b095775f155f0ddaf71e8e03c91))
+
 # [1.457.0](https://github.com/featherweight-design/concert-crawl/compare/v1.456.0...v1.457.0) (2026-11-14)
 
 
