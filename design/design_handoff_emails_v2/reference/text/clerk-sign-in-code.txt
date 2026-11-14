@@ -1,0 +1,21 @@
+Subject: Your Concert Crawl sign-in code
+Preheader: Enter it on the sign-in page. It works for 10 minutes.
+
+CONCERT CRAWL
+
+Your sign-in code
+
+Enter this code on the sign-in page to finish signing in.
+
+    {{otp_code}}
+
+Works for 10 minutes. Only the newest code works.
+{{#if requested_from}}Asked for from {{requested_from}} at {{requested_at}}.{{/if}}
+
+Didn’t try to sign in? You can ignore this email. Nobody gets in without the code.
+
+We’ll never ask you for this code by phone, text or email.
+
+----------------------------------------
+This is an account email, so it can’t be turned off. We only send one when you ask for it.
+Concert Crawl · Featherweight Design, LLC · Denver, CO

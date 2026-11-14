@@ -1,0 +1,418 @@
+[
+ {
+  "section": "00-shell-and-parts",
+  "name": "parts-d",
+  "title": "Shared parts · light",
+  "note": "Every email is built from these. One brand look (Light and Electric), never the reader’s theme.",
+  "width": 1000,
+  "screen": "screens/00-shell-and-parts/parts-d.jpg"
+ },
+ {
+  "section": "00-shell-and-parts",
+  "name": "parts-dark-d",
+  "title": "Shared parts · dark",
+  "note": "The same pieces under prefers-color-scheme: dark.",
+  "width": 1000,
+  "screen": "screens/00-shell-and-parts/parts-dark-d.jpg"
+ },
+ {
+  "section": "01-invite",
+  "name": "invite-m",
+  "title": "Invite · phone",
+  "note": "The code on the share sheet’s ticket. The button carries the code (?code=), so the invite screen opens filled in.",
+  "width": 390,
+  "screen": "screens/01-invite/invite-m.jpg"
+ },
+ {
+  "section": "01-invite",
+  "name": "invite-dark-m",
+  "title": "Invite · phone, dark",
+  "note": "What Apple Mail, iOS Mail and the Outlook apps show in dark mode.",
+  "width": 390,
+  "screen": "screens/01-invite/invite-dark-m.jpg"
+ },
+ {
+  "section": "01-invite",
+  "name": "invite-d",
+  "title": "Invite · desktop",
+  "note": "Desktop keeps the button its own width; phone runs it full width.",
+  "width": 1000,
+  "screen": "screens/01-invite/invite-d.jpg"
+ },
+ {
+  "section": "01-invite",
+  "name": "invite-dark-d",
+  "title": "Invite · desktop, dark",
+  "note": "",
+  "width": 1000,
+  "screen": "screens/01-invite/invite-dark-d.jpg"
+ },
+ {
+  "section": "01-invite",
+  "name": "invite-320",
+  "title": "Invite · 320",
+  "note": "The 14-character code still fits on one line at 24px.",
+  "width": 320,
+  "screen": "screens/01-invite/invite-320.jpg"
+ },
+ {
+  "section": "01-invite",
+  "name": "invite-noexpiry-m",
+  "title": "Invite · no expiry",
+  "note": "expires_at is null: the stub reads No expiry.",
+  "width": 390,
+  "screen": "screens/01-invite/invite-noexpiry-m.jpg"
+ },
+ {
+  "section": "01-invite",
+  "name": "invite-named-m",
+  "title": "Invite · a named code",
+  "note": "A plain code (4 to 20 letters and numbers, no BETA-). Needs the invite-code.ts fix from custom-auth.",
+  "width": 390,
+  "screen": "screens/01-invite/invite-named-m.jpg"
+ },
+ {
+  "section": "01-invite",
+  "name": "invite-text",
+  "title": "Invite · plain text",
+  "note": "",
+  "width": 600,
+  "screen": "screens/01-invite/invite-text.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-m",
+  "title": "Weekly digest · 3 shows · phone",
+  "note": "Artist photos lead, with the Browse image treatment: 2px genre ring and the genre left edge.",
+  "width": 390,
+  "screen": "screens/02-weekly-digest/digest-m.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-dark-m",
+  "title": "Weekly digest · 3 shows · phone, dark",
+  "note": "What Apple Mail, iOS Mail and the Outlook apps show in dark mode.",
+  "width": 390,
+  "screen": "screens/02-weekly-digest/digest-dark-m.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-d",
+  "title": "Weekly digest · 3 shows · desktop",
+  "note": "One column at every width, so nothing reflows between clients.",
+  "width": 1000,
+  "screen": "screens/02-weekly-digest/digest-d.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-dark-d",
+  "title": "Weekly digest · 3 shows · desktop, dark",
+  "note": "",
+  "width": 1000,
+  "screen": "screens/02-weekly-digest/digest-dark-d.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-more-d",
+  "title": "Weekly digest · 5 shown, +4 more",
+  "note": "Five rows at most, then +N more this week into Browse.",
+  "width": 1000,
+  "screen": "screens/02-weekly-digest/digest-more-d.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-one-m",
+  "title": "Weekly digest · 1 show",
+  "note": "Singular subject and title.",
+  "width": 390,
+  "screen": "screens/02-weekly-digest/digest-one-m.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-zero-m",
+  "title": "Weekly digest · a quiet week",
+  "note": "Nobody they follow is in town: the zero note plus two taste picks. With no picks either, nothing is sent (live).",
+  "width": 390,
+  "screen": "screens/02-weekly-digest/digest-zero-m.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-zero-dark-m",
+  "title": "Weekly digest · a quiet week, dark",
+  "note": "",
+  "width": 390,
+  "screen": "screens/02-weekly-digest/digest-zero-dark-m.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-long-320",
+  "title": "Weekly digest · long names at 320",
+  "note": "Artist and tour wrap; venue drops under the date on phones.",
+  "width": 320,
+  "screen": "screens/02-weekly-digest/digest-long-320.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-images-off-d",
+  "title": "Weekly digest · images off",
+  "note": "Outlook and privacy modes block images: alt text on the genre fallback, the logo’s alt stands in.",
+  "width": 1000,
+  "screen": "screens/02-weekly-digest/digest-images-off-d.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-outlook-d",
+  "title": "Weekly digest · Outlook for Windows",
+  "note": "No rounded corners or gradients: square cards, solid cyan edge and button. Still reads as us.",
+  "width": 1000,
+  "screen": "screens/02-weekly-digest/digest-outlook-d.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-text",
+  "title": "Weekly digest · plain text",
+  "note": "",
+  "width": 600,
+  "screen": "screens/02-weekly-digest/digest-text.jpg"
+ },
+ {
+  "section": "02-weekly-digest",
+  "name": "digest-zero-text",
+  "title": "Weekly digest · quiet week, plain text",
+  "note": "",
+  "width": 600,
+  "screen": "screens/02-weekly-digest/digest-zero-text.jpg"
+ },
+ {
+  "section": "03-sign-in-code",
+  "name": "si-m",
+  "title": "Sign-in code · phone",
+  "note": "From “Email me a code instead”. Never names the account or anything in it.",
+  "width": 390,
+  "screen": "screens/03-sign-in-code/si-m.jpg"
+ },
+ {
+  "section": "03-sign-in-code",
+  "name": "si-dark-m",
+  "title": "Sign-in code · phone, dark",
+  "note": "What Apple Mail, iOS Mail and the Outlook apps show in dark mode.",
+  "width": 390,
+  "screen": "screens/03-sign-in-code/si-dark-m.jpg"
+ },
+ {
+  "section": "03-sign-in-code",
+  "name": "si-d",
+  "title": "Sign-in code · desktop",
+  "note": "Same shape as the auth pages’ panel: the trail leads into the code.",
+  "width": 1000,
+  "screen": "screens/03-sign-in-code/si-d.jpg"
+ },
+ {
+  "section": "03-sign-in-code",
+  "name": "si-dark-d",
+  "title": "Sign-in code · desktop, dark",
+  "note": "",
+  "width": 1000,
+  "screen": "screens/03-sign-in-code/si-dark-d.jpg"
+ },
+ {
+  "section": "03-sign-in-code",
+  "name": "si-nofrom-m",
+  "title": "Sign-in code · no device line",
+  "note": "When Clerk sends no requested_from, the line is left out, not left blank.",
+  "width": 390,
+  "screen": "screens/03-sign-in-code/si-nofrom-m.jpg"
+ },
+ {
+  "section": "03-sign-in-code",
+  "name": "si-320",
+  "title": "Sign-in code · 320",
+  "note": "",
+  "width": 320,
+  "screen": "screens/03-sign-in-code/si-320.jpg"
+ },
+ {
+  "section": "03-sign-in-code",
+  "name": "si-text",
+  "title": "Sign-in code · plain text",
+  "note": "",
+  "width": 600,
+  "screen": "screens/03-sign-in-code/si-text.jpg"
+ },
+ {
+  "section": "04-verify-email-code",
+  "name": "su-m",
+  "title": "Verify email code · phone",
+  "note": "Step 3 of 3 during the beta. A sign-up with a taken email gets no email at all (custom-auth rule 2).",
+  "width": 390,
+  "screen": "screens/04-verify-email-code/su-m.jpg"
+ },
+ {
+  "section": "04-verify-email-code",
+  "name": "su-dark-m",
+  "title": "Verify email code · phone, dark",
+  "note": "What Apple Mail, iOS Mail and the Outlook apps show in dark mode.",
+  "width": 390,
+  "screen": "screens/04-verify-email-code/su-dark-m.jpg"
+ },
+ {
+  "section": "04-verify-email-code",
+  "name": "su-d",
+  "title": "Verify email code · desktop",
+  "note": "Same shape as the auth pages’ panel: the trail leads into the code.",
+  "width": 1000,
+  "screen": "screens/04-verify-email-code/su-d.jpg"
+ },
+ {
+  "section": "04-verify-email-code",
+  "name": "su-dark-d",
+  "title": "Verify email code · desktop, dark",
+  "note": "",
+  "width": 1000,
+  "screen": "screens/04-verify-email-code/su-dark-d.jpg"
+ },
+ {
+  "section": "04-verify-email-code",
+  "name": "su-text",
+  "title": "Verify email code · plain text",
+  "note": "",
+  "width": 600,
+  "screen": "screens/04-verify-email-code/su-text.jpg"
+ },
+ {
+  "section": "05-password-reset-code",
+  "name": "pr-m",
+  "title": "Password reset code · phone",
+  "note": "Only sent when the address has an account; the page reads the same either way.",
+  "width": 390,
+  "screen": "screens/05-password-reset-code/pr-m.jpg"
+ },
+ {
+  "section": "05-password-reset-code",
+  "name": "pr-dark-m",
+  "title": "Password reset code · phone, dark",
+  "note": "What Apple Mail, iOS Mail and the Outlook apps show in dark mode.",
+  "width": 390,
+  "screen": "screens/05-password-reset-code/pr-dark-m.jpg"
+ },
+ {
+  "section": "05-password-reset-code",
+  "name": "pr-d",
+  "title": "Password reset code · desktop",
+  "note": "Same shape as the auth pages’ panel: the trail leads into the code.",
+  "width": 1000,
+  "screen": "screens/05-password-reset-code/pr-d.jpg"
+ },
+ {
+  "section": "05-password-reset-code",
+  "name": "pr-dark-d",
+  "title": "Password reset code · desktop, dark",
+  "note": "",
+  "width": 1000,
+  "screen": "screens/05-password-reset-code/pr-dark-d.jpg"
+ },
+ {
+  "section": "05-password-reset-code",
+  "name": "pr-text",
+  "title": "Password reset code · plain text",
+  "note": "",
+  "width": 600,
+  "screen": "screens/05-password-reset-code/pr-text.jpg"
+ },
+ {
+  "section": "06-new-device-code",
+  "name": "nd-m",
+  "title": "New-device code · phone",
+  "note": "After a right password on a new device. The amber card is for the person it wasn’t.",
+  "width": 390,
+  "screen": "screens/06-new-device-code/nd-m.jpg"
+ },
+ {
+  "section": "06-new-device-code",
+  "name": "nd-dark-m",
+  "title": "New-device code · phone, dark",
+  "note": "What Apple Mail, iOS Mail and the Outlook apps show in dark mode.",
+  "width": 390,
+  "screen": "screens/06-new-device-code/nd-dark-m.jpg"
+ },
+ {
+  "section": "06-new-device-code",
+  "name": "nd-d",
+  "title": "New-device code · desktop",
+  "note": "Same shape as the auth pages’ panel: the trail leads into the code.",
+  "width": 1000,
+  "screen": "screens/06-new-device-code/nd-d.jpg"
+ },
+ {
+  "section": "06-new-device-code",
+  "name": "nd-dark-d",
+  "title": "New-device code · desktop, dark",
+  "note": "",
+  "width": 1000,
+  "screen": "screens/06-new-device-code/nd-dark-d.jpg"
+ },
+ {
+  "section": "06-new-device-code",
+  "name": "nd-text",
+  "title": "New-device code · plain text",
+  "note": "",
+  "width": 600,
+  "screen": "screens/06-new-device-code/nd-text.jpg"
+ },
+ {
+  "section": "07-inbox",
+  "name": "inbox-m",
+  "title": "Inbox · subjects and preheaders",
+  "note": "What shows before anyone opens one. No code in any subject or preheader.",
+  "width": 390,
+  "screen": "screens/07-inbox/inbox-m.jpg"
+ },
+ {
+  "section": "07-inbox",
+  "name": "inbox-dark-m",
+  "title": "Inbox · dark",
+  "note": "",
+  "width": 390,
+  "screen": "screens/07-inbox/inbox-dark-m.jpg"
+ },
+ {
+  "section": "08-unsubscribe-page",
+  "name": "unsub-off-m",
+  "title": "Unsubscribe · digest off",
+  "note": "The one-click link from the footer. No sign-in, same page whether or not the account exists.",
+  "width": 390,
+  "screen": "screens/08-unsubscribe-page/unsub-off-m.jpg"
+ },
+ {
+  "section": "08-unsubscribe-page",
+  "name": "unsub-off-dark-m",
+  "title": "Unsubscribe · digest off, dark",
+  "note": "Follows the device, like the emails.",
+  "width": 390,
+  "screen": "screens/08-unsubscribe-page/unsub-off-dark-m.jpg"
+ },
+ {
+  "section": "08-unsubscribe-page",
+  "name": "unsub-off-d",
+  "title": "Unsubscribe · desktop",
+  "note": "",
+  "width": 1000,
+  "screen": "screens/08-unsubscribe-page/unsub-off-d.jpg"
+ },
+ {
+  "section": "08-unsubscribe-page",
+  "name": "unsub-bad-m",
+  "title": "Unsubscribe · link didn’t work",
+  "note": "Bad or tampered token, or a malformed link.",
+  "width": 390,
+  "screen": "screens/08-unsubscribe-page/unsub-bad-m.jpg"
+ },
+ {
+  "section": "08-unsubscribe-page",
+  "name": "unsub-down-m",
+  "title": "Unsubscribe · something went wrong",
+  "note": "EMAIL_UNSUBSCRIBE_SECRET missing or the write failed.",
+  "width": 390,
+  "screen": "screens/08-unsubscribe-page/unsub-down-m.jpg"
+ }
+]

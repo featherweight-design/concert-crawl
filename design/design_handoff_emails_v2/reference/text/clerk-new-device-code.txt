@@ -1,0 +1,22 @@
+Subject: Confirm it’s you: your Concert Crawl code
+Preheader: Someone signed in with your password on a new device.
+
+CONCERT CRAWL
+
+Confirm it’s you
+
+Someone signed in with your password on a device we haven’t seen before. If that was you, enter this code to finish.
+
+    {{otp_code}}
+
+Works for 10 minutes. Only the newest code works.
+{{#if requested_from}}Asked for from {{requested_from}} at {{requested_at}}.{{/if}}
+
+Wasn’t you? Don’t share the code. Someone knows your password, so reset it now.
+Reset your password: https://concertcrawl.app/sign-in/forgot
+
+We’ll never ask you for this code by phone, text or email.
+
+----------------------------------------
+This is an account email, so it can’t be turned off. We only send one when you ask for it.
+Concert Crawl · Featherweight Design, LLC · Denver, CO

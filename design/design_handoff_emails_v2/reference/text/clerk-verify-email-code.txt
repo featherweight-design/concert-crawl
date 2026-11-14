@@ -1,0 +1,21 @@
+Subject: Confirm your email for Concert Crawl
+Preheader: Enter the code to finish making your account.
+
+CONCERT CRAWL
+
+Confirm your email
+
+Enter this code to finish making your Concert Crawl account.
+
+    {{otp_code}}
+
+Works for 10 minutes. Only the newest code works.
+{{#if requested_from}}Asked for from {{requested_from}} at {{requested_at}}.{{/if}}
+
+Didn’t try to make an account? Ignore this email. No account is made without the code.
+
+We’ll never ask you for this code by phone, text or email.
+
+----------------------------------------
+This is an account email, so it can’t be turned off. We only send one when you ask for it.
+Concert Crawl · Featherweight Design, LLC · Denver, CO
