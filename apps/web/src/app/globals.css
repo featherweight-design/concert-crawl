@@ -537,6 +537,14 @@
   outline-offset: 2px;
 }
 
+/* The What's new modal's step dots are the only way to step (`all: unset`
+   clears the UA ring), so they carry their own. */
+.spotlight-dot:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  border-radius: 999px;
+}
+
 /* Admin Pause panel (3a): the chips, month arrows and days are `all: unset`,
    and each reason's radio is visually hidden inside its row, so the ring goes
    on the control, or on the row while its radio has keyboard focus. */

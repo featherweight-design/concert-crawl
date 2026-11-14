@@ -138,6 +138,26 @@ describe('SpotlightModal', () => {
     expect(screen.getByText('Step two caption.')).toBeTruthy();
   });
 
+  it('names the current step and steps with the arrow keys', () => {
+    render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
+    expect(
+      screen
+        .getByRole('button', { name: 'Go to step 1' })
+        .getAttribute('aria-current'),
+    ).toBe('step');
+
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(screen.getByText('Step two caption.')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: 'Go to step 2' })
+        .getAttribute('aria-current'),
+    ).toBe('step');
+
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(screen.getByText('Step one caption.')).toBeTruthy();
+  });
+
   it('calls onCTA when CTA button is clicked', () => {
     const onCTA = vi.fn();
     render(

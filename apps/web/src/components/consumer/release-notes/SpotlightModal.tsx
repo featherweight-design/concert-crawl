@@ -32,8 +32,12 @@ export function SpotlightModal({
 
   useEffect(() => {
     if (!sp) return;
+    const last = sp.steps.length - 1;
     function handleKeyDown(ev: KeyboardEvent) {
       if (ev.key === 'Escape') onClose();
+      // With the Back and Next buttons gone, the arrows step too.
+      if (ev.key === 'ArrowRight') setStep((cur) => Math.min(last, cur + 1));
+      if (ev.key === 'ArrowLeft') setStep((cur) => Math.max(0, cur - 1));
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
@@ -332,26 +336,42 @@ export function SpotlightModal({
                   gap: 10,
                 }}
               >
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {/* The dots are the only way to step, so each is a 24px-tall,
+                    24px-wide-or-more target around the drawn 6px dot, with a
+                    focus ring and the current step named (arrow keys also
+                    step, above). */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
                   {Array.from({ length: totalSteps }).map((_, idx) => (
                     <button
                       key={idx}
                       type="button"
+                      className="spotlight-dot"
                       onClick={() => setStep(idx)}
                       aria-label={COPY.modal.stepIndicatorAriaLabel(idx + 1)}
+                      aria-current={idx === step ? 'step' : undefined}
                       style={{
                         all: 'unset',
                         cursor: 'pointer',
-                        width: idx === step ? 22 : 6,
-                        height: 6,
-                        borderRadius: 6,
-                        background:
-                          idx === step
-                            ? 'var(--signal)'
-                            : 'var(--border-strong)',
-                        transition: 'width 220ms ease',
+                        boxSizing: 'border-box',
+                        padding: '9px 9px',
+                        display: 'flex',
                       }}
-                    />
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          display: 'block',
+                          width: idx === step ? 22 : 6,
+                          height: 6,
+                          borderRadius: 6,
+                          background:
+                            idx === step
+                              ? 'var(--signal)'
+                              : 'var(--border-strong)',
+                          transition: 'width 220ms ease',
+                        }}
+                      />
+                    </button>
                   ))}
                 </div>
               </div>
