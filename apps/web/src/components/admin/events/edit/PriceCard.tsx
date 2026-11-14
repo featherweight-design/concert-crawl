@@ -54,7 +54,18 @@ export const PriceCard = ({
   const { getToken } = useAuth();
   const [open, setOpen] = useState(false);
   const host = hostOf(detail.ticketUrl);
-  const mine = detail.mySubmission;
+  // The admin edit route takes a pending or corroborated price; one under an
+  // open Price check waits for the check.
+  const mine =
+    detail.mySubmission !== null &&
+    (detail.mySubmission.status === 'pending' ||
+      detail.mySubmission.status === 'corroborated')
+      ? detail.mySubmission
+      : null;
+  // A new price goes in only where the show has none (the add route refuses a
+  // priced show). An admin price over a listed one is held for Hugh, so the
+  // button is drawn but off there (`06/edit-price-desktop`).
+  const canEdit = mine !== null || detail.priceMin === null;
   const close = () => setOpen(false);
 
   return (
@@ -81,8 +92,14 @@ export const PriceCard = ({
         {!past && (
           <AdminButton
             data-testid="event-edit-price-edit"
+            disabled={!canEdit}
             onClick={() => setOpen(true)}
-            style={{ ...TINT_BUTTON, height: 32, padding: '0 12px' }}
+            style={{
+              ...TINT_BUTTON,
+              height: 32,
+              padding: '0 12px',
+              ...(!canEdit && { opacity: 0.5, cursor: 'not-allowed' }),
+            }}
           >
             {COPY.edit}
           </AdminButton>
@@ -135,7 +152,7 @@ export const PriceCard = ({
           }}
         />
       )}
-      {open && mine === null && (
+      {open && mine === null && detail.priceMin === null && (
         <AddPricePanel
           single
           row={{

@@ -56,6 +56,11 @@ export interface MySubmission {
   id: string;
   priceMin: string;
   priceMax: string | null;
+  /**
+   * `pending`, `corroborated` or `disputed`. The admin edit route takes only
+   * the first two; a price under an open Price check is not editable here.
+   */
+  status: string;
 }
 
 /** A price as numeric text; the API may send a number. */
@@ -67,15 +72,20 @@ const priceText = (value: unknown): string | null | undefined => {
 };
 
 /** `undefined` when the payload holds something else. */
-const mySubmissionOf = (value: unknown): MySubmission | null | undefined => {
-  if (value === null || value === undefined) return null;
-  if (!isRecord(value) || !isText(value['id'])) return undefined;
+/**
+ * An edit-only extra: anything but a well-formed submission reads as none, so
+ * a drift here costs Edit price its sheet, never the whole editor.
+ */
+const mySubmissionOf = (value: unknown): MySubmission | null => {
+  if (!isRecord(value) || !isText(value['id']) || !isText(value['status'])) {
+    return null;
+  }
   const priceMin = priceText(value['priceMin']);
   const priceMax = priceText(value['priceMax']);
   if (priceMin === undefined || priceMin === null || priceMax === undefined) {
-    return undefined;
+    return null;
   }
-  return { id: value['id'], priceMin, priceMax };
+  return { id: value['id'], priceMin, priceMax, status: value['status'] };
 };
 
 const isHiddenReason = (value: unknown): value is HiddenReason | null =>
@@ -98,9 +108,6 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     !isHiddenReason(value['hiddenReason']) ||
     !isCount(value['watchingCount']) ||
     typeof value['isSoldOut'] !== 'boolean' ||
-    !isCount(value['submittedPriceCount']) ||
-    !isTextOrNull(value['priceRetrievedAt']) ||
-    !isTextOrNull(value['ticketUrl']) ||
     !isTextOrNull(value['extractionStrategy']) ||
     !isText(value['createdAt']) ||
     !isTextOrNull(value['lastSeenAt'])
@@ -113,14 +120,12 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
   if (!isTextOrNull(eventUrl) || !isTextOrNull(sourceUrl)) return null;
   const priceMin = priceText(value['ticketPriceMin']);
   const priceMax = priceText(value['ticketPriceMax']);
-  const mySubmission = mySubmissionOf(value['mySubmission']);
-  if (
-    priceMin === undefined ||
-    priceMax === undefined ||
-    mySubmission === undefined
-  ) {
-    return null;
-  }
+  if (priceMin === undefined || priceMax === undefined) return null;
+  // The Price card's extras read leniently: a missing or odd value draws as
+  // none rather than failing the whole editor.
+  const count = value['submittedPriceCount'];
+  const retrieved = value['priceRetrievedAt'];
+  const ticketUrl = value['ticketUrl'];
   return {
     id: value['id'],
     title: value['title'],
@@ -137,10 +142,10 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     isSoldOut: value['isSoldOut'],
     priceMin,
     priceMax,
-    submittedPriceCount: value['submittedPriceCount'],
-    priceRetrievedAt: value['priceRetrievedAt'],
-    ticketUrl: value['ticketUrl'],
-    mySubmission,
+    submittedPriceCount: isCount(count) ? count : 0,
+    priceRetrievedAt: isText(retrieved) ? retrieved : null,
+    ticketUrl: isText(ticketUrl) ? ticketUrl : null,
+    mySubmission: mySubmissionOf(value['mySubmission']),
     extractionStrategy: value['extractionStrategy'],
     firstSeenAt: value['createdAt'],
     lastSeenAt: value['lastSeenAt'],

@@ -103,10 +103,42 @@ describe('PriceCard', () => {
     );
   });
 
-  it('opens a new price, one show only, when the admin has none', () => {
+  it('holds Edit price on a priced show the admin has no price on', () => {
     render(
       <PriceCard
         detail={DETAIL}
+        phone={false}
+        past={false}
+        onSaved={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('event-edit-price-edit')).toBeDisabled();
+  });
+
+  it('holds Edit price on the admin’s price while a Price check is open', () => {
+    render(
+      <PriceCard
+        detail={{
+          ...DETAIL,
+          mySubmission: {
+            id: 'sub-1',
+            priceMin: '12.00',
+            priceMax: null,
+            status: 'disputed',
+          },
+        }}
+        phone={false}
+        past={false}
+        onSaved={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('event-edit-price-edit')).toBeDisabled();
+  });
+
+  it('opens a new price, one show only, on a show with no price', () => {
+    render(
+      <PriceCard
+        detail={{ ...DETAIL, priceMin: null }}
         phone={false}
         past={false}
         onSaved={vi.fn()}
@@ -123,7 +155,12 @@ describe('PriceCard', () => {
       <PriceCard
         detail={{
           ...DETAIL,
-          mySubmission: { id: 'sub-1', priceMin: '12.00', priceMax: null },
+          mySubmission: {
+            id: 'sub-1',
+            priceMin: '12.00',
+            priceMax: null,
+            status: 'pending',
+          },
         }}
         phone={false}
         past={false}
