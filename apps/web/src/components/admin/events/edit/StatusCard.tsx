@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { EyeOff, type LucideIcon } from 'lucide-react';
+import { EyeOff, RefreshCw, type LucideIcon } from 'lucide-react';
+import { TINT_BUTTON } from '@/components/admin/artists/artist-styles';
+import { shortDate } from '@/components/admin/venues/overview/overview-rules';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminCard,
@@ -279,6 +281,9 @@ export const StatusCard = ({
   }, [dialog]);
   const [unhiding, setUnhiding] = useState(false);
   const current = pillOf(detail.status);
+  const delisted = detail.status === 'delisted';
+  const since =
+    detail.delistedAt === null ? null : shortDate(detail.delistedAt);
   const close = () => setDialog(null);
   // Showing a hidden show again saves at once; one at a time.
   const unhide = () => {
@@ -295,16 +300,83 @@ export const StatusCard = ({
       phone={phone}
       testId="event-edit-status"
     >
-      <Pills
-        chosen={sale ?? current}
-        locked={past}
-        current={current}
-        onSale={onSale}
-        onPostponed={() => setDialog('postponed')}
-      />
-      {detail.status === 'delisted' && (
-        <div style={SMALL} data-testid="status-delisted">
-          {COPY.status.delisted}
+      {delisted && sale === null ? (
+        // `04/listed-again`, before: read-only, with the one way back.
+        <div
+          data-testid="status-delisted"
+          style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                padding: '3px 8px',
+                borderRadius: 6,
+                border: '1px dashed var(--border-strong)',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10.5,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--fg-muted)',
+              }}
+            >
+              {COPY.status.delisted}
+            </span>
+            {since !== null && (
+              <span style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+                {COPY.status.delistedSince(since)}
+              </span>
+            )}
+          </div>
+          {since !== null && (
+            <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+              {COPY.status.delistedWhy(
+                detail.venueName ?? ADMIN_COPY.eventEdit.none,
+                since,
+                detail.watchingCount,
+              )}
+            </div>
+          )}
+          {!past && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                type="button"
+                data-testid="listed-again"
+                onClick={() =>
+                  onSale(detail.isSoldOut ? 'soldout' : 'available')
+                }
+                style={{
+                  ...TINT_BUTTON,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: 34,
+                  padding: '0 12px',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                <RefreshCw size={14} aria-hidden />
+                {COPY.status.listedAgain}
+              </button>
+              <span style={SMALL}>{COPY.status.listedAgainHint}</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <Pills
+          chosen={sale ?? current}
+          locked={past}
+          current={current}
+          onSale={onSale}
+          onPostponed={() => setDialog('postponed')}
+        />
+      )}
+      {delisted && sale !== null && (
+        // After Listed again: the earlier status, picked as an unsaved change.
+        <div style={SMALL} data-testid="status-listed-back">
+          {COPY.status.listedBack(
+            sale === 'soldout' ? COPY.status.soldout : COPY.status.available,
+          )}
         </div>
       )}
       <div

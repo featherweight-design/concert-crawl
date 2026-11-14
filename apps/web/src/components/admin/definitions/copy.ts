@@ -4200,6 +4200,14 @@ export const ADMIN_COPY = {
       postponed: 'Postponed',
       cancelled: 'Cancelled',
       delisted: 'No longer listed',
+      // addendum-5 `04/listed-again`.
+      delistedSince: (date: string) => `Since ${date}`,
+      delistedWhy: (venue: string, date: string, watching: number) =>
+        `It dropped off the ${venue} calendar in the ${date} run. The crawler sets this; you can’t pick it. ${watching.toLocaleString('en-US')} Watching were not told.`,
+      listedAgain: 'Listed again',
+      listedAgainHint: 'If the venue still has it',
+      listedBack: (status: string) =>
+        `Back to the status it had before: ${status}. Pick another if that’s wrong. Saves with the page; nobody is told.`,
       hide: 'Hide from site',
       hideHint: 'For not-a-concert or duplicates.',
     },
@@ -4262,9 +4270,6 @@ export const ADMIN_COPY = {
       discard: 'Discard',
       save: 'Save',
       saving: 'Saving…',
-      // A delisted show reads "No longer listed" to fans until a status save
-      // ends the delisting.
-      relists: 'Saving lists the show again.',
     },
     saveFailed: {
       what: 'the show',

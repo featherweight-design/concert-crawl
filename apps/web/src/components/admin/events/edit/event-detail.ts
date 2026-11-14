@@ -48,6 +48,8 @@ export interface EventDetail {
   /** ISO timestamps. */
   firstSeenAt: string;
   lastSeenAt: string | null;
+  /** When the crawl stopped finding it (ISO); null while it's listed. */
+  delistedAt: string | null;
   /** The show's own page, else its calendar; `null` when neither is safe. */
   venueUrl: string | null;
 }
@@ -149,6 +151,7 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     extractionStrategy: value['extractionStrategy'],
     firstSeenAt: value['createdAt'],
     lastSeenAt: value['lastSeenAt'],
+    delistedAt: isText(value['delistedAt']) ? value['delistedAt'] : null,
     venueUrl: resolveVenueCheckUrl(eventUrl, sourceUrl),
   };
 };
