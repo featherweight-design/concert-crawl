@@ -1793,7 +1793,7 @@ describe('EventDetailPriceBlock price check', () => {
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
     );
     // The card's meta line reads "VIP · seen on AXS · ...", the tier first.
-    expect(screen.getByText(/^VIP · /)).toBeTruthy();
+    expect(screen.getByText(/^VIP ·/)).toBeTruthy();
   });
 
   // Every priced event carries priceByTier, which routes to the multi-tier
