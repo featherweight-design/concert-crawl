@@ -66,7 +66,7 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
   const failures = failuresOf(row);
   // "Still allows /events": the stored check, with the path we crawl.
   const robots =
-    row.robots === 'no' && row.robotsPath
+    blocked && row.robotsTxtAllowed === true && row.robotsPath
       ? PANEL.venue.robotsResult.allowsPath(row.robotsPath)
       : robotsText(row.robots);
   const checked = [
@@ -100,31 +100,33 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
       </Prose>
     </Section>
   );
-  // The one shared venue status (`VenueStatus`): on the site, then crawling.
-  // A blocked venue names its status code, as the board's chip does.
+  // The one shared venue status (`VenueStatus`), from the venue's stored
+  // state only. With no liveness in the payload nothing is drawn, rather than
+  // guessing Hidden. A blocked venue names its status code once the venue
+  // itself says it is blocked.
   const chips = (
     <ChipRow>
       <VenueStatus
         venue={{
-          active: row.venueLive ?? false,
+          active: row.venueLive === true,
           crawlPausedAt: row.pausedAt,
-          blockedAt:
-            row.blockedAt ??
-            (blocked ? (row.pausedAt ?? row.lastRuns[0]?.at ?? '') : null),
+          crawlPauseReason: row.pauseReason,
+          blockedAt: row.blockedAt,
           consecutiveFailures: failures ?? row.consecutiveFailures,
-          // Unchecked reads as allowed: only a stored refusal shows blocked.
+          // Unchecked reads as allowed: only a stored refusal shows it blocked.
           robotsTxtAllowed: row.robotsTxtAllowed ?? true,
         }}
         crawlingLabel={
-          blocked && status ? PANEL.blockedChip(status) : undefined
+          blocked && status && row.blockedAt !== null
+            ? PANEL.blockedChip(status)
+            : undefined
         }
       />
     </ChipRow>
   );
   return (
     <>
-      {(row.venueLive || (blocked && status) || (row.pausedAt && failures)) &&
-        chips}
+      {row.venueLive !== null && chips}
       {blocked ? (
         <>
           <Section label={PANEL.whatHappened}>

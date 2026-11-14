@@ -42,6 +42,7 @@ const row = (over: Partial<QueueRow>): QueueRow => ({
   lastRuns: [],
   venueLive: null,
   pausedAt: null,
+  pauseReason: null,
   blockedAt: null,
   consecutiveFailures: 0,
   robotsTxtAllowed: null,
@@ -253,11 +254,33 @@ describe('VenuePanel', () => {
         venueName: 'The Ogden',
         evidence: [{ label: 'HTTP status', value: '429' }],
         robots: 'no',
+        robotsTxtAllowed: true,
         robotsPath: '/events',
         answers: [answer({ slug: 're_crawl_once', label: 'Re-crawl once' })],
       }),
     );
     expect(screen.getByText('Still allows /events')).toBeInTheDocument();
+  });
+
+  it('draws no status chips when the payload does not say if the venue is live', () => {
+    open(
+      row({ key: 'venue-failing:v1', kind: 'venue-failing', venueLive: null }),
+    );
+    expect(screen.queryByTestId('venue-status')).toBeNull();
+  });
+
+  it('keeps a hand pause with a reason from reading as an auto-pause', () => {
+    open(
+      row({
+        key: 'venue-failing:v1',
+        kind: 'venue-failing',
+        venueLive: true,
+        pausedAt: '2026-11-10T10:00:00Z',
+        pauseReason: 'other',
+        consecutiveFailures: 3,
+      }),
+    );
+    expect(screen.queryByText(/Auto-paused/)).toBeNull();
   });
 
   it('draws a blocked venue with its status chip', () => {
@@ -266,6 +289,8 @@ describe('VenuePanel', () => {
         key: 'venue-blocked:v1',
         kind: 'venue-blocked',
         venueName: 'The Ogden',
+        venueLive: true,
+        blockedAt: '2026-11-12T10:00:00Z',
         evidence: [{ label: 'HTTP status', value: '429' }],
         answers: [answer({ slug: 're_crawl_once', label: 'Re-crawl once' })],
       }),
