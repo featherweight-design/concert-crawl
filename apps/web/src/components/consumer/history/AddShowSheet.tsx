@@ -323,6 +323,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
     data,
     isPending,
     isError,
+    isPlaceholderData,
     isFetchNextPageError,
     refetch,
     fetchNextPage,
@@ -380,6 +381,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
   const scopeEmpty =
     !isPending &&
     !isError &&
+    !isPlaceholderData &&
     rows.length === 0 &&
     !searching &&
     (effectiveScope === 'venues' || effectiveScope === 'follows');
@@ -428,7 +430,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
             onChange={(event) => setText(event.target.value)}
             placeholder={COPY.searchPlaceholder}
             aria-label={COPY.searchPlaceholder}
-            className="min-w-0 flex-1 border-0 bg-transparent text-[15px] outline-none"
+            className="min-w-0 flex-1 border-0 bg-transparent text-base outline-none sm:text-[15px]"
             style={{ color: 'var(--fg)' }}
           />
           {text !== '' && (
@@ -446,7 +448,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
 
         {/* A button group with `aria-pressed`: radio semantics would promise
             arrow-key movement these chips do not have. The chip is drawn 32px
-            tall; the touch target stays 44px through the padding of its group. */}
+            tall; a pseudo-element stretches its hit area to 44px. */}
         <div
           role="group"
           aria-label={COPY.scopeAria}
@@ -460,7 +462,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
                 type="button"
                 aria-pressed={on}
                 onClick={() => setScope(item.value)}
-                className="inline-flex h-8 cursor-pointer items-center rounded-full border px-3 text-[13px] font-bold whitespace-nowrap"
+                className="relative inline-flex h-8 cursor-pointer before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']  items-center rounded-full border px-3 text-[13px] font-bold whitespace-nowrap"
                 style={{
                   borderColor: on
                     ? 'color-mix(in oklab, var(--signal) 50%, transparent)'
@@ -478,7 +480,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
+      <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pb-6">
         {!searching && !scopeEmpty && (
           <p
             data-testid="add-records-note"
@@ -513,7 +515,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
 
         {isPending ? (
           <SkeletonRows count={SKELETON_ROWS} withLabel />
-        ) : isError && rows.length === 0 ? (
+        ) : isError && (rows.length === 0 || isPlaceholderData) ? (
           <LoadError onRetry={() => void refetch()} />
         ) : scopeEmpty ? (
           <ScopeEmpty
