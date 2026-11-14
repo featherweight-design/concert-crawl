@@ -99,10 +99,11 @@ describe('EventEdit', () => {
       'Larimer Lounge',
     );
     expect(screen.getByLabelText(COPY.show.venue)).toHaveAttribute('readonly');
-    expect(screen.getByLabelText(COPY.show.date)).toHaveValue(
+    // Date and times open their pickers (`04/date-picker-d`, `time-picker-d`).
+    expect(screen.getByLabelText(COPY.show.date)).toHaveTextContent(
       'Sat, Nov 14, 2026',
     );
-    expect(screen.getByLabelText(COPY.show.doors)).toHaveValue('6:00 PM');
+    expect(screen.getByLabelText(COPY.show.doors)).toHaveTextContent('6:00 PM');
     expect(
       screen.getByText(COPY.crawl.sourceValue('Larimer Lounge', 'JSON-LD')),
     ).toBeInTheDocument();
@@ -161,7 +162,8 @@ describe('EventEdit', () => {
     expect(
       screen.getByRole('link', { name: COPY.onVenueSitePhone }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(COPY.show.date)).toHaveValue('Sat, Nov 14');
+    // The phone uses the OS date picker (addendum-5 README).
+    expect(screen.getByLabelText(COPY.show.date)).toHaveValue('2026-11-14');
     expect(screen.getByTestId('event-edit-menu')).toBeInTheDocument();
     // Date and Show side by side, as drawn, then Doors.
     // "Show" also names the card, so take the time field by its id.
@@ -293,13 +295,10 @@ describe('EventEdit Status card', () => {
     expect(await screen.findByText(/The status is still/)).toBeInTheDocument();
   });
 
-  it('confirms Postponed in a dialog, with New date held', async () => {
+  it('confirms Postponed in a dialog, with no new date yet', async () => {
     patch.mockResolvedValue({});
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
     fireEvent.click(pill('postponed'));
-    expect(
-      screen.getByRole('button', { name: COPY.postponed.newDate }),
-    ).toBeDisabled();
     fireEvent.click(
       screen.getByRole('button', { name: COPY.postponed.confirm }),
     );
@@ -309,6 +308,47 @@ describe('EventEdit Status card', () => {
       }),
     );
     await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  it('moves a postponed show to a New date, and waits for a real change', async () => {
+    patch.mockResolvedValue({});
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(pill('postponed'));
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.postponed.newDate }),
+    );
+    const confirm = screen.getByRole('button', {
+      name: COPY.postponed.confirm,
+    });
+    // The same day and time is no new date.
+    expect(confirm).toBeDisabled();
+    fireEvent.click(document.getElementById('postponed-date') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Fri, Nov 20, 2026' }));
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        status: 'postponed',
+        date: '2026-11-20',
+        showTime: '19:00:00',
+      }),
+    );
+  });
+
+  it('edits the date on the Show card, and locks it on a past show', async () => {
+    patch.mockResolvedValue({});
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sat, Nov 14, 2026' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sun, Nov 15, 2026' }));
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        date: '2026-11-15',
+      }),
+    );
+    cleanup();
+    render(<EventEdit detail={DETAIL} today="2026-11-20" />);
+    expect(screen.getByLabelText(COPY.show.date)).toHaveAttribute('readonly');
   });
 
   it('keeps the Postponed dialog open and says so when it fails', async () => {
