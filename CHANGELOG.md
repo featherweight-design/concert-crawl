@@ -1,3 +1,13 @@
+## [1.451.1](https://github.com/featherweight-design/concert-crawl/compare/v1.451.0...v1.451.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** events list loads as plain rows on the phone ([90cd023](https://github.com/featherweight-design/concert-crawl/commit/90cd02322b86a456f0afcda4cc22bc92bcea0584))
+* **web:** cap the phone column at 640 and centre it through 1023 ([b0ee156](https://github.com/featherweight-design/concert-crawl/commit/b0ee156863773c9486964bb84cfcf63484ef0208))
+* **web:** ellipsise a phone run row's line to one line ([bfb4f94](https://github.com/featherweight-design/concert-crawl/commit/bfb4f94b12941e7d1e45a06300db9f04930e059a))
+* **web:** pad phone Inspect Couldn't load, single rule over Runs Load more ([1d55cbb](https://github.com/featherweight-design/concert-crawl/commit/1d55cbb77fb188ef402c666608b5a6d0ebf96b53))
+
 # [1.451.0](https://github.com/featherweight-design/concert-crawl/compare/v1.450.0...v1.451.0) (2026-11-14)
 
 
