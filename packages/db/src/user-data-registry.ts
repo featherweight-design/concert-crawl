@@ -119,12 +119,13 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     tableName: 'feedback',
     disposition: 'anonymize',
     userIdColumn: 'user_id',
-    otherUserIdColumns: [],
+    otherUserIdColumns: ['resolved_by'],
     exportKey: 'feedback',
     exportColumns: ['page_url', 'category', 'message', 'created_at'],
     reason:
       'Product feedback stays actionable after the reporter leaves; the ' +
-      'attribution does not need to.',
+      'attribution does not need to. `resolved_by` is the admin who marked ' +
+      'it done, not a customer, and stays as the record of who acted.',
   },
 
   // ---- Prices ----

@@ -6,12 +6,13 @@ import type { FeedbackStatusFilter } from './FeedbackFilterRail';
 import type { StatusKind } from '@/components/admin/primitives/utils';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants';
+import type { FeedbackCategory } from '@concert-crawl/types';
 
 export interface FeedbackItem {
   id: string;
   userId: string;
   pageUrl: string;
-  category: 'bug' | 'idea' | 'praise' | 'other';
+  category: FeedbackCategory;
   message: string;
   metadata: Record<string, unknown> | null;
   status: Exclude<FeedbackStatusFilter, 'all'>;
@@ -25,7 +26,12 @@ const CATEGORY_KIND: Record<FeedbackItem['category'], StatusKind> = {
   idea: 'accent',
   praise: 'success',
   other: 'neutral',
+  error_report: 'danger',
+  venue_suggestion: 'accent',
 };
+
+const CATEGORY_LABEL: Record<FeedbackCategory, string> =
+  ADMIN_COPY.feedback.row.categoryLabel;
 
 const STATUS_LABEL = ADMIN_COPY.feedback.row.statusLabel;
 
@@ -133,7 +139,7 @@ export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
               {handle}
             </span>
             <StatusBadge kind={CATEGORY_KIND[item.category]}>
-              {item.category}
+              {CATEGORY_LABEL[item.category]}
             </StatusBadge>
             <StatusBadge kind={FEEDBACK_STATUS_KIND[item.status]} dot={showDot}>
               {STATUS_LABEL[item.status] ?? item.status}
