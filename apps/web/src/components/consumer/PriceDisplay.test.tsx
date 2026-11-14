@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The price-age line mounts StillAccurateAction, which reads the router and
@@ -16,7 +16,7 @@ vi.mock('@clerk/nextjs', () => ({
   }),
 }));
 
-import { PriceDisplay } from '@/components/consumer/PriceDisplay';
+import { FeeBreakdown, PriceDisplay } from '@/components/consumer/PriceDisplay';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { stubMatchMedia } from '@/test-utils/match-media';
 import { TIP_CONTENT } from '@/components/ui/cc-tip';
@@ -277,5 +277,66 @@ describe('PriceDisplay live box office card (price-states-age-trust)', () => {
     expect(screen.getByTestId('price-age-line').textContent).toBe(
       'as of 2 hours ago',
     );
+  });
+});
+
+describe('FeeBreakdown fees toggle (price-states-age-trust)', () => {
+  const withFees = {
+    face: 44,
+    fees: 9.4,
+    feeBreakdown: [{ label: 'Service fee', amount: 9.4 }],
+    sourceKind: 'community' as const,
+  };
+
+  afterEach(cleanup);
+
+  it('draws the board trigger: Inter 13px bold in the signal colour, with a ›', () => {
+    render(<FeeBreakdown price={withFees} />);
+
+    const toggle = screen.getByTestId('fees-toggle');
+    expect(toggle.textContent).toBe(
+      `${CONSUMER_COPY.priceDisplay.feesToggle('$9.40')}›`,
+    );
+    expect(toggle.style.fontFamily).toBe('var(--font-ui)');
+    expect(toggle.style.fontSize).toBe('13px');
+    expect(toggle.style.fontWeight).toBe('700');
+    expect(toggle.style.color).toBe('var(--price-text-signal)');
+    expect(toggle.querySelector('svg')).toBeNull();
+  });
+
+  it('opens the breakdown panel and reports it', () => {
+    render(<FeeBreakdown price={withFees} />);
+
+    const toggle = screen.getByTestId('fees-toggle');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('Service fee')).toBeTruthy();
+  });
+
+  it.each([
+    ['no breakdown', { ...withFees, feeBreakdown: null }],
+    ['no fees', { ...withFees, fees: null }],
+    ['zero fees', { ...withFees, fees: 0 }],
+  ])('renders nothing with %s (only real fee data shows it)', (_, price) => {
+    const { container } = render(<FeeBreakdown price={price} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('never shows on a live card today, since the API sends no fee data', () => {
+    stubMatchMedia(false);
+    render(
+      <PriceDisplay
+        priceMin="44.00"
+        priceMax={null}
+        priceSource="community"
+        venueName="Larimer Lounge"
+        ticketUrl={null}
+        eventId="evt_1"
+        artist="Test Artist"
+        date="2026-09-01T02:00:00.000Z"
+      />,
+    );
+    expect(screen.queryByTestId('fees-toggle')).toBeNull();
   });
 });
