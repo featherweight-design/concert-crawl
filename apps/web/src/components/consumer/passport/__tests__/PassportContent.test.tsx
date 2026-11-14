@@ -355,6 +355,30 @@ describe('PassportContent', () => {
     ).toBe('lg:hidden');
   });
 
+  // `more-r3-passport_m`: a phone draws the top bar in place of the big title
+  // block, which stays for lg. Both live in the DOM; CSS shows one.
+  it('draws the phone top bar beside the desktop title block', () => {
+    renderContent({});
+
+    const bar = screen.getByTestId('passport-top-bar');
+    expect(bar).toHaveClass('lg:hidden');
+    expect(bar).toHaveTextContent(COPY.pageTitle);
+    const desktopTitle = screen
+      .getAllByRole('heading', { level: 1 })
+      .find((heading) => !bar.contains(heading));
+    expect(desktopTitle?.parentElement).toHaveClass('hidden', 'lg:block');
+  });
+
+  it('asks for no card on a locked or empty Passport', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    renderContent({ locked: true });
+    cleanup();
+    renderContent({ past: [] });
+    await waitFor(() => expect(fetchMock).not.toHaveBeenCalled());
+    vi.unstubAllGlobals();
+  });
+
   // A resolving plan must not flash the lock screen at a Supporter.
   it('does not lock while the entitlement is still resolving', () => {
     entitlement.value = { isLoading: true, active: false };
