@@ -131,6 +131,45 @@ jobs:
       # so a real failure can't silently get bucketed as benign-skip.
       # `set +e` lets us inspect $? without the runner-level non-zero
       # handling kicking in.
+      # The web half. Smoke runs against the staging web app too, but this
+      # workflow only ever waited on the API deploy, so a web-only push whose
+      # Vercel build failed (2026-11-14: every build OOM-killed) went green as
+      # "skipped". Runs on every push, fails closed when the Vercel credentials
+      # are missing (repo-level `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+      # `VERCEL_PROJECT_ID_STAGING`), and treats "no deployment for this SHA"
+      # as benign only while the project's newest deployment is healthy (see
+      # vercel-wait-for-ready.sh). Same contract as staging-e2e.yml.
+      - name: Wait for staging web app to be ready on pushed SHA
+        if: github.event_name == 'push'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_STAGING: ${{ vars.VERCEL_PROJECT_ID_STAGING }}
+        run: |
+          missing=()
+          [ -z "${VERCEL_TOKEN}" ] && missing+=("VERCEL_TOKEN (repo-level secret)")
+          [ -z "${VERCEL_ORG_ID}" ] && missing+=("VERCEL_ORG_ID (repo-level variable)")
+          [ -z "${VERCEL_PROJECT_ID_STAGING}" ] && missing+=("VERCEL_PROJECT_ID_STAGING (repo-level variable)")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error title=Web readiness cannot be checked::Missing ${missing[*]}. Without them this workflow cannot confirm the staging web app is serving ${{ github.sha }}, so it fails rather than pass unchecked. Set them under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          set +e
+          bash .github/scripts/vercel-wait-for-ready.sh \
+            "${VERCEL_PROJECT_ID_STAGING}" \
+            "${{ github.sha }}" \
+            300
+          exit_code=$?
+          set -e
+          if [ "${exit_code}" -eq 0 ]; then
+            exit 0
+          elif [ "${exit_code}" -eq 124 ]; then
+            echo "::warning title=Staging web app not on this SHA::No staging web deployment for ${{ github.sha }} and the project's newest deployment is healthy: the push did not touch the web app, or a newer deploy superseded it."
+          else
+            echo "::error title=Staging web app not ready::vercel-wait-for-ready.sh exited ${exit_code}. 125 means the web deployment for this SHA failed, was cancelled, was still building at the 5 min timeout, or the project's newest deployment is failed. 1 is a script or API error."
+            exit "${exit_code}"
+          fi
+
       - name: Wait for staging API deploy of pushed SHA
         id: wait_for_live
         env:

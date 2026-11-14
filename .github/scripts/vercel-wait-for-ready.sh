@@ -174,6 +174,18 @@ while :; do
 
   if [ "$(date +%s)" -ge "$deadline" ]; then
     if [ -z "$state" ]; then
+      # No deployment for this SHA is benign only while the project is healthy.
+      # If the newest deployment it has is a failed or cancelled build, the
+      # project is serving an older commit and nothing since has landed: a
+      # web-only push that never got its deployment must not read as a skip
+      # (2026-11-14: staging served de2debd for hours while every build after
+      # it was OOM-killed and the suite stayed green).
+      case "$newest_state" in
+        ERROR | CANCELED)
+          echo "✗ No Vercel deployment for $expected_sha, and the newest one ($newest_sha) ended in state $newest_state: the project is not serving a healthy build" >&2
+          exit 125
+          ;;
+      esac
       echo "No Vercel deployment for $expected_sha appeared within ${timeout_seconds}s" >&2
       exit 124
     fi
