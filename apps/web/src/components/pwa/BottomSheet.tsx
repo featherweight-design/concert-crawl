@@ -28,9 +28,11 @@ interface BottomSheetProps {
   closeVariant?: 'boxed' | 'bare';
   /**
    * `tight` is 20px side padding (24px bottom) instead of the default 24px all
-   * round, for boards drawn on a 20px gutter.
+   * round, for boards drawn on a 20px gutter. `phone-tight` is `tight` on the
+   * phone sheet and the default 24px on the centered dialog (the share sheet
+   * boards draw both).
    */
-  inset?: 'default' | 'tight';
+  inset?: 'default' | 'tight' | 'phone-tight';
   /**
    * Paints the sheet one step lighter than the default: surface-2 on the phone
    * sheet, bg-elevated on the centered dialog (the share boards). Needs
@@ -56,8 +58,12 @@ interface BottomSheetProps {
    * share one row (the Add sheet's CONCERTS and Done).
    */
   eyebrow?: string;
-  /** Draws the eyebrow in the muted ink instead of the signal one. */
-  eyebrowMuted?: boolean;
+  /**
+   * The eyebrow's ink. `signal` (default) keeps the Add sheet's cyan; `muted`
+   * draws it in fg-muted; `subtle` draws it in fg-subtle at a wider tracking
+   * and lighter weight (the share boards' SHARE THIS SHOW).
+   */
+  eyebrowTone?: 'signal' | 'muted' | 'subtle';
   children: React.ReactNode;
 }
 
@@ -88,7 +94,7 @@ export const BottomSheet = ({
   pinned = false,
   handle = false,
   eyebrow,
-  eyebrowMuted = false,
+  eyebrowTone = 'signal',
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -194,7 +200,9 @@ export const BottomSheet = ({
             ? 'px-[18px] pb-0 pt-0 lg:px-6'
             : inset === 'tight'
               ? 'px-4 pb-6 pt-5 min-[360px]:px-5'
-              : 'p-6'
+              : inset === 'phone-tight'
+                ? 'px-4 pb-6 pt-5 min-[360px]:px-5 lg:p-6'
+                : 'p-6'
         } shadow-2xl focus:outline-none lg:inset-0 lg:m-auto lg:h-fit lg:w-full lg:rounded-2xl ${
           edgeFromSm
             ? raised
@@ -236,13 +244,19 @@ export const BottomSheet = ({
               ? '-mr-3 lg:mt-6'
               : inset === 'tight'
                 ? '-mr-2.5'
-                : '-mr-3 -mt-3'
+                : inset === 'phone-tight'
+                  ? '-mr-2.5 lg:-mr-3 lg:-mt-3'
+                  : '-mr-3 -mt-3'
           }`}
           {...drag.zoneProps}
         >
           {eyebrow !== undefined && (
             <span
-              className={`font-mono text-[9.5px] font-bold uppercase tracking-[0.14em] ${eyebrowMuted ? 'text-fg-muted' : 'text-signal'}`}
+              className={
+                eyebrowTone === 'subtle'
+                  ? 'font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-fg-subtle'
+                  : `font-mono text-[9.5px] font-bold uppercase tracking-[0.14em] ${eyebrowTone === 'muted' ? 'text-fg-muted' : 'text-signal'}`
+              }
             >
               {eyebrow}
             </span>

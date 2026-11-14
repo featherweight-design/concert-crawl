@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Share2 } from 'lucide-react';
 import { BottomSheet } from '@/components/pwa/BottomSheet';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
@@ -10,8 +11,10 @@ import {
   type ShareRatio,
 } from '@/components/consumer/share/definitions/ratios';
 import {
+  canShareFiles,
   canSystemShare,
   copyLink,
+  fetchPosterFile,
   posterFileName,
   posterImageUrl,
   publicEventUrl,
@@ -25,6 +28,34 @@ import { wasServedFromCache } from '@/lib/analytics/resource-cache';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const COPY = CONSUMER_COPY.share;
+
+/**
+ * The preview's drawn width per shape, in px (the ring sits outside it). The
+ * boards draw story at 150 (more-r3-share_d), square at 202 and wide at 302
+ * (more-r3-share_m_square, more-r3-share_m); each is drawn on one viewport
+ * only and reused on the other. `max-w-full` lets wide shrink at 320.
+ */
+const PREVIEW_WIDTH: Record<ShareRatio, number> = {
+  story: 150,
+  square: 202,
+  link: 302,
+};
+
+/** The outline glyph on each SHAPE tile, as drawn: width × height in px. */
+const GLYPH: Record<ShareRatio, { width: number; height: number }> = {
+  story: { width: 12, height: 20 },
+  square: { width: 18, height: 18 },
+  link: { width: 26, height: 14 },
+};
+
+const SIGNAL_TO_ACCENT_ROW =
+  'linear-gradient(90deg, var(--signal), var(--accent))';
+
+const TILE =
+  'flex h-16 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border text-[13px] transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)]';
+
+const GHOST_PILL =
+  'flex h-[38px] min-w-0 flex-1 cursor-pointer items-center justify-center rounded-full border border-border-strong bg-transparent px-3 text-[15px] font-bold text-fg';
 
 export interface ShareSheetProps {
   open: boolean;
@@ -148,23 +179,48 @@ export const ShareSheet = ({
     .replace('{date}', event.dateShort)
     .replace('{state}', posterStateLabel(event.state));
 
-  const onSystemShare = useCallback(async () => {
+  // The PNG is fetched as a File when a shape is picked, never inside the
+  // Share click: `navigator.share` needs that click's transient activation,
+  // and awaiting a multi-second render first spends it (the Passport's
+  // "worked once, then couldn't share", #1446). Skipped where the platform
+  // cannot take a file, since the share is the link alone there anyway.
+  const fileName = posterFileName(event);
+  const wantsFile = open && canShareFiles(caps);
+  const [posterFile, setPosterFile] = useState<{
+    url: string;
+    file: File;
+  } | null>(null);
+  useEffect(() => {
+    if (!wantsFile) return;
+    let cancelled = false;
+    void fetchPosterFile(imageUrl, fileName).then((file) => {
+      if (!cancelled && file !== null) setPosterFile({ url: imageUrl, file });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantsFile, imageUrl, fileName]);
+
+  // ⚠ Synchronous up to `share()`: `systemShare` reaches it before its first
+  // await. A file for another shape is never handed over; until this shape's
+  // lands, the share is the link.
+  const onSystemShare = () => {
     track('share_destination_selected', {
       eventId: event.id,
       destination: 'system',
     });
-    const outcome = await systemShare(caps, {
+    void systemShare(caps, {
       title,
       url: linkUrl,
-      imageUrl,
-      fileName: posterFileName(event),
+      file: posterFile?.url === imageUrl ? posterFile.file : null,
+    }).then((outcome) => {
+      setStatus(
+        outcome === 'failed' || outcome === 'unsupported'
+          ? COPY.shareFailed
+          : null,
+      );
     });
-    if (outcome === 'failed' || outcome === 'unsupported') {
-      setStatus(COPY.shareFailed);
-    } else {
-      setStatus(null);
-    }
-  }, [caps, title, linkUrl, imageUrl, event]);
+  };
 
   const onCopyLink = useCallback(async () => {
     track('share_destination_selected', {
@@ -176,118 +232,160 @@ export const ShareSheet = ({
   }, [caps, linkUrl, event.id]);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={COPY.sheetTitle}>
-      <div className="flex flex-col gap-4">
-        {/* Grabber. Decorative — the sheet is dismissed by its close button,
-            Escape or the backdrop, all of which BottomSheet already owns. */}
-        <div
-          aria-hidden="true"
-          className="mx-auto h-[5px] w-11 rounded-full"
-          style={{ background: 'var(--border-strong)' }}
-        />
-
+    // Boards: more-r3-share_m / _m_square (phone sheet) and more-r3-share_d
+    // (the 440px centred dialog): blue-to-pink top edge on both, raised fill,
+    // the muted SHARE THIS SHOW eyebrow opposite the boxed close.
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={COPY.sheetTitle}
+      maxWidth={440}
+      edgeFromSm
+      raised
+      inset="phone-tight"
+      eyebrow={COPY.sheetTitle}
+      eyebrowTone="subtle"
+    >
+      {/* Grabber: decorative, phone only. The sheet closes by its ×, Escape,
+          the backdrop or a drag, all of which BottomSheet owns. */}
+      <div
+        aria-hidden="true"
+        className="absolute left-1/2 top-[11px] h-1 w-10 -translate-x-1/2 rounded-full bg-border-strong lg:hidden"
+      />
+      <div className="flex flex-col" data-testid="share-sheet">
         {/* Live preview — the same route the destinations hand out, so what is
             previewed is byte-for-byte what gets shared. */}
-        <div className="flex justify-center">
+        <div className="mb-12 mt-7 flex justify-center lg:mb-7 lg:mt-1">
           {/* The frame carries the selected shape's own aspect, so the
               placeholder occupies exactly the footprint the poster will, and
-              the destinations below never jump when it lands. A single
-              tallest-shape box would leave `link` (1200×628) floating in dead
-              space; deriving it per ratio costs nothing and is honest about
-              what the shape picker is picking. */}
+              the controls below never jump when it lands. The ring is the
+              boards' signal frame: a 2px signal line, a faint 4px band
+              outside it and a glow. */}
           <div
-            className="relative w-40 overflow-hidden rounded-lg border border-border"
+            data-testid="share-preview-ring"
+            className="max-w-full rounded-[16px] p-1"
             style={{
-              aspectRatio: `${SC_RATIOS[ratio].width} / ${SC_RATIOS[ratio].height}`,
+              width: PREVIEW_WIDTH[ratio] + 8,
+              background: 'color-mix(in oklch, var(--signal) 14%, transparent)',
+              boxShadow:
+                '0 0 56px color-mix(in oklch, var(--signal) 26%, transparent)',
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- next/image
+            <div
+              className="relative w-full overflow-hidden rounded-xl border-2 border-signal"
+              style={{
+                aspectRatio: `${SC_RATIOS[ratio].width} / ${SC_RATIOS[ratio].height}`,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- next/image
                 would optimise a PNG that is already the render target, and the
                 route is not in the images allowlist. */}
-            <img
-              key={imageUrl}
-              src={imageUrl}
-              alt={altText}
-              onLoad={() => {
-                setPreview('ready');
-                // Read the timing entry before React re-renders and the `key`
-                // has any chance to swap the img — the entry is keyed by url,
-                // so a later read could describe a different shape's fetch.
-                track('share_card_rendered', {
-                  eventId: event.id,
-                  ratio,
-                  theme,
-                  cacheHit: wasServedFromCache(imageUrl),
-                });
-              }}
-              onError={() => setPreview('failed')}
-              className={`h-full w-full object-contain ${
-                preview === 'ready' ? '' : 'hidden'
-              }`}
-            />
-            {preview !== 'ready' && (
-              <div
-                role="status"
-                className="absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-fg-muted"
-                style={
-                  preview === 'loading'
-                    ? { background: 'var(--surface-2)' }
-                    : undefined
-                }
-              >
-                {preview === 'loading'
-                  ? COPY.previewLoading
-                  : COPY.previewFailed}
-              </div>
-            )}
+              <img
+                key={imageUrl}
+                src={imageUrl}
+                alt={altText}
+                onLoad={() => {
+                  setPreview('ready');
+                  // Read the timing entry before React re-renders and the `key`
+                  // has any chance to swap the img — the entry is keyed by url,
+                  // so a later read could describe a different shape's fetch.
+                  track('share_card_rendered', {
+                    eventId: event.id,
+                    ratio,
+                    theme,
+                    cacheHit: wasServedFromCache(imageUrl),
+                  });
+                }}
+                onError={() => setPreview('failed')}
+                className={`h-full w-full object-contain ${
+                  preview === 'ready' ? '' : 'hidden'
+                }`}
+              />
+              {preview !== 'ready' && (
+                <div
+                  role="status"
+                  className="absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-fg-muted"
+                  style={
+                    preview === 'loading'
+                      ? { background: 'var(--surface-2)' }
+                      : undefined
+                  }
+                >
+                  {preview === 'loading'
+                    ? COPY.previewLoading
+                    : COPY.previewFailed}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-xs font-medium text-fg-muted">
+        <fieldset className="m-0 flex min-w-0 flex-col border-0 p-0">
+          <legend className="mb-2.5 p-0 font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-fg-muted">
             {COPY.ratioLabel}
           </legend>
           <div className="flex gap-2">
-            {SHARE_RATIOS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={option === ratio}
-                onClick={() => setRatio(option)}
-                className={`min-h-11 flex-1 rounded-full border px-3 text-sm ${
-                  option === ratio
-                    ? 'border-accent bg-accent text-fg-on-accent'
-                    : 'border-border text-fg-muted'
-                }`}
-              >
-                {COPY.ratios[option]}
-              </button>
-            ))}
+            {SHARE_RATIOS.map((option) => {
+              const selected = option === ratio;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={selected}
+                  data-testid={`share-shape-${option}`}
+                  onClick={() => setRatio(option)}
+                  // Selected: a blue-to-pink border drawn as a border-box
+                  // gradient under a padding-box fill, bold label, signal glyph.
+                  className={`${TILE} ${
+                    selected
+                      ? 'border-transparent font-bold text-fg'
+                      : 'border-border bg-transparent font-medium text-fg-muted'
+                  }`}
+                  style={
+                    selected
+                      ? {
+                          background: `linear-gradient(var(--surface-3), var(--surface-3)) padding-box, ${SIGNAL_TO_ACCENT_ROW} border-box`,
+                        }
+                      : undefined
+                  }
+                >
+                  <ShapeGlyph
+                    ratio={option}
+                    className={selected ? 'text-signal' : 'text-fg-subtle'}
+                  />
+                  {COPY.ratios[option]}
+                </button>
+              );
+            })}
           </div>
         </fieldset>
 
-        <div className="flex flex-col gap-2">
-          {canSystemShare(caps) && (
-            <button
-              type="button"
-              onClick={() => {
-                void onSystemShare();
-              }}
-              className="min-h-11 rounded-full bg-accent px-4 text-sm font-medium text-fg-on-accent"
-            >
-              {COPY.destinations.systemShare}
-            </button>
-          )}
+        {canSystemShare(caps) && (
+          <button
+            type="button"
+            onClick={onSystemShare}
+            className="mt-3.5 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-[15px] font-bold text-fg-on-accent"
+            style={{
+              background: SIGNAL_TO_ACCENT_ROW,
+              boxShadow:
+                '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
+            }}
+          >
+            <Share2 size={16} strokeWidth={2.25} aria-hidden="true" />
+            {COPY.destinations.systemShare}
+          </button>
+        )}
+        <div className="mt-2.5 flex gap-2">
           <a
             href={imageUrl}
-            download={posterFileName(event)}
+            download={fileName}
             onClick={() => {
               track('share_destination_selected', {
                 eventId: event.id,
                 destination: 'save-image',
               });
             }}
-            className="flex min-h-11 items-center justify-center rounded-full border border-border px-4 text-sm font-medium text-fg"
+            className={GHOST_PILL}
           >
             {COPY.destinations.saveImage}
           </a>
@@ -296,18 +394,54 @@ export const ShareSheet = ({
             onClick={() => {
               void onCopyLink();
             }}
-            className="min-h-11 rounded-full border border-border px-4 text-sm font-medium text-fg"
+            className={GHOST_PILL}
           >
             {COPY.destinations.copyLink}
           </button>
         </div>
 
         {/* Polite rather than assertive: a copy confirmation should not
-            interrupt whatever the user is already reading. */}
-        <p aria-live="polite" className="min-h-4 text-xs text-fg-muted">
+            interrupt whatever the user is already reading. Not drawn on the
+            boards; kept from the pre-B+ sheet. */}
+        <p
+          aria-live="polite"
+          className="m-0 mt-2 min-h-4 text-xs text-fg-muted"
+        >
           {status}
         </p>
       </div>
     </BottomSheet>
+  );
+};
+
+/** The outline rectangle over each SHAPE label: tall, square or wide. */
+const ShapeGlyph = ({
+  ratio,
+  className,
+}: {
+  ratio: ShareRatio;
+  className: string;
+}) => {
+  const { width, height } = GLYPH[ratio];
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      fill="none"
+      aria-hidden="true"
+      data-glyph={ratio}
+      className={className}
+    >
+      <rect
+        x="0.75"
+        y="0.75"
+        width={width - 1.5}
+        height={height - 1.5}
+        rx="3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
   );
 };
