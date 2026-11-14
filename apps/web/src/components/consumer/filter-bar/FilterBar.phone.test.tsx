@@ -558,7 +558,7 @@ describe('FilterBar phone sheet', () => {
     expect(lastQuery().getAll('filterWhere')).toEqual(['hi-dive']);
   });
 
-  it('"All 16" opens every Vibe bucket under the teaching line', () => {
+  it('"All 16" opens every Vibe bucket as wrapping pills, no subtitle', () => {
     searchParams.current = new URLSearchParams(
       'filterVibe=latin&filterWhen=tonight',
     );
@@ -578,7 +578,9 @@ describe('FilterBar phone sheet', () => {
     expect(
       within(sheet).getByRole('heading', { name: copy.vibePlaceholder }),
     ).toBeTruthy();
-    expect(within(sheet).getByText(copy.popover.vibeSub)).toBeTruthy();
+    // `07/vibe-full-m` draws no subtitle under the title.
+    expect(within(sheet).queryByText(copy.popover.vibeSub)).toBeNull();
+    expect(within(sheet).getByTestId('vibe-full-list')).toBeTruthy();
     const rows = within(sheet).getAllByTestId('vibe-option');
     expect(rows).toHaveLength(VIBE_ORDER.length);
     expect(

@@ -47,7 +47,6 @@ import { crewLensFilterQuery } from '@/lib/crews';
 import { useDraftLensCount } from './useDraftLensCount';
 import { useDraftShowCount } from './useDraftShowCount';
 import { VenueOptionGrid } from './VenueOptionGrid';
-import { VibeOptionGrid } from './VibeOptionGrid';
 import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 const copy = CONSUMER_COPY.filterBar;
@@ -93,6 +92,48 @@ const VIBE_LABEL = new Map(
     option.label,
   ]),
 );
+
+/** A genre pill: dot, name and, when picked, a check in the genre's colour. The
+ * main sheet shows ten of them; the full Vibe list wraps all sixteen
+ * (`07/vibe-full-m`), so both draw the same pill. */
+const VibeChip = ({
+  genre,
+  on,
+  disabled,
+  testId,
+  onToggle,
+}: {
+  genre: string;
+  on: boolean;
+  disabled: boolean;
+  testId: string;
+  onToggle: () => void;
+}) => {
+  const color = genreColor(genre) ?? 'var(--signal)';
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={on}
+      disabled={disabled}
+      data-testid={testId}
+      onClick={onToggle}
+      className={`inline-flex h-[30px] cursor-pointer items-center gap-2 rounded-full border pr-3.5 pl-3 text-[13.5px] disabled:cursor-not-allowed disabled:opacity-40 ${MOTION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
+      style={{
+        borderColor: on ? color : 'var(--border-strong)',
+        background: on
+          ? `color-mix(in oklab, ${color} 14%, transparent)`
+          : 'var(--surface-1)',
+        color: on ? 'var(--fg)' : 'var(--fg-muted)',
+        fontWeight: on ? 700 : 600,
+      }}
+    >
+      <GenreDot genre={genre} size={8} />
+      {VIBE_LABEL.get(genre) ?? genre}
+      {on && <Check color={color} />}
+    </button>
+  );
+};
 
 const EYEBROW_STYLE: CSSProperties = {
   fontFamily: 'var(--font-mono)',
@@ -570,31 +611,15 @@ export function PhoneFilterSheet({
       >
         <div className="flex flex-wrap gap-x-[7px] gap-y-[7px]">
           {chips.map((genre) => {
-            const on = draft.values.vibe.includes(genre);
-            const color = genreColor(genre) ?? 'var(--signal)';
             return (
-              <button
+              <VibeChip
                 key={genre}
-                type="button"
-                role="checkbox"
-                aria-checked={on}
-                disabled={!on && vibeAtCap}
-                data-testid="vibe-chip-option"
-                onClick={() => toggle('vibe', genre)}
-                className={`inline-flex h-[30px] cursor-pointer items-center gap-2 rounded-full border pr-3.5 pl-3 text-[13.5px] disabled:cursor-not-allowed disabled:opacity-40 ${MOTION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
-                style={{
-                  borderColor: on ? color : 'var(--border-strong)',
-                  background: on
-                    ? `color-mix(in oklab, ${color} 14%, transparent)`
-                    : 'var(--surface-1)',
-                  color: on ? 'var(--fg)' : 'var(--fg-muted)',
-                  fontWeight: on ? 700 : 600,
-                }}
-              >
-                <GenreDot genre={genre} size={8} />
-                {VIBE_LABEL.get(genre) ?? genre}
-                {on && <Check color={color} />}
-              </button>
+                genre={genre}
+                on={draft.values.vibe.includes(genre)}
+                disabled={!draft.values.vibe.includes(genre) && vibeAtCap}
+                testId="vibe-chip-option"
+                onToggle={() => toggle('vibe', genre)}
+              />
             );
           })}
         </div>
@@ -678,11 +703,6 @@ export function PhoneFilterSheet({
                 ? FILTER_DEFS.where.label
                 : FILTER_DEFS.vibe.placeholder}
             </h2>
-            {view === 'vibe' && (
-              <p className="pt-1.5 text-[14px] leading-[1.35] text-fg-muted">
-                {copy.popover.vibeSub}
-              </p>
-            )}
           </div>
         )}
 
@@ -703,12 +723,20 @@ export function PhoneFilterSheet({
               />
             </div>
           ) : (
-            <div className="pt-[21px]">
-              <VibeOptionGrid
-                selected={draft.values.vibe}
-                onToggle={(genre) => toggle('vibe', genre)}
-                columns={1}
-              />
+            <div
+              className="flex flex-wrap gap-x-[7px] gap-y-[7px] pt-[18px]"
+              data-testid="vibe-full-list"
+            >
+              {VIBE_ORDER.map((genre) => (
+                <VibeChip
+                  key={genre}
+                  genre={genre}
+                  on={draft.values.vibe.includes(genre)}
+                  disabled={!draft.values.vibe.includes(genre) && vibeAtCap}
+                  testId="vibe-option"
+                  onToggle={() => toggle('vibe', genre)}
+                />
+              ))}
             </div>
           )}
         </div>
