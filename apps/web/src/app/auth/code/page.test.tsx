@@ -93,6 +93,24 @@ describe('invite-code screen shows "This code has ended"', () => {
     expect(field).toHaveFocus();
     // The ended code is not carried over, and the ended page is gone.
     expect(screen.queryByText('This code has ended')).toBeNull();
-    expect(screen.queryByText(/has ended/i)).toBeNull();
+    // The focused field draws the board's signal border.
+    expect(field.style.border).toContain('var(--signal)');
+  });
+
+  it('ends again after another ended code, and the way back still works', async () => {
+    validateAndSetInviteCode.mockResolvedValue({ ok: false, error: 'ended' });
+    render(<InviteCodePage />);
+
+    for (const code of ['REDROCKS', 'WINTERFEST']) {
+      fireEvent.change(screen.getByRole('textbox'), {
+        target: { value: code },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+      await screen.findByText('This code has ended');
+      fireEvent.click(screen.getByRole('button', { name: 'Enter it' }));
+      const field = await screen.findByRole('textbox');
+      expect(field).toHaveValue('');
+      expect(field).toHaveFocus();
+    }
   });
 });

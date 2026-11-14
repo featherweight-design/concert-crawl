@@ -43,10 +43,10 @@ export default function InviteCodePage() {
   }, []);
 
   useEffect(() => {
-    if (!refocus || errorKind === 'ended') return;
+    if (!refocus) return;
     inputRef.current?.focus();
     setRefocus(false);
-  }, [refocus, errorKind]);
+  }, [refocus]);
 
   const isComplete = isCompleteInviteCode(code);
 
@@ -55,6 +55,8 @@ export default function InviteCodePage() {
   function handleEnterAnother() {
     setCode('');
     setErrorKind(null);
+    // The field that held focus was unmounted without a blur.
+    setFocused(false);
     setRefocus(true);
   }
 
