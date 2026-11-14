@@ -248,6 +248,8 @@ describe('EventEdit Status card', () => {
       />,
     );
     fireEvent.click(pill('available'));
+    // Said before the save: a single pill never re-lists silently.
+    expect(screen.getByRole('status')).toHaveTextContent(COPY.saveBar.relists);
     fireEvent.click(screen.getByTestId('event-edit-save'));
     await waitFor(() =>
       expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
