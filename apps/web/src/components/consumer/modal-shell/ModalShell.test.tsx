@@ -231,8 +231,8 @@ describe('ModalShell focus containment', () => {
         </ModalShell>,
       );
       const edge = screen.getByTestId('modal-top-edge');
-      expect(edge.style.background).toContain('var(--signal)');
-      expect(edge.style.background).toContain('var(--accent)');
+      expect(edge.style.height).toBe('2px');
+      expect(edge.style.top).toBe('0px');
     });
 
     it('leaves the crew surface to its own edge', () => {

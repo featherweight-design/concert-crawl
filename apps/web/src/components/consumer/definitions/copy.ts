@@ -306,7 +306,7 @@ export const CONSUMER_COPY = {
     header: {
       eyebrow: {
         // One rail on the error screen, drawn in the header (more-p-error_m).
-        error: "Didn't save · price channel",
+        error: 'Didn’t save · price channel',
         success: 'Got it · submitted',
         alreadySubmitted: 'Already submitted',
         open: 'Community prices · open',

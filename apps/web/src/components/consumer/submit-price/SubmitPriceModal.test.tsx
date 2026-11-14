@@ -42,9 +42,6 @@ vi.mock('@/components/consumer/tier-picker/lazy', () => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
-vi.mock('@/components/brand/cc-mark', () => ({
-  CCMark: () => <div data-testid="cc-mark" />,
-}));
 vi.mock('lucide-react', () => ({
   ShieldCheck: () => <svg data-testid="shield-check-icon" />,
 }));
