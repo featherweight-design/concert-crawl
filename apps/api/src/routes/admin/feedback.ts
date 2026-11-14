@@ -3,9 +3,12 @@ import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
-import { and, eq, desc, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, desc, ilike, inArray, sql, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db, feedback, userProfiles } from '@concert-crawl/db';
 import {
+  ADMIN_FEEDBACK_KIND_CATEGORIES,
+  ADMIN_FEEDBACK_KINDS,
   ADMIN_FEEDBACK_STATUSES,
   ADMIN_FEEDBACK_VIEW_STATUSES,
   FEEDBACK_CATEGORIES,
@@ -13,6 +16,8 @@ import {
   type AdminFeedbackItem,
   type AdminFeedbackStatus,
 } from '@concert-crawl/types';
+import { containsPattern } from '../../lib/escape-like.js';
+import type { DbExecutor } from '../../lib/db-executor.js';
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
@@ -27,6 +32,17 @@ const listQuerySchema = z.object({
   // To read / Done, admin redesign decision 3. Combines with `status` (AND).
   view: z.enum(['to_read', 'done']).optional(),
   category: z.enum(FEEDBACK_CATEGORIES).optional(),
+  // A kind chip (P47-19 PR 4): bugs = bug + error_report. Combines (AND).
+  kind: z.enum(ADMIN_FEEDBACK_KINDS).optional(),
+  // Done's "Search feedback": a case-insensitive contains match on the
+  // message, LIKE metacharacters escaped. Blank after trimming means no
+  // search.
+  search: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((value) => (value ? value : undefined)),
   limit: z.coerce.number().int().min(1).max(200).default(100),
 });
 
@@ -88,40 +104,58 @@ type ItemRow = Pick<
  */
 const toItem = (
   { metadata, ...row }: ItemRow,
-  resolvedByHandle: string | null,
+  handles: { submittedBy: string | null; resolvedBy: string | null },
 ): AdminFeedbackItem => ({
   ...row,
   metadata: isRecord(metadata) ? metadata : null,
   createdAt: row.createdAt.toISOString(),
-  resolvedBy: resolvedByHandle,
+  submittedBy: handles.submittedBy,
+  resolvedBy: handles.resolvedBy,
   resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
 });
 
+/**
+ * Items with both handles: the submitter's and the resolver's, each read from
+ * user_profiles and null when there is no profile (or no user). Never the
+ * Clerk id (admin redesign rule 7).
+ */
 const selectItems = async (
   where: SQL | undefined,
   limit: number,
+  executor: DbExecutor = db,
 ): Promise<AdminFeedbackItem[]> => {
-  const rows = await db
-    .select({ ...itemColumns(), resolvedByHandle: userProfiles.handle })
+  const submitter = alias(userProfiles, 'submitter');
+  const resolver = alias(userProfiles, 'resolver');
+  const rows = await executor
+    .select({
+      ...itemColumns(),
+      submittedByHandle: submitter.handle,
+      resolvedByHandle: resolver.handle,
+    })
     .from(feedback)
-    .leftJoin(userProfiles, eq(userProfiles.userId, feedback.resolvedBy))
+    .leftJoin(submitter, eq(submitter.userId, feedback.userId))
+    .leftJoin(resolver, eq(resolver.userId, feedback.resolvedBy))
     .where(where)
     .orderBy(desc(feedback.createdAt), desc(feedback.id))
     .limit(limit);
 
-  return rows.map(({ resolvedByHandle, ...row }) =>
-    toItem(row, resolvedByHandle ?? null),
+  return rows.map(({ submittedByHandle, resolvedByHandle, ...row }) =>
+    toItem(row, {
+      submittedBy: submittedByHandle ?? null,
+      resolvedBy: resolvedByHandle ?? null,
+    }),
   );
 };
 
 export const feedbackAdminRouter = new Hono<AdminVariables>();
 
-// GET /v1/admin/feedback?view=to_read&category=bug&status=unread&limit=100
+// GET /v1/admin/feedback?view=to_read&kind=bugs&category=bug&status=unread&search=map&limit=100
 feedbackAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
-    const { status, view, category, limit } = ctx.req.valid('query');
+    const { status, view, category, kind, search, limit } =
+      ctx.req.valid('query');
 
     const data = await selectItems(
       and(
@@ -130,6 +164,12 @@ feedbackAdminRouter.get(
           ? inArray(feedback.status, [...ADMIN_FEEDBACK_VIEW_STATUSES[view]])
           : undefined,
         category ? eq(feedback.category, category) : undefined,
+        kind
+          ? inArray(feedback.category, [
+              ...ADMIN_FEEDBACK_KIND_CATEGORIES[kind],
+            ])
+          : undefined,
+        search ? ilike(feedback.message, containsPattern(search)) : undefined,
       ),
       limit,
     );
@@ -138,16 +178,24 @@ feedbackAdminRouter.get(
   },
 );
 
-// GET /v1/admin/feedback/counts: `unread` for the existing badge, plus the
-// To read and Done view totals.
+// GET /v1/admin/feedback/counts: `unread` for the existing badge, the To read
+// and Done view totals, and each kind chip's count inside To read.
 feedbackAdminRouter.get('/counts', async (ctx) => {
   const toRead = [...ADMIN_FEEDBACK_VIEW_STATUSES.to_read];
   const done = [...ADMIN_FEEDBACK_VIEW_STATUSES.done];
+  const inToReadKind = (kind: keyof typeof ADMIN_FEEDBACK_KIND_CATEGORIES) =>
+    sql<number>`count(*) FILTER (WHERE ${and(
+      inArray(feedback.status, toRead),
+      inArray(feedback.category, [...ADMIN_FEEDBACK_KIND_CATEGORIES[kind]]),
+    )})::int`;
   const [result] = await db
     .select({
       unread: sql<number>`count(*) FILTER (WHERE ${feedback.status} = 'unread')::int`,
       toRead: sql<number>`count(*) FILTER (WHERE ${inArray(feedback.status, toRead)})::int`,
       done: sql<number>`count(*) FILTER (WHERE ${inArray(feedback.status, done)})::int`,
+      bugs: inToReadKind('bugs'),
+      ideas: inToReadKind('ideas'),
+      venues: inToReadKind('venues'),
     })
     .from(feedback);
 
@@ -155,6 +203,11 @@ feedbackAdminRouter.get('/counts', async (ctx) => {
     unread: result?.unread ?? 0,
     toRead: result?.toRead ?? 0,
     done: result?.done ?? 0,
+    kinds: {
+      bugs: result?.bugs ?? 0,
+      ideas: result?.ideas ?? 0,
+      venues: result?.venues ?? 0,
+    },
   };
   return ctx.json({ success: true, data });
 });
@@ -216,26 +269,19 @@ feedbackAdminRouter.patch(
           }),
         })
         .where(eq(feedback.id, id))
-        .returning({ ...itemColumns(), resolvedBy: feedback.resolvedBy });
+        .returning({ id: feedback.id });
       if (!row) return null;
 
-      // The resolver's handle costs a read only when there is a resolver.
-      const { resolvedBy, ...itemRow } = row;
-      let resolvedByHandle: string | null = null;
-      if (resolvedBy !== null) {
-        const [profile] = await tx
-          .select({ handle: userProfiles.handle })
-          .from(userProfiles)
-          .where(eq(userProfiles.userId, resolvedBy))
-          .limit(1);
-        resolvedByHandle = profile?.handle ?? null;
-      }
+      // Re-read through the list's select, so the answer carries both
+      // handles exactly as GET does.
+      const [item] = await selectItems(eq(feedback.id, id), 1, tx);
+      if (!item) return null;
 
       return {
         from: current.status,
         nextStatus,
         transition,
-        item: toItem(itemRow, resolvedByHandle),
+        item,
       };
     });
 
