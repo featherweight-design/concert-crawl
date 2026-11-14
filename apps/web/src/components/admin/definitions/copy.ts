@@ -2186,11 +2186,6 @@ export const ADMIN_COPY = {
     page: {
       title: 'Settings',
     },
-    appearance: {
-      heading: 'Appearance',
-      description:
-        'Choose the theme for your admin interface. Your selection is saved locally.',
-    },
     opsTools: {
       heading: 'Ops tools',
       description:
