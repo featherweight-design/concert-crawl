@@ -15,6 +15,12 @@ export const crawlTriggerStatusEnum = pgEnum('crawl_trigger_status', [
   'failed',
 ]);
 
+// 'test' crawls a venue without publishing what it finds (admin redesign 3c).
+export const crawlTriggerModeEnum = pgEnum('crawl_trigger_mode', [
+  'crawl',
+  'test',
+]);
+
 export const crawlTriggers = pgTable('crawl_triggers', {
   id: uuid('id').primaryKey().defaultRandom(),
   venueId: uuid('venue_id')
@@ -27,6 +33,7 @@ export const crawlTriggers = pgTable('crawl_triggers', {
   // whose listings haven't changed. Default false keeps normal + scheduled
   // crawls on the cost-saving skip path.
   force: boolean('force').notNull().default(false),
+  mode: crawlTriggerModeEnum('mode').notNull().default('crawl'),
   crawlRunId: uuid('crawl_run_id'),
   triggeredBy: text('triggered_by'),
   createdAt: timestamp('created_at', { withTimezone: true })
