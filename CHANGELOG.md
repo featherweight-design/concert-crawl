@@ -1,3 +1,16 @@
+# [1.462.0](https://github.com/featherweight-design/concert-crawl/compare/v1.461.0...v1.462.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** claim no same-act listing only where the classifier looked ([9da0ff2](https://github.com/featherweight-design/concert-crawl/commit/9da0ff2e567249ea2a576550ebb6ff0d61b19407))
+
+
+### Features
+
+* **admin:** show the moved listing's time and crawl day, and Same act another venue ([edc56af](https://github.com/featherweight-design/concert-crawl/commit/edc56af137da5597f29cfdceaa7dd0650b51248b))
+* **web:** a revoked invite code shows the code has ended page ([9c54d37](https://github.com/featherweight-design/concert-crawl/commit/9c54d37788bddecf08c4a35e56a0beb2a3a5d87a))
+
 # [1.461.0](https://github.com/featherweight-design/concert-crawl/compare/v1.460.0...v1.461.0) (2026-11-14)
 
 
