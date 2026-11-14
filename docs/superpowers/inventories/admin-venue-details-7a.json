@@ -1,0 +1,40 @@
+{
+  "feature": "Admin venue Details tab · Venue, Tickets and Contact cards (3b part 5a)",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: addendum-3/04-venues details-d (desktop) and details-m (phone). 7a builds the Venue, Tickets and Contact cards and their save bar; About, Look and Other are 7b's, so the old City, About and identity-art sections still render below the cards. The edited row fills Contact's email to raise the save bar; nothing is saved.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/3b-7a-contact-sheet",
+  "widths": [
+    { "label": "320", "width": 320, "height": 900, "touch": true },
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "640", "width": 640, "height": 900 },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "details",
+      "label": "Venue page, Details (Bluebird Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "wait": "[data-testid=\"details-venue\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "details-edited",
+      "label": "Details with an edit: the save bar",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "wait": "[data-testid=\"details-contact\"]"
+        },
+        { "settle": 1500 },
+        {
+          "fill": "[data-testid=\"details-contact\"] input[type=\"email\"]",
+          "text": "box@bluebird.example"
+        },
+        { "settle": 1500 }
+      ]
+    }
+  ]
+}
