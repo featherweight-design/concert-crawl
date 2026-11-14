@@ -297,6 +297,95 @@ describe('admin needs-you answers', () => {
     expect(reverted?.verified).toBe(false);
   });
 
+  describe('postponed', () => {
+    const droppedItem = async (): Promise<{
+      key: string;
+      eventId: string;
+    }> => {
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      const event = await seedEvent(venue.id, {
+        artist: 'Gone Act',
+        date: inDays(10),
+        showTime: '20:00:00',
+        firstMissingAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      });
+      const [item] = await itemsOf('show-dropped');
+      return { key: item?.key ?? '', eventId: event.id };
+    };
+
+    const eventRow = async (id: string) => {
+      const [row] = await testDb.select().from(events).where(eq(events.id, id));
+      return row;
+    };
+
+    it('marks it postponed with no date, leaving date and time alone', async () => {
+      setAuth('admin');
+      const { key, eventId } = await droppedItem();
+      const res = await answer(key, { answer: 'postponed' });
+      expect(res.status).toBe(200);
+      const row = await eventRow(eventId);
+      expect(row?.status).toBe('postponed');
+      expect(row?.date).toBe(inDays(10));
+    });
+
+    it('moves the date and show time with the status, and audits them', async () => {
+      setAuth('admin');
+      const { key, eventId } = await droppedItem();
+      const res = await answer(key, {
+        answer: 'postponed',
+        date: inDays(40),
+        showTime: '19:30',
+      });
+      expect(res.status).toBe(200);
+      const row = await eventRow(eventId);
+      expect(row?.status).toBe('postponed');
+      expect(row?.date).toBe(inDays(40));
+      expect(row?.showTime?.slice(0, 5)).toBe('19:30');
+      const [audit] = await auditRows('needs_you.answer');
+      expect(audit?.metadata).toMatchObject({
+        slug: 'postponed',
+        params: { date: inDays(40), showTime: '19:30' },
+      });
+    });
+
+    it('moves only the date when the show time is blank, keeping the old time', async () => {
+      setAuth('admin');
+      const { key, eventId } = await droppedItem();
+      // Tomorrow is the earliest day the dialog offers and the API accepts.
+      const res = await answer(key, { answer: 'postponed', date: inDays(1) });
+      expect(res.status).toBe(200);
+      const row = await eventRow(eventId);
+      expect(row?.date).toBe(inDays(1));
+      expect(row?.showTime?.slice(0, 5)).toBe('20:00');
+    });
+
+    it('refuses a date that is not after today, and a time with no date', async () => {
+      setAuth('admin');
+      const { key, eventId } = await droppedItem();
+      expect(
+        (await answer(key, { answer: 'postponed', date: inDays(0) })).status,
+      ).toBe(422);
+      expect(
+        (await answer(key, { answer: 'postponed', showTime: '19:30' })).status,
+      ).toBe(422);
+      // An impossible day and a clock that does not exist are refused at the
+      // boundary, not left for the column to reject.
+      expect(
+        (await answer(key, { answer: 'postponed', date: '2099-02-31' })).status,
+      ).toBe(400);
+      expect(
+        (
+          await answer(key, {
+            answer: 'postponed',
+            date: inDays(40),
+            showTime: '99:99',
+          })
+        ).status,
+      ).toBe(400);
+      expect((await eventRow(eventId))?.status).not.toBe('postponed');
+    });
+  });
+
   it('refuses to undo a notifying answer', async () => {
     setAuth('admin');
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });

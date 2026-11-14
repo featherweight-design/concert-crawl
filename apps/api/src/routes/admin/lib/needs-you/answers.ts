@@ -9,7 +9,8 @@ import {
   moved,
   moveTo,
   notAConcert,
-  setStatusAnswer,
+  cancelled,
+  postponed,
   stillOn,
 } from './answers-events.js';
 import { keepThisMatch, noPhoto, pickRightArtist } from './answers-artists.js';
@@ -26,8 +27,8 @@ export type { AnswerHandler } from './answer-kit.js';
 export const ANSWER_HANDLERS: ReadonlyMap<string, AnswerHandler> = new Map(
   [
     stillOn,
-    setStatusAnswer('postponed'),
-    setStatusAnswer('cancelled'),
+    postponed,
+    cancelled,
     moved,
     moveTo,
     reCrawl('re_crawl_now', 'venue-failing'),

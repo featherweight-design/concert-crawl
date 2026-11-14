@@ -166,7 +166,7 @@ export const HideEventDialog = ({
   </EventConfirm>
 );
 
-const EventConfirm = ({
+export const EventConfirm = ({
   title,
   confirmLabel,
   confirmIcon,
@@ -227,7 +227,7 @@ const EventConfirm = ({
   );
 };
 
-const Radio = ({
+export const Radio = ({
   checked,
   label,
   onPick,

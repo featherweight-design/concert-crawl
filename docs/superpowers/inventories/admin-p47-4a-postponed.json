@@ -1,0 +1,26 @@
+{
+  "feature": "Admin P47-4A · Needs you Postponed with a new date",
+  "note": "P47-4 PR A. CONTACT_SHEET_ROLE=admin. Boards: addendum-3 10-needs-you-panels/postponed-d and postponed-m; the picker is addendum-5/04-event-edit/date-picker-d. Needs a show-dropped item in the queue. The dialog is shot with New date chosen.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "postponed-new-date",
+      "label": "Postponed dialog, New date chosen",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"show-dropped:\"]"
+        },
+        {
+          "click": "[data-item-key^=\"show-dropped:\"]:visible >> nth=0 >> text=Postponed"
+        },
+        { "wait": "text=No new date yet" },
+        { "click": "text=\"New date\"" },
+        { "wait": "text=Show", "settle": 800 }
+      ]
+    }
+  ]
+}

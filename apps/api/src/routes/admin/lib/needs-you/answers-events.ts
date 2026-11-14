@@ -16,6 +16,7 @@ import {
   eventIdOf,
   STATE_CHANGED,
 } from './answer-kit.js';
+import { denverDate } from './keys.js';
 
 const SHOW_KINDS = ['show-dropped', 'show-moved'] as const;
 
@@ -73,21 +74,69 @@ export const stillOn = define({
   },
 });
 
-export const setStatusAnswer = (slug: 'postponed' | 'cancelled') =>
-  define({
-    slug,
-    kinds: SHOW_KINDS,
-    schema: noParams,
-    run: async (item) => {
-      const eventId = eventIdOf(item);
-      if (eventId === null) return fail(400, 'Not a show item');
-      // The existing event update: it ends any silent delisting and fans out
-      // the watch notification when the status really changes.
-      const updated = await updateEvent(eventId, { status: slug });
-      if (!updated) return fail(404, 'Event not found');
-      return { ok: true, params: {}, before: null };
-    },
-  });
+export const cancelled = define({
+  slug: 'cancelled',
+  kinds: SHOW_KINDS,
+  schema: noParams,
+  run: async (item) => {
+    const eventId = eventIdOf(item);
+    if (eventId === null) return fail(400, 'Not a show item');
+    // The existing event update: it ends any silent delisting and fans out
+    // the watch notification when the status really changes.
+    const updated = await updateEvent(eventId, { status: 'cancelled' });
+    if (!updated) return fail(404, 'Event not found');
+    return { ok: true, params: {}, before: null };
+  },
+});
+
+// Postponed's New date (`10-needs-you-panels/postponed-d`): a date, and a show
+// time with it, or neither for "No new date yet".
+const postponedParams = z.object({
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD')
+    // A real calendar day: 2026-02-31 reads like a date and the column refuses it.
+    .refine(
+      (value) => new Date(`${value}T00:00:00Z`).toISOString().startsWith(value),
+      'date must be a real day',
+    )
+    .optional(),
+  showTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'showTime must be HH:MM')
+    .nullable()
+    .optional(),
+});
+
+export const postponed = define({
+  slug: 'postponed',
+  kinds: SHOW_KINDS,
+  schema: postponedParams,
+  run: async (item, params) => {
+    const eventId = eventIdOf(item);
+    if (eventId === null) return fail(400, 'Not a show item');
+    // A show time only means something beside a new date.
+    if (params.date === undefined && params.showTime !== undefined)
+      return fail(422, 'A show time needs a date');
+    if (params.date !== undefined && params.date <= denverDate(new Date()))
+      return fail(422, 'Pick a date after today');
+    // The existing event update: status and date together fan out once.
+    const updated = await updateEvent(eventId, {
+      status: 'postponed',
+      ...(params.date !== undefined && { date: params.date }),
+      ...(params.showTime !== undefined && { showTime: params.showTime }),
+    });
+    if (!updated) return fail(404, 'Event not found');
+    return {
+      ok: true,
+      params: {
+        ...(params.date !== undefined && { date: params.date }),
+        ...(params.showTime !== undefined && { showTime: params.showTime }),
+      },
+      before: null,
+    };
+  },
+});
 
 const mergeResult = (
   result: Awaited<ReturnType<typeof mergeEvents>>,
