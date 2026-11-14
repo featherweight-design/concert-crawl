@@ -8,7 +8,7 @@ import { updateVenue } from '@/lib/actions/venues';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminCard as Card, useIsPhone } from '@/components/admin/primitives';
 import { inputStyle } from '../source/source-parts';
-import { Field, LookCard, OtherCard, Pair } from './details-parts';
+import { Field, LookCard, Pair } from './details-parts';
 import { DetailsAbout, useAboutDraft } from './DetailsAbout';
 import { DetailsSaveBar } from './DetailsSaveBar';
 import {
@@ -54,7 +54,7 @@ const selectStyle = (invalid: boolean): CSSProperties => ({
 
 /**
  * The venue page's Details tab (3b part 5): the Venue, About, Tickets,
- * Contact and Look cards, plus Other (ruling g), with its own Save bar. Only
+ * Contact and Look cards, with its own Save bar. Only
  * the Details columns it changed are ever sent: never a Source column (the
  * Website is Source's calendar page, shown read-only, ruling b) or a crawl
  * rule.
@@ -73,10 +73,9 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   const [errors, setErrors] = useState<DetailsErrors>({});
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
-  // About and Other sit in different parents on phone and desktop, so they
-  // remount across the breakpoint: their state lives here, never in them.
+  // About sits in different parents on phone and desktop, so it remounts
+  // across the breakpoint: its state lives here, never in it.
   const aboutDraft = useAboutDraft(venue.id);
-  const [seed, setSeed] = useState(0);
 
   const savedDraft = draftOf(baseline);
   const edited = editedFields(draft, savedDraft);
@@ -209,15 +208,19 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
         >
           {text('neighborhood')}
         </Field>
-        <Field
-          id={idOf('mapPin')}
-          label={FIELDS.mapPin.label}
-          hint={FIELDS.mapPin.hint}
-          error={errors.mapPin}
-        >
-          {text('mapPin')}
+        {/* Addendum 5 `details-d`: City sits beside Neighborhood. */}
+        <Field id={idOf('city')} label={FIELDS.city} error={errors.city}>
+          {text('city')}
         </Field>
       </Pair>
+      <Field
+        id={idOf('mapPin')}
+        label={FIELDS.mapPin.label}
+        hint={FIELDS.mapPin.hint}
+        error={errors.mapPin}
+      >
+        {text('mapPin')}
+      </Field>
       {/* The "Change it before it goes live" line is for drafts (3c), and
           the redirect line waits on slug redirects: both held. */}
       <Field id={idOf('slug')} label={FIELDS.link.label} error={errors.slug}>
@@ -387,18 +390,6 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
     </Card>
   );
 
-  const otherCard = (
-    <OtherCard
-      name={venue.name}
-      seed={seed}
-      onRoll={() => setSeed((prev) => prev + 1)}
-    >
-      <Field id={idOf('city')} label={FIELDS.city} error={errors.city}>
-        {text('city')}
-      </Field>
-    </OtherCard>
-  );
-
   const lookCard = <LookCard slug={venue.slug} name={venue.name} />;
 
   const column: CSSProperties = {
@@ -422,14 +413,13 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
       style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
       {phone ? (
-        // `details-m`: Venue, Tickets, Contact, Look, About, then Other.
+        // `details-m`: Venue, Tickets, Contact, Look, then About.
         <div style={column}>
           {venueCard}
           {ticketsCard}
           {contactCard}
           {lookCard}
           {aboutCard}
-          {otherCard}
         </div>
       ) : (
         // `details-d`: two balanced columns, 1fr each (rule 5).
@@ -449,7 +439,6 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
             {ticketsCard}
             {contactCard}
             {lookCard}
-            {otherCard}
           </div>
         </div>
       )}

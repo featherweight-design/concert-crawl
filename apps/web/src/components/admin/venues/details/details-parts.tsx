@@ -1,14 +1,13 @@
 'use client';
 
-/** The Details tab's building blocks: a labelled field, a two-up row, and the Look and Other cards. */
+/** The Details tab's building blocks: a labelled field, a two-up row, and the Look card. */
 
 import type { CSSProperties, ReactNode } from 'react';
 import { MapPin } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { AdminButton, AdminCard as Card } from '@/components/admin/primitives';
+import { AdminCard as Card } from '@/components/admin/primitives';
 import { VenueTile, venueGlyphKey } from '@/components/consumer/venue-glyph';
 import { VENUE_HERO_SETTINGS } from '@/components/consumer/venue-glyph/definitions/venue-settings';
-import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
 import { errorStyle, fieldLabel, hintStyle } from '../source/source-parts';
 import { capacityTypeLabel } from './details-rules';
 
@@ -92,18 +91,16 @@ const emptyThumb: CSSProperties = {
   justifyContent: 'center',
 };
 
-/** One Look row: a 56px thumb, a title over a line, and an action. */
+/** One Look row: a 56px thumb, then a title over a line. */
 const LookRow = ({
   thumb,
   title,
   line,
-  action,
   testId,
 }: {
   thumb: ReactNode;
   title: string;
   line: string | null;
-  action?: ReactNode;
   testId: string;
 }) => (
   <div
@@ -119,7 +116,6 @@ const LookRow = ({
         </div>
       )}
     </div>
-    {action}
   </div>
 );
 
@@ -188,67 +184,6 @@ export const LookCard = ({ slug, name }: { slug: string; name: string }) => {
         }
         title={COPY.look.hero}
         line={hero === null ? COPY.look.heroNone : capacityTypeLabel(hero)}
-      />
-    </Card>
-  );
-};
-
-/**
- * The Other card (ruling g): City, and the fallback art's seed. The seed is
- * a preview: nothing stores it yet. The tab holds the seed, so a roll
- * survives the card remounting across the phone breakpoint.
- */
-export const OtherCard = ({
-  name,
-  seed,
-  onRoll,
-  children,
-}: {
-  name: string;
-  seed: number;
-  onRoll: () => void;
-  children: ReactNode;
-}) => {
-  const artName = seed === 0 ? name : `${name}·${seed}`;
-  return (
-    <Card title={COPY.cards.other} phone={false} testId="details-other">
-      {children}
-      {rule}
-      <LookRow
-        testId="details-fallback-art"
-        thumb={
-          <div
-            style={{
-              ...thumbBox,
-              border: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-            }}
-          >
-            <IdentityArt
-              name={artName}
-              kind="venue"
-              scale="tile"
-              grain={0.08}
-              width={THUMB}
-              height={THUMB}
-            />
-          </div>
-        }
-        title={COPY.fallbackArt.label}
-        line={COPY.fallbackArt.hint}
-        action={
-          <AdminButton
-            type="button"
-            variant="outline"
-            onClick={onRoll}
-            style={smallButton}
-          >
-            {COPY.fallbackArt.roll}
-          </AdminButton>
-        }
       />
     </Card>
   );
