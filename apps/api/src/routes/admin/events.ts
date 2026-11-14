@@ -8,6 +8,8 @@ import { apiLogger } from '../../lib/logger.js';
 import {
   classifySaleRefusal,
   lockEventForSaleWrite,
+  NotOnSaleError,
+  notOnSaleBody,
   PAST_LOCKED_BODY,
   PastLockedError,
 } from '../../lib/past-lock.js';
@@ -964,6 +966,15 @@ eventsAdminRouter.post(
         },
       );
     } catch (err) {
+      // A cancelled, postponed or delisted show has no sale to sell out.
+      // Like past_locked, the refusal writes nothing and audits nothing.
+      if (err instanceof NotOnSaleError) {
+        apiLogger.warn(
+          { eventId: id, reason: err.reason },
+          'admin mark sold out: refused, show not on sale',
+        );
+        return ctx.json(notOnSaleBody(err.reason), 409);
+      }
       const refused = classifySaleRefusal(err, {
         msg: 'admin mark sold out',
         eventId: id,

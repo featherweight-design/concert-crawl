@@ -92,16 +92,36 @@ export const lockEventRow = async (
   };
 };
 
+/** Why a show has no sale an admin can mark sold out. */
+export type NotOnSaleReason = 'cancelled' | 'postponed' | 'delisted';
+
+/** A sold-out mark on a show that is cancelled, postponed or delisted. */
+export class NotOnSaleError extends Error {
+  constructor(readonly reason: NotOnSaleReason) {
+    super('not_on_sale');
+    this.name = 'NotOnSaleError';
+  }
+}
+
+/** The 409 body for a sold-out mark refused by NotOnSaleError. */
+export const notOnSaleBody = (reason: NotOnSaleReason) =>
+  ({ success: false, error: 'not_on_sale', reason }) as const;
+
 /**
- * lockEventSaleState for a write that refuses a past show outright: throws
- * PastLockedError, and the caller's transaction rolls back.
+ * Lock the event row for marking it sold out: throws PastLockedError for a
+ * past show, and NotOnSaleError for a cancelled, postponed or delisted one
+ * (a show the stale sweep delisted reads `cancelled` too, so it says
+ * 'delisted'). Either way the caller's transaction rolls back.
  */
 export const lockEventForSaleWrite = async (
   tx: DbTransaction,
   eventId: string,
 ): Promise<void> => {
-  if ((await lockEventSaleState(tx, eventId)) === 'past') {
-    throw new PastLockedError();
+  const show = await lockEventRow(tx, eventId);
+  if (show.state === 'past') throw new PastLockedError();
+  if (show.delistedAt !== null) throw new NotOnSaleError('delisted');
+  if (show.status === 'cancelled' || show.status === 'postponed') {
+    throw new NotOnSaleError(show.status);
   }
 };
 
