@@ -58,7 +58,10 @@ const resolvedTransition = (
   return null;
 };
 
-const itemColumns = {
+// A function, not a module-level object: route unit tests mock
+// `@concert-crawl/db` without `feedback`, and reading it at import time would
+// fail every suite that loads the admin router.
+const itemColumns = () => ({
   id: feedback.id,
   userId: feedback.userId,
   pageUrl: feedback.pageUrl,
@@ -70,9 +73,12 @@ const itemColumns = {
   issueUrl: feedback.issueUrl,
   createdAt: feedback.createdAt,
   resolvedAt: feedback.resolvedAt,
-};
+});
 
-type ItemRow = Pick<typeof feedback.$inferSelect, keyof typeof itemColumns>;
+type ItemRow = Pick<
+  typeof feedback.$inferSelect,
+  keyof ReturnType<typeof itemColumns>
+>;
 
 /**
  * The wire shape, with `resolvedBy` as the resolver's handle, never the Clerk
@@ -96,7 +102,7 @@ const selectItems = async (
   limit: number,
 ): Promise<AdminFeedbackItem[]> => {
   const rows = await db
-    .select({ ...itemColumns, resolvedByHandle: userProfiles.handle })
+    .select({ ...itemColumns(), resolvedByHandle: userProfiles.handle })
     .from(feedback)
     .leftJoin(userProfiles, eq(userProfiles.userId, feedback.resolvedBy))
     .where(where)
@@ -210,7 +216,7 @@ feedbackAdminRouter.patch(
           }),
         })
         .where(eq(feedback.id, id))
-        .returning({ ...itemColumns, resolvedBy: feedback.resolvedBy });
+        .returning({ ...itemColumns(), resolvedBy: feedback.resolvedBy });
       if (!row) return null;
 
       // The resolver's handle costs a read only when there is a resolver.
