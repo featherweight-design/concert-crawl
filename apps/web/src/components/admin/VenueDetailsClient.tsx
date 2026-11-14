@@ -580,12 +580,19 @@ export function VenueDetailsClient({
     focusAfterRender.current = home.inputId;
     changeTab(home.tab);
   };
-  const { setPageTitle } = usePageTitle();
+  const { setPageTitle, setPhoneBack } = usePageTitle();
 
   useEffect(() => {
     setPageTitle(venue.name);
     return () => setPageTitle(null);
   }, [venue.name, setPageTitle]);
+
+  // The phone boards (venue-overview-m, source-feed-edited) draw "‹ Venues"
+  // above the venue's own header, in place of the shared title bar.
+  useEffect(() => {
+    setPhoneBack({ label: ADMIN_COPY.venuesList.title, href: '/admin/venues' });
+    return () => setPhoneBack(null);
+  }, [setPhoneBack]);
 
   // Form refs (uncontrolled inputs)
   const nameRef = useRef<HTMLInputElement>(null);
