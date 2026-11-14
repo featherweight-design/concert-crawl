@@ -221,8 +221,9 @@ describe('GET /share/[eventId]/[ratio]', () => {
   }, 30_000);
 
   // The mint's contentHash only moves with `state`, so a corrected artist or a
-  // changed drop amount would otherwise keep serving yesterday's PNG for the
-  // full s-maxage day.
+  // renamed venue would otherwise keep serving yesterday's PNG for the full
+  // s-maxage day. The B+ card draws no price, so a price change must NOT
+  // move the tag (that would only throw away a still-correct cached card).
   it('varies the ETag with every field drawn on the card', async () => {
     const tagFor = async (overrides: Record<string, unknown>) => {
       getMock.mockResolvedValue({ ...event, ...overrides });
@@ -237,9 +238,10 @@ describe('GET /share/[eventId]/[ratio]', () => {
       await tagFor({ artist: 'Snakebite Reviva' }),
       await tagFor({ showTime: '21:00' }),
       await tagFor({ date: '2026-03-15' }),
-      await tagFor({ ticketPriceMin: '16.00' }),
+      await tagFor({ venue: { ...event.venue, name: 'Gothic Theatre' } }),
     ];
     expect(new Set(tags).size).toBe(tags.length);
+    expect(await tagFor({ ticketPriceMin: '16.00' })).toBe(tags[0]);
   }, 30_000);
 
   // The B+ boards draw no handle, so a signed share draws the same card.
