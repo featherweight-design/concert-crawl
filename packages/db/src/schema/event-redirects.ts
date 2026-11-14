@@ -22,6 +22,9 @@ import { events } from './events.js';
  * instead of inserting the duplicate again. NULL on redirects written before
  * 0115. `sourceVenueId` has no foreign key, like `sourceId`: it is a key, not
  * a reference.
+ *
+ * `reason` is 'moved' when the merge was a confirmed move (the admin Events
+ * list reads it as the Moved status) and null for any other merge.
  */
 export const eventRedirects = pgTable(
   'event_redirects',
@@ -30,6 +33,7 @@ export const eventRedirects = pgTable(
     targetId: uuid('target_id')
       .notNull()
       .references(() => events.id, { onDelete: 'cascade' }),
+    reason: text('reason', { enum: ['moved'] }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

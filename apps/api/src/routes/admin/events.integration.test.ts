@@ -3335,6 +3335,42 @@ describe('a merged-away event keeps answering at its old id', () => {
     expect((await app.request(`/v1/events/${target.id}`)).status).toBe(200);
   });
 
+  it('marks the redirect Moved only for a confirmed move, which is the notifyWatchers path', async () => {
+    const venue = await seedVenue();
+    const dup = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'Dup Source',
+    });
+    const dupTarget = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'Dup Target',
+    });
+    const moved = await seedEvent(venue.id, {
+      date: '2099-09-02',
+      artist: 'Moved Source',
+    });
+    const movedTarget = await seedEvent(venue.id, {
+      date: '2099-09-09',
+      artist: 'Moved Target',
+    });
+
+    expect((await merge(dup.id, dupTarget.id)).status).toBe(200);
+    const confirmed = await app.request(`/v1/admin/events/${moved.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: movedTarget.id, notifyWatchers: true }),
+    });
+    expect(confirmed.status).toBe(200);
+
+    const rows = await testDb.select().from(eventRedirects);
+    expect(
+      Object.fromEntries(rows.map((row) => [row.sourceId, row.reason])),
+    ).toEqual({
+      [dup.id]: null,
+      [moved.id]: 'moved',
+    });
+  });
+
   it('keeps a chain one hop: merging the survivor away repoints the earlier redirect', async () => {
     const venue = await seedVenue();
     const first = await seedEvent(venue.id, {

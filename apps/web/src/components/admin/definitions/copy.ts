@@ -4249,6 +4249,7 @@ export const ADMIN_COPY = {
       soldout: 'Sold out',
       postponed: 'Postponed',
       cancelled: 'Cancelled',
+      moved: 'Moved',
       delisted: 'No longer listed',
       played: 'Played',
     },

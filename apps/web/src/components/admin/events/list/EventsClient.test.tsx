@@ -98,8 +98,8 @@ describe('EventsClient filters', () => {
     render(<EventsClient />);
     fireEvent.click(await screen.findByTestId('status-filter-chip'));
     const popover = screen.getByTestId('status-filter');
-    // Moved waits for Hugh (4b#1).
-    expect(within(popover).queryByText('Moved')).toBeNull();
+    // `06/status-filter` draws Moved between Cancelled and No longer listed.
+    expect(within(popover).getByText('Moved')).toBeInTheDocument();
     expect(
       within(popover).getByRole('button', { name: 'Show 1,204' }),
     ).toBeInTheDocument();

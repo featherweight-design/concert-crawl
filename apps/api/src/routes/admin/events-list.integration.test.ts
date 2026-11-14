@@ -18,7 +18,10 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }));
 
+import { randomUUID } from 'node:crypto';
+import { eventRedirects } from '@concert-crawl/db';
 import { createApp } from '../../app.js';
+import { testDb } from '../../test/helpers/db.js';
 import {
   clearTables,
   seedEvent,
@@ -245,6 +248,7 @@ describe('GET /v1/admin/events/list', () => {
       soldout: 0,
       postponed: 0,
       cancelled: 0,
+      moved: 0,
       delisted: 0,
       played: 0,
       ...counts,
@@ -454,8 +458,45 @@ describe('GET /v1/admin/events/list', () => {
     expect((await list('?query=bluebird')).data.total).toBe(2);
   });
 
+  it('reads Moved from a confirmed-move redirect only, and filters and counts it', async () => {
+    const venue = await seedVenue({ name: 'Larimer Lounge' });
+    const moved = await seedEvent(venue.id, {
+      artist: 'Moved Act',
+      date: dayOffset(3),
+    });
+    const merged = await seedEvent(venue.id, {
+      artist: 'Merged Act',
+      date: dayOffset(4),
+    });
+    const cancelled = await seedEvent(venue.id, {
+      artist: 'Cancelled Act',
+      date: dayOffset(5),
+      status: 'cancelled',
+    });
+    await testDb.insert(eventRedirects).values([
+      { sourceId: randomUUID(), targetId: moved.id, reason: 'moved' },
+      // A plain duplicate merge says nothing about a move.
+      { sourceId: randomUUID(), targetId: merged.id, reason: null },
+      // A cancelled show keeps its own status.
+      { sourceId: randomUUID(), targetId: cancelled.id, reason: 'moved' },
+    ]);
+
+    const all = await list();
+    const byTitle = new Map(
+      all.data.rows.map((row) => [row.title, row.status]),
+    );
+    expect(byTitle.get(moved.title)).toBe('moved');
+    expect(byTitle.get(merged.title)).toBe('available');
+    expect(byTitle.get(cancelled.title)).toBe('cancelled');
+    expect(all.data.counts.byStatus['moved']).toBe(1);
+
+    const filtered = await list('?statuses=moved');
+    expect(filtered.data.rows.map((row) => row.title)).toEqual([moved.title]);
+    expect(filtered.data.total).toBe(1);
+  });
+
   it('rejects an unknown status and a malformed venue id', async () => {
-    for (const params of ['?statuses=moved', '?venueIds=not-a-uuid']) {
+    for (const params of ['?statuses=bogus', '?venueIds=not-a-uuid']) {
       const res = await app.request(`/v1/admin/events/list${params}`, {
         headers: HEADERS,
       });

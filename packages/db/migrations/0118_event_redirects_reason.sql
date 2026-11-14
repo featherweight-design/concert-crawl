@@ -1,0 +1,15 @@
+-- Why an event was merged away (admin-approved 2026-11-14, Hugh's ruling 4b#1).
+--
+-- The admin Events list draws a Moved status (addendum 5, `02/events-statuschip`).
+-- A merge folds two listings of one night into one, and it is also how an admin
+-- confirms a show moved to a new date or room, so a redirect row alone cannot
+-- say which. `reason` records it: 'moved' when the merge was a confirmed move
+-- (the one path that tells watchers), null for every other merge.
+--
+-- Expand-only: one nullable column, no default, no backfill. Rows written
+-- before this stay null, so nothing reads as Moved until a move is confirmed
+-- after this ships. Read only by code that ships with it.
+--
+-- Down:
+--   ALTER TABLE event_redirects DROP COLUMN IF EXISTS reason;
+ALTER TABLE "event_redirects" ADD COLUMN IF NOT EXISTS "reason" text;

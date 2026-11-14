@@ -9,6 +9,7 @@ export const EVENT_LIST_STATUSES = [
   'soldout',
   'postponed',
   'cancelled',
+  'moved',
   'delisted',
   'played',
 ] as const;
@@ -19,14 +20,15 @@ export const isEventListStatus = (value: unknown): value is EventListStatus =>
   (EVENT_LIST_STATUSES as readonly string[]).includes(value);
 
 /**
- * Upcoming's Any status popover rows, in `06/status-filter`'s order. Moved
- * waits for Hugh (4b#1); Played is a Past status.
+ * Upcoming's Any status popover rows, in `06/status-filter`'s order. Played
+ * is a Past status.
  */
 export const STATUS_FILTER_OPTIONS = [
   'available',
   'soldout',
   'postponed',
   'cancelled',
+  'moved',
   'delisted',
 ] as const;
 
@@ -54,6 +56,7 @@ export const STATUS_CHIP: Record<EventListStatus, ShowStatusChip> = {
   soldout: 'soldout',
   postponed: 'postponed',
   cancelled: 'cancelled',
+  moved: 'moved',
   delisted: 'removed',
   played: 'played',
 };
