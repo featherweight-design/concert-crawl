@@ -1,3 +1,28 @@
+# [1.431.0](https://github.com/featherweight-design/concert-crawl/compare/v1.430.0...v1.431.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** show the LLM spend the monthly budget counts on the cost panel ([46b563a](https://github.com/featherweight-design/concert-crawl/commit/46b563a529b9cdb1c210468e2bd8006b76ac32fb))
+* **crawler-core:** pin generate-about to the dated Haiku 4.5 snapshot ([0446ee8](https://github.com/featherweight-design/concert-crawl/commit/0446ee8f7c4c6deb7d90138100b1c69874774ea5))
+* **web:** address the submit sheet review ([8fe3090](https://github.com/featherweight-design/concert-crawl/commit/8fe3090faf317dc8ea2c6c59b28846ad24f35e6c))
+* **web:** hold the phone item page still mid-request and keep failures visible ([efbaef5](https://github.com/featherweight-design/concert-crawl/commit/efbaef5d44f93bccebec2e19535a2b964d692724))
+* **web:** settle phone item focus on the page so no ring draws on load ([70f8de9](https://github.com/featherweight-design/concert-crawl/commit/70f8de9402f3676030ae26cbc88a809a31efe53e))
+* **web:** the crawl page's LLM cost today reads the budget's figure too ([3c3aeb8](https://github.com/featherweight-design/concert-crawl/commit/3c3aeb80a21c10807a2cd5e4aa37666538f1d2e2))
+
+
+### Features
+
+* **api:** admin event detail carries the admin's own price ([dc5feb9](https://github.com/featherweight-design/concert-crawl/commit/dc5feb9683a060879f6e07d9bf7b04d8e4bfd983))
+* **api:** my submission names its status; detail comment names its extras ([4bad8d7](https://github.com/featherweight-design/concert-crawl/commit/4bad8d77fa9c222684bcf833bbd2559fcce31292))
+* **web:** open a needs-you item as a full page on the phone ([50d6a91](https://github.com/featherweight-design/concert-crawl/commit/50d6a915820e3b968a1a4889cfa52cc5dd35e72d))
+* **web:** the price submit sheet rail, states and buttons as the boards draw them ([7b749cd](https://github.com/featherweight-design/concert-crawl/commit/7b749cd2878d799cb26c09d41bbc48fdb26462de))
+
+
+### Performance Improvements
+
+* **api:** filter the cost panel's LLM rows on a plain recorded_at range ([603984d](https://github.com/featherweight-design/concert-crawl/commit/603984d8035959a295a3d25b3d43e5b6c1af0877))
+
 # [1.430.0](https://github.com/featherweight-design/concert-crawl/compare/v1.429.0...v1.430.0) (2026-11-14)
 
 
