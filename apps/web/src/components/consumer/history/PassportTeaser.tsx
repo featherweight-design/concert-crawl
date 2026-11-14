@@ -89,8 +89,9 @@ const TeaserBody = ({
         <span
           style={{
             fontFamily: 'var(--font-ui)',
-            fontSize: 17,
-            fontWeight: 800,
+            // 19px at weight 900, as the Concerts boards draw the teaser title.
+            fontSize: 19,
+            fontWeight: 900,
             letterSpacing: '-0.015em',
             color: 'var(--fg)',
           }}
@@ -106,7 +107,7 @@ const TeaserBody = ({
             color: 'var(--fg-muted)',
           }}
         >
-          {COPY.summary(stats.nights, stats.venues, stats.topGenre)}
+          {COPY.summary(stats.nights, stats.venues)}
         </span>
         {PASSPORT_ROUTE !== null && (
           <span

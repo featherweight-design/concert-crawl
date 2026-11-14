@@ -110,11 +110,11 @@ export const HISTORY_COPY = {
     headline: 'Your Passport',
     // No genre, no third segment: HistoryHeader drops its genre tile the same
     // way, and a bare dash beside real stats reads as a rendering bug.
-    summary: (nights: number, venues: number, topGenre: string | null) =>
+    // "4 nights · 4 venues" and nothing else: the boards draw no top genre.
+    summary: (nights: number, venues: number) =>
       [
         `${nights} ${nights === 1 ? 'night' : 'nights'}`,
         `${venues} ${venues === 1 ? 'venue' : 'venues'}`,
-        ...(topGenre === null ? [] : [topGenre]),
       ].join(' · '),
     link: 'Open it →',
   },

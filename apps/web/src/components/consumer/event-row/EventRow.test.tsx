@@ -692,7 +692,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
       if (!(card instanceof HTMLElement)) throw new Error('no card');
       expect(card.style.borderLeftColor).toBe(token);
       expect(card.getAttribute('style')).toContain(
-        `color-mix(in oklch, ${token} 7%`,
+        `color-mix(in oklch, ${token} 10%`,
       );
       expect(screen.getByTestId('row-image-ring').style.boxShadow).toContain(
         'var(--genre-jazz)',

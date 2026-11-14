@@ -317,10 +317,12 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
             {COPY.watchingContent.eyebrow}
           </p>
           <div className="flex items-baseline gap-3">
+            {/* The board draws about 42px on the phone and 48 from sm up
+                (`bp-m-watching_m`, `bp-watching`), not 36 at every width. */}
             <p
+              className="text-[42px] sm:text-[48px]"
               style={{
                 fontFamily: 'var(--font-ui)',
-                fontSize: 36,
                 fontWeight: 900,
                 letterSpacing: '-0.025em',
                 color: 'var(--fg)',

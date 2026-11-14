@@ -104,19 +104,21 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
       role="status"
       aria-live="polite"
       data-testid="going-nudge"
-      // A darker inset panel with no outline: only a 3px bar in the show's
-      // stamp colour on its left edge (`bp-watching`, `bp-m-watching_m`).
+      // A lifted inset panel (lighter than the row behind it, on both boards)
+      // with no outline. On the phone only, a 3px bar in the show's stamp
+      // colour on its left edge (`bp-m-watching_m`); the desktop board draws
+      // no bar here (`bp-watching`), the venue colour rides the stamp instead.
+      className="border-l-[3px] sm:border-l-0"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         padding: '10px 12px 10px 14px',
-        background: 'color-mix(in oklch, var(--bg) 55%, var(--surface-1))',
+        background: 'color-mix(in oklch, var(--fg) 5%, var(--surface-1))',
         borderStyle: 'solid',
         borderTopWidth: 0,
         borderRightWidth: 0,
         borderBottomWidth: 0,
-        borderLeftWidth: 3,
         borderLeftColor: accent,
         borderRadius: 10,
         color: 'var(--fg)',
@@ -127,6 +129,7 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
           venueSlug={show.venueSlug}
           venueName={show.venueName}
           variant="dashed"
+          tinted
           size={32}
         />
       </span>
