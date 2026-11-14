@@ -15,10 +15,12 @@
           "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
           "wait": "[data-testid=\"details-venue\"]"
         },
+        { "settle": 2500 },
         {
           "fill": "[data-testid=\"details-venue\"] label:text-is(\"Map pin\") + input",
           "text": "39.7402, -104.9488"
         },
+        { "wait": ":text(\"unsaved change\")" },
         {
           "wait": "[data-testid=\"details-venue\"] a:has-text(\"Open the address in Maps\")"
         },
@@ -34,6 +36,7 @@
           "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
           "wait": "[data-testid=\"details-venue\"]"
         },
+        { "settle": 2500 },
         {
           "fill": "[data-testid=\"details-venue\"] label:text-is(\"Map pin\") + input",
           "text": ""
