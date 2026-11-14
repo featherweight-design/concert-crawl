@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { httpUrl } from '../lib/url-schema.js';
@@ -29,7 +28,7 @@ import { moderateNote } from '../lib/moderate-note.js';
 import { isImminentEvent } from '../lib/time.js';
 import { clearSoldOut } from '../lib/clear-sold-out.js';
 import { classifySaleRefusal } from '../lib/past-lock.js';
-import { promoteSoldOutReport } from '../lib/promote-sold-out.js';
+import { promoteReport } from '../lib/promote-report.js';
 import { apiLogger } from '../lib/logger.js';
 import { activeSoldOutWhere } from '../lib/sold-out.js';
 import { redactReportRow } from '../lib/report-privacy.js';
@@ -56,27 +55,6 @@ const EVIDENCE_METHODS = [
 
 function isImminent(eventDate: string | null): boolean {
   return isImminentEvent(eventDate, ER_POLICY.imminentThresholdDays);
-}
-
-// Is promoting a report of `reportStatus` going to actually flip user-visible
-// state on this event? Called before the promotion runs so watchers only get
-// notified on real transitions, not on duplicate promotions of the same
-// state (e.g. a second confirmed 'cancelled' report after the first was
-// already promoted). Cancelled and postponed are reflected in events.status,
-// so this checks the current value against the target. A sold-out's check
-// lives in promoteSoldOutReport, read under the event's row lock.
-async function hasEventStateChanged(
-  eventId: string,
-  reportStatus: 'cancelled' | 'postponed',
-): Promise<boolean> {
-  const [row] = await db
-    .select({ status: events.status, delistedAt: events.delistedAt })
-    .from(events)
-    .where(eq(events.id, eventId))
-    .limit(1);
-  // A delisted show is cancelled only by the stale sweep (B+ A5), so a
-  // confirmed cancellation of it is news: watchers were never told.
-  return row?.status !== reportStatus || row.delistedAt !== null;
 }
 
 // Optional so a client that sends `{}` (or predates the method) still confirms.
@@ -418,9 +396,9 @@ eventReportsRouter.post(
         data: { confirmed: true, confirmsCount, resolved },
       });
 
-    // A sale report crossing the threshold goes through the shared writes
-    // (clearSoldOut, promoteSoldOutReport), which decide under the event's
-    // and the report's row locks. With `onPast: 'close'`, a report on a past
+    // Every report crossing the threshold goes through the shared writes
+    // (clearSoldOut, promoteReport), which decide under the event's and the
+    // report's row locks. With `onPast: 'close'`, a report on a past
     // show (postponed-passed included) closes as moot: `rejected` with the
     // note "show already played", so it leaves the admin queue and a later
     // reschedule can never promote it. Nothing else changes and nobody hears,
@@ -459,45 +437,23 @@ eventReportsRouter.post(
       }
       resolved = outcome !== 'already_resolved';
     } else if (confirmsCount >= threshold && report.status !== 'available') {
-      // Check pre-state to decide whether promotion actually transitions
-      // user-visible state. Fan-out only fires on a real transition — a
-      // second cancelled/postponed report promoted after the event was
-      // already in that status shouldn't spam watchers a second time. A
-      // sold-out's check runs inside promoteSoldOutReport, under the row
-      // lock, and a sold-out on a show already sold out closes as moot.
-      let isRealTransition: boolean;
-      if (report.status === 'sold-out') {
-        let promotion: Awaited<ReturnType<typeof promoteSoldOutReport>>;
-        try {
-          promotion = await promoteSoldOutReport(eventId, reportId, {
-            onPast: 'close',
-          });
-        } catch (err) {
-          if (!saleRefused(err)) throw err;
-          return confirmed(false);
-        }
-        if (promotion.outcome === 'already_resolved') return confirmed(false);
-        ({ isRealTransition } = promotion);
-      } else {
-        isRealTransition = await hasEventStateChanged(eventId, report.status);
-        await db
-          .update(eventReports)
-          .set({
-            resolvedAt: new Date(),
-            resolution: 'promoted',
-          })
-          .where(eq(eventReports.id, reportId));
+      // Sold-out, cancelled and postponed all promote through promoteReport,
+      // which decides under the event's and the report's row locks. A past
+      // show closes the report as moot; a sold-out on a show already sold out
+      // closes as moot too. Fan-out fires only on a real transition, read
+      // under the lock, so a second cancelled report promoted after the show
+      // is already cancelled (or racing the first) never spams watchers.
+      let promotion: Awaited<ReturnType<typeof promoteReport>>;
+      try {
+        promotion = await promoteReport(eventId, reportId, report.status, {
+          onPast: 'close',
+        });
+      } catch (err) {
+        if (!saleRefused(err)) throw err;
+        return confirmed(false);
       }
-
-      // events table has a status column — update it
-      // Only map report statuses that correspond to event statuses
-      if (report.status === 'cancelled' || report.status === 'postponed') {
-        await db
-          .update(events)
-          // A confirmed status replaces the sweep's No longer listed.
-          .set({ status: report.status, ...endDelisting() })
-          .where(eq(events.id, eventId));
-      }
+      if (promotion.outcome === 'already_resolved') return confirmed(false);
+      const { isRealTransition } = promotion;
 
       // #1064: fan out watch notifications to every user watching this event.
       // Best-effort — the promotion already committed above, so any error

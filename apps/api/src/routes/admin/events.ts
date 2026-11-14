@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { activeSoldOutWhere, isSoldOutSql } from '../../lib/sold-out.js';
@@ -12,7 +11,7 @@ import {
   PAST_LOCKED_BODY,
   PastLockedError,
 } from '../../lib/past-lock.js';
-import { promoteSoldOutReport } from '../../lib/promote-sold-out.js';
+import { promoteReport } from '../../lib/promote-report.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
 import {
@@ -276,31 +275,13 @@ eventsAdminRouter.patch(
       );
     }
 
-    // Pre-state check: does promoting this report actually flip user-visible
-    // state? cancelled/postponed compare against events.status. Fan-out only
-    // fires on real transitions so duplicate confirmed reports don't re-spam
-    // watchers. A sold-out's check runs inside promoteSoldOutReport, under
-    // the row lock.
-    let isRealTransition = false;
-    if (
-      resolution === 'promoted' &&
-      (report.status === 'cancelled' || report.status === 'postponed')
-    ) {
-      const [eventRow] = await db
-        .select({ status: events.status, delistedAt: events.delistedAt })
-        .from(events)
-        .where(eq(events.id, report.eventId))
-        .limit(1);
-      // A delisted show was cancelled silently by the sweep (B+ A5).
-      isRealTransition =
-        eventRow?.status !== report.status || eventRow.delistedAt !== null;
-    }
-
-    // Promoting a sale report goes through the shared writes, which decide
-    // under the event's and the report's row locks. A past show is 409
+    // Promoting any report goes through the shared writes, which decide under
+    // the event's and the report's row locks: whether it is news (fan-out
+    // fires only on a real transition) is read there too. A past show is 409
     // `past_locked` and a missing event 404, with nothing written and no
     // audit row; a report resolved before the lock keeps the already-resolved
-    // answer. Cancelled and postponed promotions are not past-locked yet.
+    // answer.
+    let isRealTransition = false;
     const alreadyResolved = () =>
       ctx.json({ success: false, error: 'Report already resolved' }, 400);
     const refusal = (err: unknown) =>
@@ -354,13 +335,15 @@ eventsAdminRouter.patch(
     // A second sold-out on a show already sold out closes as moot (rejected)
     // instead of promoting, and tells nobody.
     let closedAsMoot = false;
-    if (resolution === 'promoted' && report.status === 'sold-out') {
-      let promotion: Awaited<ReturnType<typeof promoteSoldOutReport>>;
+    if (resolution === 'promoted' && report.status !== 'available') {
+      let promotion: Awaited<ReturnType<typeof promoteReport>>;
       try {
-        promotion = await promoteSoldOutReport(report.eventId, reportId, {
-          onPast: 'refuse',
-          adminNote: adminNote ?? null,
-        });
+        promotion = await promoteReport(
+          report.eventId,
+          reportId,
+          report.status,
+          { onPast: 'refuse', adminNote: adminNote ?? null },
+        );
       } catch (err) {
         const refused = refusal(err);
         if (refused === 'past') return ctx.json(PAST_LOCKED_BODY, 409);
@@ -384,15 +367,7 @@ eventsAdminRouter.patch(
         .returning();
     }
 
-    // If promoted and report maps to an event status — update the event
     if (resolution === 'promoted') {
-      if (report.status === 'cancelled' || report.status === 'postponed') {
-        await db
-          .update(events)
-          .set({ status: report.status, ...endDelisting() })
-          .where(eq(events.id, report.eventId));
-      }
-
       // #1064: fan out watch notifications to every user watching this event.
       // Best-effort — the resolve above already committed. Excluding
       // 'available' (handled above) narrows the status to the mapping's keys
