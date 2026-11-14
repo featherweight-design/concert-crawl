@@ -1,3 +1,19 @@
+# [1.441.0](https://github.com/featherweight-design/concert-crawl/compare/v1.440.1...v1.441.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** word a pause 422 as a date error only for a picked date ([678bdd2](https://github.com/featherweight-design/concert-crawl/commit/678bdd2c5f954fbfa6bc633fd583cb6d19b2b550))
+* **web:** price check tiles, segment fit at 320, and tab names with spaces ([1216b66](https://github.com/featherweight-design/concert-crawl/commit/1216b664557b171e1e301de3284e1f326ef258fc))
+* **web:** show the ended-check notice only on the price it names ([9519022](https://github.com/featherweight-design/concert-crawl/commit/9519022cc5affa7a223364b4fb6bf6ae23ee6d10))
+
+
+### Features
+
+* **admin:** open the Pause panel from Keep paused... and Pause crawling... ([dbf218a](https://github.com/featherweight-design/concert-crawl/commit/dbf218a1392e968a21284d638b0a45705cf65a53))
+* **web:** admin Price checks to the boards on phone and desktop ([aa3c7b2](https://github.com/featherweight-design/concert-crawl/commit/aa3c7b240eba8df5faf26ee449587d8893e96b68)), closes [#20](https://github.com/featherweight-design/concert-crawl/issues/20)
+* **web:** say how the last price check on a live price ended, as the B+ board draws it ([4646f46](https://github.com/featherweight-design/concert-crawl/commit/4646f468d72f2f4690de74107d3bc60a7593b29d))
+
 ## [1.440.1](https://github.com/featherweight-design/concert-crawl/compare/v1.440.0...v1.440.1) (2026-11-14)
 
 
