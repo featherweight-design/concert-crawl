@@ -1418,8 +1418,98 @@ export function EventDetailPriceBlock({
             ? 'resale'
             : 'primary'
         : null;
+
+      // A pending update is a price check. The board's card for it
+      // (more-st-disputes_board) is drawn for one price, so a single-tier
+      // event shows it in place of the live card. A multi-tier event keeps the
+      // live card plus the pending surface until Design draws how a check on
+      // one tier of several looks (held, Design item 20).
+      const checkedCounter = headlineBlock.counterSubmission;
+      if (blocks.length === 1 && checkedCounter != null) {
+        return (
+          <>
+            <DisputedPriceCard
+              floor={headlineFloor}
+              {...(headlineCeiling !== null
+                ? { ceiling: headlineCeiling }
+                : {})}
+              tier={headlineBlock.tier}
+              vendor={headlineRow.vendor}
+              kind={headlineKind === 'boxoffice' ? 'boxoffice' : 'community'}
+              submitter={
+                headlineRow.submitterHandle !== null
+                  ? { handle: headlineRow.submitterHandle }
+                  : null
+              }
+              liveSubmittedAt={headlineRow.observedAt}
+              confirmsCount={headlineRow.confirmsCount}
+              disputer={checkedCounter.submitter}
+              disputeFloor={checkedCounter.floor}
+              {...(checkedCounter.ceiling !== undefined
+                ? { disputeCeiling: checkedCounter.ceiling }
+                : {})}
+              disputedAt={checkedCounter.submittedAt}
+              counterSubmissionId={checkedCounter.id}
+              lastAdminActionKind={checkedCounter.lastAdminActionKind ?? null}
+              eventId={event.id}
+              disputedSubmissionId={checkedCounter.parentSubmissionId}
+              signedOut={priceGateSignedOut}
+              viewerAction={checkedCounter.viewerAction}
+              {...(checkedCounter.viewerCounterId !== null
+                ? {
+                    onWithdraw: () =>
+                      handleWithdrawUpdate(checkedCounter.viewerCounterId!),
+                  }
+                : {})}
+              onUpdateSuccess={() => router.refresh()}
+            />
+            {outboundLink !== null && outboundKind !== null && (
+              <div className="mt-3">
+                <ProvenanceCTA
+                  kind={outboundKind}
+                  vendor={outboundLink.vendor ?? event.venue.name}
+                  href={outboundLink.url}
+                  outline={outboundKind === 'resale'}
+                />
+              </div>
+            )}
+            {renderPendingSurface(priceDecision.priceByTier)}
+            {submitSuccessSurface}
+            {submitAnotherPriceCta}
+            <SubmitPriceModal
+              open={submitPriceOpen}
+              onClose={() => {
+                closeSubmitPriceModal();
+                setSubmitSuccessPayload(null);
+              }}
+              openInEditMode={submitPriceEditMode}
+              preselectedTier={preselectedTier}
+              eventId={event.id}
+              artist={event.artist}
+              venueName={event.venue.name}
+              date={event.date}
+              onSuccess={handleSubmitSuccess}
+            />
+          </>
+        );
+      }
+
+      // The pending surface's "see the update" pointer (#counter-<id>) needs
+      // somewhere to land on a multi-tier event too: an empty anchor beside
+      // the live card, one per tier under a check.
+      const counterAnchorIds = blocks.flatMap((block) =>
+        block.counterSubmission != null ? [block.counterSubmission.id] : [],
+      );
       return (
         <>
+          {counterAnchorIds.map((anchorId) => (
+            <span
+              key={anchorId}
+              id={`counter-${anchorId}`}
+              data-testid="counter-anchor"
+              aria-hidden="true"
+            />
+          ))}
           <MultiTierLiveCard
             headline={{
               floor: headlineFloor,

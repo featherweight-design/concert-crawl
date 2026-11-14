@@ -15,6 +15,7 @@
     {
       "id": "disputed-card",
       "label": "Event page: the price under a check (any fan)",
+      "fullPage": true,
       "steps": [
         {
           "goto": "/events/${CC_PENDING_EVENT_ID}",
