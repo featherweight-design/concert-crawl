@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { CalendarDays, Clock, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, Clock, X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, useIsPhone } from '@/components/admin/primitives';
+import { MonthGrid } from '../primitives/MonthGrid';
 import {
   eightAmMountain,
   mountainDayAhead,
@@ -18,9 +19,118 @@ interface SnoozeMenuProps {
   onSnooze: (until: string) => void;
   /** Absent for an item with no venue: "Not useful" is a per-venue switch. */
   onNotUseful?: ((reason: string) => void) | undefined;
+  /**
+   * What the item is, for the date step's line and the reason step's title:
+   * the warning's name and its venue (null when the item has none).
+   */
+  about?: { warning: string; venue: string | null };
   disabled?: boolean;
   now?: Date;
 }
+
+const STEP: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+  padding: 12,
+};
+
+const STEP_NOTE: CSSProperties = {
+  margin: 0,
+  fontSize: 13.5,
+  lineHeight: 1.45,
+  color: 'var(--fg-muted)',
+};
+
+/** "Apr 1": the day on the Snooze button. */
+const shortDay = (day: string): string =>
+  new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(`${day}T00:00:00Z`));
+
+/** A step's title with its back chevron (`01-snooze/not-useful-d`). */
+const StepHeader = ({
+  title,
+  onBack,
+}: {
+  title: string;
+  onBack: () => void;
+}) => (
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+    <button
+      type="button"
+      aria-label={COPY.back}
+      onClick={onBack}
+      style={{
+        display: 'flex',
+        padding: 4,
+        marginTop: 1,
+        border: 'none',
+        background: 'transparent',
+        color: 'var(--fg-muted)',
+        cursor: 'pointer',
+      }}
+    >
+      <ChevronLeft size={18} aria-hidden />
+    </button>
+    <span style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--fg)' }}>
+      {title}
+    </span>
+  </div>
+);
+
+/** One reason: a ringed tile with a radio dot. */
+const Radio = ({
+  checked,
+  label,
+  onPick,
+}: {
+  checked: boolean;
+  label: string;
+  onPick: () => void;
+}) => (
+  <button
+    type="button"
+    role="radio"
+    aria-checked={checked}
+    onClick={onPick}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      width: '100%',
+      padding: '11px 14px',
+      borderRadius: 12,
+      textAlign: 'left',
+      cursor: 'pointer',
+      fontSize: 15,
+      color: 'var(--fg)',
+      border: checked
+        ? '1.5px solid var(--signal)'
+        : '1px solid var(--border-strong)',
+      background: checked
+        ? 'color-mix(in srgb, var(--signal) 12%, transparent)'
+        : 'transparent',
+    }}
+  >
+    <span
+      aria-hidden
+      style={{
+        width: 18,
+        height: 18,
+        flex: 'none',
+        borderRadius: '50%',
+        border: `2px solid ${checked ? 'var(--signal)' : 'var(--border-strong)'}`,
+        background: checked
+          ? 'radial-gradient(var(--signal) 0 40%, transparent 45%)'
+          : 'transparent',
+      }}
+    />
+    {label}
+  </button>
+);
 
 const ICON_TILE: CSSProperties = {
   width: 36,
@@ -96,94 +206,109 @@ export const MenuItem = ({
 export const SnoozeOptions = ({
   onSnooze,
   onNotUseful,
+  about,
   afterDate,
   now,
 }: Omit<SnoozeMenuProps, 'disabled'> & { afterDate?: ReactNode }) => {
   const [mode, setMode] = useState<'menu' | 'date' | 'reason'>('menu');
   const [date, setDate] = useState('');
-  const [reason, setReason] = useState('');
+  const [reasonIndex, setReasonIndex] = useState(0);
+  const [note, setNote] = useState('');
 
   const today = now ?? new Date();
   const tomorrow = mountainDayAhead(today, 1);
   const inAWeek = mountainDayAhead(today, 7);
   const snoozeTo = (day: string) => onSnooze(eightAmMountain(day));
+  const venue = about?.venue ?? null;
 
   if (mode === 'date')
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          padding: 10,
-        }}
-      >
-        <label style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-          {COPY.dateLabel}
-          <input
-            type="date"
-            value={date}
-            min={tomorrow}
-            onChange={(event) => setDate(event.target.value)}
-            style={{
-              display: 'block',
-              width: '100%',
-              marginTop: 6,
-              height: 36,
-              padding: '0 10px',
-              borderRadius: 10,
-              border: '1px solid var(--border-strong)',
-              background: 'var(--surface-1)',
-              color: 'var(--fg)',
-            }}
-          />
-        </label>
-        <AdminButton
-          variant="primary"
-          disabled={date < tomorrow}
-          onClick={() => snoozeTo(date)}
-        >
-          {COPY.setDate}
-        </AdminButton>
+      <div style={STEP}>
+        <StepHeader title={COPY.dateTitle} onBack={() => setMode('menu')} />
+        <MonthGrid value={date} min={tomorrow} onChange={setDate} />
+        {date && (
+          <p style={STEP_NOTE}>
+            {COPY.returns(snoozeDayLabel(date))}
+            {venue ? ` ${COPY.staysSnoozed(venue)}` : ''}
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <AdminButton
+            variant="gradient"
+            icon={Clock}
+            fullWidth
+            disabled={date < tomorrow}
+            onClick={() => snoozeTo(date)}
+          >
+            {COPY.setDate(date ? shortDay(date) : '…')}
+          </AdminButton>
+          <AdminButton variant="outline" onClick={() => setMode('menu')}>
+            {COPY.back}
+          </AdminButton>
+        </div>
       </div>
     );
 
-  if (mode === 'reason' && onNotUseful)
+  if (mode === 'reason' && onNotUseful && venue) {
+    const label = COPY.reasons[reasonIndex] ?? COPY.reasons[0];
+    const trimmed = note.trim();
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          padding: 10,
-        }}
-      >
-        <label style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-          {COPY.reasonLabel}
-          <input
-            type="text"
-            value={reason}
-            maxLength={500}
-            placeholder={COPY.reasonPlaceholder}
-            onChange={(event) => setReason(event.target.value)}
-            style={{
-              display: 'block',
-              width: '100%',
-              marginTop: 6,
-              height: 36,
-              padding: '0 10px',
-              borderRadius: 10,
-              border: '1px solid var(--border-strong)',
-              background: 'var(--surface-1)',
-              color: 'var(--fg)',
-            }}
-          />
-        </label>
-        <AdminButton variant="outline" onClick={() => onNotUseful(reason)}>
-          {COPY.stopWarning}
-        </AdminButton>
+      <div style={STEP}>
+        <StepHeader
+          title={COPY.reasonTitle(about?.warning ?? '', venue)}
+          onBack={() => setMode('menu')}
+        />
+        <p style={STEP_NOTE}>{COPY.reasonSub}</p>
+        <div
+          role="radiogroup"
+          aria-label={COPY.reasonTitle(about?.warning ?? '', venue)}
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+        >
+          {COPY.reasons.map((text, index) => (
+            <Radio
+              key={text}
+              checked={index === reasonIndex}
+              label={text}
+              onPick={() => setReasonIndex(index)}
+            />
+          ))}
+        </div>
+        <textarea
+          aria-label={COPY.reasonNote}
+          value={note}
+          maxLength={400}
+          rows={2}
+          placeholder={COPY.reasonNote}
+          onChange={(event) => setNote(event.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 12,
+            border: '1px solid var(--border-strong)',
+            background: 'var(--bg)',
+            color: 'var(--fg)',
+            fontSize: 14,
+            fontFamily: 'inherit',
+            resize: 'none',
+          }}
+        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <AdminButton
+            variant="gradient"
+            fullWidth
+            onClick={() =>
+              onNotUseful(trimmed ? `${label}: ${trimmed}` : label)
+            }
+          >
+            {COPY.turnOff}
+          </AdminButton>
+          <AdminButton variant="outline" onClick={() => setMode('menu')}>
+            {COPY.back}
+          </AdminButton>
+        </div>
       </div>
     );
+  }
 
   return (
     <>
@@ -206,7 +331,7 @@ export const SnoozeOptions = ({
         onClick={() => setMode('date')}
       />
       {afterDate}
-      {onNotUseful && (
+      {onNotUseful && venue && (
         <>
           <div
             aria-hidden
@@ -220,7 +345,7 @@ export const SnoozeOptions = ({
             muted
             icon={<X size={17} />}
             title={COPY.notUseful}
-            sub={COPY.notUsefulSub}
+            sub={COPY.notUsefulSub(venue)}
             onClick={() => setMode('reason')}
           />
         </>
@@ -230,12 +355,13 @@ export const SnoozeOptions = ({
 };
 
 /**
- * `02/snooze-menu`: the card's Snooze button and its popover of
- * `SnoozeOptions`. Closing the popover drops any half-filled date or reason.
+ * `01-snooze/needs-you-clock-d`: the clock that ends a card's top line and
+ * sits beside × on the open panel, and its popover of `SnoozeOptions`. Closing the popover drops any half-filled date or reason.
  */
 export const SnoozeMenu = ({
   onSnooze,
   onNotUseful,
+  about,
   disabled = false,
   now,
 }: SnoozeMenuProps) => {
@@ -266,11 +392,10 @@ export const SnoozeMenu = ({
       ref={wrapRef}
       style={{ position: 'relative', display: 'inline-flex' }}
     >
-      <AdminButton
-        variant="ghost"
-        size="sm"
-        icon={Clock}
+      <button
+        type="button"
         data-testid="snooze-trigger"
+        aria-label={COPY.menuLabel}
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={disabled}
@@ -278,9 +403,22 @@ export const SnoozeMenu = ({
           event.stopPropagation();
           setOpen((was) => !was);
         }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          border: '1px solid var(--border-strong)',
+          background: 'var(--surface-2)',
+          color: 'var(--fg-muted)',
+          cursor: disabled ? 'default' : 'pointer',
+          opacity: disabled ? 0.5 : 1,
+        }}
       >
-        {COPY.trigger}
-      </AdminButton>
+        <Clock size={17} aria-hidden />
+      </button>
       {open && (
         <div
           role="menu"
@@ -304,7 +442,7 @@ export const SnoozeMenu = ({
                   right: 0,
                   zIndex: 20,
                   marginTop: 6,
-                  width: 320,
+                  width: 340,
                   maxWidth: 'calc(100vw - 32px)',
                 }),
             padding: 6,
@@ -327,6 +465,7 @@ export const SnoozeMenu = ({
                   }
                 : undefined
             }
+            {...(about ? { about } : {})}
             {...(now ? { now } : {})}
           />
         </div>
