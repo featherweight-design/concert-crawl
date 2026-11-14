@@ -25,6 +25,32 @@ export const useIsPhoneResolved = (): boolean | null => {
   return isPhone;
 };
 
+/**
+ * Below this viewport width a 440 panel docked beside the list would leave the
+ * list a sliver (the admin sidebar and gutters take 288 of it), so the panel
+ * overlays instead. The boards draw only the wide desktop.
+ */
+export const DOCKED_PANEL_MIN_VIEWPORT = 1100;
+
+/**
+ * True on a desktop too narrow to dock a panel beside the list. False until
+ * mounted (and where there is no `matchMedia`), so the panel docks by default.
+ */
+export const useIsNarrowDesktop = (): boolean => {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(
+      `(max-width: ${DOCKED_PANEL_MIN_VIEWPORT - 1}px)`,
+    );
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return narrow;
+};
+
 /** True below the admin breakpoint. False until mounted, so SSR renders desktop. */
 export const useIsPhone = (): boolean => {
   const [isPhone, setIsPhone] = useState(false);

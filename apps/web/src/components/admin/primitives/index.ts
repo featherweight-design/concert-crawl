@@ -47,6 +47,7 @@ export type { PinnedSaveBarLook, PinnedSaveBarProps } from './PinnedSaveBar';
 export { useSnapBack } from './useSnapBack';
 export type { SnapBack } from './useSnapBack';
 export {
+  useIsNarrowDesktop,
   useIsPhone,
   useIsPhoneResolved,
   ADMIN_PHONE_MAX_WIDTH,
