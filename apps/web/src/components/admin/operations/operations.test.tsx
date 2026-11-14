@@ -404,6 +404,22 @@ describe('Activity log', () => {
     expect(chip).toHaveFocus();
   });
 
+  it('closes the month on an outside press, but the chip only toggles it', async () => {
+    renderLog();
+    await screen.findByTestId('activity-log-table');
+    const chip = screen.getByTestId('activity-log-day-chip');
+    fireEvent.click(chip);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // A press on the chip itself is its own click's to handle: closing on the
+    // press too would reopen the month on the click that follows.
+    fireEvent.click(chip);
+    fireEvent.pointerDown(chip);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.click(chip);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   // #24: each admin in their own colours.
   it("draws the actor's avatar in their own colours", async () => {
     logPage = () =>

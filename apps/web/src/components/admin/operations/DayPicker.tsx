@@ -321,8 +321,22 @@ const MonthPopover = ({
 export const DayStepper = ({ day, today, onDay, readDays }: DayPickerProps) => {
   const [open, setOpen] = useState(false);
   const atToday = day >= today;
-  const pick = (next: string) => {
+  const chip = useRef<HTMLButtonElement>(null);
+  // The popover's own restore hands focus back to whatever held it on open,
+  // which is <body> when a click didn't focus the chip (Safari, Firefox on
+  // macOS). Closing always lands on the chip, after that restore has run.
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (open || !refocus.current) return;
+    refocus.current = false;
+    chip.current?.focus();
+  }, [open]);
+  const close = () => {
+    refocus.current = true;
     setOpen(false);
+  };
+  const pick = (next: string) => {
+    close();
     onDay(next);
   };
   return (
@@ -340,6 +354,7 @@ export const DayStepper = ({ day, today, onDay, readDays }: DayPickerProps) => {
       </button>
       <div style={{ position: 'relative' }}>
         <button
+          ref={chip}
           type="button"
           data-day-chip
           data-testid="activity-log-day-chip"
@@ -368,7 +383,7 @@ export const DayStepper = ({ day, today, onDay, readDays }: DayPickerProps) => {
             day={day}
             today={today}
             onPick={pick}
-            onClose={() => setOpen(false)}
+            onClose={close}
             readDays={readDays}
           />
         )}
