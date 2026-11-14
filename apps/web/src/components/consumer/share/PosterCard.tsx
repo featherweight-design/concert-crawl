@@ -4,12 +4,14 @@ import { IdentityArtPrint } from '@/components/consumer/identity-art/IdentityArt
 import {
   SC_METRICS,
   SC_RATIOS,
+  SQUARE_DATE_STACK,
+  frameArtSize,
   type ShareFrame,
   type ShareRatio,
 } from '@/components/consumer/share/definitions/ratios';
 import { ShareWordmark } from '@/components/consumer/share/ShareWordmark';
 import {
-  fitLineSize,
+  fitLine,
   shareMetaLines,
   storyNameText,
   type ShareCard,
@@ -32,6 +34,32 @@ const ACCENT = '#ff7bd4';
 const CHIP_FILL = '#131a37';
 const CHIP_BORDER = '#1f2748';
 const RULE = 'rgba(232,243,255,0.14)';
+/** The darkening over the blurred copy, near side → far side (alpha). */
+const BACKDROP_WASH: Record<'square' | 'link', [number, string][]> = {
+  square: [
+    [0.4, '0%'],
+    [0.68, '40%'],
+    [0.92, '75%'],
+    [1, '100%'],
+  ],
+  // Wide's text column starts at 48%, so the glow is gone by then.
+  link: [
+    [0.2, '0%'],
+    [0.55, '35%'],
+    [0.95, '50%'],
+    [1, '100%'],
+  ],
+};
+/**
+ * With no photo the ground is the art's flat palette colour, often pale, so it
+ * is held well down: undrawn on the board, and the photo tuning above would
+ * wash a cream ground to grey.
+ */
+const FLAT_GROUND_WASH: [number, string][] = [
+  [0.72, '0%'],
+  [0.9, '45%'],
+  [1, '75%'],
+];
 /** Story's full-bleed photo: the top 56% of the card, as drawn. */
 const STORY_PHOTO_HEIGHT = 1070;
 
@@ -45,6 +73,12 @@ export interface PosterCardProps {
   ratio: ShareRatio;
   /** A data URI from `loadSharePhoto`, or null: IdentityArt draws instead. */
   photo: string | null;
+  /**
+   * Square and Wide with no photo: IdentityArt pre-rendered flat to a PNG
+   * (`identityArtDataUri` at `frameArtSize`), because satori mis-rotates an
+   * inline SVG on the tilted card. Null falls back to the inline art.
+   */
+  frameArt?: string | null;
 }
 
 /** The date block and countdown: the boards' heavier mono. */
@@ -96,7 +130,10 @@ const Backdrop = ({
   ratio: ShareRatio;
 }) => {
   const { width, height } = SC_RATIOS[ratio];
+  // Sized off the longer side and centred, so Wide's glow sits beside its
+  // card rather than showing only the photo's top band.
   const bleed = Math.round(width * 0.12);
+  const side = width + bleed * 2;
   const angle = ratio === 'link' ? 90 : 135;
   return (
     <div
@@ -114,14 +151,14 @@ const Backdrop = ({
         <img
           alt=""
           src={photo}
-          width={width + bleed * 2}
-          height={width + bleed * 2}
+          width={side}
+          height={side}
           style={{
             position: 'absolute',
             left: -bleed,
-            top: -bleed,
-            width: width + bleed * 2,
-            height: width + bleed * 2,
+            top: Math.round((height - side) / 2),
+            width: side,
+            height: side,
             objectFit: 'cover',
             filter: 'blur(60px)',
           }}
@@ -144,7 +181,15 @@ const Backdrop = ({
           left: 0,
           width,
           height,
-          backgroundImage: `linear-gradient(${angle}deg, ${rgba(GROUND, 0.62)} 0%, ${rgba(GROUND, 0.9)} 45%, ${GROUND} 75%)`,
+          // Tuned to colours sampled off the board (more-r3-share_shapes):
+          // the glow reads #3f3d40 beside Wide's card and #332c34 above
+          // Square's, falling to the #0c0d1f ground on the far side.
+          backgroundImage: `linear-gradient(${angle}deg, ${(photo === null
+            ? FLAT_GROUND_WASH
+            : BACKDROP_WASH[ratio === 'link' ? 'link' : 'square']
+          )
+            .map(([alpha, at]) => `${rgba(GROUND, alpha)} ${at}`)
+            .join(', ')})`,
         }}
       />
     </div>
@@ -158,9 +203,10 @@ const Frame = ({
 }: {
   frame: ShareFrame;
   card: ShareCard;
+  /** The photo, or the pre-rendered IdentityArt PNG (`frameArtSize`). */
   photo: string | null;
 }) => {
-  const inner = frame.size - frame.border * 2;
+  const inner = frameArtSize(frame);
   return (
     <div
       style={{
@@ -174,7 +220,8 @@ const Frame = ({
         border: `${frame.border}px solid ${SIGNAL}`,
         borderRadius: frame.radius,
         overflow: 'hidden',
-        backgroundColor: GROUND,
+        // The ring colour, so the antialiased seam inside it reads as ring.
+        backgroundColor: SIGNAL,
         boxShadow: `0 ${frame.size * 0.05}px ${frame.size * 0.12}px rgba(0,0,0,0.55)`,
       }}
     >
@@ -228,15 +275,15 @@ const DateBlock = ({ card }: { card: ShareCard }) => (
       flexDirection: 'column',
       alignItems: 'flex-end',
       position: 'absolute',
-      top: 98,
-      right: 66,
+      top: SQUARE_DATE_STACK.top,
+      right: SQUARE_DATE_STACK.right,
     }}
   >
     <div
       style={{
         ...MONO,
         display: 'flex',
-        fontSize: 34,
+        fontSize: SQUARE_DATE_STACK.label,
         letterSpacing: '0.12em',
         color: SIGNAL,
       }}
@@ -248,11 +295,11 @@ const DateBlock = ({ card }: { card: ShareCard }) => (
         display: 'flex',
         fontFamily: 'Inter',
         fontWeight: 900,
-        fontSize: 126,
+        fontSize: SQUARE_DATE_STACK.day,
         lineHeight: 1,
         letterSpacing: '-0.03em',
         color: FG,
-        marginTop: 6,
+        marginTop: SQUARE_DATE_STACK.dayGap,
       }}
     >
       {card.date.day}
@@ -261,10 +308,10 @@ const DateBlock = ({ card }: { card: ShareCard }) => (
       style={{
         ...MONO,
         display: 'flex',
-        fontSize: 34,
+        fontSize: SQUARE_DATE_STACK.label,
         letterSpacing: '0.12em',
         color: FG,
-        marginTop: 44,
+        marginTop: SQUARE_DATE_STACK.monthGap,
       }}
     >
       {card.date.month}
@@ -284,15 +331,24 @@ const oneLine = {
  * the text block; Square and Wide put the photo on a tilted card over its own
  * blurred copy. No price, state, tagline, handle or stamp: none is drawn.
  */
-export const PosterCard = ({ card, ratio, photo }: PosterCardProps) => {
+export const PosterCard = ({
+  card,
+  ratio,
+  photo,
+  frameArt = null,
+}: PosterCardProps) => {
   const { width, height } = SC_RATIOS[ratio];
   const metrics = SC_METRICS[ratio];
   const textWidth = width - metrics.textLeft - metrics.textRight;
   const [chipGap, nameGap, metaGap, ruleGap] = metrics.gaps;
-  const nameSize =
+  const name =
     ratio === 'story'
-      ? metrics.name
-      : fitLineSize(card.artist, metrics.name, textWidth, metrics.nameFloor);
+      ? {
+          size: metrics.name,
+          text: storyNameText(card.artist, metrics.name, textWidth),
+        }
+      : fitLine(card.artist, metrics.name, textWidth, metrics.nameFloor);
+  const nameSize = name.size;
 
   return (
     <div
@@ -337,7 +393,7 @@ export const PosterCard = ({ card, ratio, photo }: PosterCardProps) => {
       ) : (
         <>
           <Backdrop card={card} photo={photo} ratio={ratio} />
-          <Frame frame={metrics.frame} card={card} photo={photo} />
+          <Frame frame={metrics.frame} card={card} photo={photo ?? frameArt} />
         </>
       )}
 
@@ -371,12 +427,10 @@ export const PosterCard = ({ card, ratio, photo }: PosterCardProps) => {
                   lineClamp: 2,
                   wordBreak: 'break-word',
                 }
-              : { ...oneLine, lineHeight: 1 }),
+              : { display: 'flex', whiteSpace: 'nowrap', lineHeight: 1 }),
           }}
         >
-          {ratio === 'story'
-            ? storyNameText(card.artist, nameSize, textWidth)
-            : card.artist}
+          {name.text}
         </div>
         <div
           style={{

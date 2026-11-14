@@ -1,7 +1,12 @@
 import { ImageResponse } from 'next/og';
 import type { EventDetailResponse } from '@concert-crawl/types';
 import { PosterCard } from '@/components/consumer/share/PosterCard';
-import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios';
+import {
+  frameArtSize,
+  SC_METRICS,
+  SC_RATIOS,
+} from '@/components/consumer/share/definitions/ratios';
+import { identityArtDataUri } from '@/lib/share/fallback-art';
 import { ApiError, publicApiClient } from '@/lib/api';
 import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts';
 import { mintMeta, posterFingerprint, shareCacheKey } from '@/lib/share/mint';
@@ -167,6 +172,14 @@ export const GET = async (
     return problem(502, 'share fonts unavailable');
   }
   const photo = await photoPromise;
+  // No photo on a tilted card: IdentityArt is drawn flat first (see
+  // `identityArtDataUri`). Story's full-bleed art is not rotated, so it
+  // draws inline.
+  const frame = SC_METRICS[parsed.ratio].frame;
+  const frameArt =
+    photo === null && frame !== null
+      ? await identityArtDataUri(event.artist, frameArtSize(frame))
+      : null;
   const photoMissing = photoSources.length > 0 && photo === null;
   // Taken once, after the photo: the fetch can carry the request past the
   // venue's midnight, and the card drawn is the card of this moment.
@@ -178,7 +191,12 @@ export const GET = async (
   }
 
   return new ImageResponse(
-    <PosterCard card={card} ratio={parsed.ratio} photo={photo} />,
+    <PosterCard
+      card={card}
+      ratio={parsed.ratio}
+      photo={photo}
+      frameArt={frameArt}
+    />,
     {
       ...SC_RATIOS[parsed.ratio],
       fonts,

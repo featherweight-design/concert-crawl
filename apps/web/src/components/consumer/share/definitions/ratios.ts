@@ -37,6 +37,10 @@ export interface ShareFrame {
   radius: number;
 }
 
+/** The square the photo (or its IdentityArt stand-in) fills inside the ring. */
+export const frameArtSize = (frame: ShareFrame): number =>
+  frame.size - frame.border * 2;
+
 /**
  * Every pixel measurement the B+ card uses, per ratio, measured off
  * `more-r3-share_shapes.jpg` and scaled to the artboard (story ×4.0, square
@@ -101,6 +105,37 @@ export const SC_METRICS: Record<ShareRatio, PosterMetrics> = {
     gaps: [17, 17, 31, 25],
     frame: { cx: 294, cy: 314, size: 430, tilt: -3.5, border: 7, radius: 34 },
   },
+};
+
+/**
+ * Square's FRI / 13 / NOV stack. Measured off the board at ×2.83: FRI caps at
+ * y 102–127, 13 at 155–300 (so 200px Inter 900), NOV at 328–353, with the same
+ * ~28px gap above and below the number.
+ */
+export const SQUARE_DATE_STACK = {
+  top: 92,
+  right: 66,
+  label: 34,
+  day: 200,
+  /** Margins between the boxes; negative because the boxes carry leading. */
+  dayGap: -9,
+  monthGap: -10,
+} as const;
+
+/**
+ * Cap-to-cap gaps above and below the day, from the faces' metrics: JetBrains
+ * Mono at `line-height: normal` (box 1.32em, cap top at 0.29em, cap 0.73em)
+ * and Inter at `line-height: 1` (cap top at 0.136em, baseline at 0.863em).
+ */
+export const dateStackCapGaps = (
+  stack: typeof SQUARE_DATE_STACK = SQUARE_DATE_STACK,
+): { above: number; below: number } => {
+  const labelCapBottom = (0.29 + 0.73) * stack.label;
+  const dayTop = 1.32 * stack.label + stack.dayGap;
+  const above = dayTop + 0.136 * stack.day - labelCapBottom;
+  const monthCapTop = dayTop + stack.day + stack.monthGap + 0.29 * stack.label;
+  const below = monthCapTop - (dayTop + 0.863 * stack.day);
+  return { above, below };
 };
 
 /** Closed-set guard. `apps/web` has no Zod; three members is a full validator. */

@@ -2,6 +2,12 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  dateStackCapGaps,
+  SQUARE_DATE_STACK,
+} from '@/components/consumer/share/definitions/ratios';
+import {
+  estimatedLineWidth,
+  fitLine,
   fitLineSize,
   SHARE_GENRE_HEX,
   shareChip,
@@ -149,6 +155,52 @@ describe('name fitting', () => {
     expect(long).toBeLessThan(122);
     expect(long).toBeGreaterThanOrEqual(72);
     expect(fitLineSize('A'.repeat(200), 122, 936, 72)).toBe(72);
+  });
+});
+
+describe('fitLine (Square and Wide one-line name)', () => {
+  // The Square text box: 1080 minus 72 each side.
+  const SQUARE_WIDTH = 936;
+
+  it('keeps a name that fits whole', () => {
+    expect(fitLine('IDLES', 122, SQUARE_WIDTH, 72)).toEqual({
+      size: 122,
+      text: 'IDLES',
+    });
+  });
+
+  it('cuts a name too long at the floor, and the cut text with its ellipsis fits', () => {
+    const { size, text } = fitLine(
+      'Tommy Cash and the Lowrider Orchestra',
+      122,
+      SQUARE_WIDTH,
+      72,
+    );
+    expect(size).toBe(72);
+    expect(text.endsWith('…')).toBe(true);
+    expect(text.startsWith('Tommy C')).toBe(true);
+    expect(estimatedLineWidth(text, size)).toBeLessThanOrEqual(SQUARE_WIDTH);
+  });
+});
+
+describe('Square date stack (FRI / 13 / NOV)', () => {
+  it('sits the number with the same gap above and below, as drawn', () => {
+    const { above, below } = dateStackCapGaps();
+    expect(Math.abs(above - below)).toBeLessThanOrEqual(2);
+    // The board's gap is ~28px at 1080.
+    expect(above).toBeGreaterThan(24);
+    expect(above).toBeLessThan(32);
+  });
+
+  it('pins the board-measured stack', () => {
+    expect(SQUARE_DATE_STACK).toEqual({
+      top: 92,
+      right: 66,
+      label: 34,
+      day: 200,
+      dayGap: -9,
+      monthGap: -10,
+    });
   });
 });
 
