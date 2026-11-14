@@ -58,7 +58,10 @@ import {
 import { TRIAGE_HISTORY_RUN_COUNT, deriveFaults } from '../triage.js';
 import { parseRunRows } from '../../triage.js';
 import { addDays, denverDate } from './keys.js';
-import { loadPriceByTierByEventId } from '../../../../lib/price-aggregation/index.js';
+import {
+  loadPriceByTierByEventId,
+  lowestHeadline,
+} from '../../../../lib/price-aggregation/index.js';
 
 // How far out an artist's next show may be for the artist to be worth a human's
 // time, and the price-batch window. Both are product calls from the brief.
@@ -763,9 +766,8 @@ const lowConfidenceItems: Adapter = async ({ now }) => {
   // own price columns, so this panel and Browse agree on what is listed.
   const tiers = await loadPriceByTierByEventId(ids);
   const listedOf = (eventId: string) => {
-    const headline = (tiers.get(eventId) ?? []).find(
-      (block) => block.headline !== null,
-    )?.headline;
+    // The pipeline's own pick, so this panel and Browse cannot disagree.
+    const headline = lowestHeadline(tiers.get(eventId) ?? []);
     return headline
       ? { priceMin: headline.priceMin, priceMax: headline.priceMax }
       : { priceMin: null, priceMax: null };

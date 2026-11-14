@@ -377,6 +377,9 @@ describe('EventPanel', () => {
     expect(screen.getByText('Price')).toBeInTheDocument();
     expect(screen.getByText('$25+')).toBeInTheDocument();
     cleanup();
+    open(eventRow({ priceMin: '25.00', priceMax: '40.00' }));
+    expect(screen.getByText('$25–$40')).toBeInTheDocument();
+    cleanup();
     open(eventRow());
     expect(screen.queryByText('Price')).toBeNull();
   });

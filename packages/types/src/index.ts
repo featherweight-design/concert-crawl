@@ -2155,8 +2155,8 @@ export type NeedsYouItem =
       /** The extracted headliner (`events.artist`), or null. */
       artist?: string | null;
       /** The price the app lists now (the lead tier's headline), as the price pipeline picks it. */
-      priceMin?: string | null;
-      priceMax?: string | null;
+      priceMin: string | null;
+      priceMax: string | null;
       /** The venue's own description of the show, when the crawl kept one. */
       description?: string | null;
       /** The extractor's confidence (0 to 1), or null. */
