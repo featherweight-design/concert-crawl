@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { EyeOff, type LucideIcon } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
@@ -11,6 +11,7 @@ import {
 import { gradientBorder } from '@/components/admin/artists/artist-styles';
 import { Switch } from '@/components/admin/people/PersonParts';
 import type { EventDetail } from './event-detail';
+import { DateField, TimeField } from './pickers';
 
 const COPY = ADMIN_COPY.eventEdit;
 const FAILED = ADMIN_COPY.states.saveFailed;
@@ -19,6 +20,20 @@ const FAILED = ADMIN_COPY.states.saveFailed;
 export type Sale = 'available' | 'soldout';
 
 export type StatusDialog = 'postponed' | 'hide';
+
+/** Postponed's New date: YYYY-MM-DD and an optional `HH:MM` show time. */
+export interface NewDate {
+  date: string;
+  showTime: string | null;
+}
+
+const FIELD_LABEL: CSSProperties = {
+  display: 'block',
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: 'var(--fg-muted)',
+  marginBottom: 6,
+};
 
 /** The pill drawn as chosen for a status, or none (delisted, played). */
 type Pill = Sale | 'postponed' | 'cancelled';
@@ -177,23 +192,22 @@ const EventConfirm = ({
 
 const Radio = ({
   checked,
-  disabled,
   label,
+  onPick,
 }: {
   checked: boolean;
-  disabled: boolean;
   label: string;
+  onPick: () => void;
 }) => (
-  // A toggle button: "No new date yet" is the only choice until New date's
-  // pickers are drawn, so it stays pressed and New date is disabled.
+  // A toggle button per choice: No new date yet, or New date.
   <button
     type="button"
     aria-pressed={checked}
-    disabled={disabled}
+    onClick={onPick}
     style={{
       width: '100%',
       textAlign: 'left',
-      cursor: 'default',
+      cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       gap: 12,
@@ -201,7 +215,7 @@ const Radio = ({
       padding: '0 16px',
       borderRadius: 12,
       fontSize: 15,
-      color: disabled ? 'var(--fg-subtle)' : 'var(--fg)',
+      color: 'var(--fg)',
       border: `1px solid ${checked ? 'var(--signal)' : 'var(--border)'}`,
       background: checked
         ? 'color-mix(in oklab, var(--signal) 10%, var(--bg-elevated))'
@@ -237,6 +251,7 @@ export const StatusCard = ({
   sale,
   onSale,
   onPostpone,
+  today,
   onHidden,
   dialog,
   setDialog,
@@ -247,13 +262,21 @@ export const StatusCard = ({
   /** The drafted sale, or null when the pills show what is saved. */
   sale: Sale | null;
   onSale: (sale: Sale) => void;
-  onPostpone: () => Promise<void>;
+  /** Marks it postponed, with the New date when one is picked. */
+  onPostpone: (newDate: NewDate | null) => Promise<void>;
+  /** YYYY-MM-DD in Mountain Time: New date starts here. */
+  today: string;
   onHidden: (hidden: boolean) => Promise<void>;
   /** Held by the page, so the ⋯'s Hide from site… opens the same dialog. */
   dialog: StatusDialog | null;
   setDialog: (dialog: StatusDialog | null) => void;
 }) => {
   const [unhideFailed, setUnhideFailed] = useState(false);
+  // Postponed's choice: null is No new date yet. Each opening starts there.
+  const [newDate, setNewDate] = useState<NewDate | null>(null);
+  useEffect(() => {
+    if (dialog === 'postponed') setNewDate(null);
+  }, [dialog]);
   const [unhiding, setUnhiding] = useState(false);
   const current = pillOf(detail.status);
   const close = () => setDialog(null);
@@ -327,7 +350,7 @@ export const StatusCard = ({
           )}
           onCancel={close}
           act={async () => {
-            await onPostpone();
+            await onPostpone(newDate);
             close();
           }}
         >
@@ -341,10 +364,61 @@ export const StatusCard = ({
             aria-label={COPY.postponed.title(detail.artist)}
             style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
           >
-            <Radio checked disabled={false} label={COPY.postponed.noDate} />
-            {/* Held for the date and time pickers (Design gap). */}
-            <Radio checked={false} disabled label={COPY.postponed.newDate} />
+            <Radio
+              checked={newDate === null}
+              label={COPY.postponed.noDate}
+              onPick={() => setNewDate(null)}
+            />
+            <Radio
+              checked={newDate !== null}
+              label={COPY.postponed.newDate}
+              onPick={() =>
+                setNewDate(
+                  newDate ?? {
+                    date: today < detail.date ? detail.date : today,
+                    showTime: detail.showTime?.slice(0, 5) ?? null,
+                  },
+                )
+              }
+            />
           </div>
+          {/* `04/date-picker-d`: New date takes future dates only. */}
+          {newDate !== null && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: phone ? '1fr 1fr' : '1.4fr 1fr',
+                gap: 12,
+              }}
+            >
+              <div>
+                <label htmlFor="postponed-date" style={FIELD_LABEL}>
+                  {ADMIN_COPY.eventEdit.show.date}
+                </label>
+                <DateField
+                  id="postponed-date"
+                  value={newDate.date}
+                  onChange={(date) => setNewDate({ ...newDate, date })}
+                  today={today}
+                  min={today}
+                  phone={phone}
+                  withYear={false}
+                />
+              </div>
+              <div>
+                <label htmlFor="postponed-show" style={FIELD_LABEL}>
+                  {ADMIN_COPY.eventEdit.show.showTime}
+                </label>
+                <TimeField
+                  id="postponed-show"
+                  value={newDate.showTime}
+                  onChange={(showTime) => setNewDate({ ...newDate, showTime })}
+                  phone={phone}
+                  placeholder={ADMIN_COPY.eventEdit.none}
+                />
+              </div>
+            </div>
+          )}
         </EventConfirm>
       )}
       {dialog === 'hide' && (

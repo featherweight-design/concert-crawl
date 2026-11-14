@@ -616,7 +616,19 @@ export const EventEdit = ({
       past={past}
       sale={draft.sale !== snap.value.sale ? draft.sale : null}
       onSale={(sale) => setDraft({ ...draft, sale })}
-      onPostpone={() => saveNow({ status: 'postponed' })}
+      onPostpone={(newDate) =>
+        saveNow({
+          status: 'postponed',
+          // With a New date, the show moves to it (one `watch.postponed`).
+          ...(newDate !== null && {
+            date: newDate.date,
+            ...(newDate.showTime !== null && {
+              showTime: `${newDate.showTime}:00`,
+            }),
+          }),
+        })
+      }
+      today={today}
       onHidden={(hidden) => saveNow({ hiddenFromConsumer: hidden })}
       dialog={dialog}
       // Postponed and Hide save at once; never while a Save bar save runs.
