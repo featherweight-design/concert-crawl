@@ -453,10 +453,16 @@
   }
   /* 03/health-mobile draws the summary 2px under the title and the tiles 12px
      under the summary. The shell header ends 12px under its title and the
-     subtitle keeps SectionHead's 4px, so pull up 14; the page gap is 16, so 4. */
+     subtitle keeps SectionHead's 4px, so pull up 14; the page gap is 16, so 4.
+     Both 12 and 16 belong to the shared shell and every page under it, and
+     the summary is server-rendered here: moving it into the shell header
+     would set it from an effect, so it would pop in and shift the tiles. */
   .health-head {
     margin-top: -14px;
     margin-bottom: -4px;
+  }
+  .health-head .health-phone {
+    font-size: 12.5px;
   }
   .health-tiles {
     gap: 10px;

@@ -32,6 +32,7 @@ vi.mock('@/lib/api', () => ({
 
 import {
   LlmBudgetControl,
+  SWITCH_TRACK_ON,
   warnPillOffStyle,
   warnPillOnStyle,
 } from './LlmBudgetControl';
@@ -105,7 +106,11 @@ describe('<LlmBudgetControl />', () => {
     expect(toggle.style.background).not.toContain('gradient');
     fireEvent.click(toggle);
     expect(toggle.style.background).toContain('linear-gradient');
-    expect(toggle.style.background).toContain('var(--accent)');
+    // The board's 90deg #7AE6FF to #de96df: --signal to --cta-end.
+    expect(SWITCH_TRACK_ON).toBe(
+      'linear-gradient(90deg, var(--signal), var(--cta-end))',
+    );
+    expect(toggle.style.background).toContain('var(--cta-end)');
     expect(
       screen.getByText(
         'Keep crawling with HTML and JSON-LD only, and tell me. Never stops a crawl.',

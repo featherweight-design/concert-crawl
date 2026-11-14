@@ -10,14 +10,20 @@ import {
   type HealthTilesProps,
 } from './HealthTiles';
 
-/** The phone `.health-head` rule in admin.css, whitespace collapsed. */
-const PHONE_HEAD_RULE =
-  /@media \(max-width: 720px\) \{[^@]*?\.health-head \{([^}]*)\}/.exec(
-    readFileSync(
-      path.resolve(__dirname, '../../../app/(protected)/admin/admin.css'),
-      'utf8',
-    ).replace(/\s+/g, ' '),
-  )?.[1] ?? '';
+/** admin.css with its whitespace collapsed, for rule-level assertions. */
+const ADMIN_CSS = readFileSync(
+  path.resolve(__dirname, '../../../app/(protected)/admin/admin.css'),
+  'utf8',
+).replace(/\s+/g, ' ');
+
+/** The body of `selector` inside the phone (max-width: 720px) block. */
+const phoneRule = (selector: string): string =>
+  new RegExp(
+    `@media \\(max-width: 720px\\) \\{[^@]*?${selector.replace(/\./g, '\\.')} \\{([^}]*)\\}`,
+  ).exec(ADMIN_CSS)?.[1] ?? '';
+
+const PHONE_HEAD_RULE = phoneRule('.health-head');
+const PHONE_SUMMARY_RULE = phoneRule('.health-head .health-phone');
 
 // The cost tile opens the budget panel, which reads the router and a session.
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -218,6 +224,8 @@ describe('HealthHeader', () => {
     // 03/health-mobile: summary 2px under the title, tiles 12px under it.
     expect(PHONE_HEAD_RULE).toContain('margin-top: -14px');
     expect(PHONE_HEAD_RULE).toContain('margin-bottom: -4px');
+    // The phone summary is 12.5px on the board; desktop keeps SectionHead's.
+    expect(PHONE_SUMMARY_RULE).toContain('font-size: 12.5px');
   });
 
   it('drops the count, not the button, when it fails to load', () => {

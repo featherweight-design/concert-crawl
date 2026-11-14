@@ -8,7 +8,6 @@ import {
   type AdminSettings,
 } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
-import { SIGNAL_TO_ACCENT } from '@/components/settings/definitions/styles';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -77,6 +76,9 @@ export const warnPillOnStyle = {
     'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
   border: '1px solid transparent',
 } satisfies React.CSSProperties;
+
+export const SWITCH_TRACK_ON =
+  'linear-gradient(90deg, var(--signal), var(--cta-end))';
 
 const toText = (value: number | null): string =>
   value === null ? '' : `$${value}`;
@@ -279,8 +281,9 @@ export const LlmBudgetControl = ({
             borderRadius: 999,
             border: 'none',
             padding: 0,
-            // The B+ on-switch: the blue-to-pink pair, as the board's track.
-            background: fallback ? SIGNAL_TO_ACCENT : 'var(--border-strong)',
+            // The board's track, `linear-gradient(90deg,#7AE6FF,#de96df)`:
+            // --signal to --cta-end, which resolve to those on Electric.
+            background: fallback ? SWITCH_TRACK_ON : 'var(--border-strong)',
           }}
         >
           <span
