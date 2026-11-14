@@ -1,6 +1,6 @@
 {
   "feature": "Admin venue polish · Inspect Couldn't load pads 36px 8px on the phone, venue Runs draws one rule above Load more",
-  "note": "CONTACT_SHEET_ROLE=admin. Boards: G2/inspect-couldnt-load (phone 36px 8px, stacked 44px full-width buttons), 01/couldnt-load-m, 02/couldnt-load, A3/09/load-more (one 1px rule), 04-venues/venue-runs-mobile (each row draws its own 1px bottom rule). Read-only. The Inspect page body is fetched on the client, so the body route is mocked to 500; the run and its pages list are server-fetched, so the row reaches Inspect through Bluebird's first run that lists a page. Runs is the real first page on Bluebird; the phone shot should show a single rule between the last row and Load more.",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: G2/inspect-couldnt-load (phone 36px 8px, stacked 44px full-width buttons), 01/couldnt-load-m, 02/couldnt-load, A3/09/load-more (one 1px rule), 04-venues/venue-runs-mobile (each row draws its own 1px bottom rule). Read-only. The Inspect page body is fetched on the client, so the body route is mocked to 500; the run and its pages list are server-fetched, so the row opens Inspect directly on the one scratch run with kept pages (CF Fixture Blocked Hall, run b202): no Bluebird run keeps pages. Runs is the real first page on Bluebird; the page scrolls in an inner pane, so the row scrolls Load more into view instead of a fullPage shot; the phone shot should show a single rule between the last row and Load more.",
   "widths": [
     { "label": "phone", "width": 390, "height": 900, "touch": true },
     { "label": "desktop", "width": 1440, "height": 1000 }
@@ -8,7 +8,7 @@
   "rows": [
     {
       "id": "inspect-couldnt-load",
-      "label": "Inspect, page body 500: Couldn't load this page (Bluebird, latest run)",
+      "label": "Inspect, page body 500: Couldn't load this page (CF Fixture Blocked Hall, its run with kept pages)",
       "steps": [
         {
           "route": "**/v1/admin/crawl/pages/*/body",
@@ -16,11 +16,8 @@
           "body": { "success": false }
         },
         {
-          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=runs",
-          "wait": "[data-testid=\"run-row\"]"
+          "goto": "/admin/venues/cf000000-0000-4000-8000-00000000b001/inspect/cf000000-0000-4000-8000-00000000b202"
         },
-        { "click": "[data-testid=\"run-row\"] >> nth=0" },
-        { "click": "a[href*=\"/inspect/\"]:visible >> nth=0" },
         {
           "wait": "[data-testid=\"inspect-couldnt-load\"]",
           "settle": 1000
@@ -30,13 +27,12 @@
     {
       "id": "runs-load-more",
       "label": "Venue Runs tab scrolled to Load more: one 1px rule above it (Bluebird)",
-      "fullPage": true,
       "steps": [
         {
           "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=runs",
-          "wait": "[data-testid=\"runs-load-more\"]",
-          "settle": 1000
-        }
+          "wait": "[data-testid=\"runs-load-more\"]"
+        },
+        { "scrollTo": "[data-testid=\"runs-load-more\"]", "settle": 1000 }
       ]
     }
   ]
