@@ -267,6 +267,20 @@ describe('AddShowSheet', () => {
       );
     });
 
+    // The query keeps the last scope's rows as placeholder data while the new
+    // scope loads; an empty placeholder must not read as an empty scope.
+    it('does not draw an empty scope while placeholder data stands in', () => {
+      usePastShows.mockReturnValue(
+        result({
+          data: { pages: [{ rows: [], total: 0, nextCursor: null }] },
+          isPlaceholderData: true,
+        }),
+      );
+      setup();
+      fireEvent.click(screen.getByRole('button', { name: COPY.scopeVenues }));
+      expect(screen.queryByTestId('add-show-scope-empty')).toBeNull();
+    });
+
     // `add-my-venues-empty-m`: an empty scope points back to All Denver.
     it('draws an empty scope with a way back to All Denver', () => {
       usePastShows.mockReturnValue(
