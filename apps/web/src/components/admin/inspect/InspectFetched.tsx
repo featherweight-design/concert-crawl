@@ -106,49 +106,60 @@ const SOURCE_STYLE = {
 } as const;
 
 /**
- * "Stopped here", inside the HTML where the next page never came: after the
- * body (`G2/inspect-fetched`), and scrolled to on open ("Opens at the
- * highlight"). The board's highlighted line (the next-page link) needs the
- * stop's offset, which isn't stored (A3 §3b row 27, Eng), so nothing is
- * highlighted yet. A span, as a <pre> holds phrasing content only.
- *
- * Only the source well scrolls, never the page or its other ancestors: its
- * `scrollTop` moves to the marker, whose `offsetTop` is measured from the
- * well (it is `position: relative`). No well or marker, no scroll.
+ * The HTML tab's well: the box and the scroll live on a wrapper, so the
+ * <pre> inside holds the raw body and nothing else (its textContent is the
+ * page as fetched), and "Stopped here" can sit after it in the same well.
+ */
+const {
+  padding: wellPadding,
+  borderRadius: wellRadius,
+  background: wellBackground,
+  border: wellBorder,
+  maxHeight: wellMaxHeight,
+  overflowY: wellOverflowY,
+  overflowX: wellOverflowX,
+  ...PRE_TEXT_STYLE
+} = SOURCE_STYLE;
+const WELL_STYLE = {
+  position: 'relative',
+  padding: wellPadding,
+  borderRadius: wellRadius,
+  background: wellBackground,
+  border: wellBorder,
+  maxHeight: wellMaxHeight,
+  overflowY: wellOverflowY,
+  overflowX: wellOverflowX,
+} as const;
+
+/**
+ * "Stopped here", where the next page never came: right after the body, in
+ * the same well (`G2/inspect-fetched`). The board's highlighted line (the
+ * next-page link) needs the stop's offset, which isn't stored (A3 §3b row
+ * 27, Eng), so nothing is highlighted yet.
  */
 const StoppedHere = ({
   page,
-  wellRef,
+  markerRef,
 }: {
   page: number;
-  wellRef: RefObject<HTMLPreElement | null>;
-}) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const well = wellRef.current;
-    const marker = ref.current;
-    if (well === null || marker === null) return;
-    well.scrollTop = marker.offsetTop;
-  }, [wellRef]);
-  return (
-    <span
-      ref={ref}
-      data-testid="inspect-stopped-here"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 6,
-        fontFamily: "'Inter', sans-serif",
-        fontSize: 12,
-        color: 'var(--warning)',
-      }}
-    >
-      <Flag size={12} aria-hidden style={{ flex: 'none' }} />
-      {COPY.stoppedHere(page)}
-    </span>
-  );
-};
+  markerRef: RefObject<HTMLDivElement | null>;
+}) => (
+  <div
+    ref={markerRef}
+    data-testid="inspect-stopped-here"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 6,
+      fontSize: 12,
+      color: 'var(--warning)',
+    }}
+  >
+    <Flag size={12} aria-hidden style={{ flex: 'none' }} />
+    {COPY.stoppedHere(page)}
+  </div>
+);
 
 // Venue pages assume a white page, whatever the admin theme.
 const FRAME_BACKGROUND = '#fff';
@@ -208,6 +219,7 @@ const TabPanel = ({
   page,
   phone,
   stopped,
+  pageId,
 }: {
   tab: InspectTab;
   html: string;
@@ -215,6 +227,8 @@ const TabPanel = ({
   phone: boolean;
   /** The page the run stopped at, after this one; null if it didn't. */
   stopped: number | null;
+  /** The fetched page's id: the well opens at Stopped here once per page. */
+  pageId: string;
 }) => {
   // Parsed only when the Text tab is open, and once per body.
   const text = useMemo(
@@ -230,19 +244,34 @@ const TabPanel = ({
       return cached.value;
     };
   }, [html]);
-  const wellRef = useRef<HTMLPreElement>(null);
+  // "Opens at the highlight": the well scrolls to Stopped here once per page,
+  // on the first HTML view, never again on a tab switch back. Only the well
+  // scrolls, never the page: its `scrollTop` moves to the marker, whose
+  // `offsetTop` is measured from the well (it is `position: relative`).
+  const wellRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<HTMLDivElement>(null);
+  const openedAt = useRef<string | null>(null);
+  useEffect(() => {
+    if (tab !== 'html' || stopped === null || openedAt.current === pageId) {
+      return;
+    }
+    const well = wellRef.current;
+    const marker = markerRef.current;
+    if (well === null || marker === null) return;
+    openedAt.current = pageId;
+    well.scrollTop = marker.offsetTop;
+  }, [tab, stopped, pageId]);
   if (tab === 'html') {
-    // React text: escaped, never parsed as HTML. Relative, so the marker's
-    // offsetTop is measured from the well.
+    // React text: escaped, never parsed as HTML.
     return (
-      <pre
-        ref={wellRef}
-        data-testid="inspect-html"
-        style={{ ...SOURCE_STYLE, position: 'relative' }}
-      >
-        {html}
-        {stopped !== null && <StoppedHere page={stopped} wellRef={wellRef} />}
-      </pre>
+      <div ref={wellRef} data-testid="inspect-html-well" style={WELL_STYLE}>
+        <pre data-testid="inspect-html" style={PRE_TEXT_STYLE}>
+          {html}
+        </pre>
+        {stopped !== null && (
+          <StoppedHere page={stopped} markerRef={markerRef} />
+        )}
+      </div>
     );
   }
   if (tab === 'page') {
@@ -371,6 +400,7 @@ export const InspectFetched = ({
             page={shortUrl(page.url, null)}
             phone={phone}
             stopped={stopped}
+            pageId={page.id}
           />
         )}
       </div>

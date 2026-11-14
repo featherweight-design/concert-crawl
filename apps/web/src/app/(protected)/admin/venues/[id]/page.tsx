@@ -11,6 +11,7 @@ import {
 } from '@/components/admin/venues/overview/overview-data';
 import { parseRunsPage } from '@/components/admin/crawl-runs/run-data';
 import { RUNS_FIRST_PAGE } from '@/components/admin/crawl-runs/runs-rules';
+import { venueNextCrawlAt } from '@/components/admin/venues/source/source-rules';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -49,10 +50,12 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
 
   let venue: VenueWithCrawlHealth;
   try {
-    venue = await apiClient.get<VenueWithCrawlHealth>(
+    const fetched = await apiClient.get<VenueWithCrawlHealth>(
       `/v1/admin/venues/${id}`,
       token,
     );
+    // The boundary check for the Source tab's Schedule: a bad value is null.
+    venue = { ...fetched, nextCrawlAt: venueNextCrawlAt(fetched.nextCrawlAt) };
   } catch {
     notFound();
   }

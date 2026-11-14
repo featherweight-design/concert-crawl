@@ -1,53 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { BatchRunInput } from '../crawl-batches.js';
-import {
-  CRAWLER_DAILY_CRON_UTC,
-  lastNightlyFact,
-  nextCrawlAfter,
-  venuesOfKeys,
-} from './all-clear-facts.js';
-
-describe('CRAWLER_DAILY_CRON_UTC', () => {
-  it('matches the crawler-daily cron entry in apps/api/vercel.json', () => {
-    const file = fileURLToPath(
-      new URL('../../../../../vercel.json', import.meta.url),
-    );
-    const config = JSON.parse(readFileSync(file, 'utf8')) as {
-      crons: { path: string; schedule: string }[];
-    };
-    const entry = config.crons.find(
-      (cron) => cron.path === '/v1/internal/cron/crawler-daily',
-    );
-    expect(entry?.schedule).toBe(
-      `${CRAWLER_DAILY_CRON_UTC.minute} ${CRAWLER_DAILY_CRON_UTC.hour} * * *`,
-    );
-  });
-});
-
-describe('nextCrawlAfter', () => {
-  it('is today at the cron time before it, tomorrow after it', () => {
-    expect(nextCrawlAfter(new Date('2026-11-13T05:00:00Z')).toISOString()).toBe(
-      '2026-11-13T09:07:00.000Z',
-    );
-    expect(nextCrawlAfter(new Date('2026-11-13T18:00:00Z')).toISOString()).toBe(
-      '2026-11-14T09:07:00.000Z',
-    );
-  });
-
-  it('is strictly after: at the cron instant the next one is tomorrow', () => {
-    expect(nextCrawlAfter(new Date('2026-11-13T09:07:00Z')).toISOString()).toBe(
-      '2026-11-14T09:07:00.000Z',
-    );
-  });
-
-  it('rolls over a month end', () => {
-    expect(nextCrawlAfter(new Date('2026-11-30T12:00:00Z')).toISOString()).toBe(
-      '2026-12-01T09:07:00.000Z',
-    );
-  });
-});
+import { lastNightlyFact, venuesOfKeys } from './all-clear-facts.js';
 
 describe('venuesOfKeys', () => {
   it('counts each venue once however many of its items are held', () => {

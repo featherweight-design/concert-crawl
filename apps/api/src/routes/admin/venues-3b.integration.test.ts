@@ -33,7 +33,7 @@ import {
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
-import { CRAWLER_DAILY_CRON_UTC } from './lib/needs-you/all-clear-facts.js';
+import { CRAWLER_DAILY_CRON_UTC } from '../../lib/crawl-schedule.js';
 
 const app = createApp();
 
@@ -200,6 +200,30 @@ describe('admin venues API, redesign 3b', () => {
       expect(next.getTime()).toBeGreaterThan(before);
       expect(next.getTime() - before).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
     });
+
+    // run.ts's filter: the daily crawl skips these, so nothing is scheduled.
+    it.each([
+      ['paused', { crawlPausedAt: new Date() }],
+      ['inactive', { active: false }],
+      ['unverified', { verified: false }],
+      ['blocked', { blockedAt: new Date() }],
+      ['removed', { removedAt: new Date() }],
+    ] as const)(
+      'names no next crawl for a %s venue, which the daily run skips',
+      async (_name, overrides) => {
+        const venue = await seedVenue({
+          name: 'Gothic',
+          slug: 'gothic',
+          ...overrides,
+        });
+        vi.stubEnv('VERCEL_TARGET_ENV', 'production');
+        try {
+          expect((await detail(venue.id)).nextCrawlAt).toBeNull();
+        } finally {
+          vi.unstubAllEnvs();
+        }
+      },
+    );
 
     it('answers zeros and nulls for a venue with no shows and no runs', async () => {
       const venue = await seedVenue({ name: 'New', slug: 'new' });

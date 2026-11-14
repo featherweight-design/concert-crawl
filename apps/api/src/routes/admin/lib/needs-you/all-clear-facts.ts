@@ -8,31 +8,9 @@ import type { AllClearFacts } from '@concert-crawl/types';
 import { BURST_GAP_MS, groupCrawlBatches } from '../crawl-batches.js';
 import { readWindow } from '../crawl-window.js';
 import { parseItemKey } from './keys.js';
+import { nextDailyCrawlAt } from '../../../../lib/crawl-schedule.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * When the daily crawl runs, in UTC. `apps/api/vercel.json` holds the cron
- * entry (`7 9 * * *` on `/v1/internal/cron/crawler-daily`) and a test keeps the
- * two equal. 09:07 UTC is 3:07 AM Mountain in summer, 2:07 AM in winter.
- */
-export const CRAWLER_DAILY_CRON_UTC = { hour: 9, minute: 7 } as const;
-
-/** The next daily crawl strictly after `now`. */
-export const nextCrawlAfter = (now: Date): Date => {
-  const { hour, minute } = CRAWLER_DAILY_CRON_UTC;
-  const next = new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-      hour,
-      minute,
-    ),
-  );
-  if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
-  return next;
-};
 
 const VENUE_KINDS = ['venue-failing', 'venue-blocked'] as const;
 
@@ -108,7 +86,8 @@ export const readAllClearFacts = async (now: Date): Promise<AllClearFacts> => {
   ]);
   return {
     lastCrawl: lastNightlyFact({ ...window, now }),
-    nextCrawlAt: nextCrawlAfter(now).toISOString(),
+    // Null outside production, where no daily crawl runs.
+    nextCrawlAt: nextDailyCrawlAt(now),
     snoozedVenues,
   };
 };

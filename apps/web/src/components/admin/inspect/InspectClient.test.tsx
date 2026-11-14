@@ -381,7 +381,7 @@ describe('InspectClient', () => {
     expect(screen.queryByTestId('inspect-frame')).toBeNull();
   });
 
-  it('says where the run stopped inside the HTML, after the body, and opens at it', async () => {
+  it('says where the run stopped right after the body, in the well, and opens at it', async () => {
     // jsdom has no layout: give the marker a place, and watch the well's
     // scroll (only the well scrolls, never the page).
     vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockReturnValue(480);
@@ -392,20 +392,37 @@ describe('InspectClient', () => {
     render(<InspectClient {...props({ pages, page: first })} />);
     const stopped = await screen.findByTestId('inspect-stopped-here');
     expect(stopped.textContent).toBe(COPY.stoppedHere(2));
-    // `G2/inspect-fetched`: under the source, inside the well, not above it.
+    // `G2/inspect-fetched`: under the source, in the same well.
     const source = screen.getByTestId('inspect-html');
-    expect(stopped.parentElement).toBe(source);
-    expect(source.lastElementChild).toBe(stopped);
-    expect(stopped.tagName).toBe('SPAN');
-    expect(stopped.style).toMatchObject({
-      fontSize: '12px',
-      marginTop: '6px',
-      color: 'var(--warning)',
-    });
-    expect(source.style.position).toBe('relative');
+    const well = screen.getByTestId('inspect-html-well');
+    // The source stays the raw body: the marker is its sibling, not inside.
+    expect(source.textContent).toBe(HTML);
+    expect(source.contains(stopped)).toBe(false);
+    expect(source.nextElementSibling).toBe(stopped);
+    expect(stopped.parentElement).toBe(well);
+    expect(stopped.style.fontSize).toBe('12px');
+    expect(stopped.style.marginTop).toBe('6px');
+    expect(stopped.style.color).toBe('var(--warning)');
+    expect(well.style.position).toBe('relative');
+    expect(well.style.overflowY).toBe('auto');
     expect(scrollTop).toHaveBeenCalledTimes(1);
     expect(scrollTop.mock.calls[0]?.[0]).toBe(480);
-    expect(scrollTop.mock.contexts[0]).toBe(source);
+    expect(scrollTop.mock.contexts[0]).toBe(well);
+  });
+
+  it('opens at Stopped here once per page, not on every tab switch back', async () => {
+    const scrollTop = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+    mockGet.mockResolvedValue({ html: HTML });
+    const first = page();
+    const pages = [first, page({ id: 'page-2', httpStatus: 503 })];
+    render(<InspectClient {...props({ pages, page: first })} />);
+    await screen.findByTestId('inspect-stopped-here');
+    expect(scrollTop).toHaveBeenCalledTimes(1);
+    const tabs = within(screen.getByTestId('inspect-tabs'));
+    fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.text }));
+    fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.html }));
+    expect(screen.getByTestId('inspect-stopped-here')).toBeTruthy();
+    expect(scrollTop).toHaveBeenCalledTimes(1);
   });
 
   it('draws no Stopped here, and scrolls nowhere, when the run did not stop', async () => {

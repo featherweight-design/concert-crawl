@@ -19,7 +19,8 @@ import { SaveFailedToast } from './SaveFailedToast';
  */
 export type PinnedSaveBarLook = {
   gap: number;
-  padding: string;
+  /** The pinned bar's padding; the inline row has none. */
+  padding?: string;
   /** Lets the message wrap onto a row of its own when the bar runs short. */
   wrap?: boolean;
   /**
@@ -27,7 +28,8 @@ export type PinnedSaveBarLook = {
    * (Source on the phone, `G4/source-feed-edited`).
    */
   stack?: boolean;
-  messageStyle: CSSProperties;
+  /** The pinned bar's "unsaved" line; the inline row draws no message. */
+  messageStyle?: CSSProperties;
   discardVariant: NonNullable<ComponentProps<typeof AdminButton>['variant']>;
   discardStyle?: CSSProperties;
   saveStyle?: CSSProperties;
@@ -56,6 +58,12 @@ export type PinnedSaveBarProps = {
   onDiscard: () => void;
   onSave: () => void;
   look: PinnedSaveBarLook;
+  /**
+   * `inline` draws Discard and Save as a plain right-aligned row in the
+   * page's flow, with no bar, message or pinning (Source on desktop,
+   * `04/venue-source`). The toast floats above it the same way.
+   */
+  variant?: 'pinned' | 'inline';
 };
 
 /**
@@ -75,6 +83,7 @@ export const PinnedSaveBar = ({
   onDiscard,
   onSave,
   look,
+  variant = 'pinned',
 }: PinnedSaveBarProps) => {
   const slot = useContentPaneSlot();
   const pane = look.pane;
@@ -135,6 +144,36 @@ export const PinnedSaveBar = ({
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
           {toast}
         </div>
+      </div>
+    );
+  }
+
+  if (variant === 'inline') {
+    return (
+      <div
+        data-testid={testId}
+        style={{
+          position: 'relative',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: look.gap,
+        }}
+      >
+        {/* A refusal keeps the edit, so the row stays: float above it. */}
+        {toast !== null && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 'calc(100% + 12px)',
+              zIndex: 30,
+            }}
+          >
+            {toast}
+          </div>
+        )}
+        {buttons}
       </div>
     );
   }

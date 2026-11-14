@@ -18,6 +18,8 @@ import {
   readModeOf,
   readerOf,
   robotsStateOf,
+  scheduleLine,
+  venueNextCrawlAt,
   sourceFieldOf,
   sourceFormData,
   stillSavedLine,
@@ -544,8 +546,27 @@ describe('the read-only cards', () => {
     expect(paceLine(4500)).toBe(COPY.rules.paceValue('4.5'));
     expect(paceLine(3999)).toBe(COPY.rules.paceValue('4'));
     expect(paceLine(3240)).toBe(COPY.rules.paceValue('3.2'));
-    // `G4/source-mobile`: between pages, not requests.
-    expect(paceLine(3000)).toBe('3 s minimum between pages, plus jitter');
+    // The verified pace (#465's /bot fix): every page or API call waits.
+    expect(paceLine(3000)).toBe(
+      '3 s minimum before each page or API call, plus jitter',
+    );
+  });
+
+  it('checks the venue read’s next crawl once, at the fetch', () => {
+    expect(venueNextCrawlAt('2026-11-14T09:07:00.000Z')).toBe(
+      '2026-11-14T09:07:00.000Z',
+    );
+    expect(venueNextCrawlAt(null)).toBeNull();
+    expect(venueNextCrawlAt(undefined)).toBeNull();
+    expect(venueNextCrawlAt('not a time')).toBeNull();
+    expect(venueNextCrawlAt(42)).toBeNull();
+  });
+
+  it('names the schedule in Mountain time, or nothing', () => {
+    expect(scheduleLine('2026-11-14T09:07:00.000Z')).toBe('Daily, 2:07 AM MT');
+    expect(scheduleLine('2026-07-14T09:07:00.000Z')).toBe('Daily, 3:07 AM MT');
+    expect(scheduleLine(null)).toBeNull();
+    expect(scheduleLine(undefined)).toBeNull();
   });
 
   it('reads the stored robots verdict', () => {

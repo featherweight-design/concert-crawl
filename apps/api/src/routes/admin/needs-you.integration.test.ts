@@ -142,14 +142,32 @@ describe('admin needs-you routes', () => {
 
   it('GET /facts: no nightly yet, nothing snoozed, and the next crawl is ahead', async () => {
     setAuth('admin');
-    const res = await app.request('/v1/admin/needs-you/facts');
-    expect(res.status).toBe(200);
-    const body: { success: boolean; data: AllClearFacts } = await res.json();
+    vi.stubEnv('VERCEL_TARGET_ENV', 'production');
+    let body: { success: boolean; data: AllClearFacts };
+    try {
+      const res = await app.request('/v1/admin/needs-you/facts');
+      expect(res.status).toBe(200);
+      body = await res.json();
+    } finally {
+      vi.unstubAllEnvs();
+    }
     expect(body.data.lastCrawl).toBeNull();
     expect(body.data.snoozedVenues).toBe(0);
-    expect(new Date(body.data.nextCrawlAt).getTime()).toBeGreaterThan(
-      Date.now(),
-    );
+    const next = body.data.nextCrawlAt;
+    if (next === null) throw new Error('expected a next crawl');
+    expect(new Date(next).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('GET /facts: names no next crawl outside production, which runs none', async () => {
+    setAuth('admin');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    try {
+      const res = await app.request('/v1/admin/needs-you/facts');
+      const body: { data: AllClearFacts } = await res.json();
+      expect(body.data.nextCrawlAt).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('GET /facts: counts the last nightly and the venues snoozed', async () => {

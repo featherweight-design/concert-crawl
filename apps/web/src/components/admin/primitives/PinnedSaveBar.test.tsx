@@ -207,4 +207,32 @@ describe('PinnedSaveBar', () => {
     expect(screen.getByTestId('save-failed')).toBeTruthy();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
+
+  describe('inline', () => {
+    it('draws a plain right-aligned row: no message, no bar, not pinned', () => {
+      render(<PinnedSaveBar {...props({ variant: 'inline' })} />);
+      const row = screen.getByTestId('bar');
+      expect(row.style.position).toBe('relative');
+      expect(row.style.justifyContent).toBe('flex-end');
+      expect(row.style.gap).toBe('8px');
+      expect(row.style.border).toBe('');
+      expect(row.style.background).toBe('');
+      expect(screen.queryByText('1 unsaved change')).toBeNull();
+      expect(screen.getAllByRole('button')).toHaveLength(2);
+    });
+
+    it('floats a failure above the row while the edit stays', () => {
+      render(
+        <PinnedSaveBar
+          {...props({
+            variant: 'inline',
+            failure: { title: 'Nope', saved: 'Still saved.' },
+          })}
+        />,
+      );
+      expect(
+        screen.getByTestId('bar').contains(screen.getByTestId('save-failed')),
+      ).toBe(true);
+    });
+  });
 });

@@ -353,15 +353,17 @@ const rowFrom = (value: unknown): QueueRow | null => {
 const factsFrom = (value: unknown): AllClearFacts | null => {
   if (
     !isRecord(value) ||
-    !isText(value['nextCrawlAt']) ||
+    // Null outside production, where no daily crawl runs.
+    !(value['nextCrawlAt'] === null || isText(value['nextCrawlAt'])) ||
     !isCount(value['snoozedVenues'])
   )
     return null;
+  const nextCrawlAt = value['nextCrawlAt'];
   const last = value['lastCrawl'];
   if (last === null)
     return {
       lastCrawl: null,
-      nextCrawlAt: value['nextCrawlAt'],
+      nextCrawlAt,
       snoozedVenues: value['snoozedVenues'],
     };
   if (
@@ -373,7 +375,7 @@ const factsFrom = (value: unknown): AllClearFacts | null => {
     return null;
   return {
     lastCrawl: { ok: last['ok'], total: last['total'], at: last['at'] },
-    nextCrawlAt: value['nextCrawlAt'],
+    nextCrawlAt,
     snoozedVenues: value['snoozedVenues'],
   };
 };

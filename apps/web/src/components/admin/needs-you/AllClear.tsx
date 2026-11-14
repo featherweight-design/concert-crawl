@@ -29,7 +29,11 @@ export const AllClear = ({
       COPY.facts.lastCrawl,
       COPY.facts.lastCrawlValue(facts.lastCrawl.ok, facts.lastCrawl.total),
     ]);
-  const next = facts ? nextCrawlWhen(facts.nextCrawlAt, now) : null;
+  // No row where no daily crawl runs (outside production).
+  const next =
+    facts === null || facts.nextCrawlAt === null
+      ? null
+      : nextCrawlWhen(facts.nextCrawlAt, now);
   if (next) rows.push([COPY.facts.nextCrawl, next]);
   if (facts && facts.snoozedVenues > 0)
     rows.push([

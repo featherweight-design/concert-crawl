@@ -1019,8 +1019,9 @@ export const ADMIN_COPY = {
     rules: {
       title: 'Fixed by the crawl rules',
       pace: 'Pace',
+      // The verified pace, as /bot says it (#465): every page or API call.
       paceValue: (seconds: string) =>
-        `${seconds} s minimum between pages, plus jitter`,
+        `${seconds} s minimum before each page or API call, plus jitter`,
       schedule: 'Schedule',
       // The cron's real Mountain time ("2:07 AM"), from the API.
       scheduleValue: (time: string) => `Daily, ${time} MT`,
