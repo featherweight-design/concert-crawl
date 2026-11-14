@@ -76,11 +76,16 @@ export const smallButton: CSSProperties = {
 };
 
 const THUMB = 56;
-const emptyThumb: CSSProperties = {
+/** A Look row's 56px thumb box: every thumb shares its size and corners. */
+const thumbBox: CSSProperties = {
   width: THUMB,
   height: THUMB,
   flex: 'none',
   borderRadius: 12,
+};
+/** A thumb with nothing to show yet: a dashed outline. */
+const emptyThumb: CSSProperties = {
+  ...thumbBox,
   border: '1px dashed var(--border-strong)',
   display: 'flex',
   alignItems: 'center',
@@ -160,9 +165,11 @@ export const LookCard = ({ slug, name }: { slug: string; name: string }) => {
             <div
               aria-hidden
               style={{
-                ...emptyThumb,
+                ...thumbBox,
                 border: '1px solid var(--border)',
                 background: 'linear-gradient(180deg, var(--border), var(--bg))',
+                display: 'flex',
+                justifyContent: 'center',
                 alignItems: 'flex-end',
                 overflow: 'hidden',
               }}
@@ -212,8 +219,11 @@ export const OtherCard = ({
         thumb={
           <div
             style={{
-              ...emptyThumb,
+              ...thumbBox,
               border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               overflow: 'hidden',
             }}
           >

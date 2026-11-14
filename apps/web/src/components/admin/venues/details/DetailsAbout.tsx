@@ -13,7 +13,6 @@ import {
 import { inputStyle } from '../source/source-parts';
 import { smallButton } from './details-parts';
 import {
-  ABOUT_MAX,
   capacityTypeLabel,
   editedFields,
   nearestCapacityType,
@@ -38,15 +37,29 @@ export type AboutReview = {
 
 const IDLE: AboutReview = { state: 'idle', drafted: null, failed: undefined };
 
+/** The fields an accepted draft fills besides About. */
+type FilledKey = 'capacity' | 'venueType' | 'neighborhood';
+const FILLED_KEYS: readonly FilledKey[] = [
+  'capacity',
+  'venueType',
+  'neighborhood',
+];
+
+/** What the last accepted draft put in each field it filled. */
+export type AboutFilled = Partial<Pick<DetailsDraft, FilledKey>>;
+
 /**
  * The About draft's request and review, held by the Details tab rather than
  * the card: the card sits in a different parent on phone and desktop, so it
  * remounts across the breakpoint, and a paid draft in review must survive
  * that. Each request carries a token; only the latest one lands, so a
- * cancelled or overtaken draft never opens a review.
+ * cancelled or overtaken draft never opens a review. It also remembers what
+ * the last accepted draft filled, so a later draft may replace those values:
+ * a draft's fill is not an admin's edit.
  */
 export const useAboutDraft = (venueId: string) => {
   const [review, setReview] = useState<AboutReview>(IDLE);
+  const [filled, setFilled] = useState<AboutFilled>({});
   const latest = useRef(0);
 
   const run = async () => {
@@ -78,7 +91,7 @@ export const useAboutDraft = (venueId: string) => {
         failed: undefined,
       });
     } catch (err) {
-      if (token !== latest.current) return;
+      // Logged even when overtaken: a stale failure is still a failure.
       console.error('DetailsAbout: draft failed', { venueId, err });
       settle({
         state: 'error',
@@ -94,7 +107,13 @@ export const useAboutDraft = (venueId: string) => {
     setReview(IDLE);
   };
 
-  return { review, run, stop };
+  /** Stop, and forget the last draft's fills (the edits were discarded). */
+  const reset = () => {
+    stop();
+    setFilled({});
+  };
+
+  return { review, filled, run, stop, reset, remember: setFilled };
 };
 
 /**
@@ -113,38 +132,61 @@ export const DetailsAbout = ({
   saving,
   edit,
   review,
+  filled,
   onDraft,
   onStop,
+  onFilled,
 }: {
   id: string;
   draft: DetailsDraft;
   /** The saved row as a draft: a field equal to it is unedited. */
   saved: DetailsDraft;
   error: string | undefined;
+  /** A save is in flight: nothing may be drafted or accepted. */
   saving: boolean;
   edit: (patch: Partial<DetailsDraft>) => void;
   review: AboutReview;
+  /** What the last accepted draft filled: still unedited if unchanged. */
+  filled: AboutFilled;
   onDraft: () => void;
   onStop: () => void;
+  onFilled: (filled: AboutFilled) => void;
 }) => {
   const { state, drafted, failed } = review;
 
   const accept = (content: string) => {
     if (drafted !== null) {
       const edited = new Set(editedFields(draft, saved));
+      // Unedited: as saved, or still what the last accepted draft put there.
+      const unedited = (key: FilledKey) =>
+        !edited.has(key) ||
+        (filled[key] !== undefined && draft[key] === filled[key]);
       const patch: Partial<DetailsDraft> = { about: content };
-      if (!edited.has('capacity') && drafted.capacity !== null) {
-        patch.capacity = drafted.capacity.toLocaleString('en-US');
+      const fills: AboutFilled = {};
+      for (const key of FILLED_KEYS) {
+        // A fill the admin hasn't touched stays replaceable by a later draft.
+        const kept = filled[key];
+        if (kept !== undefined && draft[key] === kept) fills[key] = kept;
       }
-      if (!edited.has('venueType')) {
+      const fill = (key: FilledKey, value: string) => {
+        patch[key] = value;
+        fills[key] = value;
+      };
+      if (unedited('capacity') && drafted.capacity !== null) {
+        fill('capacity', drafted.capacity.toLocaleString('en-US'));
+      }
+      if (unedited('venueType')) {
         const nearest = nearestCapacityType(drafted.venueType);
-        patch.venueType =
-          nearest === null ? drafted.venueType : capacityTypeLabel(nearest);
+        fill(
+          'venueType',
+          nearest === null ? drafted.venueType : capacityTypeLabel(nearest),
+        );
       }
-      if (!edited.has('neighborhood')) {
-        patch.neighborhood = drafted.neighborhood;
+      if (unedited('neighborhood')) {
+        fill('neighborhood', drafted.neighborhood);
       }
       edit(patch);
+      onFilled(fills);
     }
     onStop();
   };
@@ -156,7 +198,8 @@ export const DetailsAbout = ({
         aria-label={COPY.cards.about}
         aria-invalid={error !== undefined}
         value={draft.about}
-        maxLength={ABOUT_MAX}
+        // No maxLength: the browser would cut a long paste silently. Over
+        // ABOUT_MAX is refused on save instead, with the text kept.
         disabled={saving || state === 'loading' || state === 'review'}
         onChange={(evt) => edit({ about: evt.target.value })}
         style={{
@@ -209,6 +252,7 @@ export const DetailsAbout = ({
           onCancel={onStop}
           onAccept={accept}
           onDiscard={onStop}
+          disabled={saving}
         />
       )}
     </Card>

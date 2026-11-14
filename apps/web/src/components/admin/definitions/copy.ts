@@ -1409,12 +1409,6 @@ export const ADMIN_COPY = {
       eventsLive: 'events live',
       health: 'health',
     },
-    sections: {
-      dangerZone: {
-        eyebrow: 'danger zone',
-        title: 'Pause or remove this venue',
-      },
-    },
     dangerZone: {
       crawlPause: {
         title: 'Pause crawling',

@@ -100,6 +100,8 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   };
 
   const discard = () => {
+    // A review left open would let Accept bring back what was discarded.
+    aboutDraft.reset();
     setDraft(draftOf(baseline));
     setErrors({});
     setFailure(null);
@@ -321,8 +323,10 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
       saving={saving}
       edit={edit}
       review={aboutDraft.review}
+      filled={aboutDraft.filled}
       onDraft={() => void aboutDraft.run()}
       onStop={aboutDraft.stop}
+      onFilled={aboutDraft.remember}
     />
   );
 

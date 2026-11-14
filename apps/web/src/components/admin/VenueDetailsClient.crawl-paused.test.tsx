@@ -194,11 +194,8 @@ describe('VenueDetailsClient — venue header', () => {
         venue={buildVenue({ featured: true })}
       />,
     );
-    expect(
-      screen.queryByText(
-        ADMIN_COPY.venueDetailsClient.sections.dangerZone.title,
-      ),
-    ).toBeNull();
+    // The section's heading copy is gone from copy.ts; its buttons are the
+    // check that nothing of it renders.
     for (const name of [
       ACTIONS.flagship,
       DANGER.crawlPause.pauseButton,

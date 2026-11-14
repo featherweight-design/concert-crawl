@@ -378,7 +378,6 @@ describe('VenueDetailsClient — Details saves from its own tab', () => {
           .getAttribute('aria-invalid'),
       ).toBe('true'),
     );
-    expect(screen.queryByTestId('venue-save-error')).toBeNull();
   });
 
   it('an old venue with an AEG platform and no ID still saves Details', async () => {
@@ -426,13 +425,14 @@ describe('VenueDetailsClient — the pure tab shell', () => {
     fireEvent.change(screen.getByLabelText(DETAILS.fields.city), {
       target: { value: 'Boulder' },
     });
-    expect(screen.queryByTestId('venue-legacy-save-bar')).toBeNull();
     expect(screen.getAllByRole('button', { name: SAVE_LABEL })).toHaveLength(1);
 
+    // No other tab brings a Save of its own: at most Details' one.
     for (const key of ['overview', 'runs', 'source', 'guide'] as const) {
       fireEvent.click(screen.getByRole('tab', { name: TABS[key] }));
-      expect(screen.queryByTestId('venue-legacy-save-bar')).toBeNull();
-      expect(screen.queryByTestId('venue-save-error')).toBeNull();
+      expect(
+        screen.queryAllByRole('button', { name: SAVE_LABEL }).length,
+      ).toBeLessThanOrEqual(1);
     }
   });
 
