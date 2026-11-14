@@ -21,9 +21,20 @@ updates:
       npm-patch:
         update-types:
           - patch
+        exclude-patterns:
+          - '@fwd-stack/*'
       npm-minor:
         update-types:
           - minor
+        exclude-patterns:
+          - '@fwd-stack/*'
+      # The fwd-stack shared configs are git dependencies, bumped by commit.
+      # fetch-metadata rates a commit change as semver-major, which made the
+      # whole npm-patch group read as major and skipped its auto-merge. They get
+      # their own group, which no auto-merge step names, so a human reviews it.
+      fwd-kit:
+        patterns:
+          - '@fwd-stack/*'
       # Major bumps: intentionally ungrouped — one PR per package so each
       # breaking change gets its own focused review and migration PR
     ignore:
