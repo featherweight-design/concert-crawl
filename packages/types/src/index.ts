@@ -1953,14 +1953,54 @@ export interface AdminEmailDelivery {
   hours: number;
 }
 
+// The admin page an audit action belongs to: the Activity log's WHERE column
+// and its "Any page" filter. One per admin sidebar page; the label is the
+// web's to draw. Derived from the action key's first segment (`venue.update`
+// is venues), so a new key under a known prefix needs no change here.
+export const AUDIT_AREAS = [
+  'needs-you',
+  'health',
+  'venues',
+  'events',
+  'artists',
+  'prices',
+  'people',
+  'feature-flags',
+  'crawl-runs',
+  'operations',
+] as const;
+
+export type AuditArea = (typeof AUDIT_AREAS)[number];
+
+export type AuditTargetKind =
+  | 'event'
+  | 'venue'
+  | 'artist'
+  | 'person'
+  | 'invite-code'
+  | 'feature-flag'
+  | 'price';
+
+// The thing an audit row changed, named and linked for the Activity log.
+// `name` and `href` are both null when the row it pointed at is gone; `kind`
+// stays. A person is named by `@handle` only, never an email.
+export interface AuditTarget {
+  kind: AuditTargetKind;
+  name: string | null;
+  href: string | null;
+}
+
 // One audit_log row as the admin reads it. `actor` is a handle or a `system:`
-// name, never a Clerk id.
+// name, never a Clerk id. `area` is null for a key with no known prefix, and
+// `target` is null when the action has no target the log can name.
 export interface AuditLogItem {
   id: string;
   actor: string;
   actorKind: 'system' | 'admin';
   action: string;
+  area: AuditArea | null;
   targetId: string | null;
+  target: AuditTarget | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
 }
