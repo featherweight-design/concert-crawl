@@ -56,9 +56,11 @@ export const SectionHead = ({
         style={{
           margin: 0,
           fontFamily: "'Inter', sans-serif",
-          fontSize: 26,
-          fontWeight: 700,
-          letterSpacing: '-0.025em',
+          // Every admin desktop board draws the title at 28/800 with the
+          // summary at 13.5 (`health-desktop` and the rest of the set).
+          fontSize: 28,
+          fontWeight: 800,
+          letterSpacing: '-0.02em',
           color: 'var(--fg)',
           overflowWrap: 'anywhere',
         }}
@@ -69,7 +71,7 @@ export const SectionHead = ({
         <p
           style={{
             margin: '4px 0 0',
-            fontSize: 13,
+            fontSize: 13.5,
             color: 'var(--fg-muted)',
           }}
         >

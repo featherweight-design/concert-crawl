@@ -50,8 +50,16 @@ export const PHONE_VAR = {
 } as const;
 
 /**
+ * The loading boards step each row's opacity down by .12 from 1 (1, .88, .76,
+ * .64, .52, .40), not a smooth mask. The boards stop at six rows, so a seventh
+ * and later hold at .40 rather than going on to fade out.
+ */
+export const rowOpacity = (row: number): number =>
+  Math.max(0.4, Math.round((1 - row * 0.12) * 100) / 100);
+
+/**
  * Loading in the page's final shape (rule 9): the same tabs, filters and rows,
- * fading toward the bottom. The sweep comes from `SkeletonBlock`, which the
+ * stepping down in opacity toward the bottom. The sweep comes from `SkeletonBlock`, which the
  * global reduced-motion rule already stills. No hooks, so a route's
  * `loading.tsx` can render it on the server.
  */
@@ -126,9 +134,6 @@ export const PageSkeleton = ({
     )}
     <div
       style={{
-        // Rows fade toward the bottom, as every loading board draws them.
-        maskImage: 'linear-gradient(to bottom, black 45%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to bottom, black 45%, transparent)',
         ...(card && {
           borderRadius: 14,
           border: '1px solid var(--border)',
@@ -159,6 +164,7 @@ export const PageSkeleton = ({
             gap: 12,
             height: rowHeight,
             borderBottom: '1px solid var(--border)',
+            opacity: rowOpacity(row),
             ...(card && { padding: '0 18px' }),
           }}
         >
