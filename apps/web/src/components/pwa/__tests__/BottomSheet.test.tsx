@@ -393,4 +393,26 @@ describe('BottomSheet', () => {
     expect(dialog.className).not.toContain('h-[92dvh]');
     expect(dialog.className).toContain('overflow-y-auto');
   });
+
+  // Three inks: the Add sheet's cyan, the remove dialog's muted, and the
+  // share boards' wider, lighter subtle.
+  it.each([
+    ['signal', ['text-signal', 'font-bold', 'tracking-[0.14em]']],
+    ['muted', ['text-fg-muted', 'font-bold', 'tracking-[0.14em]']],
+    ['subtle', ['text-fg-subtle', 'font-medium', 'tracking-[0.22em]']],
+  ] as const)('draws the %s eyebrow tone', (tone, classes) => {
+    render(
+      <BottomSheet
+        open
+        onClose={() => {}}
+        title="test"
+        eyebrow="Share this show"
+        eyebrowTone={tone}
+      >
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const eyebrow = screen.getByText('Share this show');
+    for (const name of classes) expect(eyebrow.className).toContain(name);
+  });
 });
