@@ -479,7 +479,13 @@ artistsPublicRouter.get(
     // not under the unique index that stops that for upcoming ones. The row
     // the caller stamped wins, so "I went" never reads off beside their night.
     const nights = dedupeNights(pastRows, attendedIds);
-    const pastHasMore = nights.length > pastLimit;
+    // More nights than the window, or a fetch that filled its row window: when
+    // duplicate rows ate the headroom the deduped count can sit at or under the
+    // window while older nights still exist, so a full fetch also offers "Show
+    // older" (the worst case is one click that adds nothing).
+    const pastHasMore =
+      nights.length > pastLimit ||
+      pastRows.length >= (pastLimit + 1) * PAST_DUPLICATE_HEADROOM;
     const past: ArtistPastShow[] = nights.slice(0, pastLimit).map((row) => ({
       eventId: row.eventId,
       iso: row.iso,
