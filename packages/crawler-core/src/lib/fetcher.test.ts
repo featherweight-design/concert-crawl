@@ -668,6 +668,52 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     expect(result.finalUrl).toBe('https://example.com/next');
   });
 
+  it('stops waiting for a page-started navigation whose later hop is refused, and reads the original page', async () => {
+    const cdp = makeMockCdp();
+    const verdicts: Verdict[] = [];
+    const page = makeMockPage({
+      // A meta refresh to /ok/hop, which the server redirects to a path
+      // robots.txt disallows. Nothing ever commits.
+      waitForSelector: vi.fn(async () => {
+        verdicts.push(
+          await cdp.pause({
+            url: 'https://example.com/ok/hop',
+            networkId: 'jr',
+          }),
+        );
+        verdicts.push(
+          await cdp.pause({
+            url: 'https://example.com/private/y.html',
+            networkId: 'jr',
+            redirectedRequestId: 'req-1',
+          }),
+        );
+        return null;
+      }) as unknown as Page['waitForSelector'],
+    });
+    isAllowedSpy.mockImplementation(
+      async (url: string) => !url.includes('/private/'),
+    );
+    const startedAt = Date.now();
+
+    const result = await fetchPage(
+      'https://example.com',
+      makeMockBrowser(page, cdp),
+      0,
+      'networkidle',
+      '.event-card',
+    );
+
+    expect(verdicts).toEqual(['continue', 'fail']);
+    expect(cdp.send).toHaveBeenCalledWith('Fetch.failRequest', {
+      requestId: 'req-2',
+      errorReason: 'Aborted',
+    });
+    // Not the 20 s settle budget.
+    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(result.html).toBe('<html><body>loaded</body></html>');
+  });
+
   it('blocks a disallowed navigation the page starts during goto() and still returns the page', async () => {
     const cdp = makeMockCdp();
     const verdicts: Verdict[] = [];
