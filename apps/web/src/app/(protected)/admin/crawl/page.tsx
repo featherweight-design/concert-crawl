@@ -13,9 +13,13 @@ import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner';
 import {
   formatSweepHint,
   formatRunsBreakdown,
-  formatLlmCostTotal,
+  formatLlmCost,
 } from './crawl-stats';
-import type { CrawlRun, ExtractionStrategy } from '@concert-crawl/types';
+import type {
+  AdminDailyCosts,
+  CrawlRun,
+  ExtractionStrategy,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export interface CrawlStatusRow {
@@ -140,10 +144,14 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   // History tab now always shows the unfiltered run list. Blocked / failed
   // venues remain surfaced through the IssuesBanner just below.
 
-  const [rawStatus, runs] = await Promise.all([
+  const [rawStatus, runs, todayCosts] = await Promise.all([
     apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
     apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
+    // Today's LLM spend as the Health tile and the monthly budget count it
+    // (extraction plus the other LLM services), not just these runs'.
+    apiClient.get<AdminDailyCosts>('/v1/admin/costs/daily?days=1', token),
   ]);
+  const todayLlmCostUsd = todayCosts.days.at(-1)?.costUsd ?? 0;
   const status = rawStatus.map(toStatusRow);
   const todayStrMT = new Date().toLocaleDateString('en-US', {
     timeZone: 'America/Denver',
@@ -247,7 +255,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         />
         <StatCard
           label={ADMIN_COPY.crawlPage.statLlmCost}
-          value={formatLlmCostTotal(todayRuns) || '$0.00'}
+          value={formatLlmCost(todayLlmCostUsd) || '$0.00'}
           iconName="DollarSign"
           kind="signal"
           compact

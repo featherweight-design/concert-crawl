@@ -14,7 +14,9 @@ vi.mock('@/lib/auth', () => ({
   auth: async () => ({ getToken: async () => 'token' }),
   requireAdminUser: async () => undefined,
 }));
-const mockGet = vi.fn(async (_path: string): Promise<unknown> => []);
+const mockGet = vi.fn(async (path: string): Promise<unknown> =>
+  path.startsWith('/v1/admin/costs/daily') ? { days: [], totalUsd: 0 } : [],
+);
 vi.mock('@/lib/api', () => ({
   apiClient: { get: (path: string) => mockGet(path) },
 }));
