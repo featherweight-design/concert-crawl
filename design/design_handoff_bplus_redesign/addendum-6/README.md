@@ -25,19 +25,21 @@ Canvas: https://claude.ai/artifact/KXxTjkCQpzdUFAQwbxad8F (its own canvas). Sour
 | 29 | Auto-paused chip | **Ruling:** addendum 2 §29 wins: "Auto-paused" in list cells, "Auto-paused: 3 failures" in detail views. No board. |
 | 30 | Crawl runs: the 4:10 AM retry | **Ruling:** one row per night, "retried at 4:10 AM", as built. No board. |
 | 31 | Crawl runs: Next nightly crawl | **Ruling:** in the header (addendum 3, 1d ruling 26), as built. No board. |
-| 32 | Posters: tap to enlarge | **Drawn:** Enlarge opens the real poster full screen. **Hugh decides** whether it ships or the line is dropped for good. `32/*` |
+| 32 | Posters: tap to enlarge | **Drawn:** Enlarge opens the real poster full screen. **Decided with Hugh (2026-11-14): ship it.** `32/*` |
 | 33 | Health Emails row | **Confirmed as built:** Sending, N failed, Quiet. `33/emails-states` |
 | 34 | Where it's sold › | **Confirmed as built:** the › scrolls to that price's own card. No board. |
 | 35 | Share sheet: selected shape tile | **Confirmed as built:** `--surface-3` under the gradient border. No board. |
 | 36 | Admin past shows | **Drawn:** the Past tab with venue and status filters, the phone list and page, and the postponed show whose date passed. `36/*` |
 | 37 | Activity log: days and filters | **Drawn:** the day picker and arrows, an older day, the Anyone and Any page menus, phone. `37/*` |
 | 38 | Trust tones per theme | **Drawn:** three `--trust-*` tokens; Forge, Cedar and Gloss get a blue Community; Light darkens all three. `38/trust-tones` |
-| 40 | Where it's sold card | **Drawn:** (a) the tier on every line, (b) the resale line. (c) **Hugh decides**; recommended: keep both. `40/where-its-sold` |
+| 40 | Where it's sold card | **Drawn:** (a) the tier on every line, (b) the resale line. (c) **Decided with Hugh (2026-11-14): keep both.** `40/where-its-sold` |
 | 41 | Crew Coming up row | **Drawn:** six states. `41/crew-coming-up` |
 | 42 | Invite code ended | **Drawn:** "Have another code? Enter it" back to the code form. `42/code-ended-way-back` |
 | 43 | Approve one waiting price | **Drawn:** menu item and phone row action, in flight, approved with Undo, and failed. `43/*` |
 
 ## Decisions only Hugh can make
+
+Both decided with Hugh (2026-11-14), both recommendations: **40c keep both**, **32 ship it**.
 
 1. **Item 40c · resale shown twice.** On a box office + resale show, the resale price is in the price card and in Where it's sold.
    - **A (recommended): keep both.** The price card compares; Where it's sold is the full list of sellers, and every listed price has a row. Hiding one row makes the list incomplete exactly when there's a choice to make.
@@ -132,7 +134,7 @@ Canvas: https://claude.ai/artifact/KXxTjkCQpzdUFAQwbxad8F (its own canvas). Sour
 
 `32/poster-preview-m`: the preview shows the real poster (the approved invite poster, Night) with an **Enlarge** button. `32/poster-enlarged-m`: Enlarge opens it full screen over the page on solid black, with the look and code on top, ×, "Pinch to zoom. Check the QR scans before you print.", and Back / Print at the bottom. Desktop needs nothing: its preview is already large.
 
-**Hugh decides** (top of this file): ship it (recommended), or drop the line for good.
+**Decided with Hugh (2026-11-14): ship it.** Desktop is unchanged.
 
 ## 33. Health › Emails row
 
@@ -186,7 +188,7 @@ Every pill passes AA small text (4.5:1) on its own 8% tint over `--surface-1`; t
 
 - **(a) Box office rows carry the tier:** "{tier} · face value · no fees", so two box office tiers never read alike.
 - **(b) The resale line:** "{tier} · resale · all-in", with "resale" in `--trust-resale`. The letter tile stays neutral.
-- **(c) Box office + resale:** **Hugh decides** (top of this file). Recommended: keep both. The price card compares; Where it's sold is the full list of sellers.
+- **(c) Box office + resale:** **Decided with Hugh (2026-11-14): keep both.** The price card compares; Where it's sold is the full list of sellers, so the resale price shows in both.
 
 ## 41. Crew page: the Coming up row
 
