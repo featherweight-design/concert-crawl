@@ -131,6 +131,7 @@ const payload = (
       attending: null,
     },
   ],
+  pastHasMore: false,
   history: { count: 2, venues: ['Larimer Lounge', 'Globe Hall'] },
   following: false,
   myOpenReport: null,
@@ -170,6 +171,34 @@ describe('ArtistPage', () => {
       'tok_123',
     );
     expect(mockPublicGet).not.toHaveBeenCalled();
+  });
+
+  // addendum-3 README 25: "Show older" re-renders with the next 50 nights.
+  it('asks the API for the window in ?past and links to the next one', async () => {
+    mockPublicGet.mockResolvedValue(payload({ pastHasMore: true }));
+
+    const html = renderToString(
+      await ArtistPage({
+        params,
+        searchParams: Promise.resolve({ past: '100' }),
+      }),
+    );
+
+    expect(mockPublicGet).toHaveBeenCalledWith(
+      '/v1/artists/nightjar-choir?pastLimit=100',
+    );
+    expect(html).toContain('href="?past=150"');
+  });
+
+  it('ignores a ?past that is not a whole step inside the bounds', async () => {
+    mockPublicGet.mockResolvedValue(payload());
+
+    await ArtistPage({
+      params,
+      searchParams: Promise.resolve({ past: '77' }),
+    });
+
+    expect(mockPublicGet).toHaveBeenCalledWith('/v1/artists/nightjar-choir');
   });
 
   it('calls notFound() on an unknown slug', async () => {

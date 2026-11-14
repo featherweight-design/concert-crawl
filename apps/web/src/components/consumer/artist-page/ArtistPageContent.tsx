@@ -64,9 +64,12 @@ import { UpcomingShows } from './UpcomingShows';
 export const ArtistPageContent = ({
   data,
   scaRegion = false,
+  olderHref,
 }: {
   data: ArtistDetailResponse;
   scaRegion?: boolean;
+  /** "Show older" target: the next past-shows window; absent when none. */
+  olderHref?: string | undefined;
 }) => {
   const { artist, shows, past, history } = data;
   const hasShows = shows.length > 0;
@@ -213,7 +216,7 @@ export const ArtistPageContent = ({
               its contents — an empty `.ap-block-past` leaves a gap. */}
           {past.length > 0 ? (
             <div id="previously" className="ap-block-past">
-              <PastShows name={artist.name} past={past} />
+              <PastShows name={artist.name} past={past} olderHref={olderHref} />
             </div>
           ) : null}
 

@@ -1,4 +1,5 @@
 import type { ArtistPastShow } from '@concert-crawl/types';
+import Link from 'next/link';
 import React from 'react';
 
 import { CRAWL_SINCE } from './definitions/constants';
@@ -12,6 +13,8 @@ import { SectionHead } from './SectionHead';
 interface PastShowsProps {
   name: string;
   past: ArtistPastShow[];
+  /** Where "Show older" goes (the next window). Absent: nothing older. */
+  olderHref?: string | undefined;
 }
 
 /**
@@ -22,7 +25,7 @@ interface PastShowsProps {
  * dropped with #1170 (no setlist.fm license), so this block only claims what
  * the crawl saw.
  */
-export const PastShows = ({ name, past }: PastShowsProps) => {
+export const PastShows = ({ name, past, olderHref }: PastShowsProps) => {
   if (!past.length) return null;
 
   return (
@@ -142,6 +145,29 @@ export const PastShows = ({ name, past }: PastShowsProps) => {
           );
         })}
       </ul>
+      {olderHref !== undefined && (
+        <Link
+          href={olderHref}
+          scroll={false}
+          data-testid="past-show-older"
+          className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong text-[15px] font-semibold text-fg-muted no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        >
+          {ARTIST_COPY.showOlder}
+          <svg
+            aria-hidden
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3.5 5.5L7 9l3.5-3.5" />
+          </svg>
+        </Link>
+      )}
       <p
         style={{
           margin: '12px 0 0',
