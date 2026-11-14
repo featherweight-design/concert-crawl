@@ -88,9 +88,12 @@ export const PeopleSkeleton = () => (
         <SkeletonBlock key={tab} width={90} height={14} radius={6} />
       ))}
     </div>
+    {/* `display` lives in the class, never inline: an inline value beats the
+        breakpoint's `hidden` and both skeletons would draw. */}
     <div
-      className="max-[720px]:hidden"
-      style={{ display: 'flex', gap: 8, overflow: 'hidden' }}
+      data-testid="people-desktop-skeleton-bar"
+      className="flex max-[720px]:hidden"
+      style={{ gap: 8, overflow: 'hidden' }}
     >
       <span style={{ flex: '0 1 260px', minWidth: 0 }}>
         <SkeletonBlock height={36} radius={10} />
@@ -105,8 +108,9 @@ export const PeopleSkeleton = () => (
       <PeopleRowsSkeleton />
     </div>
     <div
-      className="min-[721px]:hidden"
-      style={{ display: 'flex', flexDirection: 'column' }}
+      data-testid="people-phone-skeleton-wrap"
+      className="flex min-[721px]:hidden"
+      style={{ flexDirection: 'column' }}
     >
       <div style={{ paddingBottom: 10 }}>
         <SkeletonBlock height={36} radius={10} />
