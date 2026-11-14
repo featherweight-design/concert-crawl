@@ -2,7 +2,7 @@
 
 import { ExternalLink } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { minutesSince, pagePathOf } from '../needs-you-rules';
+import { minutesSince, pageNameOf, pagePathOf } from '../needs-you-rules';
 import type { PanelProps } from './panel-props';
 import {
   AnswerButtons,
@@ -25,7 +25,9 @@ export const BugPanel = ({ row, busy, onAnswer }: PanelProps) => {
     ...(facts?.handle
       ? [{ label: PANEL.bug.from, value: `@${facts.handle}` }]
       : []),
-    ...(page ? [{ label: PANEL.bug.page, value: pagePathOf(page) }] : []),
+    ...(page
+      ? [{ label: PANEL.bug.page, value: pageNameOf(page) ?? pagePathOf(page) }]
+      : []),
     ...(facts?.device
       ? [{ label: PANEL.bug.device, value: facts.device }]
       : []),
