@@ -1,9 +1,10 @@
 // B+ crews (B14): the two pill buttons every crews surface draws, so the list,
 // the crew home, the invite landing and the crew lens cannot drift apart.
 
-/** The B+ cyan-to-pink sweep, through the violet the two mix to. */
+/** The B+ cyan-to-pink sweep, through the violet the two mix to. It fills a
+ * pill under dark label text, so it ends on --cta-end, not the raw accent. */
 export const CREW_GRADIENT =
-  'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--accent)), var(--accent))';
+  'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--cta-end)), var(--cta-end))';
 
 const pillBase: React.CSSProperties = {
   display: 'inline-flex',

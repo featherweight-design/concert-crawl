@@ -4,6 +4,10 @@ import type { AvatarColor } from '@concert-crawl/types';
 export const SIGNAL_TO_ACCENT =
   'linear-gradient(135deg, var(--signal), var(--accent))';
 
+/** The same pair where it fills a button under dark label text. */
+export const SIGNAL_TO_CTA_END =
+  'linear-gradient(135deg, var(--signal), var(--cta-end))';
+
 export interface AvatarPair {
   first: AvatarColor;
   second: AvatarColor;

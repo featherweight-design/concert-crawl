@@ -69,6 +69,11 @@ export const HISTORY_DENSITY_CONFIG: Record<
 export const MY_SHOWS_GRADIENT =
   'linear-gradient(90deg, var(--signal), var(--accent))';
 
+/** The same sweep where it fills a CTA under dark label text: the empty cards
+ * and the Artists find pill end on --cta-end (addendum-4 §3). */
+export const MY_SHOWS_CTA_GRADIENT =
+  'linear-gradient(90deg, var(--signal), var(--cta-end))';
+
 // The hairline under the Watching and Concerts headers (addendum-2
 // `03-stamps/concerts-round-stamps-m`, after "since September 2026";
 // `bp-m-watching_m`): `linear-gradient(90deg, rgba(122,230,255,.6),

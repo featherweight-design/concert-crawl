@@ -8,7 +8,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
-import { MY_SHOWS_GRADIENT } from './definitions/constants';
+import { MY_SHOWS_CTA_GRADIENT } from './definitions/constants';
 import { PASSPORT_CTA_GLOW } from '@/components/consumer/passport/definitions/styles';
 
 interface MyShowsEmptyCardBaseProps {
@@ -102,7 +102,7 @@ export const MyShowsEmptyCard = ({
         href={cta.href}
         className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-[14px] px-6 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
         style={{
-          backgroundImage: MY_SHOWS_GRADIENT,
+          backgroundImage: MY_SHOWS_CTA_GRADIENT,
           color: 'var(--fg-on-accent)',
           fontFamily: 'var(--font-ui)',
           fontSize: 15,

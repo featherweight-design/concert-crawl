@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Maximize2, Share } from 'lucide-react';
 import { BottomSheet } from '@/components/pwa/BottomSheet';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { SIGNAL_TO_ACCENT } from '@/components/settings/definitions/styles';
+import { SIGNAL_TO_CTA_END } from '@/components/settings/definitions/styles';
 import { track } from '@/lib/analytics';
 import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
 import { asAvatarColor, useMeInvite } from '@/lib/queries/use-me-invite';
@@ -382,7 +382,7 @@ const Press = ({
       style={
         primary
           ? {
-              background: SIGNAL_TO_ACCENT,
+              background: SIGNAL_TO_CTA_END,
               boxShadow:
                 '0 8px 24px color-mix(in oklch, var(--signal) 20%, transparent)',
             }

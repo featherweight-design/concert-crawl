@@ -102,7 +102,7 @@ const GRADIENT_BUTTON: CSSProperties = {
   padding: '0 22px',
   borderRadius: 14,
   border: 'none',
-  background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+  background: 'linear-gradient(90deg, var(--signal), var(--cta-end))',
   color: 'var(--fg-on-accent)',
   fontFamily: 'var(--font-ui)',
   fontSize: 15,
