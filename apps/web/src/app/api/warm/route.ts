@@ -4,7 +4,7 @@
 //
 // It must never wake the database: Hugh declined paying to keep Neon awake,
 // so this imports nothing that reads data or calls Clerk, and
-// `warm-ping.test.ts` fails if it ever does.
+// `__tests__/route.test.ts` fails if it ever does.
 
 export const dynamic = 'force-dynamic';
 
