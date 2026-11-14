@@ -33,7 +33,7 @@ export default async function MePage() {
         <SpotifyReturnFlow />
       </Suspense>
       {/* Mobile (< sm) */}
-      <div className="lg:hidden">
+      <div className="mx-auto w-full max-w-[640px] lg:hidden">
         <SettingsRoute
           profile={profile}
           submissions={submissions}

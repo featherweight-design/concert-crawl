@@ -23,7 +23,7 @@ export default async function SubmittedPricesPage() {
   return (
     <>
       <ThemeSync serverTheme={profile.theme} />
-      <div className="lg:hidden">
+      <div className="mx-auto w-full max-w-[640px] lg:hidden">
         <SubmissionsPage profile={profile} submissions={submissions} />
       </div>
       <div className="hidden lg:block">
