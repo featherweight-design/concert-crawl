@@ -4205,6 +4205,8 @@ export const ADMIN_COPY = {
     pastShowing: (span: string) => `Showing ${span} · newest first`,
     separator: ' · ',
     loadOlder: 'Load older',
+    // Screen-reader only, after a past row's title: "Pink Fuzz, Sat Nov 7".
+    rowDate: (date: string) => `, ${date}`,
     // The picked chip's accessible name: the pick alone doesn't say which
     // filter it is.
     venuePickedLabel: (pick: string) => `Venue: ${pick}`,

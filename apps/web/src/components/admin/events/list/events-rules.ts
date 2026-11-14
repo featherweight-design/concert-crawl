@@ -29,7 +29,6 @@ export const STATUS_FILTER_OPTIONS = [
   'cancelled',
   'delisted',
 ] as const;
-export type FilterStatus = (typeof STATUS_FILTER_OPTIONS)[number];
 
 /** Past's Any status menu rows, in `36/past-status-menu-d`'s order. */
 export const PAST_STATUS_FILTER_OPTIONS = [
@@ -195,15 +194,18 @@ export const showCount = (
 
 const MONTH_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-const monthDay = (date: string): { month: string; day: string } | null => {
+const monthDay = (
+  date: string,
+): { year: string; month: string; day: string } | null => {
   const match = MONTH_DAY.exec(date);
   if (!match) return null;
-  const [, year, month, day] = match;
+  const [, year = '', month, day] = match;
   // Noon UTC of that calendar day, so the month cannot slip across a zone.
   const at = new Date(
     Date.UTC(Number(year), Number(month) - 1, Number(day), 12),
   );
   return {
+    year,
     month: at.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
     day: String(Number(day)),
   };
@@ -211,13 +213,16 @@ const monthDay = (date: string): { month: string; day: string } | null => {
 
 /**
  * The dates a page of past shows spans, as `36/past-d`'s footer writes them:
- * "Nov 4–8", "Oct 30–Nov 8", or "Nov 8" for one day. Null for a bad date.
+ * "Nov 4–8", "Oct 30–Nov 8", or "Nov 8" for one day; across a year, both
+ * years: "Dec 30, 2025–Jan 2, 2026". Null for a bad date.
  */
 export const dateSpan = (oldest: string, newest: string): string | null => {
   const from = monthDay(oldest);
   const to = monthDay(newest);
   if (from === null || to === null) return null;
   if (oldest === newest) return `${to.month} ${to.day}`;
+  if (from.year !== to.year)
+    return `${from.month} ${from.day}, ${from.year}–${to.month} ${to.day}, ${to.year}`;
   return from.month === to.month
     ? `${from.month} ${from.day}–${to.day}`
     : `${from.month} ${from.day}–${to.month} ${to.day}`;

@@ -7,6 +7,7 @@ Status chip = pill with 6px dot + word (rule 3, fan `StatusChip` colours): Ticke
 ## 1. Per board
 
 ### `06/events` (1280) — caption: "Price column fits wide ranges ($89.50–$1,250). Status uses the fan-facing words; Hidden is separate."
+
 - Breadcrumb "Events". H1 "Events"; sub "1,204 upcoming · one status each, the same words fans see" → upcoming count.
 - Header button "Add a show" (secondary) → opens Add a show panel.
 - Filter row (one row): search input w/ magnifier "Search shows or artists"; segmented pill **Upcoming** (selected, gradient border) / Past; chip "Any venue" (opens venue popover); chip "Any status" (opens status popover); toggle chip "No price" + count **214**; toggle chip "Hidden" + count **4**. No chevrons drawn on chips.
@@ -17,6 +18,7 @@ Status chip = pill with 6px dot + word (rule 3, fan `StatusChip` colours): Ticke
 - Data: id, date (MT weekday/day), title, venue {id,name,glyph,colour}, status, hidden + hiddenReason, priceMin/priceMax, watchingCount; total/remaining counts; noPriceCount, hiddenCount.
 
 ### `06/events-mobile` (390) — "Cards, not a sideways table."
+
 - Header "Events", sub "1,204 upcoming", avatar "H".
 - Search "Search shows or artists".
 - Chip row (scrolls): Upcoming (selected), No price **214**, Hidden **4**, Any venue (clipped). No Past, Any status, Add a show drawn (ruled: phone adds Past toggle + Add a show; venue/status open sheets, addendum-3 4b#23).
@@ -24,18 +26,23 @@ Status chip = pill with 6px dot + word (rule 3, fan `StatusChip` colours): Ticke
 - Bottom tab bar (Needs you 14 / Venues / Events / More).
 
 ### `06/events-no-results`
+
 - Icon tile (24px cyan), title "No shows match", body "Try another venue or status, or include past shows.", button "Clear filters".
 
 ### `06/venue-filter` (popover over events)
+
 - Search "Find a venue"; list rows: checkbox (Red Rocks checked, dark check on cyan), venue glyph 13px, name, count: Red Rocks 88, Bluebird Theater 63, Globe Hall 42, Gothic Theatre 41, Larimer Lounge 37 (sorted by count desc). Footer: "Clear" (ghost), "Show 88" (tinted primary, = matching rows). Caption "Searchable, with counts."
 - Data: per-venue upcoming event counts (respecting other filters?), venue glyph.
 
 ### `06/status-filter` (popover) — "Several at once."
+
 - Checkbox rows + counts: Tickets available 903, Sold out 142, Postponed 6 ✓, Cancelled 9 ✓, Moved 3, No longer listed 11. Footer "Clear", "Show 15". No Hidden row (Hidden is its own chip).
 - Data: per-status counts incl. moved + no longer listed (delisted).
 
 ### `06/event-menu` (⋯ menu) — "Both “View on” links live here and on the edit page. Merge is for duplicates."
+
 Each item: 14px icon + title + subline.
+
 - Edit — "Title, lineup, date, status, price"
 - View on Concert Crawl — "The fan page, in a new tab"
 - View on the venue’s site — "The listing we crawled" (needs source/listing URL)
@@ -45,6 +52,7 @@ Each item: 14px icon + title + subline.
 - Delete… (red) — "Only for shows added by mistake" → `04/delete-venue` pattern; only manual rows get it (4b#10, Eng/Hugh)
 
 ### `06/event-edit` (1280) — "View on Concert Crawl and on the venue’s site, side by side. Amber lineup token: an unsure artist match. Edit price opens the shared price sheet."
+
 - Breadcrumb "Events / Six Foot Blonde" (short headliner name).
 - Header: H1 full title; status chip (Moved); meta "Sat Nov 14 · 4 Watching"; buttons "On Concert Crawl" (external icon), "On the venue’s site" (external icon), ⋯ icon button (event menu).
 - Two balanced columns (rule 5).
@@ -55,6 +63,7 @@ Each item: 14px icon + title + subline.
 - Pinned bottom bar (64px): amber "2 unsaved changes" (dirty-field count); "Discard" ghost; "Save" gradient primary.
 
 ### `06/event-edit-mobile` (390) — "Same fields, stacked, Save pinned."
+
 - Top bar: back chevron "Events", ⋯ (18px).
 - Title, Moved chip, "Sat Nov 14 · 4 Watching"; buttons "On Concert Crawl", "Venue’s site".
 - Fields drawn: Title; Lineup chips (cyan/amber); Venue "Larimer Lounge"; Date "Sat, Nov 14" + Show "7:00 PM" side by side; Status pills (overflow hidden: Tickets available, Sold out, Moved…); Price "$12" + "Edit price".
@@ -62,18 +71,22 @@ Each item: 14px icon + title + subline.
 - Ruling 4b#4: caption wins → every desktop field stacked (Doors, From the crawl, Hide toggle, Add an artist, all status options, Ticket page, Submitted prices). Cancelled opens the mobile sheet.
 
 ### `06/event-edit-mark-cancelled-desktop` — "A centered dialog over the edit page, because it notifies Watchers."
+
 - Scrim over event-edit. Dialog title "Mark Six Foot Blonde cancelled?" (headliner short name).
 - Body "4 Watchers get one notice. Get Tickets becomes refund info on the fan page. The show stays listed as Cancelled until its date passes." (watchingCount).
 - Field "Refund info (optional)" input "Refunds at point of purchase"; help "Shown where Get Tickets was."
 - Buttons "Keep it" (secondary), "Mark cancelled" (red outline).
 
 ### `06/mark-cancelled-mobile` — "Bottom sheet."
+
 - Sheet over "Ninth Key". Title "Mark Ninth Key cancelled?"; body with "6 Watchers get one notice…"; Refund info (optional) field + help; stacked "Mark cancelled" (red outline) then "Keep it".
 
 ### Postponed (addendum-3 `10/postponed-d`, `10/postponed-m`, reused per 4b#6)
+
 - Title "{show} is postponed?"; "12 people Watching it get one notice. The show stays listed as Postponed until it has a date."; radio "No new date yet" / "New date" → Date + Show time; note "With a date it reads Moved to Sat, Jan 9 for fans, and Watching follows it. Same tickets."; "Cancel" / "Mark postponed" (primary). New date optional.
 
 ### `06/edit-price-desktop` — "Overlay over event edit." (side panel, scrim)
+
 - Kind label "PRICE" (green), close ×. Title "Edit price"; sub "Six Foot Blonde · Larimer Lounge · Sat Nov 14".
 - Lowest "$12"; Highest (optional) "$15"; checkboxes: Before fees (checked), It’s free, Sold out; "Where you saw it" URL "larimerlounge.com/events/…".
 - Note box "Saved as your submission, so Submitted prices keeps the history. The 2 fans who sent $12 aren’t told." (matching submission count).
@@ -81,17 +94,20 @@ Each item: 14px icon + title + subline.
 - Rulings: tier + vendor (if required) use fan sheet's Tier and "Where it's listed" above Lowest (top 8, Eng); Sold out lives in Status only, sheet loses Sold out row (4b#20).
 
 ### `06/add-a-show-by-hand` — "Overlay panel from Events." (side panel over events list)
+
 - Kind label "SHOW" (pink), close ×. Title "Add a show by hand"; sub "For a show the crawler can’t see. The next crawl won’t remove it."
 - Title "Kaleo"; Venue picker (glyph + "Mission Ballroom"); Date "Fri, Dec 4"; Doors "7:00 PM"; Show "8:00 PM"; Ticket link "axs.com/events/…"; Lineup (comma text "Kaleo, The Band of Heathens", help "Each name is matched on Artists.") — **superseded** by addendum-3 board below.
 - Buttons "Add show" (primary), "Cancel".
 
 ### addendum-3 `11/add-a-show-lineup-d` — "The lineup uses the edit page’s chips: first is the headliner." (wins over the above)
+
 - Same panel; after Show time: amber warning box (calendar icon) "Mission Ballroom already lists **Kaleo** on Fri, Dec 4. Open it instead?" + "Open it" button (duplicate check on venue+date+title).
 - Lineup chips: "Kaleo" + mono "HEADLINER" + ×; "The Band of Heathens" + "SUPPORT" + ×; "Add an artist"; help "The first is the headliner. Drag to reorder. Each name is matched on Artists."
 - Line "Add a price after it’s saved, from the show." No price/status fields. Buttons "Add show" / "Cancel".
 - Phone: full screen, same fields stacked (4b#13). Hidden link until 4a (3e#15 ruling).
 
 ### `06/merge-duplicates` (desktop side panel) — "Pick the listing to keep; everything moves to it."
+
 - Kind label "MERGE" (cyan), close ×. Title "Merge duplicates"; sub "Two listings for one show. Pick the one to keep; Watchers, prices and reports move to it."
 - Radio card 1 (selected, gradient border): "Clipse & J.I.D" / "Red Rocks · Thu Nov 12 · from the crawl · 31 Watching · $65–$495".
 - Radio card 2: "CLIPSE with special guest JID" / "Red Rocks · Thu Nov 12 · added by @dlo · 3 Watching · no price".
@@ -100,6 +116,7 @@ Each item: 14px icon + title + subline.
 - Ruling 4b#15: desktop gets the gap-1 pick step as the first panel view.
 
 ### phone-addendum `gap-1/merge-pick` (390, full screen from ⋯ "Merge with another listing…")
+
 - Top: back chevron + "Clipse & J.I.D". Kind "MERGE". Title "Merge with another listing"; sub "Which listing is the same show?"
 - "THIS LISTING": date tile THU 12, "Clipse & J.I.D", "Red Rocks · from the crawl · 31 Watching".
 - "LIKELY THE SAME SHOW" + right "same venue and day": candidate row (date tile, title, "Red Rocks · added by @dlo · 3 Watching", chevron →).
@@ -107,6 +124,7 @@ Each item: 14px icon + title + subline.
 - `merge-pick-loading`: same with candidate slot as skeleton. `merge-nothing-found`: dashed box "No other listing at Red Rocks on Thu Nov 12. If the duplicate has another date or venue, search for it." Search results/no results follow `06/artist-search-mobile` + `06/events-no-results` (A3).
 
 ### phone-addendum `gap-1/merge-compare` (390) and `merge-compare-320`
+
 - Back "Clipse & J.I.D"; MERGE; title + sub as desktop.
 - Shared header: venue glyph 18px "Red Rocks · Thu Nov 12" / "Same venue and day on both".
 - Card "First listing" + "KEEP" label (selected): title; rows Lineup (chips Clipse, J.I.D cyan), From "the crawl", Watching "31", Price "$65–$495", Reports "none".
@@ -120,34 +138,40 @@ Each item: 14px icon + title + subline.
 - Across venue/day (A3): drop shared header, add Venue and Day as first rows of each card. (addendum-3 says "venue and date rows highlighted as differing" — same board, reuse.)
 
 ### `06/past-shows` — "Read-only except Hidden and lineup."
+
 - Breadcrumb "Events / Past". H1 "Events"; sub "Past shows · read-only except Hidden and lineup". No Add a show button.
 - Filter row: search + segmented Upcoming / **Past** (selected). No venue/status/No price/Hidden chips.
 - Columns: DATE · SHOW · VENUE · STATUS · PRICE · **CONCERTS** (no ⋯ column, no row menu).
 - Rows: Japanese Breakfast/Mission Ballroom/**Played** (muted chip)/$45 (muted)/"14 went"; Pink Fuzz/Hi-Dive/Played/$15/"3 went"; Turnstile/Fillmore/**Cancelled**/—/—; Kyle Emerson/Larimer Lounge/Played/$18/"2 went". Newest first.
-- Footer "Past shows stay for Concerts and stamps. Showing Nov 5–8".
+- Footer "Past shows stay for Concerts and stamps. Showing Nov 5–8". (Removed by addendum 6 item 36a: the footer is now "Showing Nov 4–8 · newest first · Load older".)
 - Rulings: Played OK, muted, past only (4b#21); past edit locks every field except Hidden + lineup, others shown read-only (4b#22); phone Past = phone list with Past toggle.
 
 ### `07/loading-events`
+
 - Breadcrumb "Events". Skeleton: title bar + sub bar; filter row = wide search block + 5 pills; table card with header bar and rows (square tile, two text bars, chip pill, two short bars), fading down. Rule 9: no animation under reduced motion.
 
 ### `07/loading-event-edit`
+
 - Breadcrumb "Events / …". Skeleton: title + sub bars; two columns — left: tall card (6 bars) + short card (3 bars); right: two cards (4 bars each). (Matches Show / From the crawl | Status / Price.)
 
 ## 2. Data the UI needs
 
 List (`GET /v1/admin/events`):
+
 - id, title, date + doors/show times (UTC → MT weekday/day), venue {id, name, glyph/colour}, status (available / sold out / postponed / cancelled / moved / no longer listed = delisted_at), hidden + hidden reason (unsure = is_concert_review_needed; others: by admin, not a concert, duplicate — Copy), priceMin/priceMax (via price single source, not events.ticketPriceMin), watchingCount (deduped).
 - Query: q (show or artist full-text), when=upcoming|past, venueIds[], statuses[], noPrice, hidden; paging (Load more, "Showing 25 of N" / date range + "N more").
 - Counts: upcoming total; noPrice count (214); hidden count (4); per-venue counts for the venue popover (sorted desc, searchable); per-status counts for the status popover; selection total for "Show N".
 - Past: Played (derived: past + not cancelled), wentCount (going/Concerts count — Eng), past price.
 
 Event detail (`GET /v1/admin/events/:id`):
+
 - title, short headline name (breadcrumb/dialog titles), status, moved-to venue + watchers-told date (Moved: Hugh top 7), watchingCount, fan URL (`/e/:id`), venue listing URL (source), lineup [{artistId, name, avatar, role headliner|support, position, unsure flag/match status}], venue, date, doors, show.
 - From the crawl: source label (venue calendar / feed) + method (JSON-LD/HTML/Haiku), first_seen, last_seen_at, last seen raw title (no source today), last crawl_run id (no link today).
 - Price: listed price, matching submission count, ticket page host + checked date, submitted-prices link (filtered to event).
 - manual flag, created_by handle (A2: `events.created_by`; old manual = "added by hand"), hidden flag + reason, delisted_at.
 
 Mutations:
+
 - PATCH event (title, lineup, venue, date, doors, show, status, hidden) with dirty count + Discard; snap-back on failure (rule 10).
 - Mark cancelled (refundInfo optional — no column today, Hugh 4b#7) → one Watcher notice; Mark postponed (optional new date) → notice.
 - Hide (dialog, reasons) / Delete (manual only, typed confirm per `04/delete-venue`).
@@ -186,17 +210,20 @@ Mutations:
 ## 4. Existing code paths
 
 Routes:
+
 - `apps/web/src/app/(protected)/admin/events/page.tsx` (redirects to `/admin/review?tab=all-events`; plan renames to `/admin/events` in 4b)
 - `apps/web/src/app/(protected)/admin/events/loading.tsx`
 - `apps/web/src/app/(protected)/admin/events/[id]/edit/page.tsx` (+ `page.test.tsx`, `loading.tsx`)
 - `apps/web/src/app/(protected)/admin/review/page.tsx` (current all-events host)
 
 Current events UI:
+
 - `apps/web/src/components/admin/review/all/` — `EventsTable.tsx`, `EventsMobileList.tsx`, `EventsFilterBar.tsx`, `EventRowMenu.tsx`, `EventConfirmModal.tsx`, `BulkDock.tsx`, `BulkConfirmModal.tsx`, `BulkDeleteConfirm.tsx`, `filters.ts`, `types.ts`
 - `apps/web/src/components/admin/events/editor/` — `EventEditorClient.tsx`, `EditorHeader.tsx`, `SaveBar.tsx`, `MergeEventDialog.tsx`, `EditField.tsx`, `EditSection.tsx`, `LifecycleBadge.tsx`, `SrcTag.tsx`, `VerifyMark.tsx`, `sections/{Identity,Status,Pricing,Classification,Art,DangerZone}Section.tsx`
 - `apps/web/src/components/admin/events/EventQueueSplit.tsx`, `types.ts`; `apps/web/src/components/admin/event-review-table/EventReviewTable.tsx`
 
 Price sheets (no `EditPriceSheet`/`PriceSheet`/`AddPriceSheet` exist):
+
 - `apps/web/src/components/admin/prices/EditPricePanel.tsx`, `AddPricePanel.tsx` (used by `PricesClient.tsx`), `RejectPriceDialog.tsx`, `prices-api.ts`
 - Fan sheet: `apps/web/src/components/consumer/submit-price/SubmitPriceModal.tsx`, `VendorField.tsx`
 

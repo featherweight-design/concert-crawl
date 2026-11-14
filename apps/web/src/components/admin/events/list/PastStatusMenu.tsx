@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Check } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { useIsPhone } from '@/components/admin/primitives';
@@ -71,6 +71,11 @@ const MenuRow = ({
  * Past's Any status menu (`36/past-status-menu-d`): Any status, then the four
  * past statuses as their `StatusChip`s, then the hint. Multi-select; each pick
  * applies at once, since the board draws no Show N.
+ *
+ * A pick lands in the URL a moment later, so each one builds on the last pick
+ * asked for, not on `selected`: two quick picks keep both. `selected` takes
+ * over again once the URL catches up (or moves another way while nothing is
+ * in flight, such as Back). The menu mounts fresh each time it opens.
  */
 export const PastStatusMenu = ({
   selected,
@@ -78,49 +83,72 @@ export const PastStatusMenu = ({
 }: {
   selected: readonly EventListStatus[];
   onPick: (statuses: EventListStatus[]) => void;
-}) => (
-  <div
-    data-testid="past-status-menu"
-    style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-  >
-    <MenuRow
-      on={selected.length === 0}
-      label={COPY.anyStatus}
-      onClick={() => onPick([])}
+}) => {
+  // The last set asked for: what the rows show, and what the next pick
+  // builds on.
+  const [shown, setShown] = useState<EventListStatus[]>([...selected]);
+  // That set's key while it isn't in the URL yet; null with none in flight.
+  const [pending, setPending] = useState<string | null>(null);
+  const selectedKey = selected.join(',');
+  const [seenKey, setSeenKey] = useState(selectedKey);
+  if (seenKey !== selectedKey) {
+    setSeenKey(selectedKey);
+    if (pending === null || pending === selectedKey) {
+      setPending(null);
+      setShown([...selected]);
+    }
+  }
+
+  const pick = (next: EventListStatus[]) => {
+    setPending(next.join(','));
+    setShown(next);
+    onPick(next);
+  };
+
+  return (
+    <div
+      data-testid="past-status-menu"
+      style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
     >
-      {COPY.anyStatus}
-    </MenuRow>
-    {PAST_STATUS_FILTER_OPTIONS.map((status) => {
-      const on = selected.includes(status);
-      return (
-        <MenuRow
-          key={status}
-          on={on}
-          label={COPY.status[status]}
-          onClick={() =>
-            onPick(
-              on
-                ? selected.filter((each) => each !== status)
-                : [...selected, status],
-            )
-          }
-        >
-          <StatusChip
-            status={STATUS_CHIP[status]}
+      <MenuRow
+        on={shown.length === 0}
+        label={COPY.anyStatus}
+        onClick={() => pick([])}
+      >
+        {COPY.anyStatus}
+      </MenuRow>
+      {PAST_STATUS_FILTER_OPTIONS.map((status) => {
+        const on = shown.includes(status);
+        return (
+          <MenuRow
+            key={status}
+            on={on}
             label={COPY.status[status]}
-          />
-        </MenuRow>
-      );
-    })}
-    <p
-      style={{
-        margin: 0,
-        padding: '6px 10px',
-        fontSize: 12,
-        color: 'var(--fg-subtle)',
-      }}
-    >
-      {COPY.pastStatusHint}
-    </p>
-  </div>
-);
+            onClick={() =>
+              pick(
+                on
+                  ? shown.filter((each) => each !== status)
+                  : [...shown, status],
+              )
+            }
+          >
+            <StatusChip
+              status={STATUS_CHIP[status]}
+              label={COPY.status[status]}
+            />
+          </MenuRow>
+        );
+      })}
+      <p
+        style={{
+          margin: 0,
+          padding: '6px 10px',
+          fontSize: 12,
+          color: 'var(--fg-subtle)',
+        }}
+      >
+        {COPY.pastStatusHint}
+      </p>
+    </div>
+  );
+};
