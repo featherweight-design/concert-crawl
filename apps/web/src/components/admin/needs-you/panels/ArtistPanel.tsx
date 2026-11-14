@@ -1,7 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { Search } from 'lucide-react';
+import { useAuth } from '@clerk/nextjs';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { useIsPhone } from '@/components/admin/primitives';
+import { ArtistSearchPanel } from '../../artists/ArtistSearchPanel';
+import { artistsApi, type AdminArtistRow } from '../../artists/artists-api';
 import { evidenceText, whenChipOf } from '../needs-you-rules';
 import type { ArtistCandidate } from '../needs-you-api';
 import type { PanelProps } from './panel-props';
@@ -104,6 +109,9 @@ export const ArtistPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
   const facts = row.artistFacts;
   const candidates = facts?.candidates ?? [];
   const [picked, setPicked] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
+  const { getToken } = useAuth();
+  const isPhone = useIsPhone();
   // The best candidate stands until another is picked: the one that is not
   // already the photo's match first, else the first.
   const first = candidates.find((cand) => !cand.current) ?? candidates[0];
@@ -128,6 +136,25 @@ export const ArtistPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
       ? `${matchStatus}.`
       : null,
   ].filter((part) => part !== null);
+
+  // What the artists page's search panel reads from a row: the queue item
+  // carries the artist's id, name and match, and nothing else is needed.
+  const searchRow: AdminArtistRow = {
+    id: facts?.artistId ?? '',
+    name: row.title,
+    spotifyArtistId: facts?.spotifyArtistId ?? null,
+    matchStatus: 'unmatched',
+    photoUrl: facts?.photoUrl ?? null,
+    autoMatchedAt: null,
+    openReportCount: row.reportCount ?? 0,
+    wrongPhotoReportCount: photoReports ? (row.reportCount ?? 0) : 0,
+    upcomingCount: 0,
+    watchingCount: row.watchers,
+    nextShow: row.fanDate
+      ? { date: row.fanDate, venueName: facts?.nextShowVenue ?? null }
+      : null,
+    candidates: null,
+  };
 
   return (
     <>
@@ -166,6 +193,30 @@ export const ArtistPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
           </div>
         </Section>
       )}
+      {facts?.artistId && (
+        <button
+          type="button"
+          data-testid="search-for-another"
+          onClick={() => setSearching(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            alignSelf: 'flex-start',
+            padding: '6px 8px',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            fontSize: 14,
+            fontWeight: 600,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          <Search size={16} aria-hidden />
+          {PANEL.artist.searchForAnother}
+        </button>
+      )}
       <AnswerButtons
         row={row}
         busy={busy}
@@ -189,6 +240,22 @@ export const ArtistPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
         }
         onAnswer={onAnswer}
       />
+      {searching && facts?.artistId && (
+        <ArtistSearchPanel
+          row={searchRow}
+          api={artistsApi(getToken)}
+          isPhone={isPhone}
+          onClose={() => setSearching(false)}
+          onUse={(candidate) => {
+            // The pick goes through the card's own answer, like the lead button.
+            const pick = row.answers.find(
+              (answer) => answer.slug === 'pick_the_right_artist',
+            );
+            setSearching(false);
+            if (pick) onAnswer(pick, { spotifyArtistId: candidate.id });
+          }}
+        />
+      )}
     </>
   );
 };

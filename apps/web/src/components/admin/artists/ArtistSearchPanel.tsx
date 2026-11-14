@@ -88,7 +88,8 @@ export const ArtistSearchPanel = ({
   isPhone: boolean;
   /** Saves the pick through the page's write path (with expectedStatus). */
   onUse: (candidate: SearchCandidate) => void;
-  onNotAnArtist: () => void;
+  /** Absent where that answer is not offered (Needs you): the button is left out. */
+  onNotAnArtist?: () => void;
   onClose: () => void;
 }) => {
   const [query, setQuery] = useState(row.name);
@@ -309,16 +310,20 @@ export const ArtistSearchPanel = ({
         // The phone board draws the context bare; the desktop one adds "For".
         subtitle={context ?? undefined}
         onClose={onClose}
-        footer={
-          // "No photo for now" is held, so Not an artist takes the row.
-          <AdminButton
-            type="button"
-            onClick={onNotAnArtist}
-            style={{ ...SECONDARY_BUTTON, ...PHONE_BUTTON, height: 42 }}
-          >
-            {COPY.notAnArtist}
-          </AdminButton>
-        }
+        {...(onNotAnArtist
+          ? {
+              footer: (
+                // "No photo for now" is held, so Not an artist takes the row.
+                <AdminButton
+                  type="button"
+                  onClick={onNotAnArtist}
+                  style={{ ...SECONDARY_BUTTON, ...PHONE_BUTTON, height: 42 }}
+                >
+                  {COPY.notAnArtist}
+                </AdminButton>
+              ),
+            }
+          : {})}
       >
         {body}
       </AdminSheet>
@@ -332,18 +337,22 @@ export const ArtistSearchPanel = ({
       title={PANEL.title(row.name)}
       {...(context ? { subtitle: context } : {})}
       onClose={onClose}
-      footerLayout="ruled"
-      footer={
-        // "No photo for now" is held.
-        <AdminButton
-          type="button"
-          variant="ghost"
-          onClick={onNotAnArtist}
-          style={{ ...ROW_BUTTON, height: 32 }}
-        >
-          {COPY.notAnArtist}
-        </AdminButton>
-      }
+      {...(onNotAnArtist
+        ? {
+            footerLayout: 'ruled' as const,
+            footer: (
+              // "No photo for now" is held.
+              <AdminButton
+                type="button"
+                variant="ghost"
+                onClick={onNotAnArtist}
+                style={{ ...ROW_BUTTON, height: 32 }}
+              >
+                {COPY.notAnArtist}
+              </AdminButton>
+            ),
+          }
+        : {})}
     >
       {body}
     </SidePanel>

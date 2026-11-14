@@ -2593,6 +2593,7 @@ export const ADMIN_COPY = {
         use: (name: string) => `Use ${name}`,
         // `02/artist-wrong-artist-report-or-unsure-match`: the Denver act.
         useDenver: (name: string) => `Use ${name} (Denver)`,
+        searchForAnother: 'Search for another',
         currentPhoto: 'current photo',
         keepPhoto: 'Keep current photo',
       },
