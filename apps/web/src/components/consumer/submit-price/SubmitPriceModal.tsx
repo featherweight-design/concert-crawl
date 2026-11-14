@@ -7,7 +7,8 @@ import { ShieldCheck } from 'lucide-react';
 import { ModalShell } from '@/components/consumer/modal-shell';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { PriceRailMark } from '../price-rail/PriceRailMark';
+import { PriceRailMark } from '@/components/consumer/price-rail/PriceRailMark';
+import { displayVendor } from '@/components/consumer/vendor-display';
 import { SPNumberField } from '../SPNumberField';
 import { ChipGroup } from '../ChipGroup';
 import { VendorField } from './VendorField';
@@ -1153,8 +1154,7 @@ function PendingStub({
     row.priceMax !== null && Number(row.priceMax) > Number(row.priceMin)
       ? `$${Number(row.priceMin)}–$${Number(row.priceMax)}`
       : `$${Number(row.priceMin)}`;
-  const vendor =
-    row.vendor === 'VenueBoxOffice' ? 'Venue box office' : row.vendor;
+  const vendor = displayVendor(row.vendor);
   return (
     <div
       data-testid="pending-stub"
@@ -1268,9 +1268,14 @@ function SuccessState({
       >
         {CONSUMER_COPY.submitPrice.success.body}
       </div>
-      {rows.map((row) => (
-        <PendingStub key={row.id} row={row} confirmsNeeded={confirmsNeeded} />
-      ))}
+      {/* A new price starts with no confirms. An edit may already have some, so
+          it draws no stub rather than claim "0 of N". One stub a row: the
+          boards draw the single-tier done screen only. */}
+      {rows
+        .filter((row) => !row.isEdit)
+        .map((row) => (
+          <PendingStub key={row.id} row={row} confirmsNeeded={confirmsNeeded} />
+        ))}
       <div
         style={{
           display: 'flex',
