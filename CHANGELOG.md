@@ -1,3 +1,17 @@
+# [1.471.0](https://github.com/featherweight-design/concert-crawl/compare/v1.470.1...v1.471.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** keep the docked panel on the dynamic viewport and settle the phone card test ([8bb9853](https://github.com/featherweight-design/concert-crawl/commit/8bb98534052324fa93417912a1f14c0f15a145a6))
+* **admin:** overlay the needs you panel below 1100 so the list keeps its width ([55975b0](https://github.com/featherweight-design/concert-crawl/commit/55975b04c6d84efd0e1f9f776eeaea608f1fe148))
+
+
+### Features
+
+* **admin:** needs you cards, docked panel and empty states at the board sizes ([3a3019d](https://github.com/featherweight-design/concert-crawl/commit/3a3019dba5d2c55273cbdc41c312420755cbcbbd))
+* **admin:** put the count on the price batch card's approve all ([49d92d7](https://github.com/featherweight-design/concert-crawl/commit/49d92d789ab29af9c0fdf83688ceda4d7aed2e85))
+
 ## [1.470.1](https://github.com/featherweight-design/concert-crawl/compare/v1.470.0...v1.470.1) (2026-11-14)
 
 
