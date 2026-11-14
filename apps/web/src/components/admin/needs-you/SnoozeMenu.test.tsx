@@ -90,7 +90,7 @@ describe('SnoozeMenu', () => {
     const { onNotUseful } = open();
     fireEvent.click(screen.getByText('Not useful…'));
     expect(
-      screen.getByText('Turn off “Crawl failing” for Fiddler’s Green?'),
+      screen.getByText("Turn off “Crawl failing” for Fiddler's Green?"),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('radio', { name: 'We already know why' }));
     fireEvent.change(screen.getByLabelText('Anything to add? (optional)'), {
