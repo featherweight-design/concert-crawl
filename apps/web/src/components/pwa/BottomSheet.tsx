@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { OVERLAY_COPY } from '@/components/ui/cc-overlay/definitions/copy';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
@@ -28,9 +29,9 @@ interface BottomSheetProps {
   closeVariant?: 'boxed' | 'bare';
   /**
    * `tight` is 20px side padding (24px bottom) instead of the default 24px all
-   * round, for boards drawn on a 20px gutter. `phone-tight` is `tight` on the
-   * phone sheet and the default 24px on the centered dialog (the share sheet
-   * boards draw both).
+   * round, for boards drawn on a 20px gutter. `phone-tight` is the share
+   * sheet's: an 18px gutter on the phone sheet (the close box 18px from the
+   * edge too) and the default 24px on the centered dialog, as its boards draw.
    */
   inset?: 'default' | 'tight' | 'phone-tight';
   /**
@@ -66,6 +67,13 @@ interface BottomSheetProps {
   eyebrowTone?: 'signal' | 'muted' | 'subtle';
   children: React.ReactNode;
 }
+
+// useLayoutEffect warns on the server; the portal host is client-only anyway.
+const useIsomorphicLayoutEffect =
+  typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+// The admin theme is a scoped wrapper, not <html>: see CCOverlayHost.
+const THEME_SCOPE = '[data-admin-theme]';
 
 // Whole class names, so Tailwind sees each one literally.
 const PHONE_EDGE = 'max-lg:sheet-edge';
@@ -103,8 +111,23 @@ export const BottomSheet = ({
   const drag = useSheetDrag(onClose, open);
   useBodyScrollLock(open);
 
+  // The sheet is portalled out of wherever it is mounted. Inline, `fixed` and
+  // z-[90] only rank inside the nearest stacking context: the event page's
+  // ShareButton sits in EventStage's `isolate` hero, so the page's later
+  // cards (Your move, Follow all) drew over the share sheet and took its
+  // clicks. Resolved in a layout effect so SSR and the first client render
+  // agree (no document on the server) and the sheet lands before paint. The
+  // admin theme scope wins over the body, as in CCOverlayHost, so an admin
+  // sheet keeps its tokens.
+  const [host, setHost] = useState<Element | null>(null);
+  useIsomorphicLayoutEffect(() => {
+    setHost(document.querySelector(THEME_SCOPE) ?? document.body);
+  }, []);
+
   useEffect(() => {
-    if (!open) return;
+    // Waits for the host too: a sheet mounted already open has no DOM to
+    // focus until the portal lands.
+    if (!open || host === null) return;
 
     previousFocus.current = document.activeElement;
     // The close button is always the first focusable, so focus never stays
@@ -152,11 +175,11 @@ export const BottomSheet = ({
         previousFocus.current.focus();
       }
     };
-  }, [open, onClose]);
+  }, [open, onClose, host]);
 
-  if (!open) return null;
+  if (!open || host === null) return null;
 
-  return (
+  return createPortal(
     // z-[90] puts this in the dialog band alongside ModalShell's scrim. At the
     // old z-50 it sat *below* the persistent feedback edge tab (then z-80, now
     // z-35 under every sheet), which drew over every sheet in the app and
@@ -201,7 +224,7 @@ export const BottomSheet = ({
             : inset === 'tight'
               ? 'px-4 pb-6 pt-5 min-[360px]:px-5'
               : inset === 'phone-tight'
-                ? 'px-4 pb-6 pt-5 min-[360px]:px-5 lg:p-6'
+                ? 'px-[18px] pb-6 pt-5 lg:p-6'
                 : 'p-6'
         } shadow-2xl focus:outline-none lg:inset-0 lg:m-auto lg:h-fit lg:w-full lg:rounded-2xl ${
           edgeFromSm
@@ -245,7 +268,8 @@ export const BottomSheet = ({
               : inset === 'tight'
                 ? '-mr-2.5'
                 : inset === 'phone-tight'
-                  ? '-mr-2.5 lg:-mr-3 lg:-mt-3'
+                  ? // The 30px box sits 7px inside its 44px target.
+                    '-mr-[7px] lg:-mr-3 lg:-mt-3'
                   : '-mr-3 -mt-3'
           }`}
           {...drag.zoneProps}
@@ -288,7 +312,8 @@ export const BottomSheet = ({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    host,
   );
 };
 
