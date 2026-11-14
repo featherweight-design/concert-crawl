@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { apiClient } from '@/lib/api';
+import { INVITE_CODES_HREF } from '@/lib/poster/posters-href';
 
 interface MintOptions {
   expiresIn: '7d' | '30d' | '90d' | 'never';
@@ -43,7 +44,7 @@ export async function mintInviteCodeWithOptions(
       },
     );
     // The Codes and Posters tabs both list codes.
-    revalidatePath('/admin/invite-codes', 'layout');
+    revalidatePath(INVITE_CODES_HREF, 'layout');
     return { ok: true, id: result.id, code: result.code };
   } catch (err) {
     return {

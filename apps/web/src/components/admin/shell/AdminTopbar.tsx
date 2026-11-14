@@ -100,8 +100,13 @@ export const AdminTopbar = () => {
 export const AdminPhoneHeader = ({ user }: { user: AdminShellUser }) => {
   const crumbs = useCrumbs();
   const { phoneBack } = usePageTitle();
-  // A view crumb (Events / Past) keeps the page's own title on the phone.
-  const title = [...crumbs].reverse().find((crumb) => !crumb.view)?.label ?? '';
+  // A view crumb (Events / Past) keeps the page's own title on the phone; a
+  // subtitle crumb (People / Invite codes) keeps it too, drawn underneath.
+  const last = crumbs.at(-1);
+  const subtitle = last?.subtitle ? last.label : null;
+  const title =
+    [...crumbs].reverse().find((crumb) => !crumb.view && !crumb.subtitle)
+      ?.label ?? '';
   // A page whose board draws "‹ Parent" (the venue page) shows that instead:
   // its own header carries the name, so the title bar would repeat it.
   if (phoneBack) {
@@ -137,21 +142,31 @@ export const AdminPhoneHeader = ({ user }: { user: AdminShellUser }) => {
         padding: '16px 16px 12px',
       }}
     >
-      <span
-        style={{
-          flex: 1,
-          minWidth: 0,
-          fontSize: 24,
-          fontWeight: 800,
-          letterSpacing: '-0.02em',
-          color: 'var(--fg)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {title}
-      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 24,
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            color: 'var(--fg)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {title}
+        </div>
+        {subtitle !== null && (
+          // `07/invite-codes-mobile`, `07/posters-mobile`: 12.5px muted, 2px
+          // under the title.
+          <div
+            data-testid="admin-phone-subtitle"
+            style={{ fontSize: 12.5, color: 'var(--fg-muted)', marginTop: 2 }}
+          >
+            {subtitle}
+          </div>
+        )}
+      </div>
       <PhoneUserMenu user={user} />
     </header>
   );

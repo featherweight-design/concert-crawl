@@ -3,6 +3,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 import { apiClient } from '@/lib/api';
+import { INVITE_CODES_HREF } from '@/lib/poster/posters-href';
 import type { InviteCode } from '@concert-crawl/types';
 
 async function getToken(): Promise<string> {
@@ -20,11 +21,11 @@ export async function generateInviteCode(formData: FormData): Promise<void> {
     expiresAt: expiresAt || undefined,
   });
 
-  revalidatePath('/admin/invite-codes');
+  revalidatePath(INVITE_CODES_HREF);
 }
 
 export async function revokeInviteCode(id: string): Promise<void> {
   const token = await getToken();
   await apiClient.post(`/v1/admin/invite-codes/${id}/revoke`, token, {});
-  revalidatePath('/admin/invite-codes');
+  revalidatePath(INVITE_CODES_HREF);
 }

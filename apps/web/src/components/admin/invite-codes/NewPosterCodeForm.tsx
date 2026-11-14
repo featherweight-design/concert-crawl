@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, type FormEvent } from 'react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { mintInviteCodeWithOptions } from '@/app/(protected)/admin/invite-codes/actions';
+import { mintInviteCodeWithOptions } from '@/app/(protected)/admin/people/invite-codes/actions';
 import { POSTER_MIN_SEATS, parseSeats } from '@/lib/poster/poster-rule';
 
 const copy = ADMIN_COPY.inviteCodes.poster.form;

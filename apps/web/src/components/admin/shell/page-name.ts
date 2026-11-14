@@ -14,7 +14,6 @@ const PAGE_NAMES = new Map<string, string>([
   ['prices', ADMIN_COPY.pricesPage.title],
   ['people', ADMIN_COPY.peoplePage.title],
   ['users', ADMIN_COPY.peoplePage.title],
-  ['invite-codes', ADMIN_COPY.codesPage.title],
   ['feature-flags', ADMIN_COPY.featureFlags.sectionTitle],
   ['crawl', ADMIN_COPY.crawlPage.sectionTitle],
   ['feedback', ADMIN_COPY.feedback.title],

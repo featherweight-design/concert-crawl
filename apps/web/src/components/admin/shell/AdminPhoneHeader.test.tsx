@@ -4,8 +4,10 @@ import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
+const route = vi.hoisted(() => ({ pathname: '/admin/venues/venue-1' }));
+
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/admin/venues/venue-1',
+  usePathname: () => route.pathname,
   useSearchParams: () => new URLSearchParams(''),
 }));
 vi.mock('./AdminUserMenu', () => ({
@@ -38,7 +40,10 @@ const renderHeader = (back?: PhoneBack) =>
     </PageTitleProvider>,
   );
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  route.pathname = '/admin/venues/venue-1';
+});
 
 describe('AdminPhoneHeader', () => {
   it('shows the page title and the account menu by default', () => {
@@ -86,5 +91,36 @@ describe('AdminPhoneHeader', () => {
     );
     expect(screen.queryByTestId('admin-phone-back')).toBeNull();
     expect(screen.getByText('Hi-Dive')).toBeInTheDocument();
+  });
+
+  // `07/invite-codes-mobile`, `07/posters-mobile`: "People" with the tab
+  // under it at 12.5px muted, 2px down.
+  it.each([
+    ['/admin/people/invite-codes', 'Invite codes'],
+    ['/admin/people/invite-codes/posters', 'Posters'],
+  ])('titles %s People with %s underneath', (pathname, tab) => {
+    route.pathname = pathname;
+    render(
+      <PageTitleProvider>
+        <AdminPhoneHeader user={user} />
+      </PageTitleProvider>,
+    );
+    expect(screen.getByText('People')).toBeInTheDocument();
+    const subtitle = screen.getByTestId('admin-phone-subtitle');
+    expect(subtitle).toHaveTextContent(tab);
+    expect(subtitle.style.fontSize).toBe('12.5px');
+    expect(subtitle.style.color).toBe('var(--fg-muted)');
+    expect(subtitle.style.marginTop).toBe('2px');
+  });
+
+  it('draws no second line on People itself', () => {
+    route.pathname = '/admin/people';
+    render(
+      <PageTitleProvider>
+        <AdminPhoneHeader user={user} />
+      </PageTitleProvider>,
+    );
+    expect(screen.getByText('People')).toBeInTheDocument();
+    expect(screen.queryByTestId('admin-phone-subtitle')).toBeNull();
   });
 });

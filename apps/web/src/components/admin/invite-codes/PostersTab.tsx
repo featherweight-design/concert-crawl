@@ -19,7 +19,11 @@ import { downloadBlob } from '@/lib/download-blob';
 import { qrSvg, type QrPath } from '@/lib/poster/poster-rule';
 import type { PosterVenueData } from '@/lib/poster/load-poster-venues';
 import { DENVER_TIME_ZONE } from '@/lib/time';
-import { postersHref, type PosterSelection } from '@/lib/poster/posters-href';
+import {
+  INVITE_CODES_HREF,
+  postersHref,
+  type PosterSelection,
+} from '@/lib/poster/posters-href';
 import { InviteCodesTabs } from './InviteCodesTabs';
 import { NewPosterCodeForm } from './NewPosterCodeForm';
 import { PosterFit } from './PosterFit';
@@ -142,7 +146,7 @@ export function PostersTab({
 
   return (
     <div className="poster-page pt-page" data-testid="posters-tab">
-      <Link href="/admin/invite-codes" prefetch={false} className="pt-back">
+      <Link href={INVITE_CODES_HREF} prefetch={false} className="pt-back">
         <ArrowLeft size={16} aria-hidden />
         {copy.tabs.label}
       </Link>

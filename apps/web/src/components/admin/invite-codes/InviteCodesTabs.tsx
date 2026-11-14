@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { INVITE_CODES_HREF, POSTERS_PATH } from '@/lib/poster/posters-href';
 
 const copy = ADMIN_COPY.inviteCodes.poster.tabs;
 
 const TABS = [
-  { key: 'codes', label: copy.codes, href: '/admin/invite-codes' },
-  { key: 'posters', label: copy.posters, href: '/admin/invite-codes/posters' },
+  { key: 'codes', label: copy.codes, href: INVITE_CODES_HREF },
+  { key: 'posters', label: copy.posters, href: POSTERS_PATH },
 ] as const;
 
 /** Codes and Posters, the invite-codes admin's two pages, as underline tabs. */

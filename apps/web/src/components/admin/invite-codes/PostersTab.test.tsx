@@ -17,7 +17,7 @@ const { mint } = vi.hoisted(() => ({
     code: 'BETA-NEW0-0000',
   })),
 }));
-vi.mock('@/app/(protected)/admin/invite-codes/actions', () => ({
+vi.mock('@/app/(protected)/admin/people/invite-codes/actions', () => ({
   mintInviteCodeWithOptions: mint,
 }));
 
@@ -59,7 +59,7 @@ const sheet = () => screen.getByTestId('poster-sheet');
 
 describe('PostersTab', () => {
   beforeEach(() => {
-    window.history.replaceState(null, '', '/admin/invite-codes/posters');
+    window.history.replaceState(null, '', '/admin/people/invite-codes/posters');
   });
   afterEach(() => {
     cleanup();
@@ -166,7 +166,7 @@ describe('PostersTab', () => {
       window.history.replaceState(
         null,
         '',
-        `/admin/invite-codes/posters?code=${code}&look=paper`,
+        `/admin/people/invite-codes/posters?code=${code}&look=paper`,
       );
       renderTab(CARDS, code);
       expect(screen.getByRole('alert')).toHaveTextContent(

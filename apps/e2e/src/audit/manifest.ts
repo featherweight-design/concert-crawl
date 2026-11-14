@@ -362,7 +362,7 @@ const manifest: AuditManifest = validateManifest([
   },
   {
     id: 'admin-invite-codes',
-    path: '/admin/invite-codes',
+    path: '/admin/people/invite-codes',
     tags: ['admin'],
     auth: 'admin',
   },

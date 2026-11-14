@@ -88,8 +88,9 @@ export const NewCodePanel = ({
 
   return (
     <CodeSurface
-      title={COPY.newTitle}
-      label={COPY.newTitle}
+      title={isPhone ? COPY.newTitle : COPY.newPanelTitle}
+      label={isPhone ? COPY.newTitle : COPY.newPanelTitle}
+      bareHeader
       // Dismissal stays on and is refused here while saving: toggling the
       // surface's `dismissible` re-runs its focus trap and drops focus.
       onClose={() => {

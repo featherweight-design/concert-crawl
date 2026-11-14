@@ -33,10 +33,22 @@ describe('buildBreadcrumbs', () => {
     ]);
   });
 
-  it('labels the invite codes Posters page Posters', () => {
-    expect(buildBreadcrumbs('/admin/invite-codes/posters')).toEqual([
-      { label: 'Invite codes', href: '/admin/invite-codes' },
-      { label: 'Posters' },
+  // `07/invite-codes` draws "People / Invite codes"; Posters sits beside it.
+  it('puts Invite codes and Posters under People', () => {
+    expect(buildBreadcrumbs('/admin/people/invite-codes')).toEqual([
+      { label: 'People', href: '/admin/people' },
+      { label: 'Invite codes', subtitle: true },
+    ]);
+    expect(buildBreadcrumbs('/admin/people/invite-codes/posters')).toEqual([
+      { label: 'People', href: '/admin/people' },
+      { label: 'Posters', subtitle: true },
+    ]);
+  });
+
+  it('keeps a person under People / Details', () => {
+    expect(buildBreadcrumbs('/admin/people/user_1')).toEqual([
+      { label: 'People', href: '/admin/people' },
+      { label: 'Details' },
     ]);
   });
 

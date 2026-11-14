@@ -29,6 +29,7 @@ export const CodeSurface = ({
   fullScreen = false,
   dismissible = true,
   footerLayout = 'end',
+  bareHeader = false,
 }: {
   title: ReactNode;
   /** The accessible name when `title` is a node. */
@@ -41,6 +42,12 @@ export const CodeSurface = ({
   dismissible?: boolean;
   /** The desktop panel's footer layout; see `SidePanel`. */
   footerLayout?: 'end' | 'ruled';
+  /**
+   * Desktop only: no INVITE CODE eyebrow, the title beside the close button
+   * (`12/code-taken-d`, the new-code panel). The code and edit panels keep
+   * the eyebrow (`07/a-code-in-flow`, `07/edit-an-invite-code`).
+   */
+  bareHeader?: boolean;
 }) => {
   const isPhone = useIsPhone();
   const sub = subtitle ? { subtitle } : {};
@@ -61,7 +68,9 @@ export const CodeSurface = ({
   }
   return (
     <SidePanel
-      eyebrow={<KindLabel kind="inviteCode" />}
+      {...(bareHeader
+        ? { titleInHeader: true }
+        : { eyebrow: <KindLabel kind="inviteCode" /> })}
       title={title}
       {...sub}
       footer={footer}

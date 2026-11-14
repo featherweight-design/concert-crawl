@@ -56,8 +56,6 @@ const detailFor = (key: NavKey, data: AdminMoreDetails): string => {
       );
     case 'people':
       return details.people;
-    case 'invite-codes':
-      return '';
     case 'feature-flags':
       return counted(
         data.featureFlags,
@@ -87,13 +85,8 @@ const MORE_GROUPS: Array<Exclude<NavGroup, 'primary'>> = ['manage', 'system'];
  * tab bar has no room for it (`07/more-mobile`).
  */
 const itemsFor = (group: Exclude<NavGroup, 'primary'>) => {
-  // The interim Invite codes row is drawn only in the sidebar (#178 item 8);
-  // the More board has no such row, so phones reach it by URL until 5b.
   const items = NAV.filter(
-    (item) =>
-      item.group === group &&
-      !TAB_BAR.includes(item.key) &&
-      item.key !== 'invite-codes',
+    (item) => item.group === group && !TAB_BAR.includes(item.key),
   );
   if (group !== 'manage') return items;
   const health = NAV.filter((item) => item.key === 'health');
