@@ -18,7 +18,9 @@ import {
   AdminDialog,
   AdminSheet,
   SaveFailedToast,
+  Spinner,
   useIsPhone,
+  useIsPhoneResolved,
 } from '@/components/admin/primitives';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { apiClient } from '@/lib/api';
@@ -122,24 +124,11 @@ const useEstimate = () => {
   };
 };
 
-/** The drawn spinner (`09/crawl-all-starting-m`, as Load more's). */
-const Spinner = ({ size }: { size: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2.4}
-    strokeLinecap="round"
-    aria-hidden
-    className="motion-safe:animate-spin"
-    style={{ flex: 'none' }}
-  >
-    <circle cx={12} cy={12} r={9} opacity={0.25} />
-    <path d="M21 12a9 9 0 00-9-9" />
-  </svg>
-);
+/**
+ * POST /v1/admin/crawl's 202 body. `count` is how many triggers it wrote: 0
+ * when every venue became ineligible after the estimate was read.
+ */
+const postSchema = z.object({ data: z.object({ count: z.number() }) });
 
 /** 44px on the phone sheet, 38px in the desktop modal, 9px corners on both. */
 const buttonSize = (phone: boolean): CSSProperties =>
@@ -167,7 +156,10 @@ export interface CrawlAllDialogProps {
  * failed and none states). Render it only while open.
  */
 export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
-  const phone = useIsPhone();
+  // Null until the media query is read, so a phone never paints the desktop
+  // modal for a frame first.
+  const resolvedPhone = useIsPhoneResolved();
+  const phone = resolvedPhone === true;
   const { state: estimateState, retry } = useEstimate();
   const [post, setPost] = useState<PostState>('idle');
   const postingRef = useRef(false);
@@ -179,6 +171,14 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
     try {
       const res = await fetch(CRAWL_ALL_ENDPOINT, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const parsed = postSchema.safeParse(await res.json().catch(() => null));
+      if (parsed.success && parsed.data.data.count === 0) {
+        // Nothing was queued: everything went ineligible since the count was
+        // read. Count again so the dialog says what is true now.
+        setPost('idle');
+        retry();
+        return;
+      }
       onStarted();
     } catch (err: unknown) {
       console.warn('CrawlAllDialog: could not start the crawl', { err });
@@ -321,6 +321,8 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
     );
   }
 
+  if (resolvedPhone === null) return null;
+
   if (phone) {
     return (
       <AdminSheet
@@ -328,9 +330,20 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
         label={title}
         subtitle={
           body && (
+            // Its own scroller, so a long Skipped list never pushes the
+            // buttons off screen. It stays here rather than in the sheet's
+            // scrolling children because the board draws it 6px under the
+            // title, and the children sit the sheet's 12px gap below it. The
+            // cap is the sheet's 90% less its fixed chrome (handle, title,
+            // Tonight's line, buttons, gaps and padding, about 200px).
             <div
               data-testid="crawl-all-body"
-              style={{ ...muted, marginTop: 2 }}
+              style={{
+                ...muted,
+                marginTop: 2,
+                maxHeight: 'calc(90dvh - 200px - env(safe-area-inset-bottom))',
+                overflowY: 'auto',
+              }}
             >
               {body}
             </div>
@@ -338,11 +351,14 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
         }
         onClose={onClose}
         dismissible={!posting}
+        // None: Close first in the DOM so focus opens on it, painted below
+        // Open Venues as drawn.
+        footerReversed={none}
         footer={
           none ? (
             <>
-              {openVenues}
               {cancel}
+              {openVenues}
             </>
           ) : (
             // Cancel first in the DOM, so focus opens on it; it still paints

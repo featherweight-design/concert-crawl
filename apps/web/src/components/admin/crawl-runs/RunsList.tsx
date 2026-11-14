@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react';
 import { Check } from 'lucide-react';
 import type { VenueLastFullRun } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { AdminButton } from '@/components/admin/primitives';
+import { AdminButton, Spinner } from '@/components/admin/primitives';
 import {
   runOutcome,
   shortDate,
@@ -362,20 +362,7 @@ export const LoadMoreFooter = ({
       >
         {state === 'loading' ? (
           <>
-            <svg
-              width={13}
-              height={13}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.4}
-              strokeLinecap="round"
-              aria-hidden
-              className="motion-safe:animate-spin"
-            >
-              <circle cx={12} cy={12} r={9} opacity={0.25} />
-              <path d="M21 12a9 9 0 00-9-9" />
-            </svg>
+            <Spinner size={13} />
             {COPY.loading}
           </>
         ) : state === 'failed' ? (
