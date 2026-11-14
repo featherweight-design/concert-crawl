@@ -1,3 +1,21 @@
+# [1.452.0](https://github.com/featherweight-design/concert-crawl/compare/v1.451.1...v1.452.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** centre the phone column at 640 on settings, submitted prices and search ([c48a09f](https://github.com/featherweight-design/concert-crawl/commit/c48a09fcf01fb1f2d8b31e5f74a0b99099693d67))
+* **web:** drop admin people loads that settle after unmount ([546ecb1](https://github.com/featherweight-design/concert-crawl/commit/546ecb1ca2a6217c117ba59d19b90371604d7c43))
+* **web:** follow a dropped ?handle= and skip empty handles ([116ffa2](https://github.com/featherweight-design/concert-crawl/commit/116ffa229207035b4a4d7e223c0d69971f1fe31b))
+* **web:** scroll the inspect well to Stopped here in a layout effect ([933b05f](https://github.com/featherweight-design/concert-crawl/commit/933b05f6070da83f67452fe3d45e74d205987410))
+* **web:** the Add sheet ring takes the tile's own radius ([8f0f58f](https://github.com/featherweight-design/concert-crawl/commit/8f0f58f6fcdabcaf7e37911281e1c9073f6d3b47))
+
+
+### Features
+
+* **admin:** name the Denver act on the artist pick and ring the picked card ([2e9503b](https://github.com/featherweight-design/concert-crawl/commit/2e9503b00998aad5fb65368d5b15c5881f0b6138))
+* the Add sheet rings each row's art in its lead genre ([468f693](https://github.com/featherweight-design/concert-crawl/commit/468f693fe9507ddac7bc3c487171a1ebe57de4d4))
+* **web:** add See their Submitted prices to the person menu ([48168e5](https://github.com/featherweight-design/concert-crawl/commit/48168e5512176925edd8f1708e4d47210ed1b120))
+
 ## [1.451.1](https://github.com/featherweight-design/concert-crawl/compare/v1.451.0...v1.451.1) (2026-11-14)
 
 
