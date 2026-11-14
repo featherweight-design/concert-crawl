@@ -98,7 +98,10 @@ export type VenueStatusVenue = Pick<
   | 'blockedAt'
   | 'consecutiveFailures'
   | 'robotsTxtAllowed'
->;
+> & {
+  /** A pause with a reason is a hand pause, never an auto-pause. */
+  crawlPauseReason?: Venue['crawlPauseReason'];
+};
 
 /**
  * One venue status everywhere (rule 2): on the site, then crawling, always in

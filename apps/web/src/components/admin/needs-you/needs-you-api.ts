@@ -12,6 +12,7 @@ import type {
   CrawlRunReason,
   NeedsYouCount,
   NeedsYouKind,
+  CrawlPauseReason,
 } from '@concert-crawl/types';
 import { RUN_REASONS } from '../venues/overview/overview-data';
 import {
@@ -148,6 +149,7 @@ export interface QueueRow {
   venueLive: boolean | null;
   /** When crawling was paused (an ISO instant), or null. */
   pausedAt: string | null;
+  pauseReason: CrawlPauseReason | null;
   blockedAt: string | null;
   consecutiveFailures: number;
   robotsTxtAllowed: boolean | null;
@@ -263,6 +265,16 @@ const moveToFrom = (value: unknown): MoveTo | null =>
       }
     : null;
 
+const PAUSE_REASONS: readonly CrawlPauseReason[] = [
+  'waiting_on_permission',
+  'site_broken_or_moved',
+  'other',
+];
+
+/** An admin pause's reason, or null for none or a word we do not know. */
+const pauseReasonOf = (value: unknown): CrawlPauseReason | null =>
+  PAUSE_REASONS.find((reason) => reason === value) ?? null;
+
 const textOf = (value: unknown): string | null =>
   isText(value) ? value : null;
 
@@ -373,6 +385,7 @@ const rowFrom = (value: unknown): QueueRow | null => {
     lastRuns: runsFrom(value['lastRuns']),
     venueLive: isBoolean(value['venueLive']) ? value['venueLive'] : null,
     pausedAt: isText(value['pausedAt']) ? value['pausedAt'] : null,
+    pauseReason: pauseReasonOf(value['pauseReason']),
     blockedAt: isText(value['blockedAt']) ? value['blockedAt'] : null,
     consecutiveFailures: numberOf(value['consecutiveFailures']) ?? 0,
     robotsTxtAllowed:
