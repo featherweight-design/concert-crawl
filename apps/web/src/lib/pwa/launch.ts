@@ -99,11 +99,13 @@ export const LAUNCH_DETECT =
   'if(m("(prefers-reduced-motion: reduce)").matches)return;' +
   `if(w.sessionStorage.getItem("${LAUNCH_PLAYED_KEY}"))return;` +
   'var d=document.documentElement;' +
-  `d.setAttribute("${LAUNCH_ATTR}","1");` +
+  // The variables go first: the overlay shows on the attribute, and without
+  // `--ll-total` its animation computes to none and never ends.
   'd.style.setProperty("--ll-w",String(w.innerWidth));' +
   'd.style.setProperty("--ll-h",String(w.innerHeight));' +
   `d.style.setProperty("--ll-total","${LAUNCH_MS.total}ms");` +
   `d.style.setProperty("--ll-dot","${LAUNCH_DOT_MS}ms");` +
+  `d.setAttribute("${LAUNCH_ATTR}","1");` +
   // The overlay's own animationend ends it, but a document with no overlay
   // (sign-in, onboarding, admin) or a hydration later than the animation would
   // leave the attribute set, and a later client navigation into the shell would
