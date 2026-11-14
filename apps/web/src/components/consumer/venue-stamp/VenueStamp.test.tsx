@@ -93,6 +93,27 @@ describe('VenueStamp', () => {
     expect(container.querySelector('[data-venue-stamp-fallback]')).toBeNull();
   });
 
+  // The Watching going prompt (`bp-watching`) draws the ghost stamp in the
+  // venue's own colour, still dashed and still faint.
+  it('tints a dashed stamp in the venue colour when asked', () => {
+    const { container } = render(
+      <VenueStamp {...KNOWN} variant="dashed" size={58} tinted />,
+    );
+    const ring = ringOf(container).getAttribute('stroke');
+    expect(ring).not.toBe('var(--border-strong)');
+    expect(ringOf(container).getAttribute('stroke-dasharray')).toBe(
+      DASHED_RING,
+    );
+    const faint = container.querySelector<SVGGElement>(
+      '[data-venue-stamp-glyph]',
+    );
+    expect(faint?.style.opacity).toBe(String(DASHED_GLYPH_OPACITY));
+    expect(faint?.style.filter).toBe('');
+    expect(
+      container.querySelector('[data-venue-glyph] > g')?.getAttribute('stroke'),
+    ).not.toBe('var(--fg-subtle)');
+  });
+
   // The boards' upcoming stamp: one grey dashed ring, a faint grey glyph.
   it('draws an upcoming show as one grey dashed ring around a faint grey glyph', () => {
     const { container } = render(

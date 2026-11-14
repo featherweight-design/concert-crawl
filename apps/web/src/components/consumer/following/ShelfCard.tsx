@@ -198,8 +198,10 @@ export const ShelfCard = ({
           className="font-semibold"
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '11px',
-            color: price !== null ? 'var(--signal)' : 'var(--fg-subtle)',
+            // The board draws the price white at 12px, not cyan at 11
+            // (`bp-browse`, `bp-m-browse_m`).
+            fontSize: '12px',
+            color: price !== null ? 'var(--fg)' : 'var(--fg-subtle)',
           }}
         >
           {price ?? FOLLOWING_COPY.cardPriceTba}

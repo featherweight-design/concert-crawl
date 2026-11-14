@@ -59,6 +59,13 @@ interface VenueStampProps {
    * the stamp sits beside text that already says it.
    */
   labelled?: boolean;
+  /**
+   * A dashed stamp in the venue's own colour instead of grey: the Watching
+   * going prompt draws the ghost stamp this way (`bp-watching`), amber for the
+   * Fillmore, orange for Red Rocks, pink for the Church. Ignored on a solid
+   * stamp.
+   */
+  tinted?: boolean;
 }
 
 /**
@@ -76,6 +83,7 @@ export function VenueStamp({
   variant = 'solid',
   size = 28,
   labelled = false,
+  tinted = false,
 }: VenueStampProps) {
   const colors = stampColorsFor(venueSlug);
   const glyphKey = venueGlyphKey(venueSlug);
@@ -88,8 +96,12 @@ export function VenueStamp({
   const glyphBox = size * GLYPH_SHARE;
   const glyphOffset = (size - glyphBox) / 2;
   const artInset = centre - (dashed ? rings.outer : rings.inner);
+  const inVenueColour = dashed && tinted;
   const faint = dashed
-    ? { opacity: DASHED_GLYPH_OPACITY, filter: 'grayscale(1)' }
+    ? {
+        opacity: DASHED_GLYPH_OPACITY,
+        ...(inVenueColour ? {} : { filter: 'grayscale(1)' }),
+      }
     : undefined;
 
   return (
@@ -145,7 +157,7 @@ export function VenueStamp({
             cy={centre}
             r={rings.outer}
             fill="none"
-            stroke="var(--border-strong)"
+            stroke={inVenueColour ? colors.ring : 'var(--border-strong)'}
             strokeWidth={DASHED_STROKE}
             strokeDasharray={DASHED_RING}
           />
@@ -184,7 +196,9 @@ export function VenueStamp({
             >
               <GlyphShapes
                 glyphKey={glyphKey}
-                paint={dashed ? 'var(--fg-subtle)' : colors.glyph}
+                paint={
+                  dashed && !inVenueColour ? 'var(--fg-subtle)' : colors.glyph
+                }
                 strokeWidth={glyphStrokeFor(size)}
               />
             </svg>

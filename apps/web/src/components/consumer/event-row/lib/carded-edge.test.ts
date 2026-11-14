@@ -12,7 +12,7 @@ describe('cardedEdge', () => {
 
   it('fades the genre into the surface from the left', () => {
     expect(cardedEdge('var(--genre-soul)').background).toBe(
-      'linear-gradient(90deg, color-mix(in oklch, var(--genre-soul) 7%, var(--surface-1)), var(--surface-1) 45%)',
+      'linear-gradient(90deg, color-mix(in oklch, var(--genre-soul) 10%, color-mix(in oklch, var(--bg-elevated) 72%, transparent)), color-mix(in oklch, var(--bg-elevated) 72%, transparent) 45%)',
     );
     expect(cardedEdge('var(--genre-soul)').backgroundImage).toBeUndefined();
   });
@@ -23,7 +23,7 @@ describe('cardedEdge', () => {
     const style = cardedEdge('var(--genre-soul)', { hoverSafe: true });
     expect(style.background).toBeUndefined();
     expect(style.backgroundImage).toBe(
-      'linear-gradient(90deg, color-mix(in oklch, var(--genre-soul) 7%, transparent), transparent 45%)',
+      'linear-gradient(90deg, color-mix(in oklch, var(--genre-soul) 10%, transparent), transparent 45%)',
     );
     expect(style.borderLeftWidth).toBe(2);
     expect(style.borderLeftColor).toBe('var(--genre-soul)');

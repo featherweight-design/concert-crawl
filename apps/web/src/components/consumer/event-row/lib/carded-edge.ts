@@ -10,6 +10,9 @@ interface CardedEdgeOptions {
   hoverSafe?: boolean;
 }
 
+/** The card fill: `--bg-elevated` at 72%, translucent so the page shows through. */
+const CARD_FILL = 'color-mix(in oklch, var(--bg-elevated) 72%, transparent)';
+
 /**
  * A carded row's genre treatment (B+ rule 2): the 2px left edge in the lead
  * genre's color, fading into the card's surface. One recipe, so every carded
@@ -25,9 +28,12 @@ export const cardedEdge = (
   borderLeftColor: genre,
   ...(hoverSafe
     ? {
-        backgroundImage: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, transparent), transparent 45%)`,
+        backgroundImage: `linear-gradient(90deg, color-mix(in oklch, ${genre} 10%, transparent), transparent 45%)`,
       }
     : {
-        background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, var(--surface-1)), var(--surface-1) 45%)`,
+        // The board draws 10% genre into a translucent `--bg-elevated`, so the
+        // page glow shows through the row (`bp-browse`, `bp-m-browse_m`); it
+        // was 7% into the opaque `--surface-1`.
+        background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 10%, ${CARD_FILL}), ${CARD_FILL} 45%)`,
       }),
 });

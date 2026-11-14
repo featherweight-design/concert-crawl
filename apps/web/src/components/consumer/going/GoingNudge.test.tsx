@@ -26,13 +26,14 @@ const renderNudge = () => {
   return { onYes, onDismiss };
 };
 
-// `bp-watching`, `bp-m-watching_m`: a darker inset panel with no outline, and
-// only a 3px left bar in the show's stamp colour.
+// `bp-watching`, `bp-m-watching_m`: a lifted inset panel with no outline; on
+// the phone only, a 3px left bar in the show's stamp colour.
 describe('GoingNudge panel', () => {
-  it('has a left bar and no outline, and a sans sub-line on a phone', () => {
+  it('has a phone-only left bar and no outline, and a sans sub-line on a phone', () => {
     renderNudge();
     const panel = screen.getByTestId('going-nudge');
-    expect(panel.style.borderLeftWidth).toBe('3px');
+    expect(panel.className).toContain('border-l-[3px]');
+    expect(panel.className).toContain('sm:border-l-0');
     expect(panel.style.borderTopWidth).toBe('0px');
     expect(panel.style.borderRightWidth).toBe('0px');
     expect(panel.style.borderBottomWidth).toBe('0px');
@@ -127,6 +128,11 @@ describe('GoingNudge', () => {
       .getByTestId('going-nudge-stamp')
       .querySelector('[data-venue-stamp]');
     expect(stamp?.getAttribute('data-venue-stamp')).toBe('dashed');
+    // In the venue's own colour (`bp-watching`), not grey.
+    const ring = screen
+      .getByTestId('going-nudge-stamp')
+      .querySelector('[data-venue-stamp-ring]');
+    expect(ring?.getAttribute('stroke')).not.toBe('var(--border-strong)');
     expect(
       screen
         .getByTestId('going-nudge-stamp')

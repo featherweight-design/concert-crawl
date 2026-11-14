@@ -49,10 +49,11 @@ const StatTile = ({
     <dd
       // A long venue wraps onto a second line in its third on a phone, as the
       // boards draw "Mission Ballroom", rather than cutting to "Larim…".
-      className="truncate max-sm:whitespace-normal"
+      // The values are 28px on the phone and about 44 from sm up
+      // (`bp-concerts`), not 28 at every width.
+      className="truncate text-[28px] max-sm:whitespace-normal sm:text-[44px]"
       style={{
         fontFamily: 'var(--font-ui)',
-        fontSize: 28,
         fontWeight: 900,
         letterSpacing: '-0.025em',
         fontVariantNumeric: 'tabular-nums',

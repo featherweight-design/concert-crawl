@@ -55,7 +55,7 @@ describe('PassportTeaser', () => {
     render(<PassportTeaser stats={STATS} shows={SHOWS} />);
 
     expect(screen.getByText(COPY.headline)).toBeInTheDocument();
-    expect(screen.getByText(COPY.summary(4, 2, 'indie'))).toBeInTheDocument();
+    expect(screen.getByText(COPY.summary(4, 2))).toBeInTheDocument();
   });
 
   // addendum-2 concerts-round-stamps: "PASSPORT · 2026", "Your Passport", "Open it →".
@@ -90,7 +90,9 @@ describe('PassportTeaser', () => {
       />,
     );
 
-    expect(screen.getByText('1 night · 1 venue · indie')).toBeInTheDocument();
+    expect(screen.getByText('1 night · 1 venue')).toBeInTheDocument();
+    // The boards draw no top genre on the teaser.
+    expect(screen.queryByText(/indie/)).toBeNull();
   });
 
   it('links to the Passport page now that #85 has shipped one', () => {
