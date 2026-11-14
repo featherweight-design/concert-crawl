@@ -1,3 +1,26 @@
+# [1.435.0](https://github.com/featherweight-design/concert-crawl/compare/v1.434.0...v1.435.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** bring the admin button kit, chips, dialogs and nav icons to the boards ([a8dac4a](https://github.com/featherweight-design/concert-crawl/commit/a8dac4af4a5e10246f40b9dc59b5a0071b243ff3))
+* **web:** crawl-all last fixes: toast gap and cross per board, CSS-sized trigger ([ae73372](https://github.com/featherweight-design/concert-crawl/commit/ae733726190c98ebdea64af082caef4a68fd3e33))
+* **web:** crawl-all review fixes: reachable buttons, no desktop flash, true copy ([2edac05](https://github.com/featherweight-design/concert-crawl/commit/2edac05a4937ab8b30e14b8b198ce3dd8b67f52e))
+* **web:** crawl-all risk fixes: no next crawl outside prod, real queued count ([0e90806](https://github.com/featherweight-design/concert-crawl/commit/0e90806b6381626df12a73d28dd3200e5f1f658b))
+* **web:** draw the venue save bars as their boards do ([618a321](https://github.com/featherweight-design/concert-crawl/commit/618a321747e0da6a427f13b4f17c9ddf0ebbdd28))
+* **web:** make the admin dialog eyebrow optional and skip its line when absent ([6461b20](https://github.com/featherweight-design/concert-crawl/commit/6461b20e8b85de71b0f3a7155853567211febb46))
+* **web:** match the crawl-all dialog and the failed toast to their boards ([034a2ce](https://github.com/featherweight-design/concert-crawl/commit/034a2ce8298064a5a20370c46a7d2fac07aaebe3))
+* **web:** measured admin button, dialog and sheet values from the 07 boards ([261497f](https://github.com/featherweight-design/concert-crawl/commit/261497fb3c5777dcf1ca1d3c76da4fd06aafc703))
+* **web:** name the next nightly's real time in the crawl-all confirm ([97a0cf8](https://github.com/featherweight-design/concert-crawl/commit/97a0cf8937a44ec1c346d34bd263f871355f4af4))
+* **web:** pin the desktop Details save bar inside the pane scroller ([105fd1a](https://github.com/featherweight-design/concert-crawl/commit/105fd1a028d65d554855475556d2c1b662009d93))
+* **web:** prove the pane slot in the shell and keep the drawn page gap ([39f8ed6](https://github.com/featherweight-design/concert-crawl/commit/39f8ed66fcf429d41ee9bb91a6885eddb0e283ac))
+* **web:** run the desktop Details save bar across the pane as drawn ([d8cf3a8](https://github.com/featherweight-design/concert-crawl/commit/d8cf3a8dfccb6d8775933c76dde61e6f8eca9bb4))
+
+
+### Features
+
+* **web:** confirm Crawl all venues with who is skipped and what it costs ([339e9b7](https://github.com/featherweight-design/concert-crawl/commit/339e9b7c4fab3a25d25232f9bd5ef6e1419df003))
+
 # [1.434.0](https://github.com/featherweight-design/concert-crawl/compare/v1.433.0...v1.434.0) (2026-11-14)
 
 
