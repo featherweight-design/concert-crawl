@@ -345,13 +345,16 @@ describe('ErrorTellUsCard', () => {
     const tag = await screen.findByText(copy.tagSending);
     expect(tag.style.color).toBe('var(--signal)');
     expect(screen.queryByText(copy.tagOpen)).toBeNull();
+    // Still focusable (so focus never drops mid-send), but inert and dimmed.
     for (const chip of screen.getAllByRole('radio')) {
-      expect((chip as HTMLButtonElement).disabled).toBe(true);
+      expect(chip.getAttribute('aria-disabled')).toBe('true');
     }
     expect(
-      (screen.getByRole('button', { name: copy.cancel }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+      screen
+        .getByRole('button', { name: copy.cancel })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
+    expect(tag.getAttribute('role')).toBe('status');
     expect(screen.getByRole('radiogroup').style.opacity).toBe('0.4');
 
     finish();

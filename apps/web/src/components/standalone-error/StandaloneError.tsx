@@ -107,7 +107,7 @@ const BrokenMark = () => (
       border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
     }}
   >
-    <svg width="100%" height="68%" viewBox="0 0 96 96" focusable="false">
+    <svg width="49" height="49" viewBox="0 0 96 96" focusable="false">
       <circle cx="72" cy="24" r="20" fill="var(--danger)" opacity="0.22" />
       <circle cx="72" cy="24" r="12" fill="var(--danger)" opacity="0.42" />
       <circle cx="72" cy="24" r="7" fill="var(--surface-2)" />
@@ -360,6 +360,7 @@ const LAYOUT_CSS = `
   .cc-se-actions { flex-direction: row; justify-content: center; gap: 10px; width: auto; margin-top: 16px; }
   .cc-se-try { width: auto; min-height: 48px; padding: 0 28px; border-radius: 12px; font-size: 15px; }
   .cc-se-mark { width: 88px !important; height: 88px !important; border-radius: 26px !important; }
+  .cc-se-mark svg { width: 60px; height: 60px; }
   .cc-se-second {
     min-height: 48px; padding: 0 24px !important; border-radius: 14px;
     border: 1px solid var(--border-strong) !important;
