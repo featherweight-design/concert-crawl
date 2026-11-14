@@ -34,7 +34,11 @@ import { PriceCard } from './PriceCard';
 import { DateField, TimeField } from './pickers';
 import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
 import { StatusChips } from '../list/EventsList';
-import { duplicateShowMessage, pastLockedMessage } from '../past-locked';
+import {
+  duplicateShowMessage,
+  notOnSaleMessage,
+  pastLockedMessage,
+} from '../past-locked';
 import {
   dayBefore,
   fieldDate,
@@ -574,8 +578,13 @@ export const EventEdit = ({
     } catch (err) {
       console.error('[event edit] save failed', err);
       // `past_locked` (a field a past show locks) or `duplicate_show` (another
-      // listing that night): the snap-back's toast says which.
-      setRefusal(pastLockedMessage(err) ?? duplicateShowMessage(err));
+      // listing that night), or the sold-out POST's `not_on_sale`: the
+      // snap-back's toast says which.
+      setRefusal(
+        pastLockedMessage(err) ??
+          duplicateShowMessage(err) ??
+          notOnSaleMessage(err),
+      );
       throw err;
     } finally {
       // A write that landed before a later one failed still shows: the page
