@@ -1,8 +1,10 @@
 /**
  * The account-wide email count. One Resend account (and its daily quota) is
- * shared with another app, so every email this project sends, from the API
- * or the crawler, counts in one Mountain Time calendar-day row of
- * `rate_limit_buckets`. The API refuses mail to users past the cap;
+ * shared with another app, so every email the API and the crawler send counts
+ * in one Mountain Time calendar-day row of `rate_limit_buckets`. (Two rare
+ * senders outside the apps aren't counted: the Deploy to Production
+ * workflow's rollback notice and the local `email:preview --send` script.)
+ * The API refuses mail to users past the cap;
  * operational alerts are counted but always go out (orchestrator ruling,
  * 2026-11-14).
  *

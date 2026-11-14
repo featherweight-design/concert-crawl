@@ -76,9 +76,10 @@ const warnNearCap = async (count: number, cap: number): Promise<void> => {
   });
 };
 
-const uncount = async (): Promise<void> => {
+/** Hand a claim back to the day it was counted in, even past midnight. */
+const uncount = async (claimedAt: Date): Promise<void> => {
   try {
-    await uncountEmailSend(db);
+    await uncountEmailSend(db, claimedAt);
   } catch {
     // A lost uncount only leaves the day stricter than it should be.
     apiLogger.warn('email: daily send not handed back');
@@ -95,15 +96,16 @@ export const claimDailySend = async (): Promise<
   { allowed: true; release: () => Promise<void> } | { allowed: false }
 > => {
   const cap = emailDailySendCap();
+  const claimedAt = new Date();
   let count: number;
   try {
-    count = await countEmailSend(db);
+    count = await countEmailSend(db, claimedAt);
   } catch {
     apiLogger.error('email: daily send count unavailable; send refused');
     return { allowed: false };
   }
   if (count > cap) {
-    await uncount();
+    await uncount(claimedAt);
     apiLogger.warn({ cap }, 'email: daily send cap reached; send refused');
     return { allowed: false };
   }
@@ -112,7 +114,7 @@ export const claimDailySend = async (): Promise<
   } catch {
     apiLogger.warn('email: 80% warning claim unavailable');
   }
-  return { allowed: true, release: uncount };
+  return { allowed: true, release: () => uncount(claimedAt) };
 };
 
 /**
