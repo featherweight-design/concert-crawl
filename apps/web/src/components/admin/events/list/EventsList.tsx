@@ -101,23 +101,27 @@ export const StatusChips = ({
   </span>
 );
 
-/** A table cell keeps one line; a phone card wraps the name, never cuts it. */
+/**
+ * The venue glyph and name on one line, the name ellipsised: both boards draw
+ * it so (`06/events` 24px tile, gap 8; `06/events-mobile` 18px, gap 6).
+ */
 const VenueLine = ({
   row,
   size,
-  wrap = false,
+  gap,
 }: {
   row: EventListRow;
   size: number;
-  wrap?: boolean;
+  gap: number;
 }) => (
   <span
     style={{
       display: 'flex',
-      alignItems: wrap ? 'flex-start' : 'center',
-      gap: 8,
+      alignItems: 'center',
+      gap,
       minWidth: 0,
-      fontSize: 13,
+      // 12.5 on both boards (`06/events`, `06/events-mobile`).
+      fontSize: 12.5,
       color: 'var(--fg-muted)',
     }}
   >
@@ -130,7 +134,7 @@ const VenueLine = ({
         />
       </span>
     )}
-    <span style={wrap ? { minWidth: 0 } : ellipsis}>{row.venueName}</span>
+    <span style={ellipsis}>{row.venueName}</span>
   </span>
 );
 
@@ -252,8 +256,8 @@ const DesktopTable = ({ rows, when }: { rows: EventListRow[]; when: When }) => {
                 <div
                   style={{
                     ...ellipsis,
-                    fontSize: 14,
-                    fontWeight: 700,
+                    fontSize: 13.5,
+                    fontWeight: 600,
                     color: 'var(--fg)',
                   }}
                 >
@@ -266,7 +270,7 @@ const DesktopTable = ({ rows, when }: { rows: EventListRow[]; when: When }) => {
                 )}
               </td>
               <td style={td}>
-                <VenueLine row={row} size={22} />
+                <VenueLine row={row} size={24} gap={8} />
               </td>
               <td style={td}>
                 <EventStatusChip row={row} />
@@ -274,7 +278,8 @@ const DesktopTable = ({ rows, when }: { rows: EventListRow[]; when: When }) => {
               <td
                 style={{
                   ...td,
-                  fontSize: 13.5,
+                  fontSize: 13,
+                  fontVariantNumeric: 'tabular-nums',
                   whiteSpace: 'nowrap',
                   color:
                     price === null || past ? 'var(--fg-muted)' : 'var(--fg)',
@@ -285,7 +290,7 @@ const DesktopTable = ({ rows, when }: { rows: EventListRow[]; when: When }) => {
               <td
                 style={{
                   ...td,
-                  fontSize: 13,
+                  fontSize: 12.5,
                   whiteSpace: 'nowrap',
                   color: 'var(--fg-muted)',
                 }}
@@ -328,7 +333,18 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
           gap: 6,
         }}
       >
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)' }}>
+        <div
+          style={{
+            fontSize: 14.5,
+            fontWeight: 700,
+            lineHeight: 1.3,
+            color: 'var(--fg)',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {row.title}
         </div>
         {row.hidden && (
@@ -336,7 +352,7 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
             <HiddenTag row={row} />
           </div>
         )}
-        <VenueLine row={row} size={18} wrap />
+        <VenueLine row={row} size={18} gap={6} />
       </div>
       <div
         style={{
@@ -345,21 +361,29 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
-          gap: 4,
+          gap: 5,
           textAlign: 'right',
         }}
       >
         <span
           style={{
-            fontSize: 14.5,
-            fontWeight: price === null ? 500 : 700,
+            fontSize: 13,
+            fontWeight: price === null ? 500 : 600,
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap',
             color: price === null ? 'var(--fg-muted)' : 'var(--fg)',
           }}
         >
           {price ?? COPY.phoneNoPrice}
         </span>
         {countLine !== null && (
-          <span style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
+          <span
+            style={{
+              fontSize: 11.5,
+              whiteSpace: 'nowrap',
+              color: 'var(--fg-subtle)',
+            }}
+          >
             {countLine}
           </span>
         )}
