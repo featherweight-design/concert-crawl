@@ -1,5 +1,5 @@
 import type { FetchLog } from './fetch-log.js';
-import type { Browser, CDPSession } from 'playwright';
+import type { Browser } from 'playwright';
 import { errors as playwrightErrors } from 'playwright';
 import { createLogger } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
@@ -107,7 +107,9 @@ export async function fetchPage(
   // (a navigation timeout, a reset connection) is recorded and one that did is not
   // recorded twice.
   let recorded = false;
-  let cdp: CDPSession | undefined;
+  // Set before the context closes: from then on the gate fails every paused
+  // request it is still deciding, so teardown never lets one through.
+  let closing = false;
   try {
     const page = await context.newPage();
 
@@ -125,9 +127,12 @@ export async function fetchPage(
     // it with its own TLS and headers. A declined one is failed with
     // BlockedByClient and never requested.
     //
-    // A disallow or a skip (robots.txt unreachable, Crawl-delay over the
-    // cap) is kept and rethrown, so the run records it as such rather than
-    // as a blocked-by-client failure. Only the first request for `url` is
+    // A skip (robots.txt unreachable, Crawl-delay over the cap) is always
+    // kept and rethrown, so the run records a skip rather than a failure. A
+    // disallow is rethrown only when it stopped goto()'s own navigation or a
+    // server redirect hop: then there is no page we may read. A navigation
+    // the page starts itself after goto() settled is refused and logged, and
+    // the page already loaded is read as before. Only the first request for `url` is
     // goto()'s own, already paced above; a reload or refresh back to it later
     // goes through the gate too. `url` as the browser reports it:
     // `https://venue.example` comes back as `https://venue.example/`, and the
@@ -135,6 +140,11 @@ export async function fetchPage(
     const startUrl = canonicalRequestUrl(url);
     let navigationError: Error | null = null;
     let initialRequestSeen = false;
+    let gotoSettled = false;
+    // Every main-frame URL the gate decided. Each was either cleared by
+    // robots.txt or refused before it was sent, so the after-the-fact check
+    // below need not (and, for a refused one, must not) judge it again.
+    const gated = new Set<string>();
     // Time spent clearing a hop (robots.txt and the pacing wait) is ours, not
     // the site's, so the navigation clock below stops while it runs. A count,
     // because a hop and a page-started navigation can be paused together.
@@ -148,8 +158,10 @@ export async function fetchPage(
       if (--gatesOpen === 0) gatedMs += Date.now() - gatingSince;
     };
 
-    cdp = await context.newCDPSession(page);
-    const session = cdp;
+    // Never detached by hand: detaching a Fetch session lets any request it
+    // still holds paused go out unchanged. Closing the context ends it and
+    // cancels those requests instead.
+    const session = await context.newCDPSession(page);
     const { frameTree } = await session.send('Page.getFrameTree');
     const mainFrameId = frameTree.frame.id;
     // The URL each in-flight navigation last requested, so a redirect hop
@@ -175,6 +187,7 @@ export async function fetchPage(
         initialRequestSeen = true;
         return;
       }
+      gated.add(request.url);
       gateStarted();
       try {
         await clearRedirect(from, request.url, crawlDelayMs);
@@ -195,17 +208,41 @@ export async function fetchPage(
     };
 
     // Every paused request is answered, continued or failed, whatever
-    // happens, so none is left to hang until the navigation times out.
+    // happens, so none is left to hang until the navigation times out. Once
+    // teardown has started nothing is continued: a decision that lands then
+    // is too late to pace or check against anything we will read.
     session.on('Fetch.requestPaused', (event) => {
       void (async () => {
         let allowed = false;
+        // BlockedByClient makes Chromium commit its error page in place of
+        // the document, which is fine when we throw anyway. A refused
+        // navigation we carry on past is Aborted instead: Chromium then
+        // keeps the page already loaded (checked in a local Chromium probe).
+        let errorReason: 'BlockedByClient' | 'Aborted' = 'BlockedByClient';
         try {
           await mayContinue(event);
           allowed = true;
         } catch (err) {
-          navigationError ??=
-            err instanceof Error ? err : new Error(String(err));
+          if (
+            err instanceof CrawlSkipError ||
+            event.redirectedRequestId !== undefined ||
+            !gotoSettled
+          ) {
+            navigationError ??=
+              err instanceof Error ? err : new Error(String(err));
+          } else {
+            errorReason = 'Aborted';
+            console.log(
+              JSON.stringify({
+                event: 'fetch.navigation_blocked',
+                url,
+                to: event.request.url,
+                error: err instanceof Error ? err.message : String(err),
+              }),
+            );
+          }
         }
+        if (closing) allowed = false;
         try {
           await (allowed
             ? session.send('Fetch.continueRequest', {
@@ -213,7 +250,7 @@ export async function fetchPage(
               })
             : session.send('Fetch.failRequest', {
                 requestId: event.requestId,
-                errorReason: 'BlockedByClient',
+                errorReason,
               }));
         } catch {
           // The page or context closed under the paused request: the
@@ -267,7 +304,8 @@ export async function fetchPage(
     const assertVisitsAllowed = async (extra: string[] = []): Promise<void> => {
       throwIfSkipped();
       for (const hop of new Set([...visited, ...extra, page.url()])) {
-        if (hop !== startUrl) await assertVisitedAllowed(url, hop);
+        if (hop !== startUrl && !gated.has(hop))
+          await assertVisitedAllowed(url, hop);
       }
     };
 
@@ -318,7 +356,10 @@ export async function fetchPage(
         throwIfSkipped();
         throw err;
       })
-      .finally(() => clearTimeout(clockTimer));
+      .finally(() => {
+        gotoSettled = true;
+        clearTimeout(clockTimer);
+      });
 
     const finalStatus = response?.status() ?? httpStatus;
 
@@ -454,9 +495,10 @@ export async function fetchPage(
     }
     throw err;
   } finally {
-    // Detaching ends Fetch interception, so any request still paused is
-    // released before the context goes; a session already gone is fine.
-    await cdp?.detach().catch(() => undefined);
+    // Closing the context cancels any request the gate still holds paused,
+    // and ends the CDP session with it. The flag covers a gate that decides
+    // in between: it fails its request rather than continue it.
+    closing = true;
     await context.close();
   }
 }
