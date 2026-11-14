@@ -1,0 +1,33 @@
+{
+  "feature": "Admin P47-12 PR B · Health polish: LLM budget panel and phone header",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 03-health/llm-budget-panel (switch thumb #E8F3FF; Warn-me pills h32, 0 12px, 13px, chosen = signal-to-accent ring on #171D3A; body 'Haiku runs only when…'), 03-health/health-mobile (title 24/800, summary 12.5px 2px under it, tiles 12px under the summary). Read-only: the panel is opened from the cost tile and neither the switch nor a pill is clicked, so the saved settings are what renders. The phone draws the sheet, desktop the side panel.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1440, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "budget-panel",
+      "label": "/admin LLM budget panel open: switch thumb and Warn-me pills (sheet on phone, side panel on desktop)",
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"llm-budget-trigger\"]"
+        },
+        { "click": "[data-testid=\"llm-budget-trigger\"]" },
+        { "wait": "[role=\"switch\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "health-header",
+      "label": "/admin Health header: phone title with the summary 2px under it; desktop title, summary and Open Needs you",
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"health-tiles\"]",
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}

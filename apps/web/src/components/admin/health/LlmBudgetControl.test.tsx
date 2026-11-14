@@ -30,7 +30,11 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-import { LlmBudgetControl } from './LlmBudgetControl';
+import {
+  LlmBudgetControl,
+  warnPillOffStyle,
+  warnPillOnStyle,
+} from './LlmBudgetControl';
 
 const settings: AdminSettings = {
   llmMonthlyBudgetUsd: 15,
@@ -107,6 +111,49 @@ describe('<LlmBudgetControl />', () => {
         'Keep crawling with HTML and JSON-LD only, and tell me. Never stops a crawl.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('reads the board body: Haiku runs only when nothing else finds events', () => {
+    mount();
+    open();
+    expect(
+      screen.getByText(
+        'Haiku runs only when HTML and JSON-LD find nothing. This sets what Health compares against.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('draws the switch thumb light (#E8F3FF, --fg) on both tracks', () => {
+    mount();
+    open();
+    const toggle = screen.getByRole('switch');
+    const thumb = toggle.firstElementChild;
+    if (!(thumb instanceof HTMLElement)) throw new Error('no thumb');
+    expect(thumb.style.background).toBe('var(--fg)');
+    fireEvent.click(toggle);
+    expect(thumb.style.background).toBe('var(--fg)');
+  });
+
+  it('sizes the Warn-me pills as the board (h32, 0 12px, 13px) and rings only the chosen one', () => {
+    mount();
+    open();
+    for (const name of ['50%', '75%', '90%']) {
+      const pill = screen.getByRole('button', { name });
+      expect(pill.style.height).toBe('32px');
+      expect(pill.style.padding).toBe('0px 12px');
+      expect(pill.style.fontSize).toBe('13px');
+    }
+    // jsdom drops gradient and color-mix backgrounds, so the ring is pinned
+    // on the style objects the pills render from.
+    expect(warnPillOnStyle.background).toBe(
+      'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+    );
+    expect(warnPillOnStyle.border).toBe('1px solid transparent');
+    expect(warnPillOffStyle.border).toBe('1px solid var(--border)');
+    expect(warnPillOffStyle.background).not.toContain('gradient');
+    expect(screen.getByRole('button', { name: '75%' }).style.border).toBe(
+      '1px solid transparent',
+    );
   });
 
   it('saves only what changed, closes, and refreshes the page data', async () => {

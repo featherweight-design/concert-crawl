@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import {
@@ -7,6 +9,15 @@ import {
   HealthTiles,
   type HealthTilesProps,
 } from './HealthTiles';
+
+/** The phone `.health-head` rule in admin.css, whitespace collapsed. */
+const PHONE_HEAD_RULE =
+  /@media \(max-width: 720px\) \{[^@]*?\.health-head \{([^}]*)\}/.exec(
+    readFileSync(
+      path.resolve(__dirname, '../../../app/(protected)/admin/admin.css'),
+      'utf8',
+    ).replace(/\s+/g, ' '),
+  )?.[1] ?? '';
 
 // The cost tile opens the budget panel, which reads the router and a session.
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -194,6 +205,19 @@ describe('HealthHeader', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveClass(
       'health-desk',
     );
+  });
+
+  it('pulls the phone summary up under the shell title, only when there is one', () => {
+    const { container, unmount } = render(
+      <HealthHeader needsYou={14} href="/admin/review" />,
+    );
+    expect(container.firstElementChild).toHaveClass('health-head');
+    unmount();
+    const empty = render(<HealthHeader needsYou={null} href="/admin/review" />);
+    expect(empty.container.firstElementChild).not.toHaveClass('health-head');
+    // 03/health-mobile: summary 2px under the title, tiles 12px under it.
+    expect(PHONE_HEAD_RULE).toContain('margin-top: -14px');
+    expect(PHONE_HEAD_RULE).toContain('margin-bottom: -4px');
   });
 
   it('drops the count, not the button, when it fails to load', () => {

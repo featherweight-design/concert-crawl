@@ -49,6 +49,35 @@ const labelStyle = {
   marginBottom: 8,
 } satisfies React.CSSProperties;
 
+/** A Warn-me pill, as `03/llm-budget-panel` draws it: h32, 0 12px, 13px. */
+const warnPillStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  height: 32,
+  padding: '0 12px',
+  fontSize: 13,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  borderRadius: 999,
+} satisfies React.CSSProperties;
+
+export const warnPillOffStyle = {
+  ...warnPillStyle,
+  color: 'var(--fg-muted)',
+  background: 'color-mix(in srgb, var(--bg-elevated) 60%, transparent)',
+  border: '1px solid var(--border)',
+} satisfies React.CSSProperties;
+
+/** The chosen pill: the signal-to-accent ring on `--surface-2`. */
+export const warnPillOnStyle = {
+  ...warnPillStyle,
+  color: 'var(--fg)',
+  background:
+    'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+  border: '1px solid transparent',
+} satisfies React.CSSProperties;
+
 const toText = (value: number | null): string =>
   value === null ? '' : `$${value}`;
 
@@ -199,20 +228,7 @@ export const LlmBudgetControl = ({
                 type="button"
                 aria-pressed={on}
                 onClick={() => setWarnAt(percent)}
-                style={{
-                  height: 36,
-                  minWidth: 56,
-                  padding: '0 16px',
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  borderRadius: 999,
-                  color: on ? 'var(--fg)' : 'var(--fg-muted)',
-                  background: 'transparent',
-                  // The board rings the chosen pill in the accent (pink on
-                  // Electric), not the signal the toggle and eyebrow use.
-                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-strong)'}`,
-                }}
+                style={on ? warnPillOnStyle : warnPillOffStyle}
               >
                 {copy.warnOption(percent)}
               </button>
@@ -276,7 +292,8 @@ export const LlmBudgetControl = ({
               width: 18,
               height: 18,
               borderRadius: '50%',
-              background: 'var(--fg-on-accent)',
+              // `#E8F3FF` on the board: the light thumb on either track.
+              background: 'var(--fg)',
               transition: 'left var(--motion-fast) var(--motion-ease)',
             }}
           />

@@ -203,7 +203,7 @@ export const ADMIN_COPY = {
     budget: {
       eyebrow: 'LLM budget',
       title: 'Monthly LLM budget',
-      body: 'Haiku only runs when HTML and JSON-LD find nothing. This sets what Health compares against.',
+      body: 'Haiku runs only when HTML and JSON-LD find nothing. This sets what Health compares against.',
       amountLabel: 'Budget per month',
       amountHint: 'Leave empty for no budget.',
       amountInvalid: (max: string) =>

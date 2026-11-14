@@ -33,45 +33,49 @@ export const HealthHeader = ({
   needsYou: number | null;
   href: string;
 }) => (
-  <SectionHead
-    title={copy.title}
-    // The phone shows the title once, in the shell's top bar.
-    titleClassName="health-desk"
-    subtitle={
-      needsYou === null ? undefined : (
-        <Dual
-          desk={copy.summary(needsYou)}
-          phone={copy.summaryPhone(needsYou)}
-        />
-      )
-    }
-    actions={
-      // The phone board has no button (gap G12).
-      <span className="health-desk">
-        <Link
-          href={href}
-          data-testid="health-open-needs-you"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            height: 34,
-            padding: '0 12px',
-            borderRadius: 9,
-            fontSize: 13,
-            fontWeight: 600,
-            textDecoration: 'none',
-            color: 'var(--fg)',
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border-strong)',
-          }}
-        >
-          <Inbox size={14} aria-hidden="true" />
-          {copy.openNeedsYou(needsYou)}
-        </Link>
-      </span>
-    }
-  />
+  // `.health-head` pulls the phone summary up under the shell's title. With no
+  // summary there is nothing to pull up, and the tiles would meet the title.
+  <div className={needsYou === null ? undefined : 'health-head'}>
+    <SectionHead
+      title={copy.title}
+      // The phone shows the title once, in the shell's top bar.
+      titleClassName="health-desk"
+      subtitle={
+        needsYou === null ? undefined : (
+          <Dual
+            desk={copy.summary(needsYou)}
+            phone={copy.summaryPhone(needsYou)}
+          />
+        )
+      }
+      actions={
+        // The phone board has no button (gap G12).
+        <span className="health-desk">
+          <Link
+            href={href}
+            data-testid="health-open-needs-you"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              height: 34,
+              padding: '0 12px',
+              borderRadius: 9,
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: 'none',
+              color: 'var(--fg)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-strong)',
+            }}
+          >
+            <Inbox size={14} aria-hidden="true" />
+            {copy.openNeedsYou(needsYou)}
+          </Link>
+        </span>
+      }
+    />
+  </div>
 );
 
 const Tile = ({

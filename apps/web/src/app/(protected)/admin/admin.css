@@ -451,6 +451,13 @@
   .health-phone {
     display: inline;
   }
+  /* 03/health-mobile draws the summary 2px under the title and the tiles 12px
+     under the summary. The shell header ends 12px under its title and the
+     subtitle keeps SectionHead's 4px, so pull up 14; the page gap is 16, so 4. */
+  .health-head {
+    margin-top: -14px;
+    margin-bottom: -4px;
+  }
   .health-tiles {
     gap: 10px;
     /* 03/health-mobile: the tile pills' text is 11px on the phone. */
