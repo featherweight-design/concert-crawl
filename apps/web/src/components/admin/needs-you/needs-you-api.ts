@@ -140,6 +140,10 @@ export interface QueueRow {
   venueLive: boolean | null;
   /** When crawling was paused (an ISO instant), or null. */
   pausedAt: string | null;
+  blockedAt: string | null;
+  consecutiveFailures: number;
+  robotsTxtAllowed: boolean | null;
+  robotsPath: string | null;
   /** A venue item's upcoming shows, or null when the API did not say. */
   showCount: number | null;
   /** OK runs in a row before the failure or the block, or null. */
@@ -341,6 +345,13 @@ const rowFrom = (value: unknown): QueueRow | null => {
     lastRuns: runsFrom(value['lastRuns']),
     venueLive: isBoolean(value['venueLive']) ? value['venueLive'] : null,
     pausedAt: isText(value['pausedAt']) ? value['pausedAt'] : null,
+    blockedAt: isText(value['blockedAt']) ? value['blockedAt'] : null,
+    consecutiveFailures: numberOf(value['consecutiveFailures']) ?? 0,
+    robotsTxtAllowed:
+      typeof value['robotsTxtAllowed'] === 'boolean'
+        ? value['robotsTxtAllowed']
+        : null,
+    robotsPath: textOf(value['robotsPath']),
     showCount: isCount(value['showCount']) ? value['showCount'] : null,
     okStreakBefore: isCount(value['okStreakBefore'])
       ? value['okStreakBefore']

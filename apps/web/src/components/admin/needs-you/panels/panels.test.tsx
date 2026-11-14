@@ -42,6 +42,10 @@ const row = (over: Partial<QueueRow>): QueueRow => ({
   lastRuns: [],
   venueLive: null,
   pausedAt: null,
+  blockedAt: null,
+  consecutiveFailures: 0,
+  robotsTxtAllowed: null,
+  robotsPath: null,
   showCount: null,
   okStreakBefore: null,
   pagesThisRun: null,
@@ -239,6 +243,21 @@ describe('VenuePanel', () => {
     expect(
       source.compareDocumentPosition(paused) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('says Still allows {path} when the stored robots check allows the crawler', () => {
+    open(
+      row({
+        key: 'venue-blocked:v1',
+        kind: 'venue-blocked',
+        venueName: 'The Ogden',
+        evidence: [{ label: 'HTTP status', value: '429' }],
+        robots: 'no',
+        robotsPath: '/events',
+        answers: [answer({ slug: 're_crawl_once', label: 'Re-crawl once' })],
+      }),
+    );
+    expect(screen.getByText('Still allows /events')).toBeInTheDocument();
   });
 
   it('draws a blocked venue with its status chip', () => {

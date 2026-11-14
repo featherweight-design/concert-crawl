@@ -387,6 +387,17 @@ const otherShowsCrawledFineByVenue = async (
   return result;
 };
 
+/** The path of the page we crawl ("/events"), from the stored URL; null if it is not one. */
+const pathOf = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  try {
+    const { pathname } = new URL(url);
+    return pathname === '' ? '/' : pathname.slice(0, 200);
+  } catch {
+    return null;
+  }
+};
+
 const venueFaultItems: Adapter = async ({ now }) => {
   const today = denverDate(now);
 
@@ -401,6 +412,9 @@ const venueFaultItems: Adapter = async ({ now }) => {
         lastUrlCoverageOkAt: venues.lastUrlCoverageOkAt,
         active: venues.active,
         crawlPausedAt: venues.crawlPausedAt,
+        // The stored robots.txt check and the page we crawl: never fetched here.
+        robotsTxtAllowed: venues.robotsTxtAllowed,
+        websiteUrl: venues.websiteUrl,
       })
       .from(venues)
       // A removed venue is never crawled again, so a fault on it is nothing
@@ -506,6 +520,10 @@ const venueFaultItems: Adapter = async ({ now }) => {
       lastRuns,
       venueLive: venueRow?.active ?? false,
       pausedAt: venueRow?.crawlPausedAt?.toISOString() ?? null,
+      blockedAt: venueRow?.blockedAt?.toISOString() ?? null,
+      consecutiveFailures: venueRow?.consecutiveFailures ?? 0,
+      robotsTxtAllowed: venueRow?.robotsTxtAllowed ?? null,
+      robotsPath: pathOf(venueRow?.websiteUrl),
       showCount: showCountByVenue.get(fault.venueId) ?? 0,
     };
 
