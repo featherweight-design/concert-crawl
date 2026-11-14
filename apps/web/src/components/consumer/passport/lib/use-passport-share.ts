@@ -48,6 +48,13 @@ export const usePassportShare = (
     [capabilities],
   );
 
+  // Read after mount, not during render: the server has no `navigator`, so a
+  // render-time read would hydrate differently from what it served.
+  const [canShare, setCanShare] = useState(false);
+  useEffect(() => {
+    setCanShare(canShareFiles(caps));
+  }, [caps]);
+
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
@@ -126,7 +133,7 @@ export const usePassportShare = (
     objectUrl,
     failed,
     preparing: file === null && !failed,
-    canShare: canShareFiles(caps),
+    canShare,
     share,
   };
 };

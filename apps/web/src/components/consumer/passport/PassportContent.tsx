@@ -106,8 +106,11 @@ export const PassportContent = ({
     setMounted(true);
   }, []);
   const imageUrl = `/passport/square?theme=${encodeURIComponent(theme)}`;
-  // One fetch and one share for the top bar's icon and the Share row.
-  const share = usePassportShare(mounted ? imageUrl : null);
+  // One fetch and one share for the top bar's icon and the Share row. Only the
+  // populated page draws either, so a locked or empty Passport never renders
+  // a card nobody sees (or asks for one it is not allowed).
+  const populated = !(locked || (!isLoading && !active)) && past.length > 0;
+  const share = usePassportShare(mounted && populated ? imageUrl : null);
 
   // Server 403 wins outright; the client hook decides for a plan the server
   // hasn't rejected — e.g. a token that downgraded mid-session.
@@ -204,16 +207,14 @@ export const PassportContent = ({
           {/* A phone draws the top bar in place of the title block and its
               subtitle (`more-r3-passport_m`); from lg up the header is the
               breadcrumb, title and subtitle. */}
-          {mounted && <PassportTopBar share={share} />}
+          <PassportTopBar share={share} />
           <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle lg:block">
             {COPY.breadcrumb}
           </p>
-          <div className={mounted ? 'hidden lg:block' : ''}>
+          <div className="hidden lg:block">
             <PageTitle />
           </div>
-          <p
-            className={`text-sm text-fg-muted lg:text-[15px] ${mounted ? 'hidden lg:block' : ''}`}
-          >
+          <p className="hidden text-sm text-fg-muted lg:block lg:text-[15px]">
             {COPY.statsSubtitle(stats.nights, stats.venues, pages.length)}
           </p>
         </header>
