@@ -11,7 +11,6 @@ import {
   userEventDismissals,
   userEvents,
 } from './schema/index.js';
-import type { Event } from './schema/index.js';
 
 export interface MergeEventRowsInput {
   sourceId: string;
@@ -25,8 +24,6 @@ export interface MergeEventRowsInput {
 
 export interface MergeEventRowsResult {
   counts: Record<string, number>;
-  /** The deleted source row as it was (also kept whole in the audit row). */
-  source: Event;
   /** People who were watching the row that is gone, read before anything moved. */
   movedWatcherIds: string[];
 }
@@ -266,7 +263,6 @@ export const mergeEventRows = async ({
 
     return {
       counts,
-      source: sourceRow,
       movedWatcherIds: movedWatchers.map((row) => row.userId),
     };
   });

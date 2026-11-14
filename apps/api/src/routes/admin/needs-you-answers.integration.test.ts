@@ -437,7 +437,9 @@ describe('admin needs-you answers', () => {
       expect(res.status).toBe(200);
 
       expect(await eventRow(eventId)).toBeUndefined();
-      const [merge] = await auditRows('event.merge');
+      const merges = await auditRows('event.merge');
+      expect(merges).toHaveLength(1);
+      const [merge] = merges;
       expect(merge?.targetId).toBe(target.id);
       expect(merge?.metadata).toMatchObject({
         sourceId: eventId,
