@@ -46,14 +46,17 @@ export const Section = ({
 export const Prose = ({
   children,
   muted = false,
+  small = false,
 }: {
   children: ReactNode;
   muted?: boolean;
+  /** 12.5px, for a note under a card (`WHAT MOVING DOES`). */
+  small?: boolean;
 }) => (
   <p
     style={{
       margin: 0,
-      fontSize: 14,
+      fontSize: small ? 12.5 : 14,
       lineHeight: 1.5,
       overflowWrap: 'anywhere',
       color: muted ? 'var(--fg-muted)' : 'var(--fg)',
