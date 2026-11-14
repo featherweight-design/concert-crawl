@@ -94,16 +94,19 @@ const itemsFor = (
     danger: true,
     onSelect: act.takeDown,
   };
-  // Only a live venue gets the crawl row: the hidden menu draws Show on site,
-  // Delete and Take down, nothing else (`A3/03/venue-menu-states`). Resume is
-  // the board's refresh arrows, not a play triangle.
+  // Pausing never touches `active`, so a hidden venue keeps its crawl row,
+  // as the old danger zone did. Its shows are already off the site, so its
+  // hint doesn't say they stay listed. ⏸ pending Design item 22
+  // (QUESTIONS-2026-11-12:332): `A3/03/venue-menu-states` draws no crawl row
+  // on the hidden menu. Resume is the board's refresh arrows, not a play
+  // triangle.
   const crawl: RowMenuItem =
     venue.crawlPausedAt === null
       ? {
           key: 'pause',
           icon: Pause,
           label: COPY.menu.pause,
-          hint: COPY.menu.pauseHint,
+          hint: venue.active ? COPY.menu.pauseHint : COPY.menu.pauseHintHidden,
           onSelect: act.pause,
         }
       : {
@@ -164,6 +167,7 @@ const itemsFor = (
             hint: line,
             onSelect: act.show,
           },
+          crawl,
           remove,
           takeDown,
         ];

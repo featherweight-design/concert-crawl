@@ -746,6 +746,8 @@ export const ADMIN_COPY = {
     menu: {
       pause: 'Pause crawling…',
       pauseHint: 'Shows stay listed. Pick a reason.',
+      // A hidden venue's shows are already off the site.
+      pauseHintHidden: 'Stops crawling. Pick a reason.',
       resume: 'Resume crawling',
       makeFlagship: 'Make flagship',
       makeFlagshipHint: 'Shows it first on Venues.',
