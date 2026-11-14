@@ -994,14 +994,18 @@ export const ADMIN_COPY = {
     },
   },
 
-  // The venue page's Details tab (3b part 5, `A3/04/details-d`, `-m`): the
-  // Venue, Tickets and Contact cards. Box office and the slug redirect line
-  // are held (3c, 3e).
+  // The venue page's Details tab (3b part 5, `A3/04/details-d`, `-m`,
+  // `-no-icon`). Box office, the Look card's actions and the slug redirect
+  // line are held (3c, 3e).
   venueDetails: {
     cards: {
       venue: 'Venue',
+      about: 'About',
       tickets: 'Tickets',
       contact: 'Contact',
+      look: 'Look',
+      // Ruling g: the fields with no board home.
+      other: 'Other',
     },
     fields: {
       name: 'Name',
@@ -1028,6 +1032,10 @@ export const ADMIN_COPY = {
         label: 'Capacity',
         invalid: 'Enter a whole number above 0.',
       },
+      about: {
+        draft: 'Draft from the venue’s site',
+        hint: 'Fans see this on the venue page.',
+      },
       ticketSeller: {
         label: 'Main ticket seller',
         none: 'Not set',
@@ -1042,6 +1050,7 @@ export const ADMIN_COPY = {
         label: 'Contact email',
         invalid: 'Enter an email address, like booking@venue.com.',
       },
+      city: 'City',
     },
     capacityTypes: {
       street: 'Street',
@@ -1060,9 +1069,22 @@ export const ADMIN_COPY = {
       venue_box_office: 'The venue’s box office',
       unknown: 'Unknown',
     },
+    look: {
+      icon: 'Icon',
+      iconNone: 'Fans see a plain pin until you add one.',
+      hero: 'Hero setting',
+      heroNone: 'Not picked. The venue page uses the plain backdrop.',
+    },
+    fallbackArt: {
+      label: 'Fallback art',
+      hint: 'A preview only. The seed isn’t saved yet.',
+      roll: 'Roll',
+    },
     errors: {
       nameRequired: 'Give the venue a name.',
       linkRequired: 'Give the venue a link.',
+      draftFailed: 'Couldn’t draft it. Try again.',
+      draftUnreachable: 'Couldn’t reach the server. Try again.',
     },
     saveBar: {
       unsaved: (count: number) =>
@@ -1387,55 +1409,9 @@ export const ADMIN_COPY = {
       health: 'health',
     },
     sections: {
-      // Name, link, address and ticketing are the Details cards' now (3b
-      // part 5a); City and About stay here until part 5b.
-      identity: {
-        eyebrow: '01 · identity',
-        title: 'City',
-      },
-      editorial: {
-        eyebrow: '04 · editorial',
-        title: 'About',
-        subtitle: "Shown on the venue's public page.",
-        llmNote: 'LLM-assisted',
-        llmSuffix: '— every generation needs your sign-off before it saves.',
-      },
-      identityArt: {
-        eyebrow: '05 · identity art',
-        title: 'Generative cover',
-        description:
-          'Deterministic generative art derived from the venue identity. Current seed:',
-        phase8Warning:
-          'Seed + namespace will be persisted to the DB. Changes here are preview-only until then.',
-        phase8Label: 'Phase 8 —',
-      },
       dangerZone: {
         eyebrow: 'danger zone',
         title: 'Pause or remove this venue',
-      },
-    },
-    fields: {
-      city: 'City',
-      about: {
-        label: 'About',
-        description:
-          'One short paragraph shown on the venue page (under the hero). Plain prose, no markdown.',
-        placeholder:
-          "A short description of the venue's character and history.",
-        generate: 'Generate',
-        generateCost: '~$0.0042',
-      },
-      namespace: {
-        label: 'Namespace',
-        hint: 'Venues use architectural patterns; artists use organic ones.',
-        venue: 'Venue',
-        artist: 'Artist',
-      },
-      seed: {
-        label: 'Seed',
-        lockedHint: 'LOCKED UNLESS BUMPED',
-        bumpedHint: 'Bumped to',
-        rollButton: 'Roll',
       },
     },
     dangerZone: {
@@ -1502,21 +1478,6 @@ export const ADMIN_COPY = {
         description:
           'Removes config + breaks links to existing events. Cannot be undone.',
       },
-    },
-    saveBar: {
-      unsavedChange: 'change',
-      unsavedChanges: 'changes',
-      unsaved: 'unsaved',
-      discard: 'Discard',
-      saveChanges: 'Save changes',
-      saving: 'Saving…',
-      saved: 'Saved',
-    },
-    errors: {
-      saveFailed: 'Save failed',
-      unexpected: 'An unexpected error occurred',
-      generationFailed: 'Generation failed',
-      networkError: 'Network error — could not reach API',
     },
   },
 

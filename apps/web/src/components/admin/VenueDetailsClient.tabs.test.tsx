@@ -342,7 +342,7 @@ describe('VenueDetailsClient — tabs', () => {
 });
 
 // Details saves from its own tab, so a refusal lands inline on its field
-// (DetailsTab's suite); the page's banner is only for the City and About bar.
+// (DetailsTab's suite); the page has no banner of its own any more.
 describe('VenueDetailsClient — Details saves from its own tab', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
@@ -388,11 +388,13 @@ describe('VenueDetailsClient — Details saves from its own tab', () => {
   });
 });
 
-// Until 3b part 5b, City and About keep their older sections under the
-// Details cards, saved by the page's own bar: it sends those two and nothing
-// the Details cards or Source own.
-describe('VenueDetailsClient — the older City and About sections', () => {
-  const OLD = ADMIN_COPY.venueDetailsClient;
+// The shell is only the tab strip (3b part 5b): City and About are Details
+// cards now, saved by Details' own bar, and the page has no bar of its own.
+describe('VenueDetailsClient — the pure tab shell', () => {
+  const DETAILS = ADMIN_COPY.venueDetails;
+  // The About card is a region named About too, so ask for its textbox.
+  const aboutInput = () =>
+    screen.getByRole('textbox', { name: DETAILS.cards.about });
 
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
@@ -404,24 +406,43 @@ describe('VenueDetailsClient — the older City and About sections', () => {
     vi.unstubAllGlobals();
   });
 
-  it('still render on Details, below the cards', () => {
+  it('City and About are Details cards, inside the Details tab', () => {
     render(<VenueDetailsClient venue={venue} initialTab="details" />);
     const details = panel('details');
-    expect(details.querySelector('[data-testid="venue-details"]')).not.toBe(
-      null,
+    expect(
+      details.querySelector('[data-testid="details-about"]'),
+    ).not.toBeNull();
+    expect(
+      details.querySelector('[data-testid="details-other"]'),
+    ).not.toBeNull();
+    expect(details.contains(screen.getByLabelText(DETAILS.fields.city))).toBe(
+      true,
     );
-    expect(screen.getByLabelText(OLD.fields.city)).toBeTruthy();
-    expect(screen.getByLabelText(OLD.fields.about.label)).toBeTruthy();
   });
 
-  it('the page’s bar sends City and About only', async () => {
+  it('renders no page-wide save bar on any tab, edited or not', () => {
     render(<VenueDetailsClient venue={venue} initialTab="details" />);
-    fireEvent.change(screen.getByLabelText(OLD.fields.about.label), {
-      target: { value: 'A new line.' },
+    fireEvent.change(aboutInput(), { target: { value: 'A new line.' } });
+    fireEvent.change(screen.getByLabelText(DETAILS.fields.city), {
+      target: { value: 'Boulder' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: OLD.saveBar.saveChanges }),
-    );
+    expect(screen.queryByTestId('venue-legacy-save-bar')).toBeNull();
+    expect(screen.getAllByRole('button', { name: SAVE_LABEL })).toHaveLength(1);
+
+    for (const key of ['overview', 'runs', 'source', 'guide'] as const) {
+      fireEvent.click(screen.getByRole('tab', { name: TABS[key] }));
+      expect(screen.queryByTestId('venue-legacy-save-bar')).toBeNull();
+      expect(screen.queryByTestId('venue-save-error')).toBeNull();
+    }
+  });
+
+  it('Details’ bar sends City and About, and nothing else', async () => {
+    render(<VenueDetailsClient venue={venue} initialTab="details" />);
+    fireEvent.change(aboutInput(), { target: { value: 'A new line.' } });
+    fireEvent.change(screen.getByLabelText(DETAILS.fields.city), {
+      target: { value: 'Boulder' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
 
     await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
     const formData = mockUpdateVenue.mock.calls[0]?.[1];
@@ -430,31 +451,6 @@ describe('VenueDetailsClient — the older City and About sections', () => {
     }
     expect([...formData.keys()].sort()).toEqual(['about', 'city']);
     expect(formData.get('about')).toBe('A new line.');
-  });
-
-  // Details' own bar pins to the bottom edge, so the page's bar sits in the
-  // panel's flow there; a second sticky bar would cover the first.
-  it('sits in flow on Details beside Details’ bar, and pins elsewhere', () => {
-    render(<VenueDetailsClient venue={venue} initialTab="details" />);
-    fireEvent.change(screen.getByLabelText(OLD.fields.about.label), {
-      target: { value: 'A new line.' },
-    });
-    fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
-
-    const bars = screen.getAllByTestId('venue-legacy-save-bar');
-    expect(bars).toHaveLength(1);
-    const [inFlow] = bars;
-    expect(panel('details').contains(inFlow ?? null)).toBe(true);
-    expect(inFlow?.style.position).not.toBe('sticky');
-    expect(
-      screen.getByRole('button', { name: OLD.saveBar.saveChanges }),
-    ).toBeTruthy();
-    expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('tab', { name: TABS.overview }));
-    const pinned = screen
-      .getAllByTestId('venue-legacy-save-bar')
-      .find((bar) => !panel('details').contains(bar));
-    expect(pinned?.style.position).toBe('sticky');
+    expect(formData.get('city')).toBe('Boulder');
   });
 });
