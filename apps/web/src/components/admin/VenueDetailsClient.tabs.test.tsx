@@ -411,9 +411,12 @@ describe('VenueDetailsClient — the pure tab shell', () => {
     expect(
       details.querySelector('[data-testid="details-about"]'),
     ).not.toBeNull();
+    // Addendum 5: City lives in the Venue card, beside Neighborhood.
     expect(
-      details.querySelector('[data-testid="details-other"]'),
-    ).not.toBeNull();
+      details
+        .querySelector('[data-testid="details-venue"]')
+        ?.contains(screen.getByLabelText(DETAILS.fields.city)),
+    ).toBe(true);
     expect(details.contains(screen.getByLabelText(DETAILS.fields.city))).toBe(
       true,
     );
