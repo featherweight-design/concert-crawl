@@ -119,6 +119,24 @@ describe('Not OK', () => {
   it('counts a partial run as Not OK', () => {
     expect(isNotOk(row({ status: 'partial' }))).toBe(true);
   });
+
+  it('leaves Not run out: an account-wide LLM refusal is not a venue failure', () => {
+    expect(isNotOk(row({ status: 'skipped', reason: 'llm_account' }))).toBe(
+      false,
+    );
+    expect(isNotOk(row({ status: 'failed', reason: 'llm_account' }))).toBe(
+      false,
+    );
+  });
+
+  it('keeps Blocked and robots.txt in Not OK', () => {
+    expect(isNotOk(row({ status: 'failed', reason: 'blocked_http' }))).toBe(
+      true,
+    );
+    expect(
+      isNotOk(row({ status: 'skipped', reason: 'robots_disallowed' })),
+    ).toBe(true);
+  });
 });
 
 describe('duration and cost', () => {

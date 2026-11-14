@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { CrawlRunReason } from '@concert-crawl/types';
 import type { QueueRow } from './needs-you-api';
 import {
   cardLabelOf,
@@ -173,7 +174,32 @@ describe('panel helpers', () => {
       ],
     });
     expect(listed.map((run) => run.status)).toEqual(['Blocked', 'Not run']);
-    expect(listed.every((run) => !run.ok)).toBe(true);
+    expect(listed.map((run) => run.tone)).toEqual([
+      'var(--danger)',
+      'var(--fg-muted)',
+    ]);
+  });
+
+  it('colours each run in its run chip’s tone, never red by default', () => {
+    const run = (
+      at: string,
+      status: 'success' | 'failed' | 'skipped' | 'partial',
+      reason: CrawlRunReason | null,
+    ) => ({ at, status, reason, errorMessage: null, eventsFound: 0 });
+    const listed = lastRunsOf({
+      lastRuns: [
+        run('2026-11-09T10:02:00Z', 'skipped', 'llm_account'),
+        run('2026-11-08T10:02:00Z', 'failed', 'robots_disallowed'),
+        run('2026-11-07T10:02:00Z', 'success', null),
+        run('2026-11-06T10:02:00Z', 'failed', 'timeout'),
+      ],
+    });
+    expect(listed.map((line) => [line.status, line.tone])).toEqual([
+      ['Not run', 'var(--fg-muted)'],
+      ['robots.txt', 'var(--warning)'],
+      ['OK', 'var(--success)'],
+      ['Failed', 'var(--danger)'],
+    ]);
   });
 
   it('says when the newest run happened, in Mountain Time', () => {

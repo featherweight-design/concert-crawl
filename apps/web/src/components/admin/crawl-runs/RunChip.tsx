@@ -1,22 +1,17 @@
 import type { CrawlRunReason, CrawlStatus } from '@concert-crawl/types';
 import { VenueChip } from '@/components/admin/primitives';
 import {
+  RUN_OUTCOME_TONE,
   runOutcome,
   runOutcomeKey,
-  type RunOutcomeKey,
 } from '@/components/admin/venues/overview/overview-rules';
 
-/** Each chip's tone, as drawn. Grey chips read their word in the muted ink. */
-export const RUN_CHIP_TONE: Record<RunOutcomeKey, string> = {
-  success: 'var(--success)',
-  unchanged: 'var(--fg-subtle)',
-  partial: 'var(--warning)',
-  failed: 'var(--danger)',
-  blocked: 'var(--danger)',
-  skipped: 'var(--fg-subtle)',
-  robots: 'var(--warning)',
-  notRun: 'var(--fg-subtle)',
-};
+/**
+ * Each chip's tone, as drawn: the one outcome-tone map in overview-rules,
+ * shared with Needs you's LAST 4 RUNS. Grey chips read their word in the
+ * muted ink.
+ */
+export const RUN_CHIP_TONE = RUN_OUTCOME_TONE;
 
 /**
  * A run's result chip (`A3/09/run-result-chips`, `B+/A5/14/run-chips-partial`):
