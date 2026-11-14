@@ -83,7 +83,7 @@ beforeEach(async () => {
 describe('GET /v1/admin/events/list', () => {
   it('returns upcoming shows in date order with fan-facing statuses and counts', async () => {
     const red = await seedVenue({ name: 'Red Rocks' });
-    const globe = await seedVenue({ name: 'Globe Hall' });
+    const globe = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
     const available = await seedEvent(red.id, {
       artist: 'Available Act',
       date: dayOffset(3),
@@ -151,7 +151,7 @@ describe('GET /v1/admin/events/list', () => {
 
   it('filters by venue, status, no price and hidden while chip counts keep the whole side', async () => {
     const red = await seedVenue({ name: 'Red Rocks' });
-    const globe = await seedVenue({ name: 'Globe Hall' });
+    const globe = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
     await seedEvent(red.id, {
       artist: 'Priced',
       date: dayOffset(1),
