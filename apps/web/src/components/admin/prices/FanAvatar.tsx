@@ -23,6 +23,7 @@ export const FanAvatar = ({
     <span
       aria-hidden="true"
       data-testid="fan-avatar"
+      data-colours={`${first} ${second}`}
       style={{
         width: size,
         height: size,
