@@ -457,6 +457,20 @@ describe('PendingCardB', () => {
       ).not.toBeNull();
     });
 
+    it('sets box office type in the AA-safe warning text token, not the raw tone', () => {
+      render(<PendingCardB {...buildProps({ kind: 'boxoffice' })} />);
+      const pendingCopy = CONSUMER_COPY.pendingCardB;
+      // Raw --warning is 3.65:1 on Light; --price-text-warning passes AA.
+      // The eyebrow is the line's first child (the TrustPill also says Box office).
+      const eyebrow = screen.getByTestId('pending-tickets-line')
+        .firstElementChild as HTMLElement;
+      expect(eyebrow.textContent).toBe(pendingCopy.boxOfficeLabel);
+      expect(eyebrow.style.color).toBe('var(--price-text-warning)');
+      expect(screen.getByText(pendingCopy.faceValueNoFees).style.color).toBe(
+        'var(--price-text-warning)',
+      );
+    });
+
     it('gives your submission a waiting line between the label and actions', () => {
       render(<PendingCardB {...buildProps({ view: 'submitter' })} />);
       expect(screen.getByTestId('pending-waiting').textContent).toBe(
