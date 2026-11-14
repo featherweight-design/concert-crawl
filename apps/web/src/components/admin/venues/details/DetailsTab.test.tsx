@@ -168,7 +168,7 @@ describe('DetailsTab', () => {
     vi.unstubAllGlobals();
   });
 
-  it('draws the five cards and Other, with the venue’s values', () => {
+  it('draws the five cards, with the venue’s values', () => {
     render(<DetailsTab venue={venue} />);
     const titles = screen
       .getAllByRole('region')
@@ -180,7 +180,6 @@ describe('DetailsTab', () => {
       COPY.cards.tickets,
       COPY.cards.contact,
       COPY.cards.look,
-      COPY.cards.other,
     ]);
     expect(input(FIELDS.city).value).toBe('Denver');
     expect(
@@ -532,7 +531,7 @@ describe('DetailsTab', () => {
     setPhone(true);
     // About moved into the phone column (a remount), still in review.
     expect(screen.getByTestId('details-venue').parentElement).toBe(
-      screen.getByTestId('details-other').parentElement,
+      screen.getByTestId('details-about').parentElement,
     );
     expect(
       screen.getByTestId('generate-review').getAttribute('data-content'),
@@ -542,25 +541,6 @@ describe('DetailsTab', () => {
       screen.getByTestId('generate-review').getAttribute('data-content'),
     ).toBe('A paid-for line.');
     expect(mockGenerate).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps the rolled fallback seed across the phone breakpoint', () => {
-    render(<DetailsTab venue={venue} />);
-    const roll = () =>
-      fireEvent.click(
-        within(screen.getByTestId('details-fallback-art')).getByRole('button', {
-          name: COPY.fallbackArt.roll,
-        }),
-      );
-    const artName = () =>
-      within(screen.getByTestId('details-fallback-art')).getByTestId(
-        'identity-art',
-      ).textContent;
-    roll();
-    roll();
-    expect(artName()).toBe('Ball Arena·2');
-    setPhone(true);
-    expect(artName()).toBe('Ball Arena·2');
   });
 
   it('a draft cancelled while loading never opens a review', async () => {
@@ -770,17 +750,37 @@ describe('DetailsTab', () => {
     expect(within(hero).getByText(COPY.capacityTypes.arena)).toBeTruthy();
   });
 
-  it('rolls the fallback art as a preview, never an edit', () => {
+  it('draws no fallback art and no Roll control (addendum 5)', () => {
     render(<DetailsTab venue={venue} />);
-    const art = screen.getByTestId('details-fallback-art');
-    fireEvent.click(
-      within(art).getByRole('button', { name: COPY.fallbackArt.roll }),
-    );
-    expect(within(art).getByText(COPY.fallbackArt.hint)).toBeTruthy();
-    expect(screen.queryByTestId('details-save-bar')).toBeNull();
+    expect(screen.queryByTestId('details-fallback-art')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Roll' })).toBeNull();
   });
 
-  it('stacks the cards in the phone order: Venue, Tickets, Contact, Look, About, Other', () => {
+  it('puts City beside Neighborhood on desktop, Map pin on its own row', () => {
+    render(<DetailsTab venue={venue} />);
+    const row = (label: string) =>
+      input(label).parentElement?.parentElement ?? null;
+    expect(row(FIELDS.city)).toBe(row(FIELDS.neighborhood));
+    expect(row(FIELDS.city)?.style.gridTemplateColumns).toBe(
+      'minmax(0, 1fr) minmax(0, 1fr)',
+    );
+    expect(row(FIELDS.city)?.style.gap).toBe('10px');
+    expect(row(FIELDS.mapPin.label)).not.toBe(row(FIELDS.city));
+  });
+
+  it('stacks City straight under Neighborhood on phone', () => {
+    phone = true;
+    render(<DetailsTab venue={venue} />);
+    const field = (label: string) => input(label).parentElement;
+    expect(field(FIELDS.neighborhood)?.nextElementSibling).toBe(
+      field(FIELDS.city),
+    );
+    expect(field(FIELDS.city)?.nextElementSibling).toBe(
+      field(FIELDS.mapPin.label),
+    );
+  });
+
+  it('stacks the cards in the phone order: Venue, Tickets, Contact, Look, About', () => {
     phone = true;
     render(<DetailsTab venue={venue} />);
     const titles = screen
@@ -792,11 +792,10 @@ describe('DetailsTab', () => {
       COPY.cards.contact,
       COPY.cards.look,
       COPY.cards.about,
-      COPY.cards.other,
     ]);
     // One column: every card shares a parent (desktop splits them).
     const parentOf = (id: string) => screen.getByTestId(id).parentElement;
-    expect(parentOf('details-venue')).toBe(parentOf('details-other'));
+    expect(parentOf('details-venue')).toBe(parentOf('details-look'));
     // details-m draws the cards at 16/18 on phone too, unlike Source's 14.
     for (const id of [
       'details-venue',
@@ -804,7 +803,6 @@ describe('DetailsTab', () => {
       'details-tickets',
       'details-contact',
       'details-look',
-      'details-other',
     ]) {
       expect(screen.getByTestId(id).style.padding).toBe('16px 18px');
     }
@@ -815,7 +813,7 @@ describe('DetailsTab', () => {
     const parentOf = (id: string) => screen.getByTestId(id).parentElement;
     expect(parentOf('details-venue')).toBe(parentOf('details-about'));
     expect(parentOf('details-venue')).not.toBe(parentOf('details-contact'));
-    for (const id of ['details-tickets', 'details-look', 'details-other']) {
+    for (const id of ['details-tickets', 'details-look']) {
       expect(parentOf(id)).toBe(parentOf('details-contact'));
     }
   });

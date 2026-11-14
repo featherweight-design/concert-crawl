@@ -1004,8 +1004,6 @@ export const ADMIN_COPY = {
       tickets: 'Tickets',
       contact: 'Contact',
       look: 'Look',
-      // Ruling g: the fields with no board home.
-      other: 'Other',
     },
     fields: {
       name: 'Name',
@@ -1074,11 +1072,6 @@ export const ADMIN_COPY = {
       iconNone: 'Fans see a plain pin until you add one.',
       hero: 'Hero setting',
       heroNone: 'Not picked. The venue page uses the plain backdrop.',
-    },
-    fallbackArt: {
-      label: 'Fallback art',
-      hint: 'A preview only. The seed isn’t saved yet.',
-      roll: 'Roll',
     },
     errors: {
       nameRequired: 'Give the venue a name.',
