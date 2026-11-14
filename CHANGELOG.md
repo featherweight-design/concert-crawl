@@ -1,3 +1,17 @@
+# [1.460.0](https://github.com/featherweight-design/concert-crawl/compare/v1.459.0...v1.460.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** lead a blocked venue's answers with the disabled Ask the venue ([9680993](https://github.com/featherweight-design/concert-crawl/commit/968099388b2231d44d659a978246f4d0bfd73119))
+* **admin:** tie Ask the venue to its reason and pin the 14-run cap ([95f37b8](https://github.com/featherweight-design/concert-crawl/commit/95f37b87fc15b95cafab9d0172a6108e9648cbc8))
+
+
+### Features
+
+* **admin:** list the last 14 runs and draw Ask the venue disabled on a blocked venue ([4875e84](https://github.com/featherweight-design/concert-crawl/commit/4875e84cf8da286ea899bcc5fb5255494646255f))
+* **admin:** size the show-moved card and note to the board ([f958a81](https://github.com/featherweight-design/concert-crawl/commit/f958a811fa691d6bba2a0cb6cc6d519af7002bd2))
+
 # [1.459.0](https://github.com/featherweight-design/concert-crawl/compare/v1.458.0...v1.459.0) (2026-11-14)
 
 
