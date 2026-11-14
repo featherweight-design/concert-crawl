@@ -1,3 +1,22 @@
+# [1.467.0](https://github.com/featherweight-design/concert-crawl/compare/v1.466.0...v1.467.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** list the page names as pairs so the short key passes lint ([894fd67](https://github.com/featherweight-design/concert-crawl/commit/894fd673a58de6e5503369a69a176ecb0c0af97b))
+* **web:** fit share card names to Inter 900's real widths and keep the city ([224b151](https://github.com/featherweight-design/concert-crawl/commit/224b1518d31a6ef190c28f40edddc1e236dc2651))
+* **web:** fix the share card's fallback art, backdrop, long names and date stack ([d168ced](https://github.com/featherweight-design/concert-crawl/commit/d168cedc4417abd145e3f750211c601e560565bb))
+* **web:** harden the share photo fetch and the share card's cache life ([d8017c0](https://github.com/featherweight-design/concert-crawl/commit/d8017c01224c5b9efc82b8abccf7b73bfdb83595))
+* **web:** keep a long city on the share card's meta line ([e26a63b](https://github.com/featherweight-design/concert-crawl/commit/e26a63be1bd3edfc381a97835f9cc635276c9e1a))
+* **web:** never fail the share card on its flat art, and cut names by grapheme ([2dfe66f](https://github.com/featherweight-design/concert-crawl/commit/2dfe66f6a9993fd03b947d7908bf4f1c40193556))
+* **web:** read the share card's day and cache life from one instant ([8c9400b](https://github.com/featherweight-design/concert-crawl/commit/8c9400b4c8c0d9d4a04e9e609a7226135f649b0e))
+
+
+### Features
+
+* **admin:** name the page a bug report came from ([0a2fcfe](https://github.com/featherweight-design/concert-crawl/commit/0a2fcfe3c79e58fc60c476acc15c5a2815e92468))
+* **web:** draw the B+ share image in Story, Square and Wide ([e242da9](https://github.com/featherweight-design/concert-crawl/commit/e242da9df380ea3bb52c1a8f78ff36f268a61436))
+
 # [1.466.0](https://github.com/featherweight-design/concert-crawl/compare/v1.465.0...v1.466.0) (2026-11-14)
 
 
