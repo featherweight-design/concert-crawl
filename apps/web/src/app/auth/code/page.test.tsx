@@ -2,7 +2,7 @@
 
 import '@testing-library/jest-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 // The server action pulls in next/headers; the link under test never calls it.
 const { validateAndSetInviteCode } = vi.hoisted(() => ({
@@ -90,7 +90,9 @@ describe('invite-code screen shows "This code has ended"', () => {
 
     const field = await screen.findByRole('textbox');
     expect(field).toHaveValue('');
-    expect(field).toHaveFocus();
+    // The field is disabled until the redeem's transition settles, so the
+    // focus lands a moment after it mounts.
+    await waitFor(() => expect(field).toHaveFocus());
     // The ended code is not carried over, and the ended page is gone.
     expect(screen.queryByText('This code has ended')).toBeNull();
     // The focused field draws the board's signal border.
@@ -110,7 +112,7 @@ describe('invite-code screen shows "This code has ended"', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Enter it' }));
       const field = await screen.findByRole('textbox');
       expect(field).toHaveValue('');
-      expect(field).toHaveFocus();
+      await waitFor(() => expect(field).toHaveFocus());
     }
   });
 });

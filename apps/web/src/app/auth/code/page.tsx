@@ -43,10 +43,12 @@ export default function InviteCodePage() {
   }, []);
 
   useEffect(() => {
-    if (!refocus) return;
+    // The field is disabled while a redeem is pending, and a disabled input
+    // cannot take focus: wait for it to be enabled, then focus it once.
+    if (!refocus || isPending) return;
     inputRef.current?.focus();
     setRefocus(false);
-  }, [refocus]);
+  }, [refocus, isPending]);
 
   const isComplete = isCompleteInviteCode(code);
 
