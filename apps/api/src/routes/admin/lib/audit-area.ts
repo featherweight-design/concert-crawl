@@ -69,7 +69,7 @@ export const areaOfAction = (action: string): AuditArea | null =>
   AREA_BY_PREFIX.get(actionPrefix(action)) ??
   null;
 
-export const prefixesOfAreas = (areas: readonly AuditArea[]): string[] =>
+const prefixesOfAreas = (areas: readonly AuditArea[]): string[] =>
   areas.flatMap((area) => AUDIT_AREA_PREFIXES[area]);
 
 /** The `?area=` filter: rows whose areaOfAction is one of `areas`. */

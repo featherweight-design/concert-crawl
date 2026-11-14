@@ -25,7 +25,8 @@ function summarizeRow(row: unknown): RowSample {
   if (!isRecord(row)) {
     return {
       genreValue: undefined,
-      genreType: row === null ? 'null' : typeof row,
+      genreType:
+        row === null ? 'null' : Array.isArray(row) ? 'array' : typeof row,
       otherKeys: [],
     };
   }

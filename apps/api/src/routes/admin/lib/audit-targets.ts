@@ -13,6 +13,7 @@ import { FEATURE_FLAGS, isFeatureFlagKey } from '@concert-crawl/entitlements';
 import { createLogger } from '@concert-crawl/logger';
 import { type AuditTarget, type AuditTargetKind } from '@concert-crawl/types';
 import { actionPrefix } from './audit-area.js';
+import { PRICE_SETTINGS_UPDATE_ACTION } from './settings-audit.js';
 
 // The Activity log's target links, read off the action key so the audit
 // writers stay as they are: `venue.update` targets a venue id. The WHERE
@@ -38,7 +39,11 @@ interface TargetRef {
   id: string;
 }
 
-const LOOKUP_BY_ACTION: Readonly<Record<string, Lookup>> = {
+// null: the action names no target, whatever its prefix suggests.
+const LOOKUP_BY_ACTION: Readonly<Record<string, Lookup | null>> = {
+  // A settings save made on Prices targets the settings row, not a price,
+  // so it names no target, as `settings.update` doesn't.
+  [PRICE_SETTINGS_UPDATE_ACTION]: null,
   // The crawler records a venue's merged duplicates against the venue.
   'event.drift_duplicates_merged': 'venue',
   'event.report.resolve': 'event-report',
@@ -80,9 +85,11 @@ const targetRefOf = (
   targetId: string | null,
 ): TargetRef | null => {
   if (targetId === null || targetId === '') return null;
-  const lookup =
-    LOOKUP_BY_ACTION[action] ?? LOOKUP_BY_PREFIX[actionPrefix(action)];
-  if (lookup === undefined) return null;
+  // An action listed here wins outright, even when it maps to no lookup.
+  const lookup = Object.hasOwn(LOOKUP_BY_ACTION, action)
+    ? LOOKUP_BY_ACTION[action]
+    : LOOKUP_BY_PREFIX[actionPrefix(action)];
+  if (lookup === undefined || lookup === null) return null;
   const id =
     lookup === 'feature-flag' && targetId.startsWith(FEATURE_FLAG_TARGET_PREFIX)
       ? targetId.slice(FEATURE_FLAG_TARGET_PREFIX.length)
