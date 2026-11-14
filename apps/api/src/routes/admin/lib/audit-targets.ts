@@ -11,54 +11,12 @@ import {
 } from '@concert-crawl/db';
 import { FEATURE_FLAGS, isFeatureFlagKey } from '@concert-crawl/entitlements';
 import { createLogger } from '@concert-crawl/logger';
-import {
-  AUDIT_AREAS,
-  type AuditArea,
-  type AuditTarget,
-  type AuditTargetKind,
-} from '@concert-crawl/types';
+import { type AuditTarget, type AuditTargetKind } from '@concert-crawl/types';
+import { actionPrefix } from './audit-area.js';
 
-// The Activity log's WHERE column and its target links. Both are read off the
-// action key, so the audit writers stay as they are: `venue.update` is the
-// Venues page and its target is a venue id.
-
-/** Action key prefix (the text before the first ".") → its admin page. */
-export const AUDIT_AREA_PREFIXES: Readonly<
-  Record<AuditArea, readonly string[]>
-> = {
-  'needs-you': ['needs_you'],
-  // The LLM budget, the only admin setting, is edited on Health.
-  health: ['settings'],
-  venues: ['venue'],
-  events: ['event'],
-  artists: ['artist'],
-  // A Price check (`contest.*`) is a tab of Prices.
-  prices: ['price', 'contest'],
-  // Invite codes are a tab of People.
-  people: ['user', 'invite_code'],
-  'feature-flags': ['feature_flag'],
-  'crawl-runs': ['crawl'],
-  // Feedback and the emails we send are tabs of Operations.
-  operations: ['feedback', 'notification'],
-};
-
-const AREA_BY_PREFIX = new Map<string, AuditArea>(
-  AUDIT_AREAS.flatMap((area) =>
-    AUDIT_AREA_PREFIXES[area].map((prefix): [string, AuditArea] => [
-      prefix,
-      area,
-    ]),
-  ),
-);
-
-export const actionPrefix = (action: string): string =>
-  action.split('.', 1)[0] ?? '';
-
-export const areaOfAction = (action: string): AuditArea | null =>
-  AREA_BY_PREFIX.get(actionPrefix(action)) ?? null;
-
-export const prefixesOfAreas = (areas: readonly AuditArea[]): string[] =>
-  areas.flatMap((area) => AUDIT_AREA_PREFIXES[area]);
+// The Activity log's target links, read off the action key so the audit
+// writers stay as they are: `venue.update` targets a venue id. The WHERE
+// column is audit-area.ts.
 
 // How a row's target_id is read. Mostly the prefix decides; these keys store
 // a different kind of id than their prefix suggests.

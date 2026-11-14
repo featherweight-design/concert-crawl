@@ -16,11 +16,8 @@ import {
 import { auditLog, db, userProfiles } from '@concert-crawl/db';
 import { AUDIT_AREAS, type AuditLogItem } from '@concert-crawl/types';
 import { handleQuerySchema, validationHook } from '../../lib/validator.js';
-import {
-  areaOfAction,
-  prefixesOfAreas,
-  resolveAuditTargets,
-} from './lib/audit-targets.js';
+import { areaOfAuditRow, prefixesOfAreas } from './lib/audit-area.js';
+import { resolveAuditTargets } from './lib/audit-targets.js';
 import type { AdminVariables } from './index.js';
 
 // GET-only: the admin audit middleware skips reads. Done for you reads the
@@ -186,7 +183,7 @@ auditLogAdminRouter.get(
         actor: system ? row.actorId : (row.handle ?? ADMIN_FALLBACK_ACTOR),
         actorKind: system ? 'system' : 'admin',
         action: row.action,
-        area: areaOfAction(row.action),
+        area: areaOfAuditRow(row),
         targetId: row.targetId,
         target: targets[index] ?? null,
         metadata: isRecord(row.metadata) ? row.metadata : null,
