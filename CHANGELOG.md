@@ -1,3 +1,19 @@
+# [1.453.0](https://github.com/featherweight-design/concert-crawl/compare/v1.452.0...v1.453.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** keep the People list skeleton off the codes pages ([505c179](https://github.com/featherweight-design/concert-crawl/commit/505c179755a67d490fd6cfe8183c37ae8dca0674))
+* **web:** read the Needs you queue once on Health, and size phone pills at 11px ([0dc70ac](https://github.com/featherweight-design/concert-crawl/commit/0dc70acdba930e6a417a9cc03e12029b75627dc9))
+* **web:** revalidate Posters with its codes, and move the inventories' paths ([7dfd651](https://github.com/featherweight-design/concert-crawl/commit/7dfd651d4797bf86c296ce38e7b4ac66e32536b1))
+
+
+### Features
+
+* **web:** draw the Health tile and Emails pills at the board's 22px size ([dfbf69f](https://github.com/featherweight-design/concert-crawl/commit/dfbf69fc850de9566d3a3b80c62f7ab12f8d7d32))
+* **web:** move Invite codes and Posters under People ([e7429df](https://github.com/featherweight-design/concert-crawl/commit/e7429df0393d0abc78605eff412abcf40c6121ac))
+* **web:** open Runs from the Health grid, draw Missed, Needs you lines, Emails row ([26b6f10](https://github.com/featherweight-design/concert-crawl/commit/26b6f102ff533dbd69bc0b4709aba50ef3b4b9e2))
+
 # [1.452.0](https://github.com/featherweight-design/concert-crawl/compare/v1.451.1...v1.452.0) (2026-11-14)
 
 
