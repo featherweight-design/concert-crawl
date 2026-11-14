@@ -1,6 +1,6 @@
 {
   "feature": "Admin venue Details tab · About and Look cards (3b part 5b; the Other card left with addendum 5)",
-  "note": "CONTACT_SHEET_ROLE=admin. Boards: addendum-3/04-venue-details details-d (desktop), details-m (phone), details-no-icon. 7b completes Details: all six cards, one save bar, and no old sections below. The edited row types in About to raise the save bar; nothing is saved. Walked by hand: a venue with no glyph (details-no-icon), and the About draft review (it calls the LLM).",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: addendum-3/04-venue-details details-d (desktop), details-m (phone), details-no-icon. 7b completes Details: all five cards (Venue, About, Tickets, Contact, Look; the Other card left with addendum 5), one save bar, and no old sections below. The edited row types in About to raise the save bar; nothing is saved. Walked by hand: a venue with no glyph (details-no-icon), and the About draft review (it calls the LLM).",
   "out": "/Users/huey/Downloads/fwd-handoff/plans/3b-7b-contact-sheet",
   "widths": [
     { "label": "320", "width": 320, "height": 900, "touch": true },
