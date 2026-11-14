@@ -801,6 +801,15 @@ export function ArtistsClient() {
               </div>
             )}
           </div>
+          {/* `06/artists-not-artists` draws it under a filled list only. */}
+          {tab === 'not_an_artist' && list != null && list.rows.length > 0 && (
+            <p
+              data-testid="not-artists-footnote"
+              style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-muted)' }}
+            >
+              {COPY.notArtistsFootnote}
+            </p>
+          )}
           {pager}
         </>,
       )}

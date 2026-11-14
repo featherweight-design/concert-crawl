@@ -3418,6 +3418,9 @@ export const ADMIN_COPY = {
       title: (name: string) => `Find the right ${name}`,
       forLine: (line: string) => `For ${line}`,
       separator: ' · ',
+      // Desktop only: the open wrong-photo reports on the row.
+      wrongPhoto: (count: number) =>
+        `${count} ${count === 1 ? 'fan says' : 'fans say'} the current photo is wrong`,
       inputLabel: 'Search Spotify by name',
       exactName: 'Exact name',
       results: (count: number) =>
@@ -3495,6 +3498,9 @@ export const ADMIN_COPY = {
       title: 'No matches yet',
       body: 'Artists with a confirmed Spotify match land here.',
     },
+    // Under the Not artists list (`06/artists-not-artists`).
+    notArtistsFootnote:
+      'Tours, series, promoters and non-music acts. Their shows keep the venue photo. Not an artist also hides it from To check.',
     emptyNotArtists: {
       title: 'Nothing marked',
       body: 'Mark a tour, promoter or series and it moves here.',

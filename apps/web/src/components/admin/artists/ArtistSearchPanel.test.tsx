@@ -93,13 +93,13 @@ afterEach(() => {
 
 const api = artistsApi(async () => 'token');
 
-const renderPanel = (isPhone: boolean) => {
+const renderPanel = (isPhone: boolean, over: Partial<AdminArtistRow> = {}) => {
   const onUse = vi.fn();
   const onNotAnArtist = vi.fn();
   const onClose = vi.fn();
   render(
     <ArtistSearchPanel
-      row={row}
+      row={{ ...row, ...over }}
       api={api}
       isPhone={isPhone}
       onUse={onUse}
@@ -280,4 +280,47 @@ describe('ArtistSearchPanel on the phone', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Artists' }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('keeps the wrong-artist wording when there are wrong-photo reports', async () => {
+    renderPanel(true, { wrongPhotoReportCount: 3 });
+    expect(
+      screen.getByText('Lost Lake · Sun Nov 15 · 2 wrong-artist reports'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/current photo is wrong/)).toBeNull();
+    await screen.findByText('2 results');
+  });
+});
+
+describe('ArtistSearchPanel desktop subtitle', () => {
+  it('names the wrong-photo reports, plural', async () => {
+    renderPanel(false, { wrongPhotoReportCount: 2 });
+    const subtitle = screen.getByText(
+      'For Lost Lake · Sun Nov 15 · 2 fans say the current photo is wrong',
+    );
+    expect(subtitle).toHaveStyle({ fontSize: '13px', marginTop: '4px' });
+    expect(subtitle.style.color).toBe('var(--fg-muted)');
+    await screen.findByText('2 results');
+  });
+
+  it('names one wrong-photo report, singular', async () => {
+    renderPanel(false, { wrongPhotoReportCount: 1 });
+    expect(
+      screen.getByText(
+        'For Lost Lake · Sun Nov 15 · 1 fan says the current photo is wrong',
+      ),
+    ).toBeInTheDocument();
+    await screen.findByText('2 results');
+  });
+
+  it.each([null, 0])(
+    'keeps the wrong-artist wording when the wrong-photo count is %s',
+    async (count) => {
+      renderPanel(false, { wrongPhotoReportCount: count });
+      expect(
+        screen.getByText('For Lost Lake · Sun Nov 15 · 2 wrong-artist reports'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/current photo is wrong/)).toBeNull();
+      await screen.findByText('2 results');
+    },
+  );
 });
