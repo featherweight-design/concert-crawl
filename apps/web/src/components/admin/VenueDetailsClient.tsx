@@ -404,6 +404,8 @@ const VENUE_TAB_ITEMS = VENUE_TABS.map((key) => ({
 const venueTabId = (key: VenueTab) => `venue-tab-${key}`;
 const venuePanelId = (key: VenueTab) => `venue-panel-${key}`;
 
+const STICKY_BOTTOM: React.CSSProperties = { position: 'sticky', bottom: 0 };
+
 /**
  * One tab's panel. Every panel stays mounted, only hidden, so a tab's unsaved
  * edit and its Save bar survive a tab switch (3b part 1).
@@ -617,6 +619,139 @@ export function VenueDetailsClient({
     }
   }
 
+  /**
+   * The City and About bar. Pinned to the bottom edge everywhere but Details,
+   * where it sits in flow because DetailsTab's own bar holds that edge.
+   */
+  const legacySaveBar = (sticky: boolean) => (
+    <div
+      data-testid="venue-legacy-save-bar"
+      style={{
+        ...(sticky ? STICKY_BOTTOM : {}),
+        marginTop: 4,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 16px',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        boxShadow: '0 -6px 18px rgba(0,0,0,0.08)',
+        fontFamily: "'Inter', sans-serif",
+        fontSize: 13,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Pill badge */}
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '3px 10px',
+            borderRadius: 20,
+            border:
+              '1px solid color-mix(in oklab, var(--warning) 38%, transparent)',
+            background:
+              'color-mix(in oklab, var(--warning) 10%, var(--bg-elevated))',
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 12,
+            fontWeight: 700,
+            color: 'var(--warning)',
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: 'var(--warning)',
+              flexShrink: 0,
+            }}
+          />
+          {dirtyFields.length} {ADMIN_COPY.venueDetailsClient.saveBar.unsaved}{' '}
+          {dirtyFields.length === 1
+            ? ADMIN_COPY.venueDetailsClient.saveBar.unsavedChange
+            : ADMIN_COPY.venueDetailsClient.saveBar.unsavedChanges}
+        </span>
+        {/* Dirty field names */}
+        {!isMobile && (
+          <span
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12,
+              color: 'var(--fg-muted)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: 320,
+            }}
+          >
+            {dirtyFields.join(' · ')}
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={handleDiscard}
+          disabled={isDisabled}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '0 4px',
+            cursor: isDisabled ? 'not-allowed' : 'pointer',
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13,
+            fontWeight: 700,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {ADMIN_COPY.venueDetailsClient.saveBar.discard}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={isDisabled}
+          style={{
+            background: 'var(--signal)',
+            border: 'none',
+            borderRadius: 8,
+            padding: '6px 16px',
+            color: 'var(--fg-on-accent)',
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: isDisabled ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
+          {saveState === 'saving' ? (
+            <>
+              <Loader2
+                size={12}
+                style={{ animation: 'spin 1s linear infinite' }}
+              />
+              {ADMIN_COPY.venueDetailsClient.saveBar.saving}
+            </>
+          ) : saveState === 'saved' ? (
+            <>
+              <Check size={12} />
+              {ADMIN_COPY.venueDetailsClient.saveBar.saved}
+            </>
+          ) : (
+            <>
+              <Check size={12} />
+              {ADMIN_COPY.venueDetailsClient.saveBar.saveChanges}
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div
       style={{
@@ -817,6 +952,10 @@ export function VenueDetailsClient({
             </VDField>
           </div>
         </VDSection>
+
+        {/* City and About's bar, in flow under them: DetailsTab's own bar
+            holds the bottom edge, so a second sticky bar would cover it. */}
+        {isDirty && legacySaveBar(false)}
 
         {/* 05 · identity art */}
         <VDSection
@@ -1030,137 +1169,11 @@ export function VenueDetailsClient({
 
       {/* The old danger zone's controls live in the header's ⋯ now. */}
 
-      {/* Sticky save bar. Source pins its own bar to the same edge, so this
-          one steps aside on Source; its edits wait for the tab they live on. */}
-      {isDirty && tab !== 'source' && (
-        <div
-          style={{
-            position: 'sticky',
-            bottom: 0,
-            marginTop: 4,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 16px',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            boxShadow: '0 -6px 18px rgba(0,0,0,0.08)',
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 13,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Pill badge */}
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '3px 10px',
-                borderRadius: 20,
-                border:
-                  '1px solid color-mix(in oklab, var(--warning) 38%, transparent)',
-                background:
-                  'color-mix(in oklab, var(--warning) 10%, var(--bg-elevated))',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 12,
-                fontWeight: 700,
-                color: 'var(--warning)',
-              }}
-            >
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: 'var(--warning)',
-                  flexShrink: 0,
-                }}
-              />
-              {dirtyFields.length}{' '}
-              {ADMIN_COPY.venueDetailsClient.saveBar.unsaved}{' '}
-              {dirtyFields.length === 1
-                ? ADMIN_COPY.venueDetailsClient.saveBar.unsavedChange
-                : ADMIN_COPY.venueDetailsClient.saveBar.unsavedChanges}
-            </span>
-            {/* Dirty field names */}
-            {!isMobile && (
-              <span
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 12,
-                  color: 'var(--fg-muted)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  maxWidth: 320,
-                }}
-              >
-                {dirtyFields.join(' · ')}
-              </span>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              type="button"
-              onClick={handleDiscard}
-              disabled={isDisabled}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '0 4px',
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                fontWeight: 700,
-                color: 'var(--fg-muted)',
-              }}
-            >
-              {ADMIN_COPY.venueDetailsClient.saveBar.discard}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={isDisabled}
-              style={{
-                background: 'var(--signal)',
-                border: 'none',
-                borderRadius: 8,
-                padding: '6px 16px',
-                color: 'var(--fg-on-accent)',
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontFamily: "'Inter', sans-serif",
-              }}
-            >
-              {saveState === 'saving' ? (
-                <>
-                  <Loader2
-                    size={12}
-                    style={{ animation: 'spin 1s linear infinite' }}
-                  />
-                  {ADMIN_COPY.venueDetailsClient.saveBar.saving}
-                </>
-              ) : saveState === 'saved' ? (
-                <>
-                  <Check size={12} />
-                  {ADMIN_COPY.venueDetailsClient.saveBar.saved}
-                </>
-              ) : (
-                <>
-                  <Check size={12} />
-                  {ADMIN_COPY.venueDetailsClient.saveBar.saveChanges}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Sticky save bar for City and About. Source and Details pin their own
+          bars to the same edge, so on Source it steps aside (its edits wait
+          for the tab they live on) and on Details it sits in the panel's
+          flow, under the old sections, so neither bar hides the other. */}
+      {isDirty && tab !== 'source' && tab !== 'details' && legacySaveBar(true)}
     </div>
   );
 }

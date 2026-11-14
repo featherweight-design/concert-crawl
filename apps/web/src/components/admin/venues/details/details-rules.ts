@@ -86,15 +86,22 @@ export const capacityTypeLabel = (type: CapacityType): string =>
 
 /**
  * Words in a free-text `venue_type` that place it in one of the six (ruling
- * f). Order matters: an amphitheater is outdoor before it is a theater.
+ * f). Order matters: an amphitheater is outdoor before it is a theater. Each
+ * is a whole word, so a "Barn" is not a bar and "Sparks" not a park.
  */
 const CAPACITY_TYPE_WORDS: ReadonlyArray<readonly [CapacityType, RegExp]> = [
-  ['outdoor', /outdoor|amphithea|pavilion|park|garden|lawn/],
-  ['arena', /arena|stadium|coliseum|fieldhouse/],
-  ['gallery', /gallery|museum/],
-  ['theater', /theat|auditorium|hall|ballroom|opera|playhouse/],
-  ['club', /club|bar|lounge|tavern|pub|saloon/],
-  ['street', /street/],
+  [
+    'outdoor',
+    /\b(?:outdoors?|amphithea\w*|pavilions?|parks?|gardens?|lawns?)\b/,
+  ],
+  ['arena', /\b(?:arenas?|stadiums?|coliseums?|fieldhouses?)\b/],
+  ['gallery', /\b(?:galler(?:y|ies)|museums?)\b/],
+  [
+    'theater',
+    /\b(?:theat\w*|auditoriums?|halls?|ballrooms?|operas?|playhouses?)\b/,
+  ],
+  ['club', /\b(?:(?:night)?clubs?|bars?|lounges?|taverns?|pubs?|saloons?)\b/],
+  ['street', /\b(?:streets?)\b/],
 ];
 
 /** The nearest of the six to a stored value, or null when none fits. */
@@ -122,6 +129,9 @@ const venueTypeDraftOf = (raw: string | null): string => {
 export const formatPin = (lat: number | null, lng: number | null): string =>
   lat === null || lng === null ? '' : `${lat}, ${lng}`.replace(/-/g, '−');
 
+/** One half of a pin: a plain decimal, no exponent, hex or blank. */
+const DECIMAL = /^-?\d+(\.\d+)?$/;
+
 /** The pin as typed: both null when empty, null when it doesn't parse. */
 export const parsePin = (
   text: string,
@@ -130,19 +140,25 @@ export const parsePin = (
   if (trimmed === '') return { lat: null, lng: null };
   const parts = trimmed.replace(/−/g, '-').split(/\s*,\s*|\s+/);
   if (parts.length !== 2) return null;
+  // Each half a plain decimal: an empty half ("39.7487,") is not a zero.
+  if (!parts.every((part) => DECIMAL.test(part))) return null;
   const [lat, lng] = parts.map(Number);
   if (lat === undefined || lng === undefined) return null;
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
   return { lat, lng };
 };
+
+/** Postgres `integer`'s ceiling, the capacity column's type. */
+const INT4_MAX = 2147483647;
 
 /** The capacity as typed ("19,500" included): null when empty, NaN when bad. */
 const parseCapacity = (text: string): number | null => {
   const digits = text.replace(/[,\s]/g, '');
   if (digits === '') return null;
+  // Digits only: `Number` would also take "1e3" and "0x10".
+  if (!/^\d+$/.test(digits)) return Number.NaN;
   const num = Number(digits);
-  return Number.isInteger(num) && num > 0 ? num : Number.NaN;
+  return num > 0 && num <= INT4_MAX ? num : Number.NaN;
 };
 
 /** What the tab's inputs hold. Strings stay as typed until a save. */
@@ -304,22 +320,35 @@ export type DetailsErrors = Partial<Record<DetailsField, string>>;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Checked before any request; the API's own refusals land through `detailsFieldOf`. */
-export const validateDetails = (draft: DetailsDraft): DetailsErrors => {
+/**
+ * Checked before any request; the API's own refusals land through
+ * `detailsFieldOf`. Only the fields edited against `saved` are checked, so an
+ * older stored value the rules now refuse never blocks saving another field.
+ */
+export const validateDetails = (
+  draft: DetailsDraft,
+  saved: DetailsDraft,
+): DetailsErrors => {
+  const edited = new Set(editedFields(draft, saved));
   const errors: DetailsErrors = {};
-  if (draft.name.trim() === '') errors.name = COPY.errors.nameRequired;
-  if (draft.slug.trim() === '') errors.slug = COPY.errors.linkRequired;
-  if (parsePin(draft.mapPin) === null)
+  if (edited.has('name') && draft.name.trim() === '') {
+    errors.name = COPY.errors.nameRequired;
+  }
+  if (edited.has('slug') && draft.slug.trim() === '') {
+    errors.slug = COPY.errors.linkRequired;
+  }
+  if (edited.has('mapPin') && parsePin(draft.mapPin) === null) {
     errors.mapPin = COPY.fields.mapPin.invalid;
-  if (Number.isNaN(parseCapacity(draft.capacity))) {
+  }
+  if (edited.has('capacity') && Number.isNaN(parseCapacity(draft.capacity))) {
     errors.capacity = COPY.fields.capacity.invalid;
   }
   const priceUrl = draft.priceUrl.trim();
-  if (priceUrl !== '' && !isSafeHttpUrl(priceUrl)) {
+  if (edited.has('priceUrl') && priceUrl !== '' && !isSafeHttpUrl(priceUrl)) {
     errors.priceUrl = COPY.fields.pricePage.invalid;
   }
   const email = draft.contactEmail.trim();
-  if (email !== '' && !EMAIL.test(email)) {
+  if (edited.has('contactEmail') && email !== '' && !EMAIL.test(email)) {
     errors.contactEmail = COPY.fields.contactEmail.invalid;
   }
   return errors;
@@ -334,13 +363,10 @@ export const detailsFieldOf = (
 };
 
 /** "ballarena.com": the site's host, for the read-only Website. */
-export const websiteHost = (websiteUrl: string): string => {
-  try {
-    return new URL(websiteUrl).host.replace(/^www\./, '');
-  } catch {
-    return websiteUrl;
-  }
-};
+export const websiteHost = (websiteUrl: string): string =>
+  URL.canParse(websiteUrl)
+    ? new URL(websiteUrl).host.replace(/^www\./, '')
+    : websiteUrl;
 
 /** The link made from the name, as the old slug button made it. */
 export const slugify = (name: string): string =>
