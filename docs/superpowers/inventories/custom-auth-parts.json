@@ -29,7 +29,7 @@
           "wait": "h1:has-text('Every piece, every state')",
           "settle": 1500
         },
-        { "clickRole": "link", "name": "^Terms$" },
+        { "click": "label a[href='/legal/terms']" },
         { "wait": "[role='dialog']", "settle": 1000 }
       ]
     }
