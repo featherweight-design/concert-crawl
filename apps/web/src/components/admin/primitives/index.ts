@@ -12,6 +12,7 @@ export { Sparkline } from './Sparkline';
 export { ConfidenceBar } from './ConfidenceBar';
 export { SectionHead } from './SectionHead';
 export { MetaCard } from './MetaCard';
+export { AdminCard, AdminCardRow } from './AdminCard';
 export { AdminDialog } from './AdminDialog';
 export type { AdminDialogProps } from './AdminDialog';
 export { useDialogKeyboard } from './useDialogKeyboard';
