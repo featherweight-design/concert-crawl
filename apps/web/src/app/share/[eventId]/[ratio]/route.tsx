@@ -1,15 +1,26 @@
 import { ImageResponse } from 'next/og';
 import type { EventDetailResponse } from '@concert-crawl/types';
 import { PosterCard } from '@/components/consumer/share/PosterCard';
-import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios';
+import {
+  frameArtSize,
+  SC_METRICS,
+  SC_RATIOS,
+} from '@/components/consumer/share/definitions/ratios';
+import { identityArtDataUri } from '@/lib/share/fallback-art';
 import { ApiError, publicApiClient } from '@/lib/api';
 import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts';
 import { mintMeta, posterFingerprint, shareCacheKey } from '@/lib/share/mint';
 import { toPosterEvent } from '@/lib/share/poster-event';
 import {
+  sharePhotoSources,
+  toShareCard,
+  venueDateOf,
+} from '@/lib/share/share-layout';
+import { loadSharePhoto } from '@/lib/share/share-photo';
+import {
   etagMatches,
   parseShareRequest,
-  SHARE_CACHE_CONTROL,
+  shareCacheControl,
 } from '@/lib/share/share-request';
 
 // The poster PNG.
@@ -91,15 +102,9 @@ export const GET = async (
       : problem(502, 'event lookup failed');
   }
 
-  let fonts: LoadedShareFont[];
-  try {
-    fonts = await loadShareFonts(originFontLoader(request));
-  } catch (err) {
-    console.error('[share card] font load failed', { err });
-    return problem(502, 'share fonts unavailable');
-  }
-
   const poster = toPosterEvent(event);
+  const photoSources = sharePhotoSources(event);
+  const timezone = event.venue.timezone;
   // The mint is what makes the ETag content-addressed: change the price status
   // and the hash moves, so a cached card for a now-sold-out show expires on
   // its own rather than on a timer.
@@ -109,37 +114,101 @@ export const GET = async (
       ? { id: parsed.handle, handle: parsed.handle }
       : { id: 'anon' },
   );
-  // The mint alone is too coarse to cache on — see `posterFingerprint`.
-  const drawn = posterFingerprint([
-    poster.artist,
-    poster.venue,
-    poster.city,
-    poster.dateShort,
-    poster.showTime,
-    poster.state,
-    poster.dropLabel,
-  ]);
-  const etag = `"${shareCacheKey(poster.id, parsed.handle ?? 'anon', mint.contentHash)}:${parsed.ratio}:${parsed.theme}:${drawn}"`;
 
-  if (etagMatches(request.headers.get('if-none-match'), etag)) {
-    return new Response(null, {
+  /**
+   * The card, its tag and its cache life as of one instant: the countdown's
+   * "today" and the cache's time-to-midnight read the same `now`, so they can
+   * never straddle the venue's midnight.
+   */
+  const cardAt = (now: Date) => {
+    const card = toShareCard(event, venueDateOf(now, timezone));
+    // The mint alone is too coarse to cache on — see `posterFingerprint`. The
+    // countdown is in here, so the tag moves with the day count too.
+    const drawn = posterFingerprint([
+      card.artist,
+      card.venue,
+      card.city,
+      poster.dateShort,
+      card.showTime,
+      card.chip?.label ?? null,
+      card.countdown,
+      photoSources.join(' '),
+    ]);
+    // The image is theme-independent, so the theme is not in the tag. The
+    // last segment says how the photo drew: `n` no source, `p` loaded, `f`
+    // fell back to IdentityArt.
+    const tagBase = `"${shareCacheKey(poster.id, parsed.handle ?? 'anon', mint.contentHash)}:${parsed.ratio}:${drawn}`;
+    return {
+      card,
+      tagFor: (photoState: 'n' | 'p' | 'f') => `${tagBase}:${photoState}"`,
+      // A countdown card expires at the venue's midnight, so "4 DAYS AWAY" is
+      // never served on the day it reads 3; a fallback card lives a minute.
+      cacheControlFor: (photoMissing: boolean) =>
+        shareCacheControl(card.countdown, timezone, now, photoMissing),
+    };
+  };
+  const ifNoneMatch = request.headers.get('if-none-match');
+  const notModified = (etag: string, cacheControl: string) =>
+    new Response(null, {
       status: 304,
-      headers: { ETag: etag, 'Cache-Control': SHARE_CACHE_CONTROL },
+      headers: { ETag: etag, 'Cache-Control': cacheControl },
     });
+  const loadedState = photoSources.length === 0 ? 'n' : 'p';
+
+  // Only `n` and `p` can be answered before the photo fetch.
+  const early = cardAt(new Date());
+  if (etagMatches(ifNoneMatch, early.tagFor(loadedState))) {
+    return notModified(early.tagFor(loadedState), early.cacheControlFor(false));
+  }
+
+  // The photo never fails the card: a slow or broken host falls through to
+  // the next source, then to IdentityArt.
+  const photoPromise = loadSharePhoto(photoSources);
+  let fonts: LoadedShareFont[];
+  try {
+    fonts = await loadShareFonts(originFontLoader(request));
+  } catch (err) {
+    console.error('[share card] font load failed', { err });
+    return problem(502, 'share fonts unavailable');
+  }
+  const photo = await photoPromise;
+  // No photo on a tilted card: IdentityArt is drawn flat first (see
+  // `identityArtDataUri`). Story's full-bleed art is not rotated, so it
+  // draws inline.
+  const frame = SC_METRICS[parsed.ratio].frame;
+  const frameArt =
+    photo === null && frame !== null
+      ? // next/og renders lazily, so a satori or resvg failure surfaces here;
+        // it costs the flat art (the inline art draws), never the card.
+        await identityArtDataUri(event.artist, frameArtSize(frame)).catch(
+          (err: unknown) => {
+            console.error('[share card] frame art failed', { err });
+            return null;
+          },
+        )
+      : null;
+  const photoMissing = photoSources.length > 0 && photo === null;
+  // Taken once, after the photo: the fetch can carry the request past the
+  // venue's midnight, and the card drawn is the card of this moment.
+  const { card, tagFor, cacheControlFor } = cardAt(new Date());
+  const etag = tagFor(photoMissing ? 'f' : loadedState);
+  const cacheControl = cacheControlFor(photoMissing);
+  if (photoMissing && etagMatches(ifNoneMatch, etag)) {
+    return notModified(etag, cacheControl);
   }
 
   return new ImageResponse(
     <PosterCard
-      event={poster}
+      card={card}
       ratio={parsed.ratio}
-      tokens={parsed.tokens}
-      handle={parsed.handle}
+      photo={photo}
+      frameArt={frameArt}
     />,
     {
       ...SC_RATIOS[parsed.ratio],
       fonts,
       headers: {
-        'Cache-Control': SHARE_CACHE_CONTROL,
+        'Cache-Control': cacheControl,
         ETag: etag,
       },
     },

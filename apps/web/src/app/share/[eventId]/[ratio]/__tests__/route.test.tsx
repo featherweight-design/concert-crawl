@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as ApiModule from '@/lib/api';
+import type * as FallbackArtModule from '@/lib/share/fallback-art';
 
 const getMock = vi.fn();
 // The real `ApiError` comes through: the route's 404-vs-502 split turns on
@@ -12,6 +13,14 @@ vi.mock('@/lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof ApiModule>()),
   publicApiClient: { get: getMock },
 }));
+
+// The flat IdentityArt render, spied on but real unless a test says otherwise.
+const frameArtMock = vi.fn<typeof FallbackArtModule.identityArtDataUri>();
+vi.mock('@/lib/share/fallback-art', async (importOriginal) => {
+  const real = await importOriginal<typeof FallbackArtModule>();
+  frameArtMock.mockImplementation(real.identityArtDataUri);
+  return { identityArtDataUri: frameArtMock };
+});
 
 const { ApiError } = await import('@/lib/api');
 
@@ -193,7 +202,8 @@ describe('GET /share/[eventId]/[ratio]', () => {
     expect(second.status).toBe(304);
   }, 30_000);
 
-  it('varies the ETag by ratio and theme', async () => {
+  // The B+ card is theme-independent, so a theme must not split the cache.
+  it('varies the ETag by ratio but not by theme', async () => {
     const story = await call(`http://localhost/share/${EVENT_ID}/story`, {
       eventId: EVENT_ID,
       ratio: 'story',
@@ -206,13 +216,14 @@ describe('GET /share/[eventId]/[ratio]', () => {
       `http://localhost/share/${EVENT_ID}/story?theme=jade`,
       { eventId: EVENT_ID, ratio: 'story' },
     );
-    const tags = [story, square, jade].map((res) => res.headers.get('ETag'));
-    expect(new Set(tags).size).toBe(3);
+    expect(story.headers.get('ETag')).not.toBe(square.headers.get('ETag'));
+    expect(jade.headers.get('ETag')).toBe(story.headers.get('ETag'));
   }, 30_000);
 
   // The mint's contentHash only moves with `state`, so a corrected artist or a
-  // changed drop amount would otherwise keep serving yesterday's PNG for the
-  // full s-maxage day.
+  // renamed venue would otherwise keep serving yesterday's PNG for the full
+  // s-maxage day. The B+ card draws no price, so a price change must NOT
+  // move the tag (that would only throw away a still-correct cached card).
   it('varies the ETag with every field drawn on the card', async () => {
     const tagFor = async (overrides: Record<string, unknown>) => {
       getMock.mockResolvedValue({ ...event, ...overrides });
@@ -227,12 +238,14 @@ describe('GET /share/[eventId]/[ratio]', () => {
       await tagFor({ artist: 'Snakebite Reviva' }),
       await tagFor({ showTime: '21:00' }),
       await tagFor({ date: '2026-03-15' }),
-      await tagFor({ ticketPriceMin: '16.00' }),
+      await tagFor({ venue: { ...event.venue, name: 'Gothic Theatre' } }),
     ];
     expect(new Set(tags).size).toBe(tags.length);
+    expect(await tagFor({ ticketPriceMin: '16.00' })).toBe(tags[0]);
   }, 30_000);
 
-  it('renders a different card for a signed share than an anonymous one', async () => {
+  // The B+ boards draw no handle, so a signed share draws the same card.
+  it('draws the same card for a signed share as an anonymous one', async () => {
     const anon = await digest(
       await call(`http://localhost/share/${EVENT_ID}/square`, {
         eventId: EVENT_ID,
@@ -245,7 +258,140 @@ describe('GET /share/[eventId]/[ratio]', () => {
         ratio: 'square',
       }),
     );
-    expect(anon).not.toBe(signed);
+    expect(anon).toBe(signed);
+  }, 30_000);
+
+  // A broken photo host costs the photo, never the card: IdentityArt draws.
+  it('renders the fallback when the photo cannot be fetched', async () => {
+    getMock.mockResolvedValue({
+      ...event,
+      artistPhotoUrl: 'https://photos.invalid/missing.jpg',
+    });
+    const response = await call(`http://localhost/share/${EVENT_ID}/link`, {
+      eventId: EVENT_ID,
+      ratio: 'link',
+    });
+    expect(response.status).toBe(200);
+    // Usually transient, so held for a minute, and tagged apart from a card
+    // that drew its photo.
+    expect(response.headers.get('Cache-Control')).toBe(
+      'public, max-age=60, s-maxage=60',
+    );
+    expect(response.headers.get('ETag')).toMatch(/:f"$/);
+  }, 30_000);
+
+  // Only a tilted card needs the art flattened first; Story draws it inline.
+  it('renders the flat art for a no-photo Square and Wide, not for Story', async () => {
+    for (const ratio of ['square', 'link', 'story']) {
+      frameArtMock.mockClear();
+      const response = await call(
+        `http://localhost/share/${EVENT_ID}/${ratio}`,
+        {
+          eventId: EVENT_ID,
+          ratio,
+        },
+      );
+      expect(response.status).toBe(200);
+      expect(frameArtMock).toHaveBeenCalledTimes(ratio === 'story' ? 0 : 1);
+    }
+  }, 60_000);
+
+  // next/og renders lazily, so a failing flat render rejects late; it must
+  // cost the flat art only, never the card.
+  it('still draws the card when the flat art render fails', async () => {
+    frameArtMock.mockRejectedValueOnce(new Error('resvg exploded'));
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await call(`http://localhost/share/${EVENT_ID}/square`, {
+        eventId: EVENT_ID,
+        ratio: 'square',
+      });
+      expect(response.status).toBe(200);
+      const body = Buffer.from(await response.arrayBuffer());
+      expect(body.subarray(0, 4)).toEqual(PNG_MAGIC);
+    } finally {
+      errors.mockRestore();
+    }
+  }, 30_000);
+
+  it('draws a photo that loads, under the full cache life', async () => {
+    const jpeg = await readFile(
+      path.resolve(
+        __dirname,
+        '../../../../../../../../design/design_handoff_bplus_redesign/screens/07-more-screens/more-r3-share_shapes.jpg',
+      ),
+    );
+    const diskFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) =>
+        new URL(String(input)).hostname === 'photos.example.com'
+          ? new Response(jpeg, { status: 200 })
+          : diskFetch(input, init),
+    );
+    getMock.mockResolvedValue({
+      ...event,
+      artistPhotoUrl: 'https://photos.example.com/toki.jpg',
+    });
+    const response = await call(`http://localhost/share/${EVENT_ID}/square`, {
+      eventId: EVENT_ID,
+      ratio: 'square',
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe(
+      'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
+    );
+    expect(response.headers.get('ETag')).toMatch(/:p"$/);
+    const body = Buffer.from(await response.arrayBuffer());
+    expect(body.subarray(0, 4)).toEqual(PNG_MAGIC);
+  }, 30_000);
+
+  // "4 DAYS AWAY" is only true until the venue's midnight: the tag moves with
+  // the day count, and no cache may hold the card past that midnight.
+  it('keys and expires a countdown card on the venue’s day', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      getMock.mockResolvedValue({ ...event, date: '2026-11-13' });
+      const at = async (iso: string) => {
+        vi.setSystemTime(new Date(iso));
+        return call(`http://localhost/share/${EVENT_ID}/link`, {
+          eventId: EVENT_ID,
+          ratio: 'link',
+        });
+      };
+      // 22:00 MST Nov 9, then 01:00 MST Nov 10.
+      const before = await at('2026-11-10T05:00:00Z');
+      const after = await at('2026-11-10T08:00:00Z');
+      expect(before.headers.get('Cache-Control')).toBe(
+        'public, max-age=3600, s-maxage=7200',
+      );
+      expect(before.headers.get('ETag')).not.toBe(after.headers.get('ETag'));
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 30_000);
+
+  // The countdown's day and the cache life come from one instant, taken after
+  // the photo: a fallback card 30s before midnight lives 30s, not a minute.
+  it('caps a fallback countdown card at the venue’s midnight', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-11-10T06:59:30Z'));
+      getMock.mockResolvedValue({
+        ...event,
+        date: '2026-11-13',
+        artistPhotoUrl: 'https://photos.invalid/missing.jpg',
+      });
+      const response = await call(`http://localhost/share/${EVENT_ID}/link`, {
+        eventId: EVENT_ID,
+        ratio: 'link',
+      });
+      expect(response.headers.get('Cache-Control')).toBe(
+        'public, max-age=30, s-maxage=30',
+      );
+      expect(response.headers.get('ETag')).toMatch(/:f"$/);
+    } finally {
+      vi.useRealTimers();
+    }
   }, 30_000);
 
   it('ignores an implausible handle instead of drawing it', async () => {

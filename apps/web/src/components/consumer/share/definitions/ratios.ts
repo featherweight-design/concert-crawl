@@ -26,91 +26,116 @@ export const SC_RATIOS: Record<ShareRatio, ShareRatioSpec> = {
   link: { width: 1200, height: 628 },
 };
 
+/** The tilted photo card on Square and Wide: centre, side, tilt and ring. */
+export interface ShareFrame {
+  cx: number;
+  cy: number;
+  size: number;
+  /** Degrees; negative lifts the right edge, as drawn. */
+  tilt: number;
+  border: number;
+  radius: number;
+}
+
+/** The square the photo (or its IdentityArt stand-in) fills inside the ring. */
+export const frameArtSize = (frame: ShareFrame): number =>
+  frame.size - frame.border * 2;
+
 /**
- * Every pixel measurement the poster uses, per ratio.
- *
- * A table rather than a chain of `isStory ? … : isLink ? … : …` ternaries: the
- * design handoff locks these numbers per ratio, and a table can be diffed
- * against §1 of the README line by line. The type sizes here are the README's
- * locked values, which override the (larger) ones in the `share-cards.jsx`
- * prototype — the prototype crowded the bottom block.
+ * Every pixel measurement the B+ card uses, per ratio, measured off
+ * `more-r3-share_shapes.jpg` and scaled to the artboard (story ×4.0, square
+ * ×2.83, wide ×2.14). A table so it can be diffed against the board.
  */
 export interface PosterMetrics {
-  /** Edge inset of the whole bottom block. */
-  padding: number;
-  /** Vertical rhythm between the bottom block's rows. */
-  gap: number;
-  /** Artist display type. */
-  title: number;
-  /** Venue · city. */
-  subtitle: number;
-  /** Mono date stamp; the show time sits at `time` under it. */
-  date: number;
-  time: number;
-  /** Tagline. Not drawn at `link` — there is no room. */
-  tagline: number;
-  /** State pill label. */
-  pill: number;
-  pillPaddingY: number;
-  pillPaddingX: number;
-  /** `ConcertCrawl` footer wordmark. */
+  /** The text block's left edge, right inset and bottom inset. */
+  textLeft: number;
+  textRight: number;
+  /** Null centres the block vertically (Wide). */
+  textBottom: number | null;
+  chip: { font: number; height: number; padX: number; dot: number };
+  /** Name size, and the floor a long one-line name shrinks to. */
+  name: number;
+  nameFloor: number;
+  meta: number;
   wordmark: number;
-  /** `@handle`, drawn only for a signed mint. */
-  handle: number;
-  /** Mis-registration ghost offset, x/y. */
-  ghostX: number;
-  ghostY: number;
+  countdown: number;
+  /** Vertical rhythm: chip→name, name→meta, meta→rule, rule→footer. */
+  gaps: [number, number, number, number];
+  /** Null on Story, whose photo runs full-bleed instead. */
+  frame: ShareFrame | null;
 }
 
 export const SC_METRICS: Record<ShareRatio, PosterMetrics> = {
   story: {
-    padding: 72,
-    gap: 28,
-    title: 180,
-    subtitle: 36,
-    date: 56,
-    time: 34,
-    tagline: 30,
-    pill: 22,
-    pillPaddingY: 14,
-    pillPaddingX: 22,
-    wordmark: 78,
-    handle: 36,
-    ghostX: 8,
-    ghostY: 6,
+    textLeft: 72,
+    textRight: 72,
+    textBottom: 72,
+    chip: { font: 40, height: 74, padX: 26, dot: 24 },
+    name: 140,
+    nameFloor: 140,
+    meta: 42,
+    wordmark: 51,
+    countdown: 36,
+    gaps: [26, 26, 54, 48],
+    frame: null,
   },
   square: {
-    padding: 58,
-    gap: 22,
-    title: 120,
-    subtitle: 28,
-    date: 46,
-    time: 28,
-    tagline: 26,
-    pill: 20,
-    pillPaddingY: 12,
-    pillPaddingX: 20,
-    wordmark: 60,
-    handle: 30,
-    ghostX: 5,
-    ghostY: 4,
+    textLeft: 72,
+    textRight: 72,
+    textBottom: 64,
+    chip: { font: 32, height: 48, padX: 18, dot: 17 },
+    name: 122,
+    nameFloor: 72,
+    meta: 32,
+    wordmark: 40,
+    countdown: 28,
+    gaps: [22, 31, 45, 36],
+    frame: { cx: 360, cy: 360, size: 524, tilt: -4, border: 8, radius: 40 },
   },
   link: {
-    padding: 52,
-    gap: 14,
-    title: 72,
-    subtitle: 22,
-    date: 34,
-    time: 20,
-    tagline: 20,
-    pill: 16,
-    pillPaddingY: 10,
-    pillPaddingX: 18,
-    wordmark: 42,
-    handle: 22,
-    ghostX: 5,
-    ghostY: 4,
+    textLeft: 573,
+    textRight: 48,
+    textBottom: null,
+    chip: { font: 22, height: 41, padX: 15, dot: 13 },
+    name: 84,
+    nameFloor: 52,
+    meta: 24,
+    wordmark: 30,
+    countdown: 21,
+    gaps: [17, 17, 31, 25],
+    frame: { cx: 294, cy: 314, size: 430, tilt: -3.5, border: 7, radius: 34 },
   },
+};
+
+/**
+ * Square's FRI / 13 / NOV stack. Measured off the board at ×2.83: FRI caps at
+ * y 102–127, 13 at 155–300 (so 200px Inter 900), NOV at 328–353, with the same
+ * ~28px gap above and below the number.
+ */
+export const SQUARE_DATE_STACK = {
+  top: 92,
+  right: 66,
+  label: 34,
+  day: 200,
+  /** Margins between the boxes; negative because the boxes carry leading. */
+  dayGap: -9,
+  monthGap: -10,
+} as const;
+
+/**
+ * Cap-to-cap gaps above and below the day, from the faces' metrics: JetBrains
+ * Mono at `line-height: normal` (box 1.32em, cap top at 0.29em, cap 0.73em)
+ * and Inter at `line-height: 1` (cap top at 0.136em, baseline at 0.863em).
+ */
+export const dateStackCapGaps = (
+  stack: typeof SQUARE_DATE_STACK = SQUARE_DATE_STACK,
+): { above: number; below: number } => {
+  const labelCapBottom = (0.29 + 0.73) * stack.label;
+  const dayTop = 1.32 * stack.label + stack.dayGap;
+  const above = dayTop + 0.136 * stack.day - labelCapBottom;
+  const monthCapTop = dayTop + stack.day + stack.monthGap + 0.29 * stack.label;
+  const below = monthCapTop - (dayTop + 0.863 * stack.day);
+  return { above, below };
 };
 
 /** Closed-set guard. `apps/web` has no Zod; three members is a full validator. */

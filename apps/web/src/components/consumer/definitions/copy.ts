@@ -2030,6 +2030,14 @@ export const CONSUMER_COPY = {
     // The signature set into the foot of every poster. Not a logo glyph —
     // the handoff's §1 is explicit that the poster carries no mark.
     wordmark: 'ConcertCrawl',
+    // The B+ card's footer countdown (more-r3-share_shapes: "4 DAYS AWAY").
+    // Set in mono caps, so these are sentence case and the card uppercases
+    // them. A past show draws no countdown at all.
+    countdown: {
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+      daysAway: (days: number): string => `${days} days away`,
+    },
     // Trigger + sheet chrome.
     triggerLabel: 'Share this show',
     sheetTitle: 'Share this show',

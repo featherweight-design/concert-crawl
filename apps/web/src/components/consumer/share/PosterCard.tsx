@@ -1,91 +1,363 @@
 import React from 'react';
-import {
-  identityFor,
-  ia_isDark,
-} from '@/components/consumer/identity-art/IdentityArt';
+import { identityFor } from '@/components/consumer/identity-art/IdentityArt';
 import { IdentityArtPrint } from '@/components/consumer/identity-art/IdentityArtPrint';
 import {
   SC_METRICS,
   SC_RATIOS,
+  SQUARE_DATE_STACK,
+  frameArtSize,
+  type ShareFrame,
   type ShareRatio,
 } from '@/components/consumer/share/definitions/ratios';
 import { ShareWordmark } from '@/components/consumer/share/ShareWordmark';
-import { StatePill } from '@/components/consumer/share/StatePill';
-import type { PosterEvent } from '@/lib/share/poster-event';
-import { fitTitleSize } from '@/lib/share/poster-title';
-import { posterTagline } from '@/lib/share/taglines';
+import {
+  fitLine,
+  metaMaxChars,
+  NAME_ELLIPSIS,
+  shareMetaLines,
+  storyNameText,
+  type FittedLine,
+  type ShareCard,
+  type ShareChip,
+} from '@/lib/share/share-layout';
 
 // ── Why this file looks the way it does ────────────────────────────
-// Everything here renders inside satori, not a browser. That rules out
-// `mixBlendMode`, `backdropFilter`, `maskImage`, SVG <filter> and percentage
-// sizing, and it means any element with more than one child needs an explicit
-// `display: 'flex'`. The identity art layer solves the same constraints in
-// `IdentityArtPrint` — this file must not invent a second approach.
+// Everything here renders inside satori, not a browser: any element with more
+// than one child needs `display: 'flex'`, sizes are pixels, and colours are
+// literals (no `var()`). The card is theme-independent, so it draws in the B+
+// Electric palette whatever theme the sharer runs; the ground is sampled off
+// the board. CSS `filter: blur()` does render here (satori hands it to resvg),
+// which is what draws the blurred copy of the photo behind Square and Wide.
+
+const GROUND = '#0c0d1f';
+const FG = '#e8f3ff';
+const MUTED = '#9aa8c7';
+const SIGNAL = '#7ae6ff';
+const ACCENT = '#ff7bd4';
+const CHIP_FILL = '#131a37';
+const CHIP_BORDER = '#1f2748';
+const RULE = 'rgba(232,243,255,0.14)';
+/** The darkening over the blurred copy, near side → far side (alpha). */
+const BACKDROP_WASH: Record<'square' | 'link', [number, string][]> = {
+  square: [
+    [0.4, '0%'],
+    [0.68, '40%'],
+    [0.92, '75%'],
+    [1, '100%'],
+  ],
+  // Wide's text column starts at 48%, so the glow is gone by then.
+  link: [
+    [0.2, '0%'],
+    [0.55, '35%'],
+    [0.95, '50%'],
+    [1, '100%'],
+  ],
+};
+/**
+ * With no photo the ground is the art's flat palette colour, often pale, so it
+ * is held well down: undrawn on the board, and the photo tuning above would
+ * wash a cream ground to grey.
+ */
+const FLAT_GROUND_WASH: [number, string][] = [
+  [0.72, '0%'],
+  [0.9, '45%'],
+  [1, '75%'],
+];
+/** Story's full-bleed photo: the top 56% of the card, as drawn. */
+const STORY_PHOTO_HEIGHT = 1070;
+
+const rgba = (hex: string, alpha: number): string => {
+  const channel = (at: number) => Number.parseInt(hex.slice(at, at + 2), 16);
+  return `rgba(${channel(1)},${channel(3)},${channel(5)},${alpha})`;
+};
 
 export interface PosterCardProps {
-  event: PosterEvent;
+  card: ShareCard;
   ratio: ShareRatio;
-  /** Resolved theme tokens from `lib/share/theme-tokens.ts`. */
-  tokens: Record<string, string>;
-  /** `@handle`, or null for an anonymous share — which draws no signature. */
-  handle: string | null;
+  /** A data URI from `loadSharePhoto`, or null: IdentityArt draws instead. */
+  photo: string | null;
+  /**
+   * Square and Wide with no photo: IdentityArt pre-rendered flat to a PNG
+   * (`identityArtDataUri` at `frameArtSize`), because satori mis-rotates an
+   * inline SVG on the tilted card. Null falls back to the inline art.
+   */
+  frameArt?: string | null;
 }
 
-/**
- * Split the paper hex into a channel triple so the scrim can fade the exact
- * paper colour in. `rgba(var(--x))` is not available to satori, and a scrim in
- * any other colour reads as a grey haze over the art.
- */
-const paperChannels = (paper: string): string => {
-  const rr = Number.parseInt(paper.slice(1, 3), 16);
-  const gg = Number.parseInt(paper.slice(3, 5), 16);
-  const bb = Number.parseInt(paper.slice(5, 7), 16);
-  return `${rr},${gg},${bb}`;
-};
+/** The date block and countdown: the boards' heavier mono. */
+const MONO = { fontFamily: 'JetBrains Mono', fontWeight: 700 } as const;
+/** The genre chip and meta lines: the boards' lighter mono. */
+const MONO_LIGHT = { fontFamily: 'JetBrains Mono', fontWeight: 400 } as const;
+
+/** Photo or IdentityArt, filling a fixed box. */
+const Art = ({
+  artist,
+  photo,
+  width,
+  height,
+}: {
+  artist: string;
+  photo: string | null;
+  width: number;
+  height: number;
+}) =>
+  photo !== null ? (
+    // eslint-disable-next-line @next/next/no-img-element -- satori draws a plain <img>; next/image is a browser component
+    <img
+      alt=""
+      src={photo}
+      width={width}
+      height={height}
+      style={{ width, height, objectFit: 'cover' }}
+    />
+  ) : (
+    <IdentityArtPrint
+      name={artist}
+      kind="artist"
+      width={width}
+      height={height}
+    />
+  );
 
 /**
- * The locked scrim ramp. Transparent through 38% so the top half of the card
- * is genuinely unobstructed art, then opaque by 62% so the title, venue,
- * tagline and wordmark all read against flat paper rather than over texture.
+ * Square and Wide: a blurred, darkened copy of the photo behind the tilted
+ * card ("so there is no new crop"). With no photo, the art's own ground.
  */
-const scrimGradient = (paper: string): string => {
-  const channels = paperChannels(paper);
-  const rgba = (alpha: number): string => `rgba(${channels},${alpha})`;
-  return `linear-gradient(180deg, ${rgba(0)} 0%, ${rgba(0)} 38%, ${rgba(0.85)} 52%, ${rgba(1)} 62%, ${rgba(1)} 100%)`;
+const Backdrop = ({
+  card,
+  photo,
+  ratio,
+}: {
+  card: ShareCard;
+  photo: string | null;
+  ratio: ShareRatio;
+}) => {
+  const { width, height } = SC_RATIOS[ratio];
+  // Sized off the longer side and centred, so Wide's glow sits beside its
+  // card rather than showing only the photo's top band.
+  const bleed = Math.round(width * 0.12);
+  const side = width + bleed * 2;
+  const angle = ratio === 'link' ? 90 : 135;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width,
+        height,
+      }}
+    >
+      {photo !== null ? (
+        // eslint-disable-next-line @next/next/no-img-element -- satori draws a plain <img>; next/image is a browser component
+        <img
+          alt=""
+          src={photo}
+          width={side}
+          height={side}
+          style={{
+            position: 'absolute',
+            left: -bleed,
+            top: Math.round((height - side) / 2),
+            width: side,
+            height: side,
+            objectFit: 'cover',
+            filter: 'blur(60px)',
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            width,
+            height,
+            backgroundColor: identityFor(card.artist, 'artist').palette.bg,
+          }}
+        />
+      )}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width,
+          height,
+          // Tuned to colours sampled off the board (more-r3-share_shapes):
+          // the glow reads #3f3d40 beside Wide's card and #332c34 above
+          // Square's, falling to the #0c0d1f ground on the far side.
+          backgroundImage: `linear-gradient(${angle}deg, ${(photo === null
+            ? FLAT_GROUND_WASH
+            : BACKDROP_WASH[ratio === 'link' ? 'link' : 'square']
+          )
+            .map(([alpha, at]) => `${rgba(GROUND, alpha)} ${at}`)
+            .join(', ')})`,
+        }}
+      />
+    </div>
+  );
 };
 
+const Frame = ({
+  frame,
+  card,
+  photo,
+}: {
+  frame: ShareFrame;
+  card: ShareCard;
+  /** The photo, or the pre-rendered IdentityArt PNG (`frameArtSize`). */
+  photo: string | null;
+}) => {
+  const inner = frameArtSize(frame);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        position: 'absolute',
+        left: frame.cx - frame.size / 2,
+        top: frame.cy - frame.size / 2,
+        width: frame.size,
+        height: frame.size,
+        transform: `rotate(${frame.tilt}deg)`,
+        border: `${frame.border}px solid ${SIGNAL}`,
+        borderRadius: frame.radius,
+        overflow: 'hidden',
+        // The ring colour, so the antialiased seam inside it reads as ring.
+        backgroundColor: SIGNAL,
+        boxShadow: `0 ${frame.size * 0.05}px ${frame.size * 0.12}px rgba(0,0,0,0.55)`,
+      }}
+    >
+      <Art artist={card.artist} photo={photo} width={inner} height={inner} />
+    </div>
+  );
+};
+
+const Chip = ({ chip, ratio }: { chip: ShareChip; ratio: ShareRatio }) => {
+  const { font, height, padX, dot } = SC_METRICS[ratio].chip;
+  return (
+    <div
+      style={{
+        ...MONO_LIGHT,
+        display: 'flex',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        gap: Math.round(padX * 0.7),
+        height,
+        padding: `0 ${padX}px`,
+        borderRadius: Math.round(height * 0.24),
+        border: `2px solid ${CHIP_BORDER}`,
+        backgroundColor: CHIP_FILL,
+        fontSize: font,
+        letterSpacing: '0.08em',
+        color: MUTED,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          width: dot,
+          height: dot,
+          borderRadius: dot / 2,
+          backgroundColor: chip.dot,
+          ...(chip.glow && {
+            boxShadow: `0 0 ${dot * 0.85}px ${rgba(chip.dot, 0.6)}`,
+          }),
+        }}
+      />
+      {chip.label}
+    </div>
+  );
+};
+
+/** Square's top-right date block: FRI / 13 / NOV. */
+const DateBlock = ({ card }: { card: ShareCard }) => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      position: 'absolute',
+      top: SQUARE_DATE_STACK.top,
+      right: SQUARE_DATE_STACK.right,
+    }}
+  >
+    <div
+      style={{
+        ...MONO,
+        display: 'flex',
+        fontSize: SQUARE_DATE_STACK.label,
+        letterSpacing: '0.12em',
+        color: SIGNAL,
+      }}
+    >
+      {card.date.weekday}
+    </div>
+    <div
+      style={{
+        display: 'flex',
+        fontFamily: 'Inter',
+        fontWeight: 900,
+        fontSize: SQUARE_DATE_STACK.day,
+        lineHeight: 1,
+        letterSpacing: '-0.03em',
+        color: FG,
+        marginTop: SQUARE_DATE_STACK.dayGap,
+      }}
+    >
+      {card.date.day}
+    </div>
+    <div
+      style={{
+        ...MONO,
+        display: 'flex',
+        fontSize: SQUARE_DATE_STACK.label,
+        letterSpacing: '0.12em',
+        color: FG,
+        marginTop: SQUARE_DATE_STACK.monthGap,
+      }}
+    >
+      {card.date.month}
+    </div>
+  </div>
+);
+
+const oneLine = {
+  display: 'block',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+} as const;
+
 /**
- * Direction B — the poster. Full-bleed identity art over the top half, heavy
- * display type in the bottom block, one mis-registered ghost pass on the
- * title so the card reads as printed rather than composited.
+ * The B+ share card (more-r3-share_shapes): Story is a full-bleed photo over
+ * the text block; Square and Wide put the photo on a tilted card over its own
+ * blurred copy. No price, state, tagline, handle or stamp: none is drawn.
  */
 export const PosterCard = ({
-  event,
+  card,
   ratio,
-  tokens,
-  handle,
+  photo,
+  frameArt = null,
 }: PosterCardProps) => {
   const { width, height } = SC_RATIOS[ratio];
   const metrics = SC_METRICS[ratio];
-
-  // The card is drawn in the artist's own identity palette, not the theme's.
-  // That is the Phase 7.5 contract: two people sharing the same show get the
-  // same artwork whatever theme either of them is running.
-  const identity = identityFor(event.artist, 'artist');
-  const paper = identity.palette.bg;
-  const ink = identity.palette.ink;
-  const ghostInk = ia_isDark(paper)
-    ? 'rgba(255,255,255,0.14)'
-    : 'rgba(0,0,0,0.12)';
-
-  // Satori cannot measure text, so the title size is estimated up front from
-  // the artist's longest word rather than reacting to an overflow.
-  const contentWidth = width - metrics.padding * 2;
-  const titleSize = fitTitleSize(event.artist, metrics.title, contentWidth);
-
-  const accent = tokens.accent ?? ink;
-  // `link` is a 628px-tall strip. The tagline is the first thing to go.
-  const showTagline = ratio !== 'link';
+  const textWidth = width - metrics.textLeft - metrics.textRight;
+  const [chipGap, nameGap, metaGap, ruleGap] = metrics.gaps;
+  const name: FittedLine =
+    ratio === 'story'
+      ? {
+          size: metrics.name,
+          text: storyNameText(card.artist, metrics.name, textWidth),
+          cut: false,
+        }
+      : fitLine(card.artist, metrics.name, textWidth, metrics.nameFloor);
+  const nameSize = name.size;
+  const metaLines = shareMetaLines(
+    card,
+    ratio,
+    metaMaxChars(textWidth, metrics.meta),
+  );
 
   return (
     <div
@@ -95,192 +367,134 @@ export const PosterCard = ({
         width,
         height,
         overflow: 'hidden',
-        backgroundColor: paper,
+        backgroundColor: GROUND,
       }}
     >
-      {/* Exactly half the card height — the scrim ramp is authored against it. */}
-      <IdentityArtPrint
-        name={event.artist}
-        kind="artist"
-        scale="hero"
-        width={width}
-        height={Math.round(height / 2)}
-        style={{ position: 'absolute', top: 0, left: 0 }}
-      />
+      {metrics.frame === null ? (
+        <div
+          style={{
+            display: 'flex',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width,
+            height: STORY_PHOTO_HEIGHT,
+          }}
+        >
+          <Art
+            artist={card.artist}
+            photo={photo}
+            width={width}
+            height={STORY_PHOTO_HEIGHT}
+          />
+          <div
+            style={{
+              display: 'flex',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width,
+              height: STORY_PHOTO_HEIGHT,
+              backgroundImage: `linear-gradient(180deg, ${rgba(GROUND, 0)} 0%, ${rgba(GROUND, 0)} 55%, ${rgba(GROUND, 0.72)} 82%, ${GROUND} 100%)`,
+            }}
+          />
+        </div>
+      ) : (
+        <>
+          <Backdrop card={card} photo={photo} ratio={ratio} />
+          <Frame frame={metrics.frame} card={card} photo={photo ?? frameArt} />
+        </>
+      )}
 
-      <div
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width,
-          height,
-          backgroundImage: scrimGradient(paper),
-        }}
-      />
+      {ratio === 'square' && <DateBlock card={card} />}
 
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           position: 'absolute',
-          left: metrics.padding,
-          bottom: metrics.padding,
-          width: contentWidth,
-          gap: metrics.gap,
+          left: metrics.textLeft,
+          width: textWidth,
+          ...(metrics.textBottom === null
+            ? { top: 0, height, justifyContent: 'center' }
+            : { bottom: metrics.textBottom }),
         }}
       >
-        {/* Metadata row — state pill left, date + time right. */}
+        {card.chip !== null && <Chip chip={card.chip} ratio={ratio} />}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            gap: 24,
-          }}
-        >
-          <StatePill
-            state={event.state}
-            dropLabel={event.dropLabel}
-            accent={accent}
-            fontSize={metrics.pill}
-            paddingY={metrics.pillPaddingY}
-            paddingX={metrics.pillPaddingX}
-          />
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              fontFamily: 'JetBrains Mono',
-              fontWeight: 700,
-              color: ink,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                fontSize: metrics.date,
-                letterSpacing: '0.04em',
-                lineHeight: 1,
-              }}
-            >
-              {event.dateShort}
-            </div>
-            {event.showTime !== null && (
-              <div
-                style={{
-                  display: 'flex',
-                  marginTop: 4,
-                  fontSize: metrics.time,
-                  letterSpacing: '0.04em',
-                  lineHeight: 1,
-                  opacity: 0.85,
-                }}
-              >
-                {event.showTime}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Title, with its mis-registration ghost behind it. */}
-        <div
-          style={{ display: 'flex', position: 'relative', width: contentWidth }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              position: 'absolute',
-              left: metrics.ghostX,
-              top: metrics.ghostY,
-              width: contentWidth,
-              fontFamily: 'Inter',
-              fontWeight: 900,
-              fontSize: titleSize,
-              lineHeight: 0.86,
-              letterSpacing: '-0.06em',
-              color: ghostInk,
-              textTransform: 'uppercase',
-            }}
-          >
-            {event.artist}
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              width: contentWidth,
-              fontFamily: 'Inter',
-              fontWeight: 900,
-              fontSize: titleSize,
-              lineHeight: 0.86,
-              letterSpacing: '-0.06em',
-              color: ink,
-              textTransform: 'uppercase',
-            }}
-          >
-            {event.artist}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
             fontFamily: 'Inter',
-            fontWeight: 700,
-            fontSize: metrics.subtitle,
-            lineHeight: 1.05,
-            letterSpacing: '-0.015em',
-            color: ink,
+            fontWeight: 900,
+            fontSize: nameSize,
+            letterSpacing: '-0.03em',
+            color: FG,
+            marginTop: card.chip !== null ? chipGap : 0,
+            ...(ratio === 'story'
+              ? {
+                  display: 'block',
+                  lineHeight: 0.92,
+                  lineClamp: 2,
+                  wordBreak: 'break-word',
+                }
+              : { display: 'flex', whiteSpace: 'nowrap', lineHeight: 1 }),
           }}
         >
-          {`${event.venue} · ${event.city}`}
+          {/* A cut name ends in one U+2026 glyph, untracked: the name's
+              negative tracking otherwise spaces its dots apart. */}
+          {name.cut ? (
+            <>
+              <span>{name.text}</span>
+              <span style={{ letterSpacing: 0 }}>{NAME_ELLIPSIS}</span>
+            </>
+          ) : (
+            name.text
+          )}
         </div>
-
-        {showTagline && (
-          <div
-            style={{
-              display: 'flex',
-              fontFamily: 'Inter',
-              fontWeight: 400,
-              fontSize: metrics.tagline,
-              lineHeight: 1.3,
-              color: ink,
-              opacity: 0.78,
-            }}
-          >
-            {`“${posterTagline(event.state)}”`}
-          </div>
-        )}
-
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            marginTop: nameGap,
+          }}
+        >
+          {metaLines.map((line) => (
+            <div
+              key={line}
+              style={{
+                ...MONO_LIGHT,
+                ...oneLine,
+                fontSize: metrics.meta,
+                lineHeight: 1.45,
+                letterSpacing: '0.08em',
+                color: MUTED,
+              }}
+            >
+              {line}
+            </div>
+          ))}
+        </div>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            gap: 24,
-            marginTop: ratio === 'story' ? 16 : 8,
-            paddingTop: ratio === 'story' ? 28 : 18,
-            borderTop: `2px solid ${ink}`,
+            alignItems: 'center',
+            marginTop: metaGap,
+            paddingTop: ruleGap,
+            borderTop: `2px solid ${RULE}`,
           }}
         >
-          <ShareWordmark size={metrics.wordmark} color={ink} />
-          {/* Anonymous shares render no signature line at all. */}
-          {handle !== null && (
+          <ShareWordmark size={metrics.wordmark} color={FG} accent={ACCENT} />
+          {card.countdown !== null && (
             <div
               style={{
+                ...MONO,
                 display: 'flex',
-                fontFamily: 'JetBrains Mono',
-                fontWeight: 700,
-                fontSize: metrics.handle,
-                letterSpacing: '0.04em',
-                lineHeight: 1,
-                color: ink,
-                opacity: 0.85,
+                fontSize: metrics.countdown,
+                letterSpacing: '0.12em',
+                color: SIGNAL,
               }}
             >
-              {handle}
+              {card.countdown}
             </div>
           )}
         </div>
