@@ -519,7 +519,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     // 1088 is the B+ board's 1040 content column plus the 24px gutters
     // either side; the fallback and the page must share it or the shelf
     // shifts when the route resolves.
-    <main className="mx-auto w-full max-w-[1088px] flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 lg:pb-6">
+    <main className="mx-auto w-full max-w-[1088px] flex-1 overflow-x-clip px-4 pb-20 pt-4 lg:px-6 lg:pb-6">
       <PullToRefresh />
       {/* Broken-Spotify-link notice — renders nothing unless the connection
           is in an error/revoked state. */}

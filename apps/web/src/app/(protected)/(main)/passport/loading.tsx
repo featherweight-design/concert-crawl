@@ -7,7 +7,7 @@ export default function PassportLoading() {
   return (
     <main
       aria-busy="true"
-      className="mx-auto w-full max-w-[1040px] flex-1 px-4 pb-20 pt-4 sm:px-8 lg:pb-10 sm:pt-8"
+      className="mx-auto w-full max-w-[1040px] flex-1 px-4 pb-20 pt-4 lg:px-8 lg:pb-10 lg:pt-8"
     >
       <div className="grid gap-x-[30px] gap-y-6 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)]">
         <div className="flex flex-col gap-3 lg:col-span-2">
