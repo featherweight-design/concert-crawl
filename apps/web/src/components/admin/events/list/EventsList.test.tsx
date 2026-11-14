@@ -53,7 +53,7 @@ afterEach(() => {
 });
 
 describe('EventsList on desktop', () => {
-  it('keeps a hidden show’s status chip and adds the Hidden chip (4b#8)', () => {
+  it('keeps a hidden show’s status chip and tags Hidden under the title (4b#8)', () => {
     render(
       <EventsList
         when="upcoming"
@@ -74,7 +74,11 @@ describe('EventsList on desktop', () => {
     expect(dataRow).toBeDefined();
     const cells = within(dataRow as HTMLElement);
     expect(cells.getByText(COPY.status.soldout)).toBeInTheDocument();
-    expect(cells.getByText(COPY.hiddenReason.unsure)).toBeInTheDocument();
+    // Hidden is not a status (addendum 5, §2): the tag sits in the Show cell.
+    const tag = cells.getByTestId('hidden-tag');
+    expect(tag).toHaveTextContent(COPY.hiddenReason.unsure);
+    expect(tag.closest('td')).toHaveTextContent('Michael Smoak');
+    expect(tag.closest('td')).not.toHaveTextContent(COPY.status.soldout);
     // Watching reads "—" on a hidden row.
     expect(cells.queryByText('7')).not.toBeInTheDocument();
     expect(cells.getByText(COPY.none)).toBeInTheDocument();
@@ -164,7 +168,7 @@ describe('EventsList on desktop', () => {
 });
 
 describe('EventsList on the phone', () => {
-  it('draws cards with both chips on a hidden show and no Watching line', () => {
+  it('draws cards with the status chip and Hidden tag on a hidden show, and no Watching line', () => {
     setPhone(true);
     render(
       <EventsList
