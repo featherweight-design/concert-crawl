@@ -41,8 +41,18 @@ vi.mock('next/navigation', () => ({
 
 // The mock drops data-testid, so links are found by role and name.
 vi.mock('next/link', () => ({
-  default: ({ href, children }: { href: string; children: ReactNode }) => (
-    <a href={href}>{children}</a>
+  default: ({
+    href,
+    children,
+    'aria-label': ariaLabel,
+  }: {
+    href: string;
+    children: ReactNode;
+    'aria-label'?: string;
+  }) => (
+    <a href={href} aria-label={ariaLabel}>
+      {children}
+    </a>
   ),
 }));
 
@@ -50,6 +60,7 @@ import { OverviewTab } from './OverviewTab';
 import type { OverviewData } from './overview-data';
 import type { Recrawl } from '../useRecrawl';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { filtersFromParams } from '@/components/admin/events/list/events-rules';
 
 const COPY = ADMIN_COPY.venueOverview;
 const RUN = ADMIN_COPY.venuesList.latestRun;
@@ -365,13 +376,36 @@ describe('OverviewTab — Shows', () => {
   });
 
   it('opens the Events list filtered to this venue', () => {
+    const id = '685205dc-0605-4d9c-b7e8-e71a15f5cea0';
     render(
-      <OverviewTab venue={buildVenue()} data={DATA} recrawl={recrawl()} />,
+      <OverviewTab
+        venue={buildVenue({ id })}
+        data={DATA}
+        recrawl={recrawl()}
+      />,
     );
     const link = within(card(COPY.shows.title)).getByRole('link', {
       name: COPY.shows.openInEvents,
     });
-    expect(link.getAttribute('href')).toBe('/admin/events?venueIds=venue-1');
+    const href = link.getAttribute('href') ?? '';
+    expect(href).toBe(`/admin/events?venueIds=${id}`);
+    // The Events page reads it back as the venue filter.
+    const params = new URL(href, 'http://localhost').searchParams;
+    expect(filtersFromParams(params).venueIds).toEqual([id]);
+  });
+
+  it('reads Events on phone, named for the venue', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      ...matchMediaStub(query),
+      matches: true,
+    }));
+    render(
+      <OverviewTab venue={buildVenue()} data={DATA} recrawl={recrawl()} />,
+    );
+    const link = within(card(COPY.shows.title)).getByRole('link', {
+      name: COPY.shows.eventsAriaLabel,
+    });
+    expect(link.textContent).toBe(COPY.shows.events);
   });
 
   it('reads None yet without a full run', () => {

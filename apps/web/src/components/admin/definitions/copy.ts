@@ -803,6 +803,7 @@ export const ADMIN_COPY = {
       title: 'Shows',
       openInEvents: 'Open in Events',
       events: 'Events',
+      eventsAriaLabel: 'Events for this venue',
       upcoming: 'Upcoming shows on the site',
       lastFullRun: 'Found in the last full run',
       lastFullRunValue: (shows: number, date: string) =>
