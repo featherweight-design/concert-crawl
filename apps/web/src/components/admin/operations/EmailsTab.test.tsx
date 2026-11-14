@@ -53,6 +53,12 @@ beforeEach(() => {
   mockGet.mockReset();
   mockPost.mockReset();
   serve();
+  // The bottom toast reads the viewport; jsdom has no matchMedia.
+  window.matchMedia = vi.fn().mockImplementation(() => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
 });
 afterEach(cleanup);
 
@@ -233,7 +239,9 @@ describe('EmailsTab', () => {
     mockGet.mockImplementation(async () => []);
     render(<EmailsTab isPhone={false} />);
     expect(await screen.findByText(COPY.emptyTitle)).toBeInTheDocument();
-    expect(screen.queryByRole('status')).toBeNull();
+    // No loading state left spinning beside it.
+    expect(screen.queryByTestId('emails-loading')).toBeNull();
+    expect(screen.queryByText(COPY.previewLoading)).toBeNull();
   });
 
   it("shows Couldn't load when the list fails, and Try again reloads it", async () => {
