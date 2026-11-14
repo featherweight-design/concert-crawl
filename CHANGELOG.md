@@ -1,3 +1,11 @@
+## [1.428.1](https://github.com/featherweight-design/concert-crawl/compare/v1.428.0...v1.428.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** record generate-about's cost through recordLlmCost at the model's rate ([8e5f4d4](https://github.com/featherweight-design/concert-crawl/commit/8e5f4d4d9d671ce5518e4ca99b4eb5f17b1401ab))
+* **crawler-core:** price LLM calls per model and budget every LLM service ([06a86b3](https://github.com/featherweight-design/concert-crawl/commit/06a86b3736cd8e19fd43590181e5578818cebba8))
+
 # [1.428.0](https://github.com/featherweight-design/concert-crawl/compare/v1.427.0...v1.428.0) (2026-11-14)
 
 
