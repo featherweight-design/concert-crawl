@@ -1,10 +1,13 @@
 'use client';
 
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CONTENT_GUTTER_X,
-  SIDEBAR_WIDTH,
+  CONTENT_GUTTER_Y,
+  PAGE_MAX_WIDTH,
 } from '@/components/admin/shell/content-pane';
+import { useContentPaneSlot } from '@/components/admin/shell/content-pane-slot';
 import { TAB_BAR_HEIGHT } from '@/components/admin/shell/tab-bar-height';
 import { AdminButton } from './AdminButton';
 import { SaveFailedToast } from './SaveFailedToast';
@@ -30,8 +33,9 @@ export type PinnedSaveBarLook = {
   saveStyle?: CSSProperties;
   /**
    * Pins the bar across the whole desktop content pane, edge to edge,
-   * `height` tall (`details-d`), and leaves that much room at the end of the
-   * page so it hides nothing. The toast keeps to the pane's gutters.
+   * `height` tall (`details-d`): it renders at the end of the pane's scroller
+   * (the shell's slot), past any page's width cap and short of its scrollbar.
+   * The toast keeps to the page's column. Outside the shell it stays inline.
    */
   pane?: { height: number };
   /** Overrides the bar's own drawing (border, background, radius). */
@@ -72,6 +76,9 @@ export const PinnedSaveBar = ({
   onSave,
   look,
 }: PinnedSaveBarProps) => {
+  const slot = useContentPaneSlot();
+  const pane = look.pane;
+  const paneSlot = pane === undefined ? null : slot;
   // No Dismiss: the board draws Try again only; the next save or Discard
   // clears it.
   const toast =
@@ -135,20 +142,21 @@ export const PinnedSaveBar = ({
     );
   }
 
-  const pane = look.pane;
   const bar = (
     <div
       data-testid={testId}
       style={{
+        position: 'sticky',
+        bottom: 0,
         ...(pane === undefined
-          ? { position: 'sticky', bottom: 0 }
+          ? {}
+          : { height: pane.height, boxSizing: 'border-box' }),
+        // As the pane's last child, run out over its gutters, flush to its
+        // edges and its scrollbar.
+        ...(paneSlot === null
+          ? {}
           : {
-              position: 'fixed',
-              left: SIDEBAR_WIDTH,
-              right: 0,
-              bottom: 0,
-              height: pane.height,
-              boxSizing: 'border-box',
+              margin: `0 -${CONTENT_GUTTER_X}px -${CONTENT_GUTTER_Y}px`,
             }),
         zIndex: 30,
         display: 'flex',
@@ -169,9 +177,15 @@ export const PinnedSaveBar = ({
         <div
           style={{
             position: 'absolute',
-            left: pane === undefined ? 0 : CONTENT_GUTTER_X,
-            right: pane === undefined ? 0 : CONTENT_GUTTER_X,
             bottom: 'calc(100% + 12px)',
+            // Across the pane, the toast keeps to the page's column
+            // (`07/save-failed`), not the bar's width.
+            ...(paneSlot === null
+              ? { left: 0, right: 0 }
+              : {
+                  left: CONTENT_GUTTER_X,
+                  width: `min(${PAGE_MAX_WIDTH}px, calc(100% - ${CONTENT_GUTTER_X * 2}px))`,
+                }),
           }}
         >
           {toast}
@@ -186,12 +200,5 @@ export const PinnedSaveBar = ({
     </div>
   );
 
-  if (pane === undefined) return bar;
-  // Fixed takes no room in the page, so hold the bar's height at its end.
-  return (
-    <>
-      <div aria-hidden style={{ height: pane.height, flexShrink: 0 }} />
-      {bar}
-    </>
-  );
+  return paneSlot === null ? bar : createPortal(bar, paneSlot);
 };

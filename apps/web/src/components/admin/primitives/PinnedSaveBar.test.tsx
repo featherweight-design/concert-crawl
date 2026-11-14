@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { ContentPaneSlotContext } from '@/components/admin/shell/content-pane-slot';
 import { PinnedSaveBar, type PinnedSaveBarProps } from './PinnedSaveBar';
 
 const LABELS = { discard: 'Discard', save: 'Save', saving: 'Saving…' };
@@ -117,31 +118,50 @@ describe('PinnedSaveBar', () => {
     expect(save.style.height).toBe('44px');
   });
 
-  it('pins across the content pane and holds its height in the page', () => {
+  const paneLook: PinnedSaveBarProps['look'] = {
+    gap: 10,
+    padding: '0 28px',
+    messageStyle: {},
+    discardVariant: 'ghost',
+    pane: { height: 64 },
+    barStyle: { borderRadius: 0 },
+  };
+
+  it('renders into the content pane slot, out over its gutters', () => {
+    const slot = document.createElement('div');
+    document.body.appendChild(slot);
     render(
-      <PinnedSaveBar
-        {...props({
-          look: {
-            gap: 10,
-            padding: '0 28px',
-            messageStyle: {},
-            discardVariant: 'ghost',
-            pane: { height: 64 },
-            barStyle: { borderRadius: 0 },
-          },
-        })}
-      />,
+      <ContentPaneSlotContext.Provider value={slot}>
+        <PinnedSaveBar
+          {...props({
+            look: paneLook,
+            failure: { title: 'Couldn’t save', saved: 'Still saved.' },
+          })}
+        />
+      </ContentPaneSlotContext.Provider>,
     );
     const bar = screen.getByTestId('bar');
-    expect(bar.style.position).toBe('fixed');
-    expect(bar.style.left).toBe('232px');
-    expect(bar.style.right).toBe('0px');
+    expect(bar.parentElement).toBe(slot);
+    expect(bar.style.position).toBe('sticky');
     expect(bar.style.bottom).toBe('0px');
     expect(bar.style.height).toBe('64px');
+    expect(bar.style.margin).toBe('0px -28px -24px');
     expect(bar.style.borderRadius).toBe('0px');
-    expect(bar.previousElementSibling?.getAttribute('style')).toContain(
-      'height: 64px',
-    );
+    // The toast keeps to the page's column, not the bar's width.
+    const toastBox = screen
+      .getByTestId('save-failed')
+      .closest('[style*="bottom: calc"]');
+    expect(toastBox?.getAttribute('style')).toContain('left: 28px');
+    expect(toastBox?.getAttribute('style')).not.toContain('right: 0px');
+    slot.remove();
+  });
+
+  it('stays inline, with no gutter run-out, outside the shell', () => {
+    render(<PinnedSaveBar {...props({ look: paneLook })} />);
+    const bar = screen.getByTestId('bar');
+    expect(bar.style.position).toBe('sticky');
+    expect(bar.style.height).toBe('64px');
+    expect(bar.style.margin).toBe('');
   });
 
   it('keeps one row when not stacked', () => {
