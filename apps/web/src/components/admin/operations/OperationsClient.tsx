@@ -1,8 +1,8 @@
 'use client';
 
-import FeedbackPage from '@/app/(protected)/admin/feedback/page';
+import { FeedbackView } from '@/components/admin/feedback/FeedbackView';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { AdminTabs, useIsPhone } from '@/components/admin/primitives';
+import { AdminTabs, useIsPhoneResolved } from '@/components/admin/primitives';
 
 const COPY = ADMIN_COPY.operations;
 
@@ -10,9 +10,30 @@ const COPY = ADMIN_COPY.operations;
 export const OPERATIONS_TABS = ['feedback'] as const;
 export type OperationsTab = (typeof OPERATIONS_TABS)[number];
 
+const PANEL_ID = 'operations-panel';
+const tabId = (key: OperationsTab) => `operations-tab-${key}`;
+
+/** The tab's unread count: a bare number on screen, "4 unread" when read out. */
+const UnreadCount = ({ count, phone }: { count: number; phone: boolean }) => (
+  <>
+    <span className="sr-only">{COPY.unreadCountLabel(count)}</span>
+    <span
+      aria-hidden
+      data-testid="operations-feedback-unread"
+      style={{
+        fontSize: phone ? 11 : 12,
+        color: 'var(--fg-subtle)',
+        marginLeft: phone ? 5 : 6,
+      }}
+    >
+      {count}
+    </span>
+  </>
+);
+
 /**
- * `07/activity-log`: Operations' title, subtitle and tabs. Feedback is the
- * existing feedback page, unchanged.
+ * `07/activity-log`: Operations' title, subtitle and tabs over the Feedback
+ * inbox, which drops its own heading here so the page has one h1.
  */
 export const OperationsClient = ({
   feedbackUnread,
@@ -20,7 +41,10 @@ export const OperationsClient = ({
   /** The Feedback tab's count; null (or 0) draws none. */
   feedbackUnread: number | null;
 }) => {
-  const isPhone = useIsPhone();
+  // Null until the media query is read: the chrome waits for it, so a phone
+  // never paints the desktop title and underline tabs for a frame.
+  const resolvedPhone = useIsPhoneResolved();
+  const isPhone = resolvedPhone === true;
   const tab: OperationsTab = 'feedback';
 
   const tabs = OPERATIONS_TABS.map((key) => ({
@@ -29,15 +53,7 @@ export const OperationsClient = ({
       <>
         {COPY.tabs[key]}
         {feedbackUnread !== null && feedbackUnread > 0 && (
-          <span
-            style={{
-              fontSize: isPhone ? 11 : 12,
-              color: 'var(--fg-subtle)',
-              marginLeft: isPhone ? 5 : 6,
-            }}
-          >
-            {feedbackUnread}
-          </span>
+          <UnreadCount count={feedbackUnread} phone={isPhone} />
         )}
       </>
     ),
@@ -46,7 +62,7 @@ export const OperationsClient = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* The phone header carries the title, and the tab as its subtitle. */}
-      {!isPhone && (
+      {resolvedPhone === false && (
         <header style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <h1
             style={{
@@ -64,24 +80,27 @@ export const OperationsClient = ({
           </p>
         </header>
       )}
-      <AdminTabs
-        tabs={tabs}
-        value={tab}
-        onChange={() => undefined}
-        label={COPY.tabsLabel}
-        tabId={(key) => `operations-tab-${key}`}
-        panelId={() => 'operations-panel'}
-        variant={isPhone ? 'segments' : 'underline'}
-        phone={isPhone}
-        gap={4}
-        testId="operations-tabs"
-      />
+      {resolvedPhone !== null && (
+        <AdminTabs
+          tabs={tabs}
+          value={tab}
+          onChange={() => undefined}
+          label={COPY.tabsLabel}
+          tabId={tabId}
+          panelId={() => PANEL_ID}
+          variant={isPhone ? 'segments' : 'underline'}
+          phone={isPhone}
+          gap={4}
+          testId="operations-tabs"
+        />
+      )}
       <div
-        id="operations-panel"
-        role="tabpanel"
-        aria-labelledby={`operations-tab-${tab}`}
+        id={PANEL_ID}
+        // A tabpanel only once the tab that labels it is drawn.
+        role={resolvedPhone === null ? undefined : 'tabpanel'}
+        aria-labelledby={resolvedPhone === null ? undefined : tabId(tab)}
       >
-        <FeedbackPage />
+        <FeedbackView embedded />
       </div>
     </div>
   );
