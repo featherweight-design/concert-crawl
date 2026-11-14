@@ -401,6 +401,56 @@ const latestRunColumns = () => ({
   errorMessage: sql<string | null>`left(${crawlRuns.errorMessage}, 300)`,
 });
 
+/**
+ * The most failed-run dates the list sends per venue. Three failures pause a
+ * crawl, so a streak past this is rare; the list shows the dates only when
+ * it has them all.
+ */
+const MAX_STREAK_DATES = 5;
+
+/**
+ * Each venue's latest failed runs, newest first, up to `MAX_STREAK_DATES`:
+ * the dates of its current streak once cut to `consecutive_failures`. Two
+ * failed runs never count as a strike, so they are left out here too: an
+ * account-wide LLM refusal, and a robots.txt disallow (written before the
+ * crawl, which never touches the counter). No query when no venue is failing.
+ */
+const failureStreaksOf = async (
+  venueIds: readonly string[],
+): Promise<Map<string, Date[]>> => {
+  const byVenueId = new Map<string, Date[]>();
+  if (venueIds.length === 0) return byVenueId;
+  const ranked = db
+    .select({
+      venueId: crawlRuns.venueId,
+      at: crawlRuns.createdAt,
+      rank: sql<number>`row_number() over (partition by ${crawlRuns.venueId} order by ${crawlRuns.createdAt} desc)`.as(
+        'rank',
+      ),
+    })
+    .from(crawlRuns)
+    .where(
+      and(
+        inArray(crawlRuns.venueId, [...venueIds]),
+        eq(crawlRuns.status, 'failed'),
+        or(
+          isNull(crawlRuns.reason),
+          not(inArray(crawlRuns.reason, ['llm_account', 'robots_disallowed'])),
+        ),
+      ),
+    )
+    .as('ranked');
+  const rows = await db
+    .select({ venueId: ranked.venueId, at: ranked.at })
+    .from(ranked)
+    .where(sql`${ranked.rank} <= ${MAX_STREAK_DATES}`)
+    .orderBy(ranked.venueId, desc(ranked.at));
+  for (const row of rows) {
+    byVenueId.set(row.venueId, [...(byVenueId.get(row.venueId) ?? []), row.at]);
+  }
+  return byVenueId;
+};
+
 export const venuesAdminRouter = new Hono<AdminVariables>();
 
 // #764 first-timer guide authoring — a distinct resource with its own publish
@@ -438,12 +488,31 @@ venuesAdminRouter.get('/', async (ctx) => {
   // is actually producing anything. A venue that has been skipping for weeks
   // reads as Active with full health everywhere else, so the list carries the
   // real outcome of its most recent run.
+  //
+  // One query serves the latest run and the last full run: DISTINCT ON the
+  // venue and whether the run succeeded returns each venue's latest success
+  // and its latest other run, as the detail does for one venue.
+  const succeeded = sql`(${crawlRuns.status} = 'success')`;
   const latestRuns = await db
-    .selectDistinctOn([crawlRuns.venueId], latestRunColumns())
+    .selectDistinctOn([crawlRuns.venueId, succeeded], latestRunColumns())
     .from(crawlRuns)
-    .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt));
+    .orderBy(crawlRuns.venueId, succeeded, desc(crawlRuns.createdAt));
 
-  const latestByVenueId = new Map(latestRuns.map((run) => [run.venueId, run]));
+  const latestByVenueId = new Map<string, (typeof latestRuns)[number]>();
+  const lastFullByVenueId = new Map<string, Date>();
+  for (const run of latestRuns) {
+    const latest = latestByVenueId.get(run.venueId);
+    if (latest === undefined || run.at > latest.at) {
+      latestByVenueId.set(run.venueId, run);
+    }
+    if (run.status === 'success') lastFullByVenueId.set(run.venueId, run.at);
+  }
+
+  const streaks = await failureStreaksOf(
+    allVenues
+      .filter((venue) => venue.consecutiveFailures > 0)
+      .map((venue) => venue.id),
+  );
 
   // "Paused by Hugh", "Hidden by a former admin": the handle of whoever paused
   // or hid it, one lookup for the whole list.
@@ -458,6 +527,13 @@ venuesAdminRouter.get('/', async (ctx) => {
     // The latest run in full, for the list's one-line "Failed: calendar block
     // not found" / "OK · 3:04 AM · 2 new" column.
     latestRun: latestRunOf(latestByVenueId.get(venue.id)),
+    // When the venue last read its shows, for "Unchanged since Nov 10".
+    lastFullRunAt: lastFullByVenueId.get(venue.id)?.toISOString() ?? null,
+    // The failed runs of its current streak, newest first, for an
+    // auto-paused row's "Failed Nov 9, 10, 11". Empty when it isn't failing.
+    failureStreak: (streaks.get(venue.id) ?? [])
+      .slice(0, venue.consecutiveFailures)
+      .map((at) => at.toISOString()),
     crawlPausedByName: nameOf(adminNames, venue.crawlPausedBy),
     hiddenByName: nameOf(adminNames, venue.hiddenBy),
   }));

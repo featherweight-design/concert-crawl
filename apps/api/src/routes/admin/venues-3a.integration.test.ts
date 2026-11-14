@@ -109,6 +109,43 @@ describe('admin venues API, redesign 3a', () => {
       expect(body.data[0]?.latestRun?.errorMessage).toHaveLength(300);
     });
 
+    it('carries the last full run and the current failure streak, newest first', async () => {
+      const venue = await seedVenue({
+        name: 'Junkyard',
+        slug: 'junkyard',
+        consecutiveFailures: 3,
+      });
+      const at = (day: number) => new Date(`2026-11-${day}T10:00:00Z`);
+      await seedCrawlRun(venue.id, { status: 'success', createdAt: at(7) });
+      await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(8) });
+      await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(9) });
+      // An account-wide refusal is never a strike, so it isn't a streak date.
+      await seedCrawlRun(venue.id, {
+        status: 'failed',
+        reason: 'llm_account',
+        createdAt: at(10),
+      });
+      await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(11) });
+      await seedCrawlRun(venue.id, { status: 'failed', createdAt: at(12) });
+      const body = (await (await json('GET', 'venues')).json()) as {
+        data: { lastFullRunAt: string | null; failureStreak: string[] }[];
+      };
+      expect(body.data[0]?.lastFullRunAt).toBe(at(7).toISOString());
+      expect(body.data[0]?.failureStreak).toEqual(
+        [12, 11, 9].map((day) => at(day).toISOString()),
+      );
+    });
+
+    it('has no streak and no last full run for a venue that never read shows', async () => {
+      const venue = await seedVenue({ name: 'Calm', slug: 'calm' });
+      await seedCrawlRun(venue.id, { status: 'failed', createdAt: new Date() });
+      const body = (await (await json('GET', 'venues')).json()) as {
+        data: { lastFullRunAt: string | null; failureStreak: string[] }[];
+      };
+      expect(body.data[0]?.lastFullRunAt).toBeNull();
+      expect(body.data[0]?.failureStreak).toEqual([]);
+    });
+
     it('has a null latest run for a venue that never crawled', async () => {
       await seedVenue({ name: 'Fresh', slug: 'fresh' });
       const body = (await (await json('GET', 'venues')).json()) as {
