@@ -155,5 +155,23 @@ export const HISTORY_COPY = {
       `We only have Denver shows from ${since} on. If it was more recent, try just the artist or just the venue.`,
     loadFailed: "Couldn't load shows.",
     retry: 'Try again',
+    // The whole list failing to load (`add-error-m`): the red tile, an eyebrow,
+    // a headline and a reassurance. A later page failing keeps `loadFailed`.
+    errorEyebrow: "Couldn't load",
+    errorTitle: "Couldn't load past shows.",
+    errorBody: 'Check your connection. Nothing you stamped is lost.',
+    // A scope with nothing in it (`add-my-venues-empty-m`). The follows twin is
+    // not drawn; it takes the same shape.
+    emptyVenuesTitle: 'No venues yet.',
+    emptyVenuesBody:
+      'My venues are the ones in your Concerts. Stamp a night from All Denver and its venue shows up here.',
+    emptyFollowsTitle: 'No artists yet.',
+    emptyFollowsBody:
+      'Artists you follow show up here. Follow one and their past nights land in this list.',
+    showAll: 'Show All Denver',
+    // The end of a scoped list (addendum 3 README 35), in place of the records
+    // divider that belongs to All Denver.
+    endLineVenues: "That's every past show at your venues.",
+    endLineFollows: "That's every past show by artists you follow.",
   },
 } as const;

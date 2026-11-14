@@ -236,4 +236,39 @@ describe('BottomSheet', () => {
     fireEvent.click(scrim!);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  // The Add sheet's frame (`04/add-*`): 92% tall on the phone, a drawn handle,
+  // and an eyebrow sharing the close's row. All opt-in.
+  it('pins to 92% with a handle and an eyebrow when asked', () => {
+    render(
+      <BottomSheet
+        open
+        onClose={() => {}}
+        title="test"
+        closeText="Done"
+        eyebrow="Concerts"
+        pinned
+        handle
+      >
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toContain('h-[92dvh]');
+    expect(dialog.className).toContain('overflow-hidden');
+    expect(screen.getByText('Concerts')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Done' })).toBeTruthy();
+    expect(dialog.querySelector('span.w-10.h-1, span.h-1.w-10')).not.toBeNull();
+  });
+
+  it('keeps the plain scrolling sheet without those props', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).not.toContain('h-[92dvh]');
+    expect(dialog.className).toContain('overflow-y-auto');
+  });
 });

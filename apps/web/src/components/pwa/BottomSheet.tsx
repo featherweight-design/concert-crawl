@@ -43,6 +43,19 @@ interface BottomSheetProps {
    * still 85vh.
    */
   tall?: boolean;
+  /**
+   * The phone sheet is a fixed 92% of the screen and does not scroll as a
+   * whole: the children lay out their own pinned header and a scrolling body
+   * (the Add sheet, `04/add-*`). From `sm` up it is the same capped dialog.
+   */
+  pinned?: boolean;
+  /** Draws the 40x4 drag handle above the top row (phone only). */
+  handle?: boolean;
+  /**
+   * A mono eyebrow on the left of the top row, opposite the close, so the two
+   * share one row (the Add sheet's CONCERTS and Done).
+   */
+  eyebrow?: string;
   children: React.ReactNode;
 }
 
@@ -70,6 +83,9 @@ export const BottomSheet = ({
   inset = 'default',
   raised = false,
   tall = false,
+  pinned = false,
+  handle = false,
+  eyebrow,
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -163,9 +179,19 @@ export const BottomSheet = ({
         // The width is a variable, not an interpolated class, so Tailwind
         // still sees both literal class names.
         className={`fixed inset-x-0 bottom-0 ${
-          tall ? 'max-h-[calc(100dvh-40px)] sm:max-h-[85vh]' : 'max-h-[85vh]'
-        } overflow-y-auto rounded-t-2xl ${
-          inset === 'tight' ? 'px-4 pb-6 pt-5 min-[360px]:px-5' : 'p-6'
+          pinned
+            ? 'flex h-[92dvh] max-h-[92dvh] flex-col overflow-hidden sm:max-h-[85vh]'
+            : `${
+                tall
+                  ? 'max-h-[calc(100dvh-40px)] sm:max-h-[85vh]'
+                  : 'max-h-[85vh]'
+              } overflow-y-auto`
+        } rounded-t-2xl ${
+          pinned
+            ? 'px-[18px] pb-0 pt-0 sm:px-6'
+            : inset === 'tight'
+              ? 'px-4 pb-6 pt-5 min-[360px]:px-5'
+              : 'p-6'
         } shadow-2xl focus:outline-none sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl ${
           edgeFromSm
             ? raised
@@ -186,12 +212,36 @@ export const BottomSheet = ({
             corner. First in DOM order, so it is also where focus lands. The row
             is the drag-down grab zone: no handle is drawn for this sheet, so
             nothing new is visible. */}
+        {handle && (
+          <div
+            className="flex shrink-0 justify-center pt-[11px] sm:hidden"
+            {...drag.zoneProps}
+          >
+            <span
+              aria-hidden="true"
+              className="h-1 w-10 rounded-full bg-border-strong"
+            />
+          </div>
+        )}
         <div
-          className={`flex justify-end ${
-            inset === 'tight' ? '-mr-2.5' : '-mr-3 -mt-3'
+          className={`flex shrink-0 ${
+            eyebrow === undefined
+              ? 'justify-end'
+              : 'items-center justify-between'
+          } ${
+            pinned
+              ? '-mr-3 sm:mt-6'
+              : inset === 'tight'
+                ? '-mr-2.5'
+                : '-mr-3 -mt-3'
           }`}
           {...drag.zoneProps}
         >
+          {eyebrow !== undefined && (
+            <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.14em] text-signal">
+              {eyebrow}
+            </span>
+          )}
           <button
             type="button"
             onClick={onClose}
