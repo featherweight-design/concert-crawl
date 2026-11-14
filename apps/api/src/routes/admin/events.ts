@@ -645,6 +645,8 @@ eventsAdminRouter.get(
         status: events.status,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,
+        // The show's own page, which "On the venue's site" prefers.
+        eventUrl: events.eventUrl,
         genre: events.genre,
         createdAt: events.createdAt,
         updatedAt: events.updatedAt,

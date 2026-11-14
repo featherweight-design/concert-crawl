@@ -426,6 +426,8 @@ describe('GET /v1/admin/events/:id (Event edit fields)', () => {
     const event = await seedEvent(venue.id, {
       date: dayOffset(4),
       ticketUrl: 'https://tickets.example.com/x',
+      eventUrl: 'https://venue.example.com/shows/x',
+      sourceUrl: 'https://venue.example.com/calendar',
     });
     await seedUserEvent('fan_1', event.id, { status: 'watching' });
     await seedPriceSubmission(event.id, 'fan_1');
@@ -438,6 +440,8 @@ describe('GET /v1/admin/events/:id (Event edit fields)', () => {
     const body = (await res.json()) as { data: Record<string, unknown> };
     expect(body.data).toMatchObject({
       priceRetrievedAt: null,
+      eventUrl: 'https://venue.example.com/shows/x',
+      sourceUrl: 'https://venue.example.com/calendar',
     });
   });
 

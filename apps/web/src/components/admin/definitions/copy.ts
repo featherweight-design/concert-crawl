@@ -4089,6 +4089,52 @@ export const ADMIN_COPY = {
       viewVenueHint: 'The listing we crawled',
     },
   },
+  // `06/event-edit`, `06/event-edit-mobile`, `07/loading-event-edit`.
+  eventEdit: {
+    onConcertCrawl: 'On Concert Crawl',
+    onVenueSite: 'On the venue’s site',
+    onVenueSitePhone: 'Venue’s site',
+    meta: (date: string, watching: number) =>
+      `${date} · ${watching.toLocaleString('en-US')} Watching`,
+    menu: {
+      merge: 'Merge with another listing…',
+      mergeHint: 'For duplicates. Keeps Watchers and prices',
+    },
+    show: {
+      title: 'Show',
+      titleField: 'Title',
+      venue: 'Venue',
+      date: 'Date',
+      doors: 'Doors',
+      showTime: 'Show',
+    },
+    crawl: {
+      title: 'From the crawl',
+      source: 'Source',
+      sourceValue: (venue: string, method: string | null) =>
+        method === null ? `${venue} calendar` : `${venue} calendar · ${method}`,
+      /** The reader that found the show; `null` for one with no word. */
+      method: (strategy: string | null): string | null => {
+        if (strategy === 'structured_data') return 'JSON-LD';
+        if (strategy === 'llm') return 'Haiku';
+        return null;
+      },
+      firstSeen: 'First seen',
+      lastSeen: 'Last seen',
+    },
+    saveBar: {
+      unsaved: (count: number) =>
+        count === 1 ? '1 unsaved change' : `${count} unsaved changes`,
+      discard: 'Discard',
+      save: 'Save',
+      saving: 'Saving…',
+    },
+    saveFailed: {
+      what: 'the show',
+      saved: (title: string) => `The title is still “${title}”.`,
+    },
+    none: '—',
+  },
   panel: { close: 'Close' },
   confirm: { cancel: 'Cancel' },
   states: {
