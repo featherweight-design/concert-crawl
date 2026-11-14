@@ -242,6 +242,35 @@ describe('EventsClient filters', () => {
     expect(lastHref()).toBe('/admin/events');
   });
 
+  it('names the filter on a picked chip, and counts from an unnamed first pick', async () => {
+    list.mockResolvedValueOnce({
+      ...page,
+      counts: { ...page.counts, byVenue: [page.counts.byVenue[1]!] },
+    });
+    // Red Rocks is first and never named; Bluebird is.
+    mockSearch = `venueIds=${RED_ROCKS},${BLUEBIRD}`;
+    render(<EventsClient />);
+    const chip = await screen.findByTestId('venue-filter-chip');
+    await waitFor(() =>
+      expect(chip).toHaveAccessibleName(
+        COPY.venuePickedLabel(COPY.venueCount(2)),
+      ),
+    );
+  });
+
+  it('keeps the count and draws a × on No price and Hidden when on', async () => {
+    mockSearch = 'noPrice=1&hidden=1';
+    render(<EventsClient />);
+    const noPrice = await screen.findByRole('button', { name: /No price/ });
+    const hidden = screen.getByRole('button', { name: /Hidden/ });
+    expect(noPrice).toHaveAttribute('aria-pressed', 'true');
+    expect(noPrice).toHaveTextContent('214');
+    expect(hidden).toHaveTextContent('4');
+    // The eye is Hidden's alone; both draw the ×.
+    expect(hidden.querySelectorAll('svg')).toHaveLength(2);
+    expect(noPrice.querySelectorAll('svg')).toHaveLength(1);
+  });
+
   it('counts linked venues no load has named', async () => {
     list.mockResolvedValueOnce({
       ...page,

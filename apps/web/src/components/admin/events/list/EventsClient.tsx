@@ -339,17 +339,24 @@ export const EventsClient = () => {
   // stacked and "Red Rocks +1". A linked venue with no show in any load so
   // far has no name to show, so the chip counts them instead.
   const pickedVenues = (() => {
-    const known = filters.venueIds.flatMap((id) => {
+    const [firstId] = filters.venueIds;
+    const first =
+      firstId === undefined ? undefined : knownVenues.current.get(firstId);
+    const more = filters.venueIds.length - 1;
+    // "First name, then +N": with the first pick unnamed, count them all.
+    if (first === undefined) {
+      const text = COPY.venueCount(filters.venueIds.length);
+      return { text, node: text };
+    }
+    const text = more === 0 ? first.name : COPY.venuesPicked(first.name, more);
+    const glyphs = filters.venueIds.slice(0, 2).flatMap((id) => {
       const venue = knownVenues.current.get(id);
       return venue === undefined ? [] : [venue];
     });
-    const first = known[0];
-    const more = filters.venueIds.length - 1;
-    if (first === undefined) return COPY.venueCount(filters.venueIds.length);
-    return (
+    const node = (
       <>
         <span style={{ display: 'inline-flex', flex: 'none' }}>
-          {known.slice(0, 2).map((venue, index) => (
+          {glyphs.map((venue, index) => (
             <span
               key={venue.venueId}
               style={{
@@ -363,22 +370,39 @@ export const EventsClient = () => {
             </span>
           ))}
         </span>
-        {more === 0 ? first.name : COPY.venuesPicked(first.name, more)}
+        {/* A long name ellipsises rather than push the row past 320px. */}
+        <span
+          style={{
+            minWidth: 0,
+            maxWidth: 180,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {text}
+        </span>
       </>
     );
+    return { text, node };
   })();
 
   // The status chip's pick: the StatusChip itself, or "2 statuses".
   const [onlyStatus] = filters.statuses;
   const pickedStatuses =
-    filters.statuses.length === 1 && onlyStatus !== undefined ? (
-      <StatusChip
-        status={STATUS_CHIP[onlyStatus]}
-        label={COPY.status[onlyStatus]}
-      />
-    ) : (
-      COPY.statusesPicked(filters.statuses.length)
-    );
+    filters.statuses.length === 1 && onlyStatus !== undefined
+      ? {
+          text: COPY.status[onlyStatus],
+          node: (
+            <StatusChip
+              status={STATUS_CHIP[onlyStatus]}
+              label={COPY.status[onlyStatus]}
+            />
+          ),
+        }
+      : (() => {
+          const text = COPY.statusesPicked(filters.statuses.length);
+          return { text, node: text };
+        })();
 
   const withTicked = (byVenue: readonly VenueCount[]): VenueCount[] => {
     const listed = new Set(byVenue.map((venue) => venue.venueId));
@@ -396,7 +420,8 @@ export const EventsClient = () => {
       <FilterPicker
         key="venue"
         label={COPY.anyVenue}
-        picked={pickedVenues}
+        picked={pickedVenues.node}
+        pickedLabel={COPY.venuePickedLabel(pickedVenues.text)}
         clearLabel={COPY.clearVenues}
         testId="venue-filter"
         search={COPY.findVenue}
@@ -425,7 +450,8 @@ export const EventsClient = () => {
       <FilterPicker
         key="status"
         label={COPY.anyStatus}
-        picked={pickedStatuses}
+        picked={pickedStatuses.node}
+        pickedLabel={COPY.statusPickedLabel(pickedStatuses.text)}
         clearLabel={COPY.clearStatuses}
         testId="status-filter"
         stale={countsStale}

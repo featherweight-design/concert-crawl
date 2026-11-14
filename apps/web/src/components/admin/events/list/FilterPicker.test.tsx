@@ -29,6 +29,7 @@ const picker = (props: Partial<Parameters<typeof FilterPicker>[0]> = {}) => (
   <FilterPicker
     label="Any status"
     picked="Picked"
+    pickedLabel="Status: Picked"
     clearLabel="Clear the status filter"
     testId="status-filter"
     options={STATUSES}
@@ -96,6 +97,7 @@ describe('FilterPicker', () => {
     const chip = screen.getByTestId('status-filter-chip');
     expect(chip).toHaveTextContent('Picked');
     expect(chip).not.toHaveTextContent('Any status');
+    expect(chip).toHaveAccessibleName('Status: Picked');
     fireEvent.click(chip);
     fireEvent.click(
       screen.getByRole('button', { name: 'Clear the status filter' }),

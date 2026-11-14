@@ -4058,6 +4058,10 @@ export const ADMIN_COPY = {
     venueCount: (count: number) =>
       count === 1 ? '1 venue' : `${count} venues`,
     statusesPicked: (count: number) => `${count} statuses`,
+    // The picked chip's accessible name: the pick alone doesn't say which
+    // filter it is.
+    venuePickedLabel: (pick: string) => `Venue: ${pick}`,
+    statusPickedLabel: (pick: string) => `Status: ${pick}`,
     clearVenues: 'Clear the venue filter',
     clearStatuses: 'Clear the status filter',
     noPrice: 'No price',
