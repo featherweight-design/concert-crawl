@@ -138,6 +138,21 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     }
   }, [api]);
 
+  /**
+   * Read the queue again without a loading state: after a partial approval the
+   * rest comes back as its own item. A failed read leaves the list as it is (the
+   * approval itself succeeded), rather than turning the page into Couldn't load.
+   */
+  const refresh = useCallback(async () => {
+    try {
+      const [list, total] = await Promise.all([api.list(), api.count()]);
+      setRows(list);
+      setCount(total);
+    } catch {
+      // Keep what is on screen.
+    }
+  }, [api]);
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -284,7 +299,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     );
     // A partial approval leaves the rest waiting: they come back as their own
     // item, so read the queue again rather than treat the batch as done.
-    if (submissionIds.length < row.submissionIds.length) void load();
+    if (submissionIds.length < row.submissionIds.length) void refresh();
   };
 
   const runSnooze = async (row: QueueRow, action: () => Promise<void>) => {
@@ -350,13 +365,17 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const selectedRow = rows.find((row) => row.key === selected) ?? null;
   const batchRow = rows.find((row) => row.key === batchKey) ?? null;
   const allClear = rows.length === 0 && count.decisions === 0;
+  // A batch opens its own panel on desktop; the phone has the sheet.
+  const batchPanel = selectedRow?.kind === 'price-batch' && !isPhone;
   // A failed answer on the open item shows its block in the docked panel; the
-  // phone's floats above the page, and anything else rides above the list.
+  // phone's floats above the page, and anything else rides above the list (a
+  // batch's panel draws no such block, so its failures ride above the list).
   const failureInPanel =
     failure !== null &&
     failure.rowKey !== undefined &&
     selectedRow?.key === failure.rowKey &&
-    !isPhone;
+    !isPhone &&
+    !batchPanel;
   const failureToast = failure && (
     <SaveFailedToast
       title={failure.title}
@@ -506,7 +525,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
         )}
       </div>
 
-      {selectedRow && selectedRow.kind === 'price-batch' && !isPhone && (
+      {selectedRow && batchPanel && (
         // Review on a batch opens its own panel on desktop
         // (`10-needs-you-panels/price-batch-d`); the phone has the sheet.
         <PriceBatchPanel
@@ -519,7 +538,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           onClose={() => select(null)}
         />
       )}
-      {selectedRow && !(selectedRow.kind === 'price-batch' && !isPhone) && (
+      {selectedRow && !batchPanel && (
         <EvidenceSlot
           row={selectedRow}
           answerFailed={failureInPanel ? failureToast : undefined}
