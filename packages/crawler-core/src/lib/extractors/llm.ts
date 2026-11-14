@@ -734,8 +734,24 @@ Set isConcert using these rules:
 ${IS_CONCERT_RULES}`;
 
 /**
+ * The model answered (and billed) but its answer was unusable: no
+ * adjudicate_event block, or one that fails AdjudicationSchema. Carries the
+ * call's usage so a cost tracker can still record the spend.
+ */
+export class AdjudicationResponseError extends Error {
+  constructor(
+    message: string,
+    readonly usage: TokenUsage,
+  ) {
+    super(message);
+    this.name = 'AdjudicationResponseError';
+  }
+}
+
+/**
  * Single-listing entry point for `deriveArtists()`'s escalation step. Same
  * rules and same model as page extraction, one title in and one verdict out.
+ * Throws AdjudicationResponseError, with the usage, on a malformed answer.
  */
 export const adjudicateEventWithUsage = async ({
   title,
@@ -784,6 +800,15 @@ export const adjudicateEventWithUsage = async ({
     ],
   });
 
+  // Read before the response is checked: a malformed answer was still billed,
+  // so its usage travels on the error (AdjudicationResponseError).
+  const usage: TokenUsage = {
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+  };
+
   // Matched on name, not just on block type: tool_choice pins the call, but a
   // block from some other tool would otherwise be parsed against this schema
   // and either throw a confusing shape error or, worse, coincidentally parse.
@@ -791,25 +816,23 @@ export const adjudicateEventWithUsage = async ({
     (bl) => bl.type === 'tool_use' && bl.name === ADJUDICATE_TOOL.name,
   );
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
-    throw new Error(
+    throw new AdjudicationResponseError(
       `${ADJUDICATE_TOOL.name}: no ${ADJUDICATE_TOOL.name} tool_use block in response`,
+      usage,
     );
   }
 
   const parsed = AdjudicationSchema.safeParse(toolUseBlock.input);
   if (!parsed.success) {
-    throw new Error(`adjudicate_event: ${parsed.error.message}`);
+    throw new AdjudicationResponseError(
+      `adjudicate_event: ${parsed.error.message}`,
+      usage,
+    );
   }
 
   // A verdict naming a headliner while calling the listing a non-concert is
   // self-contradictory, and the caller writes both fields. Trust isConcert —
   // it is the question the whole ladder is gated on — and drop the names.
-  const usage: TokenUsage = {
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
-    cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
-    cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
-  };
   if (!parsed.data.isConcert) {
     return {
       verdict: {

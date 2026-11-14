@@ -1,16 +1,15 @@
 import { appendFileSync } from 'node:fs';
 import {
-  adjudicateEventWithUsage,
-  calculateCost,
   createAdjudicationCost,
-  LLM_EXTRACTION_MODEL,
   makeJoinedEvidence,
   makeMusicBrainzLookup,
   rederiveEventArtists,
 } from '@concert-crawl/crawler-core';
 
 // One-off runner for the event artist re-derivation pass. Dry by default —
-// `--apply` is the only thing that writes. `--limit=N` caps the scan, which is
+// `--apply` is the only thing that writes events and artists. Every pass, dry
+// or not, writes one 'artist-adjudication' cost_tracking row: the Haiku calls
+// were billed either way, and the monthly LLM budget must see them. `--limit=N` caps the scan, which is
 // how the first prod run is kept to a sample before committing the whole table
 // to a Haiku bill.
 //
@@ -91,8 +90,6 @@ async function main(): Promise<void> {
   // Off unless asked: a repair pass fixes bills and never hides a show on a
   // model's "not a concert" (it varied run to run and hid real concerts).
   const hideNonConcerts = process.argv.includes('--hide-non-concerts');
-  let spentUsd = 0;
-  let calls = 0;
 
   console.warn(
     `[rederive-event-artists] starting — ${dryRun ? 'DRY RUN' : 'APPLY'}${
@@ -102,22 +99,18 @@ async function main(): Promise<void> {
     }`,
   );
 
-  // The pass's spend also goes to the ledger, as one 'artist-adjudication'
-  // row for the whole pass (a dry run spends too), so the monthly LLM budget
-  // sees it. spentUsd above stays for the printout and the cost cap.
+  // One tracker is the pass's spend: the cost cap and the printout read it,
+  // and it writes one 'artist-adjudication' row for the whole pass (a dry run
+  // spends too), so the monthly LLM budget sees it.
   const adjudicationCost = createAdjudicationCost();
   const musicBrainz = makeMusicBrainzLookup();
   const result = await rederiveEventArtists({
     dryRun,
     adjudicate: async (input) => {
-      const { verdict, usage } = await adjudicateEventWithUsage(input);
-      adjudicationCost.add(usage);
-      // The adjudicator calls the extractor's model.
-      spentUsd += calculateCost(usage, LLM_EXTRACTION_MODEL);
-      calls += 1;
-      if (calls % 25 === 0) {
+      const verdict = await adjudicationCost.adjudicate(input);
+      if (adjudicationCost.calls % 25 === 0) {
         console.warn(
-          `[rederive-event-artists] ${calls} calls, $${spentUsd.toFixed(4)} spent`,
+          `[rederive-event-artists] ${adjudicationCost.calls} calls, $${adjudicationCost.costUsd.toFixed(4)} spent`,
         );
       }
       return verdict;
@@ -129,7 +122,7 @@ async function main(): Promise<void> {
     // second) decide whether "A & B" is one act or two; what they cannot
     // settle is left unwritten and listed below.
     joinedEvidence: makeJoinedEvidence(musicBrainz),
-    shouldStop: () => spentUsd >= maxCostUsd,
+    shouldStop: () => adjudicationCost.costUsd >= maxCostUsd,
     // Every change, not a sample: the summary is the list an apply is judged by.
     sampleSize: Number.MAX_SAFE_INTEGER,
   }).finally(() =>
@@ -143,11 +136,11 @@ async function main(): Promise<void> {
   );
   if (result.stopped) {
     console.warn(
-      `[rederive-event-artists] COST CAP HIT at $${spentUsd.toFixed(4)}: the pass stopped early and the remaining rows were not read.`,
+      `[rederive-event-artists] COST CAP HIT at $${adjudicationCost.costUsd.toFixed(4)}: the pass stopped early and the remaining rows were not read.`,
     );
   }
   console.warn(
-    `[rederive-event-artists] haiku calls=${calls} cost=$${spentUsd.toFixed(4)}`,
+    `[rederive-event-artists] haiku calls=${adjudicationCost.calls} cost=$${adjudicationCost.costUsd.toFixed(4)}`,
   );
 
   for (const change of result.sample) {
@@ -195,7 +188,7 @@ async function main(): Promise<void> {
       '',
       `Scanned ${result.scanned} · derived ${result.derived} · ` +
         `${dryRun ? 'would update' : 'updated'} ${result.updated} · ` +
-        `hidden ${result.hidden} · Haiku calls ${calls} · $${spentUsd.toFixed(4)} ` +
+        `hidden ${result.hidden} · Haiku calls ${adjudicationCost.calls} · $${adjudicationCost.costUsd.toFixed(4)}` +
         `of the $${maxCostUsd} cap${result.stopped ? ' (COST CAP HIT, the pass stopped early)' : ''}`,
       '',
       'Strategies: ' +

@@ -25,7 +25,12 @@ vi.mock('@anthropic-ai/sdk', () => ({
 }));
 
 // import after mock registration
-const { extractWithLlm, adjudicateEvent } = await import('./llm.js');
+const {
+  extractWithLlm,
+  adjudicateEvent,
+  adjudicateEventWithUsage,
+  AdjudicationResponseError,
+} = await import('./llm.js');
 
 const SOURCE_URL = 'https://example.com/events';
 
@@ -1282,6 +1287,35 @@ describe('adjudicateEvent', () => {
 
     expect(verdict.headliners).toEqual(['Sigur Rós']);
     expect(verdict.supportingArtists).toEqual(['Julianna Barwick']);
+  });
+
+  it('throws an AdjudicationResponseError carrying the billed usage on a malformed answer', async () => {
+    // The call was answered and billed, so the cost tracker must still see
+    // its tokens even though there is no verdict.
+    mockAdjudicate.mockResolvedValue({
+      content: [{ type: 'text', text: 'no tool call' }],
+      usage: {
+        input_tokens: 10,
+        output_tokens: 5,
+        cache_read_input_tokens: 3,
+      },
+      stop_reason: 'end_turn',
+    });
+
+    const error: unknown = await adjudicateEventWithUsage({
+      title: 'Turnstile',
+      description: undefined,
+    }).catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(AdjudicationResponseError);
+    expect(error).toMatchObject({
+      usage: {
+        inputTokens: 10,
+        outputTokens: 5,
+        cacheReadTokens: 3,
+        cacheWriteTokens: 0,
+      },
+    });
   });
 });
 

@@ -43,6 +43,8 @@ vi.mock('./lib/extractors/llm.js', () => {
     );
   return {
     extractWithLlm: vi.fn(),
+    // The real module exports this; the cost tracker's catch checks it.
+    AdjudicationResponseError: class AdjudicationResponseError extends Error {},
     adjudicateEvent,
     // What crawl.ts calls: adjudicateEvent's verdict with zero usage, so a
     // case stubs the verdict on adjudicateEvent.
