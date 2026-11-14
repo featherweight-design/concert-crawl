@@ -9,10 +9,11 @@ afterEach(() => {
   cleanup();
 });
 
-// jsdom normalizes CSS numeric values (e.g. `0.20` → `0.2`); these reflect post-normalization.
-const CORAL = 'oklch(0.65 0.2 25)';
-const GOLD = 'oklch(0.66 0.14 78)';
-const AZURE = 'oklch(0.62 0.12 240)';
+// The B+ trust tones (TRUST_TOKENS): resale danger, box office warning,
+// community signal.
+const CORAL = 'var(--danger)';
+const GOLD = 'var(--warning)';
+const AZURE = 'var(--signal)';
 
 describe('AltSourceRow', () => {
   it('renders resale variant with coral dot, source label, "resale" pill, and price', () => {
@@ -57,5 +58,9 @@ describe('AltSourceRow', () => {
 
     const dot = container.querySelector('span[style*="border-radius"]');
     expect((dot as HTMLElement).style.background).toContain(AZURE);
+    // The kind label is type, so it takes the AA-safe text token.
+    expect(screen.getByText('community').style.color).toBe(
+      'var(--price-text-signal)',
+    );
   });
 });

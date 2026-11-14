@@ -9,7 +9,8 @@ afterEach(() => {
   cleanup();
 });
 
-const AZURE_NORM = 'oklch(0.62 0.12 240)';
+// The community trust colour as text (TRUST_TOKENS.community.text).
+const AZURE_NORM = 'var(--price-text-signal)';
 
 describe('MTAddTierSuccess', () => {
   it('state #1 — first tier submitted: success eyebrow + check glyph + headline + body with azure pending fragment', () => {

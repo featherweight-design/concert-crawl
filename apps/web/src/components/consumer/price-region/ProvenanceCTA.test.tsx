@@ -38,14 +38,12 @@ describe('ProvenanceCTA', () => {
       // Caption text
       expect(screen.getByText('Venue · face value, no fees')).toBeDefined();
 
-      // Caption dot — gold (TIER_COLOR_BOXOFFICE)
+      // Caption dot — the box office trust tone (B+ warning)
       const captionText = screen.getByText('Venue · face value, no fees');
       const captionRow = captionText.parentElement as HTMLElement;
       const dot = captionRow.querySelector('[aria-hidden]') as HTMLElement;
       expect(dot).toBeDefined();
-      // JSDOM strips trailing zeros from oklch values (0.20 → 0.2); compare
-      // against the normalized form.
-      expect(dot.style.background).toBe('oklch(0.66 0.14 78)');
+      expect(dot.style.background).toBe('var(--warning)');
 
       // External-link safety
       expect(anchor.getAttribute('target')).toBe('_blank');
@@ -125,15 +123,14 @@ describe('ProvenanceCTA', () => {
         screen.getByText('Ticketmaster resale · usually above face value'),
       ).toBeDefined();
 
-      // Caption dot — coral (TIER_COLOR_RESALE)
+      // Caption dot — the resale trust tone (B+ danger)
       const captionText = screen.getByText(
         'Ticketmaster resale · usually above face value',
       );
       const captionRow = captionText.parentElement as HTMLElement;
       const dot = captionRow.querySelector('[aria-hidden]') as HTMLElement;
       expect(dot).toBeDefined();
-      // JSDOM strips trailing zeros from oklch values (0.20 → 0.2).
-      expect(dot.style.background).toBe('oklch(0.65 0.2 25)');
+      expect(dot.style.background).toBe('var(--danger)');
 
       // External-link safety
       expect(anchor.getAttribute('target')).toBe('_blank');

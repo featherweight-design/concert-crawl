@@ -1,12 +1,7 @@
 'use client';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-
-const TIER_COLOR = {
-  boxoffice: 'oklch(0.66 0.14 78)',
-  resale: 'oklch(0.65 0.20 25)',
-  community: 'oklch(0.62 0.12 240)',
-} as const;
+import { TRUST_TOKENS } from '@/components/consumer/glyphs';
 
 const copy = CONSUMER_COPY.priceRegion.altSourceRow;
 
@@ -17,7 +12,8 @@ export interface AltSourceRowProps {
 }
 
 export const AltSourceRow = ({ source, kind, price }: AltSourceRowProps) => {
-  const color = TIER_COLOR[kind];
+  // The B+ trust tokens: the dot takes the tone, the kind label the text.
+  const { tone, text } = TRUST_TOKENS[kind];
   return (
     <div
       style={{
@@ -33,7 +29,7 @@ export const AltSourceRow = ({ source, kind, price }: AltSourceRowProps) => {
           width: 5,
           height: 5,
           borderRadius: 2.5,
-          background: color,
+          background: tone,
           alignSelf: 'center',
           flexShrink: 0,
         }}
@@ -52,7 +48,7 @@ export const AltSourceRow = ({ source, kind, price }: AltSourceRowProps) => {
         style={{
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: 8.5,
-          color,
+          color: text,
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
         }}

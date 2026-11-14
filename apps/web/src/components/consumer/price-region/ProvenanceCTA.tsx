@@ -1,10 +1,9 @@
 'use client';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { TRUST_TOKENS } from '@/components/consumer/glyphs';
 
 const copy = CONSUMER_COPY.priceRegion.provenance;
-const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)';
-const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)';
 
 export type ProvenanceCTAKind = 'boxoffice' | 'primary' | 'resale';
 
@@ -37,12 +36,12 @@ export const ProvenanceCTA = ({
         : copy.ariaLabelResale(vendor);
   const dotColor =
     kind === 'boxoffice'
-      ? TIER_COLOR_BOXOFFICE
+      ? TRUST_TOKENS.boxoffice.tone
       : kind === 'resale'
-        ? TIER_COLOR_RESALE
+        ? TRUST_TOKENS.resale.tone
         : 'var(--fg-subtle)';
   const captionColor = isResale
-    ? `color-mix(in oklab, ${TIER_COLOR_RESALE} 92%, var(--fg-muted))`
+    ? `color-mix(in oklab, ${TRUST_TOKENS.resale.text} 92%, var(--fg-muted))`
     : 'var(--fg-muted)';
 
   return (
