@@ -188,8 +188,9 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
     if (!isLoaded) return;
     let cancelled = false;
     setOptions({ kind: 'loading' });
-    get<AdminTestEmailOption[]>(OPTIONS_PATH)
-      .then((data) => {
+    void (async () => {
+      try {
+        const data = await get<AdminTestEmailOption[]>(OPTIONS_PATH);
         if (cancelled) return;
         setOptions({ kind: 'ready', data });
         setPicked((current) =>
@@ -197,10 +198,11 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
             ? current
             : (data[0]?.key ?? null),
         );
-      })
-      .catch(() => {
+      } catch (err) {
+        console.error('[EmailsTab] email list failed to load', err);
         if (!cancelled) setOptions({ kind: 'failed' });
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -210,13 +212,15 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
     if (picked === null) return;
     let cancelled = false;
     setPreview({ kind: 'loading' });
-    get<AdminEmailPreview>(previewPath(picked))
-      .then((data) => {
+    void (async () => {
+      try {
+        const data = await get<AdminEmailPreview>(previewPath(picked));
         if (!cancelled) setPreview({ kind: 'ready', data });
-      })
-      .catch(() => {
+      } catch (err) {
+        console.error('[EmailsTab] preview failed to load', picked, err);
         if (!cancelled) setPreview({ kind: 'failed' });
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -259,9 +263,17 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
               detail: errorMessageOf(result.error),
             },
       );
-    } catch {
+    } catch (err) {
+      console.error('[EmailsTab] test send request failed', err);
       setSend({ kind: 'failed', reason: 'request', detail: null });
     }
+  };
+
+  // A new pick clears the last send's toast, so its text and Try again never
+  // point at a different email than the one picked.
+  const pick = (key: string) => {
+    setPicked(key);
+    if (send.kind !== 'sending') setSend({ kind: 'idle' });
   };
 
   if (options.kind === 'failed') {
@@ -356,7 +368,7 @@ export const EmailsTab = ({ isPhone }: { isPhone: boolean }) => {
               type="button"
               aria-pressed={on}
               data-testid={`emails-chip-${option.key}`}
-              onClick={() => setPicked(option.key)}
+              onClick={() => pick(option.key)}
               style={chipStyle(on)}
             >
               {nameOf(option)}

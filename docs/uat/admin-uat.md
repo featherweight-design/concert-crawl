@@ -500,31 +500,22 @@ Removed on 2026-11-10 (going free): the admin founder-window page and its routes
 
 ## 11. Admin settings
 
-`/admin/settings` holds the admin panel's own preferences and any ops tools.
+Retired on 2026-11-14: `/admin/settings` now redirects to Operations › Emails
+(`/admin/operations?tab=emails`). The admin theme picker was removed earlier, so
+ADM-33 is retired. ADM-34 now tests the Emails tab.
 
-### ADM-33 — Admin appearance
+### ADM-34 — Operations › Emails
 
-**Precondition:** On `/admin/settings`.
+**Precondition:** On `/admin/operations?tab=emails`. Send me a test mails the
+picked email to ADMIN_EMAIL; no customer is contacted.
 **Steps:**
 
-1. Change the admin theme in the Appearance section (pick a different named
-   theme, e.g. Light vs. Electric/Jade).
+1. Pick each email chip and check its preview.
+2. Press Send me a test on one.
+3. Open `/admin/settings`.
 
-**Expected:** The admin panel theme changes and persists.
-**Result:** ⬜ Pass / Fail / Blocked / N/A
-**Notes:**
-
-### ADM-34 — Ops tools ⚠️
-
-**Precondition:** On `/admin/settings`. Ops actions (resync, clear cache, etc.) are
-real — read them before running anything.
-**Steps:**
-
-1. Review the available ops tools.
-2. Run one only if you understand its effect (e.g. clear cache); otherwise N/A.
-
-**Expected:** Each tool is labelled clearly enough to know what it does; any tool
-you run completes and reports success.
+**Expected:** Each chip previews its email. The test send shows "Test sent to"
+the masked address and arrives as `[TEST] …`. `/admin/settings` lands on Emails.
 **Result:** ⬜ Pass / Fail / Blocked / N/A
 **Notes:**
 
