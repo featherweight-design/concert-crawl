@@ -10,6 +10,7 @@ const item = (patch: Partial<AuditLogItem>): AuditLogItem => {
     id: `row-${nth}`,
     actor: 'system:crawler',
     actorKind: 'system',
+    actorAvatar: null,
     action: 'venue.crawl_auto_paused',
     area: 'venues',
     targetId: null,
