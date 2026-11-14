@@ -1,0 +1,98 @@
+{
+  "feature": "Admin 3b PR 6b-ii · Venue Source tab",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 04-venues/venue-source, phone-addendum gap-4-venue-source (source-mobile, -320, source-feed-edited, source-advanced-open, source-save-failed). Read-only against the scratch branch: no row saves. Held, not built: Test it now and its running state (3c), Don't crawl (the crawler doesn't honour manual yet), Save debug HTML (Hugh, row 13), Ask the venue (3c). Not reachable without scratch writes, so covered by SourceTab.test.tsx and walked by hand: robots.txt disallows, a stored manual (the note), a VenuePilot feed, save failed.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/3b-6b-contact-sheet",
+  "widths": [
+    { "label": "320", "width": 320, "height": 1400, "touch": true },
+    { "label": "phone", "width": 390, "height": 1400, "touch": true },
+    { "label": "640", "width": 640, "height": 1200 },
+    { "label": "desktop", "width": 1300, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "page-default",
+      "label": "Calendar page, browser mode without a selector (The Church Nightclub)",
+      "steps": [
+        {
+          "goto": "/admin/venues/281583ec-2cb0-4ea9-8623-434260687f83?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "feed-aeg",
+      "label": "AEG feed, 6 s pace (Gothic Theatre)",
+      "steps": [
+        {
+          "goto": "/admin/venues/ad21014a-2987-4144-b0ec-158afd1fbaef?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "feed-livenation",
+      "label": "Live Nation feed (Marquis Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/33ede218-4e2f-46f0-a738-493fbdcb991d?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "detail-pages",
+      "label": "Calendar page read by Detail pages, Advanced open (The Black Box)",
+      "steps": [
+        {
+          "goto": "/admin/venues/b87df4c9-eec1-431a-b161-5043e48bc228?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "settle": 2500 },
+        { "clickRole": "button", "name": "^Advanced" },
+        { "wait": "[data-testid=\"source-advanced\"]" },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "dirty",
+      "label": "A calendar page edit raises the Save bar (Hi-Dive)",
+      "steps": [
+        {
+          "goto": "/admin/venues/99dc4766-0ac5-4dba-89bc-666f70990aa4?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "settle": 2500 },
+        {
+          "fill": "[data-testid=\"venue-source\"] input[type=\"url\"]",
+          "text": "https://hi-dive.example/calendar"
+        },
+        { "wait": "[data-testid=\"source-save-bar\"]" },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "feed-edited",
+      "label": "Phone: Ticketing feed picked, seller AEG, the feed ID field (Hi-Dive). Desktop draws no feed fields (#175).",
+      "widths": ["320", "phone"],
+      "steps": [
+        {
+          "goto": "/admin/venues/99dc4766-0ac5-4dba-89bc-666f70990aa4?tab=source",
+          "wait": "[data-testid=\"venue-source\"]"
+        },
+        { "settle": 2500 },
+        {
+          "click": "[data-testid=\"venue-source\"] label:has-text(\"Ticketing feed\")"
+        },
+        { "wait": "[data-testid=\"source-feed-fields\"]" },
+        {
+          "click": "[data-testid=\"source-feed-fields\"] label:has-text(\"AEG\")"
+        },
+        { "wait": "[data-testid=\"source-save-bar\"]" },
+        { "settle": 800 }
+      ]
+    }
+  ]
+}
