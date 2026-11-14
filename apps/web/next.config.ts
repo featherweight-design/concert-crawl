@@ -104,9 +104,12 @@ export default withSentryConfig(withSerwist(config), {
   },
   webpack: {
     // Tree-shake Sentry logger statements from the client bundle, and the SDK's
-    // tracing code: tracing is off (see SENTRY_PRIVACY_OPTIONS) and nothing in
-    // this app starts a span, but the default client integrations still pull
-    // the browser tracing code into the largest first-load chunk.
+    // tracing code (all runtimes): tracing is off (no tracesSampleRate; see
+    // SENTRY_PRIVACY_OPTIONS) and nothing in this app starts a span, but the
+    // default client integrations still pull the browser tracing code into the
+    // largest first-load chunk. Error capture does not depend on it. If tracing
+    // is ever turned on, remove `removeTracing` or no spans will be sent. The
+    // build is webpack (`next build --webpack`), where this option applies.
     treeshake: {
       removeDebugLogging: true,
       removeTracing: true,

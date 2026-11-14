@@ -60,6 +60,7 @@ describe('PostHogProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     isAnalyticsEnabled.mockReturnValue(true);
+    initAnalytics.mockResolvedValue(undefined);
     mockGetToken.mockResolvedValue('token');
   });
 
@@ -133,10 +134,12 @@ describe('PostHogProvider', () => {
     expect(setPersonName).not.toHaveBeenCalled();
   });
 
-  it('resets the identity when signed out', () => {
+  it('resets the identity when signed out', async () => {
     mockUseUser.mockReturnValue({ isLoaded: true, user: null });
     renderProvider();
-    expect(resetAnalyticsIdentity).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(resetAnalyticsIdentity).toHaveBeenCalledTimes(1),
+    );
     expect(identifyUser).not.toHaveBeenCalled();
     expect(mockFetchMe).not.toHaveBeenCalled();
   });
@@ -149,15 +152,39 @@ describe('PostHogProvider', () => {
     expect(resetAnalyticsIdentity).not.toHaveBeenCalled();
   });
 
-  it('inits once Clerk loads and settles the identity right after', () => {
+  it('inits once Clerk loads and settles the identity right after', async () => {
     mockUseUser.mockReturnValue({ isLoaded: false, user: undefined });
     const { rerenderTree } = renderProvider();
     mockUseUser.mockReturnValue({ isLoaded: true, user: null });
     rerenderTree();
     expect(initAnalytics).toHaveBeenCalledTimes(1);
-    expect(resetAnalyticsIdentity).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(resetAnalyticsIdentity).toHaveBeenCalledTimes(1),
+    );
     expect(initAnalytics.mock.invocationCallOrder[0]).toBeLessThan(
       resetAnalyticsIdentity.mock.invocationCallOrder[0] ?? 0,
     );
+  });
+
+  it('applies only the current reader when the user changes while the SDK loads', async () => {
+    let finishLoad: () => void = () => {};
+    initAnalytics.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishLoad = resolve;
+      }),
+    );
+    mockFetchMe.mockResolvedValue({ handle: null });
+    mockUseUser.mockReturnValue({ isLoaded: true, user: ADA });
+    const { rerenderTree } = renderProvider();
+    mockUseUser.mockReturnValue({
+      isLoaded: true,
+      user: { ...ADA, id: 'user_2' },
+    });
+    rerenderTree();
+    await act(async () => {
+      finishLoad();
+    });
+    await waitFor(() => expect(identifyUser).toHaveBeenCalledWith('user_2'));
+    expect(identifyUser).not.toHaveBeenCalledWith('user_1');
   });
 });
