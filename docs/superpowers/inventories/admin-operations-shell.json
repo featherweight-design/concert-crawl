@@ -13,8 +13,8 @@
       "steps": [
         {
           "goto": "/admin/operations",
-          "wait": "[role='tablist']",
-          "settle": 1500
+          "wait": "[role='tabpanel']",
+          "settle": 3000
         }
       ]
     },
