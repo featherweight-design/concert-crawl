@@ -78,6 +78,8 @@ function makeMockPage(overrides: Partial<Page> = {}): Page {
     mainFrame: vi.fn().mockReturnValue('main-frame'),
     goto: vi.fn().mockResolvedValue(makeResponse(200)),
     waitForSelector: vi.fn().mockResolvedValue(null),
+    waitForEvent: vi.fn().mockResolvedValue(null),
+    waitForLoadState: vi.fn().mockResolvedValue(undefined),
     content: vi.fn().mockResolvedValue('<html><body>loaded</body></html>'),
     url: vi.fn().mockReturnValue('https://example.com'),
     ...overrides,
@@ -611,6 +613,81 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     });
     expect(cdp.answered('Fetch.continueRequest')).toEqual([]);
     expect(result.html).toBe('<html><body>loaded</body></html>');
+  });
+
+  it('waits for a gate still deciding a page-started navigation, then reads the page it lands on', async () => {
+    const cdp = makeMockCdp();
+    let landed = 'original';
+    let hop: Promise<Verdict> | undefined;
+    // The hop's robots.txt lookup is still running when content() would be
+    // read.
+    isAllowedSpy.mockImplementation(async (url: string) => {
+      if (url.endsWith('/next')) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      return true;
+    });
+    const page = makeMockPage({
+      // A script navigates after load, while the selector wait runs.
+      waitForSelector: vi.fn(async () => {
+        hop = cdp.pause({ url: 'https://example.com/next' });
+        void hop.then((verdict) => {
+          if (verdict === 'continue') landed = 'next';
+        });
+        return null;
+      }) as unknown as Page['waitForSelector'],
+      // Chromium commits the navigation once it is continued.
+      waitForEvent: vi.fn(async () => {
+        await hop;
+      }) as unknown as Page['waitForEvent'],
+      content: vi.fn(
+        async () => `<html><body>${landed}</body></html>`,
+      ) as unknown as Page['content'],
+      url: vi.fn(() =>
+        landed === 'next' ? 'https://example.com/next' : 'https://example.com',
+      ) as unknown as Page['url'],
+    });
+
+    const result = await fetchPage(
+      'https://example.com',
+      makeMockBrowser(page, cdp),
+      0,
+      'networkidle',
+      '.event-card',
+    );
+
+    expect(cdp.answered('Fetch.continueRequest')).toHaveLength(1);
+    expect(page.waitForLoadState).toHaveBeenCalledWith(
+      'domcontentloaded',
+      expect.anything(),
+    );
+    expect(result.html).toBe('<html><body>next</body></html>');
+    expect(result.finalUrl).toBe('https://example.com/next');
+  });
+
+  it('retries content() once after a navigation caught it mid-commit', async () => {
+    const page = makeMockPage({
+      content: vi
+        .fn()
+        .mockRejectedValueOnce(
+          new Error(
+            'page.content: Unable to retrieve content because the page is navigating and changing the content.',
+          ),
+        )
+        .mockResolvedValue('<html><body>landed</body></html>'),
+    });
+
+    const result = await fetchPage(
+      'https://example.com',
+      makeMockBrowser(page),
+      0,
+    );
+
+    expect(page.waitForLoadState).toHaveBeenCalledWith(
+      'domcontentloaded',
+      expect.anything(),
+    );
+    expect(result.html).toBe('<html><body>landed</body></html>');
   });
 
   it('leaves an iframe document to page.route, with no lookup or wait', async () => {
