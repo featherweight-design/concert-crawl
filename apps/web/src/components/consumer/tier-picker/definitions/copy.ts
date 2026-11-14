@@ -7,9 +7,9 @@ export const TIER_PICKER_COPY = {
     eyebrow: 'Upgrade · pick a lane',
     title: 'Pick a lane.',
     sub: "We run on infrastructure, not VC money. Subscriptions cover what costs us money to run. That's it.",
-    // The signed-out header: what shows when the picker has no plan to read
-    // yet (the logged-out shape). A signed-out tap goes to sign-in now, so only
-    // `default` remains.
+    // The signed-out header: what shows when the plan state is `logged-out`
+    // (including the fallback before a plan has resolved). A signed-out tap
+    // goes to sign-in now, so only `default` remains.
     loggedOut: {
       default: {
         eyebrow: 'Watching · free with an account',

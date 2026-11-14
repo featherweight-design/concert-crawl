@@ -50,8 +50,8 @@ interface HeaderVariant {
   sub: string;
 }
 
-// One surface serving more than one reach. Signed out (a plan that has not
-// resolved) it reads the Watching wording whatever the entry; signed in, an
+// One surface serving more than one reach. Signed out (a `logged-out` plan
+// state, which is also the fallback before a plan resolves) it reads the Watching wording whatever the entry; signed in, an
 // entry without its own variant falls back to the generic "Pick a lane", which
 // is what an account-menu open should read as. Resolved in ONE place so the
 // eyebrow, the title and the sub can never be drawn from three different

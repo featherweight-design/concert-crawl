@@ -11,9 +11,8 @@
 //
 // Related shows DO render, through the same EventRow the public browse list
 // uses. The row no longer carries a watch control on any surface, so the
-// `logged-out-watch` funnel entry #794 opened from here now starts from the
-// related show's own detail page instead. The mirror still does not diverge
-// from browse.
+// watch funnel #794 opened from here now starts from the related show's own
+// detail page instead. The mirror still does not diverge from browse.
 //
 // In their place there is one account card: Create an account, with a quiet
 // "Already in? Sign in" under it (B+ B8, bp-s-public_m). Its Eye is the

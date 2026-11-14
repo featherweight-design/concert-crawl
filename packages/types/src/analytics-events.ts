@@ -4,8 +4,9 @@
 // policy discloses only usage and share events.
 
 // Where the tier picker was opened from. The picker picks its header copy by
-// entry. A signed-out tap no longer opens the picker at all (it goes to
-// sign-in), so there are no `logged-out-*` entries.
+// entry. A signed-out tap goes to sign-in rather than opening the picker, so
+// there are no `logged-out-*` entries; a signed-out header still renders when
+// the plan has not resolved.
 export type PickerEntry =
   | 'settings'
   | 'paywall'
