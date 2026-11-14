@@ -1,3 +1,18 @@
+# [1.440.0](https://github.com/featherweight-design/concert-crawl/compare/v1.439.0...v1.440.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** admin Events list type to the boards ([401677d](https://github.com/featherweight-design/concert-crawl/commit/401677db4436e9140134f5fde1444e019a9acd59))
+* **web:** reload before the hide dialog closes, and return focus to the menu ([bc05232](https://github.com/featherweight-design/concert-crawl/commit/bc05232085578ec5ef8b6735863bbe8eca77e678))
+* **web:** wrap the hidden tag rather than cut it on a narrow card ([be0d167](https://github.com/featherweight-design/concert-crawl/commit/be0d167ef0e45e4e99f51a42e76a9952bb91b06e))
+
+
+### Features
+
+* **api:** name the live price a price check outcome describes ([9bbc5c6](https://github.com/featherweight-design/concert-crawl/commit/9bbc5c62d4ba76139cc65053060436e0f479cb8a))
+* **web:** add hide from site to the admin Events row menu ([4811e9a](https://github.com/featherweight-design/concert-crawl/commit/4811e9abaac2371719e32c7ee76549a470f4cfed))
+
 # [1.439.0](https://github.com/featherweight-design/concert-crawl/compare/v1.438.0...v1.439.0) (2026-11-14)
 
 
