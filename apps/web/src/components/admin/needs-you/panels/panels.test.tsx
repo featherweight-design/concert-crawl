@@ -365,11 +365,22 @@ const eventRow = (over: Partial<EventFacts> = {}) =>
       description: 'Sign up at the door.',
       confidence: 0.55,
       autoApproveBar: 0.7,
+      priceMin: null,
+      priceMax: null,
       ...over,
     },
   });
 
 describe('EventPanel', () => {
+  it('draws the listed price under WHAT WE’D LIST, only when there is one', () => {
+    open(eventRow({ priceMin: '25.00', priceMax: null }));
+    expect(screen.getByText('Price')).toBeInTheDocument();
+    expect(screen.getByText('$25+')).toBeInTheDocument();
+    cleanup();
+    open(eventRow());
+    expect(screen.queryByText('Price')).toBeNull();
+  });
+
   it('says which side of the bar the score is on', () => {
     open(eventRow());
     expect(screen.getByText(/0\.55/)).toBeInTheDocument();
