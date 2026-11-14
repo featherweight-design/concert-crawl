@@ -12,6 +12,9 @@
         },
         {
           "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "settle": 5000
         }
       ]
     }
