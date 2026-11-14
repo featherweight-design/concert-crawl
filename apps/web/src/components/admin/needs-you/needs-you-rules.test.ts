@@ -353,6 +353,27 @@ describe('price and bug helpers', () => {
     ).toBe('Resolve');
   });
 
+  // `02/a-batch-of-prices`: "Approve all 8" and "Review".
+  it('puts the count on the price batch card’s lead answer', () => {
+    const batch = {
+      kind: 'price-batch',
+      submissionIds: ['a', 'b', 'c'],
+    } as unknown as QueueRow;
+    expect(
+      cardLabelOf(batch, { slug: 'approve_all', label: 'Approve all' }),
+    ).toBe('Approve all 3');
+    expect(cardLabelOf(batch, { slug: 'review', label: 'Review' })).toBe(
+      'Review',
+    );
+    // With no ids the API's own label stands.
+    expect(
+      cardLabelOf({ ...batch, submissionIds: [] } as unknown as QueueRow, {
+        slug: 'approve_all',
+        label: 'Approve all',
+      }),
+    ).toBe('Approve all');
+  });
+
   it('words a price batch card in the singular at one and the plural at many', () => {
     const batch = (count: string): QueueRow =>
       ({

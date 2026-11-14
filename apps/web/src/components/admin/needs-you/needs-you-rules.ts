@@ -244,6 +244,13 @@ export const cardLabelOf = (
   row: QueueRow,
   answer: { slug: string; label: string },
 ): string => {
+  // The batch card's lead answer carries the count of prices it approves.
+  if (
+    row.kind === 'price-batch' &&
+    answer.slug === 'approve_all' &&
+    row.submissionIds.length > 0
+  )
+    return COPY.approveAllCount(row.submissionIds.length);
   if (row.kind !== 'price-check') return answer.label;
   const price = priceText(
     answer.slug === 'use_checked_price'
