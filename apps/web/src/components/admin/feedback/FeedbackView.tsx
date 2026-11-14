@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { StatCard, Panel, SectionHead } from '@/components/admin/primitives';
+import { StatCard, Panel, useIsPhone } from '@/components/admin/primitives';
 import { FeedbackFilterRail } from '@/components/admin/feedback/FeedbackFilterRail';
 import { FeedbackRow } from '@/components/admin/feedback/FeedbackRow';
 import { FeedbackExpanded } from '@/components/admin/feedback/FeedbackExpanded';
@@ -31,12 +31,23 @@ const STATUS_CHIPS: { value: FeedbackStatusFilter; label: string }[] = [
 const PANEL_TITLE: Record<FeedbackStatusFilter, string> =
   ADMIN_COPY.feedback.panelTitle;
 
+/** What the inbox counts, for a tab label drawn outside it. */
+export interface FeedbackCounts {
+  unread: number;
+  flagged: number;
+}
+
 /**
- * The feedback inbox. `/admin/feedback` draws it with its own heading;
- * Operations embeds it under its own title and tabs, so `embedded` drops the
- * SectionHead (eyebrow, h1, description) to keep one h1 on that page.
+ * The feedback inbox, drawn inside Operations under its title and tabs, so it
+ * has no heading of its own (the page keeps one h1). `onCounts` reports the
+ * counts the inbox shows once it has loaded, so the Feedback tab's count
+ * cannot disagree with the list under it.
  */
-export const FeedbackView = ({ embedded = false }: { embedded?: boolean }) => {
+export const FeedbackView = ({
+  onCounts,
+}: {
+  onCounts?: (counts: FeedbackCounts) => void;
+}) => {
   const { getToken } = useAuth();
   const router = useRouter();
   const [items, setItems] = useState<FeedbackItem[]>([]);
@@ -46,15 +57,9 @@ export const FeedbackView = ({ embedded = false }: { embedded?: boolean }) => {
     new Set(['feedback_surface']),
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    setIsMobile(mq.matches);
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+  // The admin breakpoint (ADMIN_PHONE_MAX_WIDTH), not a width of its own, so
+  // the inbox swaps layouts at the same width as the Operations tabs above it.
+  const isMobile = useIsPhone();
 
   const fetchFeedback = async () => {
     const token = await getToken();
@@ -186,6 +191,11 @@ export const FeedbackView = ({ embedded = false }: { embedded?: boolean }) => {
     .filter(Boolean)
     .join(' · ');
 
+  useEffect(() => {
+    if (!isLoading)
+      onCounts?.({ unread: counts.unread, flagged: counts.flagged });
+  }, [isLoading, counts.unread, counts.flagged, onCounts]);
+
   const feedbackList = (
     <>
       {isLoading ? (
@@ -234,40 +244,15 @@ export const FeedbackView = ({ embedded = false }: { embedded?: boolean }) => {
   if (isMobile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {!embedded && (
-          <SectionHead
-            eyebrow={ADMIN_COPY.feedback.eyebrow}
-            title={
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 10,
-                }}
-              >
-                {ADMIN_COPY.feedback.title}
-                {counts.unread > 0 && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      padding: '3px 10px',
-                      borderRadius: 20,
-                      border: '1.5px solid var(--signal)',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: 'var(--signal)',
-                      letterSpacing: 0,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {counts.unread} {ADMIN_COPY.feedback.unreadBadgeSuffix}
-                  </span>
-                )}
-              </span>
-            }
-            subtitle={mobileSubtitle || undefined}
-          />
+        {/* The phone has no stat cards, so the unread and flagged counts
+            lead the inbox here. */}
+        {mobileSubtitle && (
+          <p
+            data-testid="feedback-phone-counts"
+            style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}
+          >
+            {mobileSubtitle}
+          </p>
         )}
 
         {/* Horizontal chip filter */}
@@ -318,38 +303,6 @@ export const FeedbackView = ({ embedded = false }: { embedded?: boolean }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {!embedded && (
-        <SectionHead
-          eyebrow={ADMIN_COPY.feedback.eyebrow}
-          title={
-            <span
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
-            >
-              {ADMIN_COPY.feedback.title}
-              {counts.unread > 0 && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    padding: '3px 10px',
-                    borderRadius: 20,
-                    border: '1.5px solid var(--signal)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--signal)',
-                    letterSpacing: 0,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {counts.unread} {ADMIN_COPY.feedback.unreadBadgeSuffix}
-                </span>
-              )}
-            </span>
-          }
-          subtitle={ADMIN_COPY.feedback.subtitle}
-        />
-      )}
-
       {/* Stat cards */}
       <div
         style={{

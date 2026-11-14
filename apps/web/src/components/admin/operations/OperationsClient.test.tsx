@@ -3,7 +3,9 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { ADMIN_PHONE_MAX_WIDTH } from '@/components/admin/primitives';
 import { FeedbackView } from '@/components/admin/feedback/FeedbackView';
+import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow';
 import { OperationsClient } from './OperationsClient';
 
 // One stable function, so an effect keyed on it never re-runs per render.
@@ -23,12 +25,28 @@ const mockMatchMedia = (matches: boolean) => {
   }));
 };
 
-beforeEach(() => {
-  mockMatchMedia(false);
+const item = (id: string, status: FeedbackItem['status']): FeedbackItem => ({
+  id,
+  userId: 'user_1',
+  pageUrl: '/',
+  category: 'bug',
+  message: `message ${id}`,
+  metadata: null,
+  status,
+  adminNotes: null,
+  issueUrl: null,
+  createdAt: new Date().toISOString(),
+});
+
+const serve = (items: FeedbackItem[]) =>
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({ ok: true, json: async () => ({ data: [] }) })),
+    vi.fn(async () => ({ ok: true, json: async () => ({ data: items }) })),
   );
+
+beforeEach(() => {
+  mockMatchMedia(false);
+  serve([]);
 });
 afterEach(() => {
   cleanup();
@@ -38,9 +56,18 @@ afterEach(() => {
 // The inbox settles its first fetch; waiting on it keeps updates inside act.
 const settle = () => waitFor(() => expect(fetch).toHaveBeenCalled());
 
+const FOUR_UNREAD = [
+  item('a', 'unread'),
+  item('b', 'unread'),
+  item('c', 'unread'),
+  item('d', 'unread'),
+  item('e', 'flagged'),
+  item('f', 'read'),
+];
+
 describe('OperationsClient (07/activity-log)', () => {
   it('draws exactly one h1, Operations', async () => {
-    render(<OperationsClient feedbackUnread={4} />);
+    render(<OperationsClient />);
     await settle();
     const headings = screen.getAllByRole('heading', { level: 1 });
     expect(headings).toHaveLength(1);
@@ -49,7 +76,7 @@ describe('OperationsClient (07/activity-log)', () => {
   });
 
   it('wires the Feedback tab to its panel both ways', async () => {
-    render(<OperationsClient feedbackUnread={null} />);
+    render(<OperationsClient />);
     await settle();
     expect(screen.getByRole('tablist')).toHaveAccessibleName(COPY.tabsLabel);
     const tab = screen.getByRole('tab', { name: COPY.tabs.feedback });
@@ -59,37 +86,40 @@ describe('OperationsClient (07/activity-log)', () => {
     expect(panel).toHaveAttribute('aria-labelledby', tab.id);
   });
 
-  it('shows a positive unread count, read out as "N unread"', async () => {
-    render(<OperationsClient feedbackUnread={4} />);
-    await settle();
-    expect(screen.getByTestId('operations-feedback-unread')).toHaveTextContent(
-      '4',
-    );
-    expect(screen.getByTestId('operations-feedback-unread')).toHaveAttribute(
-      'aria-hidden',
-    );
+  it("counts the tab from the inbox's own items, read out as N unread", async () => {
+    serve(FOUR_UNREAD);
+    render(<OperationsClient />);
+    const count = await screen.findByTestId('operations-feedback-unread');
+    expect(count).toHaveTextContent('4');
+    expect(count).toHaveAttribute('aria-hidden');
     const label = screen.getByText(COPY.unreadCountLabel(4));
     expect(label).toHaveClass('sr-only');
     expect(label).toHaveTextContent('4 unread');
+    // One read: the list. No separate counts endpoint.
+    expect(fetch).toHaveBeenCalledOnce();
   });
 
-  it.each([0, null])('draws no count for %s', async (unread) => {
-    render(<OperationsClient feedbackUnread={unread} />);
+  it('draws no count when nothing is unread', async () => {
+    serve([item('a', 'read')]);
+    render(<OperationsClient />);
     await settle();
+    await waitFor(() =>
+      expect(screen.queryByText(ADMIN_COPY.feedback.loadingState)).toBeNull(),
+    );
     expect(screen.queryByTestId('operations-feedback-unread')).toBeNull();
     expect(screen.queryByText(/unread$/)).toBeNull();
   });
 
   it('leaves the title to the phone header on a phone', async () => {
     mockMatchMedia(true);
-    render(<OperationsClient feedbackUnread={2} />);
+    render(<OperationsClient />);
     await settle();
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
     expect(screen.getByRole('tab', { name: /Feedback/ })).toBeInTheDocument();
   });
 
-  it('embeds Feedback without its SectionHead', async () => {
-    render(<OperationsClient feedbackUnread={null} />);
+  it('embeds Feedback without a heading of its own', async () => {
+    render(<OperationsClient />);
     await settle();
     expect(screen.queryByText(ADMIN_COPY.feedback.eyebrow)).toBeNull();
     expect(screen.queryByText(ADMIN_COPY.feedback.subtitle)).toBeNull();
@@ -100,22 +130,40 @@ describe('OperationsClient (07/activity-log)', () => {
 });
 
 describe('FeedbackView', () => {
-  it('keeps its SectionHead standalone', async () => {
+  it('has no h1 or eyebrow of its own', async () => {
     render(<FeedbackView />);
-    await settle();
-    expect(screen.getByText(ADMIN_COPY.feedback.eyebrow)).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {
-        level: 1,
-        name: ADMIN_COPY.feedback.title,
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it('drops it when embedded', async () => {
-    render(<FeedbackView embedded />);
     await settle();
     expect(screen.queryByText(ADMIN_COPY.feedback.eyebrow)).toBeNull();
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+  });
+
+  it('switches at the admin breakpoint, the same query as the shell', async () => {
+    render(<FeedbackView />);
+    await settle();
+    const queries = vi
+      .mocked(window.matchMedia)
+      .mock.calls.map(([query]) => query);
+    expect(queries.length).toBeGreaterThan(0);
+    expect(new Set(queries)).toEqual(
+      new Set([`(max-width: ${ADMIN_PHONE_MAX_WIDTH}px)`]),
+    );
+  });
+
+  it('leads the phone inbox with its unread and flagged counts', async () => {
+    mockMatchMedia(true);
+    serve(FOUR_UNREAD);
+    render(<FeedbackView />);
+    expect(
+      await screen.findByTestId('feedback-phone-counts'),
+    ).toHaveTextContent('4 unread · 1 flagged');
+  });
+
+  it('reports its counts once loaded', async () => {
+    serve(FOUR_UNREAD);
+    const onCounts = vi.fn();
+    render(<FeedbackView onCounts={onCounts} />);
+    await waitFor(() =>
+      expect(onCounts).toHaveBeenLastCalledWith({ unread: 4, flagged: 1 }),
+    );
   });
 });

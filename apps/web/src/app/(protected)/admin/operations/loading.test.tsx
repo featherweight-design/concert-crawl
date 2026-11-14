@@ -16,6 +16,14 @@ describe('operations loading (07/loading-activity-log)', () => {
     expect(screen.getByText(ADMIN_COPY.states.loading)).toHaveClass('sr-only');
   });
 
+  it('marks the title bars for admin.css to hide on a phone', () => {
+    render(<AdminOperationsLoading />);
+    const head = screen.getByTestId('operations-skeleton-head');
+    expect(head).toHaveClass('operations-skeleton-head');
+    // admin.css owns display, so no inline value can beat its phone rule.
+    expect(head.style.display).toBe('');
+  });
+
   it('draws one tab pill, one per drawn tab', () => {
     render(<AdminOperationsLoading />);
     expect(screen.getAllByTestId('operations-skeleton-tab')).toHaveLength(1);
