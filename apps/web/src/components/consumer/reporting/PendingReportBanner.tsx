@@ -8,80 +8,9 @@ import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
 // ── Kind glyphs at 14×14 ──────────────────────────────────────────
 
-const CancelledGlyph14 = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 12 12"
-    fill="none"
-    aria-hidden="true"
-  >
-    <path
-      d="M3 3l6 6M9 3L3 9"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
-const PostponedGlyph14 = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 12 12"
-    fill="none"
-    aria-hidden="true"
-  >
-    <circle
-      cx="6"
-      cy="6"
-      r="4.5"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      fill="none"
-    />
-    <path
-      d="M6 3.5V6l2 1.4"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const LinkChainIcon = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 14 14"
-    fill="none"
-    aria-hidden="true"
-    style={{ flexShrink: 0 }}
-  >
-    <path
-      d="M5.5 8.5L8.5 5.5M4.5 9.5L3 8a2.5 2.5 0 010-3.5L4.5 3M9.5 4.5L11 6a2.5 2.5 0 010 3.5L9.5 11"
-      stroke="var(--fg-muted)"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
 const copy = REPORTING_COPY.pendingReportBanner;
 
 // ── Helper ────────────────────────────────────────────────────────
-
-const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${Math.floor(diffHours / 24)}d ago`;
-};
 
 const EVIDENCE_METHOD_LABELS: Record<string, string> = {
   bought_myself: 'First-hand',
@@ -97,7 +26,8 @@ export interface PendingReportBannerProps {
   confirms: number;
   needed: number;
   view: 'other' | 'reporter' | 'self-locked';
-  reportedAt: string; // ISO
+  /** Kept for callers; the board's one attribution line draws no time. */
+  reportedAt?: string; // ISO
   evidenceMethod?: string;
   evidenceUrl?: string | null;
   reporter: { handle: string; url: string } | null;
@@ -114,7 +44,6 @@ export const PendingReportBanner = ({
   confirms,
   needed,
   view,
-  reportedAt,
   evidenceMethod,
   evidenceUrl,
   reporter,
@@ -123,7 +52,6 @@ export const PendingReportBanner = ({
   onSawDifferent,
 }: PendingReportBannerProps) => {
   const tokens = REPORT_TOKENS[kind];
-  const timeAgo = formatTimeAgo(reportedAt);
   const isReporter = view === 'reporter' || view === 'self-locked';
 
   const badgeLabel =
@@ -147,12 +75,6 @@ export const PendingReportBanner = ({
   const methodLabel = evidenceMethod
     ? (EVIDENCE_METHOD_LABELS[evidenceMethod] ?? evidenceMethod)
     : null;
-
-  const evidenceLabel = evidenceUrl
-    ? evidenceUrl
-    : evidenceMethod
-      ? (EVIDENCE_METHOD_LABELS[evidenceMethod] ?? evidenceMethod)
-      : null;
 
   return (
     <div
@@ -196,13 +118,6 @@ export const PendingReportBanner = ({
             background: tokens.bg,
           }}
         >
-          {kind === 'cancelled' ? (
-            <CancelledGlyph14 />
-          ) : kind === 'postponed' ? (
-            <PostponedGlyph14 />
-          ) : (
-            <ReportGlyph kind="available" size={14} />
-          )}
           {badgeLabel}
         </span>
 
@@ -239,252 +154,109 @@ export const PendingReportBanner = ({
         </span>
       </div>
 
-      {/* Body */}
-      <div style={{ padding: kind === 'available' ? 0 : '12px 14px' }}>
-        {kind === 'available' ? (
-          // Board: event-tickets-back-pending-m. A check tile, the lead, and one
-          // attribution line: reporter, evidence method, VIEW.
-          <div style={{ display: 'flex', gap: 12, padding: 14 }}>
-            <div
-              aria-hidden="true"
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 11,
-                flex: 'none',
-                background: tokens.bgStrong,
-                border: `1px solid ${tokens.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg
-                width="19"
-                height="19"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke={tokens.color}
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3.5 8.5l3 3 6-7" />
-              </svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 800,
-                  fontSize: 15,
-                  color: 'var(--fg)',
-                }}
-              >
-                {leadText}
-              </div>
-              <div
-                style={{
-                  marginTop: 6,
-                  fontSize: 12.5,
-                  color: 'var(--fg-muted)',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 6,
-                }}
-              >
-                <span>{copy.attributionPrefix}</span>
-                {isReporter ? (
-                  <span style={{ color: tokens.color, fontWeight: 700 }}>
-                    {copy.attributionSelf}
-                  </span>
-                ) : reporter !== null ? (
-                  <a
-                    href={reporter.url ?? '#'}
-                    className="ph-no-capture"
-                    style={{ color: 'inherit', textDecoration: 'none' }}
-                  >
-                    {reporter.handle}
-                  </a>
-                ) : (
-                  <span>{copy.reportedAnonymously}</span>
-                )}
-                {methodLabel !== null && (
-                  <>
-                    <span>·</span>
-                    <span>{methodLabel}</span>
-                  </>
-                )}
-                {isSafeHttpUrl(evidenceUrl) && (
-                  <>
-                    <span>·</span>
-                    <a
-                      href={evidenceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        color: 'var(--signal)',
-                        fontWeight: 700,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      {copy.viewEvidenceLink}
-                    </a>
-                  </>
-                )}
-              </div>
-            </div>
+      {/* Body: a tile, the lead and ONE attribution line, for every kind
+          (more-st-ev_pending_canc_m, event-tickets-back-pending-m). */}
+      <div style={{ padding: 0 }}>
+        <div style={{ display: 'flex', gap: 12, padding: 14 }}>
+          <div
+            aria-hidden="true"
+            data-testid="pending-icon-tile"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 11,
+              flex: 'none',
+              color: tokens.color,
+              background: tokens.bgStrong,
+              border: `1px solid ${tokens.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ReportGlyph kind={kind} size={19} />
           </div>
-        ) : (
-          <div style={{ display: 'flex', gap: 12 }}>
-            {/* The 40px icon tile beside the lead, as on the other kinds */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
-              aria-hidden="true"
-              data-testid="pending-icon-tile"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 11,
-                flex: 'none',
-                color: tokens.color,
-                background: tokens.bgStrong,
-                border: `1px solid ${tokens.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 800,
+                fontSize: 15,
+                color: 'var(--fg)',
+                letterSpacing: '-0.01em',
+                lineHeight: 1.35,
               }}
             >
-              <ReportGlyph kind={kind} size={19} />
+              {leadText}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {/* Lead text */}
-              <p
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 700,
-                  fontSize: 14.5,
-                  color: 'var(--fg)',
-                  letterSpacing: '-0.01em',
-                  margin: '0 0 10px',
-                  lineHeight: 1.4,
-                }}
-              >
-                {leadText}
-              </p>
-
-              {/* Evidence card */}
-              {evidenceLabel !== null && (
-                <div
-                  style={{
-                    marginBottom: 10,
-                    padding: '8px 10px',
-                    background:
-                      'color-mix(in oklab, var(--fg) 4%, transparent)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 8,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
+            <div
+              data-testid="pending-attribution"
+              style={{
+                marginTop: 6,
+                fontFamily: 'var(--font-ui)',
+                fontSize: 14,
+                color: 'var(--fg-muted)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 6,
+              }}
+            >
+              <span>{copy.attributionPrefix}</span>
+              {isReporter ? (
+                <span style={{ color: tokens.color, fontWeight: 700 }}>
+                  {copy.attributionSelf}
+                </span>
+              ) : reporter !== null ? (
+                <a
+                  href={reporter.url ?? '#'}
+                  className="ph-no-capture"
+                  style={{ color: 'inherit', textDecoration: 'none' }}
                 >
-                  <LinkChainIcon />
+                  {reporter.handle}
+                </a>
+              ) : (
+                <span>{copy.reportedAnonymously}</span>
+              )}
+              {methodLabel !== null && (
+                <>
+                  <span>·</span>
                   <span
                     style={{
-                      flex: 1,
-                      minWidth: 0,
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                      fontSize: 12.5,
-                      color: 'var(--fg)',
-                      letterSpacing: '-0.005em',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      color: isSafeHttpUrl(evidenceUrl)
+                        ? 'var(--signal)'
+                        : undefined,
+                      fontWeight: isSafeHttpUrl(evidenceUrl) ? 700 : undefined,
                     }}
                   >
-                    {evidenceLabel}
+                    {methodLabel}
                   </span>
-                  {isSafeHttpUrl(evidenceUrl) ? (
-                    <a
-                      href={evidenceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        fontFamily: 'JetBrains Mono, monospace',
-                        fontSize: 9,
-                        fontWeight: 700,
-                        color: 'var(--fg-subtle)',
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        textDecoration: 'none',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {copy.viewEvidenceLink}
-                    </a>
-                  ) : (
-                    <span
-                      style={{
-                        fontFamily: 'JetBrains Mono, monospace',
-                        fontSize: 9,
-                        color: 'var(--fg-subtle)',
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        opacity: 0.4,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {copy.viewEvidenceLink}
-                    </span>
-                  )}
-                </div>
+                </>
               )}
-
-              {/* Attribution */}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  flexWrap: 'wrap',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 9,
-                  color: 'var(--fg-muted)',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                <span>{copy.attributionPrefix}</span>
-                {isReporter ? (
-                  <span style={{ color: tokens.color, fontWeight: 700 }}>
-                    {copy.attributionSelf}
-                  </span>
-                ) : reporter !== null ? (
+              {isSafeHttpUrl(evidenceUrl) && (
+                <>
+                  <span>·</span>
                   <a
-                    href={reporter.url ?? '#'}
-                    className="ph-no-capture"
+                    href={evidenceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
-                      textDecoration: 'underline',
-                      textDecorationColor: 'var(--border-strong)',
-                      color: 'inherit',
+                      color: 'var(--signal)',
+                      fontWeight: 700,
+                      textDecoration: 'none',
                     }}
                   >
-                    {reporter.handle}
+                    {copy.viewEvidenceLink}
                   </a>
-                ) : (
-                  <span>{copy.reportedAnonymously}</span>
-                )}
-                <span style={{ opacity: 0.5 }}>·</span>
-                <span>{timeAgo}</span>
-              </div>
+                </>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Action row — inside body, separated by borderTop */}
         <div
           style={{
-            ...(kind === 'available'
-              ? { padding: '10px 14px' }
-              : { marginTop: 12, paddingTop: 10 }),
+            padding: '10px 14px',
             borderTop: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
@@ -502,11 +274,9 @@ export const PendingReportBanner = ({
                   style={{
                     all: 'unset',
                     cursor: 'pointer',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    color: 'var(--fg-subtle)',
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: 14,
+                    color: 'var(--fg-muted)',
                   }}
                 >
                   {copy.footerQuestion}
@@ -522,20 +292,22 @@ export const PendingReportBanner = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  padding: '8px 14px',
-                  borderRadius: 8,
+                  justifyContent: 'center',
+                  height: 36,
+                  padding: '0 18px',
+                  borderRadius: 12,
                   background: tokens.color,
                   color: 'var(--fg-on-accent)',
-                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontFamily: 'var(--font-ui)',
                   fontWeight: 700,
-                  fontSize: 12.5,
+                  fontSize: 14.5,
                   letterSpacing: '-0.005em',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
                   lineHeight: 1,
                 }}
               >
-                <CheckGlyph size={11} color="var(--fg-on-accent)" />
+                <CheckGlyph size={13} color="var(--fg-on-accent)" />
                 {copy.confirmButton}
               </button>
             </>

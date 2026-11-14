@@ -2,7 +2,7 @@
 
 import { REPORTING_COPY } from './definitions/copy';
 import { REPORT_TOKENS } from './reportTokens';
-import { CheckGlyph, Eyebrow, PendingDot } from '@/components/consumer/glyphs';
+import { Eyebrow, PendingDot } from '@/components/consumer/glyphs';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
@@ -12,15 +12,6 @@ const tokens = REPORT_TOKENS['sold-out'];
 const DASH_STROKE = `color-mix(in oklab, ${tokens.color} 60%, transparent)`;
 
 // ── Helper ────────────────────────────────────────────────────────
-
-const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${Math.floor(diffHours / 24)}d ago`;
-};
 
 // ── Props ─────────────────────────────────────────────────────────
 
@@ -44,47 +35,19 @@ export interface PendingSoldOutCardProps {
 
 // ── Component ─────────────────────────────────────────────────────
 
-const evidenceLabel = (
-  method: string | null | undefined,
-  vendor: string,
-  note: string | null | undefined,
-): string => {
-  let base: string;
-  switch (method) {
-    case 'saw_listing':
-      base = `${vendor} listing`;
-      break;
-    case 'venue_site':
-      base = 'Venue website';
-      break;
-    case 'bought_myself':
-      base = 'Bought personally';
-      break;
-    default:
-      base = 'Community evidence';
-  }
-  return note ? `${base} · '${note}'` : base;
-};
-
 export const PendingSoldOutCard = ({
   floor,
   ceiling,
-  vendor,
   reporter,
-  reportedAt,
   confirms,
   needed,
   view,
   userHasConfirmed = false,
-  evidenceMethod,
   evidenceUrl,
-  note,
   onConfirm,
   onWithdraw,
   onSawDifferent,
 }: PendingSoldOutCardProps) => {
-  const timeAgo = formatTimeAgo(reportedAt);
-
   const priceStr = ceiling != null ? `$${floor}–$${ceiling}` : `$${floor}`;
 
   const attributionText = reporter
@@ -215,86 +178,31 @@ export const PendingSoldOutCard = ({
           </span>
         </div>
 
-        {/* Evidence row */}
-        {(evidenceMethod || evidenceUrl) && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8,
-              marginTop: 10,
-              padding: '7px 10px',
-              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
-                flex: 1,
-                minWidth: 0,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {evidenceLabel(evidenceMethod, vendor, note)}
-            </span>
-            {isSafeHttpUrl(evidenceUrl) ? (
+        {/* Reporter attribution, ONE Inter line: names the reader, so
+            analytics skips it (more-st-ev_sold_pending_m). */}
+        <div
+          className="ph-no-capture"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 14,
+            color: 'var(--fg-muted)',
+            marginTop: 8,
+          }}
+        >
+          {attributionText}
+          {isSafeHttpUrl(evidenceUrl) && (
+            <>
+              {' · '}
               <a
                 href={evidenceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  fontWeight: 700,
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  textDecoration: 'none',
-                  flexShrink: 0,
-                }}
+                style={{ color: 'inherit', textDecoration: 'none' }}
               >
                 {copy.viewLink}
               </a>
-            ) : (
-              evidenceUrl && (
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 9,
-                    color: 'var(--fg-subtle)',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    opacity: 0.4,
-                    flexShrink: 0,
-                  }}
-                >
-                  {copy.viewLink}
-                </span>
-              )
-            )}
-          </div>
-        )}
-
-        {/* Reporter attribution: names the reader, so analytics skips it */}
-        <div
-          className="ph-no-capture"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.04em',
-            marginTop: 6,
-          }}
-        >
-          {attributionText} · {timeAgo}
+            </>
+          )}
         </div>
       </div>
 
@@ -321,11 +229,9 @@ export const PendingSoldOutCard = ({
               style={{
                 all: 'unset',
                 cursor: onSawDifferent ? 'pointer' : 'default',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 10,
-                color: 'var(--fg-subtle)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 14,
+                color: 'var(--fg-muted)',
                 flexShrink: 1,
                 minWidth: 0,
               }}
@@ -346,15 +252,17 @@ export const PendingSoldOutCard = ({
                 color: 'var(--fg-on-accent)',
                 fontFamily: 'var(--font-ui)',
                 fontWeight: 700,
-                fontSize: 12.5,
-                padding: '7px 12px',
-                borderRadius: 8,
+                fontSize: 14.5,
+                justifyContent: 'center',
+                height: 36,
+                padding: '0 18px',
+                borderRadius: 12,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
                 lineHeight: 1,
               }}
             >
-              <CheckGlyph size={11} color="var(--fg-on-accent)" />
+              {/* The board draws no glyph on this one. */}
               {copy.confirmButton}
             </button>
           </div>
