@@ -434,8 +434,8 @@ const otherShowsCrawledFineByVenue = async (
 const pathOf = (url: string | null | undefined): string | null => {
   if (!url) return null;
   try {
-    const { pathname } = new URL(url);
-    return pathname === '' ? '/' : pathname.slice(0, 200);
+    const { pathname, search } = new URL(url);
+    return `${pathname === '' ? '/' : pathname}${search}`.slice(0, 200);
   } catch {
     return null;
   }
@@ -455,6 +455,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
         lastUrlCoverageOkAt: venues.lastUrlCoverageOkAt,
         active: venues.active,
         crawlPausedAt: venues.crawlPausedAt,
+        crawlPauseReason: venues.crawlPauseReason,
         // The stored robots.txt check and the page we crawl: never fetched here.
         robotsTxtAllowed: venues.robotsTxtAllowed,
         websiteUrl: venues.websiteUrl,
@@ -566,6 +567,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
       lastRuns,
       venueLive: venueRow?.active ?? false,
       pausedAt: venueRow?.crawlPausedAt?.toISOString() ?? null,
+      pauseReason: venueRow?.crawlPauseReason ?? null,
       blockedAt: venueRow?.blockedAt?.toISOString() ?? null,
       consecutiveFailures: venueRow?.consecutiveFailures ?? 0,
       robotsTxtAllowed: venueRow?.robotsTxtAllowed ?? null,
