@@ -329,4 +329,52 @@ describe('ErrorTellUsCard', () => {
         .getAttribute('aria-checked'),
     ).toBe('true');
   });
+
+  // 12-error-page err-m-sending / err-m-sent / err-m-failed.
+  it('says SENDING in signal while the send is in flight and dims what it holds', async () => {
+    let finish: () => void = () => undefined;
+    sendErrorReport.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<Card digest="2849204133" />);
+    pick('Searching');
+    fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+
+    const tag = await screen.findByText(copy.tagSending);
+    expect(tag.style.color).toBe('var(--signal)');
+    expect(screen.queryByText(copy.tagOpen)).toBeNull();
+    for (const chip of screen.getAllByRole('radio')) {
+      expect((chip as HTMLButtonElement).disabled).toBe(true);
+    }
+    expect(
+      (screen.getByRole('button', { name: copy.cancel }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(screen.getByRole('radiogroup').style.opacity).toBe('0.4');
+
+    finish();
+    await screen.findByRole('heading', { name: copy.sentHeading });
+  });
+
+  it('draws the green check badge beside the Sent heading', async () => {
+    sendErrorReport.mockResolvedValueOnce(undefined);
+    render(<Card digest="2849204133" />);
+    pick('Searching');
+    fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+    await screen.findByRole('heading', { name: copy.sentHeading });
+    expect(screen.getByTestId('error-sent-check')).toBeTruthy();
+  });
+
+  it('draws the amber dot on the saved-on-this-device box', async () => {
+    sendErrorReport.mockRejectedValueOnce(new Error('503'));
+    render(<Card digest="2849204133" />);
+    pick('Searching');
+    fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+    await screen.findByRole('heading', { name: copy.failedHeading });
+    expect(screen.getByTestId('error-saved-dot').style.background).toBe(
+      'var(--warning)',
+    );
+  });
 });

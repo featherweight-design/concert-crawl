@@ -153,6 +153,11 @@ export const ErrorTellUsCard = ({
   // another error page may have saved over it since.
   const savedAt = useRef<number | null>(null);
 
+  const sending = state === 'sending';
+  // `err-m-sending`: while the send is in flight the chips, note, attach list
+  // and Cancel dim and stop answering.
+  const DIM: CSSProperties = sending ? { opacity: 0.4 } : {};
+
   const page = reportPage(pathname);
   // The list shows whichever id the failure has: the error ID (a server
   // throw's digest or the page's minted id), else the browser throw's Sentry
@@ -230,11 +235,17 @@ export const ErrorTellUsCard = ({
               label: copy.refusedTag,
               color: 'var(--warning)',
             }
-          : {
-              eyebrow: copy.eyebrow,
-              label: state === 'prompt' ? copy.tagOptional : copy.tagOpen,
-              color: 'var(--accent)',
-            };
+          : state === 'sending'
+            ? {
+                eyebrow: copy.eyebrow,
+                label: copy.tagSending,
+                color: 'var(--signal)',
+              }
+            : {
+                eyebrow: copy.eyebrow,
+                label: state === 'prompt' ? copy.tagOptional : copy.tagOpen,
+                color: 'var(--accent)',
+              };
 
   return (
     <section
@@ -244,7 +255,7 @@ export const ErrorTellUsCard = ({
         ['--sheet-bg' as string]: 'var(--surface-1)',
         width: '100%',
         boxSizing: 'border-box',
-        borderRadius: 24,
+        borderRadius: 18,
         padding: 20,
         textAlign: 'left',
         marginTop: 24,
@@ -252,45 +263,58 @@ export const ErrorTellUsCard = ({
     >
       <style>{CARD_CSS}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...MONO }}>
-        <svg
-          aria-hidden
-          width="22"
-          height="22"
-          viewBox="0 0 96 96"
-          focusable="false"
-          style={{ flex: 'none' }}
-        >
-          <rect width="96" height="96" rx="16" fill="var(--bg)" />
-          <circle cx="72" cy="24" r="20" fill="var(--accent)" opacity="0.22" />
-          <circle cx="72" cy="24" r="12" fill="var(--accent)" opacity="0.42" />
-          <circle cx="72" cy="24" r="7" fill="var(--signal)" />
-          <circle cx="14" cy="76" r="2" fill="var(--signal)" opacity="0.4" />
-          <circle cx="34" cy="64" r="3" fill="var(--signal)" opacity="0.55" />
-          <circle cx="50" cy="50" r="4" fill="var(--signal)" opacity="0.7" />
-          <circle cx="66" cy="32" r="6" fill="var(--signal)" opacity="0.9" />
-        </svg>
         <span
           aria-hidden
-          style={
-            state === 'refused'
-              ? {
-                  // Board error-report-refused-m: a 6px warning dot in a 3px
-                  // ring of the same colour at 20%, not the glow.
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  flex: 'none',
-                  background: tag.color,
-                  boxShadow: `0 0 0 3px color-mix(in srgb, ${tag.color} 20%, transparent)`,
-                }
-              : {
-                  width: 8,
-                  height: 8,
-                  borderRadius: 8,
-                  background: tag.color,
-                  boxShadow: `0 0 8px ${tag.color}`,
-                }
-          }
+          style={{
+            display: 'inline-flex',
+            flex: 'none',
+            borderRadius: 7,
+            overflow: 'hidden',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <svg
+            aria-hidden
+            width="22"
+            height="22"
+            viewBox="0 0 96 96"
+            focusable="false"
+            style={{ display: 'block' }}
+          >
+            <rect width="96" height="96" rx="16" fill="var(--bg)" />
+            <circle
+              cx="72"
+              cy="24"
+              r="20"
+              fill="var(--accent)"
+              opacity="0.22"
+            />
+            <circle
+              cx="72"
+              cy="24"
+              r="12"
+              fill="var(--accent)"
+              opacity="0.42"
+            />
+            <circle cx="72" cy="24" r="7" fill="var(--signal)" />
+            <circle cx="14" cy="76" r="2" fill="var(--signal)" opacity="0.4" />
+            <circle cx="34" cy="64" r="3" fill="var(--signal)" opacity="0.55" />
+            <circle cx="50" cy="50" r="4" fill="var(--signal)" opacity="0.7" />
+            <circle cx="66" cy="32" r="6" fill="var(--signal)" opacity="0.9" />
+          </svg>
+        </span>
+        <span
+          aria-hidden
+          style={{
+            // The boards draw one dot for every state: 6px with a 3px ring of
+            // the same colour at 20%, not a glow.
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            flex: 'none',
+            background: tag.color,
+            boxShadow: `0 0 0 3px color-mix(in srgb, ${tag.color} 20%, transparent)`,
+          }}
         />
         <span style={{ color: 'var(--fg-muted)' }}>{tag.eyebrow}</span>
         <span
@@ -301,39 +325,75 @@ export const ErrorTellUsCard = ({
       </div>
 
       {state === 'sent' ? (
-        <div style={{ marginTop: 16 }}>
-          <h2
-            ref={headingRef}
-            tabIndex={-1}
-            className="cc-tu-h"
+        <div
+          style={{
+            marginTop: 16,
+            display: 'flex',
+            gap: 12,
+            alignItems: 'flex-start',
+          }}
+        >
+          <span
+            aria-hidden
+            data-testid="error-sent-check"
             style={{
-              margin: 0,
-              fontSize: 26,
-              fontWeight: 900,
-              letterSpacing: '-0.03em',
+              display: 'inline-flex',
+              flex: 'none',
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              border:
+                '1px solid color-mix(in srgb, var(--success) 55%, transparent)',
+              background: 'color-mix(in srgb, var(--success) 14%, transparent)',
+              color: 'var(--success)',
             }}
           >
-            {copy.sentHeading}
-          </h2>
-          <p
-            style={{
-              margin: '6px 0 0',
-              color: 'var(--fg-muted)',
-              fontSize: 15,
-            }}
-          >
-            {copy.sentBody}
-          </p>
-          <p
-            style={{
-              margin: '12px 0 0',
-              color: 'var(--fg-subtle)',
-              fontSize: 13,
-            }}
-          >
-            <span style={MONO}>{copy.sentLabel}</span> {doing}
-            {shownId ? ` · ${copy.withErrorId} ${shownId}` : ''}
-          </p>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path
+                d="M4 9.5l3.2 3.2L14 5.8"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <h2
+              ref={headingRef}
+              tabIndex={-1}
+              className="cc-tu-h"
+              style={{
+                margin: 0,
+                fontSize: 20,
+                fontWeight: 900,
+                letterSpacing: '-0.03em',
+              }}
+            >
+              {copy.sentHeading}
+            </h2>
+            <p
+              style={{
+                margin: '6px 0 0',
+                color: 'var(--fg-muted)',
+                fontSize: 15,
+              }}
+            >
+              {copy.sentBody}
+            </p>
+            <p
+              style={{
+                margin: '12px 0 0',
+                color: 'var(--fg-subtle)',
+                fontSize: 13,
+              }}
+            >
+              <span style={MONO}>{copy.sentLabel}</span> {doing}
+              {shownId ? ` · ${copy.withErrorId} ${shownId}` : ''}
+            </p>
+          </div>
         </div>
       ) : state === 'failed' ? (
         <div style={{ marginTop: 16 }}>
@@ -343,7 +403,7 @@ export const ErrorTellUsCard = ({
             className="cc-tu-h"
             style={{
               margin: 0,
-              fontSize: 26,
+              fontSize: 20,
               fontWeight: 900,
               letterSpacing: '-0.03em',
             }}
@@ -366,6 +426,7 @@ export const ErrorTellUsCard = ({
               padding: 14,
               borderRadius: 14,
               border: '1px dashed var(--border-strong)',
+              background: 'var(--surface-1)',
               color: 'var(--fg-muted)',
               fontSize: 15,
             }}
@@ -378,6 +439,19 @@ export const ErrorTellUsCard = ({
                 marginBottom: 6,
               }}
             >
+              <span
+                aria-hidden
+                data-testid="error-saved-dot"
+                style={{
+                  display: 'inline-block',
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  marginRight: 8,
+                  verticalAlign: 'middle',
+                  background: 'var(--warning)',
+                }}
+              />
               {copy.savedHeading}
             </div>
             <strong style={{ color: 'var(--fg)' }}>{doing}.</strong>
@@ -487,7 +561,7 @@ export const ErrorTellUsCard = ({
             className="cc-tu-h"
             style={{
               margin: 0,
-              fontSize: 26,
+              fontSize: 20,
               fontWeight: 900,
               letterSpacing: '-0.03em',
             }}
@@ -508,11 +582,13 @@ export const ErrorTellUsCard = ({
           <div
             role="radiogroup"
             aria-label={copy.chipsLabel}
+            aria-disabled={sending}
             style={{
               marginTop: 14,
               display: 'flex',
               flexWrap: 'wrap',
               gap: 10,
+              ...DIM,
             }}
           >
             {copy.chips.map((chip, index) => (
@@ -549,6 +625,7 @@ export const ErrorTellUsCard = ({
                   chipRefs.current[next]?.focus();
                 }}
                 className="cc-tu-chip"
+                disabled={sending}
                 style={chipStyle(doing === chip)}
               >
                 {chip}
@@ -565,7 +642,9 @@ export const ErrorTellUsCard = ({
                 rows={3}
                 placeholder={copy.notePlaceholder}
                 onChange={(event) => setNote(event.target.value)}
+                readOnly={sending}
                 style={{
+                  ...DIM,
                   marginTop: 16,
                   width: '100%',
                   boxSizing: 'border-box',
@@ -585,6 +664,7 @@ export const ErrorTellUsCard = ({
                   fontSize: 10,
                   color: 'var(--fg-subtle)',
                   margin: '14px 0 6px',
+                  ...DIM,
                 }}
               >
                 <span aria-hidden style={{ color: 'var(--success)' }}>
@@ -592,7 +672,7 @@ export const ErrorTellUsCard = ({
                 </span>
                 {copy.attachHeading}
               </div>
-              <dl style={{ margin: 0 }}>
+              <dl style={{ margin: 0, ...DIM }}>
                 {[
                   ...(shownId ? [[copy.errorId, shownId] as const] : []),
                   [copy.page, page] as const,
@@ -642,7 +722,8 @@ export const ErrorTellUsCard = ({
               >
                 <button
                   type="button"
-                  style={QUIET_BUTTON}
+                  disabled={sending}
+                  style={{ ...QUIET_BUTTON, ...DIM }}
                   onClick={() => {
                     setDoing(null);
                     setNote('');
@@ -656,7 +737,7 @@ export const ErrorTellUsCard = ({
                   disabled={doing === null || state === 'sending'}
                   style={{
                     ...GRADIENT_BUTTON,
-                    opacity: doing === null ? 0.4 : 1,
+                    opacity: doing === null ? 0.4 : sending ? 0.7 : 1,
                   }}
                 >
                   {state === 'sending' ? copy.sending : `${copy.send} →`}

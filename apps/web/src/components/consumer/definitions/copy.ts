@@ -1227,6 +1227,7 @@ export const CONSUMER_COPY = {
       eyebrow: 'Tell us · Beta',
       tagOptional: 'Optional',
       tagOpen: 'Open',
+      tagSending: 'Sending',
       heading: 'What were you doing?',
       sub: 'One tap is enough. We’ll send the error ID with it.',
       chips: [

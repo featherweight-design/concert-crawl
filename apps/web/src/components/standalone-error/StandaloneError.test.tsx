@@ -250,4 +250,17 @@ describe('StandaloneError', () => {
       );
     });
   });
+
+  // 12-error-page: Try again sweeps at 135 degrees; the chip carries a drawn
+  // copy mark, not the text glyph.
+  it('sweeps Try again at 135 degrees and draws a copy icon in the ID chip', () => {
+    render(<StandaloneError errorId="2849204133" onRetry={vi.fn()} />);
+    const tryAgain = screen.getByRole('button', { name: copy.tryAgainButton });
+    expect(tryAgain.style.background).toContain('135deg');
+    const chip = screen.getByRole('button', {
+      name: new RegExp(copy.copyErrorId),
+    });
+    expect(chip.textContent).not.toContain('⧉');
+    expect(chip.querySelector('svg')).not.toBeNull();
+  });
 });
