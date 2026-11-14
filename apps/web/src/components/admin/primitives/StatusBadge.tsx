@@ -32,11 +32,16 @@ interface StatusBadgeProps {
   'aria-label'?: string;
   /**
    * `tile` is the Health boards' pill (`03/tiles-in-each-state`,
-   * `03/health-desktop` Emails row): 22px high, `0 9px`, 11.5px, a plain
-   * dot. Only the Health tiles and the Emails row use it.
+   * `03/health-desktop` Emails row): 22px high, `0 9px`, 11.5px (11px on the
+   * phone, via `--status-badge-tile-size`), a plain dot. Only the Health
+   * tiles and the Emails row use it.
    */
   size?: 'default' | 'tile';
 }
+
+/** The tile pill's text: 11.5px, or admin.css's 11px on the phone. */
+export const STATUS_BADGE_TILE_FONT_SIZE =
+  'var(--status-badge-tile-size, 11.5px)';
 
 export const StatusBadge = ({
   kind = 'neutral',
@@ -65,7 +70,9 @@ export const StatusBadge = ({
         ...(isTile && { height: 22, boxSizing: 'border-box' as const }),
         padding: isTile ? '0 9px' : isFilled ? '4px 10px' : '2px 8px',
         borderRadius: 999,
-        fontSize: isTile ? 11.5 : isFilled ? 12 : 11,
+        // The phone board draws the tile pill at 11px: admin.css sets the
+        // variable under the phone query, scoped to the Health tiles.
+        fontSize: isTile ? STATUS_BADGE_TILE_FONT_SIZE : isFilled ? 12 : 11,
         fontWeight: 600,
         fontFamily: isMono
           ? "'JetBrains Mono', monospace"

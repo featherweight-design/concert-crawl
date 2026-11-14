@@ -196,13 +196,14 @@ export const missedCrawlAt = (
     : null;
 
 /**
- * Last night's failed venues that have an open `venue-failing` item: the
- * crawl tile's "The {m} new failures are in Needs you" (1c Q5).
+ * Last night's failed venues that have an open Needs you item (venue-failing
+ * or venue-blocked): the crawl tile's "The {m} new failures are in Needs you"
+ * (1c Q5). It reads the footer's set, so the two never disagree.
  */
 export const newFailuresInNeedsYou = (
   failed: GridCell[],
-  failingVenueIds: ReadonlySet<string>,
-): number => failed.filter((cell) => failingVenueIds.has(cell.id)).length;
+  venueIds: ReadonlySet<string>,
+): number => failed.filter((cell) => venueIds.has(cell.id)).length;
 
 /**
  * The grid's Failed and Paused venues that are in Needs you (failing or

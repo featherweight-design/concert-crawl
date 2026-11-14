@@ -97,17 +97,19 @@ describe('/admin Health page', () => {
     await expect(AdminHealthPage()).resolves.not.toBeNull();
   });
 
-  it('reads the newest nightly and the venue Needs you items', async () => {
+  it('reads the newest nightly and the Needs you queue once, unfiltered', async () => {
     answer();
     const { default: AdminHealthPage } = await import('./page');
     await AdminHealthPage();
-    for (const path of [
+    expect(mockGet).toHaveBeenCalledWith(
       '/v1/admin/crawl/batches?kind=nightly&limit=1',
-      '/v1/admin/needs-you?kind=venue-failing',
-      '/v1/admin/needs-you?kind=venue-blocked',
-    ]) {
-      expect(mockGet).toHaveBeenCalledWith(path, 'token');
-    }
+      'token',
+    );
+    // The API loads the whole queue for any ?kind=, so one read, no filter.
+    const queueReads = mockGet.mock.calls.filter(
+      ([path]) => path.split('?')[0] === '/v1/admin/needs-you',
+    );
+    expect(queueReads).toEqual([['/v1/admin/needs-you', 'token']]);
   });
 
   it('still renders when the nightly and Needs you reads fail', async () => {

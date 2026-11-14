@@ -26,21 +26,38 @@ export const parseNewestNightly = (raw: unknown): NightlyBatch | null => {
     : null;
 };
 
-const venueItemSchema = z.object({ venueId: z.string().nullable() });
+/** The Needs you kinds that put a venue in Needs you (1c Q5). */
+const VENUE_KINDS = [
+  'venue-failing',
+  'venue-blocked',
+] as const satisfies readonly NeedsYouKind[];
+
+const venueItemSchema = z.object({
+  kind: z.string(),
+  venueId: z.string().nullable(),
+});
 
 /**
- * The venue ids of `GET /v1/admin/needs-you?kind=…`'s items. An item this
- * build can't read is dropped on its own; a body that isn't a list is null.
+ * The venues with an open venue-failing or venue-blocked item, split by kind
+ * from one unfiltered `GET /v1/admin/needs-you` (the API loads the whole queue
+ * for any `?kind=`, so one read is the cheap one). An item this build can't
+ * read is dropped on its own; a body that isn't a list is null.
  */
-export const parseNeedsYouVenueIds = (raw: unknown): string[] | null => {
+export const parseNeedsYouVenueIds = (raw: unknown): Set<string> | null => {
   const list = z.array(z.unknown()).safeParse(raw);
   if (!list.success) return null;
-  return list.data.flatMap((item) => {
+  const ids = new Set<string>();
+  for (const item of list.data) {
     const parsed = venueItemSchema.safeParse(item);
-    return parsed.success && parsed.data.venueId !== null
-      ? [parsed.data.venueId]
-      : [];
-  });
+    if (
+      parsed.success &&
+      parsed.data.venueId !== null &&
+      VENUE_KINDS.some((kind) => kind === parsed.data.kind)
+    ) {
+      ids.add(parsed.data.venueId);
+    }
+  }
+  return ids;
 };
 
 const quietly = async <T>(
@@ -64,9 +81,9 @@ export const fetchNewestNightly = (token: string) =>
     ),
   );
 
-export const fetchNeedsYouVenueIds = (token: string, kind: NeedsYouKind) =>
-  quietly(`Needs you ${kind}`, async () =>
+export const fetchNeedsYouVenueIds = (token: string) =>
+  quietly('the Needs you venues', async () =>
     parseNeedsYouVenueIds(
-      await apiClient.get<unknown>(`/v1/admin/needs-you?kind=${kind}`, token),
+      await apiClient.get<unknown>('/v1/admin/needs-you', token),
     ),
   );
