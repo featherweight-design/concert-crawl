@@ -1,3 +1,22 @@
+# [1.443.0](https://github.com/featherweight-design/concert-crawl/compare/v1.442.1...v1.443.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** exact fan filter, steady fan count, and the shared person avatar ([7bbe116](https://github.com/featherweight-design/concert-crawl/commit/7bbe116b77c42be334628ccc18eeded9a7cf5903))
+* **web:** a 16px search field on the phone, and the submitted prices inventory ([e4778dc](https://github.com/featherweight-design/concert-crawl/commit/e4778dc2f960fd7c82afadb947a657239f4e42b5))
+* **web:** keep the hidden venue's crawl row pending Design item 22 ([e7502bb](https://github.com/featherweight-design/concert-crawl/commit/e7502bbbf5377a64ffe277ef518d05129682ed93))
+* **web:** name the admin not-found crumb so a failed venue drops the loading placeholder ([8d65e53](https://github.com/featherweight-design/concert-crawl/commit/8d65e5337f3a311ee6762f05ff36582edfc9fca1))
+* **web:** short phone filter words so the segment fits at 320, and mocked sheet rows ([e92deaa](https://github.com/featherweight-design/concert-crawl/commit/e92deaa783249458b1d08b5cd22a5ce5ffaec58a))
+* **web:** size the venue skeleton to the loaded header and hold the crumb with … ([013855f](https://github.com/featherweight-design/concert-crawl/commit/013855f3de0d1cf43bdc325b6710f3a33331ea30))
+* **web:** venue menu rows and icons per the board; venue skeleton matches the page ([034ca30](https://github.com/featherweight-design/concert-crawl/commit/034ca30f48fd54a98e9588c983febfc967907d8b))
+
+
+### Features
+
+* **admin:** carry the fan's avatar pair on Submitted prices rows ([e3239a4](https://github.com/featherweight-design/concert-crawl/commit/e3239a4426f8afc0eba0faf1c1fb3f1e0da264b9))
+* **web:** submitted prices on the phone, fan chip, avatars, and the shared edit sheet ([e6d5b72](https://github.com/featherweight-design/concert-crawl/commit/e6d5b72aaba7dadc4a43e64dedbf5ed144e488f9)), closes [#21](https://github.com/featherweight-design/concert-crawl/issues/21) [#8](https://github.com/featherweight-design/concert-crawl/issues/8) [#12](https://github.com/featherweight-design/concert-crawl/issues/12)
+
 ## [1.442.1](https://github.com/featherweight-design/concert-crawl/compare/v1.442.0...v1.442.1) (2026-11-14)
 
 
