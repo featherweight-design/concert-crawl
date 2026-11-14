@@ -71,6 +71,9 @@ export const ARTIST_COPY = {
   // The board's heading (artist_past_m); it was "Previously" before the rows
   // became stampable.
   pastTitle: 'Past shows',
+  // The row under the list once there are more than the window shows
+  // (addendum-3 README 25): it loads the next 50.
+  showOlder: 'Show older',
   pastNote: (since: string) =>
     `Concert Crawl started crawling in ${since}. Shows before that aren't tracked.`,
 

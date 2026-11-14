@@ -42,8 +42,8 @@ interface ErrorBody {
   error: string;
 }
 
-const getArtist = async (slug: string): Promise<Response> =>
-  app.request(`/v1/artists/${slug}`);
+const getArtist = async (slug: string, query = ''): Promise<Response> =>
+  app.request(`/v1/artists/${slug}${query}`);
 
 describe('GET /v1/artists/:slug — integration', () => {
   beforeEach(async () => {
@@ -458,6 +458,36 @@ describe('GET /v1/artists/:slug — integration', () => {
     const body: SuccessBody = await (await getArtist('prolific-act')).json();
     expect(body.data.past).toHaveLength(50);
     expect(body.data.history.count).toBe(body.data.past.length);
+    // The 51st night is why the page offers "Show older".
+    expect(body.data.pastHasMore).toBe(true);
+
+    // Asking for the next window returns every night and says there is no more.
+    const wider: SuccessBody = await (
+      await getArtist('prolific-act', '?pastLimit=100')
+    ).json();
+    expect(wider.data.past).toHaveLength(51);
+    expect(wider.data.pastHasMore).toBe(false);
+    expect(wider.data.history.count).toBe(51);
+  });
+
+  it('has no older shows to offer at or under the window, and refuses a window outside its bounds', async () => {
+    await seedArtist({ name: 'Small Act', canonicalName: 'small act' });
+    const venue = await seedVenue({ name: 'Ophelias', slug: 'ophelias' });
+    await seedEvent(venue.id, {
+      artist: 'Small Act',
+      canonicalArtist: 'small act',
+      date: '2020-01-05',
+      title: 'Small Act',
+      canonicalTitle: 'small act',
+    });
+
+    const body: SuccessBody = await (await getArtist('small-act')).json();
+    expect(body.data.pastHasMore).toBe(false);
+
+    // Under one page or past the cap is a bad request, not a silent clamp.
+    expect((await getArtist('small-act', '?pastLimit=10')).status).toBe(400);
+    expect((await getArtist('small-act', '?pastLimit=9999')).status).toBe(400);
+    expect((await getArtist('small-act', '?pastLimit=abc')).status).toBe(400);
   });
 
   // The artist page selected events.ticketPriceMin and returned it as a bare

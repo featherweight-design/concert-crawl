@@ -80,6 +80,8 @@ export interface ArtistDetailResponse {
   shows: ArtistShow[];
   /** Past shows, descending. */
   past: ArtistPastShow[];
+  /** More past nights exist beyond `past`: the page offers "Show older". */
+  pastHasMore: boolean;
   history: ArtistHistory;
   /** Present only when the request carries a session. Null when anonymous. */
   following: boolean | null;

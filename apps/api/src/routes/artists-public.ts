@@ -70,11 +70,24 @@ function matchSummary(
 }
 
 // Past shows are capped so an artist with a decade of history can't produce an
-// unbounded response. EXTENSION POINT (Item 3): when the page grows a
-// "show all history" affordance, paginate here — and remember that
-// `history.count` is derived from the returned rows, so a LIMIT that hides
-// rows also lowers the count by design. A separate COUNT(*) would drift.
+// unbounded response. The page's "Show older" row asks for a bigger window
+// (`?pastLimit=`, the next 50 at a time, addendum-3 README 25), and the response
+// says whether more exist. `history.count` is derived from the returned rows, so
+// a LIMIT that hides rows also lowers the count by design. A separate COUNT(*)
+// would drift.
 const PAST_LIMIT = 50;
+/** The most a caller can ask for, so a hand-rolled query can't unbound it. */
+const PAST_LIMIT_MAX = 500;
+
+const artistQuerySchema = z.object({
+  pastLimit: z.coerce
+    .number()
+    .int()
+    .min(PAST_LIMIT)
+    .max(PAST_LIMIT_MAX)
+    .optional()
+    .default(PAST_LIMIT),
+});
 /** Rows fetched per night wanted, so duplicate rows can be collapsed. */
 const PAST_DUPLICATE_HEADROOM = 3;
 const UPCOMING_LIMIT = 50;
@@ -296,8 +309,14 @@ artistsPublicRouter.get(
       return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
   }),
+  zValidator('query', artistQuerySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid query' }, 400);
+    }
+  }),
   async (ctx) => {
     const { slug } = ctx.req.valid('param');
+    const { pastLimit } = ctx.req.valid('query');
 
     const [artist] = await db
       .select({
@@ -400,7 +419,9 @@ artistsPublicRouter.get(
       .orderBy(desc(events.date), desc(events.showTime))
       // Fetched with headroom: duplicate rows of one night are collapsed below,
       // and they must not eat the PAST_LIMIT window of distinct nights.
-      .limit(PAST_LIMIT * PAST_DUPLICATE_HEADROOM);
+      // One night more than shown, so "are there older shows" is a fact of the
+      // rows and not a second query.
+      .limit((pastLimit + 1) * PAST_DUPLICATE_HEADROOM);
 
     // The cheapest corroborated tier, falling back to the denormalized scalar
     // whenever the event has no corroborated tier to aggregate — usually a
@@ -457,16 +478,16 @@ artistsPublicRouter.get(
     // rows for it (a venue page and a ticketing page, say), and past rows are
     // not under the unique index that stops that for upcoming ones. The row
     // the caller stamped wins, so "I went" never reads off beside their night.
-    const past: ArtistPastShow[] = dedupeNights(pastRows, attendedIds)
-      .slice(0, PAST_LIMIT)
-      .map((row) => ({
-        eventId: row.eventId,
-        iso: row.iso,
-        venue: row.venue,
-        venueSlug: row.venueSlug,
-        city: row.city,
-        attending: attendedIds ? attendedIds.has(row.eventId) : null,
-      }));
+    const nights = dedupeNights(pastRows, attendedIds);
+    const pastHasMore = nights.length > pastLimit;
+    const past: ArtistPastShow[] = nights.slice(0, pastLimit).map((row) => ({
+      eventId: row.eventId,
+      iso: row.iso,
+      venue: row.venue,
+      venueSlug: row.venueSlug,
+      city: row.city,
+      attending: attendedIds ? attendedIds.has(row.eventId) : null,
+    }));
 
     // The gate `search.ts` already applies and this route did not: an artist
     // is only real if at least one consumer-visible event bills them (#1343).
@@ -536,6 +557,7 @@ artistsPublicRouter.get(
       },
       shows,
       past,
+      pastHasMore,
       history: { count: past.length, venues: historyVenues },
       following,
       myOpenReport,

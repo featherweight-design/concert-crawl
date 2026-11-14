@@ -100,6 +100,7 @@ const base: ArtistDetailResponse = {
   },
   shows: [],
   past: [],
+  pastHasMore: false,
   history: { count: 0, venues: [] },
   following: null,
   myOpenReport: null,

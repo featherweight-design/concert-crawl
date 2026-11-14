@@ -98,4 +98,20 @@ describe('PastShows', () => {
     );
     expect(getByText(ARTIST_COPY.showCount(1))).toBeTruthy();
   });
+
+  // addendum-3 README 25: past the window, a "Show older" row loads the next.
+  it('offers Show older only when there is a next window to ask for', () => {
+    const rows = [past('2026-06-21', 'Larimer Lounge')];
+    const { queryByTestId, rerender } = render(
+      <PastShows name="Nightjar Choir" past={rows} />,
+    );
+    expect(queryByTestId('past-show-older')).toBeNull();
+
+    rerender(
+      <PastShows name="Nightjar Choir" past={rows} olderHref="?past=100" />,
+    );
+    const link = queryByTestId('past-show-older');
+    expect(link?.getAttribute('href')).toBe('?past=100');
+    expect(link?.textContent).toBe(ARTIST_COPY.showOlder);
+  });
 });
