@@ -26,7 +26,6 @@ const row = (over: Partial<AdminArtistRow> = {}): AdminArtistRow => ({
   autoMatchedAt: null,
   openReportCount: 0,
   wrongPhotoReportCount: 0,
-  genres: null,
   upcomingCount: 1,
   watchingCount: 0,
   nextShow: { date: '2026-11-15', venueName: 'Lost Lake' },

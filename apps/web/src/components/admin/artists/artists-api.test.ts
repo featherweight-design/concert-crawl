@@ -156,7 +156,6 @@ describe('parseArtistRow', () => {
     autoMatchedAt: null,
     openReportCount: 2,
     wrongPhotoReportCount: 1,
-    genres: ['indie pop'],
     upcomingCount: 1,
     watchingCount: 0,
     nextShow: null,
@@ -164,29 +163,14 @@ describe('parseArtistRow', () => {
     ...over,
   });
 
-  it('carries the genres and the wrong-photo count', () => {
-    expect(parseArtistRow(wire())).toMatchObject({
-      genres: ['indie pop'],
-      wrongPhotoReportCount: 1,
-    });
+  it('carries the wrong-photo count', () => {
+    expect(parseArtistRow(wire())?.wrongPhotoReportCount).toBe(1);
   });
 
-  it.each([
-    ['null', null],
-    ['an empty list', []],
-  ])('keeps %s genres as sent', (_label, genres) => {
-    expect(parseArtistRow(wire({ genres }))?.genres).toEqual(genres);
-  });
-
-  it.each([
-    ['a string', 'indie pop'],
-    ['a list with a non-string', ['indie pop', 3]],
-    ['an object', { 0: 'indie pop' }],
-    ['a missing field', undefined],
-  ])('blanks genres sent as %s, keeping the row', (_label, genres) => {
-    const row = parseArtistRow(wire({ genres }));
-    expect(row).not.toBeNull();
-    expect(row?.genres).toBeNull();
+  it('keeps a wrong-photo count of 0 as 0', () => {
+    expect(
+      parseArtistRow(wire({ wrongPhotoReportCount: 0 }))?.wrongPhotoReportCount,
+    ).toBe(0);
   });
 
   it.each([
@@ -198,12 +182,14 @@ describe('parseArtistRow', () => {
     expect(parseArtistRow(wire({ wrongPhotoReportCount: count }))).toBeNull();
   });
 
-  it('reads a missing wrong-photo count as 0 (web may deploy before the API)', () => {
+  it('reads a missing wrong-photo count as null, unknown (web may deploy before the API)', () => {
     const older = Object.fromEntries(
       Object.entries(wire({})).filter(
         ([key]) => key !== 'wrongPhotoReportCount',
       ),
     );
-    expect(parseArtistRow(older)?.wrongPhotoReportCount).toBe(0);
+    const row = parseArtistRow(older);
+    expect(row).not.toBeNull();
+    expect(row?.wrongPhotoReportCount).toBeNull();
   });
 });

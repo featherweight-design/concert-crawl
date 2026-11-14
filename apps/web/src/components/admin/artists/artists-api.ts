@@ -37,13 +37,12 @@ export interface AdminArtistRow {
   photoUrl: string | null;
   autoMatchedAt: string | null;
   openReportCount: number;
-  /** The open reports among `openReportCount` that say the photo is wrong. */
-  wrongPhotoReportCount: number;
   /**
-   * The matched Spotify artist's genres from the candidate snapshot; null when
-   * there is no match or no snapshot entry for it. An empty list stays empty.
+   * The open reports among `openReportCount` that say the photo is wrong.
+   * Null means unknown (an API older than the field), so the UI falls back to
+   * the phone wording and the total count rather than claiming zero.
    */
-  genres: string[] | null;
+  wrongPhotoReportCount: number | null;
   upcomingCount: number;
   watchingCount: number;
   nextShow: { date: string; venueName: string | null } | null;
@@ -77,8 +76,6 @@ const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 const isNonNegativeInteger = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0;
-const isGenreList = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every(isText);
 const isMatchStatus = (value: unknown): value is MatchStatus =>
   isText(value) && MATCH_STATUSES.includes(value);
 
@@ -87,7 +84,8 @@ const isCandidate = (value: unknown): value is ArtistCandidate =>
   isText(value['id']) &&
   isText(value['name']) &&
   isTextOrNull(value['imageUrl']) &&
-  (value['genres'] === null || isGenreList(value['genres']));
+  (value['genres'] === null ||
+    (Array.isArray(value['genres']) && value['genres'].every(isText)));
 
 const isNextShow = (value: unknown): value is AdminArtistRow['nextShow'] =>
   value === null ||
@@ -113,8 +111,9 @@ export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
     !isTextOrNull(value['photoUrl']) ||
     !isTextOrNull(value['autoMatchedAt']) ||
     !isCount(value['openReportCount']) ||
-    // Absent is allowed: web can deploy before the API that adds it, and a
-    // missing count must not empty the list. Present, it must be a count.
+    // Absent is allowed (read as null, unknown): web can deploy before the API
+    // that adds it, and a missing count must not empty the list. Present, it
+    // must be a count.
     (value['wrongPhotoReportCount'] !== undefined &&
       !isNonNegativeInteger(value['wrongPhotoReportCount'])) ||
     !isCount(value['upcomingCount']) ||
@@ -124,7 +123,6 @@ export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
     return null;
   }
   const candidates = value['candidates'];
-  const genres = value['genres'];
   return {
     id: value['id'],
     name: value['name'],
@@ -135,10 +133,7 @@ export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
     openReportCount: value['openReportCount'],
     wrongPhotoReportCount: isNonNegativeInteger(value['wrongPhotoReportCount'])
       ? value['wrongPhotoReportCount']
-      : 0,
-    // Like a candidate snapshot, a malformed genre list is blanked rather than
-    // dropping the row: genres are display-only, the counts are not.
-    genres: isGenreList(genres) ? genres : null,
+      : null,
     upcomingCount: value['upcomingCount'],
     watchingCount: value['watchingCount'],
     nextShow: value['nextShow'],

@@ -146,29 +146,12 @@ const outerArtistId = (): SQL => sql.raw('"artists"."id"');
 const openReportOn = (): SQL =>
   sql`exists (select 1 from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`;
 
-const WRONG_PHOTO: ArtistReportReason = 'wrong_photo';
-
-// The same open-report count as `openReportCount`, narrowed to wrong_photo.
-const openWrongPhotoReportCountExpr = (): SQL<number> =>
-  sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open' and ${artistReports.reason} = ${WRONG_PHOTO})`;
-
-const outerSpotifyCandidates = (): SQL =>
-  sql.raw('"artists"."spotify_candidates"');
-const outerSpotifyArtistId = (): SQL =>
-  sql.raw('"artists"."spotify_artist_id"');
-
 /**
- * The matched Spotify artist's genres, as the detail endpoint derives them:
- * the snapshot entry whose `id` is the row's `spotify_artist_id` (the first,
- * as `Array.find` takes it), else null. Read in SQL so the list never ships
- * the whole candidates blob. A snapshot that is null or not an array reads as
- * empty, a null match id compares to nothing, and an entry's `genres` that is
- * not an array reads as null, so the row can only carry an array or null.
+ * The row's open reports, all of them or one reason's. One helper for both
+ * list counts, so the two predicates can't drift apart.
  */
-const matchedGenresExpr = (): SQL<string[] | null> =>
-  sql<
-    string[] | null
-  >`(select case when jsonb_typeof(candidate.value -> 'genres') = 'array' then candidate.value -> 'genres' end from jsonb_array_elements(case when jsonb_typeof(${outerSpotifyCandidates()}) = 'array' then ${outerSpotifyCandidates()} else '[]'::jsonb end) with ordinality as candidate(value, position) where candidate.value ->> 'id' = ${outerSpotifyArtistId()} order by candidate.position limit 1)`;
+const openReportCountExpr = (reason?: ArtistReportReason): SQL<number> =>
+  sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open'${reason === undefined ? sql`` : sql` and ${artistReports.reason} = ${reason}`})`;
 
 /**
  * Whether to hide artists with no show left to see. Defaults ON.
@@ -298,9 +281,8 @@ artistsAdminRouter.get(
         // The page keeps its counts honest by walking the single row that
         // changed, and it can only do that if it knows the bucket it came from.
         isExhausted: isExhaustedBucketExpr(),
-        openReportCount: sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`,
-        wrongPhotoReportCount: openWrongPhotoReportCountExpr(),
-        genres: matchedGenresExpr(),
+        openReportCount: openReportCountExpr(),
+        wrongPhotoReportCount: openReportCountExpr('wrong_photo'),
         upcomingCount: upcomingShowCountExpr(),
         watchingCount: watchingCountExpr(outerCanonicalName()),
         // Next show in SQL, one subquery per row. The detail panel reads it

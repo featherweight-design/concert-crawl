@@ -28,7 +28,6 @@ const row = (over: Partial<AdminArtistRow> = {}): AdminArtistRow => ({
   autoMatchedAt: '2026-11-01T00:00:00Z',
   openReportCount: 0,
   wrongPhotoReportCount: 0,
-  genres: ['folk rock'],
   upcomingCount: 1,
   watchingCount: 0,
   nextShow: { date: '2026-11-14', venueName: 'Larimer Lounge' },
