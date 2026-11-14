@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { PageSkeleton, PHONE_VAR } from './PageSkeleton';
+import { PageSkeleton, PHONE_VAR, rowOpacity } from './PageSkeleton';
 
 /** admin.css with its whitespace collapsed, for rule-level assertions. */
 const ADMIN_CSS = readFileSync(
@@ -111,5 +111,29 @@ describe('PageSkeleton a11y', () => {
     expect(status).toHaveAttribute('aria-busy', 'true');
     expect(status).toHaveTextContent(ADMIN_COPY.states.loading);
     expect(screen.getByText(ADMIN_COPY.states.loading)).toHaveClass('sr-only');
+  });
+});
+
+// The loading boards step each row's opacity, not a smooth mask.
+describe('PageSkeleton row fade (07/loading-events, loading-artists)', () => {
+  it('steps the opacity 1, .88, .76, .64, .52, .40 and holds at .40', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7].map(rowOpacity)).toEqual([
+      1, 0.88, 0.76, 0.64, 0.52, 0.4, 0.4, 0.4,
+    ]);
+  });
+
+  it('puts the step on each row and no mask on the list', () => {
+    render(<PageSkeleton rows={3} columns={3} rowHeight={64} />);
+    const rows = screen
+      .getByTestId('page-skeleton')
+      .querySelectorAll<HTMLElement>('div[style*="height: 64px"]');
+    expect([...rows].map((row) => row.style.opacity)).toEqual([
+      '1',
+      '0.88',
+      '0.76',
+    ]);
+    expect(
+      screen.getByTestId('page-skeleton').innerHTML.includes('mask-image'),
+    ).toBe(false);
   });
 });
