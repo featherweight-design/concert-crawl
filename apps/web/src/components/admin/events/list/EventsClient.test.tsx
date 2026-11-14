@@ -95,6 +95,25 @@ describe('EventsClient filters', () => {
     expect(screen.queryByTestId('status-filter')).toBeNull();
   });
 
+  it('keeps a ticked venue listed at 0 when the search drops it', async () => {
+    mockSearch = `venueIds=${RED_ROCKS}`;
+    const { rerender } = render(<EventsClient />);
+    await screen.findByTestId('venue-filter-chip');
+    list.mockResolvedValueOnce({
+      ...page,
+      counts: { ...page.counts, all: 63, byVenue: [page.counts.byVenue[0]!] },
+    });
+    mockSearch = `venueIds=${RED_ROCKS}&q=blue`;
+    rerender(<EventsClient />);
+    await screen.findByText(COPY.subtitle(63));
+    fireEvent.click(screen.getByTestId('venue-filter-chip'));
+    const box = within(screen.getByTestId('venue-filter')).getByLabelText(
+      /Red Rocks/,
+    );
+    expect(box).toBeChecked();
+    expect(box.closest('label')).toHaveTextContent(/0$/);
+  });
+
   it('lists venues by count with a working search, and Clear unticks', async () => {
     mockSearch = `venueIds=${RED_ROCKS}`;
     render(<EventsClient />);
