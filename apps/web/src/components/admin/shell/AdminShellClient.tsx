@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { AdminSidebar, SIDEBAR_WIDTH } from './AdminSidebar';
-import { CONTENT_GUTTER_X } from './content-pane';
+import { CONTENT_GUTTER_X, CONTENT_GUTTER_Y } from './content-pane';
+import { ContentPaneSlotContext } from './content-pane-slot';
 import { AdminPhoneHeader, AdminTopbar } from './AdminTopbar';
 import { MobileBottomBar, TAB_BAR_HEIGHT } from './MobileBottomBar';
 import { MOBILE_BREAKPOINT, type AdminBadgeCounts } from './nav';
@@ -54,32 +55,38 @@ const DesktopShell = ({
   badgeCounts,
   user,
   children,
-}: AdminShellClientProps) => (
-  <div style={{ display: 'flex', height: '100%', width: '100%' }}>
-    <AdminSidebar badgeCounts={badgeCounts} user={user} />
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minWidth: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <AdminTopbar />
-      <main
-        data-admin-content
+}: AdminShellClientProps) => {
+  const [paneSlot, setPaneSlot] = useState<HTMLElement | null>(null);
+  return (
+    <div style={{ display: 'flex', height: '100%', width: '100%' }}>
+      <AdminSidebar badgeCounts={badgeCounts} user={user} />
+      <div
         style={{
           flex: 1,
-          overflowY: 'auto',
-          padding: `24px ${CONTENT_GUTTER_X}px`,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          overflow: 'hidden',
         }}
       >
-        {children}
-      </main>
+        <AdminTopbar />
+        <main
+          data-admin-content
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: `${CONTENT_GUTTER_Y}px ${CONTENT_GUTTER_X}px`,
+          }}
+        >
+          <ContentPaneSlotContext.Provider value={paneSlot}>
+            {children}
+          </ContentPaneSlotContext.Provider>
+          <div ref={setPaneSlot} style={{ display: 'contents' }} />
+        </main>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const AdminShellClient = (props: AdminShellClientProps) => {
   const isPhone = useIsPhone();

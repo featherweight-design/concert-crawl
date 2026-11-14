@@ -227,9 +227,7 @@ describe('DetailsTab', () => {
     const bar = screen.getByTestId('details-save-bar');
     expect(bar.style.gap).toBe('10px');
     expect(bar.style.padding).toBe('0px 28px');
-    expect(bar.style.position).toBe('fixed');
-    expect(bar.style.left).toBe('232px');
-    expect(bar.style.right).toBe('0px');
+    expect(bar.style.position).toBe('sticky');
     expect(bar.style.height).toBe('64px');
     expect(bar.style.borderTop).toBe('1px solid var(--border)');
     expect(bar.style.borderRadius).toBe('0px');

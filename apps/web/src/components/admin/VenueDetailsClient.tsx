@@ -20,6 +20,7 @@ import { RunsTab } from '@/components/admin/venues/runs/RunsTab';
 import type { RunsPage } from '@/components/admin/crawl-runs/run-data';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
+import { PAGE_MAX_WIDTH } from '@/components/admin/shell/content-pane';
 
 interface Props {
   venue: VenueWithCrawlHealth;
@@ -162,7 +163,7 @@ export function VenueDetailsClient({
         display: 'flex',
         flexDirection: 'column',
         gap: 18,
-        maxWidth: 1080,
+        maxWidth: PAGE_MAX_WIDTH,
         paddingBottom: 32,
         position: 'relative',
       }}
