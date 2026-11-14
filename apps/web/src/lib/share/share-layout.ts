@@ -169,6 +169,15 @@ export interface ShareCardSource {
   status?: EventStatus;
 }
 
+/** The venue's calendar date (`YYYY-MM-DD`) at the instant `now`. */
+export const venueDateOf = (now: Date, timezone: string): string =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+
 export const toShareCard = (
   event: ShareCardSource,
   today: string = localDateString(event.venue.timezone),

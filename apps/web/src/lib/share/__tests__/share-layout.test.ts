@@ -11,6 +11,7 @@ import {
   sharePhotoSources,
   storyNameText,
   toShareCard,
+  venueDateOf,
 } from '@/lib/share/share-layout';
 import {
   SHARE_CACHE_CONTROL,
@@ -223,6 +224,22 @@ describe('shareCacheControl (the day count is part of the cache life)', () => {
     );
     expect(shareCacheControl('4 DAYS AWAY', TZ, now, true)).toBe(
       'public, max-age=60, s-maxage=60',
+    );
+  });
+
+  it('never lets a fallback countdown card outlive midnight either', () => {
+    const lastSecond = new Date('2026-11-10T06:59:59Z');
+    expect(shareCacheControl('TODAY', TZ, lastSecond, true)).toBe(
+      'public, max-age=1, s-maxage=1',
+    );
+  });
+
+  it('reads the venue date from the same instant as the cache life', () => {
+    expect(venueDateOf(new Date('2026-11-10T06:59:59Z'), TZ)).toBe(
+      '2026-11-09',
+    );
+    expect(venueDateOf(new Date('2026-11-10T07:00:00Z'), TZ)).toBe(
+      '2026-11-10',
     );
   });
 });

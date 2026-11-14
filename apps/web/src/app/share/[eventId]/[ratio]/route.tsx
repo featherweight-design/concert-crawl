@@ -6,7 +6,11 @@ import { ApiError, publicApiClient } from '@/lib/api';
 import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts';
 import { mintMeta, posterFingerprint, shareCacheKey } from '@/lib/share/mint';
 import { toPosterEvent } from '@/lib/share/poster-event';
-import { sharePhotoSources, toShareCard } from '@/lib/share/share-layout';
+import {
+  sharePhotoSources,
+  toShareCard,
+  venueDateOf,
+} from '@/lib/share/share-layout';
 import { loadSharePhoto } from '@/lib/share/share-photo';
 import {
   etagMatches,
@@ -94,14 +98,8 @@ export const GET = async (
   }
 
   const poster = toPosterEvent(event);
-  const card = toShareCard(event);
   const photoSources = sharePhotoSources(event);
-  // A countdown card expires at the venue's midnight, so "4 DAYS AWAY" is
-  // never served on the day it reads 3. A card whose photo failed to load is
-  // held for a minute only (`photoMissing`).
-  const now = new Date();
-  const cacheControlFor = (photoMissing: boolean) =>
-    shareCacheControl(card.countdown, event.venue.timezone, now, photoMissing);
+  const timezone = event.venue.timezone;
   // The mint is what makes the ETag content-addressed: change the price status
   // and the hash moves, so a cached card for a now-sold-out show expires on
   // its own rather than on a timer.
@@ -111,33 +109,51 @@ export const GET = async (
       ? { id: parsed.handle, handle: parsed.handle }
       : { id: 'anon' },
   );
-  // The mint alone is too coarse to cache on — see `posterFingerprint`. The
-  // countdown is in here, so the tag moves with the day count too.
-  const drawn = posterFingerprint([
-    card.artist,
-    card.venue,
-    card.city,
-    poster.dateShort,
-    card.showTime,
-    card.chip?.label ?? null,
-    card.countdown,
-    photoSources.join(' '),
-  ]);
-  // The image is theme-independent, so the theme is not in the tag. The last
-  // segment says how the photo drew: `n` no source, `p` loaded, `f` fell back
-  // to IdentityArt. Only `n` and `p` can be answered before the photo fetch.
-  const tagBase = `"${shareCacheKey(poster.id, parsed.handle ?? 'anon', mint.contentHash)}:${parsed.ratio}:${drawn}`;
-  const tagFor = (photoState: 'n' | 'p' | 'f') => `${tagBase}:${photoState}"`;
+
+  /**
+   * The card, its tag and its cache life as of one instant: the countdown's
+   * "today" and the cache's time-to-midnight read the same `now`, so they can
+   * never straddle the venue's midnight.
+   */
+  const cardAt = (now: Date) => {
+    const card = toShareCard(event, venueDateOf(now, timezone));
+    // The mint alone is too coarse to cache on — see `posterFingerprint`. The
+    // countdown is in here, so the tag moves with the day count too.
+    const drawn = posterFingerprint([
+      card.artist,
+      card.venue,
+      card.city,
+      poster.dateShort,
+      card.showTime,
+      card.chip?.label ?? null,
+      card.countdown,
+      photoSources.join(' '),
+    ]);
+    // The image is theme-independent, so the theme is not in the tag. The
+    // last segment says how the photo drew: `n` no source, `p` loaded, `f`
+    // fell back to IdentityArt.
+    const tagBase = `"${shareCacheKey(poster.id, parsed.handle ?? 'anon', mint.contentHash)}:${parsed.ratio}:${drawn}`;
+    return {
+      card,
+      tagFor: (photoState: 'n' | 'p' | 'f') => `${tagBase}:${photoState}"`,
+      // A countdown card expires at the venue's midnight, so "4 DAYS AWAY" is
+      // never served on the day it reads 3; a fallback card lives a minute.
+      cacheControlFor: (photoMissing: boolean) =>
+        shareCacheControl(card.countdown, timezone, now, photoMissing),
+    };
+  };
   const ifNoneMatch = request.headers.get('if-none-match');
   const notModified = (etag: string, cacheControl: string) =>
     new Response(null, {
       status: 304,
       headers: { ETag: etag, 'Cache-Control': cacheControl },
     });
+  const loadedState = photoSources.length === 0 ? 'n' : 'p';
 
-  const expected = tagFor(photoSources.length === 0 ? 'n' : 'p');
-  if (etagMatches(ifNoneMatch, expected)) {
-    return notModified(expected, cacheControlFor(false));
+  // Only `n` and `p` can be answered before the photo fetch.
+  const early = cardAt(new Date());
+  if (etagMatches(ifNoneMatch, early.tagFor(loadedState))) {
+    return notModified(early.tagFor(loadedState), early.cacheControlFor(false));
   }
 
   // The photo never fails the card: a slow or broken host falls through to
@@ -152,7 +168,10 @@ export const GET = async (
   }
   const photo = await photoPromise;
   const photoMissing = photoSources.length > 0 && photo === null;
-  const etag = photoMissing ? tagFor('f') : expected;
+  // Taken once, after the photo: the fetch can carry the request past the
+  // venue's midnight, and the card drawn is the card of this moment.
+  const { card, tagFor, cacheControlFor } = cardAt(new Date());
+  const etag = tagFor(photoMissing ? 'f' : loadedState);
   const cacheControl = cacheControlFor(photoMissing);
   if (photoMissing && etagMatches(ifNoneMatch, etag)) {
     return notModified(etag, cacheControl);

@@ -31,7 +31,7 @@ export const isPublicPhotoUrl = (raw: string): boolean => {
   }
   if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
   if (url.username !== '' || url.password !== '') return false;
-  const host = url.hostname.toLowerCase().replace(/\.$/, '');
+  const host = url.hostname.toLowerCase().replace(/\.+$/, '');
   if (host.startsWith('[')) return false;
   if (/^[\d.]+$/.test(host)) return false;
   if (!host.includes('.') || host === 'localhost') return false;

@@ -114,9 +114,14 @@ export const shareCacheControl = (
   now: Date = new Date(),
   photoMissing = false,
 ): string => {
-  if (photoMissing) return SHARE_FALLBACK_CACHE_CONTROL;
-  if (countdown === null) return SHARE_CACHE_CONTROL;
+  if (countdown === null) {
+    return photoMissing ? SHARE_FALLBACK_CACHE_CONTROL : SHARE_CACHE_CONTROL;
+  }
   const ttl = secondsUntilLocalMidnight(now, timezone);
+  if (photoMissing) {
+    const life = Math.min(60, ttl);
+    return `public, max-age=${life}, s-maxage=${life}`;
+  }
   return `public, max-age=${Math.min(3600, ttl)}, s-maxage=${Math.min(86_400, ttl)}`;
 };
 
