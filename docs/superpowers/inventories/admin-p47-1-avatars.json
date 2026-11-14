@@ -26,7 +26,7 @@
           "wait": "a[href^=\"/admin/people/\"]"
         },
         { "click": "a[href^=\"/admin/people/\"]:visible >> nth=0" },
-        { "wait": "[data-testid=\"person-avatar\"]", "settle": 600 }
+        { "wait": "text=Account", "settle": 800 }
       ]
     }
   ]
