@@ -3,8 +3,9 @@
  * contract as the Prices page's other calls (Clerk token through `call`,
  * payloads narrowed with guards so a shape drift fails into Couldn't load).
  */
-import { AVATAR_COLORS, type AvatarColor } from '@concert-crawl/types';
+import type { AvatarColor } from '@concert-crawl/types';
 import {
+  avatarColorOrNull,
   call,
   isCount,
   isRecord,
@@ -37,13 +38,6 @@ export interface SubmittedRow {
   state: SubmissionState;
   ticketUrl: string | null;
 }
-
-const isAvatarColor = (value: unknown): value is AvatarColor =>
-  AVATAR_COLORS.some((colour) => colour === value);
-
-/** A colour the client doesn't know (or an older API's absent one) is null. */
-const colourOrNull = (value: unknown): AvatarColor | null =>
-  isAvatarColor(value) ? value : null;
 
 export interface StateCounts {
   all: number;
@@ -78,27 +72,31 @@ const rowFrom = (value: unknown): SubmittedRow | null => {
     priceMin: value['priceMin'],
     priceMax: value['priceMax'],
     handle: value['handle'],
-    avatarColor: colourOrNull(value['avatarColor']),
-    avatarSecondColor: colourOrNull(value['avatarSecondColor']),
+    // A colour the client doesn't know (or an older API's absent one) is null.
+    avatarColor: avatarColorOrNull(value['avatarColor']),
+    avatarSecondColor: avatarColorOrNull(value['avatarSecondColor']),
     backedBy: value['backedBy'],
     state: value['state'],
     ticketUrl: value['ticketUrl'],
   };
 };
 
-const query = (filter: StateFilter, search: string): string =>
-  `state=${filter}${search === '' ? '' : `&search=${encodeURIComponent(search)}`}`;
+/** `&search=…&handle=…`, each only when set. */
+const narrowing = (search: string, handle: string | null): string =>
+  `${search === '' ? '' : `&search=${encodeURIComponent(search)}`}${handle === null ? '' : `&handle=${encodeURIComponent(handle)}`}`;
 
 export const submittedApi = (getToken: GetToken) => ({
+  /** `handle` narrows to one fan's prices on the whole handle (4d#12). */
   list: async (
     filter: StateFilter,
     search: string,
     offset: number,
     limit: number,
+    handle: string | null = null,
   ): Promise<{ rows: SubmittedRow[]; total: number }> => {
     const data = await call(
       getToken,
-      `/v1/admin/prices/submissions?count=true&${query(filter, search)}&limit=${limit}&offset=${offset}`,
+      `/v1/admin/prices/submissions?count=true&state=${filter}${narrowing(search, handle)}&limit=${limit}&offset=${offset}`,
     );
     if (!isRecord(data) || !Array.isArray(data['rows'])) {
       throw new Error('submissions');
@@ -113,10 +111,14 @@ export const submittedApi = (getToken: GetToken) => ({
     };
   },
 
-  counts: async (search: string): Promise<StateCounts> => {
+  counts: async (
+    search: string,
+    handle: string | null = null,
+  ): Promise<StateCounts> => {
+    const params = narrowing(search, handle);
     const data = await call(
       getToken,
-      `/v1/admin/prices/submissions/state-counts${search === '' ? '' : `?search=${encodeURIComponent(search)}`}`,
+      `/v1/admin/prices/submissions/state-counts${params === '' ? '' : `?${params.slice(1)}`}`,
     );
     if (
       !isRecord(data) ||

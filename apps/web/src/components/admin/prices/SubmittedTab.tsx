@@ -11,6 +11,7 @@ import {
   CouldntLoad,
   EmptyState,
   PageSkeleton,
+  PersonAvatar,
   RowMenu,
   useIsPhone,
   type RowMenuItem,
@@ -19,7 +20,6 @@ import { editEventHref } from '@/lib/admin/edit-event-link';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { refusedStatus } from '../invite-codes/codes-api';
 import { EditPricePanel } from './EditPricePanel';
-import { FanAvatar } from './FanAvatar';
 import { RejectPriceDialog } from './RejectPriceDialog';
 import {
   submittedApi,
@@ -176,19 +176,23 @@ export const SubmittedTab = () => {
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [rejecting, setRejecting] = useState<SubmittedRow | null>(null);
   const [editing, setEditing] = useState<SubmittedRow | null>(null);
-  // "This fan's other prices" (4d#12): the list narrowed to one @handle, shown
-  // as a chip rather than typed into the search box.
+  // "This fan's other prices" (4d#12): the list narrowed to one fan on the
+  // whole handle, shown as a chip rather than typed into the search box.
   const [fan, setFan] = useState<string | null>(null);
+  // Whose prices `counts` were counted over, so the chip never shows another
+  // load's figure.
+  const [countsFan, setCountsFan] = useState<string | null>(null);
 
-  // The search waits for a pause in typing.
+  // The search waits for a pause in typing. A typed search replaces the fan
+  // filter at the same moment, so the swap is one reload, not two.
   useEffect(() => {
-    const timer = setTimeout(() => setSearch(typed.trim()), 300);
+    const timer = setTimeout(() => {
+      const next = typed.trim();
+      setSearch(next);
+      if (next !== '') setFan(null);
+    }, 300);
     return () => clearTimeout(timer);
   }, [typed]);
-
-  // The fan chip searches `@handle` server-side, the same search a typed
-  // handle runs; typing in the box replaces it.
-  const query = fan === null ? search : `@${fan}`;
 
   // Only the newest load may write.
   const latest = useRef(0);
@@ -198,13 +202,14 @@ export const SubmittedTab = () => {
     setMore('idle');
     try {
       const [list, nextCounts] = await Promise.all([
-        api.list(filter, query, 0, PAGE),
-        api.counts(query),
+        api.list(filter, search, 0, PAGE, fan),
+        api.counts(search, fan),
       ]);
       if (mine !== latest.current) return;
       setRows(list.rows);
       setTotal(list.total);
       setCounts(nextCounts);
+      setCountsFan(fan);
       setFailed(false);
       setLoaded(true);
       setBusy(false);
@@ -214,7 +219,7 @@ export const SubmittedTab = () => {
         setBusy(false);
       }
     }
-  }, [api, filter, query]);
+  }, [api, filter, search, fan]);
 
   useEffect(() => {
     void load();
@@ -225,7 +230,7 @@ export const SubmittedTab = () => {
     const mine = latest.current;
     setMore('loading');
     try {
-      const list = await api.list(filter, query, rows.length, PAGE);
+      const list = await api.list(filter, search, rows.length, PAGE, fan);
       if (mine !== latest.current) return;
       const seen = new Set(rows.map((row) => row.id));
       setRows([...rows, ...list.rows.filter((row) => !seen.has(row.id))]);
@@ -293,7 +298,8 @@ export const SubmittedTab = () => {
         },
       },
     ];
-    if (row.handle !== null) {
+    // Already filtered to this fan: the item would do nothing.
+    if (row.handle !== null && row.handle !== fan) {
       const handle = row.handle;
       items.push({
         key: 'fan',
@@ -357,10 +363,7 @@ export const SubmittedTab = () => {
         aria-label={COPY.search}
         placeholder={COPY.search}
         value={typed}
-        onChange={(event) => {
-          setTyped(event.target.value);
-          setFan(null);
-        }}
+        onChange={(event) => setTyped(event.target.value)}
         style={{
           width: '100%',
           height: 36,
@@ -389,7 +392,11 @@ export const SubmittedTab = () => {
         ...(isPhone && { alignSelf: 'flex-start' }),
       }}
     >
-      {COPY.fanFilter(fan, total)}
+      {COPY.fanFilter(
+        fan,
+        // The fan's total over every state, once counted for this fan.
+        countsFan === fan && counts !== null ? counts.all : null,
+      )}
       <button
         type="button"
         aria-label={COPY.clearFan}
@@ -605,10 +612,13 @@ export const SubmittedTab = () => {
                         }}
                       >
                         {row.handle !== null && (
-                          <FanAvatar
-                            handle={row.handle}
+                          // Every admin avatar is PersonAvatar (README rule
+                          // 12); the board's own disc is a Design conflict.
+                          <PersonAvatar
+                            initialOf={row.handle}
                             avatarColor={row.avatarColor}
                             avatarSecondColor={row.avatarSecondColor}
+                            size={22}
                           />
                         )}
                         <span

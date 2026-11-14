@@ -1,13 +1,7 @@
-// @vitest-environment jsdom
-
-import '@testing-library/jest-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
-import { FanAvatar } from './FanAvatar';
 import { submittedApi } from './submitted-api';
 
 afterEach(() => {
-  cleanup();
   vi.unstubAllGlobals();
 });
 
@@ -50,28 +44,6 @@ describe('submitted prices avatar pair', () => {
         [null, null],
         [null, null],
       ],
-    );
-  });
-
-  it("draws the fan's own colours, and the default pair without them", () => {
-    render(
-      <FanAvatar
-        handle="dlo"
-        avatarColor="accent"
-        avatarSecondColor="success"
-      />,
-    );
-    const own = screen.getByTestId('fan-avatar');
-    expect(own).toHaveTextContent('D');
-    expect(own).toHaveAttribute('data-colours', 'accent success');
-    cleanup();
-
-    render(
-      <FanAvatar handle="dlo" avatarColor={null} avatarSecondColor={null} />,
-    );
-    expect(screen.getByTestId('fan-avatar')).toHaveAttribute(
-      'data-colours',
-      'signal accent',
     );
   });
 });

@@ -27,9 +27,11 @@ const list =
       search: string,
       offset: number,
       limit: number,
+      handle: string | null,
     ) => Promise<{ rows: SubmittedRow[]; total: number }>
   >();
-const counts = vi.fn<(search: string) => Promise<StateCounts>>();
+const counts =
+  vi.fn<(search: string, handle: string | null) => Promise<StateCounts>>();
 vi.mock('./submitted-api', () => ({
   submittedApi: () => ({
     list: (
@@ -37,8 +39,10 @@ vi.mock('./submitted-api', () => ({
       search: string,
       offset: number,
       limit: number,
-    ) => list(filter, search, offset, limit),
-    counts: (search: string) => counts(search),
+      handle: string | null = null,
+    ) => list(filter, search, offset, limit, handle),
+    counts: (search: string, handle: string | null = null) =>
+      counts(search, handle),
     editPrice: vi.fn(() => Promise.resolve()),
     reject: vi.fn(() => Promise.resolve()),
   }),
@@ -66,7 +70,12 @@ const row = (overrides: Partial<SubmittedRow>): SubmittedRow => ({
 });
 
 const ROWS: SubmittedRow[] = [
-  row({ id: 'sub-1', handle: 'dlo' }),
+  row({
+    id: 'sub-1',
+    handle: 'dlo',
+    avatarColor: 'accent',
+    avatarSecondColor: 'success',
+  }),
   row({ id: 'sub-2', title: 'Marian Hill', handle: null, state: 'waiting' }),
 ];
 
@@ -115,7 +124,7 @@ describe('SubmittedTab on a phone', () => {
       await within(group).findByRole('button', { name: 'Published 43' }),
     );
     await waitFor(() =>
-      expect(list).toHaveBeenLastCalledWith('published', '', 0, 50),
+      expect(list).toHaveBeenLastCalledWith('published', '', 0, 50, null),
     );
   });
 
@@ -130,9 +139,13 @@ describe('SubmittedTab on a phone', () => {
     render(<SubmittedTab />);
     const items = await screen.findAllByRole('listitem');
     expect(within(items[0]!).getByText('@dlo')).toBeInTheDocument();
-    expect(within(items[0]!).getByTestId('fan-avatar')).toHaveTextContent('D');
+    const face = within(items[0]!).getByTestId('person-avatar');
+    expect(face).toHaveTextContent('D');
+    // The fan's own pair, not the house default.
+    expect(face).toHaveAttribute('data-avatar-first', 'accent');
+    expect(face).toHaveAttribute('data-avatar-second', 'success');
     expect(within(items[1]!).getByText(COPY.noHandle)).toBeInTheDocument();
-    expect(within(items[1]!).queryByTestId('fan-avatar')).toBeNull();
+    expect(within(items[1]!).queryByTestId('person-avatar')).toBeNull();
   });
 });
 
@@ -146,21 +159,48 @@ describe('SubmittedTab on a desktop', () => {
     fireEvent.click(triggers[index]!);
   };
 
-  it('filters to the fan as a chip with the count, and × clears it (4d#12)', async () => {
-    render(<SubmittedTab />);
-    await openMenu(0);
-    list.mockResolvedValue({ rows: [ROWS[0]!], total: 7 });
+  const pickFan = () =>
     fireEvent.click(
       screen.getByRole('menuitem', {
         name: new RegExp(COPY.menu.otherPrices.label),
       }),
     );
-    await waitFor(() =>
-      expect(list).toHaveBeenLastCalledWith('all', '@dlo', 0, 50),
+
+  it("filters to the fan's exact handle, counts the fan only once counted, and × clears it (4d#12)", async () => {
+    render(<SubmittedTab />);
+    await openMenu(0);
+
+    // Hold the fan's counts so the chip can be seen before they land.
+    let release: (value: StateCounts) => void = () => undefined;
+    counts.mockImplementation((_search, handle) =>
+      handle === 'dlo'
+        ? new Promise<StateCounts>((resolve) => {
+            release = resolve;
+          })
+        : Promise.resolve({
+            all: 46,
+            waiting: 3,
+            published: 43,
+            priceCheck: 0,
+          }),
     );
-    const chip = await screen.findByTestId('fan-filter');
+    // The list total (narrowed by the state chip) is not the chip's figure.
+    list.mockResolvedValue({ rows: [ROWS[0]!], total: 7 });
+    pickFan();
+
     await waitFor(() =>
-      expect(chip).toHaveTextContent(COPY.fanFilter('dlo', 7)),
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'dlo'),
+    );
+    expect(counts).toHaveBeenLastCalledWith('', 'dlo');
+    const chip = await screen.findByTestId('fan-filter');
+    // No stale figure while the fan's counts are in flight.
+    expect(chip).toHaveTextContent(/^@dlo$/);
+
+    release({ all: 5, waiting: 2, published: 3, priceCheck: 0 });
+    await waitFor(() =>
+      expect(screen.getByTestId('fan-filter')).toHaveTextContent(
+        COPY.fanFilter('dlo', 5),
+      ),
     );
     // The typed search stays empty while the chip holds the filter.
     expect(screen.getByRole('searchbox', { name: COPY.search })).toHaveValue(
@@ -171,23 +211,52 @@ describe('SubmittedTab on a desktop', () => {
     fireEvent.click(screen.getByRole('button', { name: COPY.clearFan }));
     expect(screen.queryByTestId('fan-filter')).toBeNull();
     await waitFor(() =>
-      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50),
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, null),
     );
   });
 
-  it('typing a search replaces the fan filter', async () => {
+  it('a typed search replaces the fan filter after the debounce, in one reload', async () => {
     render(<SubmittedTab />);
     await openMenu(0);
-    fireEvent.click(
-      screen.getByRole('menuitem', {
-        name: new RegExp(COPY.menu.otherPrices.label),
-      }),
-    );
+    pickFan();
     await screen.findByTestId('fan-filter');
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'dlo'),
+    );
+    const before = list.mock.calls.length;
+
     fireEvent.change(screen.getByRole('searchbox', { name: COPY.search }), {
       target: { value: 'vince' },
     });
-    expect(screen.queryByTestId('fan-filter')).toBeNull();
+    // Not before the pause in typing: no unfiltered load in between.
+    expect(screen.getByTestId('fan-filter')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('fan-filter')).toBeNull());
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', 'vince', 0, 50, null),
+    );
+    expect(list.mock.calls.length).toBe(before + 1);
+  });
+
+  it("hides This fan's other prices on that fan's own rows", async () => {
+    render(<SubmittedTab />);
+    await openMenu(0);
+    pickFan();
+    await screen.findByTestId('fan-filter');
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'dlo'),
+    );
+    await openMenu(0);
+    expect(
+      screen.queryByRole('menuitem', {
+        name: new RegExp(COPY.menu.otherPrices.label),
+      }),
+    ).toBeNull();
+    // Another item proves the menu is open.
+    expect(
+      screen.getByRole('menuitem', {
+        name: new RegExp(COPY.menu.openShow.label),
+      }),
+    ).toBeInTheDocument();
   });
 
   it('opens Edit price as the Event edit sheet, with Cancel', async () => {

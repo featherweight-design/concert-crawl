@@ -1959,6 +1959,55 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     ]);
   });
 
+  // 4d#12 "This fan's other prices": the whole handle, never a substring, so
+  // "al" does not also list alice.
+  const seedTwoFans = async () => {
+    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird' });
+    const first = await seedEvent(venue.id, {
+      title: 'Marian Hill',
+      artist: 'Marian Hill',
+      date: '2099-10-04',
+    });
+    const second = await seedEvent(venue.id, {
+      title: 'Ninth Key',
+      artist: 'Ninth Key',
+      date: '2099-10-05',
+    });
+    await seedUserProfile('user_al', { handle: 'al' });
+    await seedUserProfile('user_alice', { handle: 'alice' });
+    const alWaiting = await seedPriceSubmission(first.id, 'user_al', {
+      status: 'pending',
+    });
+    const alPublished = await seedPriceSubmission(second.id, 'user_al', {
+      status: 'corroborated',
+    });
+    await seedPriceSubmission(first.id, 'user_alice', { status: 'pending' });
+    return { alWaiting, alPublished };
+  };
+
+  it("filters to one fan's prices on the exact handle", async () => {
+    const { alWaiting, alPublished } = await seedTwoFans();
+    const ids = (await list('&handle=al')).map((row) => row.id).sort();
+    expect(ids).toEqual([alWaiting.id, alPublished.id].sort());
+    // A leading "@" is ignored.
+    expect(await list('&handle=%40al')).toHaveLength(2);
+    expect((await list('&handle=al')).every((row) => row.handle === 'al')).toBe(
+      true,
+    );
+  });
+
+  it("counts the chips over that one fan's prices", async () => {
+    await seedTwoFans();
+    const res = await app.request(
+      '/v1/admin/prices/submissions/state-counts?handle=al',
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(200);
+    expect(
+      ((await res.json()) as { data: Record<string, number> }).data,
+    ).toEqual({ all: 2, waiting: 1, published: 1, priceCheck: 0 });
+  });
+
   it('refuses status and state together instead of choosing one', async () => {
     const res = await app.request(
       '/v1/admin/prices/submissions?status=pending&state=all',
