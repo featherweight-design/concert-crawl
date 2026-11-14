@@ -47,5 +47,7 @@ describe('AddPricePanel', () => {
     expect(
       screen.getByRole('button', { name: COPY.publish }),
     ).toBeInTheDocument();
+    expect(screen.getByText(COPY.noteSingle)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.note)).toBeNull();
   });
 });

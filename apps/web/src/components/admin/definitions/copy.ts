@@ -2545,6 +2545,9 @@ export const ADMIN_COPY = {
       source: 'Where you saw it',
       sourcePlaceholder: 'axs.com/events/…',
       note: 'Publishes now, as your submission. Then the next show without a price opens here, so you can work down the list.',
+      // One show from Event edit (`06/edit-price-desktop`'s note, first line).
+      noteSingle:
+        'Saved as your submission, so Submitted prices keeps the history.',
       publishAndNext: 'Publish and next',
       publish: 'Publish',
       nothingLeft: 'That was the last show without a price.',
