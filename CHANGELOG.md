@@ -1,3 +1,11 @@
+## [1.425.1](https://github.com/featherweight-design/concert-crawl/compare/v1.425.0...v1.425.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** encode the redirect id and harden the admin href scan ([1d7a530](https://github.com/featherweight-design/concert-crawl/commit/1d7a530ca6fbd281fffbf78a34732d3f794f45e6))
+* **admin:** open the show links to its editor, not a 404 ([074278f](https://github.com/featherweight-design/concert-crawl/commit/074278fc09f28416d90bcd0a2156e8150351bcc1))
+
 # [1.425.0](https://github.com/featherweight-design/concert-crawl/compare/v1.424.0...v1.425.0) (2026-11-14)
 
 
