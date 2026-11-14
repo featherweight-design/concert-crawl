@@ -19,14 +19,16 @@ const migrationPath = join(
 
 const backfillStatement = async (): Promise<string> => {
   const file = await readFile(migrationPath, 'utf8');
-  const statements = file.split('--> statement-breakpoint');
-  expect(statements).toHaveLength(5);
-  const update = statements[4] ?? '';
-  expect(update).toContain('UPDATE "venues"');
-  return update;
+  const update = file
+    .split('--> statement-breakpoint')
+    .find((statement) => statement.includes('UPDATE "venues"'));
+  expect(update).toBeDefined();
+  return update ?? '';
 };
 
 const runBackfill = async (): Promise<void> => {
+  // sql.raw on purpose: this pins the migration's own committed text, which
+  // takes no input, so there is nothing to parameterize.
   await db.execute(sql.raw(await backfillStatement()));
 };
 

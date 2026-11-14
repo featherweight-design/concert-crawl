@@ -799,6 +799,9 @@ venuesAdminRouter.post(
         ...body,
         ticketVendor: body.ticketVendor ?? null,
         verified: true,
+        // Admin 3c: NULL means a draft. This route creates a live venue; the
+        // draft flow (3c) will be the only writer of a NULL.
+        wentLiveAt: new Date(),
       })
       .returning();
 

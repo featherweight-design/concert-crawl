@@ -1,7 +1,7 @@
 -- Admin redesign 3c: venue drafts, Ask the venue, the hero setting, the venue
 -- glyph, and test crawls.
 --
--- Expand-only: two new enums, five nullable columns on venues, one defaulted
+-- Expand-only: two new enums, four nullable columns on venues, one defaulted
 -- column on crawl_triggers, and one backfill. Nothing reads or writes these
 -- yet (3c PR2-4 and 3d do); old readers keep working.
 --
