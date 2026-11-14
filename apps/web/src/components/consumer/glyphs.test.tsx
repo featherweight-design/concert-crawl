@@ -3,7 +3,7 @@
 import React from 'react';
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import { TierMark } from './glyphs';
+import { PendingDot, StarGlyph, TierMark, TRUST_TOKENS } from './glyphs';
 
 afterEach(() => {
   cleanup();
@@ -38,8 +38,8 @@ describe('TierMark', () => {
       'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z',
     );
 
-    // Filled with the gold tier color.
-    expect(svg?.getAttribute('fill')).toBe('oklch(0.66 0.14 78)');
+    // Filled with the box office warning gold, as text (AA-safe on Light).
+    expect(svg?.getAttribute('fill')).toBe('var(--price-text-warning)');
   });
 
   it('omits the star SVG when glyph=false (default)', () => {
@@ -65,23 +65,41 @@ describe('TierMark', () => {
     expect(communityContainer.querySelector('svg')).toBeNull();
   });
 
-  it('applies the resale coral color to the wrapper', () => {
-    const { container } = render(<TierMark kind="resale">Resale</TierMark>);
-    const span = container.querySelector('span');
-    expect(span).not.toBeNull();
-    // oklch(0.65 0.20 25) is the resale coral token.
-    expect(span?.style.color).toContain('oklch(0.65 0.2 25)');
+  // The B+ trust tokens (addendum 4, price-states-age-trust): Community is
+  // the theme's signal, Resale its danger, Box office its warning gold.
+  it.each([
+    ['community', 'signal'],
+    ['resale', 'danger'],
+    ['boxoffice', 'warning'],
+  ] as const)('draws %s in the B+ --%s token', (kind, token) => {
+    render(<TierMark kind={kind}>{kind}</TierMark>);
+    const span = screen.getByTestId(`tier-mark-${kind}`);
+    expect(span.style.color).toBe(`var(--price-text-${token})`);
+    expect(span.style.border).toContain(`var(--${token})`);
+    expect(span.style.background).toContain(`var(--${token})`);
+    expect(span.getAttribute('style')).not.toContain('oklch(0.6');
+  });
+});
+
+describe('TRUST_TOKENS', () => {
+  it('maps each trust kind to the B+ signal / danger / warning tokens', () => {
+    expect(TRUST_TOKENS).toEqual({
+      community: { tone: 'var(--signal)', text: 'var(--price-text-signal)' },
+      resale: { tone: 'var(--danger)', text: 'var(--price-text-danger)' },
+      boxoffice: { tone: 'var(--warning)', text: 'var(--price-text-warning)' },
+    });
   });
 
-  it('applies the community azure color to the wrapper (shared primitive — detail-surface use)', () => {
-    // TierMark is a shared primitive. The community-azure styling here is for
-    // the detail-surface call sites; browse chips do NOT consume TierMark.
+  it('retires the old trust colours from the glyph defaults', () => {
     const { container } = render(
-      <TierMark kind="community">Community</TierMark>,
+      <>
+        <PendingDot />
+        <StarGlyph />
+      </>,
     );
-    const span = container.querySelector('span');
-    expect(span).not.toBeNull();
-    // oklch(0.62 0.12 240) is the community azure token.
-    expect(span?.style.color).toContain('oklch(0.62 0.12 240)');
+    const circle = container.querySelector('circle');
+    expect(circle?.getAttribute('stroke')).toBe('var(--signal)');
+    const star = container.querySelector('path');
+    expect(star?.getAttribute('fill')).toBe('var(--warning)');
   });
 });

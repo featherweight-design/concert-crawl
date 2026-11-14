@@ -6,7 +6,7 @@ import React from 'react';
 export const PendingDot = ({
   size = 7,
   filled = false,
-  color = 'oklch(0.62 0.12 240)',
+  color = 'var(--signal)',
 }: {
   size?: number;
   filled?: boolean;
@@ -93,7 +93,7 @@ export const ArrowGlyph = ({
 // StarGlyph
 export const StarGlyph = ({
   size = 10,
-  color = 'oklch(0.66 0.14 78)',
+  color = 'var(--warning)',
 }: {
   size?: number;
   color?: string;
@@ -146,18 +146,23 @@ export const Eyebrow = ({
 // fill, mono 9.5px bold caps at 0.08em. Community is the theme's signal,
 // Resale its danger and Box office its warning gold, as the board draws them;
 // the text runs through the AA-safe --price-text-* tokens (globals.css).
-const TRUST_PILL = {
+// TRUST_TOKENS is the one map from a trust kind to its B+ colours: `tone` for
+// fills, edges and dots, `text` for anything set as type. TierMark and
+// PriceDisplay read it too, so no trust colour is spelled out anywhere else.
+export const TRUST_TOKENS = {
   community: { tone: 'var(--signal)', text: 'var(--price-text-signal)' },
   resale: { tone: 'var(--danger)', text: 'var(--price-text-danger)' },
   boxoffice: { tone: 'var(--warning)', text: 'var(--price-text-warning)' },
 } as const;
+
+export type TrustKind = keyof typeof TRUST_TOKENS;
 
 export const TrustPill = ({
   kind,
 }: {
   kind: 'community' | 'boxoffice' | 'resale';
 }) => {
-  const { tone, text } = TRUST_PILL[kind];
+  const { tone, text } = TRUST_TOKENS[kind];
   const isBox = kind === 'boxoffice';
   const label =
     kind === 'boxoffice'
@@ -204,34 +209,30 @@ export const PendingTrustPill = TrustPill;
 // 10×10 `StarGlyph` above. The two stars coexist intentionally: `StarGlyph` is
 // the chip-scale glyph used by `MT_ListChip` and pending cards, while
 // `TierMark` carries a slightly fuller star sized for the eyebrow surface.
-const TIER_COLOR = {
-  boxoffice: 'oklch(0.66 0.14 78)',
-  resale: 'oklch(0.65 0.20 25)',
-  community: 'oklch(0.62 0.12 240)',
-} as const;
-
+// Colours come from TRUST_TOKENS (the B+ signal / danger / warning).
 const TIER_MARK_STAR_PATH =
   'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z';
 
 export interface TierMarkProps {
-  kind: 'boxoffice' | 'resale' | 'community';
+  kind: TrustKind;
   glyph?: boolean;
   children: React.ReactNode;
 }
 
 export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
-  const color = TIER_COLOR[kind];
+  const { tone, text } = TRUST_TOKENS[kind];
   return (
     <span
+      data-testid={`tier-mark-${kind}`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: '5px',
         padding: '2px 7px',
         borderRadius: '4px',
-        background: `color-mix(in oklab, ${color} 14%, transparent)`,
-        border: `1px solid color-mix(in oklab, ${color} 50%, transparent)`,
-        color,
+        background: `color-mix(in oklab, ${tone} 14%, transparent)`,
+        border: `1px solid color-mix(in oklab, ${tone} 50%, transparent)`,
+        color: text,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: '9px',
         letterSpacing: '0.08em',
@@ -246,7 +247,7 @@ export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
           width={9}
           height={9}
           viewBox="0 0 12 12"
-          fill={color}
+          fill={text}
           aria-hidden
           style={{ flexShrink: 0 }}
         >
