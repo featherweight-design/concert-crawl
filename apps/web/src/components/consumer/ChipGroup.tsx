@@ -73,7 +73,7 @@ export function ChipGroup({
           </span>
         )}
       </span>
-      <div className="flex flex-wrap gap-2">
+      <div className={`flex flex-wrap ${board ? 'gap-[7px]' : 'gap-2'}`}>
         {options.map((opt) => {
           const isActive = value === opt.value;
           const isDisabled = disabled || opt.disabled;

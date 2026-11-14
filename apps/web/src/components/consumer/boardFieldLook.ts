@@ -31,7 +31,7 @@ export const boardChipClass = ({
   struck?: boolean;
 }): string =>
   [
-    'inline-flex items-center gap-1.5 rounded-full border px-[13px] py-[7px] text-sm font-semibold transition-colors',
+    'inline-flex items-center gap-1.5 rounded-full border px-3 py-[7px] text-sm font-semibold transition-colors',
     struck
       ? 'border-border text-fg-subtle line-through cursor-not-allowed opacity-70'
       : disabled
