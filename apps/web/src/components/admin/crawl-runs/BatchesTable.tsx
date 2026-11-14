@@ -432,7 +432,8 @@ export const BatchesSkeleton = ({ filters = true }: { filters?: boolean }) => (
   >
     {filters && (
       <>
-        <div className={DESKTOP_ONLY} style={{ display: 'flex', gap: 8 }}>
+        {/* The flex lives in the class: an inline display would beat the phone's hidden. */}
+        <div className={`flex gap-2 ${DESKTOP_ONLY}`}>
           {[50, 74, 80, 76].map((width) => (
             <SkeletonBlock key={width} width={width} height={32} radius={999} />
           ))}
