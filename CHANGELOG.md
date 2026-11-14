@@ -1,3 +1,15 @@
+## [1.442.1](https://github.com/featherweight-design/concert-crawl/compare/v1.442.0...v1.442.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** validate the run reason against a shared list, not the DB enum ([1e18e45](https://github.com/featherweight-design/concert-crawl/commit/1e18e45f4f62aa7d475bba5456e8f0f9fca5972f))
+* **web:** count only amber and red runs as Not OK ([4acb591](https://github.com/featherweight-design/concert-crawl/commit/4acb5914a017c20c747399b93ca47efb635b4eb8))
+* **web:** draw Blocked, robots.txt and Not run run chips on the venue chip ([71e78fc](https://github.com/featherweight-design/concert-crawl/commit/71e78fc3354a5215a7209a723f40b3994a9b92b9))
+* **web:** fit the run chip column, tone LAST 4 RUNS from the chip, keep Not run out of Not OK ([a19ebbb](https://github.com/featherweight-design/concert-crawl/commit/a19ebbb880b77cf84e4844a97552b7608f893ea3))
+* **web:** name the run sheet by its outcome and read Needs you runs reason-first ([12c9600](https://github.com/featherweight-design/concert-crawl/commit/12c96000b47fe6209384b03d7ac25fad29f54277))
+* **web:** say submitted prices in the settings, delete-account and confirm copy ([ad58400](https://github.com/featherweight-design/concert-crawl/commit/ad5840009794cd974fc5f30e8676fa8eeb6323c3))
+
 # [1.442.0](https://github.com/featherweight-design/concert-crawl/compare/v1.441.1...v1.442.0) (2026-11-14)
 
 
