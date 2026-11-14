@@ -97,7 +97,7 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
-import { forgetPeopleScan } from './people.js';
+import { forgetPeopleScan, staffUserIds } from './people.js';
 import { maskEmail } from '../../lib/mask-email.js';
 
 const app = createApp();
@@ -168,6 +168,17 @@ describe('admin people', () => {
     setAuth('user');
     expect((await get('')).status).toBe(403);
     expect((await post('/user_a/show-email')).status).toBe(403);
+  });
+
+  // The Activity log's Anyone menu (addendum 6 #37) lists staff from this.
+  it('names admins and sub-admins as staff, nobody else', async () => {
+    clerk.users = [
+      person('user_admin', { publicMetadata: { role: 'admin' } }),
+      person('user_sub', { publicMetadata: { role: 'sub_admin' } }),
+      person('user_promoter', { publicMetadata: { role: 'promoter' } }),
+      person('user_plain'),
+    ];
+    expect((await staffUserIds()).sort()).toEqual(['user_admin', 'user_sub']);
   });
 
   it('sends each person their own avatar colours, null when none were chosen', async () => {
