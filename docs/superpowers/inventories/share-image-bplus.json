@@ -10,7 +10,7 @@
       "steps": [
         {
           "goto": "/share/${CC_PHOTO_EVENT_ID}/story",
-          "wait": "img",
+          "wait": "img[src*='/share/']",
           "settle": 800
         }
       ]
@@ -21,7 +21,7 @@
       "steps": [
         {
           "goto": "/share/${CC_NO_PHOTO_EVENT_ID}/story",
-          "wait": "img",
+          "wait": "img[src*='/share/']",
           "settle": 800
         }
       ]
@@ -32,7 +32,7 @@
       "steps": [
         {
           "goto": "/share/${CC_PHOTO_EVENT_ID}/square",
-          "wait": "img",
+          "wait": "img[src*='/share/']",
           "settle": 800
         }
       ]
@@ -43,7 +43,7 @@
       "steps": [
         {
           "goto": "/share/${CC_NO_PHOTO_EVENT_ID}/square",
-          "wait": "img",
+          "wait": "img[src*='/share/']",
           "settle": 800
         }
       ]
@@ -54,7 +54,7 @@
       "steps": [
         {
           "goto": "/share/${CC_PHOTO_EVENT_ID}/link",
-          "wait": "img",
+          "wait": "img[src*='/share/']",
           "settle": 800
         }
       ]
@@ -65,7 +65,7 @@
       "steps": [
         {
           "goto": "/share/${CC_NO_PHOTO_EVENT_ID}/link",
-          "wait": "img",
+          "wait": "img[src*='/share/']",
           "settle": 800
         }
       ]
