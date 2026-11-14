@@ -321,7 +321,12 @@ export const ErrorTellUsCard = ({
           aria-hidden
           style={{ flex: 1, height: 1, background: 'var(--border)' }}
         />
-        <span style={{ color: tag.color, fontWeight: 700 }}>{tag.label}</span>
+        <span
+          role={sending ? 'status' : undefined}
+          style={{ color: tag.color, fontWeight: 700 }}
+        >
+          {tag.label}
+        </span>
       </div>
 
       {state === 'sent' ? (
@@ -426,7 +431,7 @@ export const ErrorTellUsCard = ({
               padding: 14,
               borderRadius: 14,
               border: '1px dashed var(--border-strong)',
-              background: 'var(--surface-1)',
+              background: 'var(--surface-2)',
               color: 'var(--fg-muted)',
               fontSize: 15,
             }}
@@ -604,6 +609,7 @@ export const ErrorTellUsCard = ({
                 // while none is chosen), arrow keys move the choice.
                 tabIndex={(doing ?? copy.chips[0]) === chip ? 0 : -1}
                 onClick={() => {
+                  if (sending) return;
                   setDoing(chip);
                   if (state === 'prompt') setState('form');
                 }}
@@ -614,7 +620,7 @@ export const ErrorTellUsCard = ({
                       : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
                         ? -1
                         : 0;
-                  if (step === 0) return;
+                  if (step === 0 || sending) return;
                   event.preventDefault();
                   const next =
                     (index + step + copy.chips.length) % copy.chips.length;
@@ -625,7 +631,7 @@ export const ErrorTellUsCard = ({
                   chipRefs.current[next]?.focus();
                 }}
                 className="cc-tu-chip"
-                disabled={sending}
+                aria-disabled={sending}
                 style={chipStyle(doing === chip)}
               >
                 {chip}
@@ -722,9 +728,10 @@ export const ErrorTellUsCard = ({
               >
                 <button
                   type="button"
-                  disabled={sending}
+                  aria-disabled={sending}
                   style={{ ...QUIET_BUTTON, ...DIM }}
                   onClick={() => {
+                    if (sending) return;
                     setDoing(null);
                     setNote('');
                     setState('prompt');
@@ -734,7 +741,8 @@ export const ErrorTellUsCard = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={doing === null || state === 'sending'}
+                  disabled={doing === null}
+                  aria-disabled={sending}
                   style={{
                     ...GRADIENT_BUTTON,
                     opacity: doing === null ? 0.4 : sending ? 0.7 : 1,
