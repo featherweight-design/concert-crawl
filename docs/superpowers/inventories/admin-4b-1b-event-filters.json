@@ -1,0 +1,51 @@
+{
+  "feature": "Admin 4b-1b · Events filters",
+  "note": "Plan row 4b-1, second half (docs/superpowers/plans/2026-11-13-admin-4b-events-ui.md). CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/events (filter row), events-mobile (chip row), venue-filter, status-filter; addendum-3 4b#23 (phone: venue and status open AdminSheets with the popover's contents, not drawn). The chip label once a venue or status is chosen is held for Design, so a chosen chip keeps Any venue / Any status with the selected edge. The status list has no Moved row (held: Hugh 4b#1). Past draws none of these chips (06/past-shows), covered by admin-4b-1-events-list.json's past row. no-price and hidden accept No shows match, since staging may have no hidden show.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "venue-filter",
+      "label": "Any venue popover (phone: sheet)",
+      "steps": [
+        { "goto": "/admin/events", "wait": "[data-testid=\"events-list\"]" },
+        { "click": "[data-testid=\"venue-filter-chip\"]" },
+        { "wait": "[data-testid=\"venue-filter\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "status-filter",
+      "label": "Any status popover (phone: sheet)",
+      "steps": [
+        { "goto": "/admin/events", "wait": "[data-testid=\"events-list\"]" },
+        { "click": "[data-testid=\"status-filter-chip\"]" },
+        { "wait": "[data-testid=\"status-filter\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "no-price",
+      "label": "/admin/events?noPrice=1",
+      "steps": [
+        {
+          "goto": "/admin/events?noPrice=1",
+          "wait": "[data-testid=\"events-list\"], [data-testid=\"empty-state\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "hidden",
+      "label": "/admin/events?hidden=1",
+      "steps": [
+        {
+          "goto": "/admin/events?hidden=1",
+          "wait": "[data-testid=\"events-list\"], [data-testid=\"empty-state\"]",
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}
