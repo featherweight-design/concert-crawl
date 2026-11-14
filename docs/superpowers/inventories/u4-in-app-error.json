@@ -1,0 +1,22 @@
+{
+  "feature": "U4 PR 1 · in-app error shell",
+  "note": "Fidelity package U4 (1): (protected)/(main)/error.tsx renders InAppError inside the app shell (header + bottom nav stay), per addendum-2 18/error-in-app-m; desktop is the standalone page's layout per addendum-2 README §18 line 165 ('The error, the Tell us card and the error ID are the same as the standalone page.'). The crew home boundary uses the same in-app mode (its second logo bar is gone). As bplus-b20a-error-page.json records, no route reaches error.tsx on demand, so the error states are walked by hand and pinned by unit tests (StandaloneError.test.tsx in-app describe, (main)/error.test.tsx, crews/[crewId]/error.test.tsx). The row below is the shell baseline the in-app error sits in.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "events-baseline",
+      "label": "/events (the shell an in-app error keeps)",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]",
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}
