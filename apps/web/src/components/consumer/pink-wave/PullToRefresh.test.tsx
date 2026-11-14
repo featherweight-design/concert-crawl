@@ -1,59 +1,152 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const refreshMock = vi.fn();
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({ toast: { error: toastError } }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: refreshMock }),
+}));
+
 import { PullToRefresh } from './PullToRefresh';
 import { PINK_WAVE_COPY } from './definitions/copy';
 
-const refetchQueries = vi.hoisted(() => vi.fn());
-const toastError = vi.hoisted(() => vi.fn());
-const captured = vi.hoisted(() => ({
-  refresh: null as null | (() => Promise<void>),
-}));
-
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ refetchQueries }),
-}));
-vi.mock('sonner', () => ({ toast: { error: toastError } }));
-vi.mock('@/lib/motion/use-reduced-motion', () => ({
-  useReducedMotion: () => true,
-}));
-vi.mock('@/lib/hooks/usePullToRefresh', () => ({
-  usePullToRefresh: (refresh: () => Promise<void>) => {
-    captured.refresh = refresh;
-    return { height: 0, state: 'idle' };
-  },
-}));
-
+// jsdom has no matchMedia; the wave reads reduced motion through it.
 beforeEach(() => {
-  vi.useFakeTimers();
-  refetchQueries.mockReset();
-  toastError.mockReset();
+  vi.stubGlobal('matchMedia', () => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
 });
+
 afterEach(() => {
   cleanup();
-  vi.useRealTimers();
+  refreshMock.mockReset();
+  toastError.mockReset();
+  vi.unstubAllGlobals();
 });
 
+const touch = (type: string, clientY: number) => {
+  const event = new Event(type, { cancelable: true });
+  Object.defineProperty(event, 'touches', {
+    value: type === 'touchend' ? [] : [{ clientY }],
+  });
+  window.dispatchEvent(event);
+};
+
 describe('PullToRefresh', () => {
-  it('raises an error toast when the reload fails, instead of closing silently', async () => {
-    refetchQueries.mockRejectedValueOnce(new Error('503'));
-    render(<PullToRefresh />);
-    const done = captured.refresh?.();
-    await vi.advanceTimersByTimeAsync(1500);
-    await done;
+  it('draws the wave at rest until the pull passes 74px, and snaps back on --motion-fast', () => {
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <PullToRefresh />
+      </QueryClientProvider>,
+    );
+    act(() => {
+      touch('touchstart', 100);
+      touch('touchmove', 100 + 60 * 2);
+    });
+    expect(
+      document
+        .querySelector('[data-pink-wave]')
+        ?.getAttribute('data-pink-wave'),
+    ).toBe('still');
+    act(() => {
+      touch('touchend', 0);
+    });
+    const zone = screen.getByRole('status', { name: 'Loading shows' });
+    expect(zone.style.transition).toContain('var(--motion-fast)');
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it('takes no space until a pull begins', () => {
+    const client = new QueryClient();
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <PullToRefresh />
+      </QueryClientProvider>,
+    );
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('shows the wave and Loading shows while pulling, and reloads on release', async () => {
+    const client = new QueryClient();
+    const refetch = vi.spyOn(client, 'refetchQueries').mockResolvedValue();
+    render(
+      <QueryClientProvider client={client}>
+        <PullToRefresh />
+      </QueryClientProvider>,
+    );
+    act(() => {
+      touch('touchstart', 100);
+      touch('touchmove', 260);
+    });
+    expect(screen.getByRole('status', { name: 'Loading shows' })).toBeTruthy();
+    expect(
+      document
+        .querySelector('[data-pink-wave]')
+        ?.getAttribute('data-pink-wave'),
+    ).toBe('running');
+    await act(async () => {
+      touch('touchend', 0);
+    });
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+    expect(refetch).toHaveBeenCalledWith({ queryKey: ['events'] });
+  });
+
+  // addendum-3 #178 item 21: a failed pull says so instead of closing as if
+  // it had worked.
+  const pullPastThreshold = () => {
+    act(() => {
+      touch('touchstart', 100);
+      touch('touchmove', 100 + 100 * 2);
+      touch('touchend', 0);
+    });
+  };
+
+  it('raises an error toast when the reload fails', async () => {
+    vi.useFakeTimers();
+    const client = new QueryClient();
+    const refetch = vi
+      .spyOn(client, 'refetchQueries')
+      .mockRejectedValueOnce(new Error('503'));
+    render(
+      <QueryClientProvider client={client}>
+        <PullToRefresh />
+      </QueryClientProvider>,
+    );
+    pullPastThreshold();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    expect(refetch).toHaveBeenCalledWith(
+      { queryKey: ['events'] },
+      { throwOnError: true },
+    );
     expect(toastError).toHaveBeenCalledWith(PINK_WAVE_COPY.refreshFailed, {
       id: 'pull-refresh',
     });
+    vi.useRealTimers();
   });
 
   it('says nothing when the reload works', async () => {
-    refetchQueries.mockResolvedValueOnce(undefined);
-    render(<PullToRefresh />);
-    const done = captured.refresh?.();
-    await vi.advanceTimersByTimeAsync(1500);
-    await done;
+    vi.useFakeTimers();
+    const client = new QueryClient();
+    vi.spyOn(client, 'refetchQueries').mockResolvedValueOnce(undefined);
+    render(
+      <QueryClientProvider client={client}>
+        <PullToRefresh />
+      </QueryClientProvider>,
+    );
+    pullPastThreshold();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
     expect(toastError).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

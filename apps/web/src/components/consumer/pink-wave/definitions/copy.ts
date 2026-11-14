@@ -4,5 +4,5 @@
 export const PINK_WAVE_COPY = {
   loadingShows: 'Loading shows',
   // A pull that came back with an error while online (addendum-3 #178 item 21).
-  refreshFailed: "Couldn't refresh. Check your connection and try again.",
+  refreshFailed: "Couldn't refresh. Try again in a moment.",
 } as const;
