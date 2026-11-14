@@ -2,6 +2,7 @@ import { appendFileSync } from 'node:fs';
 import {
   adjudicateEventWithUsage,
   calculateCost,
+  LLM_EXTRACTION_MODEL,
   makeJoinedEvidence,
   makeMusicBrainzLookup,
   rederiveEventArtists,
@@ -105,7 +106,8 @@ async function main(): Promise<void> {
     dryRun,
     adjudicate: async (input) => {
       const { verdict, usage } = await adjudicateEventWithUsage(input);
-      spentUsd += calculateCost(usage);
+      // The adjudicator calls the extractor's model.
+      spentUsd += calculateCost(usage, LLM_EXTRACTION_MODEL);
       calls += 1;
       if (calls % 25 === 0) {
         console.warn(

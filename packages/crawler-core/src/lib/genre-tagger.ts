@@ -4,10 +4,11 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { db, events, costTracking } from '@concert-crawl/db';
 import { createLogger } from '@concert-crawl/logger';
 import { calculateCost } from './cost.js';
+import { GENRE_TAG_MODEL } from './llm-models.js';
 import type { TokenUsage } from '../types.js';
 
 const logger = createLogger('genre-tagger');
-const MODEL = 'claude-haiku-4-5-20251001';
+const MODEL = GENRE_TAG_MODEL;
 
 export const GENRE_TAG_BATCH_SIZE = 50;
 
@@ -242,7 +243,7 @@ export async function tagEventsWithGenres(
         .where(eq(events.id, eventId));
     }
 
-    const costUsd = calculateCost(totalTokenUsage);
+    const costUsd = calculateCost(totalTokenUsage, MODEL);
     await db.insert(costTracking).values({
       service: 'genre-tagger',
       costUsd: costUsd.toFixed(6),
