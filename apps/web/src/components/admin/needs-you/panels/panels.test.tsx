@@ -105,13 +105,15 @@ describe('ShowMovedPanel', () => {
 });
 
 describe('ShowDroppedPanel', () => {
-  it('says no other venue lists the act, unless it is a duplicate', () => {
-    open(row({}));
+  it('says no other venue lists the act only when the classifier looked', () => {
+    open(row({ classification: 'crawl_gap' }));
     expect(screen.getByText('Same act, another venue')).toBeInTheDocument();
     expect(screen.getByText('None found')).toBeInTheDocument();
-    cleanup();
-    open(row({ classification: 'duplicate' }));
-    expect(screen.queryByText('Same act, another venue')).toBeNull();
+    for (const classification of ['duplicate', 'moved', null]) {
+      cleanup();
+      open(row({ classification }));
+      expect(screen.queryByText('Same act, another venue')).toBeNull();
+    }
   });
 
   it('draws the labelled sections and the built sentences', () => {

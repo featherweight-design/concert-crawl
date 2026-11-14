@@ -29,6 +29,10 @@ export const ShowDroppedPanel = ({
 }: PanelProps) => {
   const chip = whenChipOf(row.fanDate, today);
   const seen = row.lastSeenAt ? mountainStamp(row.lastSeenAt) : null;
+  // Only where the classifier looked and found no same-act listing elsewhere:
+  // a null or 'moved' classification makes no such claim.
+  const noneElsewhere =
+    row.classification === 'crawl_gap' || row.classification === 'removed';
   return (
     <>
       <ChipRow>
@@ -51,14 +55,14 @@ export const ShowDroppedPanel = ({
             : ''}
         </Prose>
       </Section>
-      {(seen || row.classification !== 'duplicate') && (
+      {(seen || noneElsewhere) && (
         <Section label={PANEL.checkedForYou}>
           <RowCard
             rows={[
               ...(seen ? [{ label: PANEL.lastSeen, value: seen }] : []),
               // A same-act listing elsewhere would have made this a show-moved
               // item, so a dropped show has none: the board's row is honest.
-              ...(row.classification !== 'duplicate'
+              ...(noneElsewhere
                 ? [
                     {
                       label: PANEL.showDropped.sameAct,
