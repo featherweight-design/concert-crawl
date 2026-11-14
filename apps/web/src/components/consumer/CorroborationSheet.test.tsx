@@ -261,14 +261,14 @@ describe('CorroborationSheet self-locked state (confirm_self_m)', () => {
       />,
     );
     expect(
-      screen.queryByRole('button', { name: 'Edit submission' }),
+      screen.queryByRole('button', { name: 'Edit your price' }),
     ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Withdraw' })).toBeNull();
   });
 
   it('wires Edit and Withdraw to their own handlers', () => {
     const handlers = renderSelf();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit submission' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit your price' }));
     expect(handlers.onEdit).toHaveBeenCalledTimes(1);
     expect(handlers.onSubmitUpdate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }));

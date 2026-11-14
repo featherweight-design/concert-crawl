@@ -292,7 +292,7 @@ export const CONSUMER_COPY = {
     confirmingLabel: 'Confirming…',
     confirmButton: 'Confirm',
     disputeButton: 'Update',
-    noSubmissions: 'No submissions yet.',
+    noSubmissions: 'No submitted prices yet.',
   },
 
   // ── Submit price modal ──────────────────────────────────────────
@@ -321,7 +321,7 @@ export const CONSUMER_COPY = {
     form: {
       contextEyebrow: 'Submit a price',
       antiabuseNotice:
-        'Prices are capped at $2,000. Submissions stay pending until fans confirm.',
+        'Prices are capped at $2,000 and stay pending until fans confirm.',
       floorLabel: 'Floor',
       floorPlaceholder: '35',
       ceilingLabel: 'Ceiling',
@@ -347,7 +347,7 @@ export const CONSUMER_COPY = {
       networkWithdrawError:
         "Couldn't reach the server. Check your connection and try again.",
       apiWithdrawError:
-        'Something went wrong withdrawing your submission. Try again or come back later.',
+        'Something went wrong withdrawing your price. Try again or come back later.',
       defaultError:
         "Couldn't reach the server. Your inputs are still here. Try again or come back later.",
       tryAgainButton: 'Try again',
@@ -356,7 +356,7 @@ export const CONSUMER_COPY = {
     alreadySubmitted: {
       heading: 'Already in.',
       limitNote: 'You can submit up to three times per show every 24h.',
-      editButton: 'Edit submission',
+      editButton: 'Edit your price',
       withdrawButton: 'Withdraw',
     },
   },
@@ -1357,7 +1357,7 @@ export const CONSUMER_COPY = {
     ariaSawDifferentNumberSignedOut:
       'Saw a different number? Sign up to submit a price',
     // Footer — self-locked view
-    yourSubmissionLabel: 'Your submission',
+    yourSubmissionLabel: 'Your price',
     // Was a flat 'Waiting on one more fan', which contradicted the "N to go"
     // strip in this same card whenever the imminent policy bumped `needed`.
     // The card can still be rendering while `remaining` hits zero — an
@@ -1722,9 +1722,9 @@ export const CONSUMER_COPY = {
       // How many more fans it needs, from the data, not a fixed two.
       waitingNotice: (others: number) =>
         others <= 0
-          ? "Your submission is pending. You can't confirm your own price, and the confirms it needs are in."
-          : `Your submission is pending. You can't confirm your own price, but ${others} other ${others === 1 ? 'fan' : 'fans'} can.`,
-      editButton: 'Edit submission',
+          ? "Your price is pending. You can't confirm your own price, and the confirms it needs are in."
+          : `Your price is pending. You can't confirm your own price, but ${others} other ${others === 1 ? 'fan' : 'fans'} can.`,
+      editButton: 'Edit your price',
       withdrawButton: 'Withdraw',
     },
 
@@ -1944,7 +1944,7 @@ export const CONSUMER_COPY = {
     capNote: {
       beforeCap: 'Prices are capped at ',
       cap: '$2,000',
-      betweenCapAndPending: '. Submissions stay ',
+      betweenCapAndPending: ' and stay ',
       pending: 'pending',
       afterPending: ' until fans confirm.',
     },
