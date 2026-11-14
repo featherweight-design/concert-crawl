@@ -91,7 +91,11 @@ export const CreateCrewButton = ({
         onClick={onTap}
         disabled={isLoading}
         aria-haspopup={surface === 'tier-picker-on-tap' ? undefined : 'dialog'}
-        aria-expanded={createOpen || gateOpen || pickerOpen}
+        aria-expanded={
+          surface === 'tier-picker-on-tap'
+            ? undefined
+            : createOpen || gateOpen || pickerOpen
+        }
         className="flex cursor-pointer items-center justify-center gap-1.5 disabled:cursor-default"
         style={{
           minHeight: 44,
