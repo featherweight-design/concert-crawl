@@ -82,12 +82,14 @@ export const BOT_COPY = {
     rate: {
       label: 'Request rate',
       // Deliberately a claim about our own pacing, not a per-domain guarantee.
-      // Every page, API call and redirect hop we request waits `jitter()`
-      // first (floored at 3 s, plus 0-999 ms): `fetchPage`/`fetchPageHttp`,
-      // `clearRedirect`, and each platform fetcher's `deadline.wait`. Two
-      // requests are not paced, which is why this does not say "between
-      // requests": the robots.txt read (`fetchRobotsTxt`, cached per origin)
-      // and the subresources a rendered page loads for itself. The wait is per
+      // Every page and API call we request waits `jitter()` first (floored at
+      // 3 s, plus 0-999 ms): `fetchPage`/`fetchPageHttp`, the plain-HTTP
+      // redirect hops in `clearRedirect`, and each platform fetcher's
+      // `deadline.wait`. Not paced, which is why this does not say "between
+      // requests": the robots.txt read (`fetchRobotsTxt`, cached per origin),
+      // the subresources a rendered page loads for itself, and in browser mode
+      // the server redirect hops Playwright follows inside `goto()` and any
+      // iframe documents (fetcher.ts; a known crawler gap, reported for fix). The wait is per
       // venue crawl, not keyed on hostname, so two venue rows sharing a host
       // each get their own clock, and a hand-queued trigger run can overlap the
       // daily pass. Saying "to the same domain" claimed a coordination we do

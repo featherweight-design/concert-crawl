@@ -828,7 +828,7 @@ import { isNull } from 'drizzle-orm';
 import { db, venues } from '@concert-crawl/db';
 import { detectTicketVendor } from '../src/lib/detect-ticket-vendor.js';
 
-const DELAY_MS = 2_000; // polite delay between requests
+const DELAY_MS = 3_000; // the crawl rules' 3 s floor (MIN_CRAWL_DELAY_MS); never less
 
 async function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
