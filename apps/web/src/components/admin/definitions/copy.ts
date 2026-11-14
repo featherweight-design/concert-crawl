@@ -4159,9 +4159,12 @@ export const ADMIN_COPY = {
       delisted: 'No longer listed',
       played: 'Played',
     },
+    // `admin` is the API's catch-all (hidden and not flagged for review):
+    // an admin's Hide, the crawler's not-a-concert call and the artist
+    // re-derive all land there, so the chip names no actor.
     hiddenReason: {
       unsure: 'Hidden: unsure',
-      admin: 'Hidden: by an admin',
+      admin: 'Hidden',
     },
     columns: {
       date: 'Date',
