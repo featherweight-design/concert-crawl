@@ -146,8 +146,9 @@ const isReader = (strategy: string): strategy is Reader =>
 
 /**
  * The reader's name for a run's `extractionStrategyUsed`: "Haiku" for the
- * LLM, "JSON-LD" for structured data. Null for a platform feed, which no
- * board names, and for a run that recorded none.
+ * LLM, "JSON-LD" for structured data, the seller for a platform feed
+ * ("VenuePilot", "AEG", "Live Nation") and "detail pages" for that reader.
+ * Null for a run that recorded none, or one this build doesn't know.
  */
 export const runReader = (
   strategy: string | null | undefined,
@@ -158,7 +159,7 @@ export const runReader = (
 
 /**
  * A row's line (`04/venue-runs`): "106 shows · 2 new · via Haiku" for a run
- * that read shows (no "via" when the reader has no name), "Page unchanged
+ * that read shows (no "via" when the reader is unknown), "Page unchanged
  * since Nov 10" for Unchanged, otherwise the list's reason line ("Failed:
  * timed out"), or the outcome when there is none. A partial run read no
  * usable shows, so it names no reader: the board draws "via" on OK rows only.

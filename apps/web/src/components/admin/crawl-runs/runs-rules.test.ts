@@ -234,8 +234,22 @@ describe('runLine', () => {
     ).toBe('106 shows · via JSON-LD');
   });
 
-  it('names no reader for a platform feed, an unknown or missing one, or a partial run', () => {
-    for (const strategy of ['platform:venuepilot', 'toString', null]) {
+  it('names a platform feed by its seller and detail pages by what they are', () => {
+    const named: Array<[string, string]> = [
+      ['platform:venuepilot', 'VenuePilot'],
+      ['platform:aeg', 'AEG'],
+      ['platform:livenation', 'Live Nation'],
+      ['platform:detail-page', 'detail pages'],
+    ];
+    for (const [strategy, reader] of named) {
+      expect(runLine(row({ extractionStrategyUsed: strategy }), null)).toBe(
+        `106 shows · 2 new · via ${reader}`,
+      );
+    }
+  });
+
+  it('names no reader for an unknown or missing one, or a partial run', () => {
+    for (const strategy of ['platform:newthing', 'toString', null]) {
       expect(runLine(row({ extractionStrategyUsed: strategy }), null)).toBe(
         '106 shows · 2 new',
       );
@@ -279,7 +293,8 @@ describe('runReader', () => {
   it('maps the stored strategy to the reader’s name, or none', () => {
     expect(runReader('llm')).toBe('Haiku');
     expect(runReader('structured_data')).toBe('JSON-LD');
-    expect(runReader('platform:aeg')).toBeNull();
+    expect(runReader('platform:aeg')).toBe('AEG');
+    expect(runReader('platform:newthing')).toBeNull();
     expect(runReader(undefined)).toBeNull();
   });
 });
