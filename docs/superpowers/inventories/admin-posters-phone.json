@@ -44,6 +44,20 @@
         },
         { "scroll": "bottom", "settle": 800 }
       ]
+    },
+    {
+      "id": "posters-enlarged",
+      "label": "Posters, the enlarged poster (32/poster-enlarged-m)",
+      "widths": ["phone-320", "phone"],
+      "steps": [
+        {
+          "goto": "/admin/people/invite-codes/posters",
+          "wait": "[data-testid='posters-tab']",
+          "settle": 2500
+        },
+        { "clickRole": "button", "name": "^Enlarge" },
+        { "wait": "[data-testid='poster-enlarged']", "settle": 1200 }
+      ]
     }
   ]
 }
