@@ -75,7 +75,7 @@ export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
     'watch.backonsale': {
       label: 'Shows',
       ink: 'var(--success)',
-      glyph: 'backonsale',
+      glyph: 'check',
       verb: 'Tickets back on sale',
     },
     'watch.pricedrop': {
@@ -108,24 +108,24 @@ export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
     'artist.report_fixed': {
       label: 'Artists',
       ink: 'var(--success)',
-      glyph: 'userfixed',
+      glyph: 'check',
       verb: 'Artist page fixed',
     },
     'crew.going': {
       label: 'Crews',
-      ink: 'var(--accent)',
+      ink: 'var(--signal)',
       glyph: 'crew',
       verb: 'Crew plans',
     },
     'crew.joined': {
       label: 'Crews',
-      ink: 'var(--accent)',
+      ink: 'var(--signal)',
       glyph: 'crew',
       verb: 'New crew member',
     },
     'crew.left': {
       label: 'Crews',
-      ink: 'var(--accent)',
+      ink: 'var(--signal)',
       glyph: 'crew',
       verb: 'Crew member left',
     },

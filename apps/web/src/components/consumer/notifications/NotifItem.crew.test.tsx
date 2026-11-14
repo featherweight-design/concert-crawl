@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 //
-// Crew rows in the bell (#1226 PR-7). A crew notification is the one row that
-// does NOT wear the category tile: the crew's own patch is what makes it
-// recognisable at a glance, and the crew's name replaces the category eyebrow.
+// Crew rows in the bell (#1226 PR-7). Drawn as every other row since
+// addendum-2 `notif-alerts-m`: the people glyph in a signal tile and the CREWS
+// category label. The crew's name lives in the row's own title.
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, afterEach } from 'vitest';
@@ -90,21 +90,19 @@ describe('crewRowIdentity', () => {
 });
 
 describe('NotifItem — crew rows', () => {
-  it('draws the crew patch instead of the category tile', () => {
+  it('draws the people glyph in a signal tile, not the crew patch', () => {
     const { container } = render(<NotifItem item={crewRow()} now={NOW} />);
-    // The patch is a 100-viewBox SVG; every category glyph is 16-viewBox.
-    const patch = container.querySelector('svg[viewBox="0 0 100 100"]');
-    expect(patch).not.toBeNull();
-    // Decorative by definition — the crew's name is the label, and it sits
-    // outside the artwork.
-    expect(patch).toHaveAttribute('aria-hidden', 'true');
-    expect(container.querySelector('svg[viewBox="0 0 16 16"]')).toBeNull();
+    expect(container.querySelector('svg[viewBox="0 0 100 100"]')).toBeNull();
+    expect(container.querySelector('svg[viewBox="0 0 16 16"]')).not.toBeNull();
+    expect(CATEGORY_MAP['crew.going'].ink).toBe('var(--signal)');
   });
 
-  it('names the crew in the eyebrow rather than the category label', () => {
+  it('labels the row with the category, not the crew name', () => {
     render(<NotifItem item={crewRow()} now={NOW} />);
-    expect(screen.getByText('The Regulars')).toBeInTheDocument();
-    expect(screen.queryByText(CATEGORY_MAP['crew.going'].label)).toBeNull();
+    expect(
+      screen.getByText(CATEGORY_MAP['crew.going'].label),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('The Regulars')).toBeNull();
   });
 
   it('keeps the row furniture: title, unread pip and time-ago', () => {
@@ -125,17 +123,6 @@ describe('NotifItem — crew rows', () => {
     expect(
       document.querySelector('[data-testid="notif-unread-dot"]'),
     ).toBeNull();
-  });
-
-  it('falls back to the ordinary tile when the crew blob is missing', () => {
-    const { container } = render(
-      <NotifItem item={crewRow({ metadata: null })} now={NOW} />,
-    );
-    expect(container.querySelector('svg[viewBox="0 0 100 100"]')).toBeNull();
-    expect(container.querySelector('svg[viewBox="0 0 16 16"]')).not.toBeNull();
-    expect(
-      screen.getByText(CATEGORY_MAP['crew.going'].label),
-    ).toBeInTheDocument();
   });
 
   it('still names the crew in the accessible name of an actionable row', () => {

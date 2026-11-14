@@ -12,9 +12,8 @@ export type GlyphName =
   | 'pricedrop'
   | 'cancelled'
   | 'postponed'
-  | 'backonsale'
+  | 'check'
   | 'newshow'
-  | 'userfixed'
   | 'crew'
   | 'tag'
   | 'bell';
@@ -61,22 +60,16 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
       />
     </>
   ),
-  backonsale: (
-    <>
-      <path
-        d="M13.2 8a5.2 5.2 0 11-1.7-3.85"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M13.4 2.2v2.9h-2.9"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </>
+  // The board's check (`M20 6L9 17l-5-5` on a 24 box, scaled to 16): good news
+  // that needs no picture, drawn for Tickets back and Artist page fixed.
+  check: (
+    <path
+      d="M13.3 4L6 11.3 2.7 8"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   ),
   newshow: (
     <>
@@ -89,25 +82,6 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
       />
       <path
         d="M8.4 10.2a5.4 5.4 0 00-1.5-3.8M11.1 11.1A8.2 8.2 0 006.9 3.7M13.6 11.8A10.9 10.9 0 006.8 1.4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </>
-  ),
-  // A person with a cross: the wrong match was taken off. The same idea as the
-  // UserX mark the wrong-artist report card is drawn with in its handoff.
-  userfixed: (
-    <>
-      <circle cx="6" cy="5.2" r="2.2" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M1.8 13.5c0-2.4 1.9-4 4.2-4s4.2 1.6 4.2 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M11.6 4.4l3 3m0-3l-3 3"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
