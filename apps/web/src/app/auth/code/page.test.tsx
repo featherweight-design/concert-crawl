@@ -2,7 +2,13 @@
 
 import '@testing-library/jest-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 
 // The server action pulls in next/headers; the link under test never calls it.
 const { validateAndSetInviteCode } = vi.hoisted(() => ({
@@ -97,6 +103,34 @@ describe('invite-code screen shows "This code has ended"', () => {
     expect(screen.queryByText('This code has ended')).toBeNull();
     // The focused field draws the board's signal border.
     expect(field.style.border).toContain('var(--signal)');
+  });
+
+  // The race behind a flaky run: the field is disabled while a redeem's
+  // transition is pending, and a disabled input cannot take focus. Pressing
+  // Enter it in that window must still end with focus in the field.
+  it('focuses the field once a redeem that was still pending settles', async () => {
+    let finish: () => void = () => {};
+    validateAndSetInviteCode.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = () => resolve({ ok: false, error: 'ended' });
+        }),
+    );
+    render(<InviteCodePage />);
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'REDROCKS' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    // Pending: the form is disabled and nothing is focused.
+    expect(screen.getByRole('textbox')).toBeDisabled();
+    await act(async () => {
+      finish();
+    });
+    await screen.findByText('This code has ended');
+    fireEvent.click(screen.getByRole('button', { name: 'Enter it' }));
+    const field = await screen.findByRole('textbox');
+    await waitFor(() => expect(field).toBeEnabled());
+    await waitFor(() => expect(field).toHaveFocus());
   });
 
   it('ends again after another ended code, and the way back still works', async () => {

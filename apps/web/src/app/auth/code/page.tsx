@@ -45,8 +45,9 @@ export default function InviteCodePage() {
   useEffect(() => {
     // The field is disabled while a redeem is pending, and a disabled input
     // cannot take focus: wait for it to be enabled, then focus it once.
-    if (!refocus || isPending) return;
-    inputRef.current?.focus();
+    const input = inputRef.current;
+    if (!refocus || isPending || input === null) return;
+    input.focus();
     setRefocus(false);
   }, [refocus, isPending]);
 
