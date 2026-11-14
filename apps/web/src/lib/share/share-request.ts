@@ -48,6 +48,40 @@ export const resolveShareHandle = (raw: string | undefined): string | null => {
 export const SHARE_CACHE_CONTROL =
   'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
 
+/** Seconds left in `now`'s calendar day on the venue's wall clock. */
+export const secondsUntilLocalMidnight = (
+  now: Date,
+  timezone: string,
+): number => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hourCycle: 'h23',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  }).formatToParts(now);
+  const read = (type: string): number =>
+    Number(parts.find((part) => part.type === type)?.value ?? '0');
+  const elapsed = read('hour') * 3600 + read('minute') * 60 + read('second');
+  return Math.max(60, 86_400 - elapsed);
+};
+
+/**
+ * A card with a countdown ("4 DAYS AWAY") is only true until the venue's
+ * midnight, so no cache may hold it past then, and there is no
+ * stale-while-revalidate: a stale serve would be yesterday's count. Every
+ * other card keeps the locked header.
+ */
+export const shareCacheControl = (
+  countdown: string | null,
+  timezone: string,
+  now: Date = new Date(),
+): string => {
+  if (countdown === null) return SHARE_CACHE_CONTROL;
+  const ttl = secondsUntilLocalMidnight(now, timezone);
+  return `public, max-age=${Math.min(3600, ttl)}, s-maxage=${Math.min(86_400, ttl)}`;
+};
+
 /**
  * `If-None-Match` is a comma-separated list, and a cache in front of us is
  * entitled to weaken our tag to `W/"…"` on the way back. Strict equality
