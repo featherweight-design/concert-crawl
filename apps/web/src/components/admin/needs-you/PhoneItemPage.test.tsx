@@ -51,7 +51,7 @@ const phone = (on: boolean) => {
   }));
 };
 
-const open = (row: QueueRow = ROW) => {
+const open = (row: QueueRow = ROW, busy = false) => {
   const handlers = {
     onClose: vi.fn(),
     onAnswer: vi.fn(),
@@ -63,7 +63,7 @@ const open = (row: QueueRow = ROW) => {
       row={row}
       today="2026-11-12"
       ranksFirst
-      busy={false}
+      busy={busy}
       {...handlers}
     />,
   );
@@ -130,6 +130,12 @@ describe('the phone item page', () => {
     expect(onSnooze).toHaveBeenCalledWith(
       expect.stringMatching(/T08:00:00-0[67]:00$/),
     );
+  });
+
+  it('holds the back row and ⋯ still while an answer is in flight', () => {
+    open(ROW, true);
+    expect(screen.getByTestId('phone-item-back')).toBeDisabled();
+    expect(screen.getByTestId('phone-item-more')).toBeDisabled();
   });
 
   it('leaves out the venue row and Not useful for an item with no venue', () => {

@@ -246,9 +246,10 @@ export const AnswerButtons = ({
           ? wide
             ? { width: '100%', minHeight: 46, minWidth: 0, fontSize: 15 }
             : {
-                flex: '1 1 0',
+                // Auto basis: an equal share when the labels fit one row, and
+                // a wrap to the next line when they do not.
+                flex: '1 1 auto',
                 minHeight: 40,
-                minWidth: 0,
                 whiteSpace: 'nowrap',
                 fontSize: 13.5,
               }
@@ -279,7 +280,7 @@ export const AnswerButtons = ({
         {createPortal(
           <>
             {lead?.suggested && button(lead, true)}
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {!extraLast && lead?.suggested && extra}
               {others.map((answer, index) => (
                 <Fragment key={answer.slug}>

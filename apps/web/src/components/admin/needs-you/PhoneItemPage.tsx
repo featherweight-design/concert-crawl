@@ -25,6 +25,8 @@ interface PhoneItemPageProps {
   /** The ⋯ sheet's heading: the item's short name. */
   menuTitle: string;
   venue: { id: string; name: string } | null;
+  /** An answer or snooze is in flight: the page and ⋯ hold still. */
+  busy: boolean;
   onClose: () => void;
   onSnooze: (until: string) => void;
   onNotUseful?: ((reason: string) => void) | undefined;
@@ -41,6 +43,7 @@ export const PhoneItemPage = ({
   title,
   menuTitle,
   venue,
+  busy,
   onClose,
   onSnooze,
   onNotUseful,
@@ -51,8 +54,9 @@ export const PhoneItemPage = ({
   const titleId = useId();
   const [footer, setFooter] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  // The ⋯ sheet traps focus on its own, so the page's trap stands down.
-  useDialogKeyboard(pageRef, onClose, { enabled: !menuOpen });
+  // The sheet sits inside the page, so the page's trap already holds it. Escape
+  // is the sheet's while it is open, and nobody's mid-request.
+  useDialogKeyboard(pageRef, onClose, { dismissible: !menuOpen && !busy });
 
   return (
     <div
@@ -81,6 +85,7 @@ export const PhoneItemPage = ({
         <button
           type="button"
           onClick={onClose}
+          disabled={busy}
           data-testid="phone-item-back"
           style={{
             display: 'flex',
@@ -101,6 +106,7 @@ export const PhoneItemPage = ({
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
+          disabled={busy}
           aria-label={COPY.itemPage.more}
           aria-haspopup="dialog"
           data-testid="phone-item-more"
@@ -170,7 +176,7 @@ export const PhoneItemPage = ({
             </AdminButton>
           }
         >
-          <div role="menu" aria-label={COPY.snooze.menuLabel}>
+          <div role="group" aria-label={COPY.snooze.menuLabel}>
             <SnoozeOptions
               onSnooze={(until) => {
                 setMenuOpen(false);
