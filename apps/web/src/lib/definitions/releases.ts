@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.71.0-beta',
+    date: 'Nov 13, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: 'Mix two colors in your avatar: pick a pair when you edit your profile, or keep it solid.',
+      },
+    ],
+  },
+  {
     version: 'v0.70.0-beta',
     date: 'Nov 13, 2026',
     headline: null,
