@@ -7,9 +7,10 @@ import {
 } from '@concert-crawl/crawler-core';
 
 // One-off runner for the event artist re-derivation pass. Dry by default —
-// `--apply` is the only thing that writes events and artists. Every pass, dry
-// or not, writes one 'artist-adjudication' cost_tracking row: the Haiku calls
-// were billed either way, and the monthly LLM budget must see them. `--limit=N` caps the scan, which is
+// `--apply` is the only thing that writes events and artists. A pass that
+// made any Haiku call, dry or not, writes one 'artist-adjudication'
+// cost_tracking row: the calls were billed either way, and the monthly LLM
+// budget must see them. `--limit=N` caps the scan, which is
 // how the first prod run is kept to a sample before committing the whole table
 // to a Haiku bill.
 //
@@ -100,8 +101,9 @@ async function main(): Promise<void> {
   );
 
   // One tracker is the pass's spend: the cost cap and the printout read it,
-  // and it writes one 'artist-adjudication' row for the whole pass (a dry run
-  // spends too), so the monthly LLM budget sees it.
+  // and, when the pass made any call, it writes one 'artist-adjudication' row
+  // for the whole pass (a dry run spends too), so the monthly LLM budget sees
+  // it.
   const adjudicationCost = createAdjudicationCost();
   const musicBrainz = makeMusicBrainzLookup();
   const result = await rederiveEventArtists({
