@@ -12,8 +12,10 @@ import { runBackgroundTask } from './background-tasks.js';
 //   runBackgroundTask), so a slow or failing GitHub costs the admin nothing.
 // - Dormant until CRAWLER_DISPATCH_TOKEN is set (a fine-grained token with
 //   Actions: write on this one repository). Unset, the API only writes rows.
-// - A failure is logged and sent to Sentry, and the rows wait for the next
-//   daily run (CRAWL_MODE=all drains pending triggers first).
+// - A failure is logged and sent to Sentry with the trigger ids, and the rows
+//   are left pending: on production the next daily run drains them if it
+//   runs (CRAWL_MODE=all drains pending triggers first); elsewhere they wait
+//   for the next triggers dispatch.
 //
 // The same token also starts the daily crawl (`crawler-daily.yml`) from the
 // Vercel Cron route, because GitHub's own schedule drops runs on this repo;
@@ -58,8 +60,8 @@ type DispatchFailure = 'timeout' | 'request_failed' | 'refused' | 'threw';
  */
 const pendingUntil = (environment: string | undefined | null): string =>
   environment === 'production'
-    ? 'stay pending; the next daily crawl drains them if it runs'
-    : 'stay pending until the next triggers dispatch';
+    ? 'were left pending; the next daily crawl drains them if it runs'
+    : 'were left pending until the next triggers dispatch';
 
 /** The tail of a report's message: what happens to the queued rows now. */
 const queuedSuffix = (
@@ -124,28 +126,45 @@ function dispatchRepo(): string {
   return DEFAULT_REPO;
 }
 
+/**
+ * Log and send to Sentry. Never throws: a failing logger or Sentry falls back
+ * to console.error with the same message and extra (trigger ids included), so
+ * a report can neither be lost nor make its caller report a second time.
+ */
 async function report(
   message: string,
   extra: Record<string, unknown>,
   level: 'error' | 'warning' = 'error',
   failure?: DispatchFailure,
 ): Promise<void> {
-  if (level === 'error') logger.error({ ...extra, failure }, message);
-  else logger.warn({ ...extra, failure }, message);
-  Sentry.captureException(new Error(message), {
-    level,
-    tags: {
-      crawler_dispatch: 'failed',
-      ...(failure ? { crawler_dispatch_outcome: failure } : {}),
-    },
-    extra,
-  });
+  try {
+    if (level === 'error') logger.error({ ...extra, failure }, message);
+    else logger.warn({ ...extra, failure }, message);
+    Sentry.captureException(new Error(message), {
+      level,
+      tags: {
+        crawler_dispatch: 'failed',
+        ...(failure ? { crawler_dispatch_outcome: failure } : {}),
+      },
+      extra,
+    });
+  } catch (reportErr: unknown) {
+    console.error(`Could not report a crawler dispatch failure: ${message}`, {
+      ...extra,
+      failure,
+      reportError: String(reportErr),
+    });
+    return;
+  }
   // The instance can be frozen once the background task settles, which would
   // drop a buffered event.
   try {
     await Sentry.flush(SENTRY_FLUSH_MS);
   } catch (flushErr: unknown) {
-    logger.warn({ flushErr }, 'Sentry flush failed after a crawler dispatch');
+    console.error('Sentry flush failed after a crawler dispatch', {
+      flushError: String(flushErr),
+      ...extra,
+    });
   }
 }
 
@@ -540,23 +559,15 @@ export function dispatchCrawlerInBackground(queued?: QueuedTriggers): void {
     try {
       await dispatchCrawler(queued);
     } catch (err: unknown) {
-      // dispatchCrawler should never throw; if it does, the rows still wait
-      // and the admin still sees them queued.
-      try {
-        await report(
-          `Crawler dispatch threw${queuedSuffix(queued, crawlerDispatchEnvironment(), 'threw')}`,
-          { error: String(err), ...queuedExtra(queued) },
-          'error',
-          'threw',
-        );
-      } catch (reportErr: unknown) {
-        // Last resort, so the trigger ids are never lost with the report.
-        console.error('Crawler dispatch threw and could not be reported', {
-          error: String(err),
-          reportError: String(reportErr),
-          triggerIds: queued?.triggerIds,
-        });
-      }
+      // dispatchCrawler should never throw; if it does, the rows were left
+      // pending and the admin still sees them queued. report() never throws,
+      // so this catch sees only genuine dispatch throws.
+      await report(
+        `Crawler dispatch threw${queuedSuffix(queued, crawlerDispatchEnvironment(), 'threw')}`,
+        { error: String(err), ...queuedExtra(queued) },
+        'error',
+        'threw',
+      );
     }
   });
 }

@@ -205,7 +205,7 @@ describe('a failed dispatch names the queued triggers', () => {
     await drainBackgroundTasks();
     expect(mockCaptureException).toHaveBeenCalledTimes(1);
     expect(lastReported().message).toBe(
-      'Crawler dispatch failed (502); 2 queued crawl trigger(s) stay pending; the next daily crawl drains them if it runs',
+      'Crawler dispatch failed (502); 2 queued crawl trigger(s) were left pending; the next daily crawl drains them if it runs',
     );
     expect(lastContext().level).toBe('error');
     expect(lastContext().tags).toEqual({
@@ -228,7 +228,7 @@ describe('a failed dispatch names the queued triggers', () => {
     fetchMock.mockRejectedValue(new Error('ECONNRESET'));
     expect(await dispatchCrawler(queued)).toBe('failed');
     expect(lastReported().message).toBe(
-      'Crawler dispatch request failed; 2 queued crawl trigger(s) stay pending until the next triggers dispatch',
+      'Crawler dispatch request failed; 2 queued crawl trigger(s) were left pending until the next triggers dispatch',
     );
     expect(lastReported().message).not.toContain('daily');
     expect(lastContext().tags['crawler_dispatch_outcome']).toBe(
@@ -245,7 +245,7 @@ describe('a failed dispatch names the queued triggers', () => {
     fetchMock.mockRejectedValue(timeout);
     expect(await dispatchCrawler(queued)).toBe('failed');
     expect(lastReported().message).toContain(
-      'GitHub may still have started the run; if not, the 2 queued crawl trigger(s) stay pending',
+      'GitHub may still have started the run; if not, the 2 queued crawl trigger(s) were left pending',
     );
     expect(lastContext().level).toBe('warning');
     expect(lastContext().tags['crawler_dispatch_outcome']).toBe('timeout');
@@ -268,23 +268,25 @@ describe('a failed dispatch names the queued triggers', () => {
     });
   });
 
-  it('logs the trigger ids when the report itself throws, and never rejects', async () => {
+  it('falls back to console.error with the trigger ids when Sentry throws, reporting once', async () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => {});
     mockCaptureException.mockImplementation(() => {
       throw new Error('sentry down');
     });
-    fetchMock.mockResolvedValue({
-      get ok(): boolean {
-        throw new Error('response exploded');
-      },
-    });
+    fetchMock.mockResolvedValue(new Response('oops', { status: 502 }));
     dispatchCrawlerInBackground(queued);
     await drainBackgroundTasks();
+    // The refusal is the only report: no second 'threw' report follows.
+    expect(mockCaptureException).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledTimes(1);
     expect(consoleError).toHaveBeenCalledWith(
-      'Crawler dispatch threw and could not be reported',
-      expect.objectContaining({ triggerIds: queued.triggerIds }),
+      expect.stringContaining('Crawler dispatch failed (502)'),
+      expect.objectContaining({
+        triggerIds: queued.triggerIds,
+        failure: 'refused',
+      }),
     );
     consoleError.mockRestore();
   });
