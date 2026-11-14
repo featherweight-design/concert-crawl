@@ -4,26 +4,15 @@
 // policy discloses only usage and share events.
 
 // Where the tier picker was opened from. The picker picks its header copy by
-// entry, so `logged-out-watch` and `logged-out-paywall` stay distinct.
+// entry. A signed-out tap goes to sign-in rather than opening the picker, so
+// there are no `logged-out-*` entries; a signed-out header still renders when
+// the plan has not resolved.
 export type PickerEntry =
   | 'settings'
   | 'paywall'
-  | 'logged-out-paywall'
-  | 'logged-out-watch'
-  | 'logged-out-going'
-  | 'logged-out-price'
-  // A gated Follow tap on the artist page (#1115).
-  | 'logged-out-follow'
   // A signed-in user committing their onboarding artist picks without the
   // entitlement to follow (PR 8).
   | 'follow'
-  // A gated status report on the event page.
-  | 'logged-out-report'
-  // A gated wrong-artist report on the artist page.
-  | 'logged-out-artist-report'
-  // Reopened on the far side of sign-up, on the tier the visitor had picked
-  // before they had an account (#1284).
-  | 'post-signup'
   | 'takeover';
 
 /** Where a share sheet was opened from. One surface today; named so a second
