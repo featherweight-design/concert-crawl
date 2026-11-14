@@ -17,6 +17,7 @@ import {
   whenOf,
 } from './needs-you-rules';
 import type { NeedsYouAnswer, QueueRow } from './needs-you-api';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { SnoozeMenu } from './SnoozeMenu';
 
 interface QueueItemProps {
@@ -103,6 +104,17 @@ export const QueueItem = ({
         >
           {impactOf(row)}
         </span>
+        <span onClick={(event) => event.stopPropagation()}>
+          <SnoozeMenu
+            disabled={busy}
+            onSnooze={onSnooze}
+            onNotUseful={row.venueId ? onNotUseful : undefined}
+            about={{
+              warning: ADMIN_COPY.needsYou.snooze.warningOf[row.kind],
+              venue: row.venueId ? (row.venueName ?? null) : null,
+            }}
+          />
+        </span>
       </div>
       <h2
         style={{
@@ -187,19 +199,6 @@ export const QueueItem = ({
             {answer.label}
           </button>
         ))}
-        <span
-          style={{
-            marginLeft: isPhone ? 0 : 'auto',
-            gridColumn: isPhone ? '1 / -1' : undefined,
-            justifySelf: 'center',
-          }}
-        >
-          <SnoozeMenu
-            disabled={busy}
-            onSnooze={onSnooze}
-            onNotUseful={row.venueId ? onNotUseful : undefined}
-          />
-        </span>
       </div>
     </article>
   );

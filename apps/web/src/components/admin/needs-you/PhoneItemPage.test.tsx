@@ -148,6 +148,6 @@ describe('the phone item page', () => {
     fireEvent.click(screen.getByTestId('phone-item-more'));
     const sheet = screen.getByTestId('admin-sheet');
     expect(within(sheet).queryByText(/Open /)).toBeNull();
-    expect(within(sheet).queryByText('Not useful')).toBeNull();
+    expect(within(sheet).queryByText(/Not useful/)).toBeNull();
   });
 });

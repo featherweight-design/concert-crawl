@@ -2940,16 +2940,45 @@ export const ADMIN_COPY = {
       oneDay: 'Snooze 1 day',
       oneDaySub: 'Back tomorrow at 8 AM.',
       aWeek: 'Snooze a week',
-      backOn: (day: string) => `Back ${day}.`,
-      untilDate: 'Until a date...',
+      backOn: (day: string) => `Back ${day} at 8 AM.`,
+      untilDate: 'Until a date…',
       untilDateSub: 'For off-season venues and slow replies.',
-      dateLabel: 'Back on',
-      setDate: 'Snooze',
-      notUseful: 'Not useful',
-      notUsefulSub: 'Stops this kind of warning for this venue. Tell us why.',
-      reasonLabel: 'Why is it not useful?',
-      reasonPlaceholder: 'Optional',
-      stopWarning: 'Stop this warning',
+      dateTitle: 'Snooze until',
+      // `01-snooze/snooze-until-a-date-d`: when it comes back, and that a
+      // venue filling up early does not bring it back early.
+      returns: (day: string) => `Back on ${day} at 8 AM.`,
+      staysSnoozed: (venue: string) =>
+        `If ${venue} fills up before then, it stays snoozed; nothing comes back early.`,
+      setDate: (day: string) => `Snooze until ${day}`,
+      back: 'Back',
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      notUseful: 'Not useful…',
+      notUsefulSub: (venue: string) =>
+        `Turns this kind of warning off for ${venue}.`,
+      // `01-snooze/not-useful-d`: the warning is named, the reason picked.
+      reasonTitle: (warning: string, venue: string) =>
+        `Turn off “${warning}” for ${venue}?`,
+      reasonSub:
+        'Other warnings for this venue keep coming. Turn it back on from the venue’s Overview.',
+      reasons: [
+        'It’s normal for this venue',
+        'We already know why',
+        'Other',
+      ] as const,
+      reasonNote: 'Anything to add? (optional)',
+      turnOff: 'Turn it off',
+      warningOf: {
+        'show-dropped': 'Show dropped off',
+        'show-moved': 'Show moved',
+        'venue-failing': 'Crawl failing',
+        'venue-blocked': 'Venue blocked',
+        artist: 'Artist photo reports',
+        'event-low-confidence': 'Not sure it’s a concert',
+        'price-check': 'Price check',
+        'price-batch': 'A batch of prices',
+        bug: 'Bug report',
+      } as const,
       failed: "Couldn't snooze that",
     },
     // The phone's item page (`02/an-item-mobile`, `01-snooze/item-menu-m`):

@@ -25,6 +25,7 @@ import { BugPanel } from './panels/BugPanel';
 import { EventPanel } from './panels/EventPanel';
 import { PriceCheckPanel } from './panels/PriceCheckPanel';
 import { VenuePanel } from './panels/VenuePanel';
+import { SnoozeMenu } from './SnoozeMenu';
 
 const COPY = ADMIN_COPY.needsYou;
 
@@ -87,6 +88,10 @@ export const EvidenceSlot = ({
 }: EvidenceSlotProps) => {
   const isPhone = useIsPhone();
   const Drawn = drawnPanel(row.kind);
+  const snoozeAbout = {
+    warning: ADMIN_COPY.needsYou.snooze.warningOf[row.kind],
+    venue: row.venueId ? (row.venueName ?? null) : null,
+  };
   // Desktop docks the panel beside the list; the phone opens the item as a
   // full page (`02/an-item-mobile`) with its own back row, ⋯ and answer footer.
   const frame = (
@@ -108,6 +113,7 @@ export const EvidenceSlot = ({
         onClose={onClose}
         onSnooze={onSnooze}
         onNotUseful={row.venueId ? onNotUseful : undefined}
+        about={snoozeAbout}
       >
         {subtitle && (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}>
@@ -122,6 +128,14 @@ export const EvidenceSlot = ({
         onClose={onClose}
         eyebrow={<KindLabel kind={kindLabelOf(row.kind)} />}
         title={title}
+        menu={
+          <SnoozeMenu
+            disabled={busy}
+            onSnooze={onSnooze}
+            onNotUseful={row.venueId ? onNotUseful : undefined}
+            about={snoozeAbout}
+          />
+        }
         {...(subtitle ? { subtitle } : {})}
       >
         {body}

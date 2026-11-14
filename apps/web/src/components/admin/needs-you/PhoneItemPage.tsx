@@ -37,6 +37,8 @@ interface PhoneItemPageProps {
   onClose: () => void;
   onSnooze: (until: string) => void;
   onNotUseful?: ((reason: string) => void) | undefined;
+  /** The warning and venue the snooze steps name. */
+  about?: { warning: string; venue: string | null };
   children: ReactNode;
 }
 
@@ -54,6 +56,7 @@ export const PhoneItemPage = ({
   onClose,
   onSnooze,
   onNotUseful,
+  about,
   children,
 }: PhoneItemPageProps) => {
   const router = useRouter();
@@ -205,6 +208,7 @@ export const PhoneItemPage = ({
                     }
                   : undefined
               }
+              {...(about ? { about } : {})}
               afterDate={
                 venue ? (
                   <MenuItem
