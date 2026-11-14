@@ -25,7 +25,9 @@
         { "goto": "/admin/people", "wait": "a[href^=\"/admin/people/\"]" },
         { "click": "a[href^=\"/admin/people/\"]:visible >> nth=0" },
         { "wait": "text=Account" },
-        { "click": "button[aria-haspopup=\"menu\"]:visible >> nth=0" },
+        {
+          "click": "[data-admin-content] button[aria-haspopup=\"menu\"]:visible >> nth=0"
+        },
         { "click": "text=Sign them out everywhere" },
         {
           "wait": "[role=\"dialog\"], [data-testid=\"admin-sheet\"]",
