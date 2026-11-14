@@ -266,6 +266,7 @@ export const ShareSheet = ({
       inset="phone-tight"
       eyebrow={COPY.sheetTitle}
       eyebrowTone="subtle"
+      shareFrame
     >
       {/* Grabber: decorative, phone only. The sheet closes by its ×, Escape,
           the backdrop or a drag, all of which BottomSheet owns. */}

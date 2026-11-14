@@ -65,6 +65,14 @@ interface BottomSheetProps {
    * and lighter weight (the share boards' SHARE THIS SHOW).
    */
   eyebrowTone?: 'signal' | 'muted' | 'subtle';
+  /**
+   * The event share boards' frame (more-r3-share_m, _m_square, _d), measured
+   * off the boards: a 2px rim gone 44px down the sides, the page dimmed by
+   * --scrim (the board resolves to about rgba(7,10,26,.8)) under a light
+   * blur that keeps the stage's dot grid legible, and a 30px close box with
+   * 8px corners and a border-strong line. Needs `edgeFromSm` for the rim.
+   */
+  shareFrame?: boolean;
   children: React.ReactNode;
 }
 
@@ -81,6 +89,10 @@ const DIALOG_PLAIN = 'lg:border lg:border-border lg:bg-surface-1';
 const DIALOG_EDGE = 'sheet-edge lg:[--sheet-bg:var(--surface-1)]';
 const RAISED_EDGE =
   'sheet-edge [--sheet-bg:var(--surface-2)] lg:[--sheet-bg:var(--bg-elevated)]';
+const SHARE_RIM = '[--sheet-edge-w:2px] [--sheet-edge-fade:44px]';
+const SCRIM_PLAIN = 'fixed inset-0 bg-black/50';
+// 1.5px is CCOverlay's scrim blur: the board's dots stay distinct.
+const SCRIM_SHARE = 'fixed inset-0 bg-[var(--scrim)] backdrop-blur-[1.5px]';
 
 // :not(:disabled) excludes native controls that can't actually receive focus
 // (disabled button/input/select/textarea) — otherwise the focus trap sees them
@@ -103,6 +115,7 @@ export const BottomSheet = ({
   handle = false,
   eyebrow,
   eyebrowTone = 'signal',
+  shareFrame = false,
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -185,9 +198,14 @@ export const BottomSheet = ({
     // z-35 under every sheet), which drew over every sheet in the app and
     // clipped controls inside it at narrow widths. A focus-trapping dialog
     // outranks standing chrome.
-    <div className="fixed inset-0 z-[90]">
+    //
+    // text-fg on the root: portalled, the sheet no longer inherits its colour
+    // from the tree it was mounted in. The admin host ([data-admin-theme]) is
+    // display:contents and sets no colour, so without this an admin sheet
+    // took <body>'s consumer colour. --fg resolves in the host's theme scope.
+    <div className="fixed inset-0 z-[90] text-fg" data-testid="sheet-root">
       <div
-        className="fixed inset-0 bg-black/50"
+        className={shareFrame ? SCRIM_SHARE : SCRIM_PLAIN}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -228,9 +246,7 @@ export const BottomSheet = ({
                 : 'p-6'
         } shadow-2xl focus:outline-none lg:inset-0 lg:m-auto lg:h-fit lg:w-full lg:rounded-2xl ${
           edgeFromSm
-            ? raised
-              ? RAISED_EDGE
-              : DIALOG_EDGE
+            ? `${raised ? RAISED_EDGE : DIALOG_EDGE} ${shareFrame ? SHARE_RIM : ''}`
             : `${PHONE_EDGE} ${DIALOG_PLAIN}`
         } ${
           maxWidth === undefined ? 'lg:max-w-md' : 'lg:max-w-[var(--sheet-max)]'
@@ -301,7 +317,14 @@ export const BottomSheet = ({
               closeVariant === 'bare' ? (
                 <CloseIcon size={18} />
               ) : (
-                <span className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-border">
+                <span
+                  data-testid="sheet-close-box"
+                  className={`inline-flex h-[30px] w-[30px] items-center justify-center border ${
+                    shareFrame
+                      ? 'rounded-[8px] border-border-strong'
+                      : 'rounded-lg border-border'
+                  }`}
+                >
                   <CloseIcon />
                 </span>
               )

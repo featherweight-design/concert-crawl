@@ -254,6 +254,75 @@ describe('BottomSheet', () => {
     expect(dialog.parentElement?.parentElement).toBe(document.body);
   });
 
+  // Portalled past the tree that used to set it, the sheet must resolve --fg
+  // itself, or an admin sheet takes <body>'s consumer colour.
+  it('sets its own text colour on the root', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const root = screen.getByTestId('sheet-root');
+    expect(root.className.split(/\s+/)).toContain('text-fg');
+    expect(root.contains(screen.getByRole('dialog'))).toBe(true);
+  });
+
+  it('draws the share boards frame only when asked', () => {
+    const { rerender } = render(
+      <BottomSheet open onClose={() => {}} title="test" edgeFromSm raised>
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const scrimClasses = () =>
+      (
+        screen.getByRole('dialog').previousElementSibling?.className ?? ''
+      ).split(/\s+/);
+    expect(scrimClasses()).toContain('bg-black/50');
+    expect(screen.getByTestId('sheet-close-box').className).toContain(
+      'rounded-lg',
+    );
+    expect(screen.getByRole('dialog').className).not.toContain(
+      '[--sheet-edge-w:2px]',
+    );
+
+    rerender(
+      <BottomSheet
+        open
+        onClose={() => {}}
+        title="test"
+        edgeFromSm
+        raised
+        shareFrame
+      >
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    expect(scrimClasses()).toEqual(
+      expect.arrayContaining(['bg-[var(--scrim)]', 'backdrop-blur-[1.5px]']),
+    );
+    expect(
+      screen.getByTestId('sheet-close-box').className.split(/\s+/),
+    ).toEqual(
+      expect.arrayContaining([
+        'h-[30px]',
+        'w-[30px]',
+        'rounded-[8px]',
+        'border-border-strong',
+      ]),
+    );
+    // Still inside the 44px target.
+    expect(
+      screen.getByRole('button', { name: 'Close' }).className.split(/\s+/),
+    ).toEqual(expect.arrayContaining(['h-11', 'w-11']));
+    expect(screen.getByRole('dialog').className.split(/\s+/)).toEqual(
+      expect.arrayContaining([
+        'sheet-edge',
+        '[--sheet-edge-w:2px]',
+        '[--sheet-edge-fade:44px]',
+      ]),
+    );
+  });
+
   it('hosts inside the admin theme scope when there is one', () => {
     render(
       <div data-admin-theme="dark">
