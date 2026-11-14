@@ -45,7 +45,7 @@ describe('ProfileHero role chips', () => {
 
   it.each([
     ['admin', 'Admin', 'var(--price-text-warning)', 'var(--warning)'],
-    ['promoter', 'Promoter', 'var(--accent)', 'var(--accent)'],
+    ['promoter', 'Promoter', 'var(--price-text-accent)', 'var(--accent)'],
     ['beta', 'Beta', 'var(--price-text-signal)', 'var(--signal)'],
   ] as const)(
     'draws %s in its own colour, text and hairline',
@@ -60,6 +60,9 @@ describe('ProfileHero role chips', () => {
       );
       expect(chip(label).style.color).toBe(text);
       expect(chip(label).style.border).toContain(hairline);
+      // The dot is the colour key the chip matches.
+      const dot = chip(label).querySelector('[aria-hidden]') as HTMLElement;
+      expect(dot.style.background).toBe(hairline);
     },
   );
 

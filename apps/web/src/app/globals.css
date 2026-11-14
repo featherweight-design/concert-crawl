@@ -110,12 +110,16 @@
     --price-text-warning: var(--warning);
     --price-text-signal: var(--signal);
     --price-text-danger: var(--danger);
+    /* The accent as small text (the PROMOTER role chip): 3.75 -> 4.5+ on
+       Light's --surface-2, where the raw pink misses AA at 9px. */
+    --price-text-accent: var(--accent);
   }
 
   :root[data-theme='light'] {
     --price-text-subtle: color-mix(in oklab, var(--fg-subtle) 75%, var(--fg));
     --price-text-warning: color-mix(in oklab, var(--warning) 80%, var(--fg));
     --price-text-signal: color-mix(in oklab, var(--signal) 85%, var(--fg));
+    --price-text-accent: color-mix(in oklab, var(--accent) 82%, var(--fg));
   }
 
   * {
