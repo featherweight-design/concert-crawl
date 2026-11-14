@@ -1,3 +1,20 @@
+# [1.450.0](https://github.com/featherweight-design/concert-crawl/compare/v1.449.0...v1.450.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** address the crawl batch list phone review ([529ee3d](https://github.com/featherweight-design/concert-crawl/commit/529ee3d285b0dde2f35e637b481a51822a704fb1))
+* **admin:** drop the dead snooze trigger string and tighten two kind phrases ([83d583c](https://github.com/featherweight-design/concert-crawl/commit/83d583ca33c408af2c5fc5eae8c5de270a6a1747))
+* **admin:** hide the desktop filter pills in the phone skeleton ([2da5272](https://github.com/featherweight-design/concert-crawl/commit/2da52721bc02bd660c4113223b48d260d6e64da5))
+* **admin:** open snooze as a bottom sheet on the phone, not a card clock ([95cc9ea](https://github.com/featherweight-design/concert-crawl/commit/95cc9ea23d64e77255de1dc605502c72f843616e))
+* **admin:** scroll the phone snooze sheet and return focus to the clock ([3899bfc](https://github.com/featherweight-design/concert-crawl/commit/3899bfc08d3522276873985a9a5400447e377422))
+
+
+### Features
+
+* **admin:** draw the crawl batch list as cards on the phone ([4e5eb68](https://github.com/featherweight-design/concert-crawl/commit/4e5eb681512ba359aab0f62d924c1e94d70e5a88))
+* **admin:** draw the snooze clock, month grid and not-useful reasons ([3c9c8ba](https://github.com/featherweight-design/concert-crawl/commit/3c9c8ba4ad16c47be5f0996f3dc193acd324abcd))
+
 # [1.449.0](https://github.com/featherweight-design/concert-crawl/compare/v1.448.0...v1.449.0) (2026-11-14)
 
 
