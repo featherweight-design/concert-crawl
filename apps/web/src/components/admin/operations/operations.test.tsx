@@ -454,6 +454,14 @@ describe('sentences', () => {
     expect([...KNOWN_ACTIONS].sort()).toEqual([...WRITTEN_ACTIONS].sort());
   });
 
+  // The settings a `settings.update` row keeps, as the API audits them.
+  const SETTINGS = {
+    llmMonthlyBudgetUsd: 25,
+    llmBudgetWarnAtPercent: 75,
+    llmBudgetFallbackToStructured: false,
+    approvePricesMyself: false,
+  };
+
   const words = (over: Partial<AuditLogItem>) => {
     const { lead, name, tail } = sentenceFor(item(over));
     return `${lead}${name ?? ''}${tail}`;
@@ -485,7 +493,112 @@ describe('sentences', () => {
       },
       'Changed a price for Vince Staples: $50–$450',
     ],
-    [{ action: 'crawl.trigger_all', target: null }, 'Crawled all venues'],
+    [
+      { action: 'crawl.trigger_all', target: null },
+      'Queued a crawl of all venues',
+    ],
+    [
+      {
+        action: 'crawl.trigger',
+        target: { kind: 'venue', name: 'Levitt Pavilion', href: null },
+      },
+      'Queued a crawl of Levitt Pavilion',
+    ],
+    [
+      {
+        action: 'artist.name.unlock',
+        target: { kind: 'artist', name: 'Wilco', href: null },
+      },
+      'Unlocked the name of Wilco',
+    ],
+    // settings.update reads the fields its before and after differ in.
+    [
+      {
+        action: 'settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: {
+          before: { ...SETTINGS, llmMonthlyBudgetUsd: 25 },
+          after: { ...SETTINGS, llmMonthlyBudgetUsd: 40 },
+        },
+      },
+      'Changed the LLM budget',
+    ],
+    [
+      {
+        action: 'settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: {
+          before: SETTINGS,
+          after: {
+            ...SETTINGS,
+            llmBudgetWarnAtPercent: 90,
+            llmBudgetFallbackToStructured: true,
+          },
+        },
+      },
+      'Changed the LLM budget',
+    ],
+    [
+      {
+        action: 'settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: {
+          before: SETTINGS,
+          after: { ...SETTINGS, approvePricesMyself: true },
+        },
+      },
+      'Turned Approve every price myself on',
+    ],
+    [
+      {
+        action: 'settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: {
+          before: { ...SETTINGS, approvePricesMyself: true },
+          after: SETTINGS,
+        },
+      },
+      'Turned Approve every price myself off',
+    ],
+    // A mix, a save that changed nothing, or a row without the two.
+    [
+      {
+        action: 'settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: {
+          before: SETTINGS,
+          after: {
+            ...SETTINGS,
+            llmMonthlyBudgetUsd: 40,
+            approvePricesMyself: true,
+          },
+        },
+      },
+      'Changed the admin settings',
+    ],
+    [
+      {
+        action: 'settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: { before: SETTINGS, after: SETTINGS },
+      },
+      'Changed the admin settings',
+    ],
+    [
+      {
+        action: 'settings.update',
+        targetId: 'admin_settings',
+        target: null,
+        metadata: null,
+      },
+      'Changed the admin settings',
+    ],
     [
       { target: { kind: 'invite-code', name: null, href: null } },
       'Revoked invite code (deleted)',
