@@ -1,0 +1,28 @@
+{
+  "feature": "U3 · Price check outcomes and the DisputedPriceCard",
+  "note": "Spec-fidelity package U3. Needs CC_PENDING_EVENT_ID: an upcoming event whose live price has a pending update (the scratch fixture's d102 with counter d202). The audit account is neither the price's submitter nor the updater, so only the 'any fan' column (Submit an update) is photographed. The two submitter columns (YOUR PRICE note, YOUR UPDATE / Withdraw) need those accounts and are unit-tested and walked by hand. The after-review cards (held, updated) are held: the API sends no resolved-check outcome. Board: design/design_handoff_bplus_redesign/screens/08-prices-and-status/more-st-disputes_board.jpg. Electric only; the audit account's saved theme must be Electric.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "rows": [
+    {
+      "id": "disputed-card",
+      "label": "Event page: the price under a check (any fan)",
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"disputed-price-card\"]"
+        },
+        { "settle": 3000 },
+        { "wait": "[data-testid=\"proposed-price\"]", "settle": 1200 }
+      ]
+    }
+  ]
+}

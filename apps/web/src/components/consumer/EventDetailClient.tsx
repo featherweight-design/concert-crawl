@@ -443,6 +443,32 @@ export function EventDetailPriceBlock({
   const isPostponedConfirmed =
     event.status === 'postponed' && event.counterSubmission == null;
 
+  // The viewer takes their own pending update on a price under check back:
+  // DELETE /v1/submissions/:id, then a refresh re-fetches the server-rendered
+  // detail (the card flips to its "Submit an update" view).
+  const handleWithdrawUpdate = useCallback(
+    (submissionId: string) => {
+      void (async () => {
+        const token = await getToken();
+        if (!token) return;
+        try {
+          const res = await fetch(`${API_URL}/v1/submissions/${submissionId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            router.refresh();
+          } else {
+            console.error('Withdraw failed', res.status);
+          }
+        } catch (err) {
+          console.error('Withdraw failed', err);
+        }
+      })();
+    },
+    [getToken, router],
+  );
+
   const handleConfirmReport = useCallback(
     (reportId: string) => {
       void (async () => {
@@ -1552,6 +1578,12 @@ export function EventDetailPriceBlock({
         eventId={event.id}
         disputedSubmissionId={counter.parentSubmissionId}
         signedOut={priceGateSignedOut}
+        viewerAction={counter.viewerAction}
+        {...(counter.viewerCounterId !== null
+          ? {
+              onWithdraw: () => handleWithdrawUpdate(counter.viewerCounterId!),
+            }
+          : {})}
         onUpdateSuccess={() => router.refresh()}
       />
     );

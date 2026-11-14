@@ -10,7 +10,7 @@ import {
   beforeAll,
   afterAll,
 } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 
 // Stub CounterSubmitSheet — it pulls Clerk auth via a deep import chain
 // that needs the full Next.js + Clerk runtime. The pill + anchor logic
@@ -79,6 +79,68 @@ describe('DisputedPriceCard', () => {
     it('does NOT render the pill when lastAdminActionKind is omitted', () => {
       render(<DisputedPriceCard {...buildProps()} />);
       expect(screen.queryByText(/admin requested more info/i)).toBeNull();
+    });
+  });
+
+  // B+ more-st-disputes_board: the headline reads "$32 → $40?", the strip
+  // draws the age bare, and the footer follows the server's viewerAction.
+  describe('headline and strip (more-st-disputes_board)', () => {
+    it('shows the live price, an arrow and the proposed price with a "?"', () => {
+      render(<DisputedPriceCard {...buildProps()} />);
+      expect(screen.getByText('$32')).toBeTruthy();
+      expect(screen.getByTestId('proposed-price').textContent).toBe('$40?');
+    });
+
+    it('draws a range on both sides of the arrow', () => {
+      render(
+        <DisputedPriceCard
+          {...buildProps({ ceiling: 50, disputeCeiling: 60 })}
+        />,
+      );
+      expect(screen.getByText('$32–$50')).toBeTruthy();
+      expect(screen.getByTestId('proposed-price').textContent).toBe('$40–$60?');
+    });
+
+    it('says "saw $40 · 5m" in the strip, with no "ago"', () => {
+      render(<DisputedPriceCard {...buildProps()} />);
+      const strip = screen.getByText(/@fan-2 saw/);
+      expect(strip.textContent).toBe('@fan-2 saw $40 · 5m');
+    });
+  });
+
+  describe('footer by viewer action', () => {
+    it('offers "Submit an update" to anyone else, as the default', () => {
+      render(<DisputedPriceCard {...buildProps()} />);
+      expect(screen.getByText('Got a different number?')).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Submit an update' }),
+      ).toBeTruthy();
+      expect(screen.queryByText('Withdraw')).toBeNull();
+    });
+
+    it('tells the original submitter an admin will pick one, with no action', () => {
+      render(<DisputedPriceCard {...buildProps({ viewerAction: 'none' })} />);
+      expect(screen.getByText('Your price')).toBeTruthy();
+      expect(
+        screen.getByText(
+          'Someone saw a different number. An admin will pick one.',
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByRole('button')).toBeNull();
+    });
+
+    it('lets the fan with an update pending withdraw it', () => {
+      const onWithdraw = vi.fn();
+      render(
+        <DisputedPriceCard
+          {...buildProps({ viewerAction: 'withdraw', onWithdraw })}
+        />,
+      );
+      expect(screen.getByText('Your update')).toBeTruthy();
+      expect(screen.getByText('Waiting on review.')).toBeTruthy();
+      expect(screen.queryByText('Submit an update')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }));
+      expect(onWithdraw).toHaveBeenCalledTimes(1);
     });
   });
 
