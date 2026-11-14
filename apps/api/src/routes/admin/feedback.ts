@@ -27,24 +27,34 @@ const feedbackIdSchema = z.object({ id: idSchema });
 
 const statusSchema = z.enum(ADMIN_FEEDBACK_STATUSES);
 
-const listQuerySchema = z.object({
-  status: statusSchema.optional(),
-  // To read / Done, admin redesign decision 3. Combines with `status` (AND).
-  view: z.enum(['to_read', 'done']).optional(),
-  category: z.enum(FEEDBACK_CATEGORIES).optional(),
-  // A kind chip (P47-19 PR 4): bugs = bug + error_report. Combines (AND).
-  kind: z.enum(ADMIN_FEEDBACK_KINDS).optional(),
-  // Done's "Search feedback": a case-insensitive contains match on the
-  // message, LIKE metacharacters escaped. Blank after trimming means no
-  // search.
-  search: z
-    .string()
-    .trim()
-    .max(200)
-    .optional()
-    .transform((value) => (value ? value : undefined)),
-  limit: z.coerce.number().int().min(1).max(200).default(100),
-});
+const listQuerySchema = z
+  .object({
+    status: statusSchema.optional(),
+    // To read / Done, admin redesign decision 3. Combines with `status` (AND).
+    view: z.enum(['to_read', 'done']).optional(),
+    category: z.enum(FEEDBACK_CATEGORIES).optional(),
+    // A kind chip (P47-19 PR 4): bugs = bug + error_report. Combines (AND).
+    kind: z.enum(ADMIN_FEEDBACK_KINDS).optional(),
+    // Done's "Search feedback": a case-insensitive contains match on the
+    // message, LIKE metacharacters escaped. Blank after trimming means no
+    // search.
+    // The cap bounds the raw input, before trimming.
+    search: z
+      .string()
+      .max(200)
+      .trim()
+      .optional()
+      .transform((value) => (value ? value : undefined)),
+    limit: z.coerce.number().int().min(1).max(200).default(100),
+  })
+  .refine(
+    // A category outside the kind's would AND to an empty list; say so instead.
+    ({ kind, category }) =>
+      !kind ||
+      !category ||
+      ADMIN_FEEDBACK_KIND_CATEGORIES[kind].some((each) => each === category),
+    { message: 'category is not in kind', path: ['category'] },
+  );
 
 const patchBodySchema = z.object({
   status: statusSchema.optional(),
@@ -275,7 +285,9 @@ feedbackAdminRouter.patch(
       // Re-read through the list's select, so the answer carries both
       // handles exactly as GET does.
       const [item] = await selectItems(eq(feedback.id, id), 1, tx);
-      if (!item) return null;
+      // The row was just written in this transaction, so a miss is a bug:
+      // throw, so the write rolls back rather than commit unaudited.
+      if (!item) throw new Error(`feedback ${id} vanished after its update`);
 
       return {
         from: current.status,
