@@ -86,6 +86,47 @@ describe('PinnedSaveBar', () => {
     );
   });
 
+  it('stacks the message over a row of both buttons', () => {
+    render(
+      <PinnedSaveBar
+        {...props({
+          phone: true,
+          look: {
+            gap: 8,
+            stack: true,
+            padding: '10px 16px 24px',
+            messageStyle: { fontSize: 12 },
+            discardVariant: 'outline',
+            discardStyle: { height: 44 },
+            saveStyle: { flex: 1, height: 44 },
+          },
+        })}
+      />,
+    );
+    const bar = screen.getByTestId('bar');
+    expect(bar.style.flexDirection).toBe('column');
+    expect(bar.style.alignItems).toBe('');
+    const save = screen.getByRole('button', { name: 'Save' });
+    const row = save.parentElement;
+    expect(row).not.toBe(bar);
+    expect(row?.parentElement).toBe(bar);
+    expect(row?.style.gap).toBe('8px');
+    expect(screen.getByRole('button', { name: 'Discard' }).parentElement).toBe(
+      row,
+    );
+    expect(save.style.height).toBe('44px');
+  });
+
+  it('keeps one row when not stacked', () => {
+    render(<PinnedSaveBar {...props()} />);
+    const bar = screen.getByTestId('bar');
+    expect(bar.style.flexDirection).toBe('');
+    expect(bar.style.alignItems).toBe('center');
+    expect(screen.getByRole('button', { name: 'Save' }).parentElement).toBe(
+      bar,
+    );
+  });
+
   it('floats a failure above the bar, with Try again only when retryable', () => {
     const onRetry = vi.fn();
     render(

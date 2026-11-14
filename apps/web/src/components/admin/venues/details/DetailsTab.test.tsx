@@ -234,9 +234,19 @@ describe('DetailsTab', () => {
     expect(
       screen.getByRole('button', { name: COPY.saveBar.save }).style.height,
     ).toBe('38px');
+    expect(
+      screen.getByRole('button', { name: COPY.saveBar.discard }).style.height,
+    ).toBe('38px');
     setPhone(true);
     expect(bar.style.gap).toBe('8px');
     expect(bar.style.padding).toBe('12px 16px 24px');
+    const save = screen.getByRole('button', { name: COPY.saveBar.save });
+    const discard = screen.getByRole('button', { name: COPY.saveBar.discard });
+    expect(save.style.height).toBe('42px');
+    expect(save.style.fontSize).toBe('14px');
+    expect(save.style.borderRadius).toBe('9px');
+    expect(discard.style.height).toBe('42px');
+    expect(discard.style.borderRadius).toBe('9px');
   });
 
   it('saves only the changed columns, then refreshes', async () => {

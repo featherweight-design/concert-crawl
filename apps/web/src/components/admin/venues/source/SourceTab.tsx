@@ -439,15 +439,29 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
         onSave={() => void save(draft)}
         look={{
           gap: 8,
-          wrap: true,
+          // `G4/source-feed-edited` stacks the message over the buttons.
+          ...(phone ? { stack: true } : { wrap: true }),
           padding: phone ? '10px 16px 24px' : '10px 16px',
-          messageStyle: {
-            fontSize: 12,
-            color: 'var(--fg-muted)',
-            flex: phone ? '1 0 100%' : 1,
-          },
+          messageStyle: phone
+            ? { fontSize: 12, color: 'var(--fg-muted)' }
+            : { fontSize: 12, color: 'var(--fg-muted)', flex: 1 },
           discardVariant: 'outline',
-          ...(phone ? { saveStyle: { flex: 1 } } : {}),
+          ...(phone
+            ? {
+                discardStyle: {
+                  height: 44,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  borderRadius: 9,
+                },
+                saveStyle: {
+                  flex: 1,
+                  height: 44,
+                  fontSize: 15,
+                  borderRadius: 9,
+                },
+              }
+            : {}),
         }}
       />
     </div>
