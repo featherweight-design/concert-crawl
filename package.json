@@ -24,7 +24,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^1.6.0",
+    "@anthropic-ai/sdk": "^1.8.0",
     "@clerk/backend": "^2.33.6",
     "@commitlint/cli": "21.2.4",
     "@concert-crawl/crawler-core": "workspace:*",
@@ -41,7 +41,7 @@
     "husky": "9.1.7",
     "lint-staged": "17.6.0",
     "postgres": "^3.4.9",
-    "prettier": "3.9.10",
+    "prettier": "3.10.0",
     "semantic-release": "25.0.9",
     "stripe": "^22.4.0",
     "tsx": "^4.23.15",
