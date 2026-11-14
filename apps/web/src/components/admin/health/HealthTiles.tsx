@@ -258,15 +258,15 @@ export const HealthTiles = ({
         }
         pill={
           crawlState === 'onTime' ? (
-            <StatusBadge kind="success" dot>
+            <StatusBadge kind="success" dot size="tile">
               {copy.tiles.crawl.onTime}
             </StatusBadge>
           ) : crawlState === 'failed' ? (
-            <StatusBadge kind="warning" dot>
+            <StatusBadge kind="warning" dot size="tile">
               {copy.tiles.crawl.failedPill(crawl.failed)}
             </StatusBadge>
           ) : crawlState === 'missed' ? (
-            <StatusBadge kind="danger" dot>
+            <StatusBadge kind="danger" dot size="tile">
               {copy.tiles.crawl.missedPill}
             </StatusBadge>
           ) : null
@@ -323,12 +323,12 @@ export const HealthTiles = ({
           }
           pill={
             costPill ? (
-              <StatusBadge kind={costPill.kind} dot>
+              <StatusBadge kind={costPill.kind} dot size="tile">
                 <Dual desk={costPill.desk} phone={costPill.phone} />
               </StatusBadge>
             ) : (
               // No budget: the pill points at the panel that sets one.
-              <StatusBadge kind="neutral">
+              <StatusBadge kind="neutral" size="tile">
                 {copy.tiles.cost.setBudget}
               </StatusBadge>
             )

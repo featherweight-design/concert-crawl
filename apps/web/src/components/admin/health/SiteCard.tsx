@@ -8,7 +8,8 @@ const copy = ADMIN_COPY.health.site;
 
 /**
  * The Emails pill: Sending is drawn (success); failures (danger) and a quiet
- * window (neutral) are not, and reuse the same badge.
+ * window (neutral) are not, and reuse StatusBadge's drawn states. 🔸 Design
+ * item 33 is to confirm them.
  */
 export const emailState = (
   delivery: AdminEmailDelivery,
@@ -49,7 +50,7 @@ export const SiteCard = ({ delivery }: { delivery: AdminEmailDelivery }) => {
                 : copy.lastSent(formatMtTime(delivery.lastSentAt))}
             </div>
           </div>
-          <StatusBadge kind={state.kind} dot>
+          <StatusBadge kind={state.kind} dot size="tile">
             {state.label}
           </StatusBadge>
         </div>
