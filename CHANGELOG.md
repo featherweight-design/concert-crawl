@@ -1,3 +1,17 @@
+# [1.478.0](https://github.com/featherweight-design/concert-crawl/compare/v1.477.0...v1.478.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** 32px between Sign in and the way-back line, as the board ([dd632de](https://github.com/featherweight-design/concert-crawl/commit/dd632ded1bad6621be7384325ad9c16270dda4a6))
+* **web:** 44px tap area on the way-back link, out of layout ([aac6760](https://github.com/featherweight-design/concert-crawl/commit/aac67606f9ba23c4ffae60f691874d0eef5d4cb9))
+* **web:** clear the stale focus flag on Enter it; test the ended cycle ([8680f99](https://github.com/featherweight-design/concert-crawl/commit/8680f998d8dfd08c0dd69ae49af041c2dda6c903))
+
+
+### Features
+
+* **web:** a way back to the code form from the ended-code page ([e37011a](https://github.com/featherweight-design/concert-crawl/commit/e37011a17b04ccc142755b0007e2db927ff6261d))
+
 # [1.477.0](https://github.com/featherweight-design/concert-crawl/compare/v1.476.0...v1.477.0) (2026-11-14)
 
 
