@@ -38,7 +38,9 @@ vi.mock('@concert-crawl/push', async (importOriginal) => {
   };
 });
 
+import { canonicalizeTitle } from '@concert-crawl/crawler-core/canonical-title';
 import { fanoutWatchNotification } from '@concert-crawl/push';
+import { canonicalizeArtist } from '@concert-crawl/types';
 import { createApp } from '../../app.js';
 import {
   clearTables,
@@ -2350,24 +2352,88 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
     expect(rows.map((notice) => notice.userId)).toEqual([WATCHER]);
   });
 
-  it('still refuses a title change on a postponed past show', async () => {
+  it('accepts a title correction on a postponed past show, audits it and tells nobody', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(-7),
+      verified: true,
       status: 'postponed',
       title: 'Postponed Show',
+    });
+    await seedUserEvent('user_postponed_title_watcher', event.id, {
+      status: 'watching',
     });
 
     const res = await patch(event.id, { title: 'Rewritten' });
 
-    expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
+    expect(res.status).toBe(200);
     const [row] = await testDb
-      .select({ title: events.title, updatedAt: events.updatedAt })
+      .select({ title: events.title, status: events.status })
       .from(events)
       .where(eq(events.id, event.id));
-    expect(row?.title).toBe('Postponed Show');
-    expect(row?.updatedAt).toEqual(event.updatedAt);
+    expect(row).toEqual({ title: 'Rewritten', status: 'postponed' });
+    expect(fanoutWatchNotification).not.toHaveBeenCalled();
+    expect(await testDb.select().from(notifications)).toEqual([]);
+    expect(await auditRowsFor(event.id)).toEqual([{ action: 'event.update' }]);
+  });
+
+  it('refreshes canonical_artist and canonical_title with a headliner or title correction', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      title: 'Played Show',
+      artist: 'Played Artist',
+    });
+
+    const res = await patch(event.id, {
+      artist: 'The Corrected Band',
+      title: 'The Corrected Band Live',
+    });
+
+    expect(res.status).toBe(200);
+    const [row] = await testDb
+      .select({
+        canonicalArtist: events.canonicalArtist,
+        canonicalTitle: events.canonicalTitle,
+      })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.canonicalArtist).toBe(canonicalizeArtist('The Corrected Band'));
+    expect(row?.canonicalArtist).not.toBe(event.canonicalArtist);
+    expect(row?.canonicalTitle).toBe(
+      canonicalizeTitle('The Corrected Band Live'),
+    );
+  });
+
+  it('returns 409 duplicate_show when a correction collides with another night at the venue', async () => {
+    const venue = await seedVenue();
+    const takenDate = futureDate(-9);
+    await seedEvent(venue.id, {
+      date: takenDate,
+      artist: 'Same Artist',
+      showTime: '20:00',
+      status: 'upcoming',
+    });
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      artist: 'Same Artist',
+      showTime: '20:00',
+      status: 'upcoming',
+    });
+
+    const res = await patch(event.id, { date: takenDate });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'duplicate_show',
+    });
+    const [row] = await testDb
+      .select({ date: events.date })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.date).toBe(event.date);
+    expect(await auditRowsFor(event.id)).toEqual([]);
   });
 
   it('accepts a field re-sent at its stored value beside hiddenFromConsumer', async () => {

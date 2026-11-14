@@ -1536,7 +1536,7 @@ export const ADMIN_COPY = {
       saveFailed: 'Save failed',
       // The PATCH's 409 `past_locked`.
       pastLocked:
-        'Past shows can only be hidden or unhidden. A postponed one can also get a new date, time or status.',
+        'On a past show only the title, headliner, times, a past date and Hide can change. A postponed one can also get a new date or status.',
     },
   },
 

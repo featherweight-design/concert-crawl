@@ -62,8 +62,14 @@ import {
 import { watchingCountOf, wentCountOf } from './lib/event-counts.js';
 import { todayInDenver } from '../../lib/time.js';
 import { currentPriceCondition } from '../../lib/price-check.js';
+import { isUniqueViolationOn } from '../../lib/pg-errors.js';
 
 const eventIdSchema = z.object({ id: idSchema });
+
+// The partial unique index on (venue_id, date, canonical_artist, show_time)
+// WHERE status = 'upcoming' (migration 0057) that the crawler upserts on.
+const EVENT_NIGHT_UNIQUE_INDEX =
+  'events_venue_date_canonical_artist_showtime_idx';
 
 const MISSING_DATA_FLAGS = [
   'no-price',
@@ -741,11 +747,15 @@ eventsAdminRouter.patch(
     // in Denver (the list's Past side) may change `hiddenFromConsumer` and the
     // corrections of B+ addendum 5 §4 (`title`, `artist`, `doorsTime`,
     // `showTime`, and `date` to another past date), which tell no watcher. A
-    // past show stored as postponed may instead change `date`, `doorsTime`,
-    // `showTime` and `status`, so it can be rescheduled. A field re-sent at
-    // its stored value is not a change. Anything else is 409 `past_locked`,
-    // read under the row lock, and not audited. Corrections audit as
-    // `event.update`, like every other edit.
+    // past show stored as postponed may make the `title` and `artist`
+    // corrections and change `date`, `doorsTime`, `showTime` and `status`, so
+    // it can be rescheduled. A field re-sent at its stored value is not a
+    // change. Anything else is 409 `past_locked`, read under the row lock, and
+    // not audited. Corrections audit as `event.update`, like every other edit.
+    //
+    // A date, time or headliner change that would duplicate another upcoming
+    // row at the venue (the partial unique index the crawler upserts on) is
+    // 409 `duplicate_show` rather than a 500.
     let updated: Awaited<ReturnType<typeof updateEvent>>;
     try {
       updated = await updateEvent(id, body, {
@@ -754,6 +764,12 @@ eventsAdminRouter.patch(
     } catch (err) {
       if (err instanceof PastLockedError) {
         return ctx.json({ success: false, error: 'past_locked' } as const, 409);
+      }
+      if (isUniqueViolationOn(err, EVENT_NIGHT_UNIQUE_INDEX)) {
+        return ctx.json(
+          { success: false, error: 'duplicate_show' } as const,
+          409,
+        );
       }
       throw err;
     }
