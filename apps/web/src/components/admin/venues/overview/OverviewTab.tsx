@@ -408,11 +408,24 @@ const ShowsCard = ({
   phone: boolean;
 }) => {
   const full = venue.lastFullRun ?? null;
-  // Open in Events is left off: `/admin/events` redirects and drops `?venue=`
-  // today, so the link would lie. The 4b Events PR adds it back here once the
-  // Events page honours `?venue=`.
+  // The Events list filtered to this venue (`venueIds`, 4b #422). Desktop
+  // says "Open in Events", phone "Events" (venue-overview, venue-overview-m).
+  const openInEvents = (
+    <Link
+      href={`/admin/events?venueIds=${encodeURIComponent(venue.id)}`}
+      style={{ ...linkButton('ghost', false), height: 28 }}
+    >
+      <ChevronRight size={14} aria-hidden />
+      {phone ? COPY.shows.events : COPY.shows.openInEvents}
+    </Link>
+  );
   return (
-    <Card title={COPY.shows.title} phone={phone} testId="overview-shows">
+    <Card
+      title={COPY.shows.title}
+      phone={phone}
+      testId="overview-shows"
+      action={openInEvents}
+    >
       <div>
         <Row label={COPY.shows.upcoming}>
           <b>{(venue.upcomingShows ?? 0).toLocaleString('en-US')}</b>

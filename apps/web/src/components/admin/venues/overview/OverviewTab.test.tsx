@@ -364,6 +364,16 @@ describe('OverviewTab — Shows', () => {
     ).toContain('4');
   });
 
+  it('opens the Events list filtered to this venue', () => {
+    render(
+      <OverviewTab venue={buildVenue()} data={DATA} recrawl={recrawl()} />,
+    );
+    const link = within(card(COPY.shows.title)).getByRole('link', {
+      name: COPY.shows.openInEvents,
+    });
+    expect(link.getAttribute('href')).toBe('/admin/events?venueIds=venue-1');
+  });
+
   it('reads None yet without a full run', () => {
     render(
       <OverviewTab
