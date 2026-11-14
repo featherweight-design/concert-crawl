@@ -74,33 +74,41 @@ export const smallButton: CSSProperties = {
   background: 'var(--surface-2)',
 };
 
-const THUMB = 56;
-/** A Look row's 56px thumb box: every thumb shares its size and corners. */
-const thumbBox: CSSProperties = {
-  width: THUMB,
-  height: THUMB,
+/**
+ * A Look row's thumb, per board: `details-d` draws 56px thumbs, the icon at
+ * radius 15 and the hero at 12; `details-m` draws both at 48px, radius 12.
+ */
+const thumbSize = (phone: boolean) => (phone ? 48 : 56);
+const iconRadius = (phone: boolean) => (phone ? 12 : 15);
+const HERO_RADIUS = 12;
+
+const thumbBox = (phone: boolean, radius: number): CSSProperties => ({
+  width: thumbSize(phone),
+  height: thumbSize(phone),
   flex: 'none',
-  borderRadius: 12,
-};
+  borderRadius: radius,
+});
 /** A thumb with nothing to show yet: a dashed outline. */
-const emptyThumb: CSSProperties = {
-  ...thumbBox,
+const emptyThumb = (phone: boolean, radius: number): CSSProperties => ({
+  ...thumbBox(phone, radius),
   border: '1px dashed var(--border-strong)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-};
+});
 
-/** One Look row: a 56px thumb, then a title over a line. */
+/** One Look row: a thumb, then a title over a line (14px title on phone). */
 const LookRow = ({
   thumb,
   title,
   line,
+  phone,
   testId,
 }: {
   thumb: ReactNode;
   title: string;
   line: string | null;
+  phone: boolean;
   testId: string;
 }) => (
   <div
@@ -109,7 +117,12 @@ const LookRow = ({
   >
     {thumb}
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 13.5, fontWeight: 600 }}>{title}</div>
+      <div
+        data-testid={`${testId}-title`}
+        style={{ fontSize: phone ? 14 : 13.5, fontWeight: 600 }}
+      >
+        {title}
+      </div>
       {line !== null && (
         <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
           {line}
@@ -119,24 +132,43 @@ const LookRow = ({
   </div>
 );
 
-const rule = <div style={{ height: 1, background: 'var(--border)' }} />;
+const rule = (
+  <div
+    data-testid="details-look-rule"
+    style={{ height: 1, background: 'var(--border)' }}
+  />
+);
 
 /**
  * The Look card (`details-d`, `details-no-icon`): the venue's icon and hero
  * setting as the site draws them today. Both come from code, keyed by slug,
  * until 3c adds their columns; Change, Draw one and Pick one are held (3c, 3e).
- * `details-m` draws it at 16/18 on phone too, so it never takes phone padding.
+ * `details-m` draws it at 16/18 on phone too, so it never takes phone padding;
+ * on phone it draws smaller thumbs, no rule between the rows, and the hero
+ * thumb without its stage bar.
  */
-export const LookCard = ({ slug, name }: { slug: string; name: string }) => {
+export const LookCard = ({
+  slug,
+  name,
+  phone,
+}: {
+  slug: string;
+  name: string;
+  phone: boolean;
+}) => {
   const glyph = venueGlyphKey(slug);
   const hero = glyph === null ? null : VENUE_HERO_SETTINGS[glyph];
   return (
     <Card title={COPY.cards.look} phone={false} testId="details-look">
       <LookRow
         testId="details-look-icon"
+        phone={phone}
         thumb={
           glyph === null ? (
-            <div style={emptyThumb}>
+            <div
+              data-testid="details-look-icon-thumb"
+              style={emptyThumb(phone, iconRadius(phone))}
+            >
               <MapPin
                 size={22}
                 strokeWidth={1.6}
@@ -145,23 +177,33 @@ export const LookCard = ({ slug, name }: { slug: string; name: string }) => {
               />
             </div>
           ) : (
-            <VenueTile slug={slug} name={name} size={THUMB} />
+            <VenueTile
+              slug={slug}
+              name={name}
+              size={thumbSize(phone)}
+              cornerRadius={iconRadius(phone)}
+            />
           )
         }
         title={COPY.look.icon}
         line={glyph === null ? COPY.look.iconNone : null}
       />
-      {rule}
+      {!phone && rule}
       <LookRow
         testId="details-look-hero"
+        phone={phone}
         thumb={
           hero === null ? (
-            <div style={emptyThumb} />
+            <div
+              data-testid="details-look-hero-thumb"
+              style={emptyThumb(phone, HERO_RADIUS)}
+            />
           ) : (
             <div
               aria-hidden
+              data-testid="details-look-hero-thumb"
               style={{
-                ...thumbBox,
+                ...thumbBox(phone, HERO_RADIUS),
                 border: '1px solid var(--border)',
                 background: 'linear-gradient(180deg, var(--border), var(--bg))',
                 display: 'flex',
@@ -170,15 +212,18 @@ export const LookCard = ({ slug, name }: { slug: string; name: string }) => {
                 overflow: 'hidden',
               }}
             >
-              <div
-                style={{
-                  width: 40,
-                  height: 16,
-                  borderRadius: '4px 4px 0 0',
-                  background:
-                    'color-mix(in srgb, var(--signal) 35%, transparent)',
-                }}
-              />
+              {!phone && (
+                <div
+                  data-testid="details-look-hero-bar"
+                  style={{
+                    width: 40,
+                    height: 16,
+                    borderRadius: '4px 4px 0 0',
+                    background:
+                      'color-mix(in srgb, var(--signal) 35%, transparent)',
+                  }}
+                />
+              )}
             </div>
           )
         }

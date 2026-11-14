@@ -31,6 +31,12 @@ interface VenueTileProps {
    * and the Where popover boards do) instead of one gradient across the glyph.
    */
   multicolour?: boolean;
+  /**
+   * The corner radius in rendered pixels, for a board that draws the tile at
+   * a set radius (admin Details' Look card: 15 at 56, 12 at 48). Unset keeps
+   * the tile's own radius.
+   */
+  cornerRadius?: number;
 }
 
 /**
@@ -51,12 +57,18 @@ export function VenueTile({
   labelled = false,
   edgeWeight,
   multicolour = false,
+  cornerRadius,
 }: VenueTileProps) {
   const weighted = edgeWeight !== undefined;
   const edge = weighted ? (edgeWeight * 96) / size : 1.6;
   const inset = edge / 2;
   const side = 96 - edge;
-  const radius = weighted ? WEIGHTED_RADIUS : 22.2;
+  const radius =
+    cornerRadius !== undefined
+      ? (cornerRadius * 96) / size
+      : weighted
+        ? WEIGHTED_RADIUS
+        : 22.2;
   const uid = useId().replace(/:/g, '');
   const glyphKey = venueGlyphKey(slug);
   const a11y = labelled

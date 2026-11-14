@@ -1049,6 +1049,8 @@ export const ADMIN_COPY = {
         invalid: 'Enter an email address, like booking@venue.com.',
       },
       city: 'City',
+      // Addendum 5 `details-d` only: `details-m` draws City with no hint.
+      cityHint: 'Fans see it under the name.',
     },
     capacityTypes: {
       street: 'Street',
