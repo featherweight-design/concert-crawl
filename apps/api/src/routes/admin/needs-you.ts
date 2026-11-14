@@ -25,7 +25,6 @@ import {
 import { NEEDS_YOU_KINDS, isKind, parseItemKey } from './lib/needs-you/keys.js';
 import { loadNeedsYouItems } from './lib/needs-you/sources.js';
 import { readAllClearFacts } from './lib/needs-you/all-clear-facts.js';
-import { readWindow } from './crawl-batches.js';
 
 const logger = createLogger('admin:needs-you');
 
@@ -199,7 +198,7 @@ needsYouAdminRouter.get('/count', async (ctx) => {
 needsYouAdminRouter.get('/facts', async (ctx) => {
   return ctx.json({
     success: true,
-    data: await readAllClearFacts(new Date(), readWindow),
+    data: await readAllClearFacts(new Date()),
   });
 });
 

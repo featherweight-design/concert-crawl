@@ -1,11 +1,15 @@
 // What the Needs you All clear card says (`02-needs-you/all-clear`): last
-// night's crawl, the next one, and how many venues are snoozed. Read only when
-// the queue is empty, from GET /v1/admin/needs-you/facts.
+// night's crawl, the next one, and how many venues are snoozed off-season. Read
+// only when the queue is empty, from GET /v1/admin/needs-you/facts.
 
+import { and, gt, inArray, isNotNull } from 'drizzle-orm';
+import { adminQueueSnoozes, db } from '@concert-crawl/db';
 import type { AllClearFacts } from '@concert-crawl/types';
-import { groupCrawlBatches } from '../crawl-batches.js';
+import { BURST_GAP_MS, groupCrawlBatches } from '../crawl-batches.js';
+import { readWindow } from '../crawl-window.js';
 import { parseItemKey } from './keys.js';
-import { loadActiveSnoozes } from './snoozes.js';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * When the daily crawl runs, in UTC. `apps/api/vercel.json` holds the cron
@@ -30,45 +34,61 @@ export const nextCrawlAfter = (now: Date): Date => {
   return next;
 };
 
-const VENUE_KINDS: ReadonlySet<string> = new Set([
-  'venue-failing',
-  'venue-blocked',
-]);
+const VENUE_KINDS = ['venue-failing', 'venue-blocked'] as const;
 
 /**
- * Venues with a venue item snoozed right now, plus venues an admin turned a
- * warning off for ("Not useful"). A venue counts once however it is held.
+ * A venue snoozed longer than this is off for the season, not for a day or a
+ * week: "Snooze a week" ends 7 days out at most, "Until a date…" can run past it.
  */
-export const snoozedVenueCount = (snoozes: {
-  keys: ReadonlySet<string>;
-  notUseful: ReadonlySet<string>;
-}): number => {
+export const OFF_SEASON_AFTER_DAYS = 7;
+
+/** The distinct venues named by `<kind>:<venueId>[:<evidenceKey>]` item keys. */
+export const venuesOfKeys = (keys: readonly string[]): number => {
   const venues = new Set<string>();
-  for (const key of snoozes.keys) {
+  for (const key of keys) {
     const parsed = parseItemKey(key);
-    // `<kind>:<venueId>[:<evidenceKey>]`
-    if (parsed && VENUE_KINDS.has(parsed.kind))
-      venues.add(parsed.rest.split(':')[0] ?? parsed.rest);
-  }
-  for (const pair of snoozes.notUseful) {
-    const [kind, venueId] = pair.split(':');
-    if (kind && venueId && VENUE_KINDS.has(kind)) venues.add(venueId);
+    if (parsed) venues.add(parsed.rest.split(':')[0] ?? parsed.rest);
   }
   return venues.size;
+};
+
+const snoozedOffSeason = async (now: Date): Promise<number> => {
+  const rows = await db
+    .select({ itemKey: adminQueueSnoozes.itemKey })
+    .from(adminQueueSnoozes)
+    .where(
+      and(
+        isNotNull(adminQueueSnoozes.itemKey),
+        inArray(adminQueueSnoozes.kind, [...VENUE_KINDS]),
+        gt(
+          adminQueueSnoozes.until,
+          new Date(now.getTime() + OFF_SEASON_AFTER_DAYS * DAY_MS),
+        ),
+      ),
+    );
+  return venuesOfKeys(
+    rows.flatMap((row) => (row.itemKey === null ? [] : [row.itemKey])),
+  );
 };
 
 type BatchInputs = Parameters<typeof groupCrawlBatches>[0];
 
 /**
- * The latest nightly that started. A venue read OK when its page was fetched
- * or found unchanged; paused venues are in the total, not the OK count.
+ * The latest nightly that has finished: one whose last run is at least a burst
+ * gap old, so a night still running (its OK count and total both partial) is
+ * not read as a clean sweep. A venue read OK when its page was fetched or found
+ * unchanged; paused venues are in the total, not the OK count.
  */
 export const lastNightlyFact = (
   inputs: BatchInputs,
 ): AllClearFacts['lastCrawl'] => {
   const night = groupCrawlBatches(inputs).find(
     (batch) =>
-      batch.kind === 'nightly' && !batch.didntStart && batch.startedAt !== null,
+      batch.kind === 'nightly' &&
+      !batch.didntStart &&
+      batch.startedAt !== null &&
+      batch.endedAt !== null &&
+      inputs.now.getTime() - new Date(batch.endedAt).getTime() >= BURST_GAP_MS,
   );
   if (!night?.startedAt) return null;
   return {
@@ -78,21 +98,17 @@ export const lastNightlyFact = (
   };
 };
 
-export const readAllClearFacts = async (
-  now: Date,
-  readRuns: (from: Date, to: Date) => Promise<Omit<BatchInputs, 'now'>>,
-): Promise<AllClearFacts> => {
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  const [window, snoozes] = await Promise.all([
-    readRuns(
+export const readAllClearFacts = async (now: Date): Promise<AllClearFacts> => {
+  const [window, snoozedVenues] = await Promise.all([
+    readWindow(
       new Date(now.getTime() - 3 * DAY_MS),
       new Date(now.getTime() + DAY_MS),
     ),
-    loadActiveSnoozes(now),
+    snoozedOffSeason(now),
   ]);
   return {
     lastCrawl: lastNightlyFact({ ...window, now }),
     nextCrawlAt: nextCrawlAfter(now).toISOString(),
-    snoozedVenues: snoozedVenueCount(snoozes),
+    snoozedVenues,
   };
 };

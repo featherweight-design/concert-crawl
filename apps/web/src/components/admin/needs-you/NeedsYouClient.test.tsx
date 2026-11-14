@@ -355,7 +355,7 @@ describe('NeedsYouClient', () => {
     );
     render(<NeedsYouClient item={null} />);
     const facts = await screen.findByTestId('needs-you-facts');
-    expect(facts).toHaveTextContent('Last night’s crawl20 of 21 OK');
+    expect(facts).toHaveTextContent("Last night's crawl20 of 21 OK");
     expect(facts).toHaveTextContent(/Next crawlTonight, 2:07 AM/);
     // Nothing snoozed: no "Snoozed" row.
     expect(facts).not.toHaveTextContent('Snoozed');
