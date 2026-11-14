@@ -178,7 +178,14 @@ export const GET = async (
   const frame = SC_METRICS[parsed.ratio].frame;
   const frameArt =
     photo === null && frame !== null
-      ? await identityArtDataUri(event.artist, frameArtSize(frame))
+      ? // next/og renders lazily, so a satori or resvg failure surfaces here;
+        // it costs the flat art (the inline art draws), never the card.
+        await identityArtDataUri(event.artist, frameArtSize(frame)).catch(
+          (err: unknown) => {
+            console.error('[share card] frame art failed', { err });
+            return null;
+          },
+        )
       : null;
   const photoMissing = photoSources.length > 0 && photo === null;
   // Taken once, after the photo: the fetch can carry the request past the

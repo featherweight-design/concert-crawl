@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as ApiModule from '@/lib/api';
+import type * as FallbackArtModule from '@/lib/share/fallback-art';
 
 const getMock = vi.fn();
 // The real `ApiError` comes through: the route's 404-vs-502 split turns on
@@ -12,6 +13,14 @@ vi.mock('@/lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof ApiModule>()),
   publicApiClient: { get: getMock },
 }));
+
+// The flat IdentityArt render, spied on but real unless a test says otherwise.
+const frameArtMock = vi.fn<typeof FallbackArtModule.identityArtDataUri>();
+vi.mock('@/lib/share/fallback-art', async (importOriginal) => {
+  const real = await importOriginal<typeof FallbackArtModule>();
+  frameArtMock.mockImplementation(real.identityArtDataUri);
+  return { identityArtDataUri: frameArtMock };
+});
 
 const { ApiError } = await import('@/lib/api');
 
@@ -267,6 +276,40 @@ describe('GET /share/[eventId]/[ratio]', () => {
       'public, max-age=60, s-maxage=60',
     );
     expect(response.headers.get('ETag')).toMatch(/:f"$/);
+  }, 30_000);
+
+  // Only a tilted card needs the art flattened first; Story draws it inline.
+  it('renders the flat art for a no-photo Square and Wide, not for Story', async () => {
+    for (const ratio of ['square', 'link', 'story']) {
+      frameArtMock.mockClear();
+      const response = await call(
+        `http://localhost/share/${EVENT_ID}/${ratio}`,
+        {
+          eventId: EVENT_ID,
+          ratio,
+        },
+      );
+      expect(response.status).toBe(200);
+      expect(frameArtMock).toHaveBeenCalledTimes(ratio === 'story' ? 0 : 1);
+    }
+  }, 60_000);
+
+  // next/og renders lazily, so a failing flat render rejects late; it must
+  // cost the flat art only, never the card.
+  it('still draws the card when the flat art render fails', async () => {
+    frameArtMock.mockRejectedValueOnce(new Error('resvg exploded'));
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await call(`http://localhost/share/${EVENT_ID}/square`, {
+        eventId: EVENT_ID,
+        ratio: 'square',
+      });
+      expect(response.status).toBe(200);
+      const body = Buffer.from(await response.arrayBuffer());
+      expect(body.subarray(0, 4)).toEqual(PNG_MAGIC);
+    } finally {
+      errors.mockRestore();
+    }
   }, 30_000);
 
   it('draws a photo that loads, under the full cache life', async () => {

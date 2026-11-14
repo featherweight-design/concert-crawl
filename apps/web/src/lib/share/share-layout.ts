@@ -229,15 +229,27 @@ export const fitLineSize = (
   width: number,
   floor: number,
 ): number => {
-  const length = name.trim().length;
+  const length = graphemes(name.trim()).length;
   if (length === 0) return base;
   const fitting = width / (length * NAME_ADVANCE_RATIO);
   return Math.floor(Math.max(floor, Math.min(base, fitting)));
 };
 
+/**
+ * User-perceived characters, so a count or a cut never splits a surrogate
+ * pair, a ZWJ sequence or a flag. Code points where Intl.Segmenter is absent.
+ */
+export const graphemes = (text: string): string[] =>
+  typeof Intl.Segmenter === 'function'
+    ? Array.from(
+        new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(text),
+        (part) => part.segment,
+      )
+    : Array.from(text);
+
 /** The estimated set width of `text` at `size`, on the same ratio as fitting. */
 export const estimatedLineWidth = (text: string, size: number): number =>
-  text.length * NAME_ADVANCE_RATIO * size;
+  graphemes(text).length * NAME_ADVANCE_RATIO * size;
 
 /**
  * The one-line name as drawn: its size, and its text cut to fit with a `…`
@@ -251,8 +263,9 @@ export const fitLine = (
   floor: number,
 ): { size: number; text: string } => {
   const text = name.trim();
+  const glyphs = graphemes(text);
   const size = fitLineSize(text, base, width, floor);
-  if (estimatedLineWidth(text, size) <= width) return { size, text };
+  if (glyphs.length * NAME_ADVANCE_RATIO * size <= width) return { size, text };
   const keep = Math.max(1, Math.floor(width / (NAME_ADVANCE_RATIO * size)) - 1);
-  return { size, text: `${text.slice(0, keep).trimEnd()}…` };
+  return { size, text: `${glyphs.slice(0, keep).join('').trimEnd()}…` };
 };
