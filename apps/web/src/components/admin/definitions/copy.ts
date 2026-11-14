@@ -3521,6 +3521,10 @@ export const ADMIN_COPY = {
         'price.promoted': ['Published a price for ', ' a second fan confirmed'],
         'price.pipeline.run': ['Ran the price pipeline for ', ''],
         'price.submission.admin_add': ['Added a price for ', ''],
+        'price.submission.replace_listed': [
+          'Replaced the listed price for ',
+          '',
+        ],
         'price.submission.edit_price': (args: { range: string | null }) =>
           [
             'Changed a price for ',
