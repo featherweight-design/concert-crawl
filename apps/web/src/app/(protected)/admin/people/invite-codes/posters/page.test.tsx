@@ -58,6 +58,12 @@ const renderPage = async (query: Record<string, string> = {}) =>
 describe('Posters tab page', () => {
   beforeEach(() => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://concertcrawl.app');
+    // `useIsPhone` reads the breakpoint and jsdom ships no matchMedia: desktop.
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
     requireAdminUser.mockResolvedValue({ userId: 'user_admin' });
     getToken.mockResolvedValue('token');
     getVenues.mockResolvedValue([

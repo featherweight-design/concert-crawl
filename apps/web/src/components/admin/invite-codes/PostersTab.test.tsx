@@ -60,6 +60,12 @@ const sheet = () => screen.getByTestId('poster-sheet');
 describe('PostersTab', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/admin/people/invite-codes/posters');
+    // `useIsPhone` reads the breakpoint and jsdom ships no matchMedia: desktop.
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
   });
   afterEach(() => {
     cleanup();

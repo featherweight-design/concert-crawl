@@ -3237,6 +3237,23 @@ export const ADMIN_COPY = {
       notPrintable:
         "That code can't be printed: it's full, expired, revoked or a personal code. Pick another.",
       noCodes: 'No poster codes yet. Mint one to print a poster.',
+      // From 07/posters-mobile: the phone's own strings. Desktop keeps the
+      // keys above.
+      phone: {
+        step: (num: number, name: string) => `${num} · ${name}`,
+        change: 'Change',
+        look: {
+          night: 'Dark, glowing. Turn on Background graphics when printing.',
+          paper: 'One ink on white. Cheapest to print.',
+        },
+        tearTabsHint: 'The QR shrinks to 3.5 in to make room.',
+        checklist: [
+          'US Letter, scale 100%',
+          'Background graphics on',
+          'Test scan from 6 ft',
+        ],
+        print: 'Print',
+      },
     },
   },
 
