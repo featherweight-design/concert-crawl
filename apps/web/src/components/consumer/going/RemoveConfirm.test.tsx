@@ -158,4 +158,26 @@ describe('RemoveConfirm', () => {
     setup();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+
+  // addendum-3 remove-busy-m / event-past-remove-d.
+  it('draws the title 25 on 900 and the footnote as mono caps', () => {
+    setup();
+    const title = screen
+      .getAllByText(GOING_COPY.remove.title)
+      .find((node) => node.getAttribute('aria-hidden') === 'true');
+    expect(title?.style.fontSize).toBe('25px');
+    expect(title?.style.fontWeight).toBe('900');
+    const note = screen.getByText(GOING_COPY.remove.footnoteConcerts);
+    expect(note.className).toContain('uppercase');
+    expect(note.style.fontSize).toBe('9px');
+  });
+
+  it('puts the eyebrow on the Cancel row, not above it', () => {
+    setup();
+    const eyebrow = screen.getByText(GOING_COPY.eyebrow.past);
+    const cancel = screen.getByRole('button', {
+      name: GOING_COPY.remove.cancel,
+    });
+    expect(eyebrow.parentElement).toBe(cancel.parentElement);
+  });
 });

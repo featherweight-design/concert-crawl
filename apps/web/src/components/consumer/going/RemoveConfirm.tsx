@@ -46,29 +46,22 @@ export const RemoveConfirm = ({
     title={GOING_COPY.remove.title}
     maxWidth={DIALOG_WIDTH}
     closeText={GOING_COPY.remove.cancel}
+    // The eyebrow and Cancel share one row (`remove-busy-m`), and the desktop
+    // dialog wears the gradient top edge (`event-past-remove-d`).
+    eyebrow={GOING_COPY.eyebrow.past}
+    eyebrowMuted
+    edgeFromSm
   >
     <div className="flex flex-col gap-3 pt-1">
-      <span
-        className="uppercase"
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10.5,
-          fontWeight: 700,
-          letterSpacing: '0.14em',
-          color: 'var(--fg-subtle)',
-        }}
-      >
-        {GOING_COPY.eyebrow.past}
-      </span>
       {/* The sheet's own sr-only heading names the dialog; this is the drawn
           title, so it stays a plain element rather than a second heading. */}
       <span
         aria-hidden="true"
         style={{
           fontFamily: 'var(--font-ui)',
-          fontWeight: 700,
-          fontSize: 22,
-          letterSpacing: '-0.02em',
+          fontWeight: 900,
+          fontSize: 25,
+          letterSpacing: '-0.025em',
           color: 'var(--fg)',
         }}
       >
@@ -78,7 +71,7 @@ export const RemoveConfirm = ({
         className="m-0"
         style={{
           fontFamily: 'var(--font-ui)',
-          fontSize: 14,
+          fontSize: 13.5,
           lineHeight: 1.5,
           color: 'var(--fg-muted)',
         }}
@@ -94,7 +87,7 @@ export const RemoveConfirm = ({
           className="m-0 flex items-start gap-2.5 rounded-xl border px-3.5 py-3"
           style={{
             fontFamily: 'var(--font-ui)',
-            fontSize: 14,
+            fontSize: 13,
             lineHeight: 1.4,
             color: 'var(--fg)',
             borderColor: 'color-mix(in oklab, var(--danger) 45%, transparent)',
@@ -113,7 +106,7 @@ export const RemoveConfirm = ({
           type="button"
           onClick={onConfirm}
           disabled={pending}
-          className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-xl border-0 px-4 text-[15px] font-bold disabled:cursor-default disabled:opacity-60"
+          className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-xl border-0 px-4 text-[15px] font-extrabold disabled:cursor-default disabled:opacity-60"
           style={{ background: 'var(--danger)', color: 'var(--bg)' }}
         >
           {pending
@@ -126,17 +119,18 @@ export const RemoveConfirm = ({
           type="button"
           onClick={onClose}
           disabled={pending}
-          className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-[var(--border-strong)] bg-transparent px-4 text-[15px] font-semibold text-[var(--fg)] disabled:cursor-default disabled:opacity-50"
+          className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-[var(--border-strong)] bg-transparent px-4 text-[15px] font-semibold text-[var(--fg)] disabled:cursor-default disabled:opacity-40"
         >
           {GOING_COPY.remove.keep}
         </button>
       </div>
 
       <p
-        className="m-0 text-center"
+        className="m-0 text-center uppercase"
         style={{
-          fontFamily: 'var(--font-ui)',
-          fontSize: 12,
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          letterSpacing: '0.14em',
           color: 'var(--fg-subtle)',
         }}
       >

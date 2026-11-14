@@ -21,13 +21,22 @@ vi.mock('@/components/ui/cc-overlay', () => ({
   CCOverlay: ({
     id,
     mode,
+    width,
+    arrow,
     children,
   }: {
     id: string;
     mode: string;
+    width?: number;
+    arrow?: boolean;
     children: React.ReactNode;
   }) => (
-    <div id={id} data-mode={mode}>
+    <div
+      id={id}
+      data-mode={mode}
+      data-width={width}
+      data-arrow={arrow === undefined ? undefined : String(arrow)}
+    >
       {children}
     </div>
   ),
@@ -275,5 +284,36 @@ describe('RowMenu', () => {
     setup();
     expect(trigger().className).toContain('h-11');
     expect(trigger().className).toContain('w-11');
+  });
+
+  // addendum-3 upcoming-menu-d / past-menu-m / menu-flip-focus-d.
+  it('draws the desktop popover 250 wide with no arrow nub', () => {
+    setup();
+    fireEvent.click(trigger());
+    const panel = document.querySelector('[data-mode="popover"]');
+    expect(panel?.getAttribute('data-width')).toBe('250');
+    expect(panel?.getAttribute('data-arrow')).toBe('false');
+  });
+
+  it('weights the items 700 and haloes keyboard focus with a 2px gap and a 4px ring', () => {
+    setup();
+    fireEvent.click(trigger());
+    const item = screen.getAllByRole('menuitem')[0]!;
+    expect(item.className).toContain('font-bold');
+    expect(item.className).toContain('focus-visible:shadow-');
+    expect(item.className).toContain('var(--signal)');
+  });
+
+  it('seats each phone icon in a 34px tile with a hairline between items', () => {
+    mobile.value = true;
+    setup('upcoming');
+    fireEvent.click(trigger());
+    const items = screen.getAllByRole('menuitem');
+    for (const item of items) {
+      expect(
+        item.querySelector('span[aria-hidden="true"]')?.className,
+      ).toContain('h-[34px]');
+    }
+    expect(items[1]!.className).toContain('border-t');
   });
 });

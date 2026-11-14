@@ -40,6 +40,12 @@ interface CCOverlayPopoverProps extends OverlayCommonProps {
   placement?: OverlayPlacement;
   align?: OverlayAlign;
   width?: number;
+  /** Opt out of the 9px arrow nub (`upcoming-menu-d` draws none). */
+  arrow?: boolean;
+  /** Panel padding in px; the default 14 suits a tip with a header. */
+  padding?: number;
+  /** Panel corner radius in px; the default is the 12px tip radius. */
+  radius?: number;
 }
 
 interface CCOverlaySheetProps extends OverlayCommonProps {
@@ -134,6 +140,9 @@ const Popover = ({
   placement = 'top',
   align = 'center',
   width = 300,
+  arrow = true,
+  padding = 14,
+  radius = 12,
   showHeader = true,
   onClose,
   children,
@@ -158,19 +167,23 @@ const Popover = ({
         // rect, so no ancestor's overflow or stacking context can clip it. The
         // admin Panel clips its rounded corners with overflow:hidden, which cut
         // the bottom off any tip opened inside one.
-        className="fixed z-40 flex flex-col rounded-xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] p-[14px] text-left"
+        className="fixed z-40 flex flex-col border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-left"
         style={{
           width,
+          padding,
+          borderRadius: radius,
           ...position.style,
           boxShadow:
             '0 18px 44px -14px var(--shadow-strong), 0 2px 6px -2px var(--shadow-soft)',
         }}
       >
-        <span
-          aria-hidden
-          className="absolute h-[9px] w-[9px] rotate-45 border-l border-t border-[var(--border-strong)] bg-[var(--bg-elevated)]"
-          style={{ ...arrowVertical, left: position.arrowLeft }}
-        />
+        {arrow && (
+          <span
+            aria-hidden
+            className="absolute h-[9px] w-[9px] rotate-45 border-l border-t border-[var(--border-strong)] bg-[var(--bg-elevated)]"
+            style={{ ...arrowVertical, left: position.arrowLeft }}
+          />
+        )}
         {showHeader && (
           <div className="mb-[9px] flex flex-shrink-0 items-start gap-[10px]">
             <span
