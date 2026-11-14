@@ -2712,6 +2712,9 @@ export const ADMIN_COPY = {
         playsDenver: 'Plays Denver',
         current: 'Current',
         use: (name: string) => `Use ${name}`,
+        // `02/artist-wrong-artist-report-or-unsure-match`: the Denver act.
+        useDenver: (name: string) => `Use ${name} (Denver)`,
+        currentPhoto: 'current photo',
         keepPhoto: 'Keep current photo',
       },
       event: {

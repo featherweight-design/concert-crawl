@@ -307,11 +307,20 @@ describe('ArtistPanel', () => {
         candidate({ id: 'sp2', name: 'Wild Child Band' }),
       ]),
     );
-    fireEvent.click(screen.getByText('Use Wild Child Band'));
+    fireEvent.click(screen.getByText('Use Wild Child Band (Denver)'));
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({ slug: 'pick_the_right_artist' }),
       { spotifyArtistId: 'sp2' },
     );
+  });
+
+  it('names the Denver act on the lead button, and only that one', () => {
+    open(
+      artistRow([
+        candidate({ id: 'sp1', name: 'Away Act', playsDenver: false }),
+      ]),
+    );
+    expect(screen.getByText('Use Away Act')).toBeInTheDocument();
   });
 
   it('follows the picked card, and relabels keep_this_match', () => {
@@ -322,7 +331,7 @@ describe('ArtistPanel', () => {
       ]),
     );
     fireEvent.click(screen.getAllByTestId('artist-candidate')[1]!);
-    fireEvent.click(screen.getByText('Use Two'));
+    fireEvent.click(screen.getByText('Use Two (Denver)'));
     expect(send).toHaveBeenCalledWith(expect.anything(), {
       spotifyArtistId: 'sp2',
     });
