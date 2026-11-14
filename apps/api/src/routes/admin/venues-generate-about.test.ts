@@ -141,8 +141,8 @@ describe('POST /v1/admin/venues/:id/generate-about', () => {
     });
     const res = await post();
     expect(res.status).toBe(200);
+    await vi.waitFor(() => expect(mockInsertValues).toHaveBeenCalledTimes(1));
     expect(mockDb.insert).toHaveBeenCalledWith(mockCostTracking);
-    expect(mockInsertValues).toHaveBeenCalledTimes(1);
     const row = mockInsertValues.mock.calls[0]?.[0];
     expect(row).toMatchObject({
       service: 'venue-about',
@@ -167,11 +167,35 @@ describe('POST /v1/admin/venues/:id/generate-about', () => {
     });
     const res = await post();
     expect(res.status).toBe(503);
-    expect(mockInsertValues).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(mockInsertValues).toHaveBeenCalledTimes(1));
     expect(mockInsertValues.mock.calls[0]?.[0]).toMatchObject({
       service: 'venue-about',
       costUsd: expectedCost,
     });
+  });
+
+  it('answers without waiting on the cost write', async () => {
+    adminAuth();
+    mockDb.select.mockReturnValue(makeQueryBuilder([mockVenueRow]));
+    // A ledger write that never settles must not hold the draft.
+    mockInsertValues.mockReturnValue(new Promise<never>(() => undefined));
+    mockAnthropicCreate.mockResolvedValue({
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            capacity: 1600,
+            venueType: 'Theater',
+            neighborhood: 'Capitol Hill',
+            about: 'A historic venue on Colfax Ave.',
+          }),
+        },
+      ],
+      usage,
+    });
+    const res = await post();
+    expect(res.status).toBe(200);
+    expect(mockInsertValues).toHaveBeenCalledTimes(1);
   });
 
   it('a failed cost write never fails the draft', async () => {
@@ -194,6 +218,7 @@ describe('POST /v1/admin/venues/:id/generate-about', () => {
     });
     const res = await post();
     expect(res.status).toBe(200);
+    await vi.waitFor(() => expect(mockInsertValues).toHaveBeenCalledTimes(1));
   });
 
   it('returns 401 for unauthenticated requests', async () => {
