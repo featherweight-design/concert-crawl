@@ -46,6 +46,9 @@ export const copy = {
     browseHref: '/',
     signIn: 'Sign in',
     signInHref: '/sign-in',
+    // The way back to the code form (addendum 6 item 42): a quieter third
+    // exit, so an ended code is not a dead end for someone holding another.
+    another: { prefix: 'Have another code?', link: 'Enter it' },
   },
   footer: {
     waitlist: "Don't have a code? Join the waitlist",

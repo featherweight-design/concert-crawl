@@ -8,10 +8,11 @@ const ended = copy.ended;
 /**
  * What a fan sees when the code they opened was ended on purpose by an admin
  * (`admin addendum-3 12/code-ended-fan-m`): the mark, the plain news, and two
- * ways on. It is a page, not an inline error, because there is nothing to
- * retype: the code is gone.
+ * ways on, and a quieter third (addendum 6 item 42): "Have another code? Enter
+ * it", back to the code form, empty and focused. It is a page, not an inline
+ * error, because there is nothing to retype: the code is gone.
  */
-export function CodeEnded() {
+export function CodeEnded({ onEnterAnother }: { onEnterAnother: () => void }) {
   return (
     <main
       data-testid="code-ended"
@@ -112,6 +113,30 @@ export function CodeEnded() {
             {ended.signIn}
           </Link>
         </div>
+        <p
+          style={{
+            margin: '18px 0 0',
+            fontSize: 14,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {ended.another.prefix}{' '}
+          <button
+            type="button"
+            onClick={onEnterAnother}
+            style={{
+              padding: 0,
+              border: 0,
+              background: 'none',
+              color: 'var(--signal)',
+              font: 'inherit',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            {ended.another.link}
+          </button>
+        </p>
       </div>
     </main>
   );

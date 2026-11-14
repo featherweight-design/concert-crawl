@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { validateAndSetInviteCode } from './actions';
 import { CodeEnded } from './CodeEnded';
@@ -27,6 +27,11 @@ export default function InviteCodePage() {
   const [errorKind, setErrorKind] = useState<ErrorKind>(null);
   const [isPending, startTransition] = useTransition();
   const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  // Set by "Enter it" on the ended page: the form is not mounted until the
+  // ended state clears, so the focus waits for the render that mounts it.
+  const [refocus, setRefocus] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // A poster's QR lands here as `?code=BETA-…`. The field is filled in and
   // nothing more: the visitor still presses the button, so a scan alone never
@@ -37,7 +42,21 @@ export default function InviteCodePage() {
     if (fromLink) setCode(formatInviteCodeInput(fromLink));
   }, []);
 
+  useEffect(() => {
+    if (!refocus || errorKind === 'ended') return;
+    inputRef.current?.focus();
+    setRefocus(false);
+  }, [refocus, errorKind]);
+
   const isComplete = isCompleteInviteCode(code);
+
+  // The way back from the ended page: the form again, empty. The ended code
+  // is not carried over.
+  function handleEnterAnother() {
+    setCode('');
+    setErrorKind(null);
+    setRefocus(true);
+  }
 
   function handleChange(ev: React.ChangeEvent<HTMLInputElement>) {
     setErrorKind(null);
@@ -61,7 +80,9 @@ export default function InviteCodePage() {
   }
 
   // An ended code is a page of its own: there is nothing to retype.
-  if (errorKind === 'ended') return <CodeEnded />;
+  if (errorKind === 'ended') {
+    return <CodeEnded onEnterAnother={handleEnterAnother} />;
+  }
 
   return (
     <div
@@ -138,9 +159,12 @@ export default function InviteCodePage() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input
+              ref={inputRef}
               type="text"
               value={code}
               onChange={handleChange}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               placeholder={copy.input.placeholder}
               autoComplete="off"
               autoCorrect="off"
@@ -159,7 +183,7 @@ export default function InviteCodePage() {
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
                 background: 'var(--surface-1)',
-                border: `1.5px solid ${errorKind ? 'var(--danger)' : isComplete ? 'var(--signal)' : 'var(--border-strong)'}`,
+                border: `1.5px solid ${errorKind ? 'var(--danger)' : isComplete || focused ? 'var(--signal)' : 'var(--border-strong)'}`,
                 borderRadius: 12,
                 color: 'var(--fg)',
                 outline: 'none',
