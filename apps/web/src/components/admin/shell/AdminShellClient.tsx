@@ -81,7 +81,11 @@ const DesktopShell = ({
           <ContentPaneSlotContext.Provider value={paneSlot}>
             {children}
           </ContentPaneSlotContext.Provider>
-          <div ref={setPaneSlot} style={{ display: 'contents' }} />
+          <div
+            ref={setPaneSlot}
+            data-testid="admin-content-pane-slot"
+            style={{ display: 'contents' }}
+          />
         </main>
       </div>
     </div>

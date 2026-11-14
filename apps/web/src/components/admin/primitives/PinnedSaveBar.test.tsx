@@ -130,30 +130,34 @@ describe('PinnedSaveBar', () => {
   it('renders into the content pane slot, out over its gutters', () => {
     const slot = document.createElement('div');
     document.body.appendChild(slot);
-    render(
-      <ContentPaneSlotContext.Provider value={slot}>
-        <PinnedSaveBar
-          {...props({
-            look: paneLook,
-            failure: { title: 'Couldn’t save', saved: 'Still saved.' },
-          })}
-        />
-      </ContentPaneSlotContext.Provider>,
-    );
-    const bar = screen.getByTestId('bar');
-    expect(bar.parentElement).toBe(slot);
-    expect(bar.style.position).toBe('sticky');
-    expect(bar.style.bottom).toBe('0px');
-    expect(bar.style.height).toBe('64px');
-    expect(bar.style.margin).toBe('0px -28px -24px');
-    expect(bar.style.borderRadius).toBe('0px');
-    // The toast keeps to the page's column, not the bar's width.
-    const toastBox = screen
-      .getByTestId('save-failed')
-      .closest('[style*="bottom: calc"]');
-    expect(toastBox?.getAttribute('style')).toContain('left: 28px');
-    expect(toastBox?.getAttribute('style')).not.toContain('right: 0px');
-    slot.remove();
+    try {
+      render(
+        <ContentPaneSlotContext.Provider value={slot}>
+          <PinnedSaveBar
+            {...props({
+              look: paneLook,
+              failure: { title: 'Couldn’t save', saved: 'Still saved.' },
+            })}
+          />
+        </ContentPaneSlotContext.Provider>,
+      );
+      const bar = screen.getByTestId('bar');
+      expect(bar.parentElement).toBe(slot);
+      expect(bar.style.position).toBe('sticky');
+      expect(bar.style.bottom).toBe('0px');
+      expect(bar.style.height).toBe('64px');
+      expect(bar.style.margin).toBe('0px -28px -24px');
+      expect(bar.style.borderRadius).toBe('0px');
+      // The toast keeps to the page's column, not the bar's width.
+      const toastBox = screen
+        .getByTestId('save-failed')
+        .closest('[style*="bottom: calc"]');
+      expect(toastBox?.getAttribute('style')).toContain('left: 28px');
+      expect(toastBox?.getAttribute('style')).not.toContain('right: 0px');
+    } finally {
+      cleanup();
+      slot.remove();
+    }
   });
 
   it('stays inline, with no gutter run-out, outside the shell', () => {
