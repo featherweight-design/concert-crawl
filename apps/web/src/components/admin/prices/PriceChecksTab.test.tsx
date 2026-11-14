@@ -94,7 +94,11 @@ describe('PriceChecksTab on the phone', () => {
     const card = (await screen.findByText(/Vince Staples ·/)).closest('li');
     const scope = within(card as HTMLElement);
     expect(scope.getAllByText(COPY.priceCheck).length).toBeGreaterThan(1);
-    expect(scope.getByRole('link', { name: COPY.openTicketPage })).toHaveStyle({
+    expect(
+      scope.getByRole('link', {
+        name: ADMIN_COPY.pricesPage.add.openTicketPage,
+      }),
+    ).toHaveStyle({
       height: '40px',
     });
   });
@@ -103,10 +107,28 @@ describe('PriceChecksTab on the phone', () => {
     setPhone(true);
     render(<PriceChecksTab />);
     const tabs = await screen.findByTestId('price-checks-views');
-    fireEvent.click(
-      within(tabs).getByRole('tab', { name: new RegExp(COPY.views.resolved) }),
-    );
+    // Named with a space before the count, not "Resolved17".
+    const tab = within(tabs).getByRole('tab', {
+      name: `${COPY.views.resolved} 17`,
+    });
+    fireEvent.click(tab);
     expect(await screen.findByText('Ninth Key')).toBeInTheDocument();
     expect(screen.queryByText(/Vince Staples/)).toBeNull();
+    expect(screen.getByRole('tabpanel')).toHaveAttribute(
+      'aria-labelledby',
+      tab.id,
+    );
+  });
+
+  it('puts Use before Keep, as ruled (A3 4d #20)', async () => {
+    setPhone(true);
+    render(<PriceChecksTab />);
+    const card = (await screen.findByText(/Vince Staples ·/)).closest('li');
+    const buttons = within(card as HTMLElement)
+      .getAllByRole('button')
+      .map((button) => button.textContent ?? '');
+    expect(buttons.findIndex((text) => text.startsWith('Use'))).toBeLessThan(
+      buttons.findIndex((text) => text.startsWith('Keep')),
+    );
   });
 });
