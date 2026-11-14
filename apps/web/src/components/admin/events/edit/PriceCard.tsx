@@ -125,6 +125,7 @@ export const PriceCard = ({
       </div>
       {open && mine !== null && (
         <EditPricePanel
+          single
           row={{
             title: detail.title,
             venueName: detail.venueName,

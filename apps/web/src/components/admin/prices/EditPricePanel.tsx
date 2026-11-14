@@ -9,6 +9,7 @@ import {
   SidePanel,
   useIsPhone,
 } from '@/components/admin/primitives';
+import { metaDate } from '../needs-you/needs-you-rules';
 import type { SubmittedRow } from './submitted-api';
 import { parseDollars, shortDate } from './prices-rules';
 
@@ -52,6 +53,8 @@ interface EditPricePanelProps {
   onClose: () => void;
   /** Saves the two amounts; resolves with the refusal's text, or null when saved. */
   onSave: (priceMin: string, priceMax: string | null) => Promise<string | null>;
+  /** Opened for one show from Event edit: drawn as `06/edit-price-desktop`. */
+  single?: boolean;
 }
 
 /**
@@ -64,6 +67,7 @@ export const EditPricePanel = ({
   row,
   onClose,
   onSave,
+  single = false,
 }: EditPricePanelProps) => {
   const isPhone = useIsPhone();
   const formId = useId();
@@ -154,6 +158,8 @@ export const EditPricePanel = ({
           checked={free}
           disabled={busy}
           onChange={(event) => setFree(event.target.checked)}
+          // The edit sheet draws a cyan check (`06/edit-price-desktop`).
+          style={single ? { accentColor: 'var(--signal)' } : undefined}
         />
         {ADD.free}
       </label>
@@ -166,18 +172,40 @@ export const EditPricePanel = ({
   );
 
   const footer = (
-    <AdminButton
-      variant="gradient"
-      size="md"
-      disabled={busy}
-      onClick={() => void save()}
-      style={{ flex: 1, height: isPhone ? 44 : 40 }}
-    >
-      {COPY.save}
-    </AdminButton>
+    <>
+      <AdminButton
+        variant="gradient"
+        size="md"
+        disabled={busy}
+        onClick={() => void save()}
+        style={{ flex: 1, height: isPhone ? 44 : 40 }}
+      >
+        {COPY.save}
+      </AdminButton>
+      {single && (
+        <AdminButton
+          variant="outline"
+          size="md"
+          disabled={busy}
+          onClick={onClose}
+          style={{ height: isPhone ? 44 : 40 }}
+        >
+          {ADMIN_COPY.confirm.cancel}
+        </AdminButton>
+      )}
+    </>
   );
 
   const sub = [row.venueName, row.date === null ? '' : shortDate(row.date)]
+    .filter(Boolean)
+    .join(' · ');
+  // `06/edit-price-desktop`: from Event edit, "Edit price" over the show,
+  // venue and day.
+  const singleMeta = [
+    row.title,
+    row.venueName,
+    row.date === null ? '' : metaDate(row.date),
+  ]
     .filter(Boolean)
     .join(' · ');
 
@@ -206,13 +234,19 @@ export const EditPricePanel = ({
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             color: 'var(--success)',
+            ...(single && {
+              padding: '2px 6px',
+              borderRadius: 5,
+              border:
+                '1px solid color-mix(in srgb, var(--success) 45%, transparent)',
+            }),
           }}
         >
           {ADD.eyebrow}
         </span>
       }
-      title={row.title}
-      subtitle={sub}
+      title={single ? COPY.sheetTitle : row.title}
+      subtitle={single ? singleMeta : sub}
       footer={footer}
       width={460}
       dismissible={!busy}
