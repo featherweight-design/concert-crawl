@@ -302,6 +302,37 @@ describe('EventRow — lifecycle beats the price state', () => {
     );
   });
 
+  // `more-st-rows_board`: the chip sits beside the name for every status, the
+  // slot holds a dash where there is nothing to buy, and a postponed show
+  // keeps its price and says "Date TBA".
+  it('sets Cancelled beside the name and dashes the price', () => {
+    render(
+      <EventRow show={makeShow({ lifecycle: 'cancelled' })} surface="browse" />,
+    );
+    expect(
+      screen
+        .getByTestId('row-title-line')
+        .contains(screen.getByTestId('row-cancelled')),
+    ).toBe(true);
+    expect(screen.getByTestId('row-no-price')).toHaveTextContent(
+      'No price, cancelled',
+    );
+  });
+
+  it('sets Postponed beside the name, keeps the price and says Date TBA', () => {
+    render(
+      <EventRow show={makeShow({ lifecycle: 'postponed' })} surface="browse" />,
+    );
+    expect(
+      screen
+        .getByTestId('row-title-line')
+        .contains(screen.getByTestId('row-postponed')),
+    ).toBe(true);
+    expect(screen.queryByTestId('row-no-price')).toBeNull();
+    expect(screen.getByText(/\$\d/)).toBeInTheDocument();
+    expect(screen.getByText('Date TBA')).toBeInTheDocument();
+  });
+
   it('reads Postponed, not Sold out, on a show that is both', () => {
     render(
       <EventRow
@@ -818,10 +849,13 @@ describe('EventRow — No longer listed (A5)', () => {
     expect(screen.queryByTestId('row-removed-line')).toBeNull();
   });
 
-  it('keeps the chip in the price slot on a wide row', () => {
+  it('sets the chip beside the name on a wide row and dashes the price', () => {
     render(<EventRow show={removedShow()} surface="browse" />);
-    const textColumn = screen.getByTestId('row-removed-line').parentElement;
-    expect(textColumn?.contains(screen.getByTestId('row-removed'))).toBe(false);
+    const chip = screen.getByTestId('row-removed');
+    expect(screen.getByTestId('row-title-line').contains(chip)).toBe(true);
+    expect(screen.getByTestId('row-no-price')).toHaveTextContent(
+      'No price, no longer listed',
+    );
   });
 
   it('moves the chip under the title on a narrow row', () => {
