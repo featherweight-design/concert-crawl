@@ -45,7 +45,8 @@ const addButtonStyle: CSSProperties = {
   border: '1px solid color-mix(in srgb, var(--signal) 30%, transparent)',
 };
 
-const DateTile = ({ date }: { date: string }) => {
+/** The mono weekday over the day number; the Events list draws it too. */
+export const DateTile = ({ date }: { date: string }) => {
   const tile = dateTile(date);
   return (
     <div

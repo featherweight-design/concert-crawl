@@ -8,8 +8,20 @@ export interface PageSkeletonProps {
   /** Columns per row on desktop; rows become cards on the phone. */
   columns?: number;
   rows?: number;
-  /** A search box above the filters, as Events and Venues draw it. */
+  /** A search box above the filters, as Venues draws it. */
   search?: boolean;
+  /**
+   * The search box at the start of the filter row instead of above it, as
+   * `07/loading-events` draws it.
+   */
+  inlineSearch?: boolean;
+  /** The page's title and subtitle bars, for a page whose client draws them. */
+  heading?: boolean;
+  /**
+   * The rows inside a table card with its header bar, and a status pill and
+   * value bars on each row, as `07/loading-events` draws them.
+   */
+  card?: boolean;
   /** The loaded row's height on this page, so nothing jumps (#178 item 29). */
   rowHeight: number;
 }
@@ -26,6 +38,9 @@ export const PageSkeleton = ({
   columns = 3,
   rows = 7,
   search = false,
+  inlineSearch = false,
+  heading = false,
+  card = false,
   rowHeight,
 }: PageSkeletonProps) => (
   <div
@@ -33,7 +48,16 @@ export const PageSkeleton = ({
     aria-busy="true"
     style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
   >
-    {search && <SkeletonBlock height={36} radius={12} />}
+    {heading && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <SkeletonBlock width={200} height={28} radius={8} />
+        <SkeletonBlock width="min(380px, 80%)" height={12} radius={6} />
+      </div>
+    )}
+    {search && !inlineSearch && <SkeletonBlock height={36} radius={12} />}
+    {inlineSearch && filters === 0 && (
+      <SkeletonBlock width="min(260px, 100%)" height={36} radius={12} />
+    )}
     {tabs > 0 && (
       <div style={{ display: 'flex', gap: 8 }}>
         {Array.from({ length: tabs }, (_, i) => (
@@ -42,7 +66,16 @@ export const PageSkeleton = ({
       </div>
     )}
     {filters > 0 && (
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          ...(inlineSearch && { flexWrap: 'wrap' }),
+        }}
+      >
+        {inlineSearch && (
+          <SkeletonBlock width="min(260px, 100%)" height={36} radius={12} />
+        )}
         {Array.from({ length: filters }, (_, i) => (
           <SkeletonBlock
             key={i}
@@ -58,8 +91,27 @@ export const PageSkeleton = ({
         // Rows fade toward the bottom, as every loading board draws them.
         maskImage: 'linear-gradient(to bottom, black 45%, transparent)',
         WebkitMaskImage: 'linear-gradient(to bottom, black 45%, transparent)',
+        ...(card && {
+          borderRadius: 14,
+          border: '1px solid var(--border)',
+          background: 'var(--surface-1)',
+          overflow: 'hidden',
+        }),
       }}
     >
+      {card && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            height: 38,
+            padding: '0 18px',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <SkeletonBlock width="min(380px, 60%)" height={8} radius={4} />
+        </div>
+      )}
       {Array.from({ length: rows }, (_, row) => (
         <div
           key={row}
@@ -69,12 +121,13 @@ export const PageSkeleton = ({
             gap: 12,
             height: rowHeight,
             borderBottom: '1px solid var(--border)',
+            ...(card && { padding: '0 18px' }),
           }}
         >
           <SkeletonBlock width={44} height={44} radius={10} />
           <div
             style={{
-              flex: 1,
+              flex: card ? '1 0 40%' : 1,
               display: 'flex',
               flexDirection: 'column',
               gap: 8,
@@ -87,9 +140,28 @@ export const PageSkeleton = ({
             />
             <SkeletonBlock width="35%" height={10} radius={5} />
           </div>
-          {Array.from({ length: Math.max(0, columns - 2) }, (_, col) => (
-            <SkeletonBlock key={col} width={70} height={20} radius={999} />
-          ))}
+          {card ? (
+            // A status pill and short value bars, as the table boards draw.
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                flex: '0 1 auto',
+                minWidth: 0,
+                overflow: 'hidden',
+              }}
+            >
+              <SkeletonBlock width={70} height={20} radius={999} />
+              {Array.from({ length: Math.max(0, columns - 3) }, (_, col) => (
+                <SkeletonBlock key={col} width={80} height={9} radius={5} />
+              ))}
+            </div>
+          ) : (
+            Array.from({ length: Math.max(0, columns - 2) }, (_, col) => (
+              <SkeletonBlock key={col} width={70} height={20} radius={999} />
+            ))
+          )}
         </div>
       ))}
     </div>

@@ -3,6 +3,7 @@ import { auth, requireAdminUser } from '@/lib/auth';
 import { ReviewPageClient } from '@/components/admin/review/ReviewPageClient';
 import { fetchNeedsYouDecisions } from '@/components/admin/shell/needs-you-count';
 import {
+  EVENTS_HREF,
   NEEDS_YOU_HREF,
   reviewPricesRedirect,
   reviewRedirectsToNeedsYou,
@@ -24,6 +25,8 @@ export default async function ReviewPage({
   await requireAdminUser();
   const params = await searchParams;
   const tab = firstParam(params?.['tab']);
+  // The all-events tab is the 4b Events list now.
+  if (tab === 'all-events') redirect(EVENTS_HREF);
   const pricesHref = reviewPricesRedirect(tab, firstParam(params?.['section']));
   if (pricesHref) redirect(pricesHref);
   if (reviewRedirectsToNeedsYou(tab)) redirect(NEEDS_YOU_HREF);

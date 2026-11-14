@@ -1,0 +1,53 @@
+{
+  "feature": "Admin 4b-1a · Events list",
+  "note": "Plan row 4b-1, first half (docs/superpowers/plans/2026-11-13-admin-4b-events-ui.md). CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/events, events-mobile, events-no-results, event-menu, past-shows; 07-people-flags-operations/loading-events; addendum-3 09-crawl-runs/load-more. By hand: loading (07/loading-events, throttle the API) and couldn't load (02/couldnt-load, stop the API). row-menu is desktop only: the phone cards draw no ⋯ (06/events-mobile), so its phone cells fail on the click by design. The venue, status, No price and Hidden filters (venue-filter, status-filter) land in 4b-1b with their own inventory; Add a show is held for 4b-3.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "list",
+      "label": "/admin/events (Upcoming)",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"events-list\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "no-results",
+      "label": "No shows match",
+      "steps": [
+        {
+          "goto": "/admin/events?q=zzzzzz",
+          "wait": "[data-testid=\"empty-state\"]",
+          "settle": 400
+        }
+      ]
+    },
+    {
+      "id": "row-menu",
+      "label": "Row ⋯ menu (desktop; phone cards have none)",
+      "steps": [
+        { "goto": "/admin/events", "wait": "[data-testid=\"events-list\"]" },
+        { "click": "[data-testid=\"event-row-menu\"]:visible >> nth=0" },
+        { "wait": "[role=\"menu\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "past",
+      "label": "/admin/events?when=past",
+      "steps": [
+        {
+          "goto": "/admin/events?when=past",
+          "wait": "[data-testid=\"events-list\"]",
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}

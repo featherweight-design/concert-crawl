@@ -4,6 +4,11 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 export interface Crumb {
   label: string;
   href?: string;
+  /**
+   * A view of the page above it (Events / Past), not a page of its own: the
+   * phone header keeps the page's title (4b#22).
+   */
+  view?: true;
 }
 
 const subLabelFor = (item: NavItem, pathname: string): string => {
@@ -41,6 +46,13 @@ export function buildBreadcrumbs(
   const key = activeNavKey(pathname, searchParams);
   const item = key ? NAV.find((candidate) => candidate.key === key) : undefined;
   if (!item) return [];
+  // `06/past-shows`: "Events / Past".
+  if (pathname === '/admin/events' && searchParams?.get('when') === 'past') {
+    return [
+      { label: item.label, href: item.href },
+      { label: ADMIN_COPY.eventsList.pastCrumb, view: true },
+    ];
+  }
   if (isSectionRoot(item, pathname)) return [{ label: item.label }];
   return [
     { label: item.label, href: item.href },

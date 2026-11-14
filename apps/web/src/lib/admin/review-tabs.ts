@@ -47,6 +47,9 @@ export const isRetiredReviewTab = (value: string | null | undefined): boolean =>
 /** Where retired tabs and a tab-less `/admin/review` land. */
 export const NEEDS_YOU_HREF = '/admin/needs-you';
 
+/** Where the retired all-events tab lands: the 4b Events list. */
+export const EVENTS_HREF = '/admin/events';
+
 /** Where the retired Review price tabs land. */
 export const PRICES_HREF = '/admin/prices';
 export const PRICES_SUBMITTED_HREF = '/admin/prices?tab=submitted';
