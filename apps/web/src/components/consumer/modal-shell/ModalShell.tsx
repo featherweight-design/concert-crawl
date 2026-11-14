@@ -10,6 +10,12 @@ import {
   CREW_PANEL,
 } from './crew-surface';
 import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
+import {
+  ScrollFade,
+  SHEET_FOOTER_PADDING,
+  SHEET_TOP_GAP,
+  useScrollEdges,
+} from './sheet-rule';
 
 interface ModalShellProps {
   open: boolean;
@@ -44,68 +50,7 @@ interface ModalShellProps {
   ariaDescribedBy?: string;
 }
 
-/** How far above a sheet's top edge it stops (addendum 6 item 15). */
-const SHEET_TOP_GAP = 24;
 const SHEET_MAX_HEIGHT = `calc(100% - ${SHEET_TOP_GAP}px)`;
-/** The fade above the pinned footer, tall enough to say "there is more". */
-const FADE_HEIGHT = 22;
-
-/**
- * Whether the scrolling body has been scrolled (the rail then draws a hairline
- * under it) and whether there is more below (the footer then draws a fade).
- * Watches size and content changes too, so a body that grows or shrinks after
- * a state change updates without a scroll.
- */
-function useScrollEdges(active: boolean, isMobile: boolean) {
-  const bodyRef = useRef<HTMLDivElement | null>(null);
-  const [edges, setEdges] = useState({ scrolled: false, more: false });
-
-  const measure = useCallback(() => {
-    const body = bodyRef.current;
-    if (body === null) return;
-    const scrolled = body.scrollTop > 0;
-    const more = body.scrollHeight - body.scrollTop - body.clientHeight > 1;
-    setEdges((prev) =>
-      prev.scrolled === scrolled && prev.more === more
-        ? prev
-        : { scrolled, more },
-    );
-  }, []);
-
-  useEffect(() => {
-    const body = bodyRef.current;
-    if (!active) {
-      // The shell stays mounted while closed: a reopened sheet starts unscrolled.
-      setEdges((prev) =>
-        prev.scrolled || prev.more ? { scrolled: false, more: false } : prev,
-      );
-      return;
-    }
-    if (body === null) return;
-    measure();
-    const observers: Array<{ disconnect: () => void }> = [];
-    if (typeof ResizeObserver !== 'undefined') {
-      const resize = new ResizeObserver(measure);
-      resize.observe(body);
-      // At the cap the body's own box stops changing; its content does not.
-      for (const child of Array.from(body.children)) resize.observe(child);
-      observers.push(resize);
-    }
-    if (typeof MutationObserver !== 'undefined') {
-      const mutation = new MutationObserver(measure);
-      mutation.observe(body, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-      observers.push(mutation);
-    }
-    return () => observers.forEach((observer) => observer.disconnect());
-    // The phone and desktop layouts mount different body elements.
-  }, [active, isMobile, measure]);
-
-  return { bodyRef, edges, measure };
-}
 
 export function ModalShell({
   open,
@@ -127,7 +72,13 @@ export function ModalShell({
   const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const drag = useSheetDrag(onClose, open);
-  const { bodyRef, edges, measure } = useScrollEdges(open && mounted, isMobile);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const { edges, measure } = useScrollEdges(
+    bodyRef,
+    open && mounted,
+    // The phone and desktop layouts mount different body elements.
+    isMobile,
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -222,21 +173,7 @@ export function ModalShell({
   // drawn panel), and the fade above it while there is more to scroll.
   const footerBackground = crew ? panel : 'var(--surface-2)';
   const hasFooter = Boolean(isMobile ? (mobileFooter ?? footer) : footer);
-  const fade = hasFooter && edges.more && (
-    <div
-      aria-hidden="true"
-      data-testid="modal-fade"
-      style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: FADE_HEIGHT,
-        pointerEvents: 'none',
-        background: `linear-gradient(to bottom, transparent, ${panel})`,
-      }}
-    />
-  );
+  const fade = <ScrollFade show={hasFooter && edges.more} panel={panel} />;
 
   // Portalled to the body: triggers live inside clipping and transformed
   // ancestors — the filter rail scrolls horizontally, and a transformed
@@ -355,7 +292,7 @@ export function ModalShell({
               style={{
                 flexShrink: 0,
                 // 12px above; 20px plus the safe area below.
-                padding: '12px 18px calc(20px + env(safe-area-inset-bottom))',
+                padding: SHEET_FOOTER_PADDING,
                 borderTop: '1px solid var(--border)',
                 background: footerBackground,
               }}

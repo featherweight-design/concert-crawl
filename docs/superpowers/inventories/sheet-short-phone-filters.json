@@ -1,0 +1,167 @@
+{
+  "feature": "Addendum 6 item 15b · the sheet rule on the filter sheets: the phone Filters sheet and the venue filter sheet at 320 x 568 (24px top stop, scrolling body, pinned footer, fade)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/screens/15-sheet-overflow/sheet-short-phone. PhoneFilterSheet (Browse) is opened on its main view, then its Where and Vibe lists; the older FilterSheet is the /venues index's phone sheet (Sort, Capacity). Both are phone surfaces (lg:hidden): the 1300 cells open the same pages and show the desktop popover instead, so the sheets are shot at 320 and 390 only. Signed in.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": {
+        "cc-theme": "light"
+      },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    {
+      "label": "short",
+      "width": 320,
+      "height": 568,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    }
+  ],
+  "rows": [
+    {
+      "id": "filters-main",
+      "label": "Filters sheet, main view",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "text=Filters",
+          "settle": 3000
+        },
+        {
+          "clickRole": "button",
+          "name": "^Filters"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-sheet\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "filters-main-end",
+      "label": "Filters sheet, main view scrolled to the end",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "text=Filters",
+          "settle": 3000
+        },
+        {
+          "clickRole": "button",
+          "name": "^Filters"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-sheet\"]"
+        },
+        {
+          "scrollTo": "[data-testid=\"filter-sheet-body\"] > :last-child",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "filters-where",
+      "label": "Filters sheet, the Where list",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "text=Filters",
+          "settle": 3000
+        },
+        {
+          "clickRole": "button",
+          "name": "^Filters"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-sheet\"]"
+        },
+        {
+          "click": "[data-testid=\"filter-sheet-all-where\"]"
+        },
+        {
+          "wait": "[data-testid=\"filter-sheet-body\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "filters-vibe",
+      "label": "Filters sheet, the Vibe list",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "text=Filters",
+          "settle": 3000
+        },
+        {
+          "clickRole": "button",
+          "name": "^Filters"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-sheet\"]"
+        },
+        {
+          "click": "[data-testid=\"filter-sheet-all-vibe\"]"
+        },
+        {
+          "wait": "[data-testid=\"vibe-full-list\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "venue-sort",
+      "label": "Venues index, the Sort sheet",
+      "steps": [
+        {
+          "goto": "/venues",
+          "wait": "button:has-text(\"Most upcoming shows\"):visible",
+          "settle": 4000
+        },
+        {
+          "click": "button:has-text(\"Most upcoming shows\"):visible"
+        },
+        {
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "venue-capacity",
+      "label": "Venues index, the Capacity sheet",
+      "steps": [
+        {
+          "goto": "/venues",
+          "wait": "button:has-text(\"Any capacity\"):visible",
+          "settle": 4000
+        },
+        {
+          "scrollTo": "button:has-text(\"Any capacity\"):visible",
+          "settle": 600
+        },
+        {
+          "click": "button:has-text(\"Any capacity\"):visible"
+        },
+        {
+          "settle": 2500
+        }
+      ]
+    }
+  ]
+}

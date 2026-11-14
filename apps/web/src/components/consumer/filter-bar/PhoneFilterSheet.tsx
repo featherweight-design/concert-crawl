@@ -30,6 +30,11 @@ import { genreColor } from '@/lib/genre-color';
 import { useModalDialog } from '@/lib/hooks/useModalDialog';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import {
+  ScrollFade,
+  SHEET_TOP_GAP,
+  useScrollEdges,
+} from '@/components/consumer/modal-shell/sheet-rule';
+import {
   FILTER_DEFS,
   VIBE_ORDER,
   compareVenueNames,
@@ -356,6 +361,9 @@ export function PhoneFilterSheet({
   // the way back lands where the main sheet was left. Set before paint, so a
   // list never flashes in at the main sheet's offset.
   const bodyRef = useRef<HTMLDivElement>(null);
+  // The fade above the pinned footer while there is more to scroll; a view
+  // change swaps the body's content, so it re-measures.
+  const { edges, measure } = useScrollEdges(bodyRef, true, view);
   const mainScroll = useRef(0);
   useLayoutEffect(() => {
     const body = bodyRef.current;
@@ -651,7 +659,9 @@ export function PhoneFilterSheet({
         className="sheet-edge absolute bottom-0 left-1/2 flex w-full -translate-x-1/2 flex-col rounded-t-[20px] [--sheet-bg:var(--surface-2)]"
         style={{
           maxWidth: 402,
-          maxHeight: 'calc(100dvh - 50px)',
+          // The sheet stops 24px below the top of the screen; taller content
+          // scrolls inside it (addendum 6 item 15).
+          maxHeight: `calc(100dvh - ${SHEET_TOP_GAP}px)`,
           boxShadow: '0 -20px 60px rgba(0,0,0,0.4)',
           ...drag.sheetStyle,
         }}
@@ -707,44 +717,53 @@ export function PhoneFilterSheet({
           </div>
         )}
 
-        <div
-          ref={bodyRef}
-          data-testid="filter-sheet-body"
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4"
-        >
-          {view === 'main' ? (
-            main
-          ) : view === 'where' ? (
-            <div className="pt-[11px]">
-              <VenueOptionGrid
-                venues={venues}
-                selected={draft.values.where}
-                onToggle={(slug) => toggle('where', slug)}
-                variant="sheet"
-              />
-            </div>
-          ) : (
-            <div
-              className="flex flex-wrap gap-x-[7px] gap-y-[7px] pt-[18px]"
-              data-testid="vibe-full-list"
-            >
-              {VIBE_ORDER.map((genre) => (
-                <VibeChip
-                  key={genre}
-                  genre={genre}
-                  on={draft.values.vibe.includes(genre)}
-                  disabled={!draft.values.vibe.includes(genre) && vibeAtCap}
-                  testId="vibe-option"
-                  onToggle={() => toggle('vibe', genre)}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <div
+            ref={bodyRef}
+            data-testid="filter-sheet-body"
+            onScroll={measure}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4"
+          >
+            {view === 'main' ? (
+              main
+            ) : view === 'where' ? (
+              <div className="pt-[11px]">
+                <VenueOptionGrid
+                  venues={venues}
+                  selected={draft.values.where}
+                  onToggle={(slug) => toggle('where', slug)}
+                  variant="sheet"
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            ) : (
+              <div
+                className="flex flex-wrap gap-x-[7px] gap-y-[7px] pt-[18px]"
+                data-testid="vibe-full-list"
+              >
+                {VIBE_ORDER.map((genre) => (
+                  <VibeChip
+                    key={genre}
+                    genre={genre}
+                    on={draft.values.vibe.includes(genre)}
+                    disabled={!draft.values.vibe.includes(genre) && vibeAtCap}
+                    testId="vibe-option"
+                    onToggle={() => toggle('vibe', genre)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          <ScrollFade show={edges.more} panel="var(--surface-2)" />
         </div>
 
+        {/* The pinned footer: a hairline on top, 12px above, 20px plus the
+            safe area below (the sheet itself is --surface-2). */}
         <div
-          className="shrink-0 px-4 pt-3"
-          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+          className="shrink-0"
+          style={{
+            padding: '12px 16px calc(20px + env(safe-area-inset-bottom))',
+            borderTop: '1px solid var(--border)',
+          }}
         >
           <button
             type="button"
