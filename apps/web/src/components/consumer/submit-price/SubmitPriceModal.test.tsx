@@ -430,7 +430,7 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     render(<SubmitPriceModal {...defaultProps} />);
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy());
     expect(screen.getByText(/\$45/)).toBeTruthy();
-    expect(screen.getByText('Edit submission')).toBeTruthy();
+    expect(screen.getByText('Edit your price')).toBeTruthy();
     expect(screen.getByText('Withdraw')).toBeTruthy();
   });
 
@@ -830,7 +830,7 @@ describe('SubmitPriceModal — per-event rate limit (#876)', () => {
 
     render(<SubmitPriceModal {...defaultProps} />);
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy());
-    expect(screen.queryByText('Edit submission')).toBeNull();
+    expect(screen.queryByText('Edit your price')).toBeNull();
     expect(screen.queryByText('Withdraw')).toBeNull();
   });
 
@@ -857,7 +857,7 @@ describe('SubmitPriceModal — per-event rate limit (#876)', () => {
 
     render(<SubmitPriceModal {...defaultProps} />);
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy());
-    expect(screen.getByText('Edit submission')).toBeTruthy();
+    expect(screen.getByText('Edit your price')).toBeTruthy();
     expect(screen.getByText('Withdraw')).toBeTruthy();
   });
 
@@ -904,7 +904,7 @@ describe('SubmitPriceModal — per-event rate limit (#876)', () => {
     render(<SubmitPriceModal {...defaultProps} />);
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy());
     // No pending row → no edit/withdraw actions.
-    expect(screen.queryByText('Edit submission')).toBeNull();
+    expect(screen.queryByText('Edit your price')).toBeNull();
     expect(screen.queryByText('Withdraw')).toBeNull();
   });
 

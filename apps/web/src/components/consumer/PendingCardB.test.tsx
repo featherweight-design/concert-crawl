@@ -271,13 +271,13 @@ describe('PendingCardB', () => {
         screen.getByRole('button', { name: /confirm price/i }),
       ).toBeTruthy();
       // Other-view footer should not surface the submitter labels
-      expect(screen.queryByText('Your submission')).toBeNull();
+      expect(screen.queryByText('Your price')).toBeNull();
       expect(screen.queryByRole('button', { name: 'Withdraw' })).toBeNull();
     });
 
     it('view "submitter" renders Your-submission label + Edit + Withdraw', () => {
       render(<PendingCardB {...buildProps({ view: 'submitter' })} />);
-      expect(screen.getByText('Your submission')).toBeTruthy();
+      expect(screen.getByText('Your price')).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Withdraw' })).toBeTruthy();
       expect(
@@ -291,7 +291,7 @@ describe('PendingCardB', () => {
           {...buildProps({ view: 'self-locked', kind: 'boxoffice' })}
         />,
       );
-      expect(screen.getByText('Your submission')).toBeTruthy();
+      expect(screen.getByText('Your price')).toBeTruthy();
       expect(screen.getByText('Waiting on one more fan')).toBeTruthy();
       expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Withdraw' })).toBeNull();
