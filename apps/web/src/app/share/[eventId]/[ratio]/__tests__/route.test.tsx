@@ -325,6 +325,30 @@ describe('GET /share/[eventId]/[ratio]', () => {
     }
   }, 30_000);
 
+  // The countdown's day and the cache life come from one instant, taken after
+  // the photo: a fallback card 30s before midnight lives 30s, not a minute.
+  it('caps a fallback countdown card at the venue’s midnight', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-11-10T06:59:30Z'));
+      getMock.mockResolvedValue({
+        ...event,
+        date: '2026-11-13',
+        artistPhotoUrl: 'https://photos.invalid/missing.jpg',
+      });
+      const response = await call(`http://localhost/share/${EVENT_ID}/link`, {
+        eventId: EVENT_ID,
+        ratio: 'link',
+      });
+      expect(response.headers.get('Cache-Control')).toBe(
+        'public, max-age=30, s-maxage=30',
+      );
+      expect(response.headers.get('ETag')).toMatch(/:f"$/);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 30_000);
+
   it('ignores an implausible handle instead of drawing it', async () => {
     const anon = await digest(
       await call(`http://localhost/share/${EVENT_ID}/square`, {

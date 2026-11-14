@@ -53,6 +53,8 @@ describe('isPublicPhotoUrl', () => {
     'http://[fd00::1]/a.jpg',
     'http://localhost/a.jpg',
     'http://localhost./a.jpg',
+    'http://localhost../a.jpg',
+    'http://printer.local../a.jpg',
     'http://printer.local/a.jpg',
     'http://metadata.google.internal/a.jpg',
     'http://intranet/a.jpg',
