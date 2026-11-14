@@ -1,3 +1,21 @@
+# [1.434.0](https://github.com/featherweight-design/concert-crawl/compare/v1.433.0...v1.434.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** edit sheet checkbox drawn as the board's themed box ([efd7964](https://github.com/featherweight-design/concert-crawl/commit/efd79641a03d17e1171fdc4fa8830612852e0eaf))
+* **admin:** event edit price sheets drawn as 06/edit-price-desktop ([ab26afe](https://github.com/featherweight-design/concert-crawl/commit/ab26afe436a5108bb18edc1069fbeb10087730d6))
+* **admin:** one-show price sheet says it saves as your submission ([09318fb](https://github.com/featherweight-design/concert-crawl/commit/09318fb8fb903c46ec4793a4e53789bc4d2c1042))
+* **admin:** price card edits only what the routes take ([e3b239b](https://github.com/featherweight-design/concert-crawl/commit/e3b239be643174dd676bf0f663d6a38477426b8f))
+
+
+### Features
+
+* **admin:** event edit price card with the shared price sheet ([057442b](https://github.com/featherweight-design/concert-crawl/commit/057442bde06ad1171dd1564698461a5d103563f1))
+* **web:** colour the confirm sheet by the price's trust level as addendum 5 draws it ([c3628de](https://github.com/featherweight-design/concert-crawl/commit/c3628de922af9c3defd9a559d2613d162dddbf60))
+* **web:** hint City on desktop and draw the Look card to the boards on Details ([30d205c](https://github.com/featherweight-design/concert-crawl/commit/30d205c13ed44aec0b0af1ca4cf3527af0e4ab81))
+* **web:** put City beside Neighborhood and drop the fallback art on Details ([acfc361](https://github.com/featherweight-design/concert-crawl/commit/acfc3619772ffe4f2a6f8b3d1bad315f92660b88))
+
 # [1.433.0](https://github.com/featherweight-design/concert-crawl/compare/v1.432.0...v1.433.0) (2026-11-14)
 
 
