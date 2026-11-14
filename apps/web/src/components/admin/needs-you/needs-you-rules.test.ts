@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CrawlRunReason } from '@concert-crawl/types';
 import type { QueueRow } from './needs-you-api';
 import {
+  panelTitleOf,
   metaOf,
   cardLabelOf,
   causeText,
@@ -132,6 +133,18 @@ describe('panel helpers', () => {
       ],
     }).map((item) => item.slug);
     expect(ordered).toEqual(['b', 'a', 'c']);
+  });
+
+  it('quotes only the show name in an event title, not the headliner prefix', () => {
+    const base = {
+      kind: 'event-low-confidence',
+      title: 'Michael Smoak: The Purpose Progression',
+      eventFacts: { artist: 'Michael Smoak' },
+    } as unknown as QueueRow;
+    expect(panelTitleOf(base)).toBe('Is “The Purpose Progression” a concert?');
+    expect(
+      panelTitleOf({ ...base, title: 'Purpose Progression' } as QueueRow),
+    ).toBe('Is “Purpose Progression” a concert?');
   });
 
   it('keeps the four newest runs and the status words', () => {
