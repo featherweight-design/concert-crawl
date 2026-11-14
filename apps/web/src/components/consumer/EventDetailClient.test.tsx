@@ -1871,6 +1871,61 @@ describe('EventDetailPriceBlock price check', () => {
     ).not.toBeNull();
   });
 
+  // The ended-check notice rides on the price card, and only on the card whose
+  // headline is the price the outcome names.
+  const outcomeFor = (submissionId: string) => ({
+    submissionId,
+    outcome: 'held' as const,
+    resolvedAt: '2026-11-13T12:00:00.000Z',
+    previous: null,
+  });
+
+  it('shows the ended-check notice on the card whose headline is the named price', () => {
+    const event = buildBaseEvent({
+      ticketPriceMin: '44.00',
+      priceSource: 'community',
+      priceCheckOutcome: outcomeFor('parent-1'),
+      priceByTier: [
+        makeTierBlock({ tier: 'GA', headline: headline('parent-1') }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    expect(screen.getByTestId('price-check-outcome')).toBeTruthy();
+  });
+
+  it('hides the ended-check notice when the card shows a different price than the one named', () => {
+    const event = buildBaseEvent({
+      ticketPriceMin: '44.00',
+      priceSource: 'community',
+      priceCheckOutcome: outcomeFor('some-other-price'),
+      priceByTier: [
+        makeTierBlock({ tier: 'GA', headline: headline('parent-1') }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    expect(screen.queryByTestId('price-check-outcome')).toBeNull();
+  });
+
+  it('shows the ended-check notice on a multi-tier event when the headline tier is the named price', () => {
+    const event = buildBaseEvent({
+      ticketPriceMin: '44.00',
+      priceSource: 'community',
+      priceCheckOutcome: outcomeFor('parent-1'),
+      priceByTier: [
+        makeTierBlock({ tier: 'GA', headline: headline('parent-1') }),
+        makeTierBlock({ tier: 'VIP', headline: headline('parent-2') }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    expect(screen.getByTestId('price-check-outcome')).toBeTruthy();
+  });
+
   it('draws no anchor and no check card when no tier is under a check', () => {
     const event = buildBaseEvent({
       ticketPriceMin: '44.00',

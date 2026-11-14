@@ -194,6 +194,7 @@ describe('MultiTierLiveCard price check outcome', () => {
   it('says an admin held the price', () => {
     renderWith({
       outcome: 'held',
+      submissionId: 's1',
       resolvedAt: '2026-11-13T12:00:00.000Z',
       previous: null,
     });
@@ -208,6 +209,7 @@ describe('MultiTierLiveCard price check outcome', () => {
   it('says the price was updated, and what it was', () => {
     renderWith({
       outcome: 'updated',
+      submissionId: 's1',
       resolvedAt: '2026-11-13T12:00:00.000Z',
       previous: { floor: 44, ceiling: null },
     });
@@ -219,12 +221,26 @@ describe('MultiTierLiveCard price check outcome', () => {
   it('draws a previous range as a range', () => {
     renderWith({
       outcome: 'updated',
+      submissionId: 's1',
       resolvedAt: '2026-11-13T12:00:00.000Z',
       previous: { floor: 44, ceiling: 60 },
     });
     expect(
       screen.getByText('Updated after a price check. Was $44–$60.'),
     ).toBeDefined();
+  });
+
+  // An update with no price it replaced has nothing true to say, and must not
+  // fall through to the "held" line.
+  it('draws nothing for an update that carries no previous price', () => {
+    renderWith({
+      submissionId: 's1',
+      outcome: 'updated',
+      resolvedAt: '2026-11-13T12:00:00.000Z',
+      previous: null,
+    });
+    expect(screen.queryByTestId('price-check-outcome')).toBeNull();
+    expect(screen.queryByText(/This number held/)).toBeNull();
   });
 
   it('draws nothing when there is no outcome', () => {

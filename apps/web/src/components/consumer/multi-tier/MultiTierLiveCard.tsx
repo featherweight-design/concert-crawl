@@ -72,10 +72,15 @@ const formatWas = (previous: { floor: number; ceiling: number | null }) =>
     ? `$${previous.floor}–$${previous.ceiling}`
     : `$${previous.floor}`;
 
-const checkOutcomeText = (outcome: PriceCheckOutcome): string =>
-  outcome.outcome === 'updated' && outcome.previous !== null
+// Null when the outcome cannot be put into words: an update with no price it
+// replaced says nothing true, and it must not fall through to the "held" line.
+const checkOutcomeText = (outcome: PriceCheckOutcome): string | null => {
+  if (outcome.outcome === 'held') return copy.checkHeld;
+  return outcome.previous !== null
     ? copy.checkUpdated(formatWas(outcome.previous))
-    : copy.checkHeld;
+    : null;
+};
+
 const formatHeadlinePrice = (floor: number, ceiling?: number): string => {
   if (ceiling !== undefined) return `$${floor}–${ceiling}`;
   return `$${floor}`;
@@ -92,6 +97,8 @@ export const MultiTierLiveCard = ({
   checkOutcome = null,
 }: MultiTierLiveCardProps) => {
   const hasAlternates = alternates.length > 0;
+  const outcomeText =
+    checkOutcome !== null ? checkOutcomeText(checkOutcome) : null;
 
   return (
     <div
@@ -213,7 +220,7 @@ export const MultiTierLiveCard = ({
       )}
 
       {/* How the last price check ended: a success-tinted notice row */}
-      {checkOutcome !== null && (
+      {checkOutcome !== null && outcomeText !== null && (
         <div
           data-testid="price-check-outcome"
           data-outcome={checkOutcome.outcome}
@@ -239,7 +246,7 @@ export const MultiTierLiveCard = ({
           >
             <CheckGlyph size={12} />
           </span>
-          <span>{checkOutcomeText(checkOutcome)}</span>
+          <span>{outcomeText}</span>
         </div>
       )}
     </div>

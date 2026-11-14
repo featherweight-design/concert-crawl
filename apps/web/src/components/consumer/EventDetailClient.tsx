@@ -1523,10 +1523,14 @@ export function EventDetailPriceBlock({
             observedAt={headlineBlock.headline?.observedAt ?? null}
             eventId={event.id}
             submissionId={headlineBlock.headline?.submissionId ?? null}
-            // The outcome is for the event's primary price, which is the
-            // headline only when there is one tier.
+            // The outcome names the live price it describes; show it only on
+            // the card whose headline is that price.
             checkOutcome={
-              blocks.length === 1 ? (event.priceCheckOutcome ?? null) : null
+              event.priceCheckOutcome != null &&
+              event.priceCheckOutcome.submissionId ===
+                headlineBlock.headline?.submissionId
+                ? event.priceCheckOutcome
+                : null
             }
           />
           {outboundLink !== null && outboundKind !== null && (
