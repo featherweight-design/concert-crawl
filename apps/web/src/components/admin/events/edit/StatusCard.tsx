@@ -67,25 +67,28 @@ const SMALL: CSSProperties = { fontSize: 12.5, color: 'var(--fg-muted)' };
 
 const Pills = ({
   chosen,
-  locked,
+  saleLocked,
   current,
   onSale,
   onPostponed,
 }: {
   chosen: Pill | null;
-  /** A past show: every pill reads only (4b#22). */
-  locked: boolean;
+  /**
+   * Tickets available and Sold out read only: a postponed show whose date
+   * passed stays Postponed until it has a new date (`36/postponed-passed-d`).
+   */
+  saleLocked: boolean;
   current: Pill | null;
   onSale: (sale: Sale) => void;
   onPostponed: () => void;
 }) => {
   const pills: { key: Pill; label: string; disabled: boolean }[] = [
-    { key: 'available', label: COPY.status.available, disabled: locked },
-    { key: 'soldout', label: COPY.status.soldout, disabled: locked },
+    { key: 'available', label: COPY.status.available, disabled: saleLocked },
+    { key: 'soldout', label: COPY.status.soldout, disabled: saleLocked },
     {
       key: 'postponed',
       label: COPY.status.postponed,
-      disabled: locked || current === 'postponed',
+      disabled: current === 'postponed',
     },
     // Mark cancelled waits for its Refund info field (Hugh 4b#7): drawn, and
     // chosen only when the show already is.
@@ -289,6 +292,7 @@ export const StatusCard = ({
   detail,
   phone,
   past,
+  saleLocked,
   sale,
   onSale,
   onPostpone,
@@ -302,6 +306,8 @@ export const StatusCard = ({
   phone: boolean;
   /** A played past show: its chip and went count, no pills. */
   past: boolean;
+  /** Tickets available and Sold out off (see `Pills`). */
+  saleLocked: boolean;
   /** The drafted sale, or null when the pills show what is saved. */
   sale: Sale | null;
   onSale: (sale: Sale) => void;
@@ -368,7 +374,7 @@ export const StatusCard = ({
               ].join(' · ')}
             </span>
           </div>
-          {!phone && <div style={SMALL}>{PAST.noStatus}</div>}
+          {!phone && <div style={SMALL}>{PAST.noStatus(detail.status)}</div>}
         </div>
       ) : delisted && sale === null ? (
         // `04/listed-again`, before: read-only, with the one way back.
@@ -435,7 +441,7 @@ export const StatusCard = ({
       ) : (
         <Pills
           chosen={sale ?? current}
-          locked={past}
+          saleLocked={saleLocked}
           current={current}
           onSale={onSale}
           onPostponed={() => setDialog('postponed')}

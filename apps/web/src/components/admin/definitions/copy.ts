@@ -4371,9 +4371,19 @@ export const ADMIN_COPY = {
     past: {
       banner:
         'This show has played. Fixes change the record on artist pages and in fans’ Concerts. Nobody is told.',
+      // A past show that never played (cancelled, no longer listed): the
+      // drawn banner, without "has played" (orchestrator ruling).
+      bannerNotPlayed:
+        'This show is in the past. Fixes change the record on artist pages and in fans’ Concerts. Nobody is told.',
       went: (count: number) =>
         `${count.toLocaleString('en-US')} marked “I went”`,
-      noStatus: 'A played show has no status to set.',
+      noStatus: (status: string) => {
+        if (status === 'cancelled')
+          return 'A cancelled show has no status to set.';
+        if (status === 'delisted')
+          return 'A show no longer listed has no status to set.';
+        return 'A played show has no status to set.';
+      },
       hideHint: 'Takes it off artist pages and Concerts.',
       priceRecord: 'A record. It can’t be edited.',
     },

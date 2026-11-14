@@ -523,7 +523,15 @@ export const EventEdit = ({
   );
   const snap = useSnapBack<Fields>(saved, async (next) => {
     const token = await tokenOrThrow();
-    const saleChanged = next.sale !== null && next.sale !== savedSale;
+    // While the date is still past, no sale write goes out: a played show has
+    // no status to set, and a passed postponed one stays Postponed until its
+    // new date (`36/postponed-passed-d`). No `status: 'upcoming'`, no
+    // sold-out or available call.
+    const saleChanged =
+      next.sale !== null &&
+      next.sale !== savedSale &&
+      !past &&
+      !(passed && next.date < today);
     const body: {
       title?: string;
       status?: 'upcoming';
@@ -714,6 +722,7 @@ export const EventEdit = ({
       detail={detail}
       phone={phone}
       past={past}
+      saleLocked={passed && draft.date < today}
       sale={draft.sale !== snap.value.sale ? draft.sale : null}
       onSale={(sale) => setDraft({ ...draft, sale })}
       onPostpone={(newDate) =>
@@ -764,7 +773,9 @@ export const EventEdit = ({
   );
   const banner = past ? (
     <Banner warning={false} phone={phone}>
-      {COPY.past.banner}
+      {detail.status === 'played'
+        ? COPY.past.banner
+        : COPY.past.bannerNotPlayed}
     </Banner>
   ) : passed ? (
     <Banner warning phone={phone}>
