@@ -246,7 +246,9 @@ describe('NeedsYouClient', () => {
         if (url.endsWith('/needs-you/count'))
           return json({
             ...COUNT,
-            decisions: 1,
+            // A second item keeps the queue from reading All clear, which
+            // would hide the answered line this test looks for.
+            decisions: 2,
             byKind: { ...COUNT.byKind, 'show-dropped': 0, bug: 0 },
           });
         if (url.endsWith('/answer'))
@@ -256,7 +258,7 @@ describe('NeedsYouClient', () => {
             auditId: 'audit-p',
             undoable: false,
           });
-        return json([venue]);
+        return json([venue, ITEMS[1]]);
       }),
     );
     render(<NeedsYouClient item={null} />);
