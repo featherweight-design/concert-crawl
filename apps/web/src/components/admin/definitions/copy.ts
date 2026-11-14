@@ -4139,6 +4139,52 @@ export const ADMIN_COPY = {
       firstSeen: 'First seen',
       lastSeen: 'Last seen',
     },
+    // `06/event-edit` Status card; Moved waits for Hugh (4b#1).
+    status: {
+      title: 'Status',
+      available: 'Tickets available',
+      soldout: 'Sold out',
+      postponed: 'Postponed',
+      cancelled: 'Cancelled',
+      delisted: 'No longer listed',
+      hide: 'Hide from site',
+      hideHint: 'For not-a-concert or duplicates.',
+    },
+    // addendum-3 `10/postponed-d`, `10/postponed-m` (4b#6). New date is held
+    // for the date and time pickers.
+    postponed: {
+      title: (show: string) => `${show} is postponed?`,
+      notice: (watching: number) =>
+        watching === 0
+          ? 'Nobody is Watching it yet.'
+          : `${watching.toLocaleString('en-US')} ${watching === 1 ? 'person' : 'people'} Watching it get one notice.`,
+      stays: 'The show stays listed as Postponed until it has a date.',
+      noDate: 'No new date yet',
+      newDate: 'New date',
+      confirm: 'Mark postponed',
+      failed: 'mark it postponed',
+    },
+    // `04/hide-from-site`, without the Why row: no column holds a reason yet.
+    hide: {
+      title: (show: string) => `Hide ${show} from the site?`,
+      body: (show: string, watching: number) =>
+        `${show} disappears from the app, including Watching lists and search. ${
+          watching === 0
+            ? 'Nobody is Watching it.'
+            : `${watching.toLocaleString('en-US')} ${watching === 1 ? 'person is' : 'people are'} Watching it; they get no notice.`
+        }`,
+      foot: 'You can show it again here. Nothing is deleted.',
+      confirm: 'Hide show',
+      failed: 'hide it',
+      saved: 'It’s still on the site.',
+      menu: 'Hide from site…',
+      menuHint: 'Not a concert, or a duplicate',
+    },
+    unhideFailed: {
+      what: 'Hide from site',
+      saved: 'It’s still hidden.',
+    },
+    statusSaved: (status: string) => `The status is still ${status}.`,
     saveBar: {
       unsaved: (count: number) =>
         count === 1 ? '1 unsaved change' : `${count} unsaved changes`,

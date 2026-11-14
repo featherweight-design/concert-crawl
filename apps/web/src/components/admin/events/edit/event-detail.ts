@@ -28,6 +28,11 @@ export interface EventDetail {
   hidden: boolean;
   hiddenReason: HiddenReason | null;
   watchingCount: number;
+  /**
+   * The sold-out flag, apart from `status`: a postponed show can be sold out
+   * too, and Tickets available must clear it.
+   */
+  isSoldOut: boolean;
   /** `structured_data`, `llm` or `manual`; `null` when unknown. */
   extractionStrategy: string | null;
   /** ISO timestamps. */
@@ -56,6 +61,7 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     typeof value['hiddenFromConsumer'] !== 'boolean' ||
     !isHiddenReason(value['hiddenReason']) ||
     !isCount(value['watchingCount']) ||
+    typeof value['isSoldOut'] !== 'boolean' ||
     !isTextOrNull(value['extractionStrategy']) ||
     !isText(value['createdAt']) ||
     !isTextOrNull(value['lastSeenAt'])
@@ -79,6 +85,7 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     hidden: value['hiddenFromConsumer'],
     hiddenReason: value['hiddenReason'],
     watchingCount: value['watchingCount'],
+    isSoldOut: value['isSoldOut'],
     extractionStrategy: value['extractionStrategy'],
     firstSeenAt: value['createdAt'],
     lastSeenAt: value['lastSeenAt'],

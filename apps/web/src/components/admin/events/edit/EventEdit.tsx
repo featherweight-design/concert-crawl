@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { ExternalLink, GitMerge } from 'lucide-react';
+import { ExternalLink, EyeOff, GitMerge } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -29,6 +29,7 @@ import { apiClient } from '@/lib/api';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { MergeEventDialog } from '../editor/MergeEventDialog';
+import { StatusCard, pillOf, type Sale, type StatusDialog } from './StatusCard';
 import { StatusChips } from '../list/EventsList';
 import { fieldDate, fieldTime, isPast, type EventDetail } from './event-detail';
 
@@ -38,11 +39,18 @@ const LIST = ADMIN_COPY.eventsList;
 /** The fields this editor saves. Status, Hidden and price save on their own. */
 interface Fields {
   title: string;
+  /** Tickets available or Sold out; `null` while neither pill is chosen. */
+  sale: Sale | null;
 }
+
+/** The saved sale: the pill drawn chosen when nothing is drafted. */
+const saleOf = (status: EventDetail['status']): Sale | null =>
+  status === 'available' || status === 'soldout' ? status : null;
 
 /** How many fields differ from what is saved: the Save bar's count. */
 const changedCount = (draft: Fields, saved: Fields): number =>
-  draft.title.trim() !== saved.title.trim() ? 1 : 0;
+  (draft.title.trim() !== saved.title.trim() ? 1 : 0) +
+  (draft.sale !== saved.sale ? 1 : 0);
 
 /** The header's 36px buttons, as on the venue header (`06/event-edit`). */
 const BUTTON: CSSProperties = {
@@ -114,10 +122,13 @@ const Header = ({
   detail,
   phone,
   onMerge,
+  onHide,
 }: {
   detail: EventDetail;
   phone: boolean;
   onMerge: () => void;
+  /** Opens the Hide dialog; `null` once the show is hidden. */
+  onHide: (() => void) | null;
 }) => {
   const { venueUrl } = detail;
   const grow = phone ? 1 : 'none';
@@ -147,7 +158,9 @@ const Header = ({
             {detail.title}
           </h1>
           {/* The phone board draws the ⋯ at the top right, beside the title. */}
-          {phone && <EventEditMenu detail={detail} onMerge={onMerge} />}
+          {phone && (
+            <EventEditMenu detail={detail} onMerge={onMerge} onHide={onHide} />
+          )}
         </div>
         <div
           style={{
@@ -185,7 +198,9 @@ const Header = ({
             {phone ? COPY.onVenueSitePhone : COPY.onVenueSite}
           </a>
         )}
-        {!phone && <EventEditMenu detail={detail} onMerge={onMerge} />}
+        {!phone && (
+          <EventEditMenu detail={detail} onMerge={onMerge} onHide={onHide} />
+        )}
       </div>
     </div>
   );
@@ -198,9 +213,11 @@ const Header = ({
 const EventEditMenu = ({
   detail,
   onMerge,
+  onHide,
 }: {
   detail: EventDetail;
   onMerge: () => void;
+  onHide: (() => void) | null;
 }) => (
   <RowMenu
     label={LIST.menu.label(detail.title)}
@@ -236,6 +253,18 @@ const EventEditMenu = ({
         hint: COPY.menu.mergeHint,
         onSelect: onMerge,
       },
+      ...(onHide === null
+        ? []
+        : [
+            {
+              key: 'hide',
+              icon: EyeOff,
+              label: COPY.hide.menu,
+              hint: COPY.hide.menuHint,
+              warning: true,
+              onSelect: onHide,
+            },
+          ]),
     ]}
   />
 );
@@ -338,17 +367,49 @@ export const EventEdit = ({
     return () => setPhoneBack(null);
   }, [backLabel, backHref, setPhoneBack]);
 
-  // Memoised: `useSnapBack` treats a new object as a fresh server value.
-  // Keyed on the saved title alone, so a refresh after another save (status,
-  // Hidden, a merge) never throws away a title being typed.
-  const savedTitle = detail.title;
-  const saved = useMemo(() => ({ title: savedTitle }), [savedTitle]);
-  const snap = useSnapBack<Fields>(saved, async (next) => {
+  const tokenOrThrow = async (): Promise<string> => {
     const token = await getToken();
     if (!token) throw new Error('signed out');
-    await apiClient.patch(`/v1/admin/events/${detail.id}`, token, next);
+    return token;
+  };
+  const path = `/v1/admin/events/${detail.id}`;
+
+  // Memoised: `useSnapBack` treats a new object as a fresh server value.
+  // Keyed on the saved title and sale alone, so a refresh after another save
+  // (Hidden, a merge) never throws away a title being typed.
+  const savedTitle = detail.title;
+  const savedSale = saleOf(detail.status);
+  const saved = useMemo(
+    () => ({ title: savedTitle, sale: savedSale }),
+    [savedTitle, savedSale],
+  );
+  const snap = useSnapBack<Fields>(saved, async (next) => {
+    const token = await tokenOrThrow();
+    const saleChanged = next.sale !== null && next.sale !== savedSale;
+    const body: { title?: string; status?: 'upcoming' } = {
+      ...(next.title !== savedTitle && { title: next.title }),
+      // Back on sale from Postponed or Cancelled: the show is on again.
+      ...(saleChanged &&
+        (detail.status === 'postponed' || detail.status === 'cancelled') && {
+          status: 'upcoming',
+        }),
+    };
+    if (Object.keys(body).length > 0) await apiClient.patch(path, token, body);
+    // Sold out is its own flag with its own Watcher notice (`watch.soldout`).
+    if (saleChanged && next.sale === 'soldout' && !detail.isSoldOut) {
+      await apiClient.post(`${path}/sold-out`, token, {});
+    }
+    if (saleChanged && next.sale === 'available' && detail.isSoldOut) {
+      await apiClient.post(`${path}/available`, token, {});
+    }
     router.refresh();
   });
+  const [dialog, setDialog] = useState<StatusDialog | null>(null);
+  /** Postponed and Hide save at once, outside the Save bar (they confirm). */
+  const saveNow = async (body: object) => {
+    await apiClient.patch(path, await tokenOrThrow(), body);
+    router.refresh();
+  };
   const [draft, setDraft] = useState<Fields>(snap.value);
   // What is saved (after a save, a refresh, or a snap-back) resets the form.
   useEffect(() => setDraft(snap.value), [snap.value]);
@@ -437,6 +498,20 @@ export const EventEdit = ({
     </AdminCard>
   );
 
+  const status = (
+    <StatusCard
+      detail={detail}
+      phone={phone}
+      past={past}
+      sale={draft.sale !== snap.value.sale ? draft.sale : null}
+      onSale={(sale) => setDraft({ ...draft, sale })}
+      onPostpone={() => saveNow({ status: 'postponed' })}
+      onHidden={(hidden) => saveNow({ hiddenFromConsumer: hidden })}
+      dialog={dialog}
+      setDialog={setDialog}
+    />
+  );
+
   return (
     <div
       data-testid="event-edit"
@@ -448,26 +523,47 @@ export const EventEdit = ({
         minHeight: '100%',
       }}
     >
-      <Header detail={detail} phone={phone} onMerge={() => setMerging(true)} />
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: phone
-            ? 'minmax(0, 1fr)'
-            : 'repeat(2, minmax(0, 1fr))',
-          gap: 16,
-          alignItems: 'start',
-        }}
-      >
+      <Header
+        detail={detail}
+        phone={phone}
+        onMerge={() => setMerging(true)}
+        onHide={detail.hidden ? null : () => setDialog('hide')}
+      />
+      {phone ? (
+        // `06/event-edit-mobile`: the Show fields, then Status, stacked.
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {fields}
+          {status}
           {crawl}
         </div>
-      </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 16,
+            alignItems: 'start',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {fields}
+            {crawl}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {status}
+          </div>
+        </div>
+      )}
       {snap.failed !== null && (
         <SaveFailedToast
           what={COPY.saveFailed.what}
-          saved={COPY.saveFailed.saved(snap.failed.saved.title)}
+          saved={
+            snap.failed.attempted.title !== snap.failed.saved.title
+              ? COPY.saveFailed.saved(snap.failed.saved.title)
+              : COPY.statusSaved(
+                  COPY.status[pillOf(detail.status) ?? 'available'],
+                )
+          }
           onRetry={() => void snap.retry()}
           retrying={snap.saving}
           onDismiss={snap.dismiss}
@@ -480,7 +576,9 @@ export const EventEdit = ({
           saving={snap.saving}
           phone={phone}
           onDiscard={() => setDraft(snap.value)}
-          onSave={() => void snap.save({ title: draft.title.trim() })}
+          onSave={() =>
+            void snap.save({ title: draft.title.trim(), sale: draft.sale })
+          }
         />
       )}
       {merging && (
