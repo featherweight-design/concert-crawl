@@ -10,7 +10,10 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(nav.search),
 }));
 
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { MobileBottomBar } from './MobileBottomBar';
+import { NEEDS_YOU_FAILED_ATTR } from './nav';
 
 const renderAt = (pathname: string, needsYou = 0) => {
   nav.pathname = pathname;
@@ -50,5 +53,20 @@ describe('MobileBottomBar', () => {
   it('badges only Needs you', () => {
     renderAt('/admin', 3);
     expect(screen.getAllByTestId('admin-needs-you-badge')).toHaveLength(1);
+  });
+
+  it('hides the badge while Needs you couldn’t load (addendum-3 #21)', () => {
+    renderAt('/admin/needs-you', 3);
+    // The class admin.css hides under the root flag Needs you sets.
+    expect(screen.getByTestId('admin-tab-bar-badge')).toHaveClass(
+      'admin-tab-bar-badge',
+    );
+    const css = readFileSync(
+      path.resolve(__dirname, '../../../app/(protected)/admin/admin.css'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+    expect(css).toContain(
+      `[${NEEDS_YOU_FAILED_ATTR}] .admin-tab-bar-badge { display: none; }`,
+    );
   });
 });

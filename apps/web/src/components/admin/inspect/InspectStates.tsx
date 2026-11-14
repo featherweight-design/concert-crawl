@@ -4,7 +4,10 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { Clock, ExternalLink, RefreshCw, X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { StateMessage } from '@/components/admin/primitives/StateMessage';
+import {
+  COULDNT_LOAD_X_STROKE,
+  StateMessage,
+} from '@/components/admin/primitives/StateMessage';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import type { GoneReason } from './inspect-rules';
 
@@ -139,6 +142,8 @@ export const InspectCouldntLoad = ({
     role="alert"
     icon={X}
     tone="var(--danger)"
+    tinted
+    iconStrokeWidth={COULDNT_LOAD_X_STROKE}
     title={COPY.couldntLoad.title}
     body={COPY.couldntLoad.body}
     actions={

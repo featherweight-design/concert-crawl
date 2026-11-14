@@ -40,7 +40,7 @@ export type { ConfirmDialogProps } from './ConfirmDialog';
 export { PageSkeleton } from './PageSkeleton';
 export type { PageSkeletonProps } from './PageSkeleton';
 export { EmptyState } from './EmptyState';
-export { CouldntLoad } from './CouldntLoad';
+export { CouldntLoad, CouldntLoadPage } from './CouldntLoad';
 export { SaveFailedToast } from './SaveFailedToast';
 export { PinnedSaveBar } from './PinnedSaveBar';
 export type { PinnedSaveBarLook, PinnedSaveBarProps } from './PinnedSaveBar';

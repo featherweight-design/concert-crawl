@@ -4309,7 +4309,6 @@ export const ADMIN_COPY = {
       body: "This page didn't load. Nothing you decided is lost.",
       tryAgain: 'Try again',
       openHealth: 'Open Health',
-      errorId: (digest: string) => `Error ID: ${digest}`,
     },
     saveFailed: {
       title: (what: string) => `Couldn't change ${what}`,

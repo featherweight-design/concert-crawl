@@ -17,9 +17,11 @@ import {
   AdminButton,
   ConfirmDialog,
   CouldntLoad,
+  CouldntLoadPage,
   SaveFailedToast,
   useIsPhone,
 } from '@/components/admin/primitives';
+import { NEEDS_YOU_FAILED_ATTR } from '@/components/admin/shell/nav';
 import { AllClear } from './AllClear';
 import { AnsweredRow } from './AnsweredRow';
 import { NeedsYouSkeleton } from './NeedsYouSkeleton';
@@ -156,6 +158,17 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Addendum-3 item 21 (`01/couldnt-load-m`): while the queue couldn't load,
+  // the phone tab bar's badge hides, since its count can't be trusted. The
+  // tab bar lives in the shell, so the flag rides on the root element and
+  // admin.css hides `.admin-tab-bar-badge` under it.
+  useEffect(() => {
+    if (!failedLoad) return;
+    const root = document.documentElement;
+    root.setAttribute(NEEDS_YOU_FAILED_ATTR, '');
+    return () => root.removeAttribute(NEEDS_YOU_FAILED_ATTR);
+  }, [failedLoad]);
 
   // The All clear card's facts, read once the queue is empty. A failed read
   // leaves the card without them: they are context, not a decision.
@@ -354,8 +367,30 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       />
     ) : null;
 
+  // The phone shell already prints the page's title in its top bar. Every
+  // desktop board draws it 28/800 (`02/needs-you-desktop`, `02/couldnt-load`).
+  // `02/couldnt-load` draws that title without the loaded page's -0.02em.
+  const pageTitle = !isPhone && (
+    <h1
+      style={{
+        margin: 0,
+        fontSize: 28,
+        fontWeight: 800,
+        letterSpacing: failedLoad ? undefined : '-0.02em',
+        color: 'var(--fg)',
+      }}
+    >
+      {COPY.title}
+    </h1>
+  );
+
+  // `02/couldnt-load`: the title stays, only the content under it changes.
   if (failedLoad)
-    return <CouldntLoad page={COPY.title} onRetry={() => void load()} />;
+    return (
+      <CouldntLoadPage title={pageTitle}>
+        <CouldntLoad fill page={COPY.title} onRetry={() => void load()} />
+      </CouldntLoadPage>
+    );
   // The queue loads in the browser, so the skeleton the route's `loading.tsx`
   // drew stays up through the real wait (`07/loading-needs-you`).
   if (rows === null || count === null) return <NeedsYouSkeleton />;
@@ -399,20 +434,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
         }}
       >
         <header style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {/* The phone shell already prints the page's title in its top bar. */}
-          {!isPhone && (
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 32,
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                color: 'var(--fg)',
-              }}
-            >
-              {COPY.title}
-            </h1>
-          )}
+          {pageTitle}
           {/* All clear draws the title alone: the card says the rest. */}
           {!allClear && (
             <p style={{ margin: 0, fontSize: 14.5, color: 'var(--fg-muted)' }}>

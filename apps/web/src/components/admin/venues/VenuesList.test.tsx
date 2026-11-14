@@ -154,6 +154,32 @@ describe('VenuesList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(refresh).toHaveBeenCalled();
   });
+
+  it('keeps the page title above Couldn’t load (README 02: chrome stays)', () => {
+    render(<VenuesList venues={null} />);
+    const title = screen.getByRole('heading', { level: 1, name: COPY.title });
+    // `02/couldnt-load`'s title: 28/800, no letter-spacing.
+    expect(title.style.fontSize).toBe('28px');
+    expect(title.style.letterSpacing).toBe('');
+    expect(
+      screen.getByRole('heading', { name: `Couldn't load ${COPY.title}` }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('couldnt-load-page')).toContainElement(title);
+    expect(screen.getByTestId('couldnt-load')).toHaveClass(
+      'admin-couldnt-load-fill',
+    );
+  });
+
+  it('leaves the title to the phone top bar on error', () => {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    render(<VenuesList venues={null} />);
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    expect(screen.getByTestId('couldnt-load')).toBeInTheDocument();
+  });
 });
 
 describe('VenuesList Select', () => {
