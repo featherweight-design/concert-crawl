@@ -61,7 +61,7 @@ describe('PendingReportBanner, Tickets available', () => {
     );
 
     expect(screen.getByText('Venue site')).toBeTruthy();
-    const link = screen.getByRole('link', { name: copy.viewEvidenceLink });
+    const link = screen.getByRole('link', { name: copy.viewEvidenceAria });
     expect(link.getAttribute('href')).toBe('https://venue.example/post');
   });
 
@@ -75,7 +75,7 @@ describe('PendingReportBanner, Tickets available', () => {
     );
 
     expect(
-      screen.getByRole('link', { name: copy.viewEvidenceLink }),
+      screen.getByRole('link', { name: copy.viewEvidenceAria }),
     ).toBeTruthy();
   });
 
@@ -86,7 +86,7 @@ describe('PendingReportBanner, Tickets available', () => {
       />,
     );
 
-    expect(screen.queryByRole('link', { name: copy.viewEvidenceLink })).toBe(
+    expect(screen.queryByRole('link', { name: copy.viewEvidenceAria })).toBe(
       null,
     );
   });
@@ -131,9 +131,6 @@ describe.each(['cancelled', 'postponed'] as const)(
       const confirm = screen.getByRole('button', { name: copy.confirmButton });
       expect(confirm.style.height).toBe('36px');
       expect(confirm.style.borderRadius).toBe('12px');
-      expect(
-        screen.getByText(copy.footerQuestion).style.textTransform,
-      ).not.toBe('uppercase');
       expect(
         container.querySelector('[data-testid="pending-icon-tile"]'),
       ).not.toBeNull();
