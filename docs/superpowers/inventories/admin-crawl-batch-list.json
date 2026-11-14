@@ -1,0 +1,395 @@
+{
+  "feature": "Admin 1d · Crawl runs batch list (P47-18 PR2)",
+  "note": "CONTACT_SHEET_ROLE=admin. Desktop only: the phone cards and filters land in the next PR, and until then the phone draws this table scrolling sideways. Boards: 07/crawl-runs-desktop, A3/09/loading-runs-d, A3/09/runs-filter-empty-d, A3/09/load-more. Read-only: every row answers GET /v1/admin/crawl/batches with a mocked body (the API's { success, data, hasMore, nextBefore } envelope); nothing starts a crawl. One route answers every page, so Load more's second page repeats the first and the dedupe keeps the list as it was: the row shows the footer, not a second page. The loading row screenshots the skeleton before the mocked body lands, so it is best-effort. Rows link to ?run=<linkKey>; the batch detail is PR3, so no detail row.",
+  "widths": [{ "label": "desktop", "width": 1440, "height": 1000 }],
+  "rows": [
+    {
+      "id": "list",
+      "label": "The list: Done, amber Done (Blocked), Failed re-crawl, Didn't start, retried night, Running Crawl all",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/batches*",
+          "body": {
+            "success": true,
+            "hasMore": false,
+            "nextBefore": null,
+            "data": [
+              {
+                "key": "by_hand:user_x:1762898700",
+                "kind": "by_hand",
+                "startedAt": "2026-11-11T21:05:00.000Z",
+                "endedAt": "2026-11-11T21:13:00.000Z",
+                "night": null,
+                "actor": "user_x",
+                "venueCount": 19,
+                "counts": {
+                  "ok": 7,
+                  "notOk": 0,
+                  "unchanged": 1,
+                  "skipped": 0,
+                  "total": 8,
+                  "failed": 0,
+                  "blocked": 0
+                },
+                "eventsFound": 410,
+                "eventsInserted": 3,
+                "pending": 11,
+                "retried": false,
+                "didntStart": false,
+                "costUsd": 0.31,
+                "linkKey": "run:1762898700:aa11bb22",
+                "crawlAll": true,
+                "venueName": null,
+                "actorHandle": "hugh",
+                "retry": null
+              },
+              {
+                "key": "nightly:2026-11-11",
+                "kind": "nightly",
+                "startedAt": "2026-11-11T10:00:00.000Z",
+                "endedAt": "2026-11-11T10:18:00.000Z",
+                "night": "2026-11-11",
+                "actor": null,
+                "venueCount": 21,
+                "counts": {
+                  "ok": 14,
+                  "notOk": 1,
+                  "unchanged": 6,
+                  "skipped": 0,
+                  "total": 21,
+                  "failed": 1,
+                  "blocked": 0
+                },
+                "eventsFound": 1180,
+                "eventsInserted": 9,
+                "pending": 0,
+                "retried": false,
+                "didntStart": false,
+                "costUsd": 0.71,
+                "linkKey": "nightly:2026-11-11",
+                "crawlAll": false,
+                "venueName": null,
+                "actorHandle": null,
+                "retry": null
+              },
+              {
+                "key": "by_hand:user_x:1762809240",
+                "kind": "by_hand",
+                "startedAt": "2026-11-10T21:14:00.000Z",
+                "endedAt": "2026-11-10T21:18:00.000Z",
+                "night": null,
+                "actor": "user_x",
+                "venueCount": 1,
+                "counts": {
+                  "ok": 1,
+                  "notOk": 0,
+                  "unchanged": 0,
+                  "skipped": 0,
+                  "total": 1,
+                  "failed": 0,
+                  "blocked": 0
+                },
+                "eventsFound": 106,
+                "eventsInserted": 0,
+                "pending": 0,
+                "retried": false,
+                "didntStart": false,
+                "costUsd": 0.15,
+                "linkKey": "run:1762809240:aa11bb22",
+                "crawlAll": false,
+                "venueName": "Ball Arena",
+                "actorHandle": "hugh",
+                "retry": null
+              },
+              {
+                "key": "by_hand:user_x:1762790000",
+                "kind": "by_hand",
+                "startedAt": "2026-11-10T15:53:20.000Z",
+                "endedAt": "2026-11-10T15:54:00.000Z",
+                "night": null,
+                "actor": "user_x",
+                "venueCount": 1,
+                "counts": {
+                  "ok": 0,
+                  "notOk": 1,
+                  "unchanged": 0,
+                  "skipped": 0,
+                  "total": 1,
+                  "failed": 1,
+                  "blocked": 0
+                },
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "pending": 0,
+                "retried": false,
+                "didntStart": false,
+                "costUsd": 0,
+                "linkKey": "run:1762790000:aa11bb22",
+                "crawlAll": false,
+                "venueName": "Junkyard",
+                "actorHandle": "hugh",
+                "retry": null
+              },
+              {
+                "key": "nightly:2026-11-10",
+                "kind": "nightly",
+                "startedAt": "2026-11-10T10:00:00.000Z",
+                "endedAt": "2026-11-10T10:22:00.000Z",
+                "night": "2026-11-10",
+                "actor": null,
+                "venueCount": 21,
+                "counts": {
+                  "ok": 13,
+                  "notOk": 2,
+                  "unchanged": 6,
+                  "skipped": 0,
+                  "total": 21,
+                  "failed": 1,
+                  "blocked": 1
+                },
+                "eventsFound": 1150,
+                "eventsInserted": 4,
+                "pending": 0,
+                "retried": false,
+                "didntStart": false,
+                "costUsd": 0.92,
+                "linkKey": "nightly:2026-11-10",
+                "crawlAll": false,
+                "venueName": null,
+                "actorHandle": null,
+                "retry": null
+              },
+              {
+                "key": "nightly:2026-11-09",
+                "kind": "nightly",
+                "startedAt": "2026-11-09T10:00:00.000Z",
+                "endedAt": "2026-11-09T11:27:00.000Z",
+                "night": "2026-11-09",
+                "actor": null,
+                "venueCount": 21,
+                "counts": {
+                  "ok": 16,
+                  "notOk": 0,
+                  "unchanged": 5,
+                  "skipped": 0,
+                  "total": 21,
+                  "failed": 0,
+                  "blocked": 0
+                },
+                "eventsFound": 1140,
+                "eventsInserted": 2,
+                "pending": 0,
+                "retried": true,
+                "didntStart": false,
+                "costUsd": 0.66,
+                "linkKey": "nightly:2026-11-09",
+                "crawlAll": false,
+                "venueName": null,
+                "actorHandle": null,
+                "retry": {
+                  "at": "2026-11-09T11:10:00.000Z",
+                  "counts": {
+                    "ok": 10,
+                    "notOk": 0,
+                    "unchanged": 2,
+                    "skipped": 0,
+                    "total": 12,
+                    "failed": 0,
+                    "blocked": 0
+                  }
+                }
+              },
+              {
+                "key": "nightly:2026-11-08",
+                "kind": "nightly",
+                "startedAt": null,
+                "endedAt": null,
+                "night": "2026-11-08",
+                "actor": null,
+                "venueCount": 0,
+                "counts": {
+                  "ok": 0,
+                  "notOk": 0,
+                  "unchanged": 0,
+                  "skipped": 0,
+                  "total": 0,
+                  "failed": 0,
+                  "blocked": 0
+                },
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "pending": 0,
+                "retried": false,
+                "didntStart": true,
+                "costUsd": 0,
+                "linkKey": "nightly:2026-11-08",
+                "crawlAll": false,
+                "venueName": null,
+                "actorHandle": null,
+                "retry": null
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-batch-row\"]",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "loading",
+      "label": "Loading: real header, column labels, bar rows (best-effort)",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/batches*",
+          "status": 500,
+          "body": { "success": false, "error": "held for the skeleton" }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-runs-skeleton\"]"
+        }
+      ]
+    },
+    {
+      "id": "filters-open",
+      "label": "Not OK picked",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/batches*",
+          "body": {
+            "success": true,
+            "hasMore": false,
+            "nextBefore": null,
+            "data": [
+              {
+                "key": "nightly:2026-11-08",
+                "kind": "nightly",
+                "startedAt": null,
+                "endedAt": null,
+                "night": "2026-11-08",
+                "actor": null,
+                "venueCount": 0,
+                "counts": {
+                  "ok": 0,
+                  "notOk": 0,
+                  "unchanged": 0,
+                  "skipped": 0,
+                  "total": 0,
+                  "failed": 0,
+                  "blocked": 0
+                },
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "pending": 0,
+                "retried": false,
+                "didntStart": true,
+                "costUsd": 0,
+                "linkKey": "nightly:2026-11-08",
+                "crawlAll": false,
+                "venueName": null,
+                "actorHandle": null,
+                "retry": null
+              }
+            ]
+          }
+        },
+        { "goto": "/admin/crawl", "wait": "[data-testid=\"crawl-batch-row\"]" },
+        { "clickRole": "button", "name": "^Not OK" },
+        { "wait": "[data-testid=\"crawl-batch-row\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "filter-empty",
+      "label": "By hand with no batches: the filter empty and Show all",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/batches*",
+          "body": {
+            "success": true,
+            "hasMore": false,
+            "nextBefore": null,
+            "data": []
+          }
+        },
+        {
+          "goto": "/admin/crawl?kind=by_hand",
+          "wait": "[data-testid=\"runs-filter-empty\"]",
+          "settle": 500
+        }
+      ]
+    },
+    {
+      "id": "empty",
+      "label": "No batches at all: the filter-empty line, no Show all (no empty board is drawn)",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/batches*",
+          "body": {
+            "success": true,
+            "hasMore": false,
+            "nextBefore": null,
+            "data": []
+          }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"runs-filter-empty\"]",
+          "settle": 500
+        }
+      ]
+    },
+    {
+      "id": "load-more",
+      "label": "Showing 1 and Load 25 more",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/batches*",
+          "body": {
+            "success": true,
+            "hasMore": true,
+            "nextBefore": "2026-11-11T10:00:00.000Z",
+            "data": [
+              {
+                "key": "nightly:2026-11-11",
+                "kind": "nightly",
+                "startedAt": "2026-11-11T10:00:00.000Z",
+                "endedAt": "2026-11-11T10:18:00.000Z",
+                "night": "2026-11-11",
+                "actor": null,
+                "venueCount": 21,
+                "counts": {
+                  "ok": 14,
+                  "notOk": 1,
+                  "unchanged": 6,
+                  "skipped": 0,
+                  "total": 21,
+                  "failed": 1,
+                  "blocked": 0
+                },
+                "eventsFound": 1180,
+                "eventsInserted": 9,
+                "pending": 0,
+                "retried": false,
+                "didntStart": false,
+                "costUsd": 0.71,
+                "linkKey": "nightly:2026-11-11",
+                "crawlAll": false,
+                "venueName": null,
+                "actorHandle": null,
+                "retry": null
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-runs-load-more\"]",
+          "settle": 500
+        }
+      ]
+    }
+  ]
+}
