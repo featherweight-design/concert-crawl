@@ -42,6 +42,8 @@ const listQuerySchema = z
     search: z
       .string()
       .max(200)
+      // Postgres text can't hold NUL; refuse it here as a 400, not a 500.
+      .refine((value) => !value.includes('\u0000'), 'search has a NUL')
       .trim()
       .optional()
       .transform((value) => (value ? value : undefined)),
