@@ -12,7 +12,7 @@ interface ProtectedErrorProps {
 }
 
 export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
-  const { isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const router = useRouter();
   const retry = useErrorBoundaryRetry(reset);
@@ -25,7 +25,10 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
     <ErrorReport
       error={error}
       onRetry={retry}
-      signedIn={isSignedIn === true}
+      // A protected route: assume signed in until Clerk answers. Clerk can be
+      // slow or blocked (Brave Shields), and a card that then 401s switches
+      // the page to signed out itself.
+      signedIn={isLoaded ? isSignedIn === true : true}
       onSignOut={() => void signOut(() => router.push('/'))}
     />
   );

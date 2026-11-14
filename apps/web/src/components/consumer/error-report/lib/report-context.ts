@@ -66,15 +66,18 @@ export const mintClientErrorId = (): string => {
 /**
  * Signed in, as far as a page outside ClerkProvider can tell (`global-error`):
  * Clerk's `__client_uat` cookie holds the last sign-in time in seconds, and
- * `0` when signed out. Only a positive integer counts; missing, `0` or anything
- * unreadable is signed out, so the page never offers a card that would 401.
+ * `0` when signed out. Clerk can also write a per-instance `__client_uat_<suffix>`
+ * copy, and a stale host-only `__client_uat=0` can sit beside a live one, so
+ * every one of them is read: signed in when ANY holds a positive integer.
+ * Missing, `0` or anything unreadable is signed out, so the page never offers
+ * a card that would 401.
  */
-export const hasClientSession = (cookie: string): boolean => {
-  for (const part of cookie.split(';')) {
-    const [name, ...rest] = part.trim().split('=');
-    if (name !== '__client_uat') continue;
+export const hasClientSession = (cookie: string): boolean =>
+  cookie.split(';').some((part) => {
+    const [name = '', ...rest] = part.trim().split('=');
+    if (name !== '__client_uat' && !name.startsWith('__client_uat_')) {
+      return false;
+    }
     const value = rest.join('=');
     return /^\d+$/.test(value) && Number(value) > 0;
-  }
-  return false;
-};
+  });

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   cleanup,
@@ -37,9 +38,14 @@ afterEach(cleanup);
 const pick = (chip: string) =>
   fireEvent.click(screen.getByRole('radio', { name: chip }));
 
+// The page's two handlers are required; a test that cares passes its own.
+const Card = (props: Partial<ComponentProps<typeof ErrorTellUsCard>>) => (
+  <ErrorTellUsCard onDone={vi.fn()} onSignedOut={vi.fn()} {...props} />
+);
+
 describe('ErrorTellUsCard', () => {
   it('opens as the prompt: six chips as a radio group, nothing attached yet', () => {
-    render(<ErrorTellUsCard digest="2849204133" />);
+    render(<Card digest="2849204133" />);
 
     expect(screen.getByRole('heading', { name: copy.heading })).toBeTruthy();
     expect(screen.getByText(copy.sub)).toBeTruthy();
@@ -49,7 +55,7 @@ describe('ErrorTellUsCard', () => {
   });
 
   it('one tap opens the form with that chip selected and lists what is attached', () => {
-    render(<ErrorTellUsCard digest="2849204133" />);
+    render(<Card digest="2849204133" />);
     pick('Opening a show');
 
     expect(
@@ -65,7 +71,7 @@ describe('ErrorTellUsCard', () => {
   });
 
   it('Cancel goes back to the prompt with nothing chosen', () => {
-    render(<ErrorTellUsCard />);
+    render(<Card />);
     pick('Searching');
     fireEvent.click(screen.getByRole('button', { name: copy.cancel }));
 
@@ -79,7 +85,7 @@ describe('ErrorTellUsCard', () => {
 
   it('sends the chip and the optional note, then shows Loud and clear', async () => {
     sendErrorReport.mockResolvedValue(undefined);
-    render(<ErrorTellUsCard digest="2849204133" />);
+    render(<Card digest="2849204133" />);
     pick('Opening a show');
     fireEvent.change(screen.getByLabelText(copy.noteLabel), {
       target: { value: 'Tapped Get tickets.' },
@@ -104,7 +110,7 @@ describe('ErrorTellUsCard', () => {
 
   it('a failed send says Signal lost, keeps the report on the device, and Send again retries', async () => {
     sendErrorReport.mockRejectedValueOnce(new Error('503'));
-    render(<ErrorTellUsCard digest="2849204133" />);
+    render(<Card digest="2849204133" />);
     pick('Searching');
     fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
 
@@ -122,12 +128,20 @@ describe('ErrorTellUsCard', () => {
     expect(loadPendingReport()).toBeNull();
   });
 
+  it('leaves its edge to the sheet-edge utility (global-error injects the fallback itself)', () => {
+    const { container } = render(<Card />);
+    const card = screen.getByTestId('error-tell-us-card');
+    expect(card.classList.contains('sheet-edge')).toBe(true);
+    const css = container.querySelector('style')?.textContent ?? '';
+    expect(css).not.toContain('border-box');
+  });
+
   describe('refused (addendum-2 18-error-page/error-report-refused-m)', () => {
     it.each([429, 422, 400])(
       '%i says Not sent. under the LIMIT rail, is not saved, and takes focus',
       async (status) => {
         sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(status));
-        render(<ErrorTellUsCard digest="2849204133" />);
+        render(<Card digest="2849204133" />);
         pick('Searching');
         fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
 
@@ -137,6 +151,14 @@ describe('ErrorTellUsCard', () => {
         expect(screen.getByText(copy.refusedBody)).toBeTruthy();
         expect(screen.getByText(copy.failedEyebrow)).toBeTruthy();
         expect(screen.getByText(copy.refusedTag)).toBeTruthy();
+        // Board error-report-refused-m sizes.
+        expect(heading.style.fontSize).toBe('22px');
+        expect(screen.getByText(copy.refusedBody).style.fontSize).toBe(
+          '13.5px',
+        );
+        const doneStyle = screen.getByRole('button', { name: copy.done }).style;
+        expect(doneStyle.borderRadius).toBe('12px');
+        expect(doneStyle.fontSize).toBe('14.5px');
         // One button only: Done. No Edit, no Send again.
         expect(
           screen.getAllByRole('button').map((button) => button.textContent),
@@ -157,7 +179,7 @@ describe('ErrorTellUsCard', () => {
         }),
       );
       sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
-      render(<ErrorTellUsCard digest="2849204133" />);
+      render(<Card digest="2849204133" />);
       pick('Searching');
       fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
 
@@ -167,7 +189,7 @@ describe('ErrorTellUsCard', () => {
 
     it('Send again that is refused drops the copy this card saved', async () => {
       sendErrorReport.mockRejectedValueOnce(new Error('503'));
-      render(<ErrorTellUsCard digest="2849204133" />);
+      render(<Card digest="2849204133" />);
       pick('Searching');
       fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
       await screen.findByRole('heading', { name: copy.failedHeading });
@@ -184,7 +206,7 @@ describe('ErrorTellUsCard', () => {
     it('Done hands the close to the page', async () => {
       const onDone = vi.fn();
       sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
-      render(<ErrorTellUsCard digest="2849204133" onDone={onDone} />);
+      render(<Card digest="2849204133" onDone={onDone} />);
       pick('Searching');
       fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
       await screen.findByRole('heading', { name: copy.refusedHeading });
@@ -193,22 +215,38 @@ describe('ErrorTellUsCard', () => {
       expect(onDone).toHaveBeenCalledTimes(1);
     });
 
-    it('Done with no page to close it goes back to the prompt', async () => {
-      sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
-      render(<ErrorTellUsCard digest="2849204133" />);
+    it('a refused Send again leaves the slot alone once another page saved over this card’s copy', async () => {
+      sendErrorReport.mockRejectedValueOnce(new Error('503'));
+      render(<Card digest="2849204133" />);
       pick('Searching');
       fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
-      await screen.findByRole('heading', { name: copy.refusedHeading });
+      await screen.findByRole('heading', { name: copy.failedHeading });
+      const ours = loadPendingReport();
+      expect(ours?.doing).toBe('Searching');
 
-      fireEvent.click(screen.getByRole('button', { name: copy.done }));
-      expect(screen.getByText(copy.sub)).toBeTruthy();
+      // Another error page (another tab) saves its own report into the slot.
+      localStorage.setItem(
+        'cc-pending-error-report',
+        JSON.stringify({
+          doing: 'My shows',
+          note: '',
+          page: '/me',
+          savedAt: (ours?.savedAt ?? 0) + 1,
+        }),
+      );
+
+      sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
+      fireEvent.click(screen.getByRole('button', { name: copy.sendAgain }));
+
+      await screen.findByRole('heading', { name: copy.refusedHeading });
+      expect(loadPendingReport()?.doing).toBe('My shows');
     });
   });
 
   it('a 401 saves the report for the next signed-in launch and tells the page', async () => {
     const onSignedOut = vi.fn();
     sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(401));
-    render(<ErrorTellUsCard digest="2849204133" onSignedOut={onSignedOut} />);
+    render(<Card digest="2849204133" onSignedOut={onSignedOut} />);
     pick('Searching');
     fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
 
@@ -220,7 +258,7 @@ describe('ErrorTellUsCard', () => {
     'a transient failure (%s) is the failed state, saved',
     async (failure) => {
       sendErrorReport.mockRejectedValueOnce(failure);
-      render(<ErrorTellUsCard digest="2849204133" />);
+      render(<Card digest="2849204133" />);
       pick('Searching');
       fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
 
@@ -232,7 +270,7 @@ describe('ErrorTellUsCard', () => {
   );
 
   it('is a real radio group: one tab stop, arrow keys move the choice', () => {
-    render(<ErrorTellUsCard />);
+    render(<Card />);
     const radios = screen.getAllByRole('radio');
     // None chosen yet: the first chip is the single tab stop.
     expect(radios.map((radio) => radio.getAttribute('tabindex'))).toEqual([
@@ -259,7 +297,7 @@ describe('ErrorTellUsCard', () => {
 
   it('Edit drops the saved copy and puts focus on the form heading', async () => {
     sendErrorReport.mockRejectedValue(new Error('503'));
-    render(<ErrorTellUsCard />);
+    render(<Card />);
     pick('Searching');
     fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
     await screen.findByRole('heading', { name: copy.failedHeading });
@@ -278,7 +316,7 @@ describe('ErrorTellUsCard', () => {
 
   it('Edit on the failed card goes back to the form with the choice kept', async () => {
     sendErrorReport.mockRejectedValue(new Error('503'));
-    render(<ErrorTellUsCard />);
+    render(<Card />);
     pick('My shows');
     fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
     await screen.findByRole('heading', { name: copy.failedHeading });

@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/crews/abc',
 }));
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ isSignedIn: true, getToken: async () => 'token' }),
+  useAuth: () => ({ isLoaded: true, isSignedIn: true }),
   useClerk: () => ({ signOut: vi.fn() }),
 }));
 vi.mock('@sentry/nextjs', () => ({

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { CARD_EDGE_FALLBACK_CSS } from '@/components/consumer/error-report/ErrorTellUsCard';
 import GlobalError from './global-error';
 
 vi.mock('next/navigation', () => ({
@@ -49,6 +50,17 @@ describe('global-error', () => {
       screen.getByRole('heading', { name: copy.errorHeading }),
     ).toBeTruthy();
     expect(screen.getByText('4471')).toBeTruthy();
+  });
+
+  // globals.css is not loaded here, so this page (and only this page) carries
+  // the card's sheet-edge fallback.
+  it('injects the Tell us card edge fallback itself', () => {
+    renderPage();
+    // The whole document: React may hoist <html>/<head> out of the container.
+    const css = Array.from(document.querySelectorAll('style'))
+      .map((style) => style.textContent)
+      .join('\n');
+    expect(css).toContain(CARD_EDGE_FALLBACK_CSS);
   });
 
   // No ClerkProvider here: Clerk's `__client_uat` cookie decides (addendum-2

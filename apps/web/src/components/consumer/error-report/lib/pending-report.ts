@@ -29,15 +29,19 @@ const isPending = (value: unknown): value is PendingReport => {
   );
 };
 
-/** Keeps the report for the next launch. Storage can be off: that is not fatal. */
-export const savePendingReport = (draft: ErrorReportDraft): void => {
+/**
+ * Keeps the report for the next launch. Storage can be off: that is not fatal.
+ * Returns the stored copy's `savedAt`, which identifies it (the slot is shared,
+ * so another error page can overwrite it), or null when nothing was stored.
+ */
+export const savePendingReport = (draft: ErrorReportDraft): number | null => {
+  const savedAt = Date.now();
   try {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify({ ...draft, savedAt: Date.now() }),
-    );
+    localStorage.setItem(KEY, JSON.stringify({ ...draft, savedAt }));
+    return savedAt;
   } catch {
     /* private mode or storage full: the report is lost, nothing else is */
+    return null;
   }
 };
 
@@ -63,6 +67,14 @@ export const loadPendingReport = (now = Date.now()): PendingReport | null => {
     clearPendingReport();
     return null;
   }
+};
+
+/**
+ * Clears the slot only if it still holds the copy saved at `savedAt`: a report
+ * another error page saved over it since is left alone.
+ */
+export const clearPendingReportSavedAt = (savedAt: number): void => {
+  if (loadPendingReport()?.savedAt === savedAt) clearPendingReport();
 };
 
 /**

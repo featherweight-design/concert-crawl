@@ -23,9 +23,16 @@ describe('hasClientSession (__client_uat)', () => {
     ['__client_uat=', false],
     ['__client_uat=abc', false],
     ['__client_uat=-5', false],
-    ['__client_uat_dev=1700000000', false],
     ['__client_uat=1700000000', true],
     ['theme=x; __client_uat=1700000000; other=1', true],
+    // Clerk's per-instance suffixed copy counts.
+    ['__client_uat_Xy12ab=1700000000', true],
+    // A stale host-only "0" beside a live suffixed one: signed in.
+    ['__client_uat=0; __client_uat_Xy12ab=1700000000', true],
+    // Every copy says signed out.
+    ['__client_uat=0; __client_uat_Xy12ab=0', false],
+    // Only Clerk's own names.
+    ['__client_uatx=1700000000', false],
   ])('%j → %s', (cookie, expected) => {
     expect(hasClientSession(cookie)).toBe(expected);
   });

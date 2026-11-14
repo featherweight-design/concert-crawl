@@ -7,6 +7,7 @@ import {
   type CSSProperties,
   type ReactNode,
   type Ref,
+  type RefObject,
 } from 'react';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -125,12 +126,17 @@ const BrokenMark = () => (
  * <body> and leaves a screen reader silent. The heading takes focus on mount,
  * without scrolling, so the page announces itself.
  */
-const Heading = () => {
-  const ref = useRef<HTMLHeadingElement>(null);
+const Heading = ({
+  headingRef,
+}: {
+  headingRef?: RefObject<HTMLHeadingElement | null> | undefined;
+}) => {
+  const ownRef = useRef<HTMLHeadingElement>(null);
+  const ref = headingRef ?? ownRef;
 
   useEffect(() => {
     ref.current?.focus({ preventScroll: true });
-  }, []);
+  }, [ref]);
 
   return (
     <h1
@@ -351,6 +357,11 @@ export interface StandaloneErrorProps {
    * the Tell us card closes under it (Done on a refused report).
    */
   errorIdRef?: Ref<HTMLButtonElement> | undefined;
+  /**
+   * The page heading (already `tabIndex={-1}`), the focus target when the
+   * card closes and there is no error ID chip to land on.
+   */
+  headingRef?: RefObject<HTMLHeadingElement | null> | undefined;
 }
 
 // The standalone page owns the whole viewport and paints its own ground. In
@@ -369,6 +380,7 @@ export const StandaloneError = ({
   children,
   inApp = false,
   errorIdRef,
+  headingRef,
 }: StandaloneErrorProps) => (
   <div
     data-testid="standalone-error"
@@ -407,7 +419,7 @@ export const StandaloneError = ({
         >
           {copy.eyebrow}
         </p>
-        <Heading />
+        <Heading headingRef={headingRef} />
         <p
           className="cc-se-body"
           style={{

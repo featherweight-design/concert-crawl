@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import * as Sentry from '@sentry/nextjs';
 
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { StandaloneError } from '@/components/standalone-error/StandaloneError';
 import { ErrorTellUsCard } from './ErrorTellUsCard';
 import { mintClientErrorId } from './lib/report-context';
@@ -74,7 +75,37 @@ interface ErrorReportProps {
  * closes the card, keeps the error ID and puts focus on it. No Clerk hook
  * here, so `global-error` can use it.
  */
-export const ErrorReport = ({
+export const ErrorReport = (props: ErrorReportProps) => (
+  // A new error (a retry that threw again) is a new page: the card comes back,
+  // a lost-session switch and a closed card are forgotten, and a browser throw
+  // gets its own id. Keyed on the error's identity so all of that resets.
+  <ErrorReportPage key={pageKeyFor(props.error)} {...props} />
+);
+
+const pageKeys = new WeakMap<Error, number>();
+let nextPageKey = 0;
+const pageKeyFor = (error: Error): number => {
+  const seen = pageKeys.get(error);
+  if (seen !== undefined) return seen;
+  nextPageKey += 1;
+  pageKeys.set(error, nextPageKey);
+  return nextPageKey;
+};
+
+// Read by screen readers, never seen.
+const VISUALLY_HIDDEN: CSSProperties = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
+
+const ErrorReportPage = ({
   error,
   onRetry,
   signedIn,
@@ -85,6 +116,7 @@ export const ErrorReport = ({
   const [sessionLost, setSessionLost] = useState(false);
   const [cardClosed, setCardClosed] = useState(false);
   const errorIdRef = useRef<HTMLButtonElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   // Minted after mount, not during render: a server-rendered boundary always
   // has a digest, and a random id in render would not survive hydration.
@@ -93,9 +125,11 @@ export const ErrorReport = ({
   }, [error]);
 
   // Done (or a 401 switching the page to signed out) unmounts the card, so
-  // focus goes to the error ID it pointed at, never to <body>.
+  // focus goes to the error ID it pointed at, or, with no chip, to the page
+  // heading: never to <body>.
   useEffect(() => {
-    if (cardClosed || sessionLost) errorIdRef.current?.focus();
+    if (!cardClosed && !sessionLost) return;
+    (errorIdRef.current ?? headingRef.current)?.focus();
   }, [cardClosed, sessionLost]);
 
   // `digest` has two meanings on this page and in the report: the server's
@@ -105,21 +139,29 @@ export const ErrorReport = ({
   const signedInNow = signedIn && !sessionLost;
 
   return (
-    <StandaloneError
-      errorId={errorId}
-      errorIdRef={errorIdRef}
-      onRetry={onRetry}
-      onSignOut={signedInNow ? onSignOut : undefined}
-      inApp={inApp}
-    >
-      {signedInNow && !cardClosed ? (
-        <ErrorTellUsCard
-          digest={errorId}
-          sentryEventId={clientIds?.sentryEventId}
-          onSignedOut={() => setSessionLost(true)}
-          onDone={() => setCardClosed(true)}
-        />
-      ) : null}
-    </StandaloneError>
+    <>
+      <StandaloneError
+        errorId={errorId}
+        errorIdRef={errorIdRef}
+        headingRef={headingRef}
+        onRetry={onRetry}
+        onSignOut={signedInNow ? onSignOut : undefined}
+        inApp={inApp}
+      >
+        {signedInNow && !cardClosed ? (
+          <ErrorTellUsCard
+            digest={errorId}
+            sentryEventId={clientIds?.sentryEventId}
+            onSignedOut={() => setSessionLost(true)}
+            onDone={() => setCardClosed(true)}
+          />
+        ) : null}
+      </StandaloneError>
+      {/* Outside the card, which a 401 unmounts: the switch to the signed-out
+          layout says the report was kept, as the failed state would have. */}
+      <p role="status" aria-live="polite" style={VISUALLY_HIDDEN}>
+        {sessionLost ? CONSUMER_COPY.errorReport.card.savedHeading : ''}
+      </p>
+    </>
   );
 };

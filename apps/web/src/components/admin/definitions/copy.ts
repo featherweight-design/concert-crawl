@@ -2480,7 +2480,9 @@ export const ADMIN_COPY = {
         submitted: 'Submitted',
         userId: 'User ID',
         doing: 'Was doing',
-        errorDigest: 'Error digest',
+        // metadata.digest: a server digest, or for a browser error the
+        // client-made ID (c-…) shown on the error page.
+        errorId: 'Error ID',
         sentryEvent: 'Sentry event',
       },
     },
