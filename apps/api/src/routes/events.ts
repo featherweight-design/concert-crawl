@@ -1061,7 +1061,12 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           counters: primaryCounters,
         }),
       };
-    } else if (!legacyPrimary.contested) {
+    } else if (
+      !legacyPrimary.contested &&
+      !allPendingRows.some(
+        (sub) => sub.disputedSubmissionId === legacyPrimary.id,
+      )
+    ) {
       // No check is open, so show how the last one ended. The rows that can
       // say are the archived ones tied to the live price: its predecessor, or
       // updates that lost to it (lib/price-check-outcome.ts).
@@ -1089,6 +1094,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceCheckOutcome = pickPriceCheckOutcome({
         liveId: legacyPrimary.id,
         liveDisputedSubmissionId: legacyPrimary.disputedSubmissionId,
+        liveUpdatedAt: legacyPrimary.updatedAt,
         archived,
         now: new Date(),
       });

@@ -1587,6 +1587,144 @@ describe('GET /v1/events/:id — integration', () => {
   });
 });
 
+// How the last price check on the live price ended (priceCheckOutcome), read
+// from the archived rows a decided check leaves behind.
+describe('GET /v1/events/:id — priceCheckOutcome', () => {
+  const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
+
+  const readOutcome = async (eventId: string) => {
+    const res = await app.request(`/v1/events/${eventId}`);
+    const body = (await res.json()) as {
+      data: {
+        priceCheckOutcome: {
+          outcome: 'held' | 'updated';
+          previous: { floor: number; ceiling: number | null } | null;
+        } | null;
+      };
+    };
+    return body.data.priceCheckOutcome;
+  };
+
+  const seedCheckEvent = async (slug: string) => {
+    const venue = await seedVenue({ name: slug, slug });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    });
+    const owner = await seedUserProfile(`${slug}-owner`, {
+      handle: `${slug}-owner`,
+    });
+    const other = await seedUserProfile(`${slug}-other`, {
+      handle: `${slug}-other`,
+    });
+    return { event, owner, other };
+  };
+
+  it('is "updated" with the old price when an update replaced it', async () => {
+    const { event, owner, other } = await seedCheckEvent('outcome-updated');
+    const stamp = daysAgo(2);
+    const old = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '44',
+      priceMax: '60',
+      status: 'archived',
+      archivedReason: 'Replaced by price check update',
+      updatedAt: stamp,
+    });
+    await seedPriceSubmission(event.id, other.userId, {
+      priceMin: '52',
+      status: 'corroborated',
+      disputedSubmissionId: old.id,
+      updatedAt: stamp,
+    });
+    expect(await readOutcome(event.id)).toMatchObject({
+      outcome: 'updated',
+      previous: { floor: 44, ceiling: 60 },
+    });
+  });
+
+  it('is "held" when an update against the live price was archived', async () => {
+    const { event, owner, other } = await seedCheckEvent('outcome-held');
+    const stamp = daysAgo(2);
+    const live = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '44',
+      status: 'corroborated',
+      updatedAt: stamp,
+    });
+    await seedPriceSubmission(event.id, other.userId, {
+      priceMin: '52',
+      status: 'archived',
+      archivedReason: 'Price is correct',
+      disputedSubmissionId: live.id,
+      updatedAt: stamp,
+    });
+    expect(await readOutcome(event.id)).toMatchObject({
+      outcome: 'held',
+      previous: null,
+    });
+  });
+
+  it('is null once the decision is older than 14 days', async () => {
+    const { event, owner, other } = await seedCheckEvent('outcome-stale');
+    const stamp = daysAgo(15);
+    const live = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '44',
+      status: 'corroborated',
+      updatedAt: stamp,
+    });
+    await seedPriceSubmission(event.id, other.userId, {
+      priceMin: '52',
+      status: 'archived',
+      archivedReason: 'Price is correct',
+      disputedSubmissionId: live.id,
+      updatedAt: stamp,
+    });
+    expect(await readOutcome(event.id)).toBeNull();
+  });
+
+  it('is null once the live row was edited after the decision', async () => {
+    const { event, owner, other } = await seedCheckEvent('outcome-edited');
+    const live = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '48',
+      status: 'corroborated',
+      updatedAt: daysAgo(0.5),
+    });
+    await seedPriceSubmission(event.id, other.userId, {
+      priceMin: '52',
+      status: 'archived',
+      archivedReason: 'Price is correct',
+      disputedSubmissionId: live.id,
+      updatedAt: daysAgo(2),
+    });
+    expect(await readOutcome(event.id)).toBeNull();
+  });
+
+  it('is null while a new check is open on the live price', async () => {
+    const { event, owner, other } = await seedCheckEvent('outcome-open');
+    const stamp = daysAgo(2);
+    const live = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '44',
+      status: 'disputed',
+      updatedAt: stamp,
+    });
+    await seedPriceSubmission(event.id, other.userId, {
+      priceMin: '52',
+      status: 'archived',
+      archivedReason: 'Price is correct',
+      disputedSubmissionId: live.id,
+      updatedAt: stamp,
+    });
+    const third = await seedUserProfile('outcome-open-third', {
+      handle: 'outcome-open-third',
+    });
+    await seedPriceSubmission(event.id, third.userId, {
+      priceMin: '30',
+      status: 'pending',
+      disputedSubmissionId: live.id,
+    });
+    expect(await readOutcome(event.id)).toBeNull();
+  });
+});
+
 describe('GET /v1/events — filterPrice', () => {
   beforeEach(async () => {
     await clearTables();
