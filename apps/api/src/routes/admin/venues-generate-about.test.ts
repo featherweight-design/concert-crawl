@@ -47,9 +47,12 @@ function makeQueryBuilder(resolveWith: unknown[] = []) {
   return builder;
 }
 
+const mockInsertValues = vi.fn().mockResolvedValue(undefined);
 const mockDb = {
   select: vi.fn().mockReturnValue(makeQueryBuilder([])),
+  insert: vi.fn().mockReturnValue({ values: mockInsertValues }),
 };
+const mockCostTracking = { table: 'cost_tracking' };
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
@@ -63,6 +66,7 @@ vi.mock('@concert-crawl/db', () => ({
   crawlRuns: {},
   auditLog: {},
   inviteCodes: {},
+  costTracking: mockCostTracking,
 }));
 
 // Spread the real module so a new drizzle-orm import elsewhere in the app
@@ -94,6 +98,102 @@ describe('POST /v1/admin/venues/:id/generate-about', () => {
     mockGetAuth.mockReset();
     mockAnthropicCreate.mockReset();
     mockDb.select.mockReturnValue(makeQueryBuilder([]));
+    mockDb.insert.mockClear();
+    mockInsertValues.mockReset();
+    mockInsertValues.mockResolvedValue(undefined);
+  });
+
+  const usage = {
+    input_tokens: 1000,
+    output_tokens: 200,
+    cache_read_input_tokens: null,
+    cache_creation_input_tokens: 500,
+  };
+  // calculateCost's Haiku rates: 1000 in, 200 out, 500 cache-write.
+  const expectedCost = (
+    1000 * (0.8 / 1_000_000) +
+    200 * (4.0 / 1_000_000) +
+    500 * (1.0 / 1_000_000)
+  ).toFixed(6);
+  const post = () =>
+    createApp().request('/v1/admin/venues/venue-1/generate-about', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+
+  it('records the call’s cost as a venue-about row', async () => {
+    adminAuth();
+    mockDb.select.mockReturnValue(makeQueryBuilder([mockVenueRow]));
+    mockAnthropicCreate.mockResolvedValue({
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            capacity: 1600,
+            venueType: 'Theater',
+            neighborhood: 'Capitol Hill',
+            about: 'A historic venue on Colfax Ave.',
+          }),
+        },
+      ],
+      usage,
+    });
+    const res = await post();
+    expect(res.status).toBe(200);
+    expect(mockDb.insert).toHaveBeenCalledWith(mockCostTracking);
+    expect(mockInsertValues).toHaveBeenCalledTimes(1);
+    const row = mockInsertValues.mock.calls[0]?.[0];
+    expect(row).toMatchObject({
+      service: 'venue-about',
+      costUsd: expectedCost,
+      tokensUsed: '1200',
+    });
+    expect(JSON.parse(String(row?.metadata))).toEqual({
+      venueId: 'venue-1',
+      inputTokens: 1000,
+      outputTokens: 200,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 500,
+    });
+  });
+
+  it('records the cost even when the reply doesn’t parse', async () => {
+    adminAuth();
+    mockDb.select.mockReturnValue(makeQueryBuilder([mockVenueRow]));
+    mockAnthropicCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Sorry, I cannot help with that.' }],
+      usage,
+    });
+    const res = await post();
+    expect(res.status).toBe(503);
+    expect(mockInsertValues).toHaveBeenCalledTimes(1);
+    expect(mockInsertValues.mock.calls[0]?.[0]).toMatchObject({
+      service: 'venue-about',
+      costUsd: expectedCost,
+    });
+  });
+
+  it('a failed cost write never fails the draft', async () => {
+    adminAuth();
+    mockDb.select.mockReturnValue(makeQueryBuilder([mockVenueRow]));
+    mockInsertValues.mockRejectedValue(new Error('db down'));
+    mockAnthropicCreate.mockResolvedValue({
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            capacity: null,
+            venueType: 'Theater',
+            neighborhood: 'Capitol Hill',
+            about: 'A historic venue on Colfax Ave.',
+          }),
+        },
+      ],
+      usage,
+    });
+    const res = await post();
+    expect(res.status).toBe(200);
   });
 
   it('returns 401 for unauthenticated requests', async () => {
