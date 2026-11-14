@@ -57,15 +57,36 @@ export const isPastShow = (date: string, today: string): boolean =>
 export const lockEventSaleState = async (
   tx: DbTransaction,
   eventId: string,
-): Promise<'open' | 'past'> => {
+): Promise<'open' | 'past'> => (await lockEventRow(tx, eventId)).state;
+
+/**
+ * lockEventSaleState, also returning the show's status and delisting as read
+ * under the same lock, for a write that decides on them (promoteReport).
+ */
+export const lockEventRow = async (
+  tx: DbTransaction,
+  eventId: string,
+): Promise<{
+  state: 'open' | 'past';
+  status: string;
+  delistedAt: Date | null;
+}> => {
   const [row] = await tx
-    .select({ date: events.date })
+    .select({
+      date: events.date,
+      status: events.status,
+      delistedAt: events.delistedAt,
+    })
     .from(events)
     .where(eq(events.id, eventId))
     .for('update')
     .limit(1);
   if (!row) throw new EventNotFoundError();
-  return isPastShow(row.date, todayInDenver()) ? 'past' : 'open';
+  return {
+    state: isPastShow(row.date, todayInDenver()) ? 'past' : 'open',
+    status: row.status,
+    delistedAt: row.delistedAt,
+  };
 };
 
 /**

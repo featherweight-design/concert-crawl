@@ -23,9 +23,10 @@ import {
   notifications,
 } from '@concert-crawl/db';
 import { ER_POLICY } from '@concert-crawl/types';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { createApp } from '../app.js';
 import { todayInDenver } from '../lib/time.js';
+import { countLockWaiters, withLockHolder } from '../test/helpers/locks.js';
 import {
   clearTables,
   seedEvent,
@@ -56,9 +57,12 @@ describe('cancelled and postponed reports under the shared write', () => {
     return day.toISOString().slice(0, 10);
   };
 
-  const seedShow = async (date: string) => {
+  const seedShow = async (date: string, status?: 'postponed') => {
     const venue = await seedVenue();
-    const event = await seedEvent(venue.id, { date });
+    const event = await seedEvent(venue.id, {
+      date,
+      ...(status && { status }),
+    });
     eventId = event.id;
     await seedUserEvent(WATCHER, eventId, { status: 'watching' });
   };
@@ -126,6 +130,16 @@ describe('cancelled and postponed reports under the shared write', () => {
       },
       body: JSON.stringify({ resolution: 'promoted' }),
     });
+  };
+
+  // True once `count` backends are waiting on a lock, false after `maxMs`.
+  const waitForWaiters = async (count: number, maxMs = 30_000) => {
+    const start = Date.now();
+    while (Date.now() - start <= maxMs) {
+      if ((await countLockWaiters()) >= count) return true;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    return false;
   };
 
   const noticesSent = () => db.select().from(notifications);
@@ -213,25 +227,25 @@ describe('cancelled and postponed reports under the shared write', () => {
           status,
         });
 
-        // Hold the event's row lock while both requests start, so both have
-        // read the show before either can write: an unlocked "is this news"
-        // read would see the old status twice and notify twice.
-        let pending: Promise<Response[]> | undefined;
-        await db.transaction(async (tx) => {
-          await tx
-            .select({ id: events.id })
-            .from(events)
-            .where(eq(events.id, eventId))
-            .for('update');
-          pending = Promise.all([
-            adminPromote(first.id),
-            adminPromote(second.id),
-          ]);
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        });
-        if (!pending) throw new Error('the requests were never sent');
+        // Hold the event's row lock until BOTH requests are waiting on it, so
+        // both are past every unlocked read before either can write: an
+        // unlocked "is this news" read would see the old status twice and
+        // notify twice.
+        const { pending, bothWaited } = await withLockHolder(
+          [sql`SELECT id FROM events WHERE id = ${eventId} FOR UPDATE`],
+          async () => {
+            const requests = Promise.all([
+              adminPromote(first.id),
+              adminPromote(second.id),
+            ]);
+            // Settles never reject unobserved, even if the wait below throws.
+            requests.catch(() => undefined);
+            return { pending: requests, bothWaited: await waitForWaiters(2) };
+          },
+        );
         const responses = await pending;
 
+        expect(bothWaited).toBe(true);
         expect(responses.map((res) => res.status)).toEqual([200, 200]);
         expect((await reportState(first.id))?.resolution).toBe('promoted');
         expect((await reportState(second.id))?.resolution).toBe('promoted');
@@ -244,4 +258,60 @@ describe('cancelled and postponed reports under the shared write', () => {
       });
     });
   }
+
+  // A postponed show whose date passed "stays Postponed until you set the new
+  // date or mark it cancelled" (addendum 6), so a cancelled report still
+  // promotes on it; anything else stays past-locked.
+  describe('a postponed show whose date has passed', () => {
+    const cancelledNotices = () =>
+      db
+        .select({ userId: notifications.userId })
+        .from(notifications)
+        .where(eq(notifications.category, 'watch.cancelled'));
+
+    it('lets an admin promote a cancelled report, telling watchers', async () => {
+      await seedShow(daysFromToday(-7), 'postponed');
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'cancelled',
+      });
+
+      const res = await adminPromote(report.id);
+
+      expect(res.status).toBe(200);
+      expect((await reportState(report.id))?.resolution).toBe('promoted');
+      expect(await showStatus()).toBe('cancelled');
+      expect((await cancelledNotices()).map((row) => row.userId)).toEqual([
+        WATCHER,
+      ]);
+    });
+
+    it('promotes a fan cancelled report at the threshold, telling watchers', async () => {
+      await seedShow(daysFromToday(-7), 'postponed');
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'cancelled',
+      });
+
+      await confirmToThreshold(report.id);
+
+      expect((await reportState(report.id))?.resolution).toBe('promoted');
+      expect(await showStatus()).toBe('cancelled');
+      expect((await cancelledNotices()).map((row) => row.userId)).toEqual([
+        WATCHER,
+      ]);
+    });
+
+    it('still refuses an admin promote of a postponed report', async () => {
+      await seedShow(daysFromToday(-7), 'postponed');
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'postponed',
+      });
+
+      const res = await adminPromote(report.id);
+
+      expect(res.status).toBe(409);
+      expect(await reportState(report.id)).toEqual(PENDING);
+      expect(await showStatus()).toBe('postponed');
+      expect(await noticesSent()).toEqual([]);
+    });
+  });
 });
