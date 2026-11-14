@@ -20,7 +20,7 @@ export default function CrewJoinError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const { isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const router = useRouter();
   const onRetry = useErrorBoundaryRetry(reset);
@@ -33,7 +33,8 @@ export default function CrewJoinError({
     <ErrorReport
       error={error}
       onRetry={onRetry}
-      signedIn={isSignedIn === true}
+      // A public route: signed out until Clerk says otherwise.
+      signedIn={isLoaded && isSignedIn === true}
       onSignOut={() => void signOut(() => router.push('/'))}
     />
   );

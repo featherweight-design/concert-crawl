@@ -7,6 +7,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { ErrorReport } from '@/components/consumer/error-report';
+import { CARD_EDGE_FALLBACK_CSS } from '@/components/consumer/error-report/ErrorTellUsCard';
 import { hasClientSession } from '@/components/consumer/error-report/lib/report-context';
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 import { THEMES } from '@/theme/themes';
@@ -56,6 +57,9 @@ export default function GlobalError({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* The Tell us card's edge: globals.css (its `sheet-edge` utility) is
+            not loaded on this page. */}
+        <style>{CARD_EDGE_FALLBACK_CSS}</style>
       </head>
       <body style={{ margin: 0, background: 'var(--bg)' }}>
         {/* Signed in: the Tell us card, with Go home rather than Sign out

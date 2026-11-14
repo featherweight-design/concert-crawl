@@ -4,7 +4,11 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { clearPendingReport, savePendingReport } from './lib/pending-report';
+import {
+  clearPendingReport,
+  clearPendingReportSavedAt,
+  savePendingReport,
+} from './lib/pending-report';
 import {
   deviceSummary,
   isReportableId,
@@ -19,10 +23,22 @@ type CardState = 'prompt' | 'form' | 'sending' | 'sent' | 'failed' | 'refused';
 
 // The desktop boards draw the card smaller than the phone's: a 20px heading and
 // 34px chips (a mouse needs no 44px target). `!important` only where the phone
-// size is inline. The first rule is the `sheet-edge` utility's own definition
-// (globals.css), repeated because `global-error` replaces the root layout and
-// never loads globals.css; in the app it draws exactly what the class does.
+// size is inline.
 const CARD_CSS = `
+@media (min-width: 900px) {
+  [data-testid='error-tell-us-card'] { padding: 18px !important; border-radius: 20px !important; margin-top: 0 !important; }
+  .cc-tu-h { font-size: 20px !important; }
+  .cc-tu-chip { min-height: 34px !important; padding: 0 14px !important; font-size: 13px !important; }
+}
+`;
+
+/**
+ * The card's edge for `global-error` only: the `sheet-edge` utility's own
+ * definition (globals.css), which that page cannot load because it replaces
+ * the root layout. `global-error` injects it; every other page draws the edge
+ * from the utility class itself.
+ */
+export const CARD_EDGE_FALLBACK_CSS = `
 [data-testid='error-tell-us-card'] {
   border: 1.5px solid transparent;
   border-bottom-width: 0;
@@ -30,11 +46,6 @@ const CARD_CSS = `
     linear-gradient(var(--sheet-bg, var(--surface-1)), var(--sheet-bg, var(--surface-1))) padding-box,
     linear-gradient(to bottom, transparent 0, transparent 20px, var(--sheet-bg, var(--surface-1)) 72px) border-box,
     linear-gradient(90deg, var(--signal), var(--accent)) border-box;
-}
-@media (min-width: 900px) {
-  [data-testid='error-tell-us-card'] { padding: 18px !important; border-radius: 20px !important; margin-top: 0 !important; }
-  .cc-tu-h { font-size: 20px !important; }
-  .cc-tu-chip { min-height: 34px !important; padding: 0 14px !important; font-size: 13px !important; }
 }
 `;
 
@@ -49,14 +60,14 @@ interface ErrorTellUsCardProps {
   /**
    * The send came back 401: the session is gone. The report is already saved
    * for the next signed-in launch; the page switches to its signed-out layout,
-   * which has no card. Without it the card shows its failed state instead.
+   * which has no card.
    */
-  onSignedOut?: (() => void) | undefined;
+  onSignedOut: () => void;
   /**
    * Done on the refused state: the page closes the card and keeps the error
-   * ID (addendum-3 row 17). Without it the card goes back to its prompt.
+   * ID (addendum-3 row 17).
    */
-  onDone?: (() => void) | undefined;
+  onDone: () => void;
 }
 
 // "Safari on iPhone" reads "iPhone · Safari" on the board.
@@ -137,10 +148,10 @@ export const ErrorTellUsCard = ({
   // Set by Edit: the failed card's button unmounts, so focus has to be sent on
   // to the form's heading or it drops to the page.
   const [focusForm, setFocusForm] = useState(false);
-  // Whether the copy on the device is this card's report (saved by a failed
-  // send), so a refused Send again can drop it without touching a report some
-  // other error page saved.
-  const savedHere = useRef(false);
+  // The `savedAt` of the copy this card put on the device (a failed send), so
+  // a refused Send again can drop it, and only it: the slot is shared, and
+  // another error page may have saved over it since.
+  const savedAt = useRef<number | null>(null);
 
   const page = reportPage(pathname);
   // The list shows whichever id the failure has: the error ID (a server
@@ -173,7 +184,7 @@ export const ErrorTellUsCard = ({
     try {
       await sendErrorReport(draft, navigator.userAgent);
       clearPendingReport();
-      savedHere.current = false;
+      savedAt.current = null;
       setState('sent');
     } catch (err) {
       console.error('[error report] send failed', err);
@@ -181,33 +192,23 @@ export const ErrorTellUsCard = ({
       if (failure === 'refused') {
         // Not saved and not retried: the same report gets the same answer.
         // "It isn't saved" must hold, so a copy this card saved on an earlier
-        // failed try goes too; anything another page saved stays.
-        if (savedHere.current) {
-          clearPendingReport();
-          savedHere.current = false;
+        // failed try goes too, if the slot still holds it; a report another
+        // page saved stays.
+        if (savedAt.current !== null) {
+          clearPendingReportSavedAt(savedAt.current);
+          savedAt.current = null;
         }
         setState('refused');
         return;
       }
       // Transient, or the session is gone: kept for the next signed-in launch.
-      savePendingReport(draft);
-      savedHere.current = true;
-      if (failure === 'signed-out' && onSignedOut) {
+      savedAt.current = savePendingReport(draft);
+      if (failure === 'signed-out') {
         onSignedOut();
         return;
       }
       setState('failed');
     }
-  };
-
-  const done = () => {
-    if (onDone) {
-      onDone();
-      return;
-    }
-    setDoing(null);
-    setNote('');
-    setState('prompt');
   };
 
   const tag =
@@ -396,7 +397,7 @@ export const ErrorTellUsCard = ({
                 // Editing means the saved copy is about to be replaced; it
                 // must not go out on its own if the edit is abandoned.
                 clearPendingReport();
-                savedHere.current = false;
+                savedAt.current = null;
                 setFocusForm(true);
                 setState('form');
               }}
@@ -423,21 +424,24 @@ export const ErrorTellUsCard = ({
             ref={headingRef}
             tabIndex={-1}
             className="cc-tu-h"
+            // Board error-report-refused-m: 22px / 900 / -0.025em (the desktop
+            // .cc-tu-h rule still sets 20px from 900px).
             style={{
               margin: 0,
-              fontSize: 26,
+              fontSize: 22,
               fontWeight: 900,
-              letterSpacing: '-0.03em',
+              letterSpacing: '-0.025em',
             }}
           >
             {copy.refusedHeading}
           </h2>
           <p
+            // Board: 13.5px, 4px under the heading, line-height 1.45.
             style={{
-              margin: '6px 0 0',
+              margin: '4px 0 0',
               color: 'var(--fg-muted)',
-              fontSize: 15,
-              lineHeight: 1.5,
+              fontSize: 13.5,
+              lineHeight: 1.45,
             }}
           >
             {copy.refusedBody}
@@ -451,13 +455,17 @@ export const ErrorTellUsCard = ({
           >
             <button
               type="button"
-              onClick={done}
+              onClick={onDone}
+              // Board: 46px tall, 0 22px padding, radius 12, 14.5px / 700.
               style={{
                 ...GRADIENT_BUTTON,
                 minHeight: 46,
+                padding: '0 22px',
+                borderRadius: 12,
                 background: 'transparent',
                 border: '1px solid var(--border-strong)',
                 color: 'var(--fg)',
+                fontSize: 14.5,
                 fontWeight: 700,
               }}
             >

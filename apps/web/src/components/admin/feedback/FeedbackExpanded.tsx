@@ -58,7 +58,7 @@ function buildGitHubIssueUrl(item: FeedbackItem): string {
       ? `- Was doing: ${metaString(meta, 'doing')}`
       : null,
     metaString(meta, 'digest')
-      ? `- Error digest: ${metaString(meta, 'digest')}`
+      ? `- Error ID: ${metaString(meta, 'digest')}`
       : null,
     metaString(meta, 'sentryEventId')
       ? `- Sentry event: ${metaString(meta, 'sentryEventId')}`
@@ -176,14 +176,17 @@ export function FeedbackExpanded({
       label: ADMIN_COPY.feedback.expanded.contextRowLabels.device,
       value: (meta['userAgent'] ?? meta['device']) as string | undefined,
     },
-    // A report filed from an error page: what the reporter was doing, and
-    // the id to find the failure by in Sentry (server digest or browser event).
+    // A report filed from an error page: what the reporter was doing, and the
+    // error ID the page showed. `metadata.digest` holds either the server's
+    // digest (a server throw) or, for a browser throw, the client-made ID
+    // (`c-…`), which is also the `error_id` tag on its Sentry event. The
+    // Sentry event row is the browser throw's event id, when Sentry was on.
     {
       label: ADMIN_COPY.feedback.expanded.contextRowLabels.doing,
       value: metaString(meta, 'doing'),
     },
     {
-      label: ADMIN_COPY.feedback.expanded.contextRowLabels.errorDigest,
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.errorId,
       value: metaString(meta, 'digest'),
     },
     {

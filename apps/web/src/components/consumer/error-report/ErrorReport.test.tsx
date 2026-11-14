@@ -24,6 +24,19 @@ vi.mock('./lib/send-report', async (importOriginal) => ({
 vi.mock('next/navigation', () => ({
   usePathname: () => '/venues/bluebird-theater',
 }));
+// The real minting shape by default; one test mints nothing to draw no chip.
+const mint = vi.hoisted(() =>
+  vi.fn(
+    () =>
+      `c-${Array.from({ length: 10 }, () =>
+        Math.floor(Math.random() * 36).toString(36),
+      ).join('')}`,
+  ),
+);
+vi.mock('./lib/report-context', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  mintClientErrorId: mint,
+}));
 const captureException = vi.hoisted(() => vi.fn(() => 'evt-1'));
 vi.mock('@sentry/nextjs', () => ({
   captureException,
@@ -100,6 +113,110 @@ describe('ErrorReport (the error page with its Tell us card)', () => {
     expect(screen.getByText(page.signedOutBody)).toBeTruthy();
     // Saved for the next signed-in launch (the flush keeps a 401 too).
     expect(loadPendingReport()?.doing).toBe('Searching');
+    // ...and said so, politely, from a region the card's unmount can't take.
+    expect(screen.getByRole('status').textContent).toBe(card.savedHeading);
+    expect(screen.getByRole('status').getAttribute('aria-live')).toBe('polite');
+    // Focus lands on the error ID, not <body>.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: /4471/ }),
+      ),
+    );
+  });
+
+  it('the live region is silent until a 401', () => {
+    render(
+      <ErrorReport
+        error={Object.assign(new Error('x'), { digest: '4471' })}
+        onRetry={vi.fn()}
+        signedIn
+        onSignOut={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('status').textContent).toBe('');
+  });
+
+  it('with no error ID chip, closing the card puts focus on the page heading', async () => {
+    mint.mockReturnValueOnce('');
+    sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
+    render(
+      <ErrorReport
+        error={new Error('client')}
+        onRetry={vi.fn()}
+        signedIn
+        onSignOut={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(page.errorIdLabel)).toBeNull();
+    pickAndSend('Searching');
+    const refused = await screen.findByRole('heading', {
+      name: card.refusedHeading,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(refused));
+
+    fireEvent.click(screen.getByRole('button', { name: card.done }));
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { name: page.errorHeading }),
+      ),
+    );
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it('a new error brings the card back after Done', async () => {
+    sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
+    const { rerender } = render(
+      <ErrorReport
+        error={Object.assign(new Error('x'), { digest: '4471' })}
+        onRetry={vi.fn()}
+        signedIn
+        onSignOut={vi.fn()}
+      />,
+    );
+    pickAndSend('Searching');
+    await screen.findByRole('heading', { name: card.refusedHeading });
+    fireEvent.click(screen.getByRole('button', { name: card.done }));
+    expect(screen.queryByTestId('error-tell-us-card')).toBeNull();
+
+    rerender(
+      <ErrorReport
+        error={Object.assign(new Error('again'), { digest: '5582' })}
+        onRetry={vi.fn()}
+        signedIn
+        onSignOut={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('error-tell-us-card')).toBeTruthy();
+    expect(screen.getByText(card.sub)).toBeTruthy();
+    expect(screen.getByText('5582')).toBeTruthy();
+  });
+
+  it('a new error forgets a lost session (the boundary still says signed in)', async () => {
+    sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(401));
+    const { rerender } = render(
+      <ErrorReport
+        error={Object.assign(new Error('x'), { digest: '4471' })}
+        onRetry={vi.fn()}
+        signedIn
+        onSignOut={vi.fn()}
+      />,
+    );
+    pickAndSend('Searching');
+    await waitFor(() =>
+      expect(screen.queryByTestId('error-tell-us-card')).toBeNull(),
+    );
+
+    rerender(
+      <ErrorReport
+        error={Object.assign(new Error('again'), { digest: '5582' })}
+        onRetry={vi.fn()}
+        signedIn
+        onSignOut={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('error-tell-us-card')).toBeTruthy();
   });
 
   it('refused, then Done: the card closes, the error ID stays and takes focus', async () => {

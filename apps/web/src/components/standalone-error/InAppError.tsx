@@ -29,7 +29,7 @@ export const InAppError = ({
   /** Prefixes the console line, so a boundary's failures can be told apart. */
   logLabel: string;
 }) => {
-  const { isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const router = useRouter();
 
@@ -44,7 +44,10 @@ export const InAppError = ({
       inApp
       error={error}
       onRetry={onRetry}
-      signedIn={isSignedIn === true}
+      // Behind the protected layout: assume signed in until Clerk answers.
+      // Clerk can be slow or blocked (Brave Shields), and a card that then
+      // 401s switches the page to signed out itself.
+      signedIn={isLoaded ? isSignedIn === true : true}
       onSignOut={() => void signOut(() => router.push('/'))}
     />
   );

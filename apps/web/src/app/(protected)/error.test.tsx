@@ -18,7 +18,7 @@ vi.mock('@sentry/nextjs', () => ({
 }));
 const sentryEnabled = { current: true };
 
-const auth = { isSignedIn: true, getToken: vi.fn(async () => 'token') };
+const auth = { isLoaded: true, isSignedIn: true };
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => auth,
   useClerk: () => ({ signOut: vi.fn() }),
@@ -36,6 +36,7 @@ beforeEach(() => {
   captureException.mockClear();
   sentryEnabled.current = true;
   fetchMock.mockClear();
+  auth.isLoaded = true;
   auth.isSignedIn = true;
   localStorage.clear();
   vi.stubGlobal('fetch', fetchMock);
@@ -81,6 +82,18 @@ describe('ProtectedError', () => {
     auth.isSignedIn = false;
     render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
     expect(screen.queryByTestId('error-tell-us-card')).toBeNull();
+  });
+
+  // A protected route: assume signed in until Clerk answers (it can be slow,
+  // or blocked by Brave Shields); a 401 on send switches the layout itself.
+  it('while Clerk is still loading: the signed-in page, card and Sign out', () => {
+    auth.isLoaded = false;
+    auth.isSignedIn = false;
+    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
+    expect(screen.getByTestId('error-tell-us-card')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: CONSUMER_COPY.error.signOutButton }),
+    ).toBeTruthy();
   });
 
   it('files the report with the chip, the note and the browser throw’s event id', async () => {

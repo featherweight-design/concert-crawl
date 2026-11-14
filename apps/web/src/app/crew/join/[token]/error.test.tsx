@@ -24,7 +24,7 @@ const copy = CONSUMER_COPY.error;
 const card = CONSUMER_COPY.errorReport.card;
 
 // An invite is often opened signed out.
-const session = { isSignedIn: false };
+const session = { isLoaded: true, isSignedIn: false };
 const signOut = vi.fn();
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => session,
@@ -37,6 +37,7 @@ vi.mock('@sentry/nextjs', () => ({
 
 afterEach(() => {
   cleanup();
+  session.isLoaded = true;
   session.isSignedIn = false;
   vi.unstubAllGlobals();
 });
@@ -48,6 +49,17 @@ beforeEach(() => {
 });
 
 describe('crew join error boundary', () => {
+  // A public route: while Clerk is still loading (or blocked), signed out.
+  it('Clerk not loaded yet: the signed-out layout, no card', () => {
+    session.isLoaded = false;
+    render(<CrewJoinError error={new Error('x')} reset={vi.fn()} />);
+
+    expect(screen.queryByTestId('error-tell-us-card')).toBeNull();
+    expect(
+      screen.getByRole('link', { name: copy.goHomeButton }),
+    ).toBeInTheDocument();
+  });
+
   it('signed out: the bare error page, no card, no Sign out, Go home', () => {
     const reset = vi.fn();
     render(
