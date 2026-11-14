@@ -144,6 +144,25 @@ describe('DisputedPriceCard', () => {
     });
   });
 
+  describe('signed-out gate and analytics masking', () => {
+    it('announces the sign-up gate on "Submit an update" when signed out', () => {
+      render(<DisputedPriceCard {...buildProps({ signedOut: true })} />);
+      expect(
+        screen.getByRole('button', {
+          name: 'Submit an update: sign up to submit a price',
+        }),
+      ).toBeTruthy();
+    });
+
+    it('keeps the updater and submitter names out of analytics', () => {
+      const { container } = render(<DisputedPriceCard {...buildProps()} />);
+      const masked = Array.from(container.querySelectorAll('.ph-no-capture'));
+      const text = masked.map((node) => node.textContent ?? '').join(' ');
+      expect(text).toContain('@fan-2');
+      expect(text).toContain('@fan-1');
+    });
+  });
+
   describe('anchor target for counter pointer', () => {
     it('sets id="counter-<counterSubmissionId>" on the card root', () => {
       const { container } = render(
