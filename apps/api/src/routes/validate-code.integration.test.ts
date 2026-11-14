@@ -73,6 +73,22 @@ describe('POST /v1/auth/validate-code rate limit', () => {
     expect((await validate(miss(1))).status).toBe(404);
   });
 
+  // `code-ended-fan-m`: a revoked code answers "ended", and it still counts as a
+  // miss, so finding codes that once existed buys no free probes.
+  it('answers a revoked code as ended and spends the miss budget on it', async () => {
+    await testDb.insert(inviteCodes).values({
+      code: 'BETA-AAAA-0004',
+      createdBy: 'user_admin',
+      revokedAt: new Date(),
+    });
+    for (let i = 0; i < 10; i += 1) {
+      const res = await validate('BETA-AAAA-0004');
+      expect(res.status).toBe(410);
+      expect((await res.json()).error).toBe('ended');
+    }
+    expect((await validate('BETA-AAAA-0004')).status).toBe(429);
+  });
+
   it('tells a miss refused in the extra slot to wait out the window', async () => {
     for (let i = 0; i < 10; i += 1) await validate(miss(i));
     const res = await validate(miss(10));
