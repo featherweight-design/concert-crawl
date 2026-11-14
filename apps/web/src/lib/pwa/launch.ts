@@ -25,8 +25,11 @@
 export const LAUNCH_PLAYED_KEY = 'cc-launch-played';
 export const LAUNCH_ATTR = 'data-launch';
 
-/** Every beat of the timeline, in ms from frame 0 (README rule 12). */
-export const LAUNCH_MS = {
+/**
+ * The handoff's timeline, in ms from frame 0 (README rule 12). It sets the
+ * choreography's proportions only: the played length is `LAUNCH_TOTAL_MS`.
+ */
+const BOARD_MS = {
   tileFadeEnd: 110,
   growStart: 110,
   growEnd: 360,
@@ -42,6 +45,39 @@ export const LAUNCH_MS = {
   total: 1040,
 } as const;
 
+/**
+ * How long the launch plays. Hugh's ruling (2026-11-14): as long as the-99's
+ * app loader (3000ms), with the board's 1040ms stretched evenly so every beat
+ * keeps its place in the choreography.
+ */
+export const LAUNCH_TOTAL_MS = 3000;
+
+const stretch = (ms: number): number => (ms * LAUNCH_TOTAL_MS) / BOARD_MS.total;
+
+/** Every beat as played, in ms from frame 0: the board's, stretched. */
+export const LAUNCH_MS = {
+  tileFadeEnd: stretch(BOARD_MS.tileFadeEnd),
+  growStart: stretch(BOARD_MS.growStart),
+  growEnd: stretch(BOARD_MS.growEnd),
+  trailStart: stretch(BOARD_MS.trailStart),
+  trailEnd: stretch(BOARD_MS.trailEnd),
+  trailStep: stretch(BOARD_MS.trailStep),
+  wordStart: stretch(BOARD_MS.wordStart),
+  wordEnd: stretch(BOARD_MS.wordEnd),
+  coreBlueEnd: stretch(BOARD_MS.coreBlueEnd),
+  pulseStart: stretch(BOARD_MS.pulseStart),
+  pulseEnd: stretch(BOARD_MS.pulseEnd),
+  shrinkStart: stretch(BOARD_MS.shrinkStart),
+  total: stretch(BOARD_MS.total),
+} as const;
+
+/** A trail dot lights for two steps. */
+export const LAUNCH_DOT_MS = LAUNCH_MS.trailStep * 2;
+
+/** When trail dot `index` lights: pink travels up the trail a dot at a time. */
+export const launchDotDelayMs = (index: number): number =>
+  LAUNCH_MS.trailStart + LAUNCH_MS.trailStep * index;
+
 /** The animation's end, plus slack: `data-launch` is cleared by then, always. */
 export const LAUNCH_END_MS = LAUNCH_MS.total + 1500;
 
@@ -54,7 +90,8 @@ export const LAUNCH_LANDING = { size: 28, left: 16, top: 15 } as const;
  * the decision; `launch.test.ts` runs it against stubbed windows. It also hands
  * the CSS the viewport (`--ll-w`, `--ll-h`, unitless px) that the animation's
  * positions are measured from, because `calc()` cannot divide one length by
- * another yet.
+ * another yet, and the durations (`--ll-total`, `--ll-dot`), so the CSS holds
+ * no number of its own for the timeline.
  */
 export const LAUNCH_DETECT =
   '(function(){try{var w=window,m=w.matchMedia.bind(w);' +
@@ -65,6 +102,8 @@ export const LAUNCH_DETECT =
   `d.setAttribute("${LAUNCH_ATTR}","1");` +
   'd.style.setProperty("--ll-w",String(w.innerWidth));' +
   'd.style.setProperty("--ll-h",String(w.innerHeight));' +
+  `d.style.setProperty("--ll-total","${LAUNCH_MS.total}ms");` +
+  `d.style.setProperty("--ll-dot","${LAUNCH_DOT_MS}ms");` +
   // The overlay's own animationend ends it, but a document with no overlay
   // (sign-in, onboarding, admin) or a hydration later than the animation would
   // leave the attribute set, and a later client navigation into the shell would

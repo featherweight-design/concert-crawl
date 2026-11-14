@@ -5,8 +5,8 @@
  * hand-rolled @keyframes" (Hugh's rule, CLAUDE.md Motion), ruled by the
  * orchestrator on 2026-11-13:
  *
- * - The timeline is the handoff's fixed design timeline (`LAUNCH_MS`, 1040ms),
- *   not a motion token, and its expo-out curve (0.16, 1, 0.3, 1) is not
+ * - The timeline is the handoff's design timeline (`LAUNCH_MS`), not a motion
+ *   token, and its expo-out curve (0.16, 1, 0.3, 1) is not
  *   `--motion-ease` (0.22, 0.61, 0.36, 1), so the tokens cannot express it.
  * - It has to be on screen in the very first frame, before React hydrates: an
  *   inline head script (`LAUNCH_DETECT`, lib/pwa/launch.ts) marks `<html
@@ -19,7 +19,10 @@
  * - Reduced motion is a straight cut: the head script bails, and the block at
  *   the end hides the overlay if the preference flips mid-load.
  *
- * Every offset below is a `LAUNCH_MS` beat over the 1040ms total, and
+ * The durations are not written here: the head script sets `--ll-total` and
+ * `--ll-dot` from `LAUNCH_MS` (3000ms, the board's 1040ms stretched evenly), so
+ * one number changes the length. Every offset below is a `LAUNCH_MS` beat as a
+ * share of the total, which a uniform stretch leaves alone, and
  * `launch.test.ts` fails if they drift apart. The position maths is the board's
  * 390 x 844 offsets (the core 55px right of and 102px above the centre), scaled
  * with the viewport and clamped to 0.8 to 1.25. It matches the Web Animations
@@ -51,34 +54,34 @@
 
 html[data-launch] .launch-loader {
   display: block;
-  animation: ll-root 1040ms linear forwards;
+  animation: ll-root var(--ll-total) linear forwards;
 }
 
 .launch-loader .ll-tile {
-  animation: ll-tile 1040ms linear forwards;
+  animation: ll-tile var(--ll-total) linear forwards;
 }
 .launch-loader .ll-bloom {
   left: calc(var(--ll-core-x) - 165px);
   top: calc(var(--ll-core-y) - 165px);
-  animation: ll-bloom 1040ms linear forwards;
+  animation: ll-bloom var(--ll-total) linear forwards;
 }
 .launch-loader .ll-mark {
   transform: translate(var(--ll-start-x), var(--ll-start-y)) scale(1.33333);
-  animation: ll-mark 1040ms linear forwards;
+  animation: ll-mark var(--ll-total) linear forwards;
 }
 .launch-loader .ll-word {
-  animation: ll-word 1040ms linear forwards;
+  animation: ll-word var(--ll-total) linear forwards;
 }
 .launch-loader .ll-core {
-  animation: ll-core 1040ms linear forwards;
+  animation: ll-core var(--ll-total) linear forwards;
 }
 .launch-loader .ll-halo {
-  animation: ll-halo 1040ms linear forwards;
+  animation: ll-halo var(--ll-total) linear forwards;
 }
-/* Each trail dot lights for two steps (2 x 32ms) from its own delay, set inline
-   from `LAUNCH_MS`: 300ms plus 32ms a dot. */
+/* Each trail dot lights for two trail steps (`--ll-dot`) from its own delay,
+   set inline from `launchDotDelayMs`. */
 .launch-loader .ll-dot {
-  animation: ll-dot 64ms linear both;
+  animation: ll-dot var(--ll-dot) linear both;
 }
 
 @keyframes ll-root {

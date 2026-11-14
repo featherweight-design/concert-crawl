@@ -6,10 +6,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   LAUNCH_ATTR,
   LAUNCH_DETECT,
+  LAUNCH_DOT_MS,
   LAUNCH_END_MS,
   LAUNCH_MS,
   LAUNCH_PLAYED_KEY,
+  LAUNCH_TOTAL_MS,
   endLaunch,
+  launchDotDelayMs,
   markLaunchPlayed,
 } from './launch';
 
@@ -86,6 +89,13 @@ describe('LAUNCH_DETECT', () => {
     expect(style.getPropertyValue('--ll-h')).toBe('640');
   });
 
+  it('hands the CSS the durations from LAUNCH_MS', () => {
+    detect();
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue('--ll-total')).toBe(`${LAUNCH_MS.total}ms`);
+    expect(style.getPropertyValue('--ll-dot')).toBe(`${LAUNCH_DOT_MS}ms`);
+  });
+
   it("counts the iOS home screen's navigator.standalone as installed", () => {
     detect({
       matchMedia: () => ({ matches: false }),
@@ -156,7 +166,7 @@ describe('markLaunchPlayed and endLaunch', () => {
 });
 
 describe('timeline', () => {
-  it('runs its beats in order and ends at 1040ms', () => {
+  it('runs its beats in order and ends at 3000ms', () => {
     const order = [
       LAUNCH_MS.tileFadeEnd,
       LAUNCH_MS.growEnd,
@@ -167,7 +177,34 @@ describe('timeline', () => {
       LAUNCH_MS.total,
     ];
     expect([...order].sort((left, right) => left - right)).toEqual(order);
-    expect(LAUNCH_MS.total).toBe(1040);
+    expect(LAUNCH_MS.total).toBe(LAUNCH_TOTAL_MS);
+    expect(LAUNCH_TOTAL_MS).toBe(3000);
+  });
+
+  // Hugh's ruling: the board's 1040ms stretched evenly, so the choreography
+  // keeps its proportions. These are the board's beats over its total.
+  it('keeps the board choreography in proportion', () => {
+    const share = (ms: number) => ms / LAUNCH_MS.total;
+    expect(share(LAUNCH_MS.tileFadeEnd)).toBeCloseTo(110 / 1040, 10);
+    expect(share(LAUNCH_MS.growEnd)).toBeCloseTo(360 / 1040, 10);
+    expect(share(LAUNCH_MS.trailStart)).toBeCloseTo(300 / 1040, 10);
+    expect(share(LAUNCH_MS.trailStep)).toBeCloseTo(32 / 1040, 10);
+    expect(share(LAUNCH_MS.shrinkStart)).toBeCloseTo(860 / 1040, 10);
+  });
+
+  it('lights trail dots off the stretched step', () => {
+    expect(LAUNCH_DOT_MS).toBeCloseTo(2 * LAUNCH_MS.trailStep, 10);
+    expect(launchDotDelayMs(0)).toBeCloseTo(LAUNCH_MS.trailStart, 10);
+    expect(launchDotDelayMs(3)).toBeCloseTo(
+      LAUNCH_MS.trailStart + 3 * LAUNCH_MS.trailStep,
+      10,
+    );
+  });
+
+  // The head script's timer is the backstop for a document with no overlay:
+  // it must not clear the attribute while the longer run is still playing.
+  it('clears data-launch only after the whole run', () => {
+    expect(LAUNCH_END_MS).toBe(LAUNCH_MS.total + 1500);
   });
 });
 
@@ -190,12 +227,23 @@ describe('launch.css', () => {
     );
   };
 
-  it('runs every animation over the full 1040ms', () => {
-    expect(css).toContain('animation: ll-root 1040ms linear forwards');
-    for (const name of ['tile', 'bloom', 'mark', 'word', 'core', 'halo']) {
-      expect(css).toContain(`animation: ll-${name} 1040ms linear forwards`);
+  // The CSS writes no duration of its own: the head script hands it the
+  // timeline's, so LAUNCH_MS is the one place the length lives.
+  it('runs every animation over the full timeline, from the head script', () => {
+    for (const name of [
+      'root',
+      'tile',
+      'bloom',
+      'mark',
+      'word',
+      'core',
+      'halo',
+    ]) {
+      expect(css).toContain(
+        `animation: ll-${name} var(--ll-total) linear forwards`,
+      );
     }
-    expect(LAUNCH_MS.total).toBe(1040);
+    expect(css).not.toMatch(/animation:[^;]*\d+m?s/);
   });
 
   it.each([
@@ -245,9 +293,7 @@ describe('launch.css', () => {
   });
 
   it('lights each trail dot for two steps', () => {
-    expect(css).toContain(
-      `animation: ll-dot ${LAUNCH_MS.trailStep * 2}ms linear both`,
-    );
+    expect(css).toContain('animation: ll-dot var(--ll-dot) linear both');
   });
 
   // The overlay covers the whole screen and must never hold a tap or sit under
