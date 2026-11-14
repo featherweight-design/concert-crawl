@@ -41,7 +41,11 @@ vi.mock('drizzle-orm', async (importOriginal) => ({
   isNotNull: vi.fn((_a) => ({ type: 'isNotNull' })),
   sql: Object.assign(
     vi.fn(() => ({ type: 'sql' })),
-    { placeholder: vi.fn() },
+    {
+      placeholder: vi.fn(),
+      // isSoldOutForFansSql joins the not-on-sale statuses into its NOT IN.
+      join: vi.fn(() => ({ type: 'sql.join' })),
+    },
   ),
 }));
 
@@ -141,6 +145,8 @@ const mockEvent = {
   imageUrl: null,
   genre: ['rock'],
   status: 'upcoming',
+  // The detail select reads it: isOnSale gates the sold-out report load.
+  delistedAt: null,
   confidenceScore: '0.9',
   verified: true,
   sourceUrl: null,

@@ -26,8 +26,11 @@ const detailBody = z.object({
     soldOutReport: z.unknown().nullable(),
   }),
 });
+// The browse list nests its page under data.data (beside total, limit, offset).
 const listBody = z.object({
-  data: z.array(z.object({ id: z.string(), isSoldOut: z.boolean() })),
+  data: z.object({
+    data: z.array(z.object({ id: z.string(), isSoldOut: z.boolean() })),
+  }),
 });
 
 /**
@@ -61,7 +64,7 @@ describe('sold out as fans read it', () => {
   const listed = async () =>
     listBody
       .parse(await (await app.request('/v1/events')).json())
-      .data.find((row) => row.id === eventId);
+      .data.data.find((row) => row.id === eventId);
 
   it('reads sold out on an upcoming show', async () => {
     expect((await detail()).priceStatus).toBe('soldout');

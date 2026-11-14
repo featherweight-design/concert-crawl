@@ -35,7 +35,11 @@ vi.mock('drizzle-orm', async (importOriginal) => ({
   isNull: vi.fn((col: unknown) => ({ type: 'isNull', col })),
   sql: Object.assign(
     vi.fn((..._args: unknown[]) => ({ type: 'sql' })),
-    { raw: vi.fn((str: string) => ({ type: 'sql.raw', str })) },
+    {
+      raw: vi.fn((str: string) => ({ type: 'sql.raw', str })),
+      // isSoldOutForFansSql joins the not-on-sale statuses into its NOT IN.
+      join: vi.fn(() => ({ type: 'sql.join' })),
+    },
   ),
 }));
 
