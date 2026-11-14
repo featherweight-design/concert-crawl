@@ -84,7 +84,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
     <>
       {/* Mobile: horizontally scrollable chip strip */}
       <div
-        className="flex sm:hidden items-center gap-1.5 overflow-x-auto"
+        className="flex lg:hidden items-center gap-1.5 overflow-x-auto"
         style={{ padding: '8px 16px 14px', scrollbarWidth: 'none' }}
       >
         {VENUE_FILTER_ORDER.map((key) => {
@@ -140,7 +140,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
       </div>
 
       {/* Desktop: wrapping chip row */}
-      <div className="hidden sm:flex flex-wrap items-center gap-2">
+      <div className="hidden lg:flex flex-wrap items-center gap-2">
         {VENUE_FILTER_ORDER.map((key) => {
           const def = VENUE_FILTER_DEFS[key];
           const value = state[key];
