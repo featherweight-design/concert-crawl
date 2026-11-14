@@ -408,7 +408,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
             {/* The venue row and its guide chip are siblings, not nested —
                 InfoRow wraps its whole row in a link when `href` is set, and an
                 anchor inside an anchor is invalid HTML. */}
-            <div>
+            <div className="relative">
               <InfoRow
                 icon={<IconPin />}
                 label={copy.venueLabel}
@@ -416,12 +416,15 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
                 href={`/venues/${event.venue.slug}`}
                 data-testid="event-venue-name"
               />
-              <div className="flex justify-end">
+              {/* Desktop (bp-event): level with the Venue row. The phone's
+                  copy sits under Ages, below. */}
+              <div className="absolute right-0 top-1/2 hidden -translate-y-1/2 lg:block">
                 <EventFirstTimerChip
                   venueName={event.venue.name}
                   venueSlug={event.venue.slug}
                   venueGuidePublished={event.venueGuidePublished}
                   mode={guideViewerMode}
+                  placement="desktop"
                 />
               </div>
             </div>
@@ -440,6 +443,16 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
               label={copy.agesLabel}
               value={copy.allAges}
             />
+            {/* Phone (bp-m-event_m_end): under Ages, in the value column. */}
+            <div className="pb-2 pl-7 lg:hidden">
+              <EventFirstTimerChip
+                venueName={event.venue.name}
+                venueSlug={event.venue.slug}
+                venueGuidePublished={event.venueGuidePublished}
+                mode={guideViewerMode}
+                placement="phone"
+              />
+            </div>
           </div>
 
           {/* Phase 8.5 — live/pending report banners render below the info block */}

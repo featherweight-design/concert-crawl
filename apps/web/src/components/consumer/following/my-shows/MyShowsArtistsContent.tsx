@@ -321,12 +321,14 @@ const denseButton = {
   textDecoration: 'none',
 } as const;
 
-// B+ (`bp-artists`): the find action is the gradient pill.
+// B+ (`bp-artists`): the find action is a gradient rounded rectangle, radius
+// about 10, with a signal glow (not a full pill).
 const densePrimary = {
   ...denseButton,
   background: MY_SHOWS_GRADIENT,
   color: 'var(--fg-on-accent)',
   border: '1px solid transparent',
-  borderRadius: 999,
+  borderRadius: 10,
+  boxShadow: '0 8px 24px -10px var(--signal)',
   fontWeight: 800,
 };
