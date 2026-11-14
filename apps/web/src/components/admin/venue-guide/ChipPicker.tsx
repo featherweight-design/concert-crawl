@@ -52,7 +52,7 @@ export const ChipPicker = ({
             padding: '0 13px',
             borderRadius: 999,
             boxSizing: 'border-box',
-            fontFamily: 'var(--font-ui)',
+            fontFamily: 'inherit',
             fontSize: 12,
             fontWeight: 600,
             letterSpacing: '-0.005em',
@@ -91,7 +91,7 @@ export const ChipPicker = ({
           padding: '0 13px',
           borderRadius: 999,
           boxSizing: 'border-box',
-          fontFamily: 'var(--font-ui)',
+          fontFamily: 'inherit',
           fontSize: 12,
           fontWeight: 500,
           color: 'var(--fg-subtle)',
@@ -107,7 +107,7 @@ export const ChipPicker = ({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        fontFamily: 'var(--font-mono)',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: 9.5,
         fontWeight: 700,
         letterSpacing: '0.08em',
@@ -122,7 +122,7 @@ export const ChipPicker = ({
     <span
       style={{
         flexBasis: '100%',
-        fontFamily: 'var(--font-ui)',
+        fontFamily: 'inherit',
         fontSize: 11.5,
         lineHeight: 1.45,
         color: 'var(--fg-subtle)',

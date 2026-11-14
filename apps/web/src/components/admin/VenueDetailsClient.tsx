@@ -8,7 +8,8 @@ import {
   venueTabHref,
   type VenueTab,
 } from '@/lib/admin/venue-tabs';
-import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock';
+import { GuideTab } from '@/components/admin/venues/guide/GuideTab';
+import { guideNeedsYou } from '@/components/admin/venues/guide/guide-rules';
 import { VenueHeader } from '@/components/admin/venues/VenueHeader';
 import { useRecrawl } from '@/components/admin/venues/useRecrawl';
 import { recrawlOff } from '@/components/admin/venues/venue-header-rules';
@@ -54,10 +55,33 @@ const VENUE_TAB_LABEL: Record<VenueTab, string> = {
   details: TAB_COPY.details,
   guide: TAB_COPY.guide,
 };
-const VENUE_TAB_ITEMS = VENUE_TABS.map((key) => ({
-  key,
-  label: VENUE_TAB_LABEL[key],
-}));
+/**
+ * The Guide tab's dot (`04/venue-guide`): the guide is unpublished or Publish
+ * is blocked, read from the fetched guide (logic ruling). Unknown when the
+ * fetch failed, so no dot then. The tab's name stays "Guide".
+ */
+const venueTabItems = (guideDot: boolean) =>
+  VENUE_TABS.map((key) => ({
+    key,
+    label:
+      key === 'guide' && guideDot ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {VENUE_TAB_LABEL[key]}
+          <span
+            aria-hidden
+            data-testid="guide-tab-dot"
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: 'var(--warning)',
+            }}
+          />
+        </span>
+      ) : (
+        VENUE_TAB_LABEL[key]
+      ),
+  }));
 const venueTabId = (key: VenueTab) => `venue-tab-${key}`;
 const venuePanelId = (key: VenueTab) => `venue-panel-${key}`;
 
@@ -124,6 +148,14 @@ export function VenueDetailsClient({
     setTabFromUrl(initialTab);
     setTab(initialTab);
   }
+  // The guide as last saved: the panel's writes update it, and a server
+  // re-render with a new fetch replaces it (adjusted during render).
+  const [liveGuide, setLiveGuide] = useState<VenueGuide>(guide);
+  const [guideFromServer, setGuideFromServer] = useState<VenueGuide>(guide);
+  if (guideFromServer !== guide) {
+    setGuideFromServer(guide);
+    setLiveGuide(guide);
+  }
   const tablistRef = useRef<HTMLDivElement | null>(null);
   /**
    * Client-only: the tab lives in state and the URL follows through
@@ -177,7 +209,7 @@ export function VenueDetailsClient({
       <VenueHeader venue={venue} recrawl={recrawl} />
 
       <AdminTabs
-        tabs={VENUE_TAB_ITEMS}
+        tabs={venueTabItems(!guideLoadFailed && guideNeedsYou(liveGuide))}
         value={tab}
         onChange={changeTab}
         label={TAB_COPY.label}
@@ -210,13 +242,11 @@ export function VenueDetailsClient({
       </VenueTabPanel>
 
       <VenueTabPanel tab="guide" active={tab}>
-        {/* #764 first-timer guide — its own resource with its own publish
-            gate, so it renders as a standalone block. */}
-        <VenueGuideBlock
-          venueId={venue.id}
-          venueName={venue.name}
-          initialGuide={guide}
+        <GuideTab
+          venue={venue}
+          guide={liveGuide}
           loadFailed={guideLoadFailed}
+          onGuideChange={setLiveGuide}
         />
       </VenueTabPanel>
 

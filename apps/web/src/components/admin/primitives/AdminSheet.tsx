@@ -28,6 +28,8 @@ export interface AdminSheetProps {
    * the close button (`06/artist-search-mobile` draws "‹ Artists").
    */
   backLabel?: string;
+  /** Full screen without `backLabel` only: a ⋯ menu beside the close button. */
+  menu?: ReactNode;
 }
 
 /**
@@ -46,6 +48,7 @@ export const AdminSheet = ({
   dismissible = true,
   footerReversed = false,
   backLabel,
+  menu,
 }: AdminSheetProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -109,7 +112,15 @@ export const AdminSheet = ({
             {backLabel}
           </button>
         ) : fullScreen ? (
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            {menu}
             <button
               type="button"
               onClick={onClose}

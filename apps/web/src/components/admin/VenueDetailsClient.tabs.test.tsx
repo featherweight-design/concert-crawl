@@ -458,3 +458,67 @@ describe('VenueDetailsClient — the pure tab shell', () => {
     expect(formData.get('city')).toBe('Boulder');
   });
 });
+
+// The Guide tab's dot (logic ruling): unpublished, or Publish blocked.
+describe('VenueDetailsClient — the Guide tab dot', () => {
+  beforeEach(() => vi.stubGlobal('matchMedia', matchMediaStub));
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const access = (body: string, isPlaceholder = false) => ({
+    chipType: 'accessibility' as const,
+    body,
+    isPlaceholder,
+  });
+  const dot = () => screen.queryByTestId('guide-tab-dot');
+
+  it('shows while the guide is unpublished', () => {
+    render(
+      <VenueDetailsClient
+        venue={venue}
+        guide={{ chips: [access('Ramp')], insiderTip: null, publishedAt: null }}
+      />,
+    );
+    expect(dot()).not.toBeNull();
+    // The tab keeps its name: the dot is decoration.
+    expect(screen.getByRole('tab', { name: TABS.guide })).toBeTruthy();
+  });
+
+  it('shows on a published guide whose Publish is blocked', () => {
+    render(
+      <VenueDetailsClient
+        venue={venue}
+        guide={{ chips: [], insiderTip: 'Tip', publishedAt: '2026-11-01' }}
+      />,
+    );
+    expect(dot()).not.toBeNull();
+  });
+
+  it('hides on a published guide with Accessibility, or Can’t document yet', () => {
+    const { rerender } = render(
+      <VenueDetailsClient
+        venue={venue}
+        guide={{ chips: [access('Ramp')], insiderTip: null, publishedAt: 'x' }}
+      />,
+    );
+    expect(dot()).toBeNull();
+    rerender(
+      <VenueDetailsClient
+        venue={venue}
+        guide={{
+          chips: [access('', true)],
+          insiderTip: null,
+          publishedAt: 'y',
+        }}
+      />,
+    );
+    expect(dot()).toBeNull();
+  });
+
+  it('hides when the guide failed to load: its state is unknown', () => {
+    render(<VenueDetailsClient venue={venue} guideLoadFailed />);
+    expect(dot()).toBeNull();
+  });
+});

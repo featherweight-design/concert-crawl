@@ -52,7 +52,7 @@ export const ChipStateDot = ({
       {!hideLabel && (
         <span
           style={{
-            fontFamily: 'var(--font-mono)',
+            fontFamily: "'JetBrains Mono', monospace",
             fontSize: 9.5,
             fontWeight: 700,
             letterSpacing: '0.06em',
