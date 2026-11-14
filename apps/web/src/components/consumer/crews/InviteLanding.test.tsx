@@ -347,6 +347,20 @@ describe('DeadInviteLink (#1226)', () => {
       screen.getByRole('link', { name: COPY.linkDead.browse }),
     ).toBeInTheDocument();
   });
+
+  // The stale-link card draws the generic hex patch (addendum 5 item 13), the
+  // one patch that is the same for every crew, dimmed and hidden from
+  // assistive tech. It is handed no crew id, so nothing can leak.
+  it('draws the generic patch, decorative and dimmed', () => {
+    const { container } = render(<DeadInviteLink kind="expired" />);
+    const svg = container.querySelector('svg[aria-hidden="true"]');
+    expect(svg).not.toBeNull();
+    expect(
+      container.querySelector('path[d="M28 21l6 3.5v7L28 35l-6-3.5v-7z"]'),
+    ).not.toBeNull();
+    const dimmed = svg?.parentElement as HTMLElement;
+    expect(dimmed.style.filter).toBe('grayscale(1)');
+  });
 });
 
 describe('InviteLandingSkeleton (#1226)', () => {

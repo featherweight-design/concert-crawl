@@ -61,10 +61,13 @@ describe('CrewPatch generic', () => {
     );
     expect(filled?.getAttribute('fill')).toBe('var(--signal)');
     expect(outlined?.getAttribute('stroke')).toBe('var(--accent)');
-    // A short spoke leaves each of the six vertices.
-    expect(
-      container.querySelectorAll('g[transform^="scale"] line'),
-    ).toHaveLength(6);
+    // The hex holds out six arms, one stroke in accent.
+    const arms = container.querySelector(
+      'path[d="M28 9v6M28 41v6M12 19l5 2.5M39 34.5l5 2.5M12 37l5-2.5M39 21.5l5-2.5"]',
+    );
+    expect(arms?.getAttribute('stroke')).toBe('var(--accent)');
+    // The weave is the board's: three rings (and twelve faint spokes).
+    expect(container.querySelectorAll('circle')).toHaveLength(3);
   });
 
   it('keeps the frame: the rim in the accent, the glow from 56px up', () => {
