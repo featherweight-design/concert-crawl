@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { pastLockedMessage } from '@/components/admin/events/past-locked';
 import { Pagination } from '@/components/admin/primitives';
 import {
   REVIEW_ALL_EVENTS_PAGE_SIZE,
@@ -224,9 +225,10 @@ export const AllEventsTabContent = ({
         refresh();
       } catch (apiErr) {
         const message =
-          apiErr instanceof ApiError
+          pastLockedMessage(apiErr) ??
+          (apiErr instanceof ApiError
             ? apiErr.message
-            : 'Failed to apply the change.';
+            : 'Failed to apply the change.');
         console.error('AllEventsTabContent action error:', apiErr);
         setActionError(message);
       }

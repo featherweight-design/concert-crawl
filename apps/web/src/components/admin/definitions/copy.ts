@@ -1557,6 +1557,9 @@ export const ADMIN_COPY = {
     errors: {
       actionFailed: 'Action failed',
       saveFailed: 'Save failed',
+      // The PATCH's 409 `past_locked`.
+      pastLocked:
+        'Past shows can only be hidden or unhidden. A postponed one can also get a new date, time or status.',
     },
   },
 
