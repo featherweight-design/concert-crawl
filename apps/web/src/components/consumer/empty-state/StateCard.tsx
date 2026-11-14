@@ -5,7 +5,7 @@ import { useId, type ReactNode } from 'react';
  * violet the two mix to (the same sweep the invite landing's CTA uses).
  */
 export const STATE_CTA_GRADIENT =
-  'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--accent)), var(--accent))';
+  'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--cta-end)), var(--cta-end))';
 
 interface StateCardAction {
   label: string;
@@ -70,8 +70,7 @@ const TAB_ACTION_STYLE: React.CSSProperties = {
   borderRadius: 12,
   fontSize: 14.5,
   letterSpacing: 0,
-  background:
-    'linear-gradient(135deg, var(--signal), color-mix(in oklch, var(--signal), var(--accent)))',
+  background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
   boxShadow: '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
 };
 

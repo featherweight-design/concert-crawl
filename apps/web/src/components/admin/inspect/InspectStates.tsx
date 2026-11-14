@@ -35,7 +35,7 @@ export const stateButton = (
   cursor: 'pointer',
   ...(primary
     ? {
-        background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+        background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
         color: 'var(--bg)',
         border: '1px solid transparent',
       }

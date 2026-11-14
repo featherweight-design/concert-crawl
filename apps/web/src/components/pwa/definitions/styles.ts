@@ -2,6 +2,10 @@
 export const PWA_GRADIENT =
   'linear-gradient(90deg, var(--signal), var(--accent))';
 
+/** The same sweep where it fills a primary button under dark label text. */
+export const PWA_CTA_GRADIENT =
+  'linear-gradient(90deg, var(--signal), var(--cta-end))';
+
 /** A control edged in the sweep: fill on the padding box, sweep on the border. */
 export const gradientEdge = (fill: string) =>
   `linear-gradient(${fill}, ${fill}) padding-box, ${PWA_GRADIENT} border-box`;
