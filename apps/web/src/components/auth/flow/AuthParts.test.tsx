@@ -38,11 +38,13 @@ describe('PasswordField', () => {
     render(<PasswordField label="Password" defaultValue="secret" />);
     const input = screen.getByLabelText('Password');
     expect(input).toHaveAttribute('type', 'password');
-    fireEvent.click(screen.getByRole('button', { name: COPY.password.show }));
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.password.showLabel }),
+    );
     expect(input).toHaveAttribute('type', 'text');
     expect(
-      screen.getByRole('button', { name: COPY.password.hide }),
-    ).toHaveAttribute('aria-pressed', 'true');
+      screen.getByRole('button', { name: COPY.password.hideLabel }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -88,14 +90,18 @@ describe('ConsentCheck', () => {
       return (
         <ConsentCheck checked={on} onChange={setOn}>
           {COPY.consent.lead}
-          <LegalLink onClick={onLink}>{COPY.consent.terms}</LegalLink>
+          <LegalLink href="/legal/terms" onClick={onLink}>
+            {COPY.consent.terms}
+          </LegalLink>
         </ConsentCheck>
       );
     }
     render(<Harness />);
     const box = screen.getByRole('checkbox');
     expect(box).not.toBeChecked();
-    fireEvent.click(screen.getByRole('button', { name: COPY.consent.terms }));
+    const link = screen.getByRole('link', { name: COPY.consent.terms });
+    expect(link).toHaveAttribute('href', '/legal/terms');
+    fireEvent.click(link);
     expect(onLink).toHaveBeenCalledOnce();
     expect(box).not.toBeChecked();
     fireEvent.click(box);

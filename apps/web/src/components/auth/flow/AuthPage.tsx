@@ -72,8 +72,8 @@ export function AuthPage({ children, onBack, venueCount }: AuthPageProps) {
           >
             <defs>
               <linearGradient id="auth-edge" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0" stopColor="var(--signal)" />
-                <stop offset="1" stopColor="var(--cta-end)" />
+                <stop offset="0" style={{ stopColor: 'var(--signal)' }} />
+                <stop offset="1" style={{ stopColor: 'var(--cta-end)' }} />
               </linearGradient>
             </defs>
             <path

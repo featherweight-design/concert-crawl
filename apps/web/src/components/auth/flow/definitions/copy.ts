@@ -21,6 +21,9 @@ export const AUTH_FLOW_COPY = {
   password: {
     show: 'Show',
     hide: 'Hide',
+    // The button's accessible name: the visible word, in context.
+    showLabel: 'Show password',
+    hideLabel: 'Hide password',
     rule: 'At least 8 characters.',
   },
   code: {
@@ -52,6 +55,8 @@ export const AUTH_FLOW_COPY = {
     useCode: 'Use an invite code',
     forgot: 'Forgot password?',
     legalBody: 'The live page renders here.',
+    termsTitle: 'Terms of Service',
+    privacyTitle: 'Privacy Policy',
   },
   steps: {
     label: (step: number, total: number) => `Step ${step} of ${total}`,

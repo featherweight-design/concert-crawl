@@ -51,23 +51,26 @@ export function ConsentCheck({
         </span>
         <span>{children}</span>
       </label>
-      {error ? (
-        <div className="mt-2" aria-live="polite">
+      <div className={error ? 'mt-2' : undefined} aria-live="polite">
+        {error ? (
           <AuthErrorLine id={`${id}-error`}>{error}</AuthErrorLine>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }
 
-/** A document name inside the consent sentence. A button, so it never toggles. */
+/**
+ * A document name inside the consent sentence. A real link to the legal page
+ * (a button is a labelable element, which a label may not contain), so it works
+ * without script; with script it opens the sheet and never toggles the box.
+ */
 export function LegalLink({
   onClick,
   ...rest
-}: Omit<ComponentProps<'button'>, 'type'>) {
+}: Omit<ComponentProps<'a'>, 'target'> & { href: string }) {
   return (
-    <button
-      type="button"
+    <a
       {...rest}
       onClick={(evt) => {
         evt.preventDefault();
