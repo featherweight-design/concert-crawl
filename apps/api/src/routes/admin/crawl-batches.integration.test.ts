@@ -20,9 +20,14 @@ import type {
   CrawlAllEstimate,
   CrawlBatch,
   CrawlBatchDetail,
+  CrawlBatchPage,
 } from '@concert-crawl/types';
 import { createApp } from '../../app.js';
-import { clearTables, seedVenue } from '../../test/helpers/seed.js';
+import {
+  clearTables,
+  seedUserProfile,
+  seedVenue,
+} from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
 import { CRAWLER_DAILY_CRON_UTC } from '../../lib/crawl-schedule.js';
@@ -279,5 +284,147 @@ describe('admin crawl batches', () => {
     expect((await get('?limit=0')).status).toBe(400);
     expect((await get('?limit=101')).status).toBe(400);
     expect((await get('?kind=weekly')).status).toBe(400);
+    expect((await get('?before=yesterday')).status).toBe(400);
+  });
+
+  describe('the list fields', () => {
+    const seedByHand = async () => {
+      const ball = await seedVenue({ name: 'Ball Arena', slug: 'ball-arena' });
+      const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      const hughAt = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const otherAt = new Date(Date.now() - 60 * 60 * 1000);
+      const ballRun = await seedRun(ball.id, new Date(hughAt.getTime() + 5e3), {
+        llmCostUsd: 0.25,
+      });
+      const levittRun = await seedRun(
+        levitt.id,
+        new Date(hughAt.getTime() + 9e3),
+        { status: 'failed', reason: 'blocked_http', llmCostUsd: 0.5 },
+      );
+      // Crawl all writes its triggers in one statement: one created_at.
+      await testDb.insert(crawlTriggers).values([
+        {
+          venueId: ball.id,
+          triggeredBy: 'user_hugh',
+          status: 'done',
+          crawlRunId: ballRun,
+          createdAt: hughAt,
+        },
+        {
+          venueId: levitt.id,
+          triggeredBy: 'user_hugh',
+          status: 'done',
+          crawlRunId: levittRun,
+          createdAt: hughAt,
+        },
+        {
+          venueId: ball.id,
+          triggeredBy: 'user_nohandle',
+          status: 'pending',
+          createdAt: otherAt,
+        },
+      ]);
+      await seedUserProfile('user_hugh', { handle: 'hugh' });
+      return { hughAt, otherAt };
+    };
+
+    it('sends cost, Crawl all, the one venue, the @handle and a link key, and never an email', async () => {
+      setAuth('admin');
+      const { hughAt, otherAt } = await seedByHand();
+
+      const res = await get('?kind=by_hand');
+      const text = await res.text();
+      const body: CrawlBatchPage = JSON.parse(text);
+      expect(body.data).toHaveLength(2);
+      const [recrawl, crawlAll] = body.data;
+      expect(crawlAll).toMatchObject({
+        actor: 'user_hugh',
+        actorHandle: 'hugh',
+        crawlAll: true,
+        venueName: null,
+        costUsd: 0.75,
+        linkKey: `run:${Math.floor(hughAt.getTime() / 1000)}`,
+        counts: { ok: 1, notOk: 1, blocked: 1, failed: 0 },
+        retry: null,
+      });
+      expect(recrawl).toMatchObject({
+        actor: 'user_nohandle',
+        actorHandle: null,
+        crawlAll: false,
+        venueName: 'Ball Arena',
+        costUsd: 0,
+        linkKey: `run:${Math.floor(otherAt.getTime() / 1000)}`,
+      });
+      expect(text).not.toMatch(/email/i);
+      expect(text).not.toContain('@');
+    });
+
+    it('looks a by-hand batch up by its link key, with the handle, and 404s an unknown second', async () => {
+      setAuth('admin');
+      const { hughAt } = await seedByHand();
+      const epoch = Math.floor(hughAt.getTime() / 1000);
+
+      const res = await get(`/run:${epoch}`);
+      expect(res.status).toBe(200);
+      const body: { data: CrawlBatchDetail } = await res.json();
+      expect(body.data).toMatchObject({
+        key: `by_hand:user_hugh:${epoch}`,
+        actorHandle: 'hugh',
+        crawlAll: true,
+      });
+      expect(body.data.runs).toHaveLength(2);
+      expect((await get(`/run:${epoch - 1}`)).status).toBe(404);
+    });
+
+    it('splits a retried night into its retry wave, keeping retried folded', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      await seedRun(venue.id, nightAt(1), {
+        status: 'failed',
+        reason: 'error',
+      });
+      await seedRun(venue.id, nightAt(1, 70));
+
+      const body: CrawlBatchPage = await (await get('?kind=nightly')).json();
+      const night = body.data.find((batch) => !batch.didntStart);
+      expect(night).toMatchObject({
+        retried: true,
+        counts: { total: 2, failed: 1, ok: 1 },
+        retry: {
+          at: nightAt(1, 70).toISOString(),
+          counts: { total: 1, ok: 1 },
+        },
+      });
+    });
+
+    it('pages with before, every batch once, until hasMore is false', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      for (const daysAgo of [1, 2, 3, 4, 5, 6]) {
+        await seedRun(venue.id, nightAt(daysAgo));
+      }
+
+      const seen: string[] = [];
+      let before: string | null = null;
+      for (let page = 0; page < 10; page += 1) {
+        const query: string =
+          before === null ? '?limit=2' : `?limit=2&before=${before}`;
+        const body: CrawlBatchPage = await (await get(query)).json();
+        expect(body.data.length).toBeLessThanOrEqual(2);
+        seen.push(...body.data.map((batch) => batch.key));
+        if (!body.hasMore) {
+          expect(body.nextBefore).toBeNull();
+          break;
+        }
+        before = body.nextBefore;
+        expect(before).not.toBeNull();
+      }
+      expect(new Set(seen).size).toBe(seen.length);
+      for (const daysAgo of [1, 2, 3, 4, 5, 6]) {
+        expect(seen).toContain(`nightly:${denverDate(nightAt(daysAgo))}`);
+      }
+      const first: CrawlBatchPage = await (await get('?limit=2')).json();
+      expect(first.hasMore).toBe(true);
+    });
   });
 });

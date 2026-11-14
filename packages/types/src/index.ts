@@ -588,6 +588,20 @@ export interface CrawlBatchCounts {
   /** Runs skipped on purpose: the venue's crawl is paused. */
   skipped: number;
   total: number;
+  /**
+   * Part of `notOk`: runs that failed outright (not blocked, robots.txt or an
+   * account-wide LLM refusal), the run chip's Failed.
+   */
+  failed: number;
+  /** Part of `notOk`: runs the venue answered with a 403 or 429. */
+  blocked: number;
+}
+
+/** A retried night's later waves: the backup dispatch and what it ran. */
+export interface CrawlBatchRetry {
+  /** When the retry's first run started, ISO. */
+  at: string;
+  counts: CrawlBatchCounts;
 }
 
 export interface CrawlBatch {
@@ -611,10 +625,44 @@ export interface CrawlBatch {
   retried: boolean;
   /** A night with no scheduled run at all, derived, not stored. */
   didntStart: boolean;
+  /** The Haiku spend of the batch's runs, USD (0 with none recorded). */
+  costUsd: number;
+  /**
+   * The key a URL carries, with no Clerk id in it: `nightly:YYYY-MM-DD`, or
+   * `run:<epoch s>` for a by-hand batch. GET /batches/:key takes either.
+   */
+  linkKey: string;
+  /**
+   * The by-hand batch was one Crawl all: its triggers were written together
+   * by POST /v1/admin/crawl. False for a re-crawl of one or more venues, for
+   * a Crawl all that queued a single venue, and for every nightly.
+   */
+  crawlAll: boolean;
+  /** The venue of a one-venue by-hand batch ("Re-crawl · Ball Arena"), else null. */
+  venueName: string | null;
+  /**
+   * The actor's @handle (no "@"), null for nightly or with no handle set.
+   * Filled by the routes from user_profiles; never an email.
+   */
+  actorHandle: string | null;
+  /**
+   * A retried night's later waves on their own, so a list can draw the retry
+   * as a second row. `retried` stays the folded flag. Null when not retried.
+   */
+  retry: CrawlBatchRetry | null;
 }
 
 export interface CrawlBatchDetail extends CrawlBatch {
   runs: CrawlBatchRun[];
+}
+
+/** GET /v1/admin/crawl/batches: a page of batches, newest first. */
+export interface CrawlBatchPage {
+  data: CrawlBatch[];
+  /** Older batches exist past this page. */
+  hasMore: boolean;
+  /** Pass as `before` for the next page; null when `hasMore` is false. */
+  nextBefore: string | null;
 }
 
 /** Why Crawl all leaves a venue out (blocked wins, then paused, hidden, unverified). */

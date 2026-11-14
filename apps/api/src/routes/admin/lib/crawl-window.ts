@@ -39,12 +39,14 @@ export const readWindow = async (
       .select({
         id: crawlTriggers.id,
         venueId: crawlTriggers.venueId,
+        venueName: venues.name,
         triggeredBy: crawlTriggers.triggeredBy,
         status: crawlTriggers.status,
         crawlRunId: crawlTriggers.crawlRunId,
         createdAt: crawlTriggers.createdAt,
       })
       .from(crawlTriggers)
+      .leftJoin(venues, eq(venues.id, crawlTriggers.venueId))
       .where(
         and(
           gte(crawlTriggers.createdAt, from),
@@ -56,4 +58,21 @@ export const readWindow = async (
     runs: runRows,
     triggers: triggerRows,
   };
+};
+
+/** Any run or trigger older than `before`: the list has history left to page. */
+export const hasRowsBefore = async (before: Date): Promise<boolean> => {
+  const [run, trigger] = await Promise.all([
+    db
+      .select({ id: crawlRuns.id })
+      .from(crawlRuns)
+      .where(lt(crawlRuns.createdAt, before))
+      .limit(1),
+    db
+      .select({ id: crawlTriggers.id })
+      .from(crawlTriggers)
+      .where(lt(crawlTriggers.createdAt, before))
+      .limit(1),
+  ]);
+  return run.length > 0 || trigger.length > 0;
 };
