@@ -3,6 +3,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   headerLine,
   recrawlOff,
+  runningSince,
   viewOnSiteHref,
   type HeaderVenue,
 } from './venue-header-rules';
@@ -104,6 +105,32 @@ describe('recrawlOff — taken down', () => {
     });
     expect(headerLine(takenDown, false)).toBe(COPY.recrawlOff.removed);
     expect(headerLine(takenDown, true)).toBe(COPY.recrawlOff.removed);
+  });
+});
+
+describe('a running re-crawl', () => {
+  // 3:41 PM in Denver on Nov 12.
+  const STARTED = '2026-11-12T22:41:00.000Z';
+
+  it('reads when it started, in Mountain Time, on both widths', () => {
+    expect(headerLine(venue(), false, STARTED)).toBe(COPY.startedAt('3:41 PM'));
+    expect(headerLine(venue(), true, STARTED)).toBe('Started 3:41 PM');
+  });
+
+  it('still says why Re-crawl is off first', () => {
+    expect(headerLine(venue({ verified: false }), false, STARTED)).toBe(
+      COPY.recrawlOff.unverified,
+    );
+  });
+
+  it('takes the start from a processing trigger only', () => {
+    expect(runningSince({ status: 'processing', updatedAt: STARTED })).toBe(
+      STARTED,
+    );
+    expect(runningSince({ status: 'pending', updatedAt: STARTED })).toBeNull();
+    expect(
+      runningSince({ status: 'processing', updatedAt: 'soon' }),
+    ).toBeNull();
   });
 });
 

@@ -1,5 +1,7 @@
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
+import { z } from 'zod';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { shortTime } from './overview/overview-rules';
 
 const COPY = ADMIN_COPY.venueHeader;
 
@@ -49,14 +51,37 @@ export const recrawlOff = (venue: HeaderVenue): RecrawlOff | null => {
 export const viewOnSiteHref = (venue: HeaderVenue): string | null =>
   offSite(venue) ? null : `/venues/${encodeURIComponent(venue.slug)}`;
 
+const startedAtSchema = z.iso.datetime({ offset: true });
+
+/**
+ * When a running re-crawl started: the trigger's `updatedAt` once it reads
+ * `processing`, which the crawler stamps as it claims the trigger. Null for
+ * any other status or a time that won't parse.
+ */
+export const runningSince = (trigger: {
+  status: string;
+  updatedAt: unknown;
+}): string | null => {
+  if (trigger.status !== 'processing') return null;
+  const parsed = startedAtSchema.safeParse(trigger.updatedAt);
+  return parsed.success ? parsed.data : null;
+};
+
 /**
  * The line beside the chips: "Central Platte Valley · 235 upcoming", or why
  * Re-crawl is off. The phone keeps the neighbourhood under the name instead
- * (`A3/03/venue-overview-m`), so its line is only the reason.
+ * (`A3/03/venue-overview-m`), so its line is only the reason. While a
+ * re-crawl runs, both read when it started, "Started 3:41 PM" in Mountain
+ * Time (`A3/03/re-crawl-states`).
  */
-export const headerLine = (venue: HeaderVenue, isPhone: boolean): string => {
+export const headerLine = (
+  venue: HeaderVenue,
+  isPhone: boolean,
+  startedAt: string | null = null,
+): string => {
   const off = recrawlOff(venue);
   if (off !== null) return COPY.recrawlOff[off];
+  if (startedAt !== null) return COPY.startedAt(shortTime(startedAt));
   if (isPhone) return '';
   const shows = venue.deleteBlockers?.upcomingShows ?? null;
   return [venue.neighborhood, shows === null ? null : COPY.upcoming(shows)]

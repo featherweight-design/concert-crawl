@@ -592,6 +592,14 @@ export const ADMIN_COPY = {
       withReason: (outcome: string, reason: string) => `${outcome}: ${reason}`,
       pausedOn: (date: string) => `Paused · ${date}`,
       pausedBy: (name: string, date: string) => `Paused by ${name} · ${date}`,
+      // `04/venues-desktop`: "Skipped: page unchanged since Nov 10", in the
+      // Unchanged word `09/run-result-chips` gives the outcome.
+      unchangedSince: (date: string) => `Unchanged since ${date}`,
+      // `01/venues-list-status-columns`: an auto-paused row's failures, by
+      // date ("Nov 9, 10, 11"), the count addendum-2 item 29 puts here.
+      failedOn: (dates: string) => `Failed ${dates}`,
+      // A month's later days drop the month: "Oct 31, Nov 1, 2".
+      dateList: (dates: readonly string[]) => dates.join(', '),
       reasons: {
         calendar_not_found: 'calendar block not found',
         no_events_found: 'no shows found',
@@ -714,6 +722,9 @@ export const ADMIN_COPY = {
     recrawl: 'Re-crawl',
     queued: 'Queued',
     running: 'Crawling now',
+    // Crawling now's line, "Page 2 of 4 · started 3:41 PM" on the board. No
+    // page progress is recorded while a run is out, so it is the start alone.
+    startedAt: (time: string) => `Started ${time}`,
     viewOnSite: 'View on site',
     // Why Re-crawl is off. The API refuses all four (paused 409, robots 409,
     // hidden or unverified 400). The board's "/events" has no source, so no
@@ -1161,6 +1172,14 @@ export const ADMIN_COPY = {
       added > 0
         ? `${showCount(shows)} · ${added.toLocaleString('en-US')} new`
         : showCount(shows),
+    // "106 shows · 2 new · via Haiku": the reader that found them, named as
+    // the run detail's HOW WE READ IT steps name it. A platform feed has no
+    // drawn name, so its line has no "via".
+    via: (line: string, reader: string) => `${line} · via ${reader}`,
+    readers: {
+      structured_data: 'JSON-LD',
+      llm: 'Haiku',
+    },
     unchangedSince: (date: string) => `Page unchanged since ${date}`,
     // "230 s"; a run with no recorded duration reads the dash.
     duration: (seconds: number) => `${seconds.toLocaleString('en-US')} s`,

@@ -139,17 +139,40 @@ export const mergeRuns = (
   );
 };
 
+type Reader = keyof typeof COPY.readers;
+
+const isReader = (strategy: string): strategy is Reader =>
+  Object.hasOwn(COPY.readers, strategy);
+
 /**
- * A row's line (`04/venue-runs`): "106 shows · 2 new" for a run that read
- * shows, "Page unchanged since Nov 10" for Unchanged, otherwise the list's
- * reason line ("Failed: timed out"), or the outcome when there is none.
- * "via Haiku" is left off: no copy maps `extractionStrategyUsed` to a name.
+ * The reader's name for a run's `extractionStrategyUsed`: "Haiku" for the
+ * LLM, "JSON-LD" for structured data. Null for a platform feed, which no
+ * board names, and for a run that recorded none.
+ */
+export const runReader = (
+  strategy: string | null | undefined,
+): string | null =>
+  strategy !== null && strategy !== undefined && isReader(strategy)
+    ? COPY.readers[strategy]
+    : null;
+
+/**
+ * A row's line (`04/venue-runs`): "106 shows · 2 new · via Haiku" for a run
+ * that read shows (no "via" when the reader has no name), "Page unchanged
+ * since Nov 10" for Unchanged, otherwise the list's reason line ("Failed:
+ * timed out"), or the outcome when there is none. A partial run read no
+ * usable shows, so it names no reader: the board draws "via" on OK rows only.
  */
 export const runLine = (
   run: RunRow,
   lastFullRun: VenueLastFullRun | null,
 ): string => {
-  if (run.status === 'success' || run.status === 'partial') {
+  if (run.status === 'success') {
+    const line = COPY.shows(run.eventsFound, run.eventsInserted);
+    const reader = runReader(run.extractionStrategyUsed);
+    return reader === null ? line : COPY.via(line, reader);
+  }
+  if (run.status === 'partial') {
     return COPY.shows(run.eventsFound, run.eventsInserted);
   }
   if (isUnchanged(run)) {

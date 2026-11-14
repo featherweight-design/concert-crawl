@@ -151,6 +151,7 @@ const mockStart = vi.fn();
 const recrawl = (state: Recrawl['state'] = 'idle'): Recrawl => ({
   state,
   reason: null,
+  startedAt: null,
   start: mockStart,
   retry: vi.fn(),
   dismiss: vi.fn(),

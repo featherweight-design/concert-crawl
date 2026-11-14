@@ -20,6 +20,7 @@ import {
   runCost,
   runDuration,
   runLine,
+  runReader,
   runSummary,
   shortUrl,
 } from './runs-rules';
@@ -221,6 +222,29 @@ describe('runLine', () => {
     );
   });
 
+  it('names the reader of an OK run: "via Haiku", "via JSON-LD"', () => {
+    expect(runLine(row({ extractionStrategyUsed: 'llm' }), null)).toBe(
+      '106 shows · 2 new · via Haiku',
+    );
+    expect(
+      runLine(
+        row({ extractionStrategyUsed: 'structured_data', eventsInserted: 0 }),
+        null,
+      ),
+    ).toBe('106 shows · via JSON-LD');
+  });
+
+  it('names no reader for a platform feed, an unknown or missing one, or a partial run', () => {
+    for (const strategy of ['platform:venuepilot', 'toString', null]) {
+      expect(runLine(row({ extractionStrategyUsed: strategy }), null)).toBe(
+        '106 shows · 2 new',
+      );
+    }
+    expect(
+      runLine(row({ status: 'partial', extractionStrategyUsed: 'llm' }), null),
+    ).toBe('106 shows · 2 new');
+  });
+
   it('names the date an Unchanged run kept', () => {
     expect(runLine(RUNS[0]!, lastFull)).toBe('Page unchanged since Nov 10');
     expect(runLine(RUNS[0]!, null)).toBe(RUN.unchanged);
@@ -248,6 +272,15 @@ describe('runLine', () => {
     expect(runLine(row({ status: 'skipped', reason: null }), null)).toBe(
       RUN.skipped,
     );
+  });
+});
+
+describe('runReader', () => {
+  it('maps the stored strategy to the reader’s name, or none', () => {
+    expect(runReader('llm')).toBe('Haiku');
+    expect(runReader('structured_data')).toBe('JSON-LD');
+    expect(runReader('platform:aeg')).toBeNull();
+    expect(runReader(undefined)).toBeNull();
   });
 });
 
