@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import {
+  cleanup,
+  render,
+  screen,
+  fireEvent,
+  act,
+  within,
+} from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EntitlementResult } from '@/lib/queries/use-entitlement';
 import type { ShelfArtist } from './definitions/types';
@@ -182,6 +189,15 @@ describe('FollowShelf', () => {
     expect(url.searchParams.get('filterFollowing')).toBe('1');
     expect(url.searchParams.get('filterVibe')).toBe('jazz');
     expect(url.searchParams.has('offset')).toBe(false);
+  });
+
+  // addendum-3 a6 ruling 3: See all shows only past five.
+  it('shows See all only past five follows', () => {
+    renderShelf({ mode: 'some', followCount: 5, artists: many(5) });
+    expect(screen.queryByTestId('shelf-see-all')).toBeNull();
+    cleanup();
+    renderShelf({ mode: 'some', followCount: 6, artists: many(6) });
+    expect(screen.getByTestId('shelf-see-all')).toBeTruthy();
   });
 
   // The starter picks aren't your artists, so there is no list to see all of.

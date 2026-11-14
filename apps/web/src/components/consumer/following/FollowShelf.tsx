@@ -31,7 +31,10 @@ import {
   SHELF_RAIL_GAP_CLASS,
   SHELF_RAIL_SCROLL_CLASS,
 } from '@/components/consumer/definitions/constants';
-import { SHELF_VISIBLE_CARDS } from './definitions/constants';
+import {
+  SHELF_SEE_ALL_AFTER,
+  SHELF_VISIBLE_CARDS,
+} from './definitions/constants';
 import type { ShelfArtist, ShelfMode } from './definitions/types';
 import { readSessionSeed, shuffleWithSeed } from './lib/shuffle';
 
@@ -192,7 +195,8 @@ export const FollowShelf = ({
           // the shelf so they can unfollow, but the filter chip drops the
           // scope for them at once, so See all would do nothing.
           action={
-            surface === 'visible-active' && (
+            surface === 'visible-active' &&
+            followCount > SHELF_SEE_ALL_AFTER && (
               <Link
                 href={seeAllHref}
                 replace

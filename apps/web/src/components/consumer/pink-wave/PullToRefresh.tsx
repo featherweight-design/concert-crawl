@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
 import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
 import { PinkWave } from './PinkWave';
@@ -32,10 +33,19 @@ export function PullToRefresh() {
     // nothing to wait on, so only the client reload and the floor hold the
     // indicator.
     router.refresh();
-    await Promise.all([
-      queryClient.refetchQueries({ queryKey: ['events'] }),
-      floor,
-    ]);
+    try {
+      await Promise.all([
+        queryClient.refetchQueries(
+          { queryKey: ['events'] },
+          { throwOnError: true },
+        ),
+        floor,
+      ]);
+    } catch {
+      // A failed pull used to close silently, as if it had worked. One toast
+      // at a time: a second failed pull replaces the first.
+      toast.error(PINK_WAVE_COPY.refreshFailed, { id: 'pull-refresh' });
+    }
   }, [router, queryClient]);
 
   const { height, state } = usePullToRefresh(refresh);
