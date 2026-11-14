@@ -11,6 +11,10 @@ describe('adminPageName', () => {
     expect(adminPageName(pathname)).toBe('People');
   });
 
+  it('names Operations', () => {
+    expect(adminPageName('/admin/operations')).toBe('Operations');
+  });
+
   it('has no name for the old invite-codes root, which only redirects', () => {
     expect(adminPageName('/admin/invite-codes')).toBeUndefined();
   });

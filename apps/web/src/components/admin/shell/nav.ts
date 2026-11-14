@@ -120,7 +120,7 @@ export const NAV: NavItem[] = [
   {
     key: 'operations',
     label: navCopy.operations,
-    href: '/admin/feedback',
+    href: '/admin/operations',
     icon: Wrench,
     group: 'system',
   },
