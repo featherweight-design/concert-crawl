@@ -180,9 +180,9 @@ describe('EventEdit Status card', () => {
     patch.mockResolvedValue({});
     post.mockResolvedValue({});
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
-    expect(pill('available')).toHaveAttribute('aria-checked', 'true');
+    expect(pill('available')).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(pill('soldout'));
-    expect(pill('soldout')).toHaveAttribute('aria-checked', 'true');
+    expect(pill('soldout')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('event-edit-save'));
     await waitFor(() =>
@@ -218,13 +218,66 @@ describe('EventEdit Status card', () => {
     });
   });
 
+  it('marks a postponed show sold out and back on, and a delisted one too', async () => {
+    patch.mockResolvedValue({});
+    post.mockResolvedValue({});
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'postponed' }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.click(pill('soldout'));
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        '/v1/admin/events/evt-1/sold-out',
+        'token',
+        {},
+      ),
+    );
+    expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+      status: 'upcoming',
+    });
+    cleanup();
+    patch.mockClear();
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'delisted' }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.click(pill('available'));
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        status: 'upcoming',
+      }),
+    );
+  });
+
+  it('refreshes after a partial save, so the page shows what landed', async () => {
+    patch.mockResolvedValue({});
+    post.mockRejectedValue(new Error('500'));
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'postponed' }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.click(pill('soldout'));
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(await screen.findByText(/The status is still/)).toBeInTheDocument();
+  });
+
   it('confirms Postponed in a dialog, with New date held', async () => {
     patch.mockResolvedValue({});
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
     fireEvent.click(pill('postponed'));
     expect(
-      screen.getByRole('radio', { name: COPY.postponed.newDate }),
-    ).toHaveAttribute('aria-disabled', 'true');
+      screen.getByRole('button', { name: COPY.postponed.newDate }),
+    ).toBeDisabled();
     fireEvent.click(
       screen.getByRole('button', { name: COPY.postponed.confirm }),
     );
