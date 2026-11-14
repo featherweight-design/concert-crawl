@@ -989,8 +989,9 @@ const screenshotOf = (metadata: unknown): string | null => {
 const deviceOf = (metadata: unknown): string | null => {
   if (typeof metadata !== 'object' || metadata === null) return null;
   const device = Reflect.get(metadata, 'device');
+  // By code point, so an emoji at the cut is never split into a lone surrogate.
   return typeof device === 'string' && device.trim() !== ''
-    ? device.trim().slice(0, 120)
+    ? Array.from(device.trim()).slice(0, 120).join('')
     : null;
 };
 
