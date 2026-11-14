@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AdminSidebar, SIDEBAR_WIDTH } from './AdminSidebar';
+import { CONTENT_GUTTER_X } from './content-pane';
 import { AdminPhoneHeader, AdminTopbar } from './AdminTopbar';
 import { MobileBottomBar, TAB_BAR_HEIGHT } from './MobileBottomBar';
 import { MOBILE_BREAKPOINT, type AdminBadgeCounts } from './nav';
@@ -68,7 +69,11 @@ const DesktopShell = ({
       <AdminTopbar />
       <main
         data-admin-content
-        style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: `24px ${CONTENT_GUTTER_X}px`,
+        }}
       >
         {children}
       </main>

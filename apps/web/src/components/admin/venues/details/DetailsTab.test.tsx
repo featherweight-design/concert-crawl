@@ -226,7 +226,13 @@ describe('DetailsTab', () => {
     fireEvent.change(input(FIELDS.address), { target: { value: '1 Main St' } });
     const bar = screen.getByTestId('details-save-bar');
     expect(bar.style.gap).toBe('10px');
-    expect(bar.style.padding).toBe('13px 16px');
+    expect(bar.style.padding).toBe('0px 28px');
+    expect(bar.style.position).toBe('fixed');
+    expect(bar.style.left).toBe('232px');
+    expect(bar.style.right).toBe('0px');
+    expect(bar.style.height).toBe('64px');
+    expect(bar.style.borderTop).toBe('1px solid var(--border)');
+    expect(bar.style.borderRadius).toBe('0px');
     expect(bar.style.flexWrap).toBe('');
     expect(screen.getByText(COPY.saveBar.unsaved(1)).style.color).toBe(
       'var(--warning)',
@@ -240,6 +246,7 @@ describe('DetailsTab', () => {
     setPhone(true);
     expect(bar.style.gap).toBe('8px');
     expect(bar.style.padding).toBe('12px 16px 24px');
+    expect(bar.style.position).toBe('sticky');
     const save = screen.getByRole('button', { name: COPY.saveBar.save });
     const discard = screen.getByRole('button', { name: COPY.saveBar.discard });
     expect(save.style.height).toBe('42px');

@@ -17,8 +17,9 @@ import {
 } from './nav';
 import { SidebarUserMenu } from './AdminUserMenu';
 import type { AdminShellUser } from './AdminAvatar';
+import { SIDEBAR_WIDTH } from './content-pane';
 
-export const SIDEBAR_WIDTH = 232;
+export { SIDEBAR_WIDTH };
 
 const GROUP_LABELS: Record<NavGroup, string | null> = {
   primary: null,

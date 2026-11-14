@@ -1,6 +1,10 @@
 'use client';
 
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
+import {
+  CONTENT_GUTTER_X,
+  SIDEBAR_WIDTH,
+} from '@/components/admin/shell/content-pane';
 import { TAB_BAR_HEIGHT } from '@/components/admin/shell/tab-bar-height';
 import { AdminButton } from './AdminButton';
 import { SaveFailedToast } from './SaveFailedToast';
@@ -24,6 +28,14 @@ export type PinnedSaveBarLook = {
   discardVariant: NonNullable<ComponentProps<typeof AdminButton>['variant']>;
   discardStyle?: CSSProperties;
   saveStyle?: CSSProperties;
+  /**
+   * Pins the bar across the whole desktop content pane, edge to edge,
+   * `height` tall (`details-d`), and leaves that much room at the end of the
+   * page so it hides nothing. The toast keeps to the pane's gutters.
+   */
+  pane?: { height: number };
+  /** Overrides the bar's own drawing (border, background, radius). */
+  barStyle?: CSSProperties;
 };
 
 export type PinnedSaveBarProps = {
@@ -123,12 +135,21 @@ export const PinnedSaveBar = ({
     );
   }
 
-  return (
+  const pane = look.pane;
+  const bar = (
     <div
       data-testid={testId}
       style={{
-        position: 'sticky',
-        bottom: 0,
+        ...(pane === undefined
+          ? { position: 'sticky', bottom: 0 }
+          : {
+              position: 'fixed',
+              left: SIDEBAR_WIDTH,
+              right: 0,
+              bottom: 0,
+              height: pane.height,
+              boxSizing: 'border-box',
+            }),
         zIndex: 30,
         display: 'flex',
         ...(look.stack === true
@@ -140,6 +161,7 @@ export const PinnedSaveBar = ({
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border)',
         borderRadius: phone ? 0 : 12,
+        ...look.barStyle,
       }}
     >
       {/* A refusal keeps the edit, so the bar stays: float above it. */}
@@ -147,8 +169,8 @@ export const PinnedSaveBar = ({
         <div
           style={{
             position: 'absolute',
-            left: 0,
-            right: 0,
+            left: pane === undefined ? 0 : CONTENT_GUTTER_X,
+            right: pane === undefined ? 0 : CONTENT_GUTTER_X,
             bottom: 'calc(100% + 12px)',
           }}
         >
@@ -162,5 +184,14 @@ export const PinnedSaveBar = ({
         buttons
       )}
     </div>
+  );
+
+  if (pane === undefined) return bar;
+  // Fixed takes no room in the page, so hold the bar's height at its end.
+  return (
+    <>
+      <div aria-hidden style={{ height: pane.height, flexShrink: 0 }} />
+      {bar}
+    </>
   );
 };
