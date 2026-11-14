@@ -257,11 +257,38 @@ describe('GuideTab edit panel', () => {
     renderTab(published);
     open('parking');
     fireEvent.click(screen.getByTestId('guide-menu'));
+    expect(screen.getByText(COPY.unpublishHint)).toBeTruthy();
     fireEvent.click(
       screen.getByRole('menuitem', { name: new RegExp(COPY.unpublish) }),
     );
     await waitFor(() => expect(mockUnpublish).toHaveBeenCalledWith('venue-1'));
     expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it('titles Write mode "Write" but names the dialog after its section', () => {
+    renderTab({ ...draftGuide, insiderTip: null });
+    open('insider_tip', true);
+    expect(screen.getByRole('heading', { name: COPY.write })).toBeTruthy();
+    expect(
+      screen.getByRole('dialog', {
+        name: COPY.writeLabel(COPY.section.insider_tip),
+      }),
+    ).toBeTruthy();
+  });
+
+  it('names the phone’s full-screen Write after its section too', async () => {
+    phone = true;
+    renderTab({ ...draftGuide, insiderTip: null });
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: COPY.writeLabel(COPY.section.insider_tip),
+      }),
+    );
+    expect(
+      screen.getByRole('dialog', {
+        name: COPY.writeLabel(COPY.section.insider_tip),
+      }),
+    ).toBeTruthy();
   });
 });
 

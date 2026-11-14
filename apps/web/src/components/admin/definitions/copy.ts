@@ -1290,7 +1290,8 @@ export const ADMIN_COPY = {
       'Accessibility is required to publish. Write it, or mark it Can’t document yet.',
     menu: 'More for this guide',
     unpublish: 'Unpublish',
-    unpublishHint: 'Takes the guide off the venue page. Nothing here is lost.',
+    unpublishHint:
+      'Takes the guide off the venue page. Sections go back to Draft.',
     failed: {
       saved: 'Your text is still in the box.',
       unpublish: 'Couldn’t unpublish the guide',
