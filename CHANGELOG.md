@@ -1,3 +1,18 @@
+# [1.469.0](https://github.com/featherweight-design/concert-crawl/compare/v1.468.0...v1.469.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** abort and drop stale share poster prefetches ([c71a833](https://github.com/featherweight-design/concert-crawl/commit/c71a83338273e161fc19ac5fc28815e4ce2a6ff3))
+* **web:** give Save image and Copy link a 44px hit area at their drawn 38px ([57ba73b](https://github.com/featherweight-design/concert-crawl/commit/57ba73b252ed930860d557072cb84edee32a7f8a))
+* **web:** portal BottomSheet to the body so page cards stop drawing over it ([4e4ac12](https://github.com/featherweight-design/concert-crawl/commit/4e4ac123a37a91d30e70b3e904db867159b14660))
+* **web:** share sheet frame as the boards draw it; sheets set their own colour ([af7d8ee](https://github.com/featherweight-design/concert-crawl/commit/af7d8eeb8477cc9b94fc45e37dfdc7745c8177b3))
+
+
+### Features
+
+* **web:** draw the share sheet as the B+ boards do ([f622946](https://github.com/featherweight-design/concert-crawl/commit/f622946276d6ac7d8cbbd5a84873f1abe5d5070e)), closes [#1446](https://github.com/featherweight-design/concert-crawl/issues/1446)
+
 # [1.468.0](https://github.com/featherweight-design/concert-crawl/compare/v1.467.0...v1.468.0) (2026-11-14)
 
 
