@@ -75,7 +75,14 @@ vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
 import { VenueDetailsClient } from './VenueDetailsClient';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const SAVE_LABEL = ADMIN_COPY.venueDetailsClient.saveBar.saveChanges;
+const SAVE_LABEL = ADMIN_COPY.venueDetails.saveBar.save;
+const addressInput = (): HTMLInputElement => {
+  const input = screen.getByLabelText(ADMIN_COPY.venueDetails.fields.address);
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error('Expected the Address field to be an input');
+  }
+  return input;
+};
 
 const matchMediaStub = (query: string): MediaQueryList => ({
   matches: false,
@@ -176,18 +183,14 @@ describe('VenueDetailsClient — Source is split out (3b part 6)', () => {
     }
   });
 
-  it('the page’s save sends Details fields and no Source field or crawl rule', async () => {
+  it('Details’ save sends Details fields and no Source field or crawl rule', async () => {
     render(
       <VenueDetailsClient
         initialTab="details"
         venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
       />,
     );
-    const address = document.getElementById('edit-venue-address');
-    if (!(address instanceof HTMLInputElement)) {
-      throw new Error('Expected #edit-venue-address to be an input');
-    }
-    fireEvent.change(address, { target: { value: '1 Colfax Ave' } });
+    fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
     fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
 
     await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
@@ -214,7 +217,7 @@ describe('VenueDetailsClient — Source is split out (3b part 6)', () => {
     }
   });
 
-  it('an edit in Source does not raise the page’s bar', () => {
+  it('an edit in Source does not raise Details’ bar', () => {
     render(<VenueDetailsClient initialTab="source" venue={buildVenue()} />);
     fireEvent.change(
       screen.getByLabelText(ADMIN_COPY.venueSource.read.calendarPage.label),
@@ -226,14 +229,11 @@ describe('VenueDetailsClient — Source is split out (3b part 6)', () => {
     ).toBeTruthy();
   });
 
-  // Both bars pin to the bottom edge, so only one may show at a time.
-  it('steps the page’s bar aside on Source, and brings it back on Details', () => {
+  // Both bars pin to the bottom edge; each lives in its own panel, so only the
+  // open tab's bar shows.
+  it('hides Details’ bar on Source, and brings it back on Details', () => {
     render(<VenueDetailsClient initialTab="details" venue={buildVenue()} />);
-    const address = document.getElementById('edit-venue-address');
-    if (!(address instanceof HTMLInputElement)) {
-      throw new Error('Expected #edit-venue-address to be an input');
-    }
-    fireEvent.change(address, { target: { value: '1 Colfax Ave' } });
+    fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
     expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
 
     const tabs = ADMIN_COPY.venueDetailsClient.tabs;

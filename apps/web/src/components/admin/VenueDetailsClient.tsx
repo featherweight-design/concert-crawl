@@ -1,5 +1,4 @@
 'use client';
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,6 +20,7 @@ import { useRecrawl } from '@/components/admin/venues/useRecrawl';
 import { recrawlOff } from '@/components/admin/venues/venue-header-rules';
 import { OverviewTab } from '@/components/admin/venues/overview/OverviewTab';
 import { SourceTab } from '@/components/admin/venues/source/SourceTab';
+import { DetailsTab } from '@/components/admin/venues/details/DetailsTab';
 import type { OverviewData } from '@/components/admin/venues/overview/overview-data';
 import { RunsTab } from '@/components/admin/venues/runs/RunsTab';
 import type { RunsPage } from '@/components/admin/crawl-runs/run-data';
@@ -37,25 +37,7 @@ import {
   type GenerateFieldResult,
 } from './generate-field/GenerateField';
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
-import {
-  ExternalLink,
-  RefreshCw,
-  AlertCircle,
-  Check,
-  Loader2,
-  Sparkles,
-} from 'lucide-react';
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 60);
-}
+import { AlertCircle, Check, Loader2, Sparkles } from 'lucide-react';
 
 // ── VD Primitives ─────────────────────────────────────────────
 
@@ -321,54 +303,6 @@ function VDInput({
   );
 }
 
-interface VDSelectProps {
-  id: string;
-  value: string;
-  disabled?: boolean;
-  onChange: React.ChangeEventHandler<HTMLSelectElement>;
-  children: React.ReactNode;
-}
-
-function VDSelect({ id, value, disabled, onChange, children }: VDSelectProps) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <select
-      id={id}
-      value={value}
-      disabled={disabled}
-      onChange={onChange}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={{
-        width: '100%',
-        height: 36,
-        padding: '0 28px 0 12px',
-        border: `1px solid ${focused ? 'var(--signal)' : 'var(--border-strong)'}`,
-        borderRadius: 8,
-        background: 'var(--bg-elevated)',
-        color: 'var(--fg)',
-        fontSize: 13,
-        fontWeight: 500,
-        fontFamily: "'Inter', sans-serif",
-        outline: 'none',
-        boxSizing: 'border-box' as const,
-        opacity: disabled ? 0.66 : 1,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        appearance: 'none' as const,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'right 10px center',
-        boxShadow: focused
-          ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-          : 'none',
-        transition: 'border-color .12s, box-shadow .12s',
-      }}
-    >
-      {children}
-    </select>
-  );
-}
-
 interface VDSegToggleProps {
   options: { value: string; label: string }[];
   value: string;
@@ -467,24 +401,12 @@ const VENUE_TAB_ITEMS = VENUE_TABS.map((key) => ({
   key,
   label: VENUE_TAB_LABEL[key],
 }));
-/** The fields a save can be refused on, and where each one lives. */
-type RefusedField = 'slug';
-const REFUSED_FIELD_HOME: Record<
-  RefusedField,
-  { tab: VenueTab; inputId: string; label: string }
-> = {
-  slug: {
-    tab: 'details',
-    inputId: 'edit-venue-slug',
-    label: ADMIN_COPY.venueDetailsClient.fields.slug.label,
-  },
-};
 const venueTabId = (key: VenueTab) => `venue-tab-${key}`;
 const venuePanelId = (key: VenueTab) => `venue-panel-${key}`;
 
 /**
- * One tab's panel. Every panel stays mounted, only hidden, so the one form
- * and save bar keep an unsaved edit across a tab switch (3b part 1).
+ * One tab's panel. Every panel stays mounted, only hidden, so a tab's unsaved
+ * edit and its Save bar survive a tab switch (3b part 1).
  */
 function VenueTabPanel({
   tab,
@@ -542,14 +464,6 @@ export function VenueDetailsClient({
     setTab(initialTab);
   }
   const tablistRef = useRef<HTMLDivElement | null>(null);
-  // An input to focus once its panel is showing (a refused save).
-  const focusAfterRender = useRef<string | null>(null);
-  useEffect(() => {
-    const inputId = focusAfterRender.current;
-    if (!inputId) return;
-    focusAfterRender.current = null;
-    document.getElementById(inputId)?.focus();
-  });
   /**
    * Client-only: the tab lives in state and the URL follows through
    * `history.replaceState`, which the App Router syncs with
@@ -571,15 +485,6 @@ export function VenueDetailsClient({
       strip.scrollIntoView({ block: 'start' });
     }
   };
-  /** A refused save: open the field's tab, focus it, and say which field. */
-  const refuseField = (field: RefusedField, message: string) => {
-    const home = REFUSED_FIELD_HOME[field];
-    setFieldErrors({ [field]: message });
-    // The banner names the field and its tab; the reason stays at the field.
-    setSaveError(TAB_COPY.refused(home.label, VENUE_TAB_LABEL[home.tab]));
-    focusAfterRender.current = home.inputId;
-    changeTab(home.tab);
-  };
   const { setPageTitle, setPhoneBack } = usePageTitle();
 
   useEffect(() => {
@@ -594,47 +499,16 @@ export function VenueDetailsClient({
     return () => setPhoneBack(null);
   }, [setPhoneBack]);
 
-  // Form refs (uncontrolled inputs)
-  const nameRef = useRef<HTMLInputElement>(null);
-  const slugRef = useRef<HTMLInputElement>(null);
+  // The older Details sections still here until 3b part 5b: City, About and
+  // its generate, and the identity-art preview. The Venue, Tickets and
+  // Contact cards (`DetailsTab`) and Source (`SourceTab`) save their own
+  // fields through their own bars.
   const cityRef = useRef<HTMLInputElement>(null);
-  const addressRef = useRef<HTMLInputElement>(null);
-
-  // Controlled state. Source's fields (how the venue is read, the calendar
-  // page) live in `SourceTab` with its own save (3b part 6).
-  const [nameVal, setNameVal] = useState(venue.name);
-  const [slugVal, setSlugVal] = useState(venue.slug);
   const [cityVal, setCityVal] = useState(venue.city);
-  const [addressVal, setAddressVal] = useState(venue.address ?? '');
-  const [ticketVendorVal, setTicketVendorVal] = useState<string | null>(
-    venue.ticketVendor ?? null,
-  );
-  const [priceUrlVal, setPriceUrlVal] = useState(venue.priceUrl ?? '');
-  const [capacityVal, setCapacityVal] = useState<string>(
-    venue.capacity != null ? String(venue.capacity) : '',
-  );
-  const [venueTypeVal, setVenueTypeVal] = useState(venue.venueType ?? '');
   const [aboutVal, setAboutVal] = useState(venue.about ?? '');
-  const [neighborhoodVal, setNeighborhoodVal] = useState(
-    venue.neighborhood ?? '',
-  );
-  const [slugManual, setSlugManual] = useState(true);
-  const [slugFocused, setSlugFocused] = useState(false);
   const dirtyFields: string[] = [
-    ...(nameVal !== venue.name ? ['Name'] : []),
-    ...(slugVal !== venue.slug ? ['Slug'] : []),
     ...(cityVal !== venue.city ? ['City'] : []),
-    ...(addressVal !== (venue.address ?? '') ? ['Address'] : []),
-    ...(ticketVendorVal !== (venue.ticketVendor ?? null)
-      ? ['Ticket vendor']
-      : []),
-    ...(priceUrlVal !== (venue.priceUrl ?? '') ? ['Price URL'] : []),
-    ...(capacityVal !== (venue.capacity != null ? String(venue.capacity) : '')
-      ? ['Capacity']
-      : []),
-    ...(venueTypeVal !== (venue.venueType ?? '') ? ['Type'] : []),
     ...(aboutVal !== (venue.about ?? '') ? ['About'] : []),
-    ...(neighborhoodVal !== (venue.neighborhood ?? '') ? ['Neighborhood'] : []),
   ];
   const isDirty = dirtyFields.length > 0;
 
@@ -642,9 +516,6 @@ export function VenueDetailsClient({
     'idle' | 'saving' | 'saved' | 'error'
   >('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{
-    slug?: string | undefined;
-  }>({});
 
   // Responsive breakpoint
   const [isMobile, setIsMobile] = useState(false);
@@ -669,8 +540,6 @@ export function VenueDetailsClient({
     GenerateFieldResult | undefined
   >();
   const [generateError, setGenerateError] = useState<string | undefined>();
-  const [capacityGenerated, setCapacityGenerated] = useState(false);
-  const [neighborhoodGenerated, setNeighborhoodGenerated] = useState(false);
 
   async function handleGenerateAbout() {
     setGenerateState('loading');
@@ -685,15 +554,10 @@ export function VenueDetailsClient({
         setGenerateState('error');
         return;
       }
-      const { capacity, venueType, neighborhood, about } = result.data;
-      setGenerateResult({ content: about });
+      // Only the About text for now: the drafted capacity, type and
+      // neighborhood fill the Venue card once About moves into it (part 5b).
+      setGenerateResult({ content: result.data.about });
       setGenerateState('review');
-      // Pre-fill other fields
-      setCapacityVal(capacity != null ? String(capacity) : '');
-      setCapacityGenerated(true);
-      setVenueTypeVal(venueType);
-      setNeighborhoodVal(neighborhood);
-      setNeighborhoodGenerated(true);
     } catch {
       setGenerateError(ADMIN_COPY.venueDetailsClient.errors.networkError);
       setGenerateState('error');
@@ -714,61 +578,31 @@ export function VenueDetailsClient({
   const isDisabled = saveState === 'saving';
 
   function handleDiscard() {
-    setNameVal(venue.name);
-    setSlugVal(venue.slug);
     setCityVal(venue.city);
-    setAddressVal(venue.address ?? '');
-    setTicketVendorVal(venue.ticketVendor ?? null);
-    setPriceUrlVal(venue.priceUrl ?? '');
-    setCapacityVal(venue.capacity != null ? String(venue.capacity) : '');
-    setVenueTypeVal(venue.venueType ?? '');
     setAboutVal(venue.about ?? '');
-    setNeighborhoodVal(venue.neighborhood ?? '');
     setSaveState('idle');
     setSaveError(null);
-    setFieldErrors({});
-    if (nameRef.current) nameRef.current.value = venue.name;
-    if (slugRef.current) slugRef.current.value = venue.slug;
     if (cityRef.current) cityRef.current.value = venue.city;
-    if (addressRef.current) addressRef.current.value = venue.address ?? '';
   }
 
   async function handleSave() {
     setSaveError(null);
-    setFieldErrors({});
     setSaveState('saving');
 
-    // Only this bar's fields. Source's (how the venue is read, the calendar
-    // page) go through Source's own bar, and the crawl rules (request delay,
-    // robots.txt) are never sent: the API refuses them.
+    // Only this bar's fields, City and About. The Venue, Tickets and Contact
+    // cards and Source each send their own, and the crawl rules (request
+    // delay, robots.txt) are never sent: the API refuses them. `active` is
+    // left out on purpose: Pause and Activate own it.
     const formData = new FormData();
-    formData.set('name', nameVal.trim());
-    formData.set('slug', slugVal.trim());
     formData.set('city', cityVal.trim() || 'Denver');
-    formData.set('address', addressVal.trim());
-    // `active` is left out on purpose: Pause and Activate own it. Resending the
-    // value this page loaded with would let a stale tab reactivate a venue
-    // paused or removed since. An empty vendor clears it.
-    formData.set('ticketVendor', ticketVendorVal ?? '');
-    formData.set('capacity', capacityVal.trim());
-    formData.set('venueType', venueTypeVal.trim());
     formData.set('about', aboutVal.trim());
-    formData.set('neighborhood', neighborhoodVal.trim());
-    formData.set('priceUrl', priceUrlVal.trim());
 
     try {
       const result = await updateVenue(venue.id, formData);
       if (!result.success) {
-        if (result.field === 'slug') {
-          refuseField(
-            'slug',
-            result.error ?? ADMIN_COPY.venueDetailsClient.errors.slugInUse,
-          );
-        } else {
-          setSaveError(
-            result.error ?? ADMIN_COPY.venueDetailsClient.errors.saveFailed,
-          );
-        }
+        setSaveError(
+          result.error ?? ADMIN_COPY.venueDetailsClient.errors.saveFailed,
+        );
         setSaveState('error');
         return;
       }
@@ -846,180 +680,18 @@ export function VenueDetailsClient({
       </VenueTabPanel>
 
       <VenueTabPanel tab="details" active={tab}>
-        {/* 01 · identity */}
+        {/* The Venue, Tickets and Contact cards, with their own Save bar
+            (3b part 5a). */}
+        <DetailsTab venue={venue} />
+
+        {/* Until part 5b: City, About and the identity-art preview, saved by
+            this page's bar below. */}
         <VDSection
           eyebrow={ADMIN_COPY.venueDetailsClient.sections.identity.eyebrow}
           title={ADMIN_COPY.venueDetailsClient.sections.identity.title}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Venue name + Slug side by side */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                gap: 12,
-              }}
-            >
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.venueName}
-                htmlFor="edit-venue-name"
-              >
-                <VDInput
-                  id="edit-venue-name"
-                  inputRef={nameRef}
-                  defaultValue={venue.name}
-                  disabled={isDisabled}
-                  onChange={(evt) => {
-                    const val = evt.target.value;
-                    setNameVal(val);
-                    if (!slugManual && slugRef.current) {
-                      const generated = slugify(val);
-                      slugRef.current.value = generated;
-                      setSlugVal(generated);
-                    }
-                  }}
-                />
-              </VDField>
-
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.slug.label}
-                htmlFor="edit-venue-slug"
-                {...(fieldErrors.slug ? { error: fieldErrors.slug } : {})}
-                labelRight={
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      color: 'var(--fg-subtle)',
-                    }}
-                  >
-                    {
-                      ADMIN_COPY.venueDetailsClient.fields.slug
-                        .autoGeneratedBadge
-                    }
-                  </span>
-                }
-              >
-                <div
-                  onFocus={() => setSlugFocused(true)}
-                  onBlur={() => setSlugFocused(false)}
-                  style={{
-                    display: 'flex',
-                    height: 36,
-                    borderRadius: 8,
-                    border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : slugFocused ? 'var(--signal)' : 'var(--border-strong)'}`,
-                    background: 'var(--bg-elevated)',
-                    overflow: 'hidden',
-                    boxShadow: slugFocused
-                      ? fieldErrors.slug
-                        ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
-                        : '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-                      : 'none',
-                    transition: 'border-color .12s, box-shadow .12s',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 10px',
-                      background: 'var(--surface-1)',
-                      borderRight: '1px solid var(--border)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 12,
-                      color: 'var(--fg-subtle)',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {ADMIN_COPY.venueDetailsClient.fields.slug.prefix}
-                  </div>
-                  <input
-                    ref={slugRef}
-                    id="edit-venue-slug"
-                    type="text"
-                    defaultValue={venue.slug}
-                    disabled={isDisabled}
-                    onChange={(evt) => {
-                      setSlugVal(evt.target.value);
-                      setSlugManual(true);
-                      setFieldErrors((prev) => ({ ...prev, slug: undefined }));
-                    }}
-                    style={{
-                      all: 'unset',
-                      flex: 1,
-                      minWidth: 0,
-                      padding: '0 10px',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: 'var(--fg)',
-                      cursor: isDisabled ? 'not-allowed' : 'text',
-                      opacity: isDisabled ? 0.66 : 1,
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (nameRef.current && slugRef.current) {
-                        const generated = slugify(nameRef.current.value);
-                        slugRef.current.value = generated;
-                        setSlugVal(generated);
-                        setSlugManual(false);
-                        setFieldErrors((prev) => ({
-                          ...prev,
-                          slug: undefined,
-                        }));
-                      }
-                    }}
-                    disabled={isDisabled}
-                    title={
-                      ADMIN_COPY.venueDetailsClient.fields.slug.regenerateTitle
-                    }
-                    style={{
-                      flexShrink: 0,
-                      width: 36,
-                      border: 'none',
-                      borderLeft: '1px solid var(--border)',
-                      background: 'var(--surface-1)',
-                      color: 'var(--fg-muted)',
-                      cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <RefreshCw size={13} />
-                  </button>
-                </div>
-              </VDField>
-            </div>
-
-            {/* The calendar page (`website_url`) is Source's now (3b part
-                6), saved by Source's own bar. */}
-
-            {/* Street address */}
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.address.label}
-              htmlFor="edit-venue-address"
-              hint={ADMIN_COPY.venueDetailsClient.fields.address.hint}
-            >
-              <VDInput
-                id="edit-venue-address"
-                inputRef={addressRef}
-                defaultValue={venue.address ?? ''}
-                placeholder={
-                  ADMIN_COPY.venueDetailsClient.fields.address.placeholder
-                }
-                disabled={isDisabled}
-                onChange={(evt) => setAddressVal(evt.target.value)}
-              />
-            </VDField>
-
-            {/* City, full width (Live and Hidden are the header's chip and ⋯ menu) */}
+            {/* City (Live and Hidden are the header's chip and ⋯ menu) */}
             <VDField
               label={ADMIN_COPY.venueDetailsClient.fields.city}
               htmlFor="edit-venue-city"
@@ -1031,98 +703,6 @@ export function VenueDetailsClient({
                 disabled={isDisabled}
                 onChange={(evt) => setCityVal(evt.target.value)}
               />
-            </VDField>
-          </div>
-        </VDSection>
-
-        {/* 02 · ticketing */}
-        <VDSection
-          eyebrow={ADMIN_COPY.venueDetailsClient.sections.ticketing.eyebrow}
-          title={ADMIN_COPY.venueDetailsClient.sections.ticketing.title}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
-              gap: 12,
-              alignItems: 'start',
-            }}
-          >
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.primaryVendor}
-              htmlFor="edit-venue-ticket-vendor"
-            >
-              <VDSelect
-                id="edit-venue-ticket-vendor"
-                value={ticketVendorVal ?? ''}
-                disabled={isDisabled}
-                onChange={(evt) => setTicketVendorVal(evt.target.value || null)}
-              >
-                <option value="">
-                  {ADMIN_COPY.venueDetailsClient.ticketVendors.unknown}
-                </option>
-                <option value="axs">
-                  {ADMIN_COPY.venueDetailsClient.ticketVendors.axs}
-                </option>
-                <option value="ticketmaster">
-                  {ADMIN_COPY.venueDetailsClient.ticketVendors.ticketmaster}
-                </option>
-                <option value="seatgeek">
-                  {ADMIN_COPY.venueDetailsClient.ticketVendors.seatgeek}
-                </option>
-                <option value="dice">
-                  {ADMIN_COPY.venueDetailsClient.ticketVendors.dice}
-                </option>
-                <option value="eventbrite">
-                  {ADMIN_COPY.venueDetailsClient.ticketVendors.eventbrite}
-                </option>
-                <option value="venue_box_office">
-                  {ADMIN_COPY.venueDetailsClient.ticketVendors.venueBoxOffice}
-                </option>
-                <option value="unknown">
-                  {ADMIN_COPY.venueDetailsClient.ticketVendors.unknownValue}
-                </option>
-              </VDSelect>
-            </VDField>
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.ticketUrl.label}
-              htmlFor="edit-venue-price-url"
-              hint={ADMIN_COPY.venueDetailsClient.fields.ticketUrl.hint}
-            >
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <VDInput
-                  id="edit-venue-price-url"
-                  type="url"
-                  defaultValue={venue.priceUrl ?? ''}
-                  disabled={isDisabled}
-                  placeholder={
-                    ADMIN_COPY.venueDetailsClient.fields.ticketUrl.placeholder
-                  }
-                  onChange={(evt) => setPriceUrlVal(evt.target.value)}
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    flex: 1,
-                  }}
-                />
-                {isSafeHttpUrl(priceUrlVal) && (
-                  <a
-                    href={priceUrlVal}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: 'var(--fg-muted)',
-                      flexShrink: 0,
-                    }}
-                    title={
-                      ADMIN_COPY.venueDetailsClient.fields.ticketUrl.openTitle
-                    }
-                  >
-                    <ExternalLink size={14} />
-                  </a>
-                )}
-              </div>
             </VDField>
           </div>
         </VDSection>
@@ -1234,119 +814,6 @@ export function VenueDetailsClient({
                   />
                 )}
               </div>
-            </VDField>
-
-            {/* Capacity */}
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.capacity.label}
-              htmlFor="edit-venue-capacity"
-              description={
-                ADMIN_COPY.venueDetailsClient.fields.capacity.description
-              }
-            >
-              <VDInput
-                id="edit-venue-capacity"
-                type="number"
-                value={capacityVal}
-                placeholder={
-                  ADMIN_COPY.venueDetailsClient.fields.capacity.placeholder
-                }
-                disabled={isDisabled}
-                min={1}
-                onChange={(evt) => {
-                  setCapacityVal(evt.target.value);
-                  setCapacityGenerated(false);
-                }}
-              />
-              {capacityGenerated && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    marginTop: 4,
-                    padding: '3px 8px',
-                    borderRadius: 20,
-                    border:
-                      '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-                    background:
-                      'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: 'var(--success)',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: '50%',
-                      background: 'var(--success)',
-                      flexShrink: 0,
-                    }}
-                  />
-                  {ADMIN_COPY.venueDetailsClient.fields.capacity.generatedBadge}
-                </span>
-              )}
-            </VDField>
-
-            {/* Neighborhood */}
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.neighborhood.label}
-              htmlFor="edit-venue-neighborhood"
-              description={
-                ADMIN_COPY.venueDetailsClient.fields.neighborhood.description
-              }
-            >
-              <VDInput
-                id="edit-venue-neighborhood"
-                value={neighborhoodVal}
-                placeholder={
-                  ADMIN_COPY.venueDetailsClient.fields.neighborhood.placeholder
-                }
-                disabled={isDisabled}
-                onChange={(evt) => {
-                  setNeighborhoodVal(evt.target.value);
-                  setNeighborhoodGenerated(false);
-                }}
-              />
-              {neighborhoodGenerated && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    marginTop: 4,
-                    padding: '3px 8px',
-                    borderRadius: 20,
-                    border:
-                      '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-                    background:
-                      'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: 'var(--success)',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: '50%',
-                      background: 'var(--success)',
-                      flexShrink: 0,
-                    }}
-                  />
-                  {
-                    ADMIN_COPY.venueDetailsClient.fields.neighborhood
-                      .generatedBadge
-                  }
-                </span>
-              )}
             </VDField>
           </div>
         </VDSection>

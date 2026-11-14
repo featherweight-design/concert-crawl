@@ -85,7 +85,7 @@ import { VenueDetailsClient } from './VenueDetailsClient';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const TABS = ADMIN_COPY.venueDetailsClient.tabs;
-const SAVE_LABEL = ADMIN_COPY.venueDetailsClient.saveBar.saveChanges;
+const SAVE_LABEL = ADMIN_COPY.venueDetails.saveBar.save;
 
 const matchMediaStub = (query: string): MediaQueryList => ({
   matches: false,
@@ -152,9 +152,9 @@ const venue: VenueWithCrawlHealth = {
 
 const panel = (key: string) => screen.getByTestId(`venue-panel-${key}`);
 const addressInput = (): HTMLInputElement => {
-  const input = document.getElementById('edit-venue-address');
+  const input = screen.getByLabelText(ADMIN_COPY.venueDetails.fields.address);
   if (!(input instanceof HTMLInputElement)) {
-    throw new Error('Expected #edit-venue-address to be an input');
+    throw new Error('Expected the Address field to be an input');
   }
   return input;
 };
@@ -267,11 +267,12 @@ describe('VenueDetailsClient — tabs', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: TABS.guide }));
     expect(panel('details').hidden).toBe(true);
-    // The global save bar still offers the edit made in Details.
-    expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
+    // Details' bar lives in its panel, so it hides with it.
+    expect(screen.queryByRole('button', { name: SAVE_LABEL })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: TABS.details }));
     expect(addressInput().value).toBe('1 Colfax Ave');
+    expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
   });
 
   it('follows a new ?tab= from the server', () => {
@@ -306,12 +307,14 @@ describe('VenueDetailsClient — tabs', () => {
     expect(scrollSpy).toHaveBeenCalledWith({ block: 'start' });
   });
 
-  // Source has its own bar (3b part 6): the page's bar submits Details' edits
-  // from any tab, and never Source's.
-  it('a save from Overview submits the Details edit and nothing of Source', async () => {
+  // Each tab has its own bar (3b parts 5 and 6): Details' save submits its
+  // edit and never Source's, and there is no page-wide bar on Overview.
+  it('Details’ save submits the Details edit and nothing of Source', async () => {
     render(<VenueDetailsClient venue={venue} />);
     fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
     expect(panel('overview').hidden).toBe(false);
+    expect(screen.queryByRole('button', { name: SAVE_LABEL })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: TABS.details }));
     fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
 
     await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
@@ -338,11 +341,9 @@ describe('VenueDetailsClient — tabs', () => {
   });
 });
 
-// A refused save marks a field that may sit in a hidden panel: the page opens
-// that field's tab, focuses it, and says which field in the banner.
-describe('VenueDetailsClient — a refused save opens the field’s tab', () => {
-  const FIELDS = ADMIN_COPY.venueDetailsClient.fields;
-
+// Details saves from its own tab, so a refusal lands inline on its field
+// (DetailsTab's suite); the page's banner is only for the City and About bar.
+describe('VenueDetailsClient — Details saves from its own tab', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
     mockUpdateVenue.mockReset();
@@ -352,46 +353,82 @@ describe('VenueDetailsClient — a refused save opens the field’s tab', () => 
     vi.unstubAllGlobals();
   });
 
-  const saveFromOverview = (overrides: Partial<VenueWithCrawlHealth>) => {
-    render(<VenueDetailsClient venue={{ ...venue, ...overrides }} />);
+  const saveFromDetails = (overrides: Partial<VenueWithCrawlHealth>) => {
+    render(
+      <VenueDetailsClient
+        initialTab="details"
+        venue={{ ...venue, ...overrides }}
+      />,
+    );
     fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
     fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
   };
 
-  const expectOpenedAt = async (
-    tab: 'details',
-    inputId: string,
-    label: string,
-  ) => {
-    await waitFor(() => expect(document.activeElement?.id).toBe(inputId));
-    expect(panel(tab).hidden).toBe(false);
-    expect(panel('overview').hidden).toBe(true);
-    expect(
-      screen
-        .getByRole('tab', { name: TABS[tab] })
-        .getAttribute('aria-selected'),
-    ).toBe('true');
-    expect(screen.getByTestId('venue-save-error').textContent).toContain(
-      TABS.refused(label, TABS[tab]),
-    );
-  };
-
-  // Source's fields are refused on Source's own bar (3b part 6), so the only
-  // field this bar can be refused on is the slug.
-  it('the API refusing slug opens details and focuses it', async () => {
+  it('the API refusing the slug marks Link, with no page banner', async () => {
     mockUpdateVenue.mockResolvedValue({
       success: false,
       field: 'slug',
       error: 'slug was refused',
     });
-    saveFromOverview({});
-    await expectOpenedAt('details', 'edit-venue-slug', FIELDS.slug.label);
-    expect(screen.getByText('slug was refused')).toBeTruthy();
+    saveFromDetails({});
+    await waitFor(() =>
+      expect(
+        screen
+          .getByLabelText(ADMIN_COPY.venueDetails.fields.link.label)
+          .getAttribute('aria-invalid'),
+      ).toBe('true'),
+    );
+    expect(screen.queryByTestId('venue-save-error')).toBeNull();
   });
 
   it('an old venue with an AEG platform and no ID still saves Details', async () => {
     mockUpdateVenue.mockResolvedValue({ success: true });
-    saveFromOverview({ platform: 'aeg', platformVenueId: null });
+    saveFromDetails({ platform: 'aeg', platformVenueId: null });
     await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+  });
+});
+
+// Until 3b part 5b, City and About keep their older sections under the
+// Details cards, saved by the page's own bar: it sends those two and nothing
+// the Details cards or Source own.
+describe('VenueDetailsClient — the older City and About sections', () => {
+  const OLD = ADMIN_COPY.venueDetailsClient;
+
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', matchMediaStub);
+    mockUpdateVenue.mockReset();
+    mockUpdateVenue.mockResolvedValue({ success: true });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('still render on Details, below the cards', () => {
+    render(<VenueDetailsClient venue={venue} initialTab="details" />);
+    const details = panel('details');
+    expect(details.querySelector('[data-testid="venue-details"]')).not.toBe(
+      null,
+    );
+    expect(screen.getByLabelText(OLD.fields.city)).toBeTruthy();
+    expect(screen.getByLabelText(OLD.fields.about.label)).toBeTruthy();
+  });
+
+  it('the page’s bar sends City and About only', async () => {
+    render(<VenueDetailsClient venue={venue} initialTab="details" />);
+    fireEvent.change(screen.getByLabelText(OLD.fields.about.label), {
+      target: { value: 'A new line.' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: OLD.saveBar.saveChanges }),
+    );
+
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    const formData = mockUpdateVenue.mock.calls[0]?.[1];
+    if (!(formData instanceof FormData)) {
+      throw new Error('Expected updateVenue to receive a FormData');
+    }
+    expect([...formData.keys()].sort()).toEqual(['about', 'city']);
+    expect(formData.get('about')).toBe('A new line.');
   });
 });
