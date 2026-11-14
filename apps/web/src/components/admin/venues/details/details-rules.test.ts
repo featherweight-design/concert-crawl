@@ -4,6 +4,7 @@ import {
   addressMapsUrl,
   applyColumns,
   changedColumns,
+  columnsOf,
   detailsFieldOf,
   detailsFormData,
   draftOf,
@@ -32,6 +33,7 @@ const saved: DetailsColumns = {
   priceUrl: 'https://ballarena.com/tickets',
   contactEmail: 'booking@ballarena.com',
   city: 'Denver',
+  shortName: null,
 };
 
 describe('nearestCapacityType (ruling f)', () => {
@@ -212,6 +214,30 @@ describe('validateDetails', () => {
     expect(
       validateDetails({ ...pristine, about: 'a'.repeat(281) }, pristine),
     ).toEqual({ about: ADMIN_COPY.venueDetails.errors.aboutTooLong });
+  });
+
+  it('refuses a short name over 20 characters, trimmed as it would send', () => {
+    const pristine = draftOf(saved);
+    expect(
+      validateDetails(
+        { ...pristine, shortName: ` ${'a'.repeat(20)} ` },
+        pristine,
+      ),
+    ).toEqual({});
+    expect(
+      validateDetails({ ...pristine, shortName: 'a'.repeat(21) }, pristine),
+    ).toEqual({
+      shortName: ADMIN_COPY.venueDetails.errors.shortNameTooLong,
+    });
+  });
+
+  it('saves a blank short name as null and a typed one trimmed', () => {
+    const pristine = draftOf({ ...saved, shortName: 'Ball' });
+    expect(pristine.shortName).toBe('Ball');
+    expect(columnsOf({ ...pristine, shortName: '  ' }).shortName).toBeNull();
+    expect(columnsOf({ ...pristine, shortName: ' Pepsi ' }).shortName).toBe(
+      'Pepsi',
+    );
   });
 
   it('checks only the edited fields, so a stored value it refuses never blocks another save', () => {

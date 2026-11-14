@@ -188,10 +188,13 @@ export const LookCard = ({
   slug,
   name,
   phone,
+  children,
 }: {
   slug: string;
   name: string;
   phone: boolean;
+  /** The card's last row: the Short name field. */
+  children?: ReactNode;
 }) => {
   const glyph = venueGlyphKey(slug);
   const hero = glyph === null ? null : VENUE_HERO_SETTINGS[glyph];
@@ -267,6 +270,13 @@ export const LookCard = ({
         title={COPY.look.hero}
         line={hero === null ? COPY.look.heroNone : capacityTypeLabel(hero)}
       />
+      {children !== undefined && (
+        <>
+          {/* `details-m` draws no rules between the Look rows. */}
+          {!phone && rule}
+          {children}
+        </>
+      )}
     </Card>
   );
 };

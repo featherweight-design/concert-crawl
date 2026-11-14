@@ -132,6 +132,7 @@ const venue: DetailsVenue = {
   priceUrl: 'https://ballarena.com/tickets',
   contactEmail: 'booking@ballarena.com',
   city: 'Denver',
+  shortName: null,
 };
 
 const input = (label: string): HTMLInputElement => {
@@ -802,6 +803,35 @@ describe('DetailsTab', () => {
     expect(within(look).getByText(COPY.look.iconNone)).toBeTruthy();
     expect(within(look).getByText(COPY.look.heroNone)).toBeTruthy();
     expect(within(look).queryAllByRole('button')).toEqual([]);
+  });
+
+  it('ends the Look card with Short name, saved alone and cleared when blank', async () => {
+    const { unmount } = render(
+      <DetailsTab venue={{ ...venue, shortName: 'Ball' }} />,
+    );
+    const look = screen.getByRole('region', { name: COPY.cards.look });
+    const field = within(look).getByLabelText(COPY.look.shortName);
+    expect(field).toHaveProperty('value', 'Ball');
+    expect(within(look).getByText(COPY.look.shortNameHint)).toBeTruthy();
+    // Desktop draws a rule before it, as between the other Look rows.
+    expect(within(look).getAllByTestId('details-look-rule')).toHaveLength(2);
+
+    fireEvent.change(field, { target: { value: '   ' } });
+    save();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    expect([...sentForm().keys()]).toEqual(['shortName']);
+    expect(sentForm().get('shortName')).toBe('');
+    unmount();
+  });
+
+  it('refuses a short name over 20 characters before saving', () => {
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(COPY.look.shortName), {
+      target: { value: 'a'.repeat(21) },
+    });
+    save();
+    expect(screen.getByText(COPY.errors.shortNameTooLong)).toBeTruthy();
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
   });
 
   it('names the hero setting of a venue that has one', () => {
