@@ -1222,8 +1222,9 @@ export const ADMIN_COPY = {
     title: 'Crawl runs',
     subtitle:
       'Every crawl, nightly and by hand. Each venue’s own runs are on its Runs tab.',
-    // Addendum-3 row 26: one string on both viewports; the schedule is fixed.
-    nextNightly: 'Next nightly crawl: tonight at 3:00 AM MT',
+    // Addendum-3 row 26: one string on both viewports. The time is the API's
+    // next nightly in Mountain Time ("2:07 AM" in winter).
+    nextNightly: (time: string) => `Next nightly crawl: tonight at ${time} MT`,
     filters: {
       label: 'Which crawls',
       all: 'All',
@@ -1274,10 +1275,10 @@ export const ADMIN_COPY = {
     minutes: (count: number) => `${count.toLocaleString('en-US')} min`,
     noTime: '—',
     // A row's accessible name: "Nov 11, 3:00 AM: Nightly, Done, 21 venues · 14 OK".
-    rowLabel: (when: string, what: string, status: string, summary: string) =>
-      summary === ''
-        ? `${when}: ${what}, ${status}`
-        : `${when}: ${what}, ${status}, ${summary}`,
+    // A row's accessible name, every column but WHEN after it:
+    // "Nov 11, 3:00 AM: Nightly, Done, 21 venues · 14 OK, 18 min, $0.71".
+    rowLabel: (when: string, parts: readonly string[]) =>
+      `${when}: ${parts.filter((part) => part !== '').join(', ')}`,
     whenLabel: (date: string, time: string) => `${date}, ${time}`,
     // `A3/09/runs-filter-empty-d`. The board's "in the last 30 days" is left
     // off: the list pages back past 30 days.

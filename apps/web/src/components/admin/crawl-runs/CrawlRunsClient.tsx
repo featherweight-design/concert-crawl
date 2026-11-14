@@ -9,6 +9,7 @@ import {
   BATCH_FILTERS,
   batchesPath,
   fetchBatchPage,
+  fetchNextCrawlAt,
   type BatchFilter,
   type BatchPage,
 } from './batch-data';
@@ -17,6 +18,7 @@ import {
   appendBatches,
   crawlRunsHref,
   filterFromParam,
+  keepForFilter,
   notOkCountOf,
 } from './batch-rules';
 import { BatchesSkeleton, BatchesTable, CrawlRunsHeader } from './BatchesTable';
@@ -56,10 +58,37 @@ export const CrawlRunsClient = () => {
   // Not OK's count, over the loaded All or Not OK rows: the other filters
   // can't count it, so it holds until one of those loads again.
   const [notOkCount, setNotOkCount] = useState(0);
-  const countNotOk = useCallback((pageFilter: BatchFilter, page: BatchPage) => {
-    const count = notOkCountOf(pageFilter, page.rows);
-    if (count !== null) setNotOkCount(count);
+  // The next nightly (the API's nextDailyCrawlAt); null hides the line.
+  const [nextCrawlAt, setNextCrawlAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    fetchNextCrawlAt(() => tokenRef.current())
+      .then((at) => {
+        if (live) setNextCrawlAt(at);
+      })
+      .catch((err: unknown) => {
+        // The line is left off; the list doesn't depend on it.
+        console.warn('[admin crawl runs] next nightly failed', err);
+      });
+    return () => {
+      live = false;
+    };
   }, []);
+
+  /** A page as the list holds it: under Not OK, only the chip's Not OK. */
+  const accept = useCallback(
+    (pageFilter: BatchFilter, page: BatchPage, rows = page.rows) => {
+      const kept: BatchPage = {
+        ...page,
+        rows: keepForFilter(pageFilter, rows),
+      };
+      setLoaded({ filter: pageFilter, page: kept });
+      const count = notOkCountOf(pageFilter, kept.rows);
+      if (count !== null) setNotOkCount(count);
+    },
+    [],
+  );
 
   // Only the newest load may write: a slow older one must not overwrite it.
   const latest = useRef(0);
@@ -73,13 +102,12 @@ export const CrawlRunsClient = () => {
         batchesPath(filter, BATCHES_STEP, null),
       );
       if (mine !== latest.current) return;
-      setLoaded({ filter, page });
-      countNotOk(filter, page);
+      accept(filter, page);
     } catch (err) {
       console.error('[admin crawl runs] list failed', err);
       if (mine === latest.current) setFailed(true);
     }
-  }, [filter, countNotOk]);
+  }, [filter, accept]);
 
   useEffect(() => {
     void load();
@@ -99,12 +127,7 @@ export const CrawlRunsClient = () => {
         batchesPath(pageFilter, BATCHES_STEP, page.nextBefore),
       );
       if (mine !== latest.current) return;
-      const merged: BatchPage = {
-        ...next,
-        rows: appendBatches(page.rows, next.rows),
-      };
-      setLoaded({ filter: pageFilter, page: merged });
-      countNotOk(pageFilter, merged);
+      accept(pageFilter, next, appendBatches(page.rows, next.rows));
       setLoadState('idle');
     } catch (err) {
       console.error('[admin crawl runs] load more failed', err);
@@ -134,36 +157,45 @@ export const CrawlRunsClient = () => {
     />
   );
 
-  const footer = (page: BatchPage) =>
-    page.rows.length === 0 && !page.hasMore ? null : (
-      <div style={{ padding: '0 18px 12px' }}>
-        <LoadMoreFooter
-          shown={page.rows.length}
-          step={BATCHES_STEP}
-          more={page.hasMore}
-          state={loadState}
-          onLoadMore={() => void onLoadMore()}
-          failedLabel={COPY.loadMoreFailed}
-          testId="crawl-runs-load-more"
-        />
+  // `A3/09/load-more`: the divider runs edge to edge, the row 12px 18px.
+  const footer = (page: BatchPage) => (
+    <LoadMoreFooter
+      shown={page.rows.length}
+      step={BATCHES_STEP}
+      more={page.hasMore}
+      state={loadState}
+      onLoadMore={() => void onLoadMore()}
+      failedLabel={COPY.loadMoreFailed}
+      testId="crawl-runs-load-more"
+      padding="12px 18px"
+    />
+  );
+
+  const header = <CrawlRunsHeader nextCrawlAt={nextCrawlAt} />;
+
+  // The first load is `A3/09/loading-runs-d` whole: blank pill bars too.
+  if (loaded === null && !failed) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {header}
+        <BatchesSkeleton />
       </div>
     );
+  }
 
-  // Nothing under the filter reads `A3/09/runs-filter-empty-d`'s line; under
-  // All (never any runs) there is no drawn empty board, so it is the same
-  // line with no Show all.
+  // Nothing matched and nothing older is left: `A3/09/runs-filter-empty-d`'s
+  // line. Under All (never any runs) no empty board is drawn, so it is the
+  // same line with no Show all. While older pages remain, the table stays
+  // with Load more, since an older page may match.
   const content = failed ? (
     <CouldntLoad page={COPY.title} onRetry={() => void load()} />
   ) : shown === null ? (
     <BatchesSkeleton filters={false} />
-  ) : shown.page.rows.length === 0 ? (
-    <>
-      <RunsFilterEmpty
-        message={COPY.filterEmpty[filter]}
-        {...(filter !== 'all' && { onShowAll: () => onFilter('all') })}
-      />
-      {shown.page.hasMore && footer(shown.page)}
-    </>
+  ) : shown.page.rows.length === 0 && !shown.page.hasMore ? (
+    <RunsFilterEmpty
+      message={COPY.filterEmpty[filter]}
+      {...(filter !== 'all' && { onShowAll: () => onFilter('all') })}
+    />
   ) : (
     <BatchesTable
       batches={shown.page.rows}
@@ -174,7 +206,7 @@ export const CrawlRunsClient = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <CrawlRunsHeader />
+      {header}
       {filters}
       {content}
     </div>

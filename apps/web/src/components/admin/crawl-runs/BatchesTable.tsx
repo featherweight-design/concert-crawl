@@ -4,6 +4,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { VenueChip } from '@/components/admin/primitives';
 import { CrawlAllButton } from '@/components/admin/crawl/CrawlAllDialog';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+import { shortTime } from '@/components/admin/venues/overview/overview-rules';
 import type { BatchFilter, BatchRow } from './batch-data';
 import {
   batchCost,
@@ -22,28 +23,36 @@ const COPY = ADMIN_COPY.crawlRuns;
 export const DESKTOP_ONLY = 'max-[720px]:hidden';
 
 /** `07/crawl-runs-desktop`'s columns: WHEN, WHAT, RESULT, SUMMARY, TIME, COST. */
-const COLUMNS = [
-  { key: 'when', width: 90 },
-  { key: 'what', width: 190 },
-  { key: 'result', width: 120 },
-  { key: 'summary', width: null },
-  { key: 'time', width: 60 },
-  { key: 'cost', width: 56 },
-] as const;
+const COLUMNS = ['when', 'what', 'result', 'summary', 'time', 'cost'] as const;
 
-const col = (width: number | null): CSSProperties =>
-  width === null
-    ? { flex: 1, minWidth: 0 }
-    : { width, flex: 'none', minWidth: 0 };
+/**
+ * The board's widths (90, 190, 120, the rest, 60, 56; 12 apart, 18 in from
+ * the card's edges) on one grid every row subgrids, so the columns line up.
+ * The board never draws a venue and a handle together in WHAT ("Re-crawl ·
+ * Ball Arena · by @hugh" outruns 190), so WHAT is at least 190 and widens to
+ * its longest label, taken from SUMMARY. The 6px edge tracks plus the 12 gap
+ * make the board's 18px inset.
+ */
+const GRID_COLUMNS =
+  '6px 90px minmax(190px, max-content) 120px minmax(0, 1fr) 60px 56px 6px';
 
+const CELL: CSSProperties = { minWidth: 0 };
+/** The first cell starts after the edge track. */
+const FIRST_CELL: CSSProperties = { minWidth: 0, gridColumnStart: 2 };
+
+/** A row's share of the card's grid. */
 const ROW: CSSProperties = {
-  display: 'flex',
+  display: 'grid',
+  gridColumn: '1 / -1',
+  gridTemplateColumns: 'subgrid',
   alignItems: 'center',
-  gap: 12,
   borderTop: '1px solid var(--border)',
 };
 
 const CARD: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: GRID_COLUMNS,
+  columnGap: 12,
   borderRadius: 14,
   border: '1px solid var(--border)',
   background: 'var(--surface-1)',
@@ -62,9 +71,15 @@ const NOWRAP: CSSProperties = {
  * can't give), with no eyebrow. The phone shell draws the title, so the phone
  * shows the Next nightly line over a full-width Crawl all venues…; desktop
  * carries that line under the subtitle (row 26: in the header on both).
- * Server-safe, so `loading.tsx` draws the real header too.
+ * The time is the API's next nightly; with none (not production, or not
+ * loaded yet) the line is left off. Server-safe, so `loading.tsx` draws the
+ * real header too.
  */
-export const CrawlRunsHeader = () => (
+export const CrawlRunsHeader = ({
+  nextCrawlAt = null,
+}: {
+  nextCrawlAt?: string | null;
+}) => (
   <header className="flex items-end gap-3 max-[720px]:flex-col max-[720px]:items-stretch">
     <div style={{ flex: 1, minWidth: 0 }}>
       <h1
@@ -85,22 +100,28 @@ export const CrawlRunsHeader = () => (
       >
         {COPY.subtitle}
       </p>
-      <p
-        data-testid="crawl-runs-next-nightly"
-        className="mt-1 text-[var(--fg-subtle)] max-[720px]:mt-0 max-[720px]:text-[var(--fg-muted)]"
-        style={{ marginBottom: 0, fontSize: 12.5 }}
-      >
-        {COPY.nextNightly}
-      </p>
+      {nextCrawlAt !== null && (
+        <p
+          data-testid="crawl-runs-next-nightly"
+          className="mt-1 text-[var(--fg-subtle)] max-[720px]:mt-0 max-[720px]:text-[var(--fg-muted)]"
+          style={{ marginBottom: 0, fontSize: 12.5 }}
+        >
+          {COPY.nextNightly(shortTime(nextCrawlAt))}
+        </p>
+      )}
     </div>
     <CrawlAllButton />
   </header>
 );
 
 const ColumnLabels = () => (
-  <div style={{ display: 'flex', gap: 12, padding: '12px 18px' }}>
-    {COLUMNS.map((column) => (
-      <div key={column.key} style={col(column.width)}>
+  <div role="row" style={{ ...ROW, borderTop: 'none', padding: '12px 0' }}>
+    {COLUMNS.map((column, index) => (
+      <div
+        key={column}
+        role="columnheader"
+        style={index === 0 ? FIRST_CELL : CELL}
+      >
         <span
           style={{
             fontFamily: "'JetBrains Mono', monospace",
@@ -111,64 +132,42 @@ const ColumnLabels = () => (
             color: 'var(--fg-subtle)',
           }}
         >
-          {COPY.columns[column.key]}
+          {COPY.columns[column]}
         </span>
       </div>
     ))}
   </div>
 );
 
-/** A row as a link to `?run=` (the detail lands in PR3), or a plain row. */
-const RowShell = ({
-  batch,
-  filter,
-  style,
-  label,
-  children,
-}: {
-  batch: BatchRow;
-  filter: BatchFilter;
-  style: CSSProperties;
-  label: string;
-  children: ReactNode;
-}) =>
-  isClickableBatch(batch) ? (
-    <Link
-      href={crawlRunsHref(filter, batch.linkKey)}
-      scroll={false}
-      data-testid="crawl-batch-row"
-      aria-label={label}
-      style={{ ...style, color: 'var(--fg)', textDecoration: 'none' }}
-    >
-      {children}
-    </Link>
-  ) : (
-    <div
-      data-testid="crawl-batch-row"
-      aria-label={label}
-      role="group"
-      style={{ ...style, color: 'var(--fg)' }}
-    >
-      {children}
-    </div>
-  );
+/**
+ * The whole row opens `?run=` (the detail lands in PR3): the link sits in the
+ * WHEN cell, carries the row's name, and its `::after` covers the row, so the
+ * row keeps its table role and stays one click target. A night that didn't
+ * start has no link (row 14).
+ */
+const STRETCHED_LINK = "after:absolute after:inset-0 after:content-['']";
 
 const rowParts = (batch: BatchRow) => {
   const when = batchWhen(batch);
   const what = batchLabel(batch);
   const status = batchStatus(batch);
   const summary = batchSummary(batch);
+  const time = batchTime(batch);
+  const cost = batchCost(batch);
   return {
     when,
     what,
     status,
     summary,
-    label: COPY.rowLabel(
-      COPY.whenLabel(when.date, when.time),
+    time,
+    cost,
+    label: COPY.rowLabel(COPY.whenLabel(when.date, when.time), [
       what,
       status.label,
       summary,
-    ),
+      time,
+      cost,
+    ]),
   };
 };
 
@@ -185,36 +184,70 @@ const DesktopRow = ({
   batch: BatchRow;
   filter: BatchFilter;
 }) => {
-  const { when, what, status, summary, label } = rowParts(batch);
+  const { when, what, status, summary, time, cost, label } = rowParts(batch);
+  const whenText = (
+    <>
+      <span
+        style={{ ...NOWRAP, display: 'block', fontSize: 13.5, fontWeight: 600 }}
+      >
+        {when.date}
+      </span>
+      <span style={{ ...NOWRAP, ...muted(12), display: 'block', marginTop: 2 }}>
+        {when.time}
+      </span>
+    </>
+  );
   return (
-    <RowShell
-      batch={batch}
-      filter={filter}
-      label={label}
-      style={{ ...ROW, padding: '10px 18px' }}
+    <div
+      role="row"
+      data-testid="crawl-batch-row"
+      aria-label={label}
+      style={{
+        ...ROW,
+        position: 'relative',
+        padding: '10px 0',
+        color: 'var(--fg)',
+      }}
     >
-      <div style={col(90)}>
-        <div style={{ ...NOWRAP, fontSize: 13.5, fontWeight: 600 }}>
-          {when.date}
-        </div>
-        <div style={{ ...NOWRAP, ...muted(12), marginTop: 2 }}>{when.time}</div>
+      <div role="cell" style={FIRST_CELL}>
+        {isClickableBatch(batch) ? (
+          <Link
+            href={crawlRunsHref(filter, batch.linkKey)}
+            scroll={false}
+            aria-label={label}
+            className={STRETCHED_LINK}
+            style={{
+              display: 'block',
+              color: 'inherit',
+              textDecoration: 'none',
+            }}
+          >
+            {whenText}
+          </Link>
+        ) : (
+          whenText
+        )}
       </div>
-      <div style={{ ...col(190), ...NOWRAP, ...muted(12.5) }}>{what}</div>
-      <div style={col(120)}>
+      <div role="cell" style={{ ...CELL, ...NOWRAP, ...muted(12.5) }}>
+        {what}
+      </div>
+      <div role="cell" style={CELL}>
         <VenueChip
           tone={status.tone}
           label={status.label}
           testId="batch-chip"
         />
       </div>
-      <div style={{ ...col(null), ...muted(13) }}>{summary}</div>
-      <div style={{ ...col(60), ...NOWRAP, ...muted(12.5) }}>
-        {batchTime(batch)}
+      <div role="cell" style={{ ...CELL, ...muted(13) }}>
+        {summary}
       </div>
-      <div style={{ ...col(56), ...NOWRAP, ...muted(12.5) }}>
-        {batchCost(batch)}
+      <div role="cell" style={{ ...CELL, ...NOWRAP, ...muted(12.5) }}>
+        {time}
       </div>
-    </RowShell>
+      <div role="cell" style={{ ...CELL, ...NOWRAP, ...muted(12.5) }}>
+        {cost}
+      </div>
+    </div>
   );
 };
 
@@ -240,6 +273,8 @@ export const BatchesTable = ({
 }) => (
   <Scroll>
     <div
+      role="table"
+      aria-label={COPY.title}
       data-testid="crawl-runs-table"
       style={{ ...CARD, minWidth: TABLE_MIN_WIDTH }}
     >
@@ -247,7 +282,11 @@ export const BatchesTable = ({
       {batches.map((batch) => (
         <DesktopRow key={batch.key} batch={batch} filter={filter} />
       ))}
-      {footer}
+      {footer && (
+        <div role="row" style={{ gridColumn: '1 / -1' }}>
+          <div role="cell">{footer}</div>
+        </div>
+      )}
     </div>
   </Scroll>
 );
@@ -272,13 +311,13 @@ export const BatchesSkeleton = ({ filters = true }: { filters?: boolean }) => (
       </div>
     )}
     <Scroll>
-      <div style={{ ...CARD, minWidth: TABLE_MIN_WIDTH }}>
+      <div aria-hidden style={{ ...CARD, minWidth: TABLE_MIN_WIDTH }}>
         <ColumnLabels />
         {Array.from({ length: SKELETON_ROWS }, (_, row) => (
-          <div key={row} style={{ ...ROW, padding: '14px 18px' }}>
+          <div key={row} style={{ ...ROW, padding: '14px 0' }}>
             <div
               style={{
-                ...col(90),
+                ...FIRST_CELL,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 5,
@@ -287,19 +326,19 @@ export const BatchesSkeleton = ({ filters = true }: { filters?: boolean }) => (
               <SkeletonBlock width={52} height={12} radius={6} />
               <SkeletonBlock width={40} height={10} radius={6} />
             </div>
-            <div style={col(190)}>
+            <div style={CELL}>
               <SkeletonBlock width={120} height={12} radius={6} />
             </div>
-            <div style={col(120)}>
+            <div style={CELL}>
               <SkeletonBlock width={60} height={22} radius={999} />
             </div>
-            <div style={col(null)}>
+            <div style={CELL}>
               <SkeletonBlock width="80%" height={12} radius={6} />
             </div>
-            <div style={col(60)}>
+            <div style={CELL}>
               <SkeletonBlock width={36} height={12} radius={6} />
             </div>
-            <div style={col(56)}>
+            <div style={CELL}>
               <SkeletonBlock width={32} height={12} radius={6} />
             </div>
           </div>
