@@ -233,19 +233,33 @@ describe('GET /v1/admin/events/list', () => {
         body.data.counts.byVenue.map((row) => [row.name, row.total]),
       );
 
+    /** Every status key, 0 unless given: byStatus never drops a key. */
+    const allStatuses = (counts: Record<string, number>) => ({
+      available: 0,
+      soldout: 0,
+      postponed: 0,
+      cancelled: 0,
+      delisted: 0,
+      played: 0,
+      ...counts,
+    });
+
     it('applies the status filter to byVenue, and every filter but its own to byStatus', async () => {
       await seedFacets();
 
       const body = await list('?statuses=postponed');
 
       expect(body.data.total).toBe(2);
-      expect(venueTotals(body)).toEqual({ 'Red Rocks': 1, 'Globe Hall': 1 });
-      // The status filter leaves its own counts whole.
-      expect(body.data.counts.byStatus).toEqual({
-        available: 3,
-        postponed: 2,
-        cancelled: 1,
+      // Bluebird has a show in the scope, so it stays listed at 0.
+      expect(venueTotals(body)).toEqual({
+        'Red Rocks': 1,
+        'Globe Hall': 1,
+        'Bluebird Theater': 0,
       });
+      // The status filter leaves its own counts whole.
+      expect(body.data.counts.byStatus).toEqual(
+        allStatuses({ available: 3, postponed: 2, cancelled: 1 }),
+      );
       expect(body.data.counts).toMatchObject({
         all: 6,
         noPrice: 2,
@@ -259,7 +273,9 @@ describe('GET /v1/admin/events/list', () => {
       const body = await list(`?venueIds=${red.id},${globe.id}`);
 
       expect(body.data.total).toBe(5);
-      expect(body.data.counts.byStatus).toEqual({ available: 3, postponed: 2 });
+      expect(body.data.counts.byStatus).toEqual(
+        allStatuses({ available: 3, postponed: 2 }),
+      );
       expect(venueTotals(body)).toEqual({
         'Red Rocks': 3,
         'Globe Hall': 2,
@@ -316,7 +332,26 @@ describe('GET /v1/admin/events/list', () => {
       expect((byStatus.postponed ?? 0) + (byStatus.cancelled ?? 0)).toBe(
         body.data.total,
       );
-      expect(byStatus).toEqual({ available: 1, postponed: 1, cancelled: 1 });
+      expect(byStatus).toEqual(
+        allStatuses({ available: 1, postponed: 1, cancelled: 1 }),
+      );
+    });
+
+    it('keeps a ticked venue listed at 0 when another filter empties it', async () => {
+      const { bluebird } = await seedFacets();
+
+      const body = await list(`?venueIds=${bluebird.id}&statuses=postponed`);
+
+      expect(body.data.total).toBe(0);
+      // Every venue with a show in the scope, count desc then name.
+      expect(
+        body.data.counts.byVenue.map((row) => [row.name, row.total]),
+      ).toEqual([
+        ['Globe Hall', 1],
+        ['Red Rocks', 1],
+        ['Bluebird Theater', 0],
+      ]);
+      expect(body.data.counts.byStatus).toEqual(allStatuses({ cancelled: 1 }));
     });
   });
 
