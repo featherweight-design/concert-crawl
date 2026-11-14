@@ -113,7 +113,10 @@ export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
     !isTextOrNull(value['photoUrl']) ||
     !isTextOrNull(value['autoMatchedAt']) ||
     !isCount(value['openReportCount']) ||
-    !isNonNegativeInteger(value['wrongPhotoReportCount']) ||
+    // Absent is allowed: web can deploy before the API that adds it, and a
+    // missing count must not empty the list. Present, it must be a count.
+    (value['wrongPhotoReportCount'] !== undefined &&
+      !isNonNegativeInteger(value['wrongPhotoReportCount'])) ||
     !isCount(value['upcomingCount']) ||
     !isCount(value['watchingCount']) ||
     !isNextShow(value['nextShow'])
@@ -130,7 +133,9 @@ export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
     photoUrl: value['photoUrl'],
     autoMatchedAt: value['autoMatchedAt'],
     openReportCount: value['openReportCount'],
-    wrongPhotoReportCount: value['wrongPhotoReportCount'],
+    wrongPhotoReportCount: isNonNegativeInteger(value['wrongPhotoReportCount'])
+      ? value['wrongPhotoReportCount']
+      : 0,
     // Like a candidate snapshot, a malformed genre list is blanked rather than
     // dropping the row: genres are display-only, the counts are not.
     genres: isGenreList(genres) ? genres : null,

@@ -194,8 +194,16 @@ describe('parseArtistRow', () => {
     ['fractional', 1.5],
     ['a string', '1'],
     ['null', null],
-    ['missing', undefined],
   ])('drops a row whose wrong-photo count is %s', (_label, count) => {
     expect(parseArtistRow(wire({ wrongPhotoReportCount: count }))).toBeNull();
+  });
+
+  it('reads a missing wrong-photo count as 0 (web may deploy before the API)', () => {
+    const older = Object.fromEntries(
+      Object.entries(wire({})).filter(
+        ([key]) => key !== 'wrongPhotoReportCount',
+      ),
+    );
+    expect(parseArtistRow(older)?.wrongPhotoReportCount).toBe(0);
   });
 });
