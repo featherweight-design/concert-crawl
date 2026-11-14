@@ -1,0 +1,178 @@
+{
+  "feature": "Admin · Crawl all venues confirm (PR B)",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 07-people-flags-operations/crawl-all-venues (desktop), addendum-3 09-crawl-runs/crawl-all-m, crawl-all-starting-m, crawl-all-failed-m, crawl-all-none-m (phone); loading reuses addendum-3 10-needs-you-panels/panel-loading. Every row mocks GET /v1/admin/crawl/estimate, and the failed row mocks POST /api/admin/crawl/run-all, so no row can start a real crawl. Starting and loading are transient and are pinned by CrawlAllDialog.test.tsx, not photographed.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/b1-crawl-all-contact-sheet",
+  "widths": [
+    { "label": "320", "width": 320, "height": 900, "touch": true },
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "page",
+      "label": "Crawl runs page with the Crawl all venues… trigger",
+      "steps": [
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-all-trigger\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "default",
+      "label": "Confirm: 19 of 21, two skipped, recent time and cost",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/estimate",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 21,
+              "eligible": 19,
+              "skipped": [
+                { "name": "Levitt Pavilion", "reason": "paused" },
+                { "name": "The Ogden", "reason": "blocked" }
+              ],
+              "usual": { "durationMs": 1200000, "costUsd": 0.8 }
+            }
+          }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-all-trigger\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "button", "name": "^Crawl all venues" },
+        { "waitDialog": "Crawl all venues now" },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "nothing-skipped-no-history",
+      "label": "Confirm: nothing skipped, no history (both sentences dropped)",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/estimate",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 21,
+              "eligible": 21,
+              "skipped": [],
+              "usual": null
+            }
+          }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-all-trigger\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "button", "name": "^Crawl all venues" },
+        { "waitDialog": "Crawl all venues now" },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "none",
+      "label": "None eligible: Nothing to crawl right now",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/estimate",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 21,
+              "eligible": 0,
+              "skipped": [{ "name": "Levitt Pavilion", "reason": "paused" }],
+              "usual": null
+            }
+          }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-all-trigger\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "button", "name": "^Crawl all venues" },
+        { "waitDialog": "Nothing to crawl" },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "failed",
+      "label": "Post failed: Couldn’t start the crawl (run-all mocked 502)",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/estimate",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 21,
+              "eligible": 19,
+              "skipped": [
+                { "name": "Levitt Pavilion", "reason": "paused" },
+                { "name": "The Ogden", "reason": "blocked" }
+              ],
+              "usual": { "durationMs": 1200000, "costUsd": 0.8 }
+            }
+          }
+        },
+        {
+          "route": "**/api/admin/crawl/run-all",
+          "status": 502,
+          "body": { "success": false }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-all-trigger\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "button", "name": "^Crawl all venues" },
+        { "waitDialog": "Crawl all venues now" },
+        { "settle": 1000 },
+        { "clickRole": "button", "name": "^Crawl all 19$" },
+        { "settle": 2000 }
+      ]
+    },
+    {
+      "id": "other-page-save-failed",
+      "label": "Another SaveFailedToast page: Health LLM budget save failed (PATCH mocked 500; 07/save-failed padding, 30px buttons, shadow)",
+      "steps": [
+        {
+          "route": "**/v1/admin/settings",
+          "status": 500,
+          "body": { "success": false }
+        },
+        { "goto": "/admin", "wait": "[data-testid=\"llm-budget-trigger\"]" },
+        { "settle": 2000 },
+        { "click": "[data-testid=\"llm-budget-trigger\"]" },
+        { "settle": 1000 },
+        { "clickRole": "button", "name": "^50%$" },
+        { "clickRole": "button", "name": "^Save" },
+        { "wait": "[data-testid=\"save-failed\"]" },
+        { "settle": 1000 }
+      ]
+    },
+    {
+      "id": "estimate-failed",
+      "label": "Estimate didn’t load: Couldn’t count the venues",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/estimate",
+          "status": 500,
+          "body": { "success": false }
+        },
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-all-trigger\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "button", "name": "^Crawl all venues" },
+        { "waitDialog": "Crawl all venues now" },
+        { "settle": 2000 }
+      ]
+    }
+  ]
+}

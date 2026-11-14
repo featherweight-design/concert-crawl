@@ -5,6 +5,11 @@ interface SectionHeadProps {
   titleClassName?: string;
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
+  /**
+   * The actions take the full width below the admin breakpoint, where they
+   * wrap under the title (`09/crawl-all-m` draws Crawl all venues… that way).
+   */
+  actionsFullWidthOnPhone?: boolean;
 }
 
 export const SectionHead = ({
@@ -13,6 +18,7 @@ export const SectionHead = ({
   titleClassName,
   subtitle,
   actions,
+  actionsFullWidthOnPhone = false,
 }: SectionHeadProps) => (
   <div
     style={{
@@ -73,6 +79,7 @@ export const SectionHead = ({
     </div>
     {actions && (
       <div
+        className={actionsFullWidthOnPhone ? 'max-[720px]:w-full' : undefined}
         style={{
           display: 'flex',
           gap: 8,

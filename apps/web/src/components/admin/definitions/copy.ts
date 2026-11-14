@@ -226,6 +226,45 @@ export const ADMIN_COPY = {
   },
 
   crawl: {
+    // `07/crawl-all-venues` (desktop) and addendum-3 `09/crawl-all-*-m`
+    // (phone). The phone body supersedes the desktop one (addendum-3 row 16).
+    crawlAll: {
+      trigger: 'Crawl all venues…',
+      queued: 'Queued ✓',
+      title: 'Crawl all venues now?',
+      loading: 'Counting venues…',
+      // "{eligible} of {total}", or "All {total}" when nothing is skipped.
+      crawled: (eligible: number, total: number) =>
+        eligible === total
+          ? `All ${total} venues are crawled now, one at a time, 3 s apart, with robots.txt checked first.`
+          : `${eligible} of ${total} venues are crawled now, one at a time, 3 s apart, with robots.txt checked first.`,
+      skipped: (list: string) => `Skipped: ${list}.`,
+      skippedVenue: (name: string, reason: string) => `${name} (${reason})`,
+      skipReason: {
+        paused: 'paused',
+        blocked: 'blocked',
+        hidden: 'hidden',
+        unverified: 'not yet verified',
+      },
+      usual: (minutes: number, cost: string) =>
+        `Recent crawls took about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} and cost about ${cost}.`,
+      nightlyStillRuns: 'Tonight’s 3:00 AM crawl still runs.',
+      confirm: (eligible: number) => `Crawl all ${eligible}`,
+      // Drawn but held while the count loads or after it failed.
+      confirmLoading: 'Crawl all',
+      starting: 'Starting…',
+      cancel: 'Cancel',
+      failedTitle: 'Couldn’t start the crawl',
+      // The toast's Try again is states.saveFailed.tryAgain.
+      failedBody: 'GitHub didn’t take the request. Nothing was queued.',
+      estimateFailedTitle: 'Couldn’t count the venues',
+      estimateFailedBody: 'Nothing was queued.',
+      noneTitle: 'Nothing to crawl right now',
+      noneBody: (total: number) =>
+        `All ${total} venues are paused, blocked, hidden or not yet verified. Resume one from Venues to crawl it.`,
+      openVenues: 'Open Venues',
+      close: 'Close',
+    },
     issuesBanner: {
       jumpToIssues: 'Jump to issues',
       statusBlocked: 'blocked',
@@ -283,10 +322,6 @@ export const ADMIN_COPY = {
       tableColEvents: 'Events',
       tableColLlmCost: 'LLM cost',
       tableColError: 'Error',
-      runAllQueuing: 'Queuing…',
-      runAllQueued: 'Queued ✓',
-      runAllError: 'Error — retry?',
-      runAllButton: 'Run all',
       statusFilterOptions: [
         { label: 'All statuses', value: '' },
         { label: 'Success', value: 'success' },
