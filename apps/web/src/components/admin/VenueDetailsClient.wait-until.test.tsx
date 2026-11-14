@@ -1,26 +1,23 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { ReactNode } from 'react';
 import {
   render,
   screen,
   fireEvent,
   waitFor,
+  within,
   cleanup,
 } from '@testing-library/react';
-import type { VenueWithCrawlHealth } from '@concert-crawl/types';
-import { MIN_CRAWL_DELAY_MS } from '@concert-crawl/types';
 
-// ───── Mocks ─────────────────────────────────────────────────────────────────
+// Wait until, the selector and page loading moved from the page's one form
+// into Source's Advanced row (3b part 6). These keep the browser-gate rule
+// they pinned: the API re-checks the browser-mode selector whenever a gate
+// field is in the body, so an unchanged one must stay out of it.
 
 const mockUpdateVenue = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
   updateVenue: (...args: unknown[]) => mockUpdateVenue(...args),
-  pauseVenue: vi.fn(),
-  activateVenue: vi.fn(),
-  setVenueFeatured: vi.fn(),
-  generateVenueAbout: vi.fn(),
   probeVenuePlatform: vi.fn(),
 }));
 
@@ -28,61 +25,14 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-vi.mock('next/link', () => ({
-  default: ({ href, children }: { href: string; children: ReactNode }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
-
-vi.mock('@/components/admin/shell/PageTitleContext', () => ({
-  usePageTitle: () => ({ setPageTitle: vi.fn() }),
-}));
-
-vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
-  IdentityArt: () => null,
-  ia_getInitials: () => 'TV',
-  ia_isDark: () => true,
-  identityFor: () => ({ palette: { bg: '#101010' } }),
-}));
-
-vi.mock('./generate-field/GenerateField', () => ({
-  GenerateField: () => null,
-}));
-
-// The header polls crawls behind Clerk auth; it has its own suite.
-vi.mock('@/components/admin/venues/VenueHeader', () => ({
-  VenueHeader: () => null,
-}));
-
-// The page's one re-crawl and the Overview cards sit behind Clerk auth and
-// have their own suites.
-vi.mock('@/components/admin/venues/useRecrawl', () => ({
-  useRecrawl: () => ({
-    state: 'idle',
-    reason: null,
-    start: () => undefined,
-    retry: () => undefined,
-    dismiss: () => undefined,
-  }),
-}));
-vi.mock('@/components/admin/venues/overview/OverviewTab', () => ({
-  OverviewTab: () => null,
-}));
-// The Runs tab fetches behind Clerk auth; it has its own suite.
-vi.mock('@/components/admin/venues/runs/RunsTab', () => ({
-  RunsTab: () => null,
-}));
-
-// Reads triage over the network behind Clerk auth; these suites are about the
-// venue form, and there is no ClerkProvider around them.
-vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
-  VenueExpectedBadge: () => null,
-}));
-
-import { VenueDetailsClient } from './VenueDetailsClient';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import {
+  SourceTab,
+  type SourceVenue,
+} from '@/components/admin/venues/source/SourceTab';
 
-const SAVE_LABEL = ADMIN_COPY.venueDetailsClient.saveBar.saveChanges;
+const ADVANCED = ADMIN_COPY.venueSource.advanced;
+const SAVE_LABEL = ADMIN_COPY.venueSource.saveBar.save;
 
 const matchMediaStub = (query: string): MediaQueryList => ({
   matches: false,
@@ -95,341 +45,91 @@ const matchMediaStub = (query: string): MediaQueryList => ({
   dispatchEvent: () => false,
 });
 
-const buildVenue = (
-  overrides: Partial<VenueWithCrawlHealth> = {},
-): VenueWithCrawlHealth => ({
+const browserVenue: SourceVenue = {
   id: 'venue-1',
   name: 'Test Venue',
-  slug: 'test-venue',
   websiteUrl: 'https://testvenue.example.com',
-  city: 'Denver',
-  timezone: 'America/Denver',
-  active: true,
-  verified: true,
-  verifiedBy: null,
-  verifiedAt: null,
-  lastCrawledAt: null,
-  crawlNotes: null,
-  crawlDelayMs: 3000,
-  crawlWaitUntil: 'networkidle',
-  crawlWaitForSelector: null,
-  robotsTxtAllowed: true,
-  robotsTxtCheckedAt: null,
-  consecutiveFailures: 0,
-  blockedAt: null,
-  crawlPausedAt: null,
-  removedAt: null,
   extractionStrategy: null,
-  contactEmail: null,
-  priceUrl: null,
-  ticketVendor: null,
-  debugCaptureHtml: false,
-  crawlMode: null,
   platform: null,
   platformVenueId: null,
   apiProvider: null,
   apiAccountId: null,
-  address: null,
-  capacity: null,
-  venueType: null,
-  about: null,
-  neighborhood: null,
-  featured: false,
-  lat: null,
-  lng: null,
-  createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: '2026-01-01T00:00:00.000Z',
-  crawlHealth: {
-    sevenDayPercent: 100,
-    sparkline: [],
-    lastCrawledAt: null,
-    avgDurationMs: null,
-    eventsTracked: 0,
-    consecutiveFails: 0,
-  },
-  ...overrides,
-});
+  crawlMode: 'browser',
+  crawlWaitUntil: 'networkidle',
+  crawlWaitForSelector: null,
+  crawlDelayMs: 3000,
+  robotsTxtAllowed: true,
+  robotsTxtCheckedAt: null,
+};
 
-const WAIT_COPY = ADMIN_COPY.venueDetailsClient.fields.waitUntil;
+const openAdvanced = () =>
+  fireEvent.click(
+    screen.getByRole('button', { name: new RegExp(ADVANCED.label) }),
+  );
 
-describe('VenueDetailsClient — Wait until control', () => {
+const sent = async (): Promise<FormData> => {
+  await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+  const formData = mockUpdateVenue.mock.calls[0]?.[1];
+  if (!(formData instanceof FormData)) {
+    throw new Error('Expected updateVenue to receive a FormData');
+  }
+  return formData;
+};
+
+describe('Source Advanced — the browser gate', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
     mockUpdateVenue.mockReset();
     mockUpdateVenue.mockResolvedValue({ success: true });
   });
-
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
   });
 
-  it("shows the venue's current setting and its hint", () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlWaitUntil: 'load' })}
-      />,
-    );
-
-    expect(screen.getByText(WAIT_COPY.hints.load)).toBeTruthy();
-  });
-
-  it('sends the chosen value to updateVenue on save', async () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlWaitUntil: 'networkidle' })}
-      />,
-    );
-
+  it('a browser venue with no selector can still change Wait until alone', async () => {
+    render(<SourceTab venue={browserVenue} />);
+    openAdvanced();
     fireEvent.click(
-      screen.getByRole('button', { name: WAIT_COPY.options.load }),
+      screen.getByRole('radio', { name: ADVANCED.waitUntil.load }),
     );
-    expect(screen.getByText(WAIT_COPY.hints.load)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
 
-    await waitFor(() => {
-      expect(mockUpdateVenue).toHaveBeenCalledTimes(1);
-    });
-
-    const call = mockUpdateVenue.mock.calls[0];
-    if (!call) throw new Error('Expected updateVenue to have been called');
-    const [, formData] = call;
-    if (!(formData instanceof FormData)) {
-      throw new Error('Expected updateVenue to receive a FormData');
-    }
+    const formData = await sent();
+    expect([...formData.keys()]).toEqual(['crawlWaitUntil']);
     expect(formData.get('crawlWaitUntil')).toBe('load');
-    // Pause and Activate own `active`; a save from a stale tab must not
-    // resend it.
-    expect(formData.has('active')).toBe(false);
   });
 
-  it("marks the Wait selector with the API's reason when the guard refuses a save (#1344)", async () => {
-    const reason =
-      'crawlWaitForSelector is required for browser-mode venues: without it a slow client-side render is captured as an empty page';
-    mockUpdateVenue.mockResolvedValueOnce({
-      success: false,
-      error: reason,
-      field: 'crawlWaitForSelector',
+  it('sends a new selector without resending the unchanged gate fields', async () => {
+    render(<SourceTab venue={browserVenue} />);
+    openAdvanced();
+    fireEvent.change(screen.getByLabelText(ADVANCED.waitFor.label), {
+      target: { value: ' .event-card ' },
     });
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlWaitUntil: 'networkidle' })}
-      />,
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', { name: WAIT_COPY.options.load }),
-    );
     fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
 
-    const message = await screen.findByText(reason);
-    // At the field, not in the page-top banner: the input is marked invalid
-    // and the reason renders in the same field block.
-    const input = document.getElementById('edit-venue-wait-for-selector');
-    expect(input?.getAttribute('aria-invalid')).toBe('true');
-    expect(input?.parentElement?.contains(message)).toBe(true);
-    // Linked for screen readers, and announced when it appears.
-    expect(input?.getAttribute('aria-describedby')).toBe(message.id);
-    expect(message.getAttribute('role')).toBe('alert');
-    expect(
-      screen.queryByText(ADMIN_COPY.venueDetailsClient.errors.unexpected),
-    ).toBeNull();
-  });
-
-  it('says the setting is ignored while a Wait selector is set', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlWaitForSelector: '.event-card' })}
-      />,
-    );
-
-    expect(screen.getByText(WAIT_COPY.ignoredWithSelector)).toBeTruthy();
-  });
-
-  it('says the setting is ignored in HTTP only mode', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlMode: 'http' })}
-      />,
-    );
-
-    expect(screen.getByText(WAIT_COPY.ignoredHttpOnly)).toBeTruthy();
-  });
-
-  it('describes HTTP only when a selector is also set', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({
-          crawlMode: 'http',
-          crawlWaitForSelector: '.event-card',
-        })}
-      />,
-    );
-
-    expect(screen.getByText(WAIT_COPY.ignoredHttpOnly)).toBeTruthy();
-  });
-
-  it('marks the selected option as pressed', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlWaitUntil: 'load' })}
-      />,
-    );
-
-    const load = screen.getByRole('button', { name: WAIT_COPY.options.load });
-    const idle = screen.getByRole('button', {
-      name: WAIT_COPY.options.networkidle,
-    });
-    expect(load.getAttribute('aria-pressed')).toBe('true');
-    expect(idle.getAttribute('aria-pressed')).toBe('false');
-  });
-
-  // The API re-checks the browser-mode selector rule whenever a gate field is
-  // in the body, so resending them unchanged made this venue unsaveable.
-  it('omits unchanged browser-gate fields for a browser venue with no selector', async () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlMode: 'browser', crawlWaitForSelector: null })}
-      />,
-    );
-
-    fireEvent.click(
-      screen.getByRole('button', { name: WAIT_COPY.options.load }),
-    );
-    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
-
-    await waitFor(() => {
-      expect(mockUpdateVenue).toHaveBeenCalledTimes(1);
-    });
-    const formData = mockUpdateVenue.mock.calls[0]?.[1];
-    if (!(formData instanceof FormData)) {
-      throw new Error('Expected updateVenue to receive a FormData');
-    }
-    expect(formData.get('crawlWaitUntil')).toBe('load');
-    for (const key of [
-      'crawlMode',
-      'crawlWaitForSelector',
-      'platform',
-      'platformVenueId',
-      'apiProvider',
-      'apiAccountId',
-    ]) {
-      expect(formData.has(key)).toBe(false);
-    }
-  });
-
-  it('sends the whole browser-gate group when one of its fields changes', async () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlMode: 'browser', crawlWaitForSelector: null })}
-      />,
-    );
-
-    fireEvent.change(
-      screen.getByPlaceholderText(
-        ADMIN_COPY.venueDetailsClient.fields.waitSelector.placeholder,
-      ),
-      { target: { value: '.event-card' } },
-    );
-    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
-
-    await waitFor(() => {
-      expect(mockUpdateVenue).toHaveBeenCalledTimes(1);
-    });
-    const formData = mockUpdateVenue.mock.calls[0]?.[1];
-    if (!(formData instanceof FormData)) {
-      throw new Error('Expected updateVenue to receive a FormData');
-    }
+    const formData = await sent();
+    expect([...formData.keys()]).toEqual(['crawlWaitForSelector']);
     expect(formData.get('crawlWaitForSelector')).toBe('.event-card');
-    expect(formData.get('crawlMode')).toBe('browser');
-    expect(formData.get('apiProvider')).toBe('');
-  });
-});
-
-// The request delay is read-only (3b ruling d). A legacy row stored under the
-// 3 s floor (the form once accepted 1 s) shows the floor, the delay the
-// crawler actually paces at, and a save never sends the field.
-const DELAY_LABEL = ADMIN_COPY.venueDetailsClient.fields.requestDelay.label;
-
-describe('VenueDetailsClient — Request delay is read-only', () => {
-  beforeEach(() => {
-    vi.stubGlobal('matchMedia', matchMediaStub);
-    mockUpdateVenue.mockReset();
-    mockUpdateVenue.mockResolvedValue({ success: true });
   });
 
-  afterEach(() => {
-    cleanup();
-    vi.unstubAllGlobals();
-  });
-
-  it.each([
-    [1000, String(MIN_CRAWL_DELAY_MS)],
-    [3000, '3000'],
-    [5000, '5000'],
-  ])('shows a stored %ims delay as %s, read-only', (stored, shown) => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlDelayMs: stored })}
-      />,
+  it('reads page loading as Automatic for a venue the crawler has not pinned', () => {
+    render(<SourceTab venue={{ ...browserVenue, crawlMode: null }} />);
+    openAdvanced();
+    const loading = within(
+      screen.getByRole('radiogroup', { name: ADVANCED.pageLoading.label }),
     );
-
-    const input = document.getElementById('edit-venue-crawl-delay');
-    if (!(input instanceof HTMLInputElement)) {
-      throw new Error('Expected the request delay input');
-    }
-    expect(input.value).toBe(shown);
-    expect(input.readOnly).toBe(true);
     expect(
-      screen.getByText(ADMIN_COPY.venueDetailsClient.fields.requestDelay.hint),
-    ).toBeTruthy();
-  });
-
-  it('opens clean for a legacy row under the floor', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlDelayMs: 1000 })}
-      />,
-    );
-
-    expect(screen.queryByRole('button', { name: SAVE_LABEL })).toBeNull();
-    expect(screen.getAllByText(DELAY_LABEL)).toHaveLength(1);
-  });
-
-  it('never sends the delay when another field is saved', async () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlDelayMs: 1000 })}
-      />,
-    );
-
-    const name = document.getElementById('edit-venue-name');
-    if (!(name instanceof HTMLInputElement)) {
-      throw new Error('Expected the name input');
+      loading.getByRole('radio', { name: ADVANCED.pageLoading.auto }),
+    ).toHaveProperty('checked', true);
+    for (const name of [
+      ADVANCED.pageLoading.http,
+      ADVANCED.pageLoading.browser,
+    ]) {
+      expect(loading.getByRole('radio', { name })).toHaveProperty(
+        'checked',
+        false,
+      );
     }
-    fireEvent.change(name, { target: { value: 'Renamed Venue' } });
-    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
-
-    await waitFor(() => {
-      expect(mockUpdateVenue).toHaveBeenCalledTimes(1);
-    });
-    const formData = mockUpdateVenue.mock.calls[0]?.[1];
-    if (!(formData instanceof FormData)) {
-      throw new Error('Expected updateVenue to receive a FormData');
-    }
-    expect(formData.get('name')).toBe('Renamed Venue');
-    expect(formData.has('crawlDelayMs')).toBe(false);
   });
 });

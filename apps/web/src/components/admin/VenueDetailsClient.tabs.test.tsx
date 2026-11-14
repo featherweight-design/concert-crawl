@@ -292,15 +292,11 @@ describe('VenueDetailsClient — tabs', () => {
     expect(scrollSpy).toHaveBeenCalledWith({ block: 'start' });
   });
 
-  it('a save from Overview submits the edits made on Details and Source', async () => {
+  // Source has its own bar (3b part 6): the page's bar submits Details' edits
+  // from any tab, and never Source's.
+  it('a save from Overview submits the Details edit and nothing of Source', async () => {
     render(<VenueDetailsClient venue={venue} />);
     fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: ADMIN_COPY.venueDetailsClient.fields.waitUntil.options.load,
-        hidden: true,
-      }),
-    );
     expect(panel('overview').hidden).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
 
@@ -310,7 +306,21 @@ describe('VenueDetailsClient — tabs', () => {
       throw new Error('Expected updateVenue to receive a FormData');
     }
     expect(formData.get('address')).toBe('1 Colfax Ave');
-    expect(formData.get('crawlWaitUntil')).toBe('load');
+    expect(formData.has('crawlWaitUntil')).toBe(false);
+    expect(formData.has('websiteUrl')).toBe(false);
+  });
+
+  it('keeps an unsaved Source edit, and its own bar, across a tab switch', () => {
+    render(<VenueDetailsClient venue={venue} initialTab="source" />);
+    fireEvent.change(
+      screen.getByLabelText(ADMIN_COPY.venueSource.read.calendarPage.label),
+      { target: { value: 'https://gothic.example/calendar' } },
+    );
+    fireEvent.click(screen.getByRole('tab', { name: TABS.details }));
+    fireEvent.click(screen.getByRole('tab', { name: TABS.source }));
+    expect(
+      screen.getByRole('button', { name: ADMIN_COPY.venueSource.saveBar.save }),
+    ).toBeTruthy();
   });
 });
 
@@ -335,7 +345,7 @@ describe('VenueDetailsClient — a refused save opens the field’s tab', () => 
   };
 
   const expectOpenedAt = async (
-    tab: 'details' | 'source',
+    tab: 'details',
     inputId: string,
     label: string,
   ) => {
@@ -352,56 +362,22 @@ describe('VenueDetailsClient — a refused save opens the field’s tab', () => 
     );
   };
 
-  it.each([
-    {
+  // Source's fields are refused on Source's own bar (3b part 6), so the only
+  // field this bar can be refused on is the slug.
+  it('the API refusing slug opens details and focuses it', async () => {
+    mockUpdateVenue.mockResolvedValue({
+      success: false,
       field: 'slug',
-      tab: 'details',
-      inputId: 'edit-venue-slug',
-      label: FIELDS.slug.label,
-      overrides: {},
-    },
-    {
-      field: 'apiAccountId',
-      tab: 'source',
-      inputId: 'edit-venue-api-account-id',
-      label: FIELDS.apiAccountId.label,
-      overrides: { apiProvider: 'venuepilot', apiAccountId: '1105' },
-    },
-    {
-      field: 'platformVenueId',
-      tab: 'source',
-      inputId: 'edit-venue-platform-venue-id',
-      label: FIELDS.platformRouting.platformVenueId.label,
-      overrides: { platform: 'aeg', platformVenueId: '89' },
-    },
-    {
-      field: 'crawlWaitForSelector',
-      tab: 'source',
-      inputId: 'edit-venue-wait-for-selector',
-      label: FIELDS.waitSelector.label,
-      overrides: {},
-    },
-  ] as const)(
-    'the API refusing $field opens $tab and focuses it',
-    async ({ field, tab, inputId, label, overrides }) => {
-      mockUpdateVenue.mockResolvedValue({
-        success: false,
-        field,
-        error: `${field} was refused`,
-      });
-      saveFromOverview(overrides);
-      await expectOpenedAt(tab, inputId, label);
-      expect(screen.getByText(`${field} was refused`)).toBeTruthy();
-    },
-  );
+      error: 'slug was refused',
+    });
+    saveFromOverview({});
+    await expectOpenedAt('details', 'edit-venue-slug', FIELDS.slug.label);
+    expect(screen.getByText('slug was refused')).toBeTruthy();
+  });
 
-  it('the missing platform venue ID guard opens Source before any request', async () => {
+  it('an old venue with an AEG platform and no ID still saves Details', async () => {
+    mockUpdateVenue.mockResolvedValue({ success: true });
     saveFromOverview({ platform: 'aeg', platformVenueId: null });
-    await expectOpenedAt(
-      'source',
-      'edit-venue-platform-venue-id',
-      FIELDS.platformRouting.platformVenueId.label,
-    );
-    expect(mockUpdateVenue).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
   });
 });
