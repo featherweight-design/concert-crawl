@@ -16,7 +16,9 @@ import {
   auditLog,
   notifications,
   venueFaultAcknowledgements,
+  costTracking,
 } from '@concert-crawl/db';
+import { calculateCost, type TokenUsage } from '@concert-crawl/crawler-core';
 import {
   and,
   count,
@@ -1256,6 +1258,36 @@ venuesAdminRouter.post(
   },
 );
 
+/**
+ * One `cost_tracking` row for a generate-about call, priced as the crawler
+ * prices its Haiku calls. A failed write is logged, never the response's
+ * failure: the admin's draft matters more than the ledger line.
+ */
+const recordAboutCost = async (
+  venueId: string,
+  usage: Anthropic.Messages.Usage | undefined,
+): Promise<void> => {
+  try {
+    const tokens: TokenUsage = {
+      inputTokens: usage?.input_tokens ?? 0,
+      outputTokens: usage?.output_tokens ?? 0,
+      cacheReadTokens: usage?.cache_read_input_tokens ?? 0,
+      cacheWriteTokens: usage?.cache_creation_input_tokens ?? 0,
+    };
+    await db.insert(costTracking).values({
+      service: 'venue-about',
+      costUsd: calculateCost(tokens).toFixed(6),
+      tokensUsed: String(tokens.inputTokens + tokens.outputTokens),
+      metadata: JSON.stringify({ venueId, ...tokens }),
+    });
+  } catch (err) {
+    apiLogger.warn(
+      { err, venueId },
+      'generate-about: could not record the LLM cost',
+    );
+  }
+};
+
 // POST /v1/admin/venues/:id/generate-about — LLM-generate capacity, venueType, neighborhood, and about copy
 // Does NOT persist to DB; returns suggestions for admin review before saving
 venuesAdminRouter.post('/:id/generate-about', async (ctx) => {
@@ -1305,6 +1337,10 @@ Respond with only valid JSON, no markdown, no extra text.`;
       },
       { signal: AbortSignal.timeout(30_000) },
     );
+
+    // The call is paid whatever the reply holds, so its cost is recorded
+    // before any parsing can bail out.
+    await recordAboutCost(id, message.usage);
 
     const textBlock = message.content.find((block) => block.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {
