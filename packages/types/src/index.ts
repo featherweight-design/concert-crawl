@@ -339,7 +339,8 @@ export const VENUE_PLATFORMS = ['aeg', 'livenation', 'detail-page'] as const;
 export type VenuePlatform = (typeof VENUE_PLATFORMS)[number];
 
 // The longest venue short name, in characters after trimming. Shared so the
-// admin Zod schema and the admin input's maxLength agree.
+// admin Zod schema and the admin input (a follow-up, built to addendum 5's
+// details board) agree.
 export const VENUE_SHORT_NAME_MAX = 20;
 
 // Platforms whose fetcher addresses a venue by an opaque id on the
