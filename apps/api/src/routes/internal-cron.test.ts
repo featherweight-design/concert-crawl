@@ -300,22 +300,30 @@ describe('vercel.json crons', () => {
   const vercelConfig: { crons: { path: string }[] } = JSON.parse(
     readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'),
   );
+  // The keep-warm ping hits the public health route, not this router; its
+  // own tests (health.test.ts) pin it.
+  const jobPaths = vercelConfig.crons
+    .map((cron) => cron.path)
+    .filter((path) => path.startsWith('/v1/internal/cron/'));
 
   it('schedules every route the router serves', () => {
-    expect(vercelConfig.crons.map((cron) => cron.path).sort()).toEqual(
-      [...PATHS].sort(),
-    );
+    expect([...jobPaths].sort()).toEqual([...PATHS].sort());
   });
 
-  it.each(vercelConfig.crons.map((cron) => cron.path))(
-    '%s reaches a route',
-    async (path) => {
-      const res = await makeApp(makeJobs()).request(path, {
-        headers: { authorization: `Bearer ${SECRET}` },
-      });
-      expect(res.status).not.toBe(404);
-    },
-  );
+  it('schedules nothing else but the keep-warm ping', () => {
+    expect(
+      vercelConfig.crons
+        .map((cron) => cron.path)
+        .filter((path) => !jobPaths.includes(path)),
+    ).toEqual(['/v1/health']);
+  });
+
+  it.each(jobPaths)('%s reaches a route', async (path) => {
+    const res = await makeApp(makeJobs()).request(path, {
+      headers: { authorization: `Bearer ${SECRET}` },
+    });
+    expect(res.status).not.toBe(404);
+  });
 });
 
 describe('default jobs', () => {
