@@ -323,4 +323,13 @@ describe('ArtistSearchPanel desktop subtitle', () => {
       await screen.findByText('2 results');
     },
   );
+
+  it('puts "For" on the show only, so a row with no next show has none', async () => {
+    renderPanel(false, { wrongPhotoReportCount: 2, nextShow: null });
+    expect(
+      screen.getByText('2 fans say the current photo is wrong'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^For /)).toBeNull();
+    await screen.findByText('2 results');
+  });
 });

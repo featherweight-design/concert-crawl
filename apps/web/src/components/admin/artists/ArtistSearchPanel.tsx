@@ -59,7 +59,11 @@ const contextLine = (row: AdminArtistRow, isPhone: boolean): string | null => {
       : row.openReportCount > 0
         ? COPY.reports(row.openReportCount)
         : null;
-  const parts = [showLine(row), reports].filter(
+  // "For" belongs to the show, so a row with no next show never reads
+  // "For 2 fans say…". The phone board draws no "For".
+  const show = showLine(row);
+  const shown = show !== null && !isPhone ? PANEL.forLine(show) : show;
+  const parts = [shown, reports].filter(
     (part): part is string => part !== null,
   );
   return parts.length > 0 ? parts.join(PANEL.separator) : null;
@@ -326,7 +330,7 @@ export const ArtistSearchPanel = ({
       width={460}
       eyebrow={<KindLabel kind="artist" />}
       title={PANEL.title(row.name)}
-      {...(context ? { subtitle: PANEL.forLine(context) } : {})}
+      {...(context ? { subtitle: context } : {})}
       onClose={onClose}
       footerLayout="ruled"
       footer={
