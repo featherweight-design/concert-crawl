@@ -16,7 +16,11 @@ import {
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { refusedStatus } from '../invite-codes/codes-api';
 import { Hint } from '../invite-codes/CodeFormParts';
-import { RowMenu, type RowMenuItem } from '@/components/admin/primitives';
+import {
+  RowMenu,
+  Toast,
+  type RowMenuItem,
+} from '@/components/admin/primitives';
 import { MENU_ICONS } from '../invite-codes/code-menu-icons';
 import { Avatar } from './PeopleClient';
 import { RoleChip } from './RoleChip';
@@ -31,7 +35,7 @@ import {
   roleToastBody,
   signInLabel,
 } from './person-rules';
-import { Account, Recent, RoleSegment, Stats, Toast } from './PersonParts';
+import { Account, Recent, RoleSegment, Stats } from './PersonParts';
 import { PersonSkeleton } from './PersonSkeleton';
 
 const COPY = ADMIN_COPY.personPage;
@@ -227,39 +231,40 @@ export function PersonClient({ userId }: { userId: string }) {
         ),
     });
   }
-  const menu = menuItems.length === 0 ? null : (
-    <RowMenu
-      label={COPY.menu.label(name)}
-      width={300}
-      testId="person-menu"
-      // `12/person-menu-d` boxes the desktop ⋯ at 36; `07/person-mobile`
-      // draws a bare 18px fg-muted glyph, padded out to a 44px tap target
-      // with the padding cancelled so the glyph sits where it is drawn.
-      iconSize={isPhone ? 18 : 16}
-      {...(isPhone && { iconStrokeWidth: 1.5 })}
-      triggerStyle={
-        isPhone
-          ? {
-              padding: 13,
-              margin: -13,
-              alignItems: 'center',
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--fg-muted)',
-            }
-          : {
-              height: 36,
-              padding: '0 10px',
-              alignItems: 'center',
-              borderRadius: 9,
-              border: '1px solid var(--border-strong)',
-              background: 'var(--surface-2)',
-              color: 'var(--fg)',
-            }
-      }
-      items={menuItems}
-    />
-  );
+  const menu =
+    menuItems.length === 0 ? null : (
+      <RowMenu
+        label={COPY.menu.label(name)}
+        width={300}
+        testId="person-menu"
+        // `12/person-menu-d` boxes the desktop ⋯ at 36; `07/person-mobile`
+        // draws a bare 18px fg-muted glyph, padded out to a 44px tap target
+        // with the padding cancelled so the glyph sits where it is drawn.
+        iconSize={isPhone ? 18 : 16}
+        {...(isPhone && { iconStrokeWidth: 1.5 })}
+        triggerStyle={
+          isPhone
+            ? {
+                padding: 13,
+                margin: -13,
+                alignItems: 'center',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--fg-muted)',
+              }
+            : {
+                height: 36,
+                padding: '0 10px',
+                alignItems: 'center',
+                borderRadius: 9,
+                border: '1px solid var(--border-strong)',
+                background: 'var(--surface-2)',
+                color: 'var(--fg)',
+              }
+        }
+        items={menuItems}
+      />
+    );
 
   const roleChip = <RoleChip role={person.role}>{ROLES[person.role]}</RoleChip>;
 
@@ -507,6 +512,7 @@ export function PersonClient({ userId }: { userId: string }) {
       )}
       {notice?.kind === 'role' && (
         <Toast
+          testId="person-toast"
           title={COPY.toast.title(notice.name, ROLES[notice.to])}
           body={roleToastBody(notice.from, notice.to)}
           action={
@@ -530,6 +536,7 @@ export function PersonClient({ userId }: { userId: string }) {
       )}
       {notice?.kind === 'signedOut' && (
         <Toast
+          testId="person-toast"
           title={COPY.signOut.done(notice.name)}
           body={COPY.signOut.doneBody}
         />

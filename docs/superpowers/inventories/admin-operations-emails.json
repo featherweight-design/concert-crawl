@@ -1,0 +1,47 @@
+{
+  "feature": "Admin · Operations, Emails tab and the /admin/settings redirect (P47-19 PR 5b)",
+  "note": "Boards: design_handoff_admin_redesign/boards/07-people-flags-operations/emails, emails-mobile, test-email-sent. CONTACT_SHEET_ROLE=admin. The chips are the live senders (ruling: the board's six names are example data). The sheet never presses Send me a test, because it would mail ADMIN_EMAIL; the sent toast (07/test-email-sent) and the failure toast are covered by EmailsTab.test.tsx and walked by hand on staging.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "emails",
+      "label": "Operations, Emails tab (first email previewed)",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=emails",
+          "wait": "[data-testid='email-preview-frame']",
+          "settle": 4000
+        }
+      ]
+    },
+    {
+      "id": "emails-text-only",
+      "label": "Emails, a text-only email (invite code)",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=emails",
+          "wait": "[data-testid='emails-chip-invite_code']",
+          "settle": 1500
+        },
+        { "click": "[data-testid='emails-chip-invite_code']" },
+        { "wait": "[data-testid='email-preview-text']", "settle": 1500 }
+      ]
+    },
+    {
+      "id": "settings-redirect",
+      "label": "Old /admin/settings lands on Emails",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "goto": "/admin/settings",
+          "wait": "[data-testid='emails-tab']",
+          "settle": 3000
+        }
+      ]
+    }
+  ]
+}

@@ -42,6 +42,7 @@ export type { PageSkeletonProps } from './PageSkeleton';
 export { EmptyState } from './EmptyState';
 export { CouldntLoad, CouldntLoadPage } from './CouldntLoad';
 export { SaveFailedToast } from './SaveFailedToast';
+export { Toast } from './Toast';
 export { PinnedSaveBar } from './PinnedSaveBar';
 export type { PinnedSaveBarLook, PinnedSaveBarProps } from './PinnedSaveBar';
 export { useSnapBack } from './useSnapBack';

@@ -1,5 +1,6 @@
 import { NAV, activeNavKey, type NavItem } from './nav';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { operationsTabOf } from '@/components/admin/operations/operations-tabs';
 import { INVITE_CODES_HREF, POSTERS_PATH } from '@/lib/poster/posters-href';
 
 export interface Crumb {
@@ -70,7 +71,7 @@ export function buildBreadcrumbs(
     return [
       { label: item.label, href: item.href },
       {
-        label: searchParams?.get('tab') === 'log' ? tabs.log : tabs.feedback,
+        label: tabs[operationsTabOf(searchParams?.get('tab'))],
         subtitle: true,
       },
     ];

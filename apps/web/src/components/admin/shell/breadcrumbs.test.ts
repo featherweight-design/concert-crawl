@@ -45,6 +45,10 @@ describe('buildBreadcrumbs', () => {
       operations,
       { label: 'Activity log', subtitle: true },
     ]);
+    // `07/emails` draws "Operations / Emails".
+    expect(buildBreadcrumbs('/admin/operations', params('tab=emails'))).toEqual(
+      [operations, { label: 'Emails', subtitle: true }],
+    );
     expect(buildBreadcrumbs('/admin/operations')).toEqual([
       operations,
       { label: 'Feedback', subtitle: true },
