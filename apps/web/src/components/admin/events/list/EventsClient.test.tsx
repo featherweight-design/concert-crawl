@@ -284,6 +284,18 @@ describe('EventsClient filters', () => {
     );
   });
 
+  it('keeps the Upcoming / Past chips on desktop, with no phone toggle', async () => {
+    render(<EventsClient />);
+    expect(
+      await screen.findByRole('button', { name: COPY.when.upcoming }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByRole('button', { name: COPY.when.past }),
+    ).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByRole('tabpanel')).toBeNull();
+  });
+
   it('draws Any venue and Any status on Past, but no No price or Hidden (36/past-d)', async () => {
     mockSearch = 'when=past';
     render(<EventsClient />);
