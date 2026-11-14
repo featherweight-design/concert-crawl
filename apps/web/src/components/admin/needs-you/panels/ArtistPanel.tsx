@@ -35,10 +35,17 @@ const CandidateCard = ({
       cursor: 'pointer',
       borderRadius: 14,
       color: 'var(--fg)',
-      background: 'var(--surface-1)',
-      border: selected
-        ? '1.5px solid var(--signal)'
-        : '1px solid var(--border)',
+      // The picked candidate wears the gradient ring (the board's lead card).
+      ...(selected
+        ? {
+            border: '1.5px solid transparent',
+            background:
+              'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent)) border-box',
+          }
+        : {
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border)',
+          }),
     }}
   >
     {candidate.imageUrl ? (
@@ -66,11 +73,16 @@ const CandidateCard = ({
       <span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>
         {candidate.name}
       </span>
-      {candidate.genres.length > 0 && (
+      {(candidate.genres.length > 0 || candidate.current) && (
         <span
           style={{ display: 'block', fontSize: 12, color: 'var(--fg-muted)' }}
         >
-          {candidate.genres.slice(0, 3).join(' · ')}
+          {[
+            ...candidate.genres.slice(0, 3),
+            candidate.current ? PANEL.artist.currentPhoto : null,
+          ]
+            .filter((part) => part)
+            .join(' · ')}
         </span>
       )}
     </span>
@@ -163,7 +175,9 @@ export const ArtistPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
         hide={selected ? undefined : ['pick_the_right_artist']}
         labelOf={(answer) =>
           answer.slug === 'pick_the_right_artist' && selected
-            ? PANEL.artist.use(selected.name)
+            ? selected.playsDenver
+              ? PANEL.artist.useDenver(selected.name)
+              : PANEL.artist.use(selected.name)
             : answer.slug === 'keep_this_match'
               ? PANEL.artist.keepPhoto
               : answer.label
