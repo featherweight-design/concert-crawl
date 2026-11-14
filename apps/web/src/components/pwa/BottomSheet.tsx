@@ -15,7 +15,7 @@ interface BottomSheetProps {
   /** Draws the close as this word (a drawn "Cancel") instead of the X icon. */
   closeText?: string;
   /**
-   * Draws the blue-to-pink top edge on the centered dialog too (from `sm`
+   * Draws the blue-to-pink top edge on the centered dialog too (from `lg`
    * up), not only on the phone sheet. Off by default so every other sheet
    * keeps its plain bordered dialog.
    */
@@ -39,14 +39,14 @@ interface BottomSheetProps {
   raised?: boolean;
   /**
    * Lets the phone sheet grow to 40px under the top of the viewport instead of
-   * 85vh, so a board drawn to fit a short screen does. From `sm` up the cap is
+   * 85vh, so a board drawn to fit a short screen does. From `lg` up the cap is
    * still 85vh.
    */
   tall?: boolean;
   /**
    * The phone sheet is a fixed 92% of the screen and does not scroll as a
    * whole: the children lay out their own pinned header and a scrolling body
-   * (the Add sheet, `04/add-*`). From `sm` up it is the same capped dialog.
+   * (the Add sheet, `04/add-*`). From `lg` up it is the same capped dialog.
    */
   pinned?: boolean;
   /** Draws the 40x4 drag handle above the top row (phone only). */
