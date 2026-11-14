@@ -1,3 +1,26 @@
+# [1.472.0](https://github.com/featherweight-design/concert-crawl/compare/v1.471.0...v1.472.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** make the email preview match the send ([c0bf128](https://github.com/featherweight-design/concert-crawl/commit/c0bf1288b7ae18fa1fae4a69a313345d1333b649))
+* **api:** trim the test-send error and mask named addresses ([36b1565](https://github.com/featherweight-design/concert-crawl/commit/36b1565fa8d19aee6d56553054802ae2c3bf1ec7))
+* **crawler-core:** gate main-frame redirect hops in Chromium's stack via CDP Fetch ([3a81cc1](https://github.com/featherweight-design/concert-crawl/commit/3a81cc1d192a7b82648185d824bcb7524db544fd)), closes [#472](https://github.com/featherweight-design/concert-crawl/issues/472)
+* **crawler-core:** hold gated hops at teardown, read past a refused page navigation ([68eab64](https://github.com/featherweight-design/concert-crawl/commit/68eab64497e264a48a5d1c9aad5b330f13d43eac))
+* **crawler-core:** settle gated page navigations before reading content ([22750da](https://github.com/featherweight-design/concert-crawl/commit/22750dae04c51ba5baf48a3efe36f33f8ba9ad3f))
+* **crawler-core:** stop waiting for a followed navigation that never lands ([1afcd10](https://github.com/featherweight-design/concert-crawl/commit/1afcd1057b65ba50abf23c612cbb806afbe9794d))
+* **crawler-core:** throw only for goto's own chain; cap page-started navigations ([eba1cda](https://github.com/featherweight-design/concert-crawl/commit/eba1cda3f2e6151a7fea958058e73aafa511a07c))
+* **db:** number the 0114 journal entry idx 114 ([b897dce](https://github.com/featherweight-design/concert-crawl/commit/b897dce28a3b57f14788170dce3fd722eb21883d))
+* **db:** restore 0112's journal idx and correct the 0114 comments ([7eaa5ab](https://github.com/featherweight-design/concert-crawl/commit/7eaa5ab6cf6d6e77d06bacb24d3d81e0a2bded1e))
+* land 0114 without the old admin input after the admin redesign rebase ([3a838e3](https://github.com/featherweight-design/concert-crawl/commit/3a838e367a704b9490f975932e54e24c9769050d))
+* **web:** stored short name wins in the guide, trimmed dirty check, no pre-trim cap ([bb3e19a](https://github.com/featherweight-design/concert-crawl/commit/bb3e19ad3be6e23046fe0f9b19892082d21b9622))
+
+
+### Features
+
+* **api:** preview admin emails and mask the test recipient ([05166f7](https://github.com/featherweight-design/concert-crawl/commit/05166f76b1ba5dd25ddd66841268192f6b9c7246))
+* **db,api,web:** optional venue short name for narrow tiles ([a6a7b71](https://github.com/featherweight-design/concert-crawl/commit/a6a7b718234a3b652ba39f44c66f536a5c56f0a1))
+
 # [1.471.0](https://github.com/featherweight-design/concert-crawl/compare/v1.470.1...v1.471.0) (2026-11-14)
 
 
