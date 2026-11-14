@@ -9,7 +9,11 @@ import {
   trailOpacity,
 } from '@/components/brand/cc-mark';
 import { BRAND_COPY } from '@/components/brand/definitions/copy';
-import { LAUNCH_MS, endLaunch, markLaunchPlayed } from '@/lib/pwa/launch';
+import {
+  endLaunch,
+  launchDotDelayMs,
+  markLaunchPlayed,
+} from '@/lib/pwa/launch';
 import {
   PWA_ICON_PALETTE,
   PWA_SPLASH_BACKGROUND,
@@ -144,8 +148,7 @@ export function LaunchAnimation() {
                 fill: INK_SIGNAL,
                 transformBox: 'fill-box',
                 transformOrigin: 'center',
-                // Pink travels up the trail a dot at a time.
-                animationDelay: `${LAUNCH_MS.trailStart + LAUNCH_MS.trailStep * index}ms`,
+                animationDelay: `${launchDotDelayMs(index)}ms`,
               }}
             />
           ))}
