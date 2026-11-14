@@ -28,17 +28,19 @@ const confirmEventReport = vi.fn(async (..._args: unknown[]) => ({
 vi.mock('@/lib/events', () => ({
   confirmEventReport: (...args: unknown[]) => confirmEventReport(...args),
 }));
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ entry }: { entry: string }) => (
-    <div data-testid="tier-picker" data-entry={entry} />
-  ),
+const push = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => '/events/evt_1',
 }));
+
+const onClose = vi.fn();
 
 const renderSheet = () =>
   render(
     <ConfirmReportSheet
       open
-      onClose={vi.fn()}
+      onClose={onClose}
       reportType="cancelled"
       reporter={null}
       reportedAt="2026-09-01T02:00:00.000Z"
@@ -51,6 +53,8 @@ const renderSheet = () =>
 beforeEach(() => {
   isSignedIn = true;
   isLoaded = true;
+  push.mockClear();
+  onClose.mockClear();
 
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -73,28 +77,30 @@ describe('ConfirmReportSheet', () => {
   it('shows the confirm surface to a signed-in user', () => {
     renderSheet();
 
-    expect(screen.queryByTestId('tier-picker')).toBe(null);
+    expect(push).not.toHaveBeenCalled();
     expect(screen.getByText(copy.confirmButton)).toBeTruthy();
   });
 
-  it('sends a signed-out visitor to the tier picker', () => {
+  it('sends a signed-out visitor to sign-in', () => {
     isSignedIn = false;
     renderSheet();
 
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'logged-out-report',
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/evt_1')}`,
     );
+    expect(onClose).toHaveBeenCalledTimes(1);
     // The confirm button used to render and then silently no-op, because
     // getToken() returned null and handleConfirm bailed without saying so.
     expect(screen.queryByText(copy.confirmButton)).toBe(null);
   });
 
-  it('does not flash the picker while Clerk is still loading', () => {
+  it('does not redirect while Clerk is still loading', () => {
     isLoaded = false;
     isSignedIn = false;
     renderSheet();
 
-    expect(screen.queryByTestId('tier-picker')).toBe(null);
+    expect(push).not.toHaveBeenCalled();
   });
 
   // B+ A3: how the confirmer knows reaches the server and is stored.

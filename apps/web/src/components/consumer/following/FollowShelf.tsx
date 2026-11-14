@@ -20,9 +20,9 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
 import { useAuth } from '@clerk/nextjs';
-import type { PickerEntry } from '@concert-crawl/types';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePlanState } from '@/lib/queries/use-plan-state';
+import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { ShelfCard } from './ShelfCard';
@@ -114,6 +114,7 @@ export const FollowShelf = ({
   const { surface } = useEntitlement('following');
   const { data: planState } = usePlanState();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const goToSignIn = useSignInRedirect();
   const [seed, setSeed] = useState<number | null>(null);
 
   // Read AFTER mount: the server rendered the API's order, and reading storage
@@ -159,12 +160,13 @@ export const FollowShelf = ({
     (!resolved || (!signedOut && surface !== 'visible-active'));
 
   // Fail-closed cuts both ways: an unresolved tap must not write a follow, and
-  // it must not show an entitled viewer a paywall either. `pickerEntry` reads
-  // `surface`, so opening the sheet early would also pick the wrong pitch. A
-  // 403 comes back through `onEntitlementRequired` instead, which never
-  // declines — that answer is the server's and is already settled.
-  const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
+  // it must not show an entitled viewer a paywall either. A signed-out tap goes
+  // to sign-in. A 403 comes back through `onEntitlementRequired` instead, which
+  // never declines — that answer is the server's and is already settled.
+  const openGate = () => {
+    if (surface === 'tier-picker-on-tap') goToSignIn();
+    else setPickerOpen(true);
+  };
 
   // See all turns on the My artists filter in Browse (addendum 2, item 20),
   // the same URL change the filter chip makes: every other param kept, the
@@ -228,7 +230,7 @@ export const FollowShelf = ({
               locked={locked}
               signedOut={signedOut}
               onGatedTap={() => {
-                if (resolved) setPickerOpen(true);
+                if (resolved) openGate();
               }}
               onEntitlementRequired={() => setPickerOpen(true)}
             />
@@ -260,7 +262,7 @@ export const FollowShelf = ({
         onClose={() => setPickerOpen(false)}
         planState={planState ?? LOGGED_OUT_PLAN_STATE}
         scaRegion={scaRegion}
-        entry={pickerEntry}
+        entry="paywall"
       />
     </section>
   );

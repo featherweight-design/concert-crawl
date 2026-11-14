@@ -13,10 +13,10 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: vi.fn(async () => null), isLoaded, isSignedIn }),
 }));
 
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ entry }: { entry: string }) => (
-    <div data-testid="tier-picker" data-entry={entry} />
-  ),
+const push = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => '/events/e1',
 }));
 
 const submission = {
@@ -31,12 +31,14 @@ const submission = {
   submissionId: 'sub-1',
 };
 
+const onClose = vi.fn();
+
 const renderSheet = () =>
   render(
     <CorroborationSheet
       submission={submission}
       open
-      onClose={vi.fn()}
+      onClose={onClose}
       onConfirm={vi.fn()}
       onSubmitUpdate={vi.fn()}
     />,
@@ -62,14 +64,16 @@ afterEach(() => {
 });
 
 describe('CorroborationSheet signed-out gate (#1247)', () => {
-  it('offers an account instead of a verify flow the API will reject', () => {
+  it('sends a signed-out visitor to sign-in instead of a verify flow the API will reject', () => {
     isSignedIn = false;
-    renderSheet();
+    const { container } = renderSheet();
 
-    expect(screen.getByTestId('tier-picker')).toHaveAttribute(
-      'data-entry',
-      'logged-out-price',
+    expect(container).toBeEmptyDOMElement();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/e1')}`,
     );
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('still shows the verify flow while Clerk is resolving', () => {
@@ -77,7 +81,7 @@ describe('CorroborationSheet signed-out gate (#1247)', () => {
     isSignedIn = false;
     renderSheet();
 
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
+    expect(push).not.toHaveBeenCalled();
     expect(
       screen.getByRole('radiogroup', { name: /verification method/i }),
     ).toBeInTheDocument();
@@ -86,7 +90,7 @@ describe('CorroborationSheet signed-out gate (#1247)', () => {
   it('renders the verify flow when signed in', () => {
     renderSheet();
 
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
+    expect(push).not.toHaveBeenCalled();
     expect(
       screen.getByRole('radiogroup', { name: /verification method/i }),
     ).toBeInTheDocument();

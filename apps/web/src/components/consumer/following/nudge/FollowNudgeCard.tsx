@@ -21,7 +21,6 @@
 // also why the locked branch is `locked` on FollowButton and never `hidden`.
 
 import { useId, useState } from 'react';
-import type { PickerEntry } from '@concert-crawl/types';
 
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
@@ -91,9 +90,6 @@ export const FollowNudgeCard = ({
   // showing a paying subscriber an upgrade-shaped CTA is the worse of the two
   // wrong answers, and the API enforces regardless.
   const locked = surface !== null && surface !== 'visible-active';
-
-  const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
   const body = (
     <>
@@ -246,7 +242,7 @@ export const FollowNudgeCard = ({
         onClose={() => setPickerOpen(false)}
         planState={planState ?? LOGGED_OUT_PLAN_STATE}
         scaRegion={scaRegion}
-        entry={pickerEntry}
+        entry="paywall"
       />
     </section>
   );

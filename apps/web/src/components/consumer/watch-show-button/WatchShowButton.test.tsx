@@ -16,11 +16,12 @@ import type { WatchingShow } from '@concert-crawl/types';
 let signedIn: boolean;
 let currentToken: string | null;
 
+const routerPush = vi.fn();
+// The signed-out tap hands off to sign-in through the router, carrying the
+// current path plus the live query string back with it.
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: routerPush }),
   usePathname: () => '/events/e1',
-  // Both are read to build the signed-out sign-up link, which carries the
-  // current view — query included — through auth.
-  useSearchParams: () => new URLSearchParams({ tab: 'prices' }),
 }));
 
 vi.mock('@clerk/nextjs', () => ({
@@ -107,14 +108,6 @@ vi.mock('@/lib/push/client', () => ({
   subscribeToPush: (token: string) => subscribeToPushMock(token),
   unsubscribeFromPush: (token: string, id?: string) =>
     unsubscribeFromPushMock(token, id),
-}));
-
-// The tier picker drags in the router, Stripe, and analytics. What matters
-// here is whether the button opens it and with which funnel entry, so it is
-// reduced to a marker that reports the props it received.
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
-    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }));
 
 // ---- Component under test ------------------------------------------------
@@ -567,41 +560,37 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
 
   const theButton = () => screen.getByRole('button', { name: /watch/i });
 
-  // The picker is loaded with next/dynamic, so its chunk resolves a microtask
-  // after the tap rather than in the same commit.
-  const tapAndSettle = async () => {
+  const tap = async () => {
     await act(async () => {
       fireEvent.click(theButton());
     });
-    await act(async () => {
-      await Promise.resolve();
-    });
   };
 
-  it('opens the tier picker instead of silently doing nothing', async () => {
+  afterEach(() => {
+    routerPush.mockClear();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('sends a signed-out tap to sign-in instead of silently doing nothing', async () => {
     signedIn = false;
     renderWith('Geese');
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
-    await tapAndSettle();
-    expect(screen.getByTestId('tier-picker')).not.toBeNull();
+    expect(routerPush).not.toHaveBeenCalled();
+    await tap();
+    expect(routerPush).toHaveBeenCalledTimes(1);
+    expect(routerPush).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/e1')}`,
+    );
     // No watch mutation may be attempted without a session.
     expect(toggleMutate).not.toHaveBeenCalled();
   });
 
-  it('does not load the picker chunk until the eye is tapped', () => {
-    // The static import this replaced put @stripe/stripe-js into the bundle of
-    // every page that renders a card, including /watching.
+  it('carries the current query string back through sign-in', async () => {
+    window.history.replaceState({}, '', '/events/e1?tab=prices');
     signedIn = false;
     renderWith('Geese');
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
-  });
-
-  it('tags the picker with the logged-out-watch funnel entry', async () => {
-    signedIn = false;
-    renderWith('Geese');
-    await tapAndSettle();
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'logged-out-watch',
+    await tap();
+    expect(routerPush).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/e1?tab=prices')}`,
     );
   });
 
@@ -625,7 +614,7 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
     );
   });
 
-  it('omits aria-pressed signed out — the eye is a dialog trigger, not a toggle', () => {
+  it('omits aria-pressed signed out — the eye is a sign-in hand-off, not a toggle', () => {
     signedIn = false;
     renderWith('Geese');
     // Omitted entirely, not "false": aria-pressed="false" would announce an
@@ -633,13 +622,13 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
     expect(theButton().hasAttribute('aria-pressed')).toBe(false);
   });
 
-  it('advertises the dialog it opens', async () => {
+  it('advertises no dialog, since a signed-out tap navigates', async () => {
     signedIn = false;
     renderWith('Geese');
-    expect(theButton().getAttribute('aria-haspopup')).toBe('dialog');
-    expect(theButton().getAttribute('aria-expanded')).toBe('false');
-    await tapAndSettle();
-    expect(theButton().getAttribute('aria-expanded')).toBe('true');
+    expect(theButton().hasAttribute('aria-haspopup')).toBe(false);
+    expect(theButton().hasAttribute('aria-expanded')).toBe(false);
+    await tap();
+    expect(theButton().hasAttribute('aria-expanded')).toBe(false);
   });
 
   it('keeps the signed-in toggle semantics untouched', () => {
@@ -757,15 +746,17 @@ describe('WatchShowButton strip variant', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 
-  it('still routes a signed-out tap to the tier picker', async () => {
+  it('still routes a signed-out tap to sign-in', async () => {
     signedIn = false;
+    routerPush.mockClear();
     renderStrip();
     await act(async () => {
       fireEvent.click(screen.getByRole('button'));
       await Promise.resolve();
     });
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'logged-out-watch',
+    expect(routerPush).toHaveBeenCalledTimes(1);
+    expect(routerPush).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/e1')}`,
     );
     expect(toggleMutate).not.toHaveBeenCalled();
   });

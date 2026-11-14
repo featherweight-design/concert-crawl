@@ -7,7 +7,10 @@ import type { CrewSummary, PlanState } from '@concert-crawl/types';
 
 const refresh = vi.fn();
 const push = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh, push }),
+  usePathname: () => '/crews',
+}));
 
 const entitlement = {
   isLoading: false,
@@ -165,13 +168,16 @@ describe('CrewsContent create gating (#1226)', () => {
     expect(screen.queryByTestId('create-sheet')).not.toBeInTheDocument();
   });
 
-  it('routes tier-picker-on-tap straight to the picker', () => {
+  it('routes tier-picker-on-tap straight to sign-in', () => {
     entitlement.active = false;
     entitlement.surface = 'tier-picker-on-tap';
     render(<CrewsContent initialCrews={[crew()]} scaRegion={false} />);
     fireEvent.click(screen.getByText(CREWS_COPY.list.create));
-    const picker = screen.getByTestId('tier-picker');
-    expect(picker.dataset.entry).toBe('logged-out-paywall');
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/crews')}`,
+    );
+    expect(screen.queryByTestId('tier-picker')).not.toBeInTheDocument();
   });
 });
 

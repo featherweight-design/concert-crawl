@@ -33,7 +33,9 @@ vi.mock('@clerk/nextjs', () => ({
   }),
 }));
 
+const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: routerPush }),
   usePathname: () => '/events/evt-1',
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -304,19 +306,30 @@ describe('BillFollowBlock — ONE paywall, ONE tap (ED-05)', () => {
     );
   });
 
-  // The signed-out mirror recruits: every row routes to sign-up on its own, so
+  // The signed-out mirror recruits: every row routes to sign-in on its own, so
   // a second route to the same place in the same block is noise.
   it('recruits row by row when signed out, with no bulk action', () => {
     planState.current = null;
+    routerPush.mockClear();
     render(<BillFollowBlock artists={BILL} signedOut scaRegion={false} />);
 
     expect(followButtons()).toHaveLength(0);
-    expect(
-      screen.getAllByRole('button', {
+    const rows = screen.getAllByRole('button', {
+      name: ARTIST_COPY.followSignedOutAria('Nightjar Choir'),
+    });
+    expect(rows).toHaveLength(1);
+    expect(screen.queryByTestId('bill-follow-all')).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', {
         name: ARTIST_COPY.followSignedOutAria('Nightjar Choir'),
       }),
-    ).toHaveLength(1);
-    expect(screen.queryByTestId('bill-follow-all')).toBeNull();
+    );
+    expect(routerPush).toHaveBeenCalledTimes(1);
+    expect(routerPush).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/evt-1')}`,
+    );
+    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 });
 

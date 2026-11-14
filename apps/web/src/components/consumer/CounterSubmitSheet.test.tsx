@@ -15,14 +15,12 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken, ...authState }),
 }));
 
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ entry }: { entry: string }) => (
-    <div data-testid="tier-picker" data-entry={entry} />
-  ),
-}));
+const push = vi.fn();
+const onClose = vi.fn();
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh }),
+  useRouter: () => ({ refresh, push }),
+  usePathname: () => '/events/evt-1',
 }));
 
 const renderSheetWithPreview = () =>
@@ -46,7 +44,7 @@ const renderSheet = () =>
   render(
     <CounterSubmitSheet
       open
-      onClose={vi.fn()}
+      onClose={onClose}
       eventId="evt-1"
       disputedSubmissionId="sub-1"
       currentFloor={40}
@@ -97,15 +95,16 @@ afterEach(() => {
 });
 
 describe('CounterSubmitSheet signed-out gate (#1247)', () => {
-  it('shows the tier picker instead of the form when there is no session', () => {
+  it('sends a visitor with no session to sign-in instead of showing the form', () => {
     authState.isSignedIn = false;
     renderSheet();
 
     expect(screen.queryByLabelText(/floor/i)).not.toBeInTheDocument();
-    expect(screen.getByTestId('tier-picker')).toHaveAttribute(
-      'data-entry',
-      'logged-out-price',
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/evt-1')}`,
     );
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('renders the form while Clerk is still resolving', () => {

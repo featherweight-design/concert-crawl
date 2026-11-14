@@ -1,5 +1,6 @@
 'use client';
 
+import { SignInRedirect } from '@/components/consumer/SignInRedirect';
 import type {
   ArtistMatchSummary,
   ArtistReportSummary,
@@ -7,8 +8,6 @@ import type {
 import { UserX } from 'lucide-react';
 import { useState } from 'react';
 
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { ReportFooterLink } from '@/components/consumer/reporting/ReportFooterLink';
 
 import { ArtistReportSheet } from './ArtistReportSheet';
@@ -67,15 +66,9 @@ export const ArtistReportCard = ({
       />
       {signedOut ? (
         // The same hand-off the event page's report row gives a visitor.
-        <TierPickerSheet
-          open={open}
-          onClose={() => setOpen(false)}
-          planState={LOGGED_OUT_PLAN_STATE}
-          // No payment element is reachable signed out; `true` only adds legal
-          // copy, matching the other logged-out picker call-sites.
-          scaRegion
-          entry="logged-out-artist-report"
-        />
+        open ? (
+          <SignInRedirect onDone={() => setOpen(false)} />
+        ) : null
       ) : (
         <ArtistReportSheet
           open={open}

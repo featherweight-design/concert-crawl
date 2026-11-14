@@ -19,10 +19,10 @@
 // aria-describedby sentence, not in the visible label).
 
 import { useEffect, useId, useState } from 'react';
-import type { PickerEntry } from '@concert-crawl/types';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePlanState } from '@/lib/queries/use-plan-state';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -83,7 +83,7 @@ export const FollowFilterChip = ({
   const { isLoading, surface } = useEntitlement('following');
   const { data: planState } = usePlanState();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall');
+  const goToSignIn = useSignInRedirect();
 
   const resolved = !isLoading && surface !== null;
   const usable = resolved && surface === 'visible-active';
@@ -156,13 +156,14 @@ export const FollowFilterChip = ({
   }
 
   const onLockedTap = () => {
-    // Logged out and free/supporter both land on the picker — following has no
-    // intermediate upsell sheet of its own, and inventing one here would put a
-    // second explanation of the same gate on the same screen as the artist
-    // page's.
-    setPickerEntry(
-      surface === 'tier-picker-on-tap' ? 'logged-out-paywall' : 'paywall',
-    );
+    // Logged out goes to sign-in; a locked signed-in viewer lands on the picker.
+    // Following has no intermediate upsell sheet of its own, and inventing one
+    // here would put a second explanation of the same gate on the same screen
+    // as the artist page's.
+    if (surface === 'tier-picker-on-tap') {
+      goToSignIn();
+      return;
+    }
     setPickerOpen(true);
   };
 
@@ -172,7 +173,7 @@ export const FollowFilterChip = ({
       onClose={() => setPickerOpen(false)}
       planState={planState ?? LOGGED_OUT_PLAN_STATE}
       scaRegion={scaRegion}
-      entry={pickerEntry}
+      entry="paywall"
     />
   );
   const gate = (

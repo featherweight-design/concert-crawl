@@ -21,6 +21,12 @@ vi.mock('@/components/consumer/tier-picker/lazy', () => ({
     open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }));
 
+const push = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => '/events',
+}));
+
 import { FollowFilterChip } from './FollowFilterChip';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -151,19 +157,24 @@ describe('FollowFilterChip', () => {
     );
   });
 
-  it('locked (logged out) opens the picker at the logged-out entry', () => {
+  it('locked (logged out) sends the tap to sign-in instead of the picker', () => {
     entitlementState.current = {
       isLoading: false,
       active: false,
       surface: 'tier-picker-on-tap',
     };
-    renderChip();
+    push.mockClear();
+    const onToggle = vi.fn();
+    renderChip({ onToggle });
     fireEvent.click(
       screen.getByRole('button', { name: FOLLOWING_COPY.chipAria }),
     );
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'logged-out-paywall',
+    expect(onToggle).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events')}`,
     );
+    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   it('releases a stale active scope once the entitlement resolves locked', () => {

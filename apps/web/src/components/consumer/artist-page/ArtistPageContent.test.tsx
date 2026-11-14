@@ -21,8 +21,9 @@ import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy
 import { ARTIST_COPY } from './definitions/copy';
 
 // The mobile hero renders BackChip, which reaches for the app router.
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ back: vi.fn(), push: pushMock }),
   usePathname: () => '/artists/neal-francis',
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -36,8 +37,8 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }));
 
-// The page and the report card each mount a picker; only an open one draws,
-// carrying its entry so a test can tell which hand-off opened it.
+// A signed-in viewer on a locked plan still gets the picker; only an open one
+// draws, carrying its entry so a test can tell which hand-off opened it.
 vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
     open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
@@ -811,18 +812,21 @@ describe('ArtistPageContent', () => {
       expect(document.body.textContent).toContain(copy.sheet.title);
     });
 
-    it('opens the tier picker on its own entry for a signed-out tap', () => {
+    it('sends a signed-out tap to sign-in instead of opening a picker', () => {
+      pushMock.mockClear();
       const { getByTestId, queryByTestId } = render(
         <ArtistPageContent data={withShows} />,
       );
-      expect(queryByTestId('tier-picker')).toBeNull();
+      expect(pushMock).not.toHaveBeenCalled();
 
       fireEvent.click(getByTestId('artist-report-card'));
 
-      expect(getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-        'logged-out-artist-report',
+      expect(pushMock).toHaveBeenCalledTimes(1);
+      expect(pushMock).toHaveBeenCalledWith(
+        `/sign-in?redirect_url=${encodeURIComponent('/artists/neal-francis')}`,
       );
-      // The picker stands in for the sheet; no report form opens.
+      expect(queryByTestId('tier-picker')).toBeNull();
+      // No report form opens either.
       expect(document.body.textContent).not.toContain(copy.sheet.title);
     });
 

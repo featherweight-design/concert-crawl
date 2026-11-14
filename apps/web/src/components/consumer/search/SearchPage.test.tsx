@@ -632,6 +632,8 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
     expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
       'paywall',
     );
+    // A signed-in locked viewer gets the paywall, never a sign-in redirect.
+    expect(mockPush).not.toHaveBeenCalled();
     expect(mockToggle).not.toHaveBeenCalled();
   });
 
@@ -662,13 +664,19 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
       ARTIST_COPY.followSignedOutAria('Radiohead'),
     );
     expect(button.hasAttribute('disabled')).toBe(false);
+    expect(button.hasAttribute('aria-haspopup')).toBe(false);
     fireEvent.click(button);
     expect(mockToggle).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/search')}`,
+    );
+    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   // The window where Clerk has not answered yet. Treated as signed out so the
-  // tap opens a picker instead of throwing `Not authenticated`.
-  it('unresolved session: a tap opens the picker rather than writing', () => {
+  // tap goes to sign-in instead of throwing `Not authenticated`.
+  it('unresolved session: a tap goes to sign-in rather than writing', () => {
     authState.isSignedIn = undefined;
     entitlementState.current = {
       isLoading: true,
@@ -680,6 +688,9 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
       screen.getByLabelText(ARTIST_COPY.followSignedOutAria('Radiohead')),
     );
     expect(mockToggle).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/search')}`,
+    );
   });
 
   // ...but an already-followed row proves a session on its own, so it must not

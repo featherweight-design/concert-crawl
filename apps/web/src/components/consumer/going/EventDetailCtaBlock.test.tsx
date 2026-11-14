@@ -39,7 +39,10 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
 vi.mock('@/lib/queries/use-attending-toggle', () => ({
   useAttendingToggle: () => ({ mutateAsync: mutate, isPending }),
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh, push }),
+  usePathname: () => '/events/ev1',
+}));
 vi.mock('./lib/attendance-toasts', () => ({
   showStampedToast: (arg: unknown) => showStampedToast(arg),
   showRemovedToast: (arg: unknown) => showRemovedToast(arg),
@@ -372,7 +375,7 @@ describe('EventDetailCtaBlock', () => {
     expect(goingButton()).toHaveAttribute('aria-label', GOING_COPY.locked.aria);
   });
 
-  it('sends a logged-out tap straight to the picker', () => {
+  it('sends a logged-out tap straight to sign-in', () => {
     entitlement = {
       isLoading: false,
       active: false,
@@ -380,12 +383,12 @@ describe('EventDetailCtaBlock', () => {
     };
     renderBlock();
     fireEvent.click(goingButton());
-    // Not `logged-out-paywall`: this reach is for Concerts, and the
-    // entry keys the gate's copy as well as the funnel dimension.
-    expect(screen.getByTestId('tier-picker')).toHaveAttribute(
-      'data-entry',
-      'logged-out-going',
+    expect(mutate).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/ev1')}`,
     );
+    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   // The explainer used to render only in the else-branch beneath the button, so

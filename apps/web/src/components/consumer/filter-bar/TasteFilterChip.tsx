@@ -11,12 +11,12 @@
 // locked treatment at a paying user.
 
 import { useEffect, useState } from 'react';
-import type { PickerEntry } from '@concert-crawl/types';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePlanState } from '@/lib/queries/use-plan-state';
 import { SpotifyLogo } from '@/components/brand/spotify-logo';
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { TasteUpsellSheet } from './TasteUpsellSheet';
 
@@ -65,7 +65,7 @@ export const TasteFilterChip = ({
   const { data: planState } = usePlanState();
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall');
+  const goToSignIn = useSignInRedirect();
 
   const resolved = !isLoading && surface !== null;
   const usable = resolved && surface === 'visible-active';
@@ -120,9 +120,8 @@ export const TasteFilterChip = ({
 
   const onLockedTap = () => {
     if (surface === 'tier-picker-on-tap') {
-      // Logged-out: straight to the tier picker.
-      setPickerEntry('logged-out-paywall');
-      setPickerOpen(true);
+      // Logged-out: straight to sign-in.
+      goToSignIn();
       return;
     }
     // Free / supporter: the taste upsell first.
@@ -157,7 +156,6 @@ export const TasteFilterChip = ({
         onClose={() => setUpsellOpen(false)}
         onSeePlans={() => {
           setUpsellOpen(false);
-          setPickerEntry('paywall');
           setPickerOpen(true);
         }}
       />
@@ -166,7 +164,7 @@ export const TasteFilterChip = ({
         onClose={() => setPickerOpen(false)}
         planState={planState ?? LOGGED_OUT_PLAN_STATE}
         scaRegion={scaRegion}
-        entry={pickerEntry}
+        entry="paywall"
       />
     </>
   );
