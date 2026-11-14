@@ -407,15 +407,26 @@ export const SubmittedTab = ({
         ...chipStyle(true),
         cursor: 'default',
         paddingRight: 6,
+        // Never wider than its row: a long handle truncates, the count and
+        // the clear button stay.
+        maxWidth: '100%',
+        minWidth: 0,
         // In the phone's column it keeps its own width.
         ...(isPhone && { alignSelf: 'flex-start' }),
       }}
     >
-      {COPY.fanFilter(
-        fan,
-        // The fan's total over every state, once counted for this fan.
-        countsFan === fan && counts !== null ? counts.all : null,
-      )}
+      <span style={{ display: 'flex', minWidth: 0, whiteSpace: 'pre' }}>
+        <span
+          data-testid="fan-filter-handle"
+          style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
+        >
+          {COPY.fanHandle(fan)}
+        </span>
+        {/* The fan's total over every state, once counted for this fan. */}
+        {countsFan === fan && counts !== null && (
+          <span style={{ flex: 'none' }}>{COPY.fanCount(counts.all)}</span>
+        )}
+      </span>
       <button
         type="button"
         aria-label={COPY.clearFan}

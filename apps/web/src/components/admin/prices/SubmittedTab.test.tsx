@@ -254,9 +254,19 @@ describe('SubmittedTab on a desktop', () => {
     release({ all: 5, waiting: 2, published: 3, priceCheck: 0 });
     await waitFor(() =>
       expect(screen.getByTestId('fan-filter')).toHaveTextContent(
-        COPY.fanFilter('dlo', 5),
+        `${COPY.fanHandle('dlo')}${COPY.fanCount(5)}`,
       ),
     );
+    expect(screen.getByTestId('fan-filter')).toHaveTextContent('@dlo · 5');
+    // A long handle truncates inside the chip, never past its row; the
+    // count sits outside the truncating part, so it stays.
+    const chipStyle = screen.getByTestId('fan-filter').style;
+    expect(chipStyle.maxWidth).toBe('100%');
+    expect(chipStyle.minWidth).toBe('0px');
+    const handle = screen.getByTestId('fan-filter-handle');
+    expect(handle.style.textOverflow).toBe('ellipsis');
+    expect(handle.style.overflow).toBe('hidden');
+    expect(handle).toHaveTextContent(/^@dlo$/);
     // The typed search stays empty while the chip holds the filter.
     expect(screen.getByRole('searchbox', { name: COPY.search })).toHaveValue(
       '',
