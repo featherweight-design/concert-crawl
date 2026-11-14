@@ -63,6 +63,28 @@ describe('Needs you sources and ranking', () => {
     ]);
   });
 
+  it('carries the reporter device on a bug, cut to a safe length', async () => {
+    await testDb.insert(feedback).values([
+      {
+        pageUrl: 'https://concertcrawl.app/',
+        category: 'bug',
+        message: 'With a device',
+        metadata: { device: 'iPhone · Safari 19' },
+      },
+      {
+        pageUrl: 'https://concertcrawl.app/',
+        category: 'bug',
+        message: 'No device',
+        metadata: { device: 42 },
+      },
+    ]);
+    const items = await listNeedsYou({ kind: 'bug', now: now() });
+    const devices = items.flatMap((item) =>
+      item.kind === 'bug' ? [item.device ?? null] : [],
+    );
+    expect(devices.sort()).toEqual([null, 'iPhone · Safari 19']);
+  });
+
   it('breaks a date tie by watchers', async () => {
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
     const date = inDays(7);

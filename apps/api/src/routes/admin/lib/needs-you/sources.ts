@@ -985,6 +985,15 @@ const screenshotOf = (metadata: unknown): string | null => {
     : null;
 };
 
+/** The device line a reporter's widget sent (`metadata.device`), cut to a safe length. */
+const deviceOf = (metadata: unknown): string | null => {
+  if (typeof metadata !== 'object' || metadata === null) return null;
+  const device = Reflect.get(metadata, 'device');
+  return typeof device === 'string' && device.trim() !== ''
+    ? device.trim().slice(0, 120)
+    : null;
+};
+
 const bugItems: Adapter = async () => {
   const rows = await db
     .select({
@@ -1015,6 +1024,7 @@ const bugItems: Adapter = async () => {
     handle: row.handle,
     screenshot: screenshotOf(row.metadata),
     issueUrl: row.issueUrl,
+    device: deviceOf(row.metadata),
     evidence: [
       ...line('Page', row.pageUrl),
       ...line('Reported', row.createdAt.toISOString().slice(0, 10)),
