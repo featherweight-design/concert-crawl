@@ -380,7 +380,7 @@ describe('EventPanel', () => {
     open(eventRow());
     expect(screen.getByTestId('edit-event')).toHaveAttribute(
       'href',
-      '/admin/events/e9',
+      '/admin/events/e9/edit',
     );
     expect(document.querySelector('[data-slug="edit_then_list"]')).toBeNull();
   });
