@@ -1597,6 +1597,7 @@ describe('GET /v1/events/:id — priceCheckOutcome', () => {
     const body = (await res.json()) as {
       data: {
         priceCheckOutcome: {
+          submissionId: string;
           outcome: 'held' | 'updated';
           previous: { floor: number; ceiling: number | null } | null;
         } | null;
@@ -1630,13 +1631,15 @@ describe('GET /v1/events/:id — priceCheckOutcome', () => {
       archivedReason: 'Replaced by price check update',
       updatedAt: stamp,
     });
-    await seedPriceSubmission(event.id, other.userId, {
+    const winner = await seedPriceSubmission(event.id, other.userId, {
       priceMin: '52',
       status: 'corroborated',
       disputedSubmissionId: old.id,
       updatedAt: stamp,
     });
     expect(await readOutcome(event.id)).toMatchObject({
+      // Names the live price it describes, so a card can match its headline.
+      submissionId: winner.id,
       outcome: 'updated',
       previous: { floor: 44, ceiling: 60 },
     });

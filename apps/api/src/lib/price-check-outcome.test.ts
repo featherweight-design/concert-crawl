@@ -48,6 +48,7 @@ describe('pickPriceCheckOutcome', () => {
       disputed: 'old',
     });
     expect(outcome).toEqual({
+      submissionId: 'live',
       outcome: 'updated',
       resolvedAt: daysAgo(1).toISOString(),
       previous: { floor: 44, ceiling: 60 },
@@ -57,6 +58,7 @@ describe('pickPriceCheckOutcome', () => {
   it('is "held" when archived updates point at the live price', () => {
     const outcome = pick([row('counter', { disputedSubmissionId: 'live' })]);
     expect(outcome).toEqual({
+      submissionId: 'live',
       outcome: 'held',
       resolvedAt: daysAgo(1).toISOString(),
       previous: null,

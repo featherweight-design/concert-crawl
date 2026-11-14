@@ -994,6 +994,9 @@ export interface PriceCheckFields {
 //   - 'updated' an update replaced the price (an admin or fan confirms
 //               decided it); `previous` is the price it replaced
 export interface PriceCheckOutcome {
+  // The live price this describes (the event's primary price). A caller shows
+  // the outcome only on a price card whose headline carries this id.
+  submissionId: string;
   outcome: 'held' | 'updated';
   resolvedAt: string;
   previous: { floor: number; ceiling: number | null } | null;
