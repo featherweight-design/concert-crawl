@@ -68,7 +68,7 @@ describe('PostHogProvider', () => {
     mockFetchMe.mockResolvedValue({ handle: 'adal' });
     renderProvider();
     expect(initAnalytics).toHaveBeenCalledTimes(1);
-    expect(identifyUser).toHaveBeenCalledWith('user_1');
+    await waitFor(() => expect(identifyUser).toHaveBeenCalledWith('user_1'));
     await waitFor(() => expect(setPersonName).toHaveBeenCalledWith('adal'));
     expect(mockFetchMe).toHaveBeenCalledWith('token');
     expect(resetAnalyticsIdentity).not.toHaveBeenCalled();
