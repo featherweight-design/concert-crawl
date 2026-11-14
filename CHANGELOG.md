@@ -1,3 +1,19 @@
+# [1.482.0](https://github.com/featherweight-design/concert-crawl/compare/v1.481.0...v1.482.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** decide sale-report writes under the report lock, close moot reports ([ea05b2e](https://github.com/featherweight-design/concert-crawl/commit/ea05b2e3db68266667819ccb239a226d89cea4c3))
+* **api:** inline the MT zone in the day query; days and actors share the log's filters ([802ac15](https://github.com/featherweight-design/concert-crawl/commit/802ac150dbbcd898833e85245a7582049dd6b6cb))
+* **api:** past-lock every sale-state write in the shared helpers ([b6ba01c](https://github.com/featherweight-design/concert-crawl/commit/b6ba01c52c122f041fa0b849332186bee5aee424))
+* **api:** past-lock the admin sold-out and available endpoints ([538fb3a](https://github.com/featherweight-design/concert-crawl/commit/538fb3a59ffdd0332482367ebdfce361109b11d4))
+
+
+### Features
+
+* **api:** activity log day dots, Anyone menu and actor avatars ([365c186](https://github.com/featherweight-design/concert-crawl/commit/365c186b23bc682503ebfff08e2c8dadfb08f1c0)), closes [#37](https://github.com/featherweight-design/concert-crawl/issues/37) [#24](https://github.com/featherweight-design/concert-crawl/issues/24)
+* **web:** swap the phone Events chips for the Upcoming / Past toggle ([821f98c](https://github.com/featherweight-design/concert-crawl/commit/821f98cd087a6ecafa5b76fd2da1fc6abb7012fd))
+
 # [1.481.0](https://github.com/featherweight-design/concert-crawl/compare/v1.480.0...v1.481.0) (2026-11-14)
 
 
