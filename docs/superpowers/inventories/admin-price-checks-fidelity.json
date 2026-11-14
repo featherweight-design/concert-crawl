@@ -1,0 +1,37 @@
+{
+  "feature": "Admin Prices · Price checks fidelity (P47-9a)",
+  "note": "Boards 06-events-artists-prices/prices-price-checks, price-checks-mobile; addendum-3 11/price-checks-resolved-d. CONTACT_SHEET_ROLE=admin. Desktop: answers stacked (Ticket page 32, Use 32, Keep 30). Phone: PRICE CHECK kind label with show · date, full-width Open ticket page row with its icon, Use and Keep side by side, and an Open / Resolved segment (A3 4d #20). The phone Resolved list is the desktop table as built (undrawn on the phone: Design item 23); the 320 cell must show it legible with no horizontal overflow. Scratch data may have no open checks, so the open rows accept the empty state.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "open",
+      "label": "/admin/prices?tab=checks",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=checks",
+          "wait": "[aria-label=\"Open Price checks\"], [data-testid=\"empty-state\"]",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "resolved",
+      "label": "Resolved",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=checks",
+          "wait": "[aria-label=\"Open Price checks\"], [data-testid=\"empty-state\"]"
+        },
+        { "clickRole": "(tab|button)", "name": "^Resolved" },
+        {
+          "wait": "[aria-label=\"Resolved Price checks\"], [data-testid=\"empty-state\"]",
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}
