@@ -321,7 +321,7 @@ describe('Tickets available reports', () => {
 });
 
 /**
- * The shared sale writes (clearSoldOut, promoteSoldOutReport), decided under
+ * The shared sale writes (clearSoldOut, promoteReport), decided under
  * the event's and the report's row locks. On a show dated before today in
  * Denver, played or still postponed, a fan confirm crossing the threshold
  * closes the report as moot (`rejected`, "show already played") and tells

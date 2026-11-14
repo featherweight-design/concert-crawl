@@ -1,10 +1,11 @@
-// The past lock on sale state (admin 4a-3b): a show dated before today in
-// Denver is history, so whether it is sold out stays as it was. This gate
-// covers the sale-state writes, marking or promoting sold out and clearing it
-// (Tickets available), on every path: the admin sold-out and available
-// endpoints, the admin report resolve and the fan confirm threshold.
-// Cancelled and postponed report promotions are NOT covered yet; that
-// follow-up waits on a ruling. The admin PATCH has its own field-level lock
+// The past lock on reported state (admin 4a-3b, addendum 6 item 36): a show
+// dated before today in Denver is history, so whether it is sold out,
+// cancelled or postponed stays as it was. This gate covers every report-driven
+// write, marking or promoting sold out, clearing it (Tickets available), and
+// promoting a cancelled or postponed report (promoteReport), on every path:
+// the admin sold-out and available endpoints, the admin report resolve (409
+// `past_locked`) and the fan confirm threshold (the report closes as moot).
+// The admin PATCH has its own field-level lock
 // (routes/admin/lib/event-update.ts) and shares this file's definitions.
 
 import { eq } from 'drizzle-orm';
