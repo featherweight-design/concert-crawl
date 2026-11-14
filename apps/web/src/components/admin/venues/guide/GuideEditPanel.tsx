@@ -300,6 +300,7 @@ export const GuideEditPanel = ({
       eyebrow={eyebrow}
       menu={menu}
       title={title}
+      label={writing ? COPY.writeLabel(label) : label}
       subtitle={venueName}
       footer={<div style={{ flex: 1 }}>{footer}</div>}
     >

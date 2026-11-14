@@ -12,6 +12,8 @@ export interface SidePanelProps {
   title: ReactNode;
   /** A `KindLabel` or similar, above the title. */
   eyebrow?: ReactNode;
+  /** The accessible name, when it should say more than the visible title. */
+  label?: string;
   /** A ⋯ menu, just before the close button. */
   menu?: ReactNode;
   subtitle?: string;
@@ -150,7 +152,9 @@ const OverlayPanel = ({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        {...(props.label
+          ? { 'aria-label': props.label }
+          : { 'aria-labelledby': titleId })}
         data-testid="side-panel"
         style={{
           ...panelStyle(width),
@@ -176,7 +180,9 @@ export const SidePanel = (props: SidePanelProps) => {
   if (!props.inline) return <OverlayPanel {...props} />;
   return (
     <aside
-      aria-labelledby={titleId}
+      {...(props.label
+        ? { 'aria-label': props.label }
+        : { 'aria-labelledby': titleId })}
       data-testid="side-panel"
       style={{
         ...panelStyle(props.width ?? 460),
