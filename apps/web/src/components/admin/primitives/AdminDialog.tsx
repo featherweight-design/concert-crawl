@@ -13,7 +13,8 @@ export interface AdminDialogProps {
   accent: string;
   /** Announced name. Usually the heading, but the two differ where the heading is a node. */
   label: string;
-  eyebrow: string;
+  /** The small-caps line over the title; omit it and the title sits 9px higher. */
+  eyebrow?: string;
   heading: ReactNode;
   /** Panel width in px. Existing dialogs run 400 to 560. */
   width?: number;
@@ -95,21 +96,25 @@ export const AdminDialog = ({
         }}
       >
         <div style={{ padding: '22px 24px 14px' }}>
-          <div
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: accent,
-            }}
-          >
-            {eyebrow}
-          </div>
+          {/* No eyebrow, no line: `07/crawl-all-venues` draws none, and an empty
+              div would push the title 9px down. */}
+          {eyebrow && (
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: accent,
+              }}
+            >
+              {eyebrow}
+            </div>
+          )}
           <h3
             style={{
-              margin: '9px 0 0',
+              margin: eyebrow ? '9px 0 0' : 0,
               // 21 across the board. Two of the four migrated dialogs
               // (BulkDeleteConfirm, MoveConfirmDialog) rendered their h3 at
               // 22, which was drift rather than intent — extracting the
