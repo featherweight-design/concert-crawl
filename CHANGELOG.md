@@ -1,3 +1,16 @@
+# [1.461.0](https://github.com/featherweight-design/concert-crawl/compare/v1.460.0...v1.461.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** keep the feature modal reachable by keyboard and touch with dots only ([5cfb031](https://github.com/featherweight-design/concert-crawl/commit/5cfb031e71f16adb6e9777638049cd83a7377976))
+
+
+### Features
+
+* **admin:** search for another artist from the Needs you artist panel ([cfe7508](https://github.com/featherweight-design/concert-crawl/commit/cfe750846f68ce1c7161bff29712a6903d53e81a))
+* **web:** crew patch on scale, gradient name field, feature modal dots only ([09e9fb2](https://github.com/featherweight-design/concert-crawl/commit/09e9fb2a67afd636c53d1888711a1f941d1c57c1))
+
 # [1.460.0](https://github.com/featherweight-design/concert-crawl/compare/v1.459.0...v1.460.0) (2026-11-14)
 
 
