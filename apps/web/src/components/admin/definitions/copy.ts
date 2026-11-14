@@ -3838,6 +3838,9 @@ export const ADMIN_COPY = {
       'price-check': 'Price check',
     },
     search: 'Search shows or people',
+    // 4d#12: the list filtered to one fan, as a chip with the handle.
+    fanFilter: (handle: string, count: number) => `@${handle} · ${count}`,
+    clearFan: 'Clear the fan filter',
     listLabel: 'Submitted prices',
     columns: {
       show: 'Show',
@@ -3857,9 +3860,10 @@ export const ADMIN_COPY = {
       'not-used': 'Not used',
       stale: 'Stale',
     },
+    // 4d#8: the phone's pills read the desktop's words.
     phoneStates: {
       waiting: 'Waiting for you',
-      published: 'Live',
+      published: 'Published',
       'price-check': 'Price check',
       'not-used': 'Not used',
       stale: 'Stale',
