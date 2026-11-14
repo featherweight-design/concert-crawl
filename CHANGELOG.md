@@ -1,3 +1,21 @@
+# [1.473.0](https://github.com/featherweight-design/concert-crawl/compare/v1.472.0...v1.473.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** queue share events during the posthog load and retry a failed one ([42f2d3e](https://github.com/featherweight-design/concert-crawl/commit/42f2d3e1f4de9b16f1275d5e0e21b5a882e717e0))
+
+
+### Features
+
+* **admin:** retire the Review page and send it to Events ([c8c292e](https://github.com/featherweight-design/concert-crawl/commit/c8c292ee619d161d7495868fcbb65802c86ffb06))
+
+
+### Performance Improvements
+
+* **web:** load posthog-js on demand, off the first-load bundle ([246be14](https://github.com/featherweight-design/concert-crawl/commit/246be147cb7061827d1151c38691a9c58c43c45b))
+* **web:** tree-shake Sentry tracing from the client bundle ([ccdd995](https://github.com/featherweight-design/concert-crawl/commit/ccdd9952d2d97b3953313c25b8a276878a85fae5))
+
 # [1.472.0](https://github.com/featherweight-design/concert-crawl/compare/v1.471.0...v1.472.0) (2026-11-14)
 
 
