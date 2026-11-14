@@ -151,6 +151,9 @@ export async function sendTransactionalEmail<
 }): Promise<TransactionalSendOutcome> {
   const { templateKey, userId, dedupeKey, vars } = params;
   const logContext = { templateKey, userId, dedupeKey };
+  // The day's cap claim while it is unspent: handed back unless Resend
+  // accepts the send.
+  let unspent: (() => Promise<void>) | null = null;
 
   try {
     if (isNonProductionEnvironment()) {
@@ -196,6 +199,19 @@ export async function sendTransactionalEmail<
       );
       return 'suppressed';
     }
+
+    // The day's cap is claimed before the dedupe key, so a capped send leaves
+    // its key unspent and a later run can still deliver it. Every path below
+    // that ends without a send hands the claim back (the `finally`).
+    const slot = await claimDailySend();
+    if (!slot.allowed) {
+      apiLogger.warn(
+        logContext,
+        'sendTransactionalEmail: daily email cap reached — not sent',
+      );
+      return 'capped';
+    }
+    unspent = slot.release;
 
     // Claim-then-flip: the row is inserted as 'failed' to consume the dedupe
     // key before the send, then flipped to 'sent' on success — a crash
@@ -251,30 +267,17 @@ export async function sendTransactionalEmail<
       return 'failed';
     }
 
-    // Last, so a send stopped by anything above never spends the day's cap.
-    // A capped send leaves its claim 'failed', as a crash would: the dedupe
-    // key is spent and nothing replays it.
-    const slot = await claimDailySend();
-    if (!slot.allowed) return 'capped';
-
     const rendered = renderer(vars);
     const resend = new Resend(apiKey);
-    let response: Awaited<ReturnType<typeof resend.emails.send>>;
-    try {
-      response = await resend.emails.send({
-        from: TRANSACTIONAL_EMAIL_FROM,
-        replyTo: TRANSACTIONAL_REPLY_TO,
-        to: recipient,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-      });
-    } catch (err) {
-      await slot.release();
-      throw err;
-    }
+    const response = await resend.emails.send({
+      from: TRANSACTIONAL_EMAIL_FROM,
+      replyTo: TRANSACTIONAL_REPLY_TO,
+      to: recipient,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+    });
     if (response.error) {
-      await slot.release();
       apiLogger.error(
         { ...logContext, resendError: response.error },
         'sendTransactionalEmail: Resend rejected send — send-log row left failed',
@@ -282,6 +285,8 @@ export async function sendTransactionalEmail<
       return 'failed';
     }
 
+    // Resend accepted it: the day's claim is spent, whatever the log says.
+    unspent = null;
     await db
       .update(emailSendLog)
       .set({ status: 'sent', resendId: response.data?.id ?? null })
@@ -293,6 +298,8 @@ export async function sendTransactionalEmail<
       'sendTransactionalEmail: send failed — send-log row (if claimed) left failed',
     );
     return 'failed';
+  } finally {
+    if (unspent) await unspent();
   }
 }
 
@@ -401,8 +408,16 @@ export async function sendInviteCodeEmail(
       );
       return 'refused';
     }
+    // Past here, a send that doesn't happen wasn't the requester's doing, so
+    // their recipient and network budget is handed back with the day's.
     const slot = await claimDailySend();
-    if (!slot.allowed) return 'refused';
+    if (!slot.allowed) {
+      await limits.release();
+      return 'refused';
+    }
+    const unsent = async () => {
+      await Promise.all([slot.release(), limits.release()]);
+    };
 
     const resend = new Resend(apiKey);
     let response: Awaited<ReturnType<typeof resend.emails.send>>;
@@ -420,11 +435,11 @@ export async function sendInviteCodeEmail(
         ].join('\n'),
       });
     } catch (err) {
-      await slot.release();
+      await unsent();
       throw err;
     }
     if (response.error) {
-      await slot.release();
+      await unsent();
       apiLogger.error(
         { resendError: response.error },
         'Resend rejected invite code email',

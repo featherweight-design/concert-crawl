@@ -23,6 +23,7 @@ vi.mock('../emails/registry.js', () => ({
 // The send limits (email-limits.ts, tested on their own): open by default,
 // steered per test.
 const mockRelease = vi.fn().mockResolvedValue(undefined);
+const mockLimitsRelease = vi.fn().mockResolvedValue(undefined);
 const mockClaimDailySend = vi.fn();
 const mockCheckRecipientLimits = vi.fn();
 const mockCountAlertSend = vi.fn().mockResolvedValue(undefined);
@@ -37,7 +38,10 @@ beforeEach(() => {
     allowed: true,
     release: mockRelease,
   });
-  mockCheckRecipientLimits.mockResolvedValue({ allowed: true });
+  mockCheckRecipientLimits.mockResolvedValue({
+    allowed: true,
+    release: mockLimitsRelease,
+  });
 });
 
 // Chainable Drizzle mocks — each terminal step is a named mock so tests can
@@ -114,15 +118,16 @@ describe('sendInviteCodeEmail', () => {
     expect(mockSend).not.toHaveBeenCalled();
   });
 
-  it('refuses at the daily cap', async () => {
+  it("refuses at the daily cap, handing the recipient's budget back", async () => {
     mockClaimDailySend.mockResolvedValueOnce({ allowed: false });
     await expect(
       sendInviteCodeEmail('fan@example.com', 'CODE', '203.0.113.9'),
     ).resolves.toBe('refused');
     expect(mockSend).not.toHaveBeenCalled();
+    expect(mockLimitsRelease).toHaveBeenCalledOnce();
   });
 
-  it('says failed, and hands the day back, when Resend rejects it', async () => {
+  it('says failed, and hands every claim back, when Resend rejects it', async () => {
     mockSend.mockResolvedValueOnce({
       data: null,
       error: { name: 'validation_error', message: 'nope' },
@@ -131,14 +136,16 @@ describe('sendInviteCodeEmail', () => {
       sendInviteCodeEmail('fan@example.com', 'CODE', '203.0.113.9'),
     ).resolves.toBe('failed');
     expect(mockRelease).toHaveBeenCalledOnce();
+    expect(mockLimitsRelease).toHaveBeenCalledOnce();
   });
 
-  it('says failed, and hands the day back, when the send throws', async () => {
+  it('says failed, and hands every claim back, when the send throws', async () => {
     mockSend.mockRejectedValueOnce(new Error('network'));
     await expect(
       sendInviteCodeEmail('fan@example.com', 'CODE', '203.0.113.9'),
     ).resolves.toBe('failed');
     expect(mockRelease).toHaveBeenCalledOnce();
+    expect(mockLimitsRelease).toHaveBeenCalledOnce();
   });
 });
 
@@ -414,12 +421,25 @@ describe('sendTransactionalEmail', () => {
     expect(mockRelease).toHaveBeenCalledOnce();
   });
 
-  it('stops at the daily cap: no send, the row left failed', async () => {
+  it('stops at the daily cap before spending the dedupe key', async () => {
     mockClaimDailySend.mockResolvedValueOnce({ allowed: false });
 
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('capped');
     expect(mockSend).not.toHaveBeenCalled();
-    expect(mockUpdateSet).not.toHaveBeenCalled();
+    // No send-log claim, so a later run can still deliver it.
+    expect(mockInsertValues).not.toHaveBeenCalled();
+  });
+
+  it('hands the day back when the dedupe key was already spent', async () => {
+    mockInsertReturning.mockResolvedValueOnce([]);
+
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('deduped');
+    expect(mockRelease).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the day spent once Resend accepts the send', async () => {
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent');
+    expect(mockRelease).not.toHaveBeenCalled();
   });
 
   it('hands the day back when Resend throws', async () => {

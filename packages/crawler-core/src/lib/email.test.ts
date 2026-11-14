@@ -13,9 +13,12 @@ vi.mock('resend', () => ({
 // The account-wide daily email count (packages/db): alerts are counted, never
 // refused.
 const mockCountEmailSend = vi.fn().mockResolvedValue(1);
+const mockClaimWarning = vi.fn().mockResolvedValue(false);
 vi.mock('@concert-crawl/db', () => ({
   db: {},
   countEmailSend: (...args: unknown[]) => mockCountEmailSend(...args),
+  claimEmailCapWarning: (...args: unknown[]) => mockClaimWarning(...args),
+  emailDailySendCap: () => 30,
 }));
 
 describe('alert sends and the daily email count', () => {
@@ -47,6 +50,20 @@ describe('alert sends and the daily email count', () => {
     const { sendCrawlFailureEmail } = await import('./email.js');
     await sendCrawlFailureEmail(input);
     expect(mockCountEmailSend).toHaveBeenCalledOnce();
+  });
+
+  it("raises the day's 80% warning when an alert claims it", async () => {
+    mockSend.mockResolvedValueOnce({ data: { id: 'e1' }, error: null });
+    mockCountEmailSend.mockResolvedValueOnce(24);
+    mockClaimWarning.mockResolvedValueOnce(true);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { sendCrawlFailureEmail } = await import('./email.js');
+    await sendCrawlFailureEmail(input);
+    expect(mockClaimWarning).toHaveBeenCalledWith({}, 24, 30);
+    const logged = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).toContain('email.daily_cap_80');
+    expect(logged).not.toContain('admin@example.com');
+    warnSpy.mockRestore();
   });
 
   it('still sends when the count is unavailable', async () => {
