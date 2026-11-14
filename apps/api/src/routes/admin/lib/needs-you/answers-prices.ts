@@ -70,7 +70,12 @@ export const approveAll = define({
       else
         skipped.push({
           id,
-          reason: outcome.ok === 'contest_lockout' ? 'in a contest' : 'missing',
+          reason:
+            outcome.ok === 'contest_lockout'
+              ? 'in a contest'
+              : outcome.ok === 'not_waiting'
+                ? 'no longer waiting'
+                : 'missing',
         });
     }
     if (approved.length === 0) {

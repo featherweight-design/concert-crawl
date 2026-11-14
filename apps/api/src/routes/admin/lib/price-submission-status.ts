@@ -25,7 +25,8 @@ export type SetSubmissionStatusResult =
       };
     }
   | { ok: false }
-  | { ok: 'contest_lockout' };
+  | { ok: 'contest_lockout' }
+  | { ok: 'not_waiting' };
 
 /**
  * Approve (corroborated), dispute or stale one price submission
@@ -104,6 +105,12 @@ export const setSubmissionStatus = async (
       return { ok: 'contest_lockout' as const };
     }
 
+    // Only a waiting price changes here (addendum 6 #43). Every caller
+    // (Approve, the old queue's buttons, the Needs you batch) acts on a
+    // waiting row; without this a price another admin had already rejected
+    // could be approved and published from a stale screen.
+    if (existing.status !== 'pending') return { ok: 'not_waiting' as const };
+
     const [updated] = await tx
       .update(priceSubmissions)
       .set({
@@ -119,7 +126,8 @@ export const setSubmissionStatus = async (
     if (!updated) return { ok: false };
 
     let pricedropForFanout: PriceDrop | undefined;
-    if (status === 'corroborated' && existing.status !== 'corroborated') {
+    // Only a waiting row reaches here, so approving is always a first approval.
+    if (status === 'corroborated') {
       // Award cred to the submitter
       if (existing.userId !== null) {
         await awardPriceCred(tx, existing.userId);
