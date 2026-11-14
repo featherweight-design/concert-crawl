@@ -1,6 +1,6 @@
 {
   "feature": "Browse · the phone Filters sheet's Where tiles caption a venue with its short name (B+ addendum 4, item 4 A)",
-  "note": "Board: design/design_handoff_bplus_redesign/addendum-4/boards/04-venue-short-names/where-tiles-m. Phone only: the Where tiles are the phone sheet. Needs short names on the scratch venues (Red Rocks, Cervantes', Mission set for this sheet and cleared after); every other tile shows B, the full name in the 2-line clamp. Venues collected (Passport) draws no caption, so it is not in this sheet.",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-4/boards/04-venue-short-names/where-tiles-m. Phone only: the Where tiles are the phone sheet. The sheet has no setup step: before running it, set short names on scratch-contact-sheet by hand under the orchestrator's lock (one UPDATE on red-rocks-amphitheatre → 'Red Rocks', cervantes-masterpiece-ballroom → 'Cervantes''', mission-ballroom → 'Mission'), and set them back to NULL after. Without them every tile shows B, the full name in the 2-line clamp. The desktop Where row puts the name beside the tile at full width, so it is not a caption under 90px and keeps the full name. Venues collected (Passport) draws no caption, so it is not in this sheet.",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 900, "touch": true },
     { "label": "phone", "width": 390, "height": 900, "touch": true }
