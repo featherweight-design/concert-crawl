@@ -8,6 +8,7 @@ import { useOnPhone, useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import type { FilterOption } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { CheckboxMark } from './CheckboxMark';
+import { SHEET_TOP_GAP } from '@/components/consumer/modal-shell/sheet-rule';
 
 const copy = CONSUMER_COPY.filterBar;
 
@@ -76,9 +77,12 @@ export function FilterSheet({
         role="dialog"
         aria-modal="true"
         aria-label={`${title} filter`}
-        className="sheet-edge absolute [--sheet-bg:var(--bg-elevated)] bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-[20px]"
+        className="sheet-edge absolute [--sheet-bg:var(--bg-elevated)] bottom-0 left-1/2 flex -translate-x-1/2 w-full flex-col rounded-t-[20px]"
         style={{
           maxWidth: 402,
+          // The sheet stops 24px below the top of the screen; the options
+          // scroll inside it (addendum 6 item 15).
+          maxHeight: `calc(100dvh - ${SHEET_TOP_GAP}px)`,
           paddingTop: 8,
           paddingBottom: 28,
           boxShadow: '0 -20px 60px rgba(0,0,0,0.4)',
@@ -111,7 +115,7 @@ export function FilterSheet({
           {title}
         </div>
 
-        <div className="max-h-[52vh] overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {!alwaysOn && (
             <OptionButton
               label={placeholder}
