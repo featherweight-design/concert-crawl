@@ -81,8 +81,8 @@ vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
 import { VenueDetailsClient } from './VenueDetailsClient';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const ADDRESS_COPY = ADMIN_COPY.venueDetailsClient.fields.address;
-const SAVE_LABEL = ADMIN_COPY.venueDetailsClient.saveBar.saveChanges;
+const ADDRESS_LABEL = ADMIN_COPY.venueDetails.fields.address;
+const SAVE_LABEL = ADMIN_COPY.venueDetails.saveBar.save;
 
 const matchMediaStub = (query: string): MediaQueryList => ({
   matches: false,
@@ -151,14 +151,16 @@ const buildVenue = (
 });
 
 const addressInput = (): HTMLInputElement => {
-  const input = document.getElementById('edit-venue-address');
+  const input = screen.getByLabelText(ADDRESS_LABEL);
   if (!(input instanceof HTMLInputElement)) {
-    throw new Error('Expected #edit-venue-address to be an input');
+    throw new Error('Expected the Address field to be an input');
   }
   return input;
 };
 
-describe('VenueDetailsClient — street address field', () => {
+// The address lives in the Details tab (3b part 5); its own suite covers the
+// tab. This one checks the shell hands it the venue and its own save.
+describe('VenueDetailsClient — the Details tab’s address', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
     mockUpdateVenue.mockReset();
@@ -173,22 +175,37 @@ describe('VenueDetailsClient — street address field', () => {
   it('renders the address input prefilled from the venue', () => {
     render(
       <VenueDetailsClient
+        initialTab="details"
         venue={buildVenue({ address: '1380 W Florida Ave, Denver, CO 80223' })}
       />,
     );
 
     expect(addressInput().value).toBe('1380 W Florida Ave, Denver, CO 80223');
-    expect(addressInput().placeholder).toBe(ADDRESS_COPY.placeholder);
+    expect(
+      screen
+        .getByTestId('venue-panel-details')
+        .querySelector('[data-testid="venue-details"]'),
+    ).not.toBeNull();
   });
 
   it('renders an empty address input when the venue has none', () => {
-    render(<VenueDetailsClient venue={buildVenue({ address: null })} />);
+    render(
+      <VenueDetailsClient
+        initialTab="details"
+        venue={buildVenue({ address: null })}
+      />,
+    );
 
     expect(addressInput().value).toBe('');
   });
 
   it('sends the edited address to updateVenue on save', async () => {
-    render(<VenueDetailsClient venue={buildVenue({ address: null })} />);
+    render(
+      <VenueDetailsClient
+        initialTab="details"
+        venue={buildVenue({ address: null })}
+      />,
+    );
 
     fireEvent.change(addressInput(), {
       target: { value: '  1380 W Florida Ave, Denver, CO 80223  ' },
@@ -211,12 +228,13 @@ describe('VenueDetailsClient — street address field', () => {
     );
   });
 
-  // A missing key now means "leave it", so a venue with no vendor (or one just
-  // cleared) must send an explicit empty value for the API to store null.
-  it('always sends the ticket vendor, empty when there is none', async () => {
+  // Details sends only what changed (3b part 5): an untouched field, the
+  // ticket vendor included, stays out of the body.
+  it('sends only the address when only the address changed', async () => {
     render(
       <VenueDetailsClient
-        venue={buildVenue({ address: null, ticketVendor: null })}
+        initialTab="details"
+        venue={buildVenue({ address: null, ticketVendor: 'axs' })}
       />,
     );
     fireEvent.change(addressInput(), { target: { value: '1 Main St' } });
@@ -226,7 +244,6 @@ describe('VenueDetailsClient — street address field', () => {
     if (!(formData instanceof FormData)) {
       throw new Error('Expected updateVenue to receive a FormData');
     }
-    expect(formData.has('ticketVendor')).toBe(true);
-    expect(formData.get('ticketVendor')).toBe('');
+    expect([...formData.keys()]).toEqual(['address']);
   });
 });

@@ -85,6 +85,18 @@ export function buildUpdateVenueBody(
   const featured = ifPresent('featured', isTrue);
 
   const priceUrl = ifPresent('priceUrl', trimmedOrNull);
+  const contactEmail = ifPresent('contactEmail', trimmedOrNull);
+
+  // The Map pin (3b Details), entered by hand. Empty clears it; a value that
+  // isn't a number is sent as given so the API's 400 names the field.
+  const coordinate = (raw: FormDataEntryValue): number | string | null => {
+    const trimmed = String(raw).trim();
+    if (trimmed === '') return null;
+    const num = Number(trimmed);
+    return Number.isFinite(num) ? num : trimmed;
+  };
+  const lat = ifPresent('lat', coordinate);
+  const lng = ifPresent('lng', coordinate);
 
   const debugCaptureHtml = ifPresent('debugCaptureHtml', isTrue);
 
@@ -152,6 +164,9 @@ export function buildUpdateVenueBody(
     neighborhood,
     featured,
     priceUrl,
+    contactEmail,
+    lat,
+    lng,
     extractionStrategy,
     debugCaptureHtml,
     platform,

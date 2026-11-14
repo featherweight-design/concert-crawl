@@ -90,3 +90,34 @@ describe('buildUpdateVenueBody — API integration fields', () => {
     expect(body.apiAccountId).toBeNull();
   });
 });
+
+describe('buildUpdateVenueBody — Details contact fields (3b part 5)', () => {
+  it('sends the map pin as numbers and a trimmed contact email', () => {
+    const body = buildUpdateVenueBody(
+      formDataFrom({
+        lat: '39.7487',
+        lng: '-105.0077',
+        contactEmail: ' booking@ballarena.example ',
+      }),
+    );
+    expect(body.lat).toBe(39.7487);
+    expect(body.lng).toBe(-105.0077);
+    expect(body.contactEmail).toBe('booking@ballarena.example');
+  });
+
+  it('clears both halves of the pin and the email when empty', () => {
+    const body = buildUpdateVenueBody(
+      formDataFrom({ lat: '', lng: '', contactEmail: '  ' }),
+    );
+    expect(body.lat).toBeNull();
+    expect(body.lng).toBeNull();
+    expect(body.contactEmail).toBeNull();
+  });
+
+  it('leaves the pin and the email out when their keys are missing', () => {
+    const body = buildUpdateVenueBody(formDataFrom({ name: 'Gothic' }));
+    expect(body.lat).toBeUndefined();
+    expect(body.lng).toBeUndefined();
+    expect(body.contactEmail).toBeUndefined();
+  });
+});
