@@ -54,28 +54,39 @@ const shortDay = (day: string): string =>
 const StepHeader = ({
   title,
   onBack,
+  sheet,
 }: {
   title: string;
   onBack: () => void;
+  /** In the phone's bottom sheet the title stands alone: Back is a button. */
+  sheet: boolean;
 }) => (
   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-    <button
-      type="button"
-      aria-label={COPY.back}
-      onClick={onBack}
+    {!sheet && (
+      <button
+        type="button"
+        aria-label={COPY.back}
+        onClick={onBack}
+        style={{
+          display: 'flex',
+          padding: 4,
+          marginTop: 1,
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--fg-muted)',
+          cursor: 'pointer',
+        }}
+      >
+        <ChevronLeft size={18} aria-hidden />
+      </button>
+    )}
+    <span
       style={{
-        display: 'flex',
-        padding: 4,
-        marginTop: 1,
-        border: 'none',
-        background: 'transparent',
-        color: 'var(--fg-muted)',
-        cursor: 'pointer',
+        fontSize: sheet ? 20 : 15.5,
+        fontWeight: 800,
+        color: 'var(--fg)',
       }}
     >
-      <ChevronLeft size={18} aria-hidden />
-    </button>
-    <span style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--fg)' }}>
       {title}
     </span>
   </div>
@@ -208,9 +219,21 @@ export const SnoozeOptions = ({
   onNotUseful,
   about,
   afterDate,
+  sheet = false,
+  onStep,
   now,
-}: Omit<SnoozeMenuProps, 'disabled'> & { afterDate?: ReactNode }) => {
-  const [mode, setMode] = useState<'menu' | 'date' | 'reason'>('menu');
+}: Omit<SnoozeMenuProps, 'disabled'> & {
+  afterDate?: ReactNode;
+  /** Drawn in the phone's bottom sheet, not the desktop popover. */
+  sheet?: boolean;
+  /** Tells the sheet which step is showing, so it can drop its own title. */
+  onStep?: (step: 'menu' | 'date' | 'reason') => void;
+}) => {
+  const [mode, setModeState] = useState<'menu' | 'date' | 'reason'>('menu');
+  const setMode = (next: 'menu' | 'date' | 'reason') => {
+    setModeState(next);
+    onStep?.(next);
+  };
   const [date, setDate] = useState('');
   const [reasonIndex, setReasonIndex] = useState(0);
   const [note, setNote] = useState('');
@@ -224,7 +247,11 @@ export const SnoozeOptions = ({
   if (mode === 'date')
     return (
       <div style={STEP}>
-        <StepHeader title={COPY.dateTitle} onBack={() => setMode('menu')} />
+        <StepHeader
+          title={COPY.dateTitle}
+          onBack={() => setMode('menu')}
+          sheet={sheet}
+        />
         <MonthGrid value={date} min={tomorrow} onChange={setDate} />
         {date && (
           <p style={STEP_NOTE}>
@@ -257,6 +284,7 @@ export const SnoozeOptions = ({
         <StepHeader
           title={COPY.reasonTitle(about?.warning ?? '', venue)}
           onBack={() => setMode('menu')}
+          sheet={sheet}
         />
         <p style={STEP_NOTE}>{COPY.reasonSub}</p>
         <div

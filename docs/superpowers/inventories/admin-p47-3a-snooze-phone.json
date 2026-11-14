@@ -1,0 +1,83 @@
+{
+  "feature": "Admin P47-3A · snooze on the phone item page",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: addendum-3 01-snooze item-menu-m, snooze-until-a-date-m, not-useful-m. The phone has no clock on the cards: a card opens the item page and the clock is in its ... sheet.",
+  "widths": [
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    }
+  ],
+  "rows": [
+    {
+      "id": "item-menu",
+      "label": "Item page more sheet",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key]"
+        },
+        {
+          "click": "[data-item-key]:visible >> nth=0"
+        },
+        {
+          "click": "[data-testid=\"phone-item-more\"]"
+        },
+        {
+          "wait": "text=Snooze 1 day",
+          "settle": 500
+        }
+      ]
+    },
+    {
+      "id": "date-step",
+      "label": "Until a date as a bottom sheet",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key]"
+        },
+        {
+          "click": "[data-item-key]:visible >> nth=0"
+        },
+        {
+          "click": "[data-testid=\"phone-item-more\"]"
+        },
+        {
+          "click": "text=Until a date…"
+        },
+        {
+          "click": "button[aria-label*=\"November 27\"]"
+        },
+        {
+          "wait": "text=Snooze until Nov 27",
+          "settle": 500
+        }
+      ]
+    },
+    {
+      "id": "not-useful",
+      "label": "Not useful as a bottom sheet",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"venue-\"]"
+        },
+        {
+          "click": "[data-item-key^=\"venue-\"]:visible >> nth=0"
+        },
+        {
+          "click": "[data-testid=\"phone-item-more\"]"
+        },
+        {
+          "click": "text=Not useful…"
+        },
+        {
+          "wait": "text=Turn it off",
+          "settle": 500
+        }
+      ]
+    }
+  ]
+}

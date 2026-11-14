@@ -1,41 +1,72 @@
 {
   "feature": "Admin P47-3A · Needs you snooze clock, month grid, Not useful",
-  "note": "P47-3 PR A. CONTACT_SHEET_ROLE=admin. Boards: addendum-3 01-snooze needs-you-clock-d, snooze-open-d, snooze-until-a-date-d/-m, not-useful-d/-m, item-menu-m.",
+  "note": "P47-3 PR A. CONTACT_SHEET_ROLE=admin. Boards: addendum-3 01-snooze needs-you-clock-d, snooze-open-d, snooze-until-a-date-d/-m, not-useful-d/-m, item-menu-m. Desktop only: the phone is admin-p47-3a-snooze-phone.json.",
   "widths": [
-    { "label": "phone", "width": 390, "height": 844, "touch": true },
-    { "label": "desktop", "width": 1300, "height": 900 }
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
   ],
   "rows": [
     {
       "id": "clock-open",
       "label": "Clock open on the first card",
       "steps": [
-        { "goto": "/admin/needs-you", "wait": "[data-item-key]" },
-        { "click": "[data-testid=\"snooze-trigger\"]:visible >> nth=0" },
-        { "wait": "text=Snooze 1 day", "settle": 500 }
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key]"
+        },
+        {
+          "click": "[data-testid=\"snooze-trigger\"]:visible >> nth=0"
+        },
+        {
+          "wait": "text=Snooze 1 day",
+          "settle": 500
+        }
       ]
     },
     {
       "id": "date-step",
       "label": "Until a date, a day picked",
       "steps": [
-        { "goto": "/admin/needs-you", "wait": "[data-item-key]" },
-        { "click": "[data-testid=\"snooze-trigger\"]:visible >> nth=0" },
-        { "click": "text=Until a date…" },
-        { "click": "button[aria-label*=\"November 19\"]" },
-        { "wait": "text=Snooze until Nov 19", "settle": 500 }
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key]"
+        },
+        {
+          "click": "[data-testid=\"snooze-trigger\"]:visible >> nth=0"
+        },
+        {
+          "click": "text=Until a date…"
+        },
+        {
+          "click": "button[aria-label*=\"November 19\"]"
+        },
+        {
+          "wait": "text=Snooze until Nov 19",
+          "settle": 500
+        }
       ]
     },
     {
       "id": "not-useful",
       "label": "Not useful reason step on a venue card",
       "steps": [
-        { "goto": "/admin/needs-you", "wait": "[data-item-key^=\"venue-\"]" },
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"venue-\"]"
+        },
         {
           "click": "[data-item-key^=\"venue-\"]:visible >> nth=0 >> [data-testid=\"snooze-trigger\"]"
         },
-        { "click": "text=Not useful…" },
-        { "wait": "text=Turn it off", "settle": 500 }
+        {
+          "click": "text=Not useful…"
+        },
+        {
+          "wait": "text=Turn it off",
+          "settle": 500
+        }
       ]
     }
   ]
