@@ -19,6 +19,7 @@ import { editEventHref } from '@/lib/admin/edit-event-link';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { refusedStatus } from '../invite-codes/codes-api';
 import { EditPricePanel } from './EditPricePanel';
+import { FanAvatar } from './FanAvatar';
 import { RejectPriceDialog } from './RejectPriceDialog';
 import {
   submittedApi,
@@ -175,21 +176,19 @@ export const SubmittedTab = () => {
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [rejecting, setRejecting] = useState<SubmittedRow | null>(null);
   const [editing, setEditing] = useState<SubmittedRow | null>(null);
-
-  // The chips and the search are desktop-only: a phone width clears them rather
-  // than leaving a hidden filter on the list.
-  useEffect(() => {
-    if (isPhone) {
-      setFilter('all');
-      setTyped('');
-    }
-  }, [isPhone]);
+  // "This fan's other prices" (4d#12): the list narrowed to one @handle, shown
+  // as a chip rather than typed into the search box.
+  const [fan, setFan] = useState<string | null>(null);
 
   // The search waits for a pause in typing.
   useEffect(() => {
     const timer = setTimeout(() => setSearch(typed.trim()), 300);
     return () => clearTimeout(timer);
   }, [typed]);
+
+  // The fan chip searches `@handle` server-side, the same search a typed
+  // handle runs; typing in the box replaces it.
+  const query = fan === null ? search : `@${fan}`;
 
   // Only the newest load may write.
   const latest = useRef(0);
@@ -199,8 +198,8 @@ export const SubmittedTab = () => {
     setMore('idle');
     try {
       const [list, nextCounts] = await Promise.all([
-        api.list(filter, search, 0, PAGE),
-        api.counts(search),
+        api.list(filter, query, 0, PAGE),
+        api.counts(query),
       ]);
       if (mine !== latest.current) return;
       setRows(list.rows);
@@ -215,7 +214,7 @@ export const SubmittedTab = () => {
         setBusy(false);
       }
     }
-  }, [api, filter, search]);
+  }, [api, filter, query]);
 
   useEffect(() => {
     void load();
@@ -226,7 +225,7 @@ export const SubmittedTab = () => {
     const mine = latest.current;
     setMore('loading');
     try {
-      const list = await api.list(filter, search, rows.length, PAGE);
+      const list = await api.list(filter, query, rows.length, PAGE);
       if (mine !== latest.current) return;
       const seen = new Set(rows.map((row) => row.id));
       setRows([...rows, ...list.rows.filter((row) => !seen.has(row.id))]);
@@ -303,7 +302,9 @@ export const SubmittedTab = () => {
         hint: COPY.menu.otherPrices.hint(handle),
         onSelect: () => {
           setFilter('all');
-          setTyped(`@${handle}`);
+          setTyped('');
+          setSearch('');
+          setFan(handle);
         },
       });
     }
@@ -332,16 +333,147 @@ export const SubmittedTab = () => {
     return items;
   };
 
-  const fan = (row: SubmittedRow) =>
+  const fanLabel = (row: SubmittedRow) =>
     row.handle === null ? COPY.noHandle : `@${row.handle}`;
   const sub = (row: SubmittedRow) =>
     [row.venueName, dayOf(row.date)].filter(Boolean).join(' · ');
 
   const remaining = total - rows.length;
 
+  const searchBox = (
+    <label style={{ position: 'relative', width: isPhone ? '100%' : 220 }}>
+      <Search
+        size={15}
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: 11,
+          top: 10,
+          color: 'var(--fg-subtle)',
+        }}
+      />
+      <input
+        type="search"
+        aria-label={COPY.search}
+        placeholder={COPY.search}
+        value={typed}
+        onChange={(event) => {
+          setTyped(event.target.value);
+          setFan(null);
+        }}
+        style={{
+          width: '100%',
+          height: 36,
+          padding: '0 12px 0 34px',
+          borderRadius: 10,
+          fontSize: 13,
+          color: 'var(--fg)',
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
+          boxSizing: 'border-box',
+        }}
+      />
+    </label>
+  );
+
+  // The fan filter (4d#12): the handle and how many prices it holds, in the
+  // active chip style, with its own clear button.
+  const fanChip = fan !== null && (
+    <span
+      data-testid="fan-filter"
+      style={{
+        ...chipStyle(true),
+        cursor: 'default',
+        paddingRight: 6,
+        // In the phone's column it keeps its own width.
+        ...(isPhone && { alignSelf: 'flex-start' }),
+      }}
+    >
+      {COPY.fanFilter(fan, total)}
+      <button
+        type="button"
+        aria-label={COPY.clearFan}
+        onClick={() => setFan(null)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 22,
+          height: 22,
+          padding: 0,
+          borderRadius: 999,
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--fg-muted)',
+          cursor: 'pointer',
+        }}
+      >
+        <X size={14} aria-hidden />
+      </button>
+    </span>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {!isPhone && (
+      {isPhone ? (
+        // 4d#21: on the phone, search on top, then the filters as a segment.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {searchBox}
+          <div
+            role="group"
+            aria-label={COPY.filtersLabel}
+            style={{
+              display: 'flex',
+              padding: 3,
+              borderRadius: 10,
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              // Four labels with counts can outgrow a 320px screen: the strip
+              // scrolls rather than pushing the page sideways.
+              overflowX: 'auto',
+            }}
+          >
+            {STATE_FILTERS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+                style={{
+                  flex: 1,
+                  height: 32,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 8px',
+                  whiteSpace: 'nowrap',
+                  fontFamily: 'inherit',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: 'none',
+                  borderRadius: 7,
+                  color: filter === key ? 'var(--fg)' : 'var(--fg-muted)',
+                  background:
+                    filter === key ? 'var(--bg-elevated)' : 'transparent',
+                }}
+              >
+                {COPY.filters[key]}{' '}
+                <span
+                  style={{
+                    marginLeft: 2,
+                    fontSize: 11,
+                    color: 'var(--fg-subtle)',
+                  }}
+                >
+                  {countOf(counts, key) ?? ''}
+                </span>
+              </button>
+            ))}
+          </div>
+          {fanChip}
+        </div>
+      ) : (
         <div
           style={{
             display: 'flex',
@@ -363,44 +495,17 @@ export const SubmittedTab = () => {
                 onClick={() => setFilter(key)}
                 style={chipStyle(filter === key)}
               >
-                {COPY.filters[key]}
+                {/* A real space: "Published 43", not "Published43". */}
+                {COPY.filters[key]}{' '}
                 <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
                   {countOf(counts, key) ?? ''}
                 </span>
               </button>
             ))}
           </div>
+          {fanChip}
           <span style={{ flex: 1 }} />
-          <label style={{ position: 'relative', width: 220 }}>
-            <Search
-              size={15}
-              aria-hidden
-              style={{
-                position: 'absolute',
-                left: 11,
-                top: 10,
-                color: 'var(--fg-subtle)',
-              }}
-            />
-            <input
-              type="search"
-              aria-label={COPY.search}
-              placeholder={COPY.search}
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-              style={{
-                width: '100%',
-                height: 36,
-                padding: '0 12px 0 34px',
-                borderRadius: 10,
-                fontSize: 13,
-                color: 'var(--fg)',
-                background: 'var(--surface-1)',
-                border: '1px solid var(--border)',
-                boxSizing: 'border-box',
-              }}
-            />
-          </label>
+          {searchBox}
         </div>
       )}
 
@@ -492,12 +597,32 @@ export const SubmittedTab = () => {
                       </div>
                       <div
                         style={{
-                          fontSize: 13.5,
-                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          minWidth: 0,
                           marginTop: 6,
                         }}
                       >
-                        {fan(row)}
+                        {row.handle !== null && (
+                          <FanAvatar
+                            handle={row.handle}
+                            avatarColor={row.avatarColor}
+                            avatarSecondColor={row.avatarSecondColor}
+                          />
+                        )}
+                        <span
+                          style={{
+                            minWidth: 0,
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {fanLabel(row)}
+                        </span>
                       </div>
                     </div>
                     <div
@@ -578,7 +703,7 @@ export const SubmittedTab = () => {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {fan(row)}
+                      {fanLabel(row)}
                     </span>
                     <span style={{ width: 110 }}>
                       <Pill tone={pill.tone}>
@@ -645,6 +770,7 @@ export const SubmittedTab = () => {
 
       {editing && (
         <EditPricePanel
+          single
           key={editing.id}
           row={editing}
           onClose={() => setEditing(null)}
