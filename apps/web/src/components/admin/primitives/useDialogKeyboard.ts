@@ -50,9 +50,8 @@ export interface UseDialogKeyboardOptions {
  *
  * Focus lands on the first ENABLED focusable element, or on the panel itself
  * when a caller has disabled everything. Note that "first" is whatever the
- * caller renders first, and that is not always an inert control:
- * StagedApplyConfirm leads with a "trigger recrawl" checkbox, so focus opens
- * on a toggle. No current caller opens on its destructive confirm, which
+ * caller renders first, and that is not always an inert control: a panel
+ * that leads with a checkbox opens focus on a toggle. No current caller opens on its destructive confirm, which
  * matters because these dialogs guard irreversible work — but this hook
  * cannot enforce that, so it is a thing to re-check when reordering a panel.
  */

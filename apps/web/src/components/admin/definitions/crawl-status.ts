@@ -46,13 +46,3 @@ export const CRAWL_STATUS_DISPLAY: Record<
 export const isCrawlDisplayStatus = (
   status: string,
 ): status is CrawlDisplayStatus => Object.hasOwn(CRAWL_STATUS_DISPLAY, status);
-
-/**
- * For the places that colour something other than a badge — the dot on a
- * split-view row, for instance — so they read the same map rather than
- * carrying a second copy of it.
- */
-export const crawlStatusKind = (status: string | null): StatusKind => {
-  const key = status ?? 'never';
-  return isCrawlDisplayStatus(key) ? CRAWL_STATUS_DISPLAY[key].kind : 'neutral';
-};
