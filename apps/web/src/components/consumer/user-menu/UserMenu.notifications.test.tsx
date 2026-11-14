@@ -464,7 +464,7 @@ describe('account menu identity (addendum 2 item 25)', () => {
     expect(row.querySelector('.lucide-log-out')).toBeNull();
   });
 
-  it('shows the email, as main does, when there is no handle or display name', async () => {
+  it('reads Your account when there is no handle or display name', async () => {
     signIn();
     fetchMe.mockResolvedValue({
       handle: null,
@@ -482,7 +482,10 @@ describe('account menu identity (addendum 2 item 25)', () => {
     await renderChrome(<UserMenu />);
     await click(desktopTrigger());
 
-    expect(screen.getByText('hugh@example.com')).toBeInTheDocument();
+    expect(
+      screen.getAllByText(CONSUMER_COPY.userMenu.identityFallback).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText('hugh@example.com')).toBeNull();
   });
 
   const noHandle = {
@@ -519,14 +522,17 @@ describe('account menu identity (addendum 2 item 25)', () => {
     expect(screen.getByText('Hugh')).toBeInTheDocument();
   });
 
-  it('falls through an empty full name to the email', async () => {
+  it('falls through an empty full name to Your account', async () => {
     signIn();
     mockNames = { fullName: '', firstName: '' };
     fetchMe.mockResolvedValue(noHandle);
     await renderChrome(<UserMenu />);
     await click(desktopTrigger());
 
-    expect(screen.getByText('hugh@example.com')).toBeInTheDocument();
+    expect(
+      screen.getAllByText(CONSUMER_COPY.userMenu.identityFallback).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText('hugh@example.com')).toBeNull();
   });
 });
 

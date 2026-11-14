@@ -22,7 +22,7 @@ export const SHELF_SUGGESTION_POOL = 24;
 export const SHELF_VISIBLE_CARDS = 10;
 
 /** See all joins the shelf header only past this many follows (addendum 3,
- * a6 ruling 3): with five or fewer, the shelf already shows everyone. */
+ * a6 ruling 3, a number the board fixes, not the card count). */
 export const SHELF_SEE_ALL_AFTER = 5;
 
 /**
