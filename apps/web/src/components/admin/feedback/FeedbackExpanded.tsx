@@ -13,7 +13,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { MonoLabel } from '@/components/admin/primitives';
-import type { FeedbackItem } from './FeedbackRow';
+import { CATEGORY_LABEL, type FeedbackItem } from './FeedbackRow';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import { personHref } from '@/components/admin/people/people-rules';
@@ -45,7 +45,7 @@ function buildGitHubIssueUrl(item: FeedbackItem): string {
       return item.pageUrl;
     }
   })();
-  const title = `[${item.category}] ${item.message.slice(0, 72)}`;
+  const title = `[${CATEGORY_LABEL[item.category]}] ${item.message.slice(0, 72)}`;
   const body = [
     `**User feedback:**`,
     item.message,

@@ -30,7 +30,8 @@ const CATEGORY_KIND: Record<FeedbackItem['category'], StatusKind> = {
   venue_suggestion: 'accent',
 };
 
-const CATEGORY_LABEL: Record<FeedbackCategory, string> =
+/** Readable category names: the row badge and the GitHub issue title share it. */
+export const CATEGORY_LABEL: Record<FeedbackCategory, string> =
   ADMIN_COPY.feedback.row.categoryLabel;
 
 const STATUS_LABEL = ADMIN_COPY.feedback.row.statusLabel;
