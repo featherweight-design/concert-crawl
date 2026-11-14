@@ -143,6 +143,20 @@ describe('the phone item page', () => {
     expect(screen.getByTestId('phone-item-more')).toBeDisabled();
   });
 
+  it('draws the date step as a titled bottom sheet with a Back button and no chevron', () => {
+    open();
+    fireEvent.click(screen.getByTestId('phone-item-more'));
+    const sheet = screen.getByTestId('admin-sheet');
+    fireEvent.click(within(sheet).getByText('Until a date…'));
+    expect(within(sheet).getByText('Snooze until')).toBeInTheDocument();
+    // The step's own Back button only: the sheet drops its Close footer and
+    // the step drops the popover's chevron.
+    expect(within(sheet).getAllByRole('button', { name: 'Back' })).toHaveLength(
+      1,
+    );
+    expect(within(sheet).queryByRole('button', { name: 'Close' })).toBeNull();
+  });
+
   it('leaves out the venue row and Not useful for an item with no venue', () => {
     open({ ...ROW, venueId: null, venueName: null } as QueueRow);
     fireEvent.click(screen.getByTestId('phone-item-more'));

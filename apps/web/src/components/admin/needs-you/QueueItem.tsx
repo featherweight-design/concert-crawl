@@ -104,17 +104,21 @@ export const QueueItem = ({
         >
           {impactOf(row)}
         </span>
-        <span onClick={(event) => event.stopPropagation()}>
-          <SnoozeMenu
-            disabled={busy}
-            onSnooze={onSnooze}
-            onNotUseful={row.venueId ? onNotUseful : undefined}
-            about={{
-              warning: ADMIN_COPY.needsYou.snooze.warningOf[row.kind],
-              venue: row.venueId ? (row.venueName ?? null) : null,
-            }}
-          />
-        </span>
+        {/* On the phone the clock lives in the item page's ⋯ sheet
+            (`01-snooze/answered-m` draws no clock on the cards). */}
+        {!isPhone && (
+          <span onClick={(event) => event.stopPropagation()}>
+            <SnoozeMenu
+              disabled={busy}
+              onSnooze={onSnooze}
+              onNotUseful={row.venueId ? onNotUseful : undefined}
+              about={{
+                warning: ADMIN_COPY.needsYou.snooze.warningOf[row.kind],
+                venue: row.venueId ? (row.venueName ?? null) : null,
+              }}
+            />
+          </span>
+        )}
       </div>
       <h2
         style={{

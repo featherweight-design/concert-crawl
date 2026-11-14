@@ -64,6 +64,7 @@ export const PhoneItemPage = ({
   const titleId = useId();
   const [footer, setFooter] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [step, setStep] = useState<'menu' | 'date' | 'reason'>('menu');
   // The sheet sits inside the page, so the page's trap already holds it. Escape
   // is the sheet's while it is open, and nobody's mid-request.
   useDialogKeyboard(pageRef, onClose, { dismissible: !menuOpen && !busy });
@@ -186,16 +187,31 @@ export const PhoneItemPage = ({
 
       {menuOpen && (
         <AdminSheet
-          title={menuTitle}
-          onClose={() => setMenuOpen(false)}
-          footer={
-            <AdminButton variant="outline" onClick={() => setMenuOpen(false)}>
-              {COPY.itemPage.close}
-            </AdminButton>
-          }
+          // A date or reason step carries its own title and Back button, as
+          // `01-snooze/snooze-until-a-date-m` draws it.
+          title={step === 'menu' ? menuTitle : ''}
+          label={menuTitle}
+          onClose={() => {
+            setMenuOpen(false);
+            setStep('menu');
+          }}
+          {...(step === 'menu'
+            ? {
+                footer: (
+                  <AdminButton
+                    variant="outline"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {COPY.itemPage.close}
+                  </AdminButton>
+                ),
+              }
+            : {})}
         >
           <div role="group" aria-label={COPY.snooze.menuLabel}>
             <SnoozeOptions
+              sheet
+              onStep={setStep}
               onSnooze={(until) => {
                 setMenuOpen(false);
                 onSnooze(until);
