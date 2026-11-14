@@ -184,19 +184,39 @@ notificationsAdminRouter.post(
           reason: result.reason,
           ...(result.error === undefined
             ? {}
-            : { error: serializeErrorForAudit(result.error) }),
+            : { error: errorForResponse(result.error) }),
         };
     return ctx.json({ success: true, data });
   },
 );
 
-// ADMIN_EMAIL may list several addresses; mask each on its own.
+// ADMIN_EMAIL may list several addresses, each bare or as
+// `Name <address>`; mask each address on its own.
 function maskAdminEmail(adminEmail: string): string {
   return adminEmail
     .split(',')
-    .map((address) => maskEmail(address.trim()))
+    .map((entry) => {
+      const bracketed = /<([^>]*)>/.exec(entry);
+      return maskEmail((bracketed?.[1] ?? entry).trim());
+    })
     .filter((masked) => masked !== '')
     .join(', ');
+}
+
+// Only a name and a message go back to the browser: Resend's own rejection
+// is a plain object with more fields than the admin needs to see.
+function errorForResponse(err: unknown): { name?: string; message: string } {
+  if (err instanceof Error) return { name: err.name, message: err.message };
+  if (err && typeof err === 'object') {
+    const name =
+      'name' in err && typeof err.name === 'string' ? err.name : undefined;
+    const message =
+      'message' in err && typeof err.message === 'string'
+        ? err.message
+        : 'Unknown error';
+    return name === undefined ? { message } : { name, message };
+  }
+  return { message: String(err) };
 }
 
 // The generic admin alert, with who asked for it and when. Both the test send

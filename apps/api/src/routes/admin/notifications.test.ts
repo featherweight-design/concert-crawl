@@ -166,7 +166,7 @@ describe('POST /v1/admin/notifications/test-email', () => {
 
   it('masks each address when ADMIN_EMAIL lists several', async () => {
     adminAuth();
-    vi.stubEnv('ADMIN_EMAIL', 'hugh@gmail.com, ops@concertcrawl.app');
+    vi.stubEnv('ADMIN_EMAIL', 'hugh@gmail.com, Ops <ops@concertcrawl.app>');
     mockSendAdminAlertEmail.mockResolvedValueOnce({
       sent: true,
       resendId: 'resend_many',
@@ -179,6 +179,30 @@ describe('POST /v1/admin/notifications/test-email', () => {
 
     const body = await res.json();
     expect(body.data.sentTo).toBe('h***@gmail.com, o***@concertcrawl.app');
+  });
+
+  it("returns only the name and message of Resend's own rejection", async () => {
+    adminAuth();
+    mockSendAdminAlertEmail.mockResolvedValueOnce({
+      sent: false,
+      reason: 'send_failed',
+      error: {
+        name: 'validation_error',
+        message: 'Invalid from',
+        statusCode: 422,
+      },
+    });
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      { method: 'POST' },
+    );
+
+    const body = await res.json();
+    expect(body.data.error).toEqual({
+      name: 'validation_error',
+      message: 'Invalid from',
+    });
   });
 
   it('defaults to the generic admin alert when no emailKey is given', async () => {
@@ -347,18 +371,29 @@ describe('GET /v1/admin/notifications/test-email/:emailKey/preview', () => {
 
   it('previews the generic admin alert exactly as the send builds it', async () => {
     adminAuth();
-    const body = await (await preview('admin_alert')).json();
-    mockSendAdminAlertEmail.mockResolvedValueOnce({
-      sent: true,
-      resendId: null,
-    });
-    await createApp().request('/v1/admin/notifications/test-email', {
-      method: 'POST',
-    });
-    const [sent] = mockSendAdminAlertEmail.mock.calls[0];
-    expect(body.data.subject).toBe(sent.subject);
-    expect(body.data.html).toContain('admin user admin_123');
-    expect(body.data.text).toContain('admin user admin_123');
+    // Freeze the clock so both builds carry the same "Triggered at".
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-14T12:00:00Z'));
+    try {
+      const body = await (await preview('admin_alert')).json();
+      mockSendAdminAlertEmail.mockResolvedValueOnce({
+        sent: true,
+        resendId: null,
+      });
+      await createApp().request('/v1/admin/notifications/test-email', {
+        method: 'POST',
+      });
+      const [sent] = mockSendAdminAlertEmail.mock.calls[0];
+      expect(body.data).toEqual({
+        emailKey: 'admin_alert',
+        subject: sent.subject,
+        html: sent.html,
+        text: sent.text,
+      });
+      expect(body.data.text).toContain('admin user admin_123');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps html empty for a text-only email', async () => {
