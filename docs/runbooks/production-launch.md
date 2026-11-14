@@ -512,7 +512,7 @@ In a **fresh incognito browser** (avoids stale staging cookies):
 
 1. Visit `https://concertcrawl.app/` → should render the landing page (no redirect to `/events`)
 2. Sign in via Clerk → after sign-in, lands on `/events`
-3. Browse events, open a detail page, hit `/admin/review` (if admin)
+3. Browse events, open a detail page, hit `/admin/events` (if admin)
 4. DevTools console should be clean — no `/__clerk/*` 404s, no Sentry init errors, no CORS errors
 
 ### Canary the prod crawler

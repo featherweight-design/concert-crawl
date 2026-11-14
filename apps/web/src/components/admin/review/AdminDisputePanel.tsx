@@ -52,9 +52,9 @@ const GOLD_DARK = 'oklch(0.66 0.14 78)';
 const INTER = 'Inter, system-ui, sans-serif';
 const MONO = "'JetBrains Mono', monospace";
 
-// Where the panel sends the admin after a successful action. Spec §7.8 +
-// the user's brief both pin this as the queue tab.
-const QUEUE_ROUTE = '/admin/review?tab=contests';
+// Where the panel sends the admin after a successful action: price checks
+// are decided in Needs you now (Review is retired).
+const QUEUE_ROUTE = '/admin/needs-you';
 
 // ───── Props ─────────────────────────────────────────────────────────────────
 

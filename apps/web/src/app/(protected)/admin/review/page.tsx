@@ -1,7 +1,5 @@
 import { redirect } from 'next/navigation';
-import { auth, requireAdminUser } from '@/lib/auth';
-import { ReviewPageClient } from '@/components/admin/review/ReviewPageClient';
-import { fetchNeedsYouDecisions } from '@/components/admin/shell/needs-you-count';
+import { requireAdminUser } from '@/lib/auth';
 import {
   NEEDS_YOU_HREF,
   reviewPricesRedirect,
@@ -12,9 +10,10 @@ const firstParam = (value: string | string[] | undefined): string | null =>
   typeof value === 'string' ? value : (value?.[0] ?? null);
 
 /**
- * Review keeps one tab (all events). The price tabs live on Prices and the
- * decision tabs in Needs you, so those URLs and a missing `?tab=` redirect
- * before any fetch.
+ * Review is retired (0c). The price tabs live on Prices, the decision tabs in
+ * Needs you, and the last one, all events, is the Events list: a past show is
+ * found there with the Past chip and the search box. Old links and bookmarks
+ * land in the right place.
  */
 export default async function ReviewPage({
   searchParams,
@@ -27,19 +26,5 @@ export default async function ReviewPage({
   const pricesHref = reviewPricesRedirect(tab, firstParam(params?.['section']));
   if (pricesHref) redirect(pricesHref);
   if (reviewRedirectsToNeedsYou(tab)) redirect(NEEDS_YOU_HREF);
-
-  const { getToken } = await auth();
-  const token = await getToken();
-  if (!token) return null;
-
-  // The one Needs you number, the same source as the sidebar badge. A
-  // failure hides the pending pill rather than showing a wrong number.
-  const decisions = await fetchNeedsYouDecisions(token).catch(
-    (err: unknown): number => {
-      console.error('admin review: needs-you count failed', err);
-      return 0;
-    },
-  );
-
-  return <ReviewPageClient decisions={decisions} />;
+  redirect('/admin/events');
 }
