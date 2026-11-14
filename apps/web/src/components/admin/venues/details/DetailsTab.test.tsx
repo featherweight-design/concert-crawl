@@ -23,12 +23,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: mockRefresh, push: vi.fn(), replace: vi.fn() }),
 }));
 
-vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
-  IdentityArt: ({ name }: { name: string }) => (
-    <span data-testid="identity-art">{name}</span>
-  ),
-}));
-
 // The review UI has its own suite; this stub accepts the draft on a click,
 // shows what it holds, offers Cancel, and holds Accept when disabled.
 vi.mock('@/components/admin/generate-field/GenerateField', () => ({
