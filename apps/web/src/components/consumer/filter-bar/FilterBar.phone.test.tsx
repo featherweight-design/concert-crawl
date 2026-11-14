@@ -521,11 +521,25 @@ describe('FilterBar phone sheet', () => {
     expect(tiles[0]).toHaveAccessibleName('The Black Box');
     expect(tiles[0]).toHaveAttribute('aria-checked', 'true');
     expect(tiles[1]).toHaveAccessibleName('Red Rocks Amphitheatre');
-    // No short-name field exists, so a tile carries the full name, clamped to
-    // two lines under the tile (ruling, 2026-11-12).
+    // Addendum 4 item 4 A, B: with no short name a tile carries the full
+    // name, clamped to two lines under the tile.
     expect(tiles[0]).toHaveTextContent(/^The Black Box$/);
     expect(tiles[1]).toHaveTextContent(/^Red Rocks Amphitheatre$/);
     expect(tiles[1]?.querySelector('.line-clamp-2')).not.toBeNull();
+  });
+
+  it("Where captions a tile with the venue's short name, keeping the full name as its label", () => {
+    renderBar({
+      venues: VENUES.map((each) =>
+        each.slug === 'red-rocks'
+          ? { ...each, shortName: ' Red Rocks ' }
+          : each,
+      ),
+    });
+    const tile = within(openSheet()).getAllByTestId('venue-tile-option')[0];
+    expect(tile).toHaveAccessibleName('Red Rocks Amphitheatre');
+    expect(tile).toHaveTextContent(/^Red Rocks$/);
+    expect(tile?.querySelector('.line-clamp-2')).not.toBeNull();
   });
 
   it('"All N" opens the full Where list, searchable, and Back returns', () => {
