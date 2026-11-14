@@ -4185,6 +4185,24 @@ export const ADMIN_COPY = {
       saved: 'It’s still hidden.',
     },
     statusSaved: (status: string) => `The status is still ${status}.`,
+    // `06/event-edit` Price card and `06/edit-price-desktop` (4b#19).
+    price: {
+      title: 'Price',
+      listed: 'Listed price',
+      from: 'From',
+      // The board's ", matching" is left off: the count is every Submitted
+      // price that stands, not only those that match the listed price.
+      fromValue: (count: number) =>
+        count === 0
+          ? 'No Submitted prices'
+          : `${count.toLocaleString('en-US')} Submitted ${count === 1 ? 'price' : 'prices'}`,
+      ticketPage: 'Ticket page',
+      ticketValue: (host: string, checked: string | null) =>
+        checked === null ? host : `${host} · checked ${checked}`,
+      edit: 'Edit price',
+      submitted: 'Submitted prices',
+      note: 'Edit price opens the same price sheet as Prices, and is saved as your submission, so the history stays in one place.',
+    },
     saveBar: {
       unsaved: (count: number) =>
         count === 1 ? '1 unsaved change' : `${count} unsaved changes`,

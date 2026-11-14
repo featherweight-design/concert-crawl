@@ -29,6 +29,7 @@ import { apiClient } from '@/lib/api';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { MergeEventDialog } from '../editor/MergeEventDialog';
+import { PriceCard } from './PriceCard';
 import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
 import { StatusChips } from '../list/EventsList';
 import { fieldDate, fieldTime, isPast, type EventDetail } from './event-detail';
@@ -535,6 +536,14 @@ export const EventEdit = ({
     </AdminCard>
   );
 
+  const price = (
+    <PriceCard
+      detail={detail}
+      phone={phone}
+      past={past}
+      onSaved={() => router.refresh()}
+    />
+  );
   const status = (
     <StatusCard
       detail={detail}
@@ -570,10 +579,11 @@ export const EventEdit = ({
         onHide={detail.hidden || snap.saving ? null : () => setDialog('hide')}
       />
       {phone ? (
-        // `06/event-edit-mobile`: the Show fields, then Status, stacked.
+        // `06/event-edit-mobile`: the Show fields, Status, then Price, stacked.
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {fields}
           {status}
+          {price}
           {crawl}
         </div>
       ) : (
@@ -591,6 +601,7 @@ export const EventEdit = ({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {status}
+            {price}
           </div>
         </div>
       )}

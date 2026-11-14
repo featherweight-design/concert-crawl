@@ -33,6 +33,16 @@ export interface EventDetail {
    * too, and Tickets available must clear it.
    */
   isSoldOut: boolean;
+  /** The listed price, numeric text; `null` when the show has none. */
+  priceMin: string | null;
+  priceMax: string | null;
+  /** Submitted prices that stand (no counters, nothing stale). */
+  submittedPriceCount: number;
+  /** When the price pipeline last checked the ticket page (ISO). */
+  priceRetrievedAt: string | null;
+  ticketUrl: string | null;
+  /** The admin's own live price on the show, which Edit price opens. */
+  mySubmission: MySubmission | null;
   /** `structured_data`, `llm` or `manual`; `null` when unknown. */
   extractionStrategy: string | null;
   /** ISO timestamps. */
@@ -41,6 +51,32 @@ export interface EventDetail {
   /** The show's own page, else its calendar; `null` when neither is safe. */
   venueUrl: string | null;
 }
+
+export interface MySubmission {
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+}
+
+/** A price as numeric text; the API may send a number. */
+const priceText = (value: unknown): string | null | undefined => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return undefined;
+};
+
+/** `undefined` when the payload holds something else. */
+const mySubmissionOf = (value: unknown): MySubmission | null | undefined => {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value) || !isText(value['id'])) return undefined;
+  const priceMin = priceText(value['priceMin']);
+  const priceMax = priceText(value['priceMax']);
+  if (priceMin === undefined || priceMin === null || priceMax === undefined) {
+    return undefined;
+  }
+  return { id: value['id'], priceMin, priceMax };
+};
 
 const isHiddenReason = (value: unknown): value is HiddenReason | null =>
   value === null || value === 'unsure' || value === 'admin';
@@ -62,6 +98,9 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     !isHiddenReason(value['hiddenReason']) ||
     !isCount(value['watchingCount']) ||
     typeof value['isSoldOut'] !== 'boolean' ||
+    !isCount(value['submittedPriceCount']) ||
+    !isTextOrNull(value['priceRetrievedAt']) ||
+    !isTextOrNull(value['ticketUrl']) ||
     !isTextOrNull(value['extractionStrategy']) ||
     !isText(value['createdAt']) ||
     !isTextOrNull(value['lastSeenAt'])
@@ -72,6 +111,16 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
   const eventUrl = value['eventUrl'] ?? null;
   const sourceUrl = value['sourceUrl'];
   if (!isTextOrNull(eventUrl) || !isTextOrNull(sourceUrl)) return null;
+  const priceMin = priceText(value['ticketPriceMin']);
+  const priceMax = priceText(value['ticketPriceMax']);
+  const mySubmission = mySubmissionOf(value['mySubmission']);
+  if (
+    priceMin === undefined ||
+    priceMax === undefined ||
+    mySubmission === undefined
+  ) {
+    return null;
+  }
   return {
     id: value['id'],
     title: value['title'],
@@ -86,6 +135,12 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     hiddenReason: value['hiddenReason'],
     watchingCount: value['watchingCount'],
     isSoldOut: value['isSoldOut'],
+    priceMin,
+    priceMax,
+    submittedPriceCount: value['submittedPriceCount'],
+    priceRetrievedAt: value['priceRetrievedAt'],
+    ticketUrl: value['ticketUrl'],
+    mySubmission,
     extractionStrategy: value['extractionStrategy'],
     firstSeenAt: value['createdAt'],
     lastSeenAt: value['lastSeenAt'],
