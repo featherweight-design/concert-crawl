@@ -31,7 +31,7 @@ export type { VenueStatusVenue } from './VenueStatus';
 export { KindLabel } from './KindLabel';
 export type { Kind } from './KindLabel';
 export { PersonAvatar } from './PersonAvatar';
-export { SidePanel } from './SidePanel';
+export { SidePanel, DOCKED_PANEL_WIDTH } from './SidePanel';
 export type { SidePanelProps } from './SidePanel';
 export { AdminSheet } from './AdminSheet';
 export type { AdminSheetProps } from './AdminSheet';
@@ -47,6 +47,7 @@ export type { PinnedSaveBarLook, PinnedSaveBarProps } from './PinnedSaveBar';
 export { useSnapBack } from './useSnapBack';
 export type { SnapBack } from './useSnapBack';
 export {
+  useIsNarrowDesktop,
   useIsPhone,
   useIsPhoneResolved,
   ADMIN_PHONE_MAX_WIDTH,

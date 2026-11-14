@@ -18,9 +18,12 @@ import {
   ConfirmDialog,
   CouldntLoad,
   CouldntLoadPage,
+  DOCKED_PANEL_WIDTH,
   SaveFailedToast,
+  useIsNarrowDesktop,
   useIsPhone,
 } from '@/components/admin/primitives';
+import { CONTENT_GUTTER_X } from '@/components/admin/shell/content-pane';
 import { NEEDS_YOU_FAILED_ATTR } from '@/components/admin/shell/nav';
 import { AllClear } from './AllClear';
 import { AnsweredRow } from './AnsweredRow';
@@ -101,6 +104,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const router = useRouter();
   const api = useMemo(() => needsYouApi(getToken), [getToken]);
   const isPhone = useIsPhone();
+  // Too narrow to dock the panel beside the list: it overlays, so the list
+  // keeps its full width (SidePanel makes the same call).
+  const narrowDesktop = useIsNarrowDesktop();
 
   const [rows, setRows] = useState<QueueRow[] | null>(null);
   const [count, setCount] = useState<NeedsYouCount | null>(null);
@@ -457,9 +463,10 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   );
 
   return (
-    // The inline panel is a flex sibling of the list, docked on its right, so
-    // you can work down the queue with an item open.
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
+    // The inline panel is docked flush to the right edge, so you can work down
+    // the queue with an item open. The list keeps `right: 440` from the board:
+    // the panel's width less the content area's own right gutter.
+    <div style={{ display: 'flex', alignItems: 'flex-start' }}>
       <div
         style={{
           flex: 1,
@@ -467,13 +474,25 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           display: 'flex',
           flexDirection: 'column',
           gap: 16,
+          marginRight:
+            selectedRow && !isPhone && !narrowDesktop
+              ? DOCKED_PANEL_WIDTH - CONTENT_GUTTER_X
+              : undefined,
         }}
       >
-        <header style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <header style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {pageTitle}
           {/* All clear draws the title alone: the card says the rest. */}
           {!allClear && (
-            <p style={{ margin: 0, fontSize: 14.5, color: 'var(--fg-muted)' }}>
+            // 13.5 on desktop, 12.5 on the phone (`needs-you-desktop`,
+            // `needs-you-mobile`).
+            <p
+              style={{
+                margin: 0,
+                fontSize: isPhone ? 12.5 : 13.5,
+                color: 'var(--fg-muted)',
+              }}
+            >
               {COPY.summary(count.decisions, count.handledToday)}
             </p>
           )}
@@ -502,7 +521,14 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
                   style={pillStyle(filter === key)}
                 >
                   {COPY.filters[key]}
-                  <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      // The selected pill's count reads #9AA8C7, the rest #5A6788.
+                      color:
+                        filter === key ? 'var(--fg-muted)' : 'var(--fg-subtle)',
+                    }}
+                  >
                     {filterCount(count, key)}
                   </span>
                 </button>

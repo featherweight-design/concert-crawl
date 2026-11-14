@@ -66,4 +66,31 @@ describe('SidePanel', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByTestId('side-panel')).toBeInTheDocument();
   });
+
+  // Narrower than 1100 a docked panel would squeeze the list to a sliver, so
+  // the inline panel overlays like any other side panel.
+  it('overlays the inline panel on a desktop narrower than 1100', () => {
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    try {
+      renderPanel({ inline: true });
+      expect(screen.getByTestId('side-panel-scrim')).toBeInTheDocument();
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  // `02/needs-you-desktop`: docked flush right, full height, 440 wide.
+  it('docks the inline panel flush to the right edge at 440 and full height', () => {
+    renderPanel({ inline: true });
+    const panel = screen.getByTestId('side-panel');
+    expect(panel.style.position).toBe('fixed');
+    expect(panel.style.right).toBe('0px');
+    expect(panel.style.bottom).toBe('0px');
+    expect(panel.style.width).toBe('440px');
+  });
 });

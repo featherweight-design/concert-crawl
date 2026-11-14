@@ -2515,6 +2515,9 @@ export const ADMIN_COPY = {
     emptyFilter: (kindLabel: string, others: number) =>
       `No ${kindLabel.toLowerCase()} waiting. ${others} other ${others === 1 ? 'decision is' : 'decisions are'}.`,
     showAll: 'Show all',
+    // The price batch card's lead answer carries its count: "Approve all 8"
+    // (`02/a-batch-of-prices`). The API's label stays the bare "Approve all".
+    approveAllCount: (count: number) => `Approve all ${count}`,
     allClear: {
       title: 'All clear',
       body: (handledToday: number) =>
