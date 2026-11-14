@@ -157,6 +157,28 @@ export async function fetchPage(
     const gateEnded = (): void => {
       if (--gatesOpen === 0) gatedMs += Date.now() - gatingSince;
     };
+    // The site's share of the 60 s navigation budget still unspent: wall
+    // time since goto() began, less the gate's time. Infinite before goto().
+    let navigationStartedAt: number | null = null;
+    const siteMsLeft = (): number => {
+      if (navigationStartedAt === null) return NAVIGATION_TIMEOUT_MS;
+      const now = Date.now();
+      const gating = gatesOpen > 0 ? now - gatingSince : 0;
+      return (
+        NAVIGATION_TIMEOUT_MS - (now - navigationStartedAt - gatedMs - gating)
+      );
+    };
+
+    // Gates still deciding, and navigations a gate let through after goto()
+    // settled that have not committed yet. Read before content(), so a
+    // navigation the page starts is read where it lands, as Chromium would
+    // have done unpaced, rather than mid-flight.
+    const pendingGates = new Set<Promise<void>>();
+    const pendingCommits = new Set<Promise<void>>();
+    const track = (set: Set<Promise<void>>, task: Promise<void>): void => {
+      set.add(task);
+      void task.finally(() => set.delete(task));
+    };
 
     // Never detached by hand: detaching a Fetch session lets any request it
     // still holds paused go out unchanged. Closing the context ends it and
@@ -169,13 +191,15 @@ export async function fetchPage(
     const lastHop = new Map<string, string>();
 
     // Whether a paused main-frame document may be sent. Throws on a disallow,
-    // a skip, or anything unexpected; the caller fails the request.
-    const mayContinue = async (event: PausedRequest): Promise<void> => {
+    // a skip, or anything unexpected; the caller fails the request. Resolves
+    // true when it cleared a navigation through the gate, false when it let
+    // one pass without gating.
+    const mayContinue = async (event: PausedRequest): Promise<boolean> => {
       const { requestId, request } = event;
       // An iframe document is left to page.route, which aborts it. Gating it
       // here too would spend a robots lookup and a pacing wait on a request
       // that is about to be refused anyway.
-      if (event.frameId !== mainFrameId) return;
+      if (event.frameId !== mainFrameId) return false;
       const hopKey = event.networkId ?? requestId;
       const from = lastHop.get(hopKey) ?? page.url();
       lastHop.set(hopKey, request.url);
@@ -185,12 +209,13 @@ export async function fetchPage(
         request.url === startUrl
       ) {
         initialRequestSeen = true;
-        return;
+        return false;
       }
       gated.add(request.url);
       gateStarted();
       try {
         await clearRedirect(from, request.url, crawlDelayMs);
+        return true;
       } catch (err) {
         console.log(
           JSON.stringify({
@@ -212,15 +237,16 @@ export async function fetchPage(
     // teardown has started nothing is continued: a decision that lands then
     // is too late to pace or check against anything we will read.
     session.on('Fetch.requestPaused', (event) => {
-      void (async () => {
+      const answer = async (): Promise<void> => {
         let allowed = false;
+        let cleared = false;
         // BlockedByClient makes Chromium commit its error page in place of
         // the document, which is fine when we throw anyway. A refused
         // navigation we carry on past is Aborted instead: Chromium then
         // keeps the page already loaded (checked in a local Chromium probe).
         let errorReason: 'BlockedByClient' | 'Aborted' = 'BlockedByClient';
         try {
-          await mayContinue(event);
+          cleared = await mayContinue(event);
           allowed = true;
         } catch (err) {
           if (
@@ -243,6 +269,23 @@ export async function fetchPage(
           }
         }
         if (closing) allowed = false;
+        // A navigation the page started, let through after goto() settled:
+        // listen for it to commit before Chromium can send it, so the read
+        // below waits for the page it lands on.
+        if (allowed && cleared && gotoSettled) {
+          track(
+            pendingCommits,
+            page
+              .waitForEvent('framenavigated', {
+                predicate: (frame) => frame === page.mainFrame(),
+                timeout: NAVIGATION_TIMEOUT_MS,
+              })
+              .then(
+                () => undefined,
+                () => undefined,
+              ),
+          );
+        }
         try {
           await (allowed
             ? session.send('Fetch.continueRequest', {
@@ -256,8 +299,64 @@ export async function fetchPage(
           // The page or context closed under the paused request: the
           // request died with it, so there is nothing left to answer.
         }
-      })();
+      };
+      const task = answer();
+      if (event.frameId === mainFrameId) track(pendingGates, task);
     });
+
+    // Resolves after `ms`, or when `task` does, whichever is first.
+    const within = async (
+      task: Promise<unknown>,
+      ms: number,
+    ): Promise<void> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        task,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, Math.max(ms, 0));
+        }),
+      ]);
+      clearTimeout(timer);
+    };
+
+    // Before reading the page: let every gate still deciding finish, and
+    // every navigation one let through commit and reach domcontentloaded, so
+    // content() reads where the page landed. A refused navigation was
+    // Aborted and leaves the page loaded as it was. Bounded by what is left
+    // of the site's 60 s; the gate's own waits do not spend it.
+    const settleNavigations = async (): Promise<void> => {
+      while (siteMsLeft() > 0) {
+        if (pendingGates.size > 0) {
+          await within(Promise.allSettled([...pendingGates]), siteMsLeft());
+        } else if (pendingCommits.size > 0) {
+          await within(Promise.allSettled([...pendingCommits]), siteMsLeft());
+          await page
+            .waitForLoadState('domcontentloaded', {
+              timeout: Math.max(siteMsLeft(), 1),
+            })
+            .catch(() => undefined);
+        } else {
+          return;
+        }
+      }
+    };
+
+    // content() throws while a navigation is mid-commit. Backstop for one
+    // that slipped past settleNavigations: wait for it to load, retry once.
+    const readContent = async (): Promise<string> => {
+      try {
+        return await page.content();
+      } catch (err) {
+        if (!(err instanceof Error) || !err.message.includes('is navigating'))
+          throw err;
+        await page
+          .waitForLoadState('domcontentloaded', {
+            timeout: Math.max(siteMsLeft(), 1),
+          })
+          .catch(() => undefined);
+        return page.content();
+      }
+    };
     await session.send('Fetch.enable', {
       patterns: [
         { urlPattern: '*', resourceType: 'Document', requestStage: 'Request' },
@@ -329,11 +428,9 @@ export async function fetchPage(
     // Playwright's own TimeoutError, which crawl.ts classifies by name.
     let clockTimer: ReturnType<typeof setTimeout> | undefined;
     const navigationClock = new Promise<never>((_resolve, reject) => {
-      const startedAt = Date.now();
+      navigationStartedAt = Date.now();
       const tick = (): void => {
-        const now = Date.now();
-        const gating = gatesOpen > 0 ? now - gatingSince : 0;
-        if (now - startedAt - gatedMs - gating >= NAVIGATION_TIMEOUT_MS) {
+        if (siteMsLeft() <= 0) {
           reject(
             new playwrightErrors.TimeoutError(
               `page.goto: Timeout ${NAVIGATION_TIMEOUT_MS}ms exceeded (pacing waits excluded) navigating to "${url}"`,
@@ -423,8 +520,9 @@ export async function fetchPage(
 
         // Reading content() can itself fail if the page died; a null html still
         // beats losing the whole error.
+        await settleNavigations();
         await assertVisitsAllowed();
-        const captured = await page.content().catch((contentErr: unknown) => {
+        const captured = await readContent().catch((contentErr: unknown) => {
           console.log(
             JSON.stringify({
               event: 'fetch.selector_timeout_capture_failed',
@@ -459,8 +557,9 @@ export async function fetchPage(
       }
     }
 
+    await settleNavigations();
     await assertVisitsAllowed();
-    const html = await page.content();
+    const html = await readContent();
     const finalUrl = page.url();
     fetchLog?.record({
       url,
