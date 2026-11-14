@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { CouldntLoad } from '@/components/admin/primitives';
+import { CouldntLoad, useIsPhone } from '@/components/admin/primitives';
 import {
   BATCH_FILTERS,
   batchesPath,
@@ -50,6 +50,7 @@ export const CrawlRunsClient = () => {
   });
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isPhone = useIsPhone();
   const filter = filterFromParam(searchParams?.get('kind'));
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -144,6 +145,7 @@ export const CrawlRunsClient = () => {
       label={COPY.filters.label}
       value={filter}
       onChange={onFilter}
+      segmented={isPhone}
       options={BATCH_FILTERS.map((key) =>
         key === 'not_ok'
           ? {
@@ -157,7 +159,8 @@ export const CrawlRunsClient = () => {
     />
   );
 
-  // `A3/09/load-more`: the divider runs edge to edge, the row 12px 18px.
+  // `A3/09/load-more`: the divider runs edge to edge, the row 12px 18px in
+  // the desktop card; the phone list has no card, so no side inset.
   const footer = (page: BatchPage) => (
     <LoadMoreFooter
       shown={page.rows.length}
@@ -167,16 +170,17 @@ export const CrawlRunsClient = () => {
       onLoadMore={() => void onLoadMore()}
       failedLabel={COPY.loadMoreFailed}
       testId="crawl-runs-load-more"
-      padding="12px 18px"
+      padding={isPhone ? '12px 0' : '12px 18px'}
     />
   );
 
   const header = <CrawlRunsHeader nextCrawlAt={nextCrawlAt} />;
+  const gap = isPhone ? 12 : 16;
 
   // The first load is `A3/09/loading-runs-d` whole: blank pill bars too.
   if (loaded === null && !failed) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap }}>
         {header}
         <BatchesSkeleton />
       </div>
@@ -200,15 +204,18 @@ export const CrawlRunsClient = () => {
     <BatchesTable
       batches={shown.page.rows}
       filter={filter}
+      phone={isPhone}
       footer={footer(shown.page)}
     />
   );
 
+  // The phone board: 12 from the header to Crawl all and on to the filter,
+  // 8 from the filter to the list (`A3/09/runs-filters-m`).
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
       {header}
       {filters}
-      {content}
+      <div style={isPhone ? { marginTop: -4 } : undefined}>{content}</div>
     </div>
   );
 };
