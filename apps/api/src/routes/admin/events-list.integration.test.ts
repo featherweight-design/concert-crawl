@@ -149,7 +149,7 @@ describe('GET /v1/admin/events/list', () => {
     ]);
   });
 
-  it('filters by venue, status, no price and hidden while chip counts keep the whole side', async () => {
+  it('filters by venue, status, no price and hidden while the header count keeps the whole side', async () => {
     const red = await seedVenue({ name: 'Red Rocks' });
     const globe = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
     await seedEvent(red.id, {
@@ -182,6 +182,142 @@ describe('GET /v1/admin/events/list', () => {
     const hidden = await list('?hidden=true');
     expect(hidden.data.rows).toEqual([]);
     expect(hidden.data.total).toBe(0);
+  });
+
+  describe('faceted counts', () => {
+    // Six upcoming shows over three venues, plus a past one the scope drops:
+    //   Red      R1 available priced | R2 available unpriced | R3 postponed unpriced hidden
+    //   Globe    G1 postponed unpriced | G2 available priced hidden
+    //   Bluebird B1 cancelled unpriced
+    const seedFacets = async () => {
+      const red = await seedVenue({ name: 'Red Rocks' });
+      const globe = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+      const bluebird = await seedVenue({
+        name: 'Bluebird Theater',
+        slug: 'bluebird-theater',
+      });
+      await seedEvent(red.id, {
+        artist: 'R1',
+        date: dayOffset(1),
+        ticketPriceMin: '20.00',
+      });
+      await seedEvent(red.id, { artist: 'R2', date: dayOffset(2) });
+      await seedEvent(red.id, {
+        artist: 'R3',
+        date: dayOffset(3),
+        status: 'postponed',
+        hiddenFromConsumer: true,
+      });
+      await seedEvent(globe.id, {
+        artist: 'G1',
+        date: dayOffset(4),
+        status: 'postponed',
+      });
+      await seedEvent(globe.id, {
+        artist: 'G2',
+        date: dayOffset(5),
+        ticketPriceMin: '35.00',
+        hiddenFromConsumer: true,
+      });
+      await seedEvent(bluebird.id, {
+        artist: 'B1',
+        date: dayOffset(6),
+        status: 'cancelled',
+      });
+      await seedEvent(red.id, { artist: 'Past', date: dayOffset(-2) });
+      return { red, globe, bluebird };
+    };
+
+    const venueTotals = (body: ListBody) =>
+      Object.fromEntries(
+        body.data.counts.byVenue.map((row) => [row.name, row.total]),
+      );
+
+    it('applies the status filter to byVenue, and every filter but its own to byStatus', async () => {
+      await seedFacets();
+
+      const body = await list('?statuses=postponed');
+
+      expect(body.data.total).toBe(2);
+      expect(venueTotals(body)).toEqual({ 'Red Rocks': 1, 'Globe Hall': 1 });
+      // The status filter leaves its own counts whole.
+      expect(body.data.counts.byStatus).toEqual({
+        available: 3,
+        postponed: 2,
+        cancelled: 1,
+      });
+      expect(body.data.counts).toMatchObject({
+        all: 6,
+        noPrice: 2,
+        hidden: 1,
+      });
+    });
+
+    it('applies the venue filter to byStatus but not to byVenue', async () => {
+      const { red, globe } = await seedFacets();
+
+      const body = await list(`?venueIds=${red.id},${globe.id}`);
+
+      expect(body.data.total).toBe(5);
+      expect(body.data.counts.byStatus).toEqual({ available: 3, postponed: 2 });
+      expect(venueTotals(body)).toEqual({
+        'Red Rocks': 3,
+        'Globe Hall': 2,
+        'Bluebird Theater': 1,
+      });
+      expect(body.data.counts).toMatchObject({
+        all: 6,
+        noPrice: 3,
+        hidden: 2,
+      });
+    });
+
+    it('counts no price and hidden under the other filters, each without its own toggle', async () => {
+      const { globe } = await seedFacets();
+
+      const noPrice = await list('?noPrice=true');
+      expect(noPrice.data.total).toBe(4);
+      expect(noPrice.data.counts).toMatchObject({ noPrice: 4, hidden: 1 });
+
+      const hidden = await list('?hidden=true');
+      expect(hidden.data.total).toBe(2);
+      expect(hidden.data.counts).toMatchObject({ noPrice: 1, hidden: 2 });
+
+      const globeUnpriced = await list(`?venueIds=${globe.id}&noPrice=true`);
+      expect(globeUnpriced.data.total).toBe(1);
+      expect(globeUnpriced.data.counts).toMatchObject({
+        noPrice: 1,
+        hidden: 0,
+        all: 6,
+      });
+    });
+
+    it('sums the ticked venues and the ticked statuses to the filtered total', async () => {
+      const { red, bluebird } = await seedFacets();
+
+      const body = await list(
+        `?venueIds=${red.id},${bluebird.id}&statuses=postponed,cancelled&noPrice=true`,
+      );
+
+      expect(body.data.total).toBe(2);
+      const ticked = new Set([red.id, bluebird.id]);
+      const venueSum = body.data.counts.byVenue
+        .filter((row) => ticked.has(row.venueId))
+        .reduce((sum, row) => sum + row.total, 0);
+      expect(venueSum).toBe(body.data.total);
+      // Untouched venues still show what ticking them would add.
+      expect(venueTotals(body)).toEqual({
+        'Red Rocks': 1,
+        'Globe Hall': 1,
+        'Bluebird Theater': 1,
+      });
+
+      const { byStatus } = body.data.counts;
+      expect((byStatus.postponed ?? 0) + (byStatus.cancelled ?? 0)).toBe(
+        body.data.total,
+      );
+      expect(byStatus).toEqual({ available: 1, postponed: 1, cancelled: 1 });
+    });
   });
 
   it('lists past shows newest first, with Played and the went count', async () => {

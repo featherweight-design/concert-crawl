@@ -104,23 +104,51 @@ const scopeWhere = (query: EventListQuery, today: string) => {
   );
 };
 
-export const listAdminEvents = async (query: EventListQuery, today: string) => {
-  const status = eventListStatusSql(today);
-  const scope = scopeWhere(query, today);
-  const where = and(
-    scope,
+/** The filters a count can leave out: each picker or toggle on the list. */
+const FACETS = ['venue', 'status', 'noPrice', 'hidden'] as const;
+type Facet = (typeof FACETS)[number];
+
+/** Each filter's clause, built once; `undefined` when that filter is off. */
+const facetClauses = (
+  query: EventListQuery,
+  status: SQL<EventListStatus>,
+): Record<Facet, SQL | undefined> => ({
+  venue:
     query.venueIds.length > 0
       ? inArray(events.venueId, query.venueIds)
       : undefined,
+  status:
     query.statuses.length > 0
       ? sql`${status} IN (${sql.join(
           query.statuses.map((value) => sql`${value}`),
           sql`, `,
         )})`
       : undefined,
-    query.noPrice ? isNull(events.ticketPriceMin) : undefined,
-    query.hidden ? eq(events.hiddenFromConsumer, true) : undefined,
-  );
+  noPrice: query.noPrice ? isNull(events.ticketPriceMin) : undefined,
+  hidden: query.hidden ? eq(events.hiddenFromConsumer, true) : undefined,
+});
+
+/**
+ * The list, its total, and faceted counts. Every count shares the scope (the
+ * side and the search), and each facet's count applies every other filter but
+ * its own, so a picker's "Show N" is exactly the rows Apply will return:
+ *
+ * - `byVenue`: per venue, every filter except the venue filter. Venues are
+ *   disjoint, so the sum over the ticked venues is the filtered total.
+ * - `byStatus`: per status, every filter except the status filter.
+ * - `noPrice`: every filter except the No price toggle, plus no price.
+ * - `hidden`: every filter except the Hidden toggle, plus hidden.
+ * - `all`: the scope alone, for the "N upcoming" header line.
+ * - `total`: the rows matching every filter.
+ */
+export const listAdminEvents = async (query: EventListQuery, today: string) => {
+  const status = eventListStatusSql(today);
+  const scope = scopeWhere(query, today);
+  const clauses = facetClauses(query, status);
+  /** Every filter clause except the one named (all of them when none is). */
+  const facetsExcept = (skip?: Facet) =>
+    FACETS.filter((facet) => facet !== skip).map((facet) => clauses[facet]);
+  const where = and(scope, ...facetsExcept());
   const order =
     query.when === 'past'
       ? // Untimed shows last on a date, as on the Upcoming side.
@@ -162,19 +190,20 @@ export const listAdminEvents = async (query: EventListQuery, today: string) => {
     .leftJoin(venues, eq(events.venueId, venues.id))
     .where(where);
 
-  // Chip and popover counts share the side and the search only, so each
-  // chip keeps its own total while another filter is on.
+  // The toggle counts read the scope, and each narrows by every filter but
+  // its own toggle. `and` always gets the toggle's own clause, so a FILTER
+  // never lands empty.
   const chipsQuery = db
     .select({
       all: count(),
-      noPrice:
-        sql<number>`count(*) FILTER (WHERE ${events.ticketPriceMin} IS NULL)`.mapWith(
-          Number,
-        ),
-      hidden:
-        sql<number>`count(*) FILTER (WHERE ${events.hiddenFromConsumer})`.mapWith(
-          Number,
-        ),
+      noPrice: sql<number>`count(*) FILTER (WHERE ${and(
+        ...facetsExcept('noPrice'),
+        isNull(events.ticketPriceMin),
+      )})`.mapWith(Number),
+      hidden: sql<number>`count(*) FILTER (WHERE ${and(
+        ...facetsExcept('hidden'),
+        eq(events.hiddenFromConsumer, true),
+      )})`.mapWith(Number),
     })
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
@@ -187,7 +216,7 @@ export const listAdminEvents = async (query: EventListQuery, today: string) => {
     .select({ status: status.as('status') })
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(scope)
+    .where(and(scope, ...facetsExcept('status')))
     .as('statuses');
   const byStatusQuery = db
     .select({ status: statuses.status, total: count() })
@@ -203,7 +232,7 @@ export const listAdminEvents = async (query: EventListQuery, today: string) => {
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(scope)
+    .where(and(scope, ...facetsExcept('venue')))
     .groupBy(venues.id, venues.name, venues.slug)
     .orderBy(desc(count()), asc(venues.name));
 
