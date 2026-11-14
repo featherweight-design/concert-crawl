@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -189,6 +190,43 @@ describe('EmailsTab', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('group', { name: COPY.chipsLabel })).toBeVisible();
     expect(listCalls()).toBe(before);
+  });
+
+  it('takes the sent toast down after a few seconds', async () => {
+    mockPost.mockResolvedValueOnce({
+      sent: true,
+      resendId: 'r1',
+      sentTo: 'h***@gmail.com',
+    });
+    render(<EmailsTab isPhone={false} />);
+    await screen.findByTestId('email-preview-frame');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      fireEvent.click(screen.getByRole('button', { name: COPY.sendTest }));
+      await vi.waitFor(() =>
+        expect(screen.getByTestId('admin-toast')).toBeInTheDocument(),
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(6000);
+      });
+      expect(screen.queryByTestId('admin-toast')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears a failed send when another email is picked', async () => {
+    mockPost.mockResolvedValueOnce({ sent: false, reason: 'send_failed' });
+    render(<EmailsTab isPhone={false} />);
+    await screen.findByTestId('email-preview-frame');
+    fireEvent.click(screen.getByRole('button', { name: COPY.sendTest }));
+    await screen.findByRole('alert');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.names.invite_code }),
+    );
+
+    expect(screen.queryByText(COPY.sendFailedTitle)).toBeNull();
   });
 
   it('says so when the API lists no emails', async () => {
