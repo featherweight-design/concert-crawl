@@ -1,0 +1,25 @@
+{
+  "feature": "Admin · Artists: Not artists footnote and the search panel's wrong-photo subtitle (P47-16 PR B)",
+  "note": "Boards: design_handoff_admin_redesign/boards/06-events-artists-prices/artists-not-artists, artists-search-opens-the-side-panel, artist-search-mobile. CONTACT_SHEET_ROLE=admin. Read-only: opening the search panel sends no write. The subtitle's wrong-photo wording needs a row with open wrong_photo reports; which wording shows for null, 0 and 1+ is pinned by ArtistSearchPanel.test.tsx.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "not-artists",
+      "label": "Not artists tab with the footnote (desktop only; no phone board draws it)",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "goto": "/admin/artists",
+          "wait": "main ul li",
+          "settle": 1200
+        },
+        { "clickRole": "tab", "name": "^Not artists" },
+        { "wait": "text=Tours, series, promoters", "settle": 1000 },
+        { "scroll": "bottom", "settle": 600 }
+      ]
+    }
+  ]
+}
