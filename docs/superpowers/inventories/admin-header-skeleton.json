@@ -1,0 +1,80 @@
+{
+  "feature": "Admin SectionHead 28/800 title + 13.5 summary; PageSkeleton stepped row opacity",
+  "note": "CONTACT_SHEET_ROLE=admin. Read-only. Health is /admin (no /admin/health route). Loading state not capturable: loading.tsx shows only during a server navigation and the kit waits for load.",
+  "widths": [
+    {
+      "label": "xs",
+      "width": 320,
+      "height": 800,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 900,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1280,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "health",
+      "label": "/admin",
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "h1:visible",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "crawl",
+      "label": "/admin/crawl",
+      "steps": [
+        {
+          "goto": "/admin/crawl",
+          "wait": "h1:visible",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "feedback",
+      "label": "/admin/feedback",
+      "steps": [
+        {
+          "goto": "/admin/feedback",
+          "wait": "h1:visible",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "feature-flags",
+      "label": "/admin/feature-flags",
+      "steps": [
+        {
+          "goto": "/admin/feature-flags",
+          "wait": "h1:visible",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "label": "/admin/review",
+      "steps": [
+        {
+          "goto": "/admin/review",
+          "wait": "h1:visible",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}

@@ -56,9 +56,12 @@ export const SectionHead = ({
         style={{
           margin: 0,
           fontFamily: "'Inter', sans-serif",
-          fontSize: 26,
-          fontWeight: 700,
-          letterSpacing: '-0.025em',
+          // Every admin desktop board draws the title at 28/800 with the
+          // summary at 13.5 (`health-desktop` and the rest of the set).
+          // 24 on the phone boards, from admin.css's `--section-head-title-size`.
+          fontSize: 'var(--section-head-title-size, 28px)',
+          fontWeight: 800,
+          letterSpacing: '-0.02em',
           color: 'var(--fg)',
           overflowWrap: 'anywhere',
         }}
@@ -68,8 +71,9 @@ export const SectionHead = ({
       {subtitle && (
         <p
           style={{
-            margin: '4px 0 0',
-            fontSize: 13,
+            // 4 under the title on desktop, 2 on the phone boards.
+            margin: 'var(--section-head-sub-gap, 4px) 0 0',
+            fontSize: 'var(--section-head-sub-size, 13.5px)',
             color: 'var(--fg-muted)',
           }}
         >

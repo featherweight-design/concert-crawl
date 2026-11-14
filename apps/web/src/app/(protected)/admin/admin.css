@@ -297,6 +297,18 @@
   }
 }
 
+/* SectionHead's phone sizes: the phone boards draw the page title at 24/800
+   and the summary at 12.5 (`health-mobile`, `needs-you-mobile`); desktop keeps
+   28 and 13.5. The component's inline sizes read these vars with the desktop
+   value as the fallback, so the server render needs no viewport hook. */
+@media (max-width: 720px) {
+  :root {
+    --section-head-title-size: 24px;
+    --section-head-sub-size: 12.5px;
+    --section-head-sub-gap: 2px;
+  }
+}
+
 /* PageSkeleton's row tail (no card). Desktop draws the value pills side by
    side; `07/loading-any-list-on-mobile` stacks a short bar over one pill. A
    server fallback can't read useIsPhone, so both render and this picks one. */
