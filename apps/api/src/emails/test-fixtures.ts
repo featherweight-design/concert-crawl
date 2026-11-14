@@ -1,6 +1,6 @@
 // apps/api/src/emails/test-fixtures.ts
 //
-// Backs the Admin > Settings "send a test email" picker. Enumerates every
+// Backs the Operations > Emails list, its preview and "Send me a test". Enumerates every
 // email the application can send and provides a realistic mock payload for
 // each, so an admin can send any template to ADMIN_EMAIL and review how it
 // renders in a real inbox before launch.
@@ -172,7 +172,7 @@ function buildAdminAlertSample(): BuiltTestEmail {
     html: `
       <p>This is a test of the Concert Crawl admin notifications pipeline.</p>
       <p>If you received this, the alert pipeline is healthy end-to-end: Resend API key, sender domain, and delivery to ADMIN_EMAIL are all working.</p>
-      <p><a href="${SAMPLE_ADMIN_URL}/admin/settings">Admin settings</a></p>
+      <p><a href="${SAMPLE_ADMIN_URL}/admin/operations?tab=emails">Admin emails</a></p>
     `,
     text: [
       'This is a test of the Concert Crawl admin notifications pipeline.',

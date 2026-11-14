@@ -4,7 +4,7 @@ import { OPERATIONS_TABS } from '@/components/admin/operations/operations-tabs';
 
 /**
  * `07/loading-activity-log`'s chrome: the title and subtitle bars, then the
- * tab strip with one pill per drawn tab (Feedback and Activity log). Feedback
+ * tab strip with one pill per drawn tab (Feedback, Emails and Activity log). Feedback
  * is the default tab, so its list skeleton follows, without its own heading;
  * the Activity log draws its own rows skeleton under its filters.
  */

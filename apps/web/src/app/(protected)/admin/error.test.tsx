@@ -63,7 +63,6 @@ describe('admin error boundary', () => {
     ['/admin/feature-flags', 'Feature flags'],
     ['/admin/crawl', 'Crawl status'],
     ['/admin/feedback', 'Feedback'],
-    ['/admin/settings', 'Settings'],
   ])('names the page at %s', (path, page) => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     pathname.current = path;

@@ -1,19 +1,9 @@
-// apps/web/src/app/(protected)/admin/settings/page.tsx
-import { requireAdminUser } from '@/lib/auth';
-import { OpsToolsSection } from '@/components/admin/settings/OpsToolsSection';
-import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { permanentRedirect } from 'next/navigation';
 
-export default async function SettingsPage() {
-  await requireAdminUser();
-
-  return (
-    <div className="max-w-2xl">
-      <h1 className="mb-8 text-2xl font-bold text-fg">
-        {ADMIN_COPY.settings.page.title}
-      </h1>
-      <div className="flex flex-col gap-0">
-        <OpsToolsSection />
-      </div>
-    </div>
-  );
+/**
+ * Settings held only the test-email tool, which now lives in
+ * Operations › Emails; old links land there.
+ */
+export default function SettingsPage() {
+  permanentRedirect('/admin/operations?tab=emails');
 }

@@ -2144,41 +2144,6 @@ export const ADMIN_COPY = {
     itemLabel: 'submissions',
   },
 
-  settings: {
-    page: {
-      title: 'Settings',
-    },
-    opsTools: {
-      heading: 'Ops tools',
-      description:
-        'Operational diagnostics for admins. Use these to verify integrations are healthy outside of incident response.',
-      testEmail: {
-        pickerLabel: 'Email to preview',
-        pickerHint:
-          'Sends a sample of the selected email to ADMIN_EMAIL so you can see how it lands in a real inbox. Uses mock data — no logging, no customer is contacted.',
-        button: 'Send test email',
-        buttonPending: 'Sending…',
-        optionsLoading: 'Loading email list…',
-        optionsFailed: 'Could not load the email list.',
-        optionsFailedFallback: 'Admin alert (generic) — fallback',
-        optionsFailedHint:
-          'Could not load the full email list. Only the generic admin alert is available — that is what will be sent.',
-        successPrefix: 'Test email sent.',
-        notSentPrefix: 'Email not sent —',
-        requestFailed: 'Request failed',
-        notAuthenticated: 'Not authenticated',
-        reasons: {
-          missingApiKey:
-            'RESEND_API_KEY is not set on the API. Configure it in Render and redeploy.',
-          missingAdminEmail:
-            'ADMIN_EMAIL is not set on the API. Configure it in Render and redeploy.',
-          sendFailed:
-            'Resend rejected the send. Inspect the error below + check that the sender domain is verified.',
-        },
-      },
-    },
-  },
-
   feedback: {
     title: 'Feedback',
     statusChips: {
@@ -3358,11 +3323,41 @@ export const ADMIN_COPY = {
     title: 'Operations',
     subtitle: 'Feedback, the emails we send, and a log of every admin change',
     tabsLabel: 'Operations sections',
-    tabs: { feedback: 'Feedback', log: 'Activity log' },
+    tabs: { feedback: 'Feedback', emails: 'Emails', log: 'Activity log' },
     // The tab's count is a bare number on screen; this reads it out.
     unreadCountLabel: (count: number) => `${count} unread`,
     // `07/activity-log-mobile` names the tab "Log" in the phone's segments.
-    phoneTabs: { feedback: 'Feedback', log: 'Log' },
+    phoneTabs: { feedback: 'Feedback', emails: 'Emails', log: 'Log' },
+    // `07/emails`, `07/emails-mobile` and `07/test-email-sent`.
+    emails: {
+      chipsLabel: 'Emails',
+      // The board's names are example data: the list is what the app still
+      // sends. An email the API lists that this map lacks shows its own label.
+      names: {
+        spotify_digest: 'Spotify digest',
+        admin_alert: 'Admin: test alert',
+        invite_code: 'Invite code',
+        crawl_failure: 'Admin: venue failing',
+        event_count_drop: 'Admin: show count dropped',
+        run_degraded: 'Admin: daily crawl degraded',
+      },
+      note: 'Only emails we still send.',
+      sendTest: 'Send me a test',
+      sending: 'Sending…',
+      previewTitle: (name: string) => `Preview of ${name}`,
+      previewLoading: 'Loading the preview',
+      sentTitle: (to: string) => `Test sent to ${to}`,
+      sentBody: (subject: string) => `“${subject}” · arrives in about a minute`,
+      sendFailedTitle: "Couldn't send the test",
+      sendFailedBody: {
+        missing_api_key:
+          'RESEND_API_KEY is not set on the API. Nothing was sent.',
+        missing_admin_email:
+          'ADMIN_EMAIL is not set on the API. Nothing was sent.',
+        send_failed: 'Resend refused it. Nothing was sent.',
+        request: 'The request failed. Nothing was sent.',
+      },
+    },
     log: {
       anyone: 'Anyone',
       anyPage: 'Any page',

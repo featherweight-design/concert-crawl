@@ -9,6 +9,7 @@ import {
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminTabs, useIsPhoneResolved } from '@/components/admin/primitives';
 import { ActivityLog } from './ActivityLog';
+import { EmailsTab } from './EmailsTab';
 import {
   OPERATIONS_TABS,
   operationsTabOf,
@@ -43,7 +44,8 @@ const UnreadCount = ({ count, phone }: { count: number; phone: boolean }) => (
 
 /**
  * `07/activity-log`: Operations' title, subtitle and tabs over the Feedback
- * inbox or, at `?tab=log`, the Activity log. The inbox has no heading of its
+ * inbox, at `?tab=emails` the Emails (`07/emails`), or at `?tab=log` the
+ * Activity log. The inbox has no heading of its
  * own so the page has one h1. The Feedback tab's count is the inbox's own,
  * reported once it has loaded; until then (or at 0) the tab draws none.
  */
@@ -128,8 +130,13 @@ export const OperationsClient = () => {
         {tab === 'feedback' ? (
           <FeedbackView onCounts={handleFeedbackCounts} />
         ) : (
-          // The log's rows and cards differ by viewport, so it waits too.
-          resolvedPhone !== null && <ActivityLog isPhone={isPhone} />
+          // The log and the emails differ by viewport, so they wait too.
+          resolvedPhone !== null &&
+          (tab === 'emails' ? (
+            <EmailsTab isPhone={isPhone} />
+          ) : (
+            <ActivityLog isPhone={isPhone} />
+          ))
         )}
       </div>
     </div>

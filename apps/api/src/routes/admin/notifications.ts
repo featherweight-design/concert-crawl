@@ -238,7 +238,7 @@ function buildGenericAdminAlertTest(userId: string): {
         <li><strong>Triggered by:</strong> admin user ${userId}</li>
       </ul>
       <p>If you received this, the alert pipeline is working end-to-end: Resend API key, sender domain, and delivery to ADMIN_EMAIL are all healthy.</p>
-      <p><a href="${adminUrl}/admin/settings">Admin settings</a></p>
+      <p><a href="${adminUrl}/admin/operations?tab=emails">Admin emails</a></p>
     `,
     text: [
       'This is a test email from the Concert Crawl admin notifications pipeline.',
