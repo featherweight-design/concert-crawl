@@ -2076,6 +2076,18 @@ export interface NeedsYouCount {
   handledToday: number;
 }
 
+// What the Needs you All clear card says (`02-needs-you/all-clear`), from
+// GET /v1/admin/needs-you/facts. Read only when the queue is empty: the
+// sidebar polls /count, which stays cheap.
+export interface AllClearFacts {
+  /** The latest nightly that started: venues read OK (fetched or unchanged) of all it covered. */
+  lastCrawl: { ok: number; total: number; at: string } | null;
+  /** The next daily crawl, ISO UTC, from the cron schedule in `apps/api/vercel.json`. */
+  nextCrawlAt: string;
+  /** Venues whose Needs you item is snoozed right now. */
+  snoozedVenues: number;
+}
+
 // A kind an admin turned off for one venue ("Not useful"), for the venue
 // Overview's WARNINGS YOU TURNED OFF. Turn back on is
 // DELETE /needs-you/snoozes/:id with its `id`.

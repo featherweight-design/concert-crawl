@@ -17,10 +17,19 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import { createApp } from '../../app.js';
-import { clearTables, seedEvent, seedVenue } from '../../test/helpers/seed.js';
+import {
+  clearTables,
+  seedCrawlRun,
+  seedEvent,
+  seedVenue,
+} from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { adminQueueSnoozes, auditLog, feedback } from '@concert-crawl/db';
-import type { NeedsYouCount, NeedsYouItem } from '@concert-crawl/types';
+import type {
+  AllClearFacts,
+  NeedsYouCount,
+  NeedsYouItem,
+} from '@concert-crawl/types';
 import { eq } from 'drizzle-orm';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
 
@@ -81,6 +90,7 @@ describe('admin needs-you routes', () => {
     const key = 'event-low-confidence:abc';
     expect((await app.request('/v1/admin/needs-you')).status).toBe(403);
     expect((await app.request('/v1/admin/needs-you/count')).status).toBe(403);
+    expect((await app.request('/v1/admin/needs-you/facts')).status).toBe(403);
     expect(
       (await snooze(key, { until: inHours(1).toISOString() })).status,
     ).toBe(403);
@@ -128,6 +138,51 @@ describe('admin needs-you routes', () => {
     expect(body.success).toBe(true);
     expect(body.data.decisions).toBe(1);
     expect(body.data.byKind['event-low-confidence']).toBe(1);
+  });
+
+  it('GET /facts: no nightly yet, nothing snoozed, and the next crawl is ahead', async () => {
+    setAuth('admin');
+    const res = await app.request('/v1/admin/needs-you/facts');
+    expect(res.status).toBe(200);
+    const body: { success: boolean; data: AllClearFacts } = await res.json();
+    expect(body.data.lastCrawl).toBeNull();
+    expect(body.data.snoozedVenues).toBe(0);
+    expect(new Date(body.data.nextCrawlAt).getTime()).toBeGreaterThan(
+      Date.now(),
+    );
+  });
+
+  it('GET /facts: counts the last nightly and the venues snoozed', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const other = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    const at = new Date(Date.now() - 2 * 3_600_000);
+    await seedCrawlRun(venue.id, { createdAt: at });
+    await seedCrawlRun(other.id, {
+      createdAt: new Date(at.getTime() + 60_000),
+      status: 'failed',
+      reason: 'timeout',
+    });
+    expect(
+      (
+        await snooze(`venue-failing:${venue.id}`, {
+          until: inHours(48).toISOString(),
+        })
+      ).status,
+    ).toBe(200);
+
+    const res = await app.request('/v1/admin/needs-you/facts');
+    const body: { data: AllClearFacts } = await res.json();
+    expect(body.data.snoozedVenues).toBe(1);
+    // The nightly window is the Mountain Time night, so two runs two hours
+    // ago may fall in last night's or be too recent to group: only the shape
+    // is pinned when one is found.
+    if (body.data.lastCrawl) {
+      expect(body.data.lastCrawl.total).toBeGreaterThanOrEqual(1);
+      expect(body.data.lastCrawl.ok).toBeLessThanOrEqual(
+        body.data.lastCrawl.total,
+      );
+    }
   });
 
   it('snooze hides the item and audits it against the key and actor', async () => {

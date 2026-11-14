@@ -11,7 +11,7 @@ import {
 import type { CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import type { NeedsYouCount } from '@concert-crawl/types';
+import type { AllClearFacts, NeedsYouCount } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -123,6 +123,26 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The All clear card's facts, read once the queue is empty. A failed read
+  // leaves the card without them: they are context, not a decision.
+  const [facts, setFacts] = useState<AllClearFacts | null>(null);
+  const queueEmpty =
+    rows !== null &&
+    count !== null &&
+    rows.length === 0 &&
+    count.decisions === 0;
+  useEffect(() => {
+    if (!queueEmpty) return;
+    let live = true;
+    api
+      .facts()
+      .then((next) => live && setFacts(next))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [queueEmpty, api]);
 
   // Rule 4: on desktop the first item opens as soon as the queue arrives, once.
   // Closing it, or answering it, leaves the panel shut. The phone keeps the list.
@@ -336,7 +356,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
         </header>
 
         {allClear ? (
-          <AllClear handledToday={count.handledToday} />
+          <AllClear
+            handledToday={count.handledToday}
+            facts={facts}
+            now={new Date()}
+          />
         ) : (
           <>
             <div
