@@ -60,7 +60,7 @@ import {
 } from '../lib/event-billing.js';
 import { isImminentEvent, todayInDenver } from '../lib/time.js';
 import { apiLogger } from '../lib/logger.js';
-import { isSoldOutForFansSql, showsSoldOutToFans } from '../lib/sold-out.js';
+import { isOnSale, isSoldOutForFansSql } from '../lib/sold-out.js';
 import { loadPromotedReportSummary } from '../lib/promoted-report.js';
 import { redactReporter } from '../lib/report-privacy.js';
 import { deriveStatusSource } from '../lib/event-status-source.js';
@@ -717,11 +717,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // Same rule as isSoldOutForFansSql, so detail and every row agree: a
   // cancelled or postponed show never reads Sold out, even with a live
   // sold-out promoted before its status changed.
-  const liveSoldOut = await loadPromotedReportSummary(id, 'sold-out', {
-    includeHandle: isAuthed,
-  });
-  const soldOutReport = showsSoldOutToFans(liveSoldOut !== null, row.status)
-    ? liveSoldOut
+  // Not loaded at all for a show with no sale.
+  const soldOutReport = isOnSale(row)
+    ? await loadPromotedReportSummary(id, 'sold-out', {
+        includeHandle: isAuthed,
+      })
     : null;
   const priceStatus: 'live' | 'soldout' | null = soldOutReport
     ? 'soldout'

@@ -30,15 +30,28 @@ export function isSoldOutSql() {
  * admin still sees, and can clear, a postponed show's live sold-out.
  */
 export function isSoldOutForFansSql() {
-  return sql<boolean>`(${isSoldOutSql()} AND "events"."status" NOT IN ('cancelled', 'postponed'))`;
+  return sql<boolean>`(${isSoldOutSql()} AND "events"."status" NOT IN (${sql.join(
+    NOT_ON_SALE_STATUSES.map((status) => sql`${status}`),
+    sql`, `,
+  )}) AND "events"."delisted_at" IS NULL)`;
 }
 
-/** The fan-read rule for one show already loaded: see isSoldOutForFansSql. */
-export const showsSoldOutToFans = (
-  hasLiveSoldOut: boolean,
-  status: string,
-): boolean =>
-  hasLiveSoldOut && status !== 'cancelled' && status !== 'postponed';
+/**
+ * The show statuses with no sale to be sold out of. One list for the fan
+ * read (isSoldOutForFansSql, isOnSale) and the admin mark's refusal.
+ */
+export const NOT_ON_SALE_STATUSES = ['cancelled', 'postponed'] as const;
+
+/**
+ * Whether a loaded show has a sale: not cancelled, postponed or delisted. The
+ * fan-read rule for one show (see isSoldOutForFansSql).
+ */
+export const isOnSale = (show: {
+  status: string;
+  delistedAt: Date | null;
+}): boolean =>
+  show.delistedAt === null &&
+  !NOT_ON_SALE_STATUSES.some((status) => status === show.status);
 
 /**
  * A promoted, resolved fan report of one status on one event: the report an
