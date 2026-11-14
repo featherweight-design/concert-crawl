@@ -7,6 +7,7 @@ import { ExternalLink, Tag } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
+  AdminTabs,
   CouldntLoad,
   EmptyState,
   PageSkeleton,
@@ -56,8 +57,8 @@ const useButtonStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  height: 28,
-  padding: '0 10px',
+  height: 32,
+  padding: '0 12px',
   borderRadius: 9,
   fontSize: 12.5,
   fontWeight: 600,
@@ -66,6 +67,40 @@ const useButtonStyle: CSSProperties = {
   color: 'var(--signal)',
   background: 'color-mix(in srgb, var(--signal) 12%, transparent)',
   border: '1px solid color-mix(in srgb, var(--signal) 30%, transparent)',
+};
+
+/** The phone card's kind label (`06/price-checks-mobile`). */
+const kindTag: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  flex: 'none',
+  height: 18,
+  padding: '0 7px',
+  borderRadius: 5,
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: 9.5,
+  fontWeight: 600,
+  letterSpacing: '0.12em',
+  lineHeight: 1,
+  textTransform: 'uppercase',
+  color: 'var(--accent)',
+  border: '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
+};
+
+/** Ticket page: outline, with its icon on both widths. */
+const ticketStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  padding: '0 12px',
+  borderRadius: 9,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  color: 'var(--fg)',
+  background: 'var(--surface-2)',
+  border: '1px solid var(--border-strong)',
+  textDecoration: 'none',
 };
 
 const smallLabel: CSSProperties = {
@@ -221,10 +256,41 @@ export const PriceChecksTab = () => {
   if (!loaded) return <PageSkeleton rows={3} columns={3} rowHeight={96} />;
 
   const words = { today: COPY.today, yesterday: COPY.yesterday };
-  const showing = isPhone ? 'open' : view;
+  const showing = view;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* The phone's Open / Resolved segment (A3 4d #20); desktop keeps the
+          drawn pills. */}
+      {isPhone && (
+        <AdminTabs
+          tabs={(['open', 'resolved'] as const).map((key) => ({
+            key,
+            label: (
+              <>
+                {COPY.views[key]}
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-subtle)',
+                    marginLeft: 5,
+                  }}
+                >
+                  {key === 'open' ? openTotal : resolvedTotal}
+                </span>
+              </>
+            ),
+          }))}
+          value={view}
+          onChange={(key) => setView(key === 'resolved' ? 'resolved' : 'open')}
+          label={COPY.viewsLabel}
+          tabId={(key) => `price-checks-view-${key}`}
+          panelId={() => 'price-checks-view'}
+          variant="segments"
+          phone
+          testId="price-checks-views"
+        />
+      )}
       {!isPhone && (
         <div
           role="group"
@@ -248,331 +314,390 @@ export const PriceChecksTab = () => {
         </div>
       )}
 
-      {showing === 'open' ? (
-        open.length === 0 ? (
-          <EmptyState
-            icon={Tag}
-            title={COPY.empty.title}
-            body={COPY.empty.body}
-          />
-        ) : (
-          <>
-            <ul
-              aria-label={COPY.listLabel}
-              style={{
-                listStyle: 'none',
-                margin: 0,
-                padding: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
-              {open.map((check) => {
-                const busy = busyIds.has(check.contestId);
-                const listed = priceRange(
-                  check.listed.priceMin,
-                  check.listed.priceMax,
-                );
-                const asked = priceRange(
-                  check.check.priceMin,
-                  check.check.priceMax,
-                );
-                return (
-                  <li
-                    key={check.contestId}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: isPhone ? '1fr' : '1fr 1.6fr auto',
-                      gap: isPhone ? 12 : 18,
-                      alignItems: 'center',
-                      padding: '14px 18px',
-                      borderRadius: 14,
-                      border: '1px solid var(--border)',
-                      background: 'var(--surface-1)',
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
+      <div
+        {...(isPhone && {
+          id: 'price-checks-view',
+          role: 'tabpanel',
+          'aria-labelledby': `price-checks-view-${view}`,
+        })}
+        style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+      >
+        {showing === 'open' ? (
+          open.length === 0 ? (
+            <EmptyState
+              icon={Tag}
+              title={COPY.empty.title}
+              body={COPY.empty.body}
+            />
+          ) : (
+            <>
+              <ul
+                aria-label={COPY.listLabel}
+                style={{
+                  listStyle: 'none',
+                  margin: 0,
+                  padding: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
+                {open.map((check) => {
+                  const busy = busyIds.has(check.contestId);
+                  const listed = priceRange(
+                    check.listed.priceMin,
+                    check.listed.priceMax,
+                  );
+                  const asked = priceRange(
+                    check.check.priceMin,
+                    check.check.priceMax,
+                  );
+                  return (
+                    <li
+                      key={check.contestId}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: isPhone ? '1fr' : '1fr 1.6fr auto',
+                        gap: isPhone ? 12 : 18,
+                        alignItems: 'center',
+                        padding: '14px 18px',
+                        borderRadius: 14,
+                        border: '1px solid var(--border)',
+                        background: 'var(--surface-1)',
+                      }}
+                    >
+                      {isPhone ? (
+                        // `06/price-checks-mobile`: the kind, then show · date.
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            minWidth: 0,
+                          }}
+                        >
+                          <span style={kindTag}>{COPY.priceCheck}</span>
+                          <span
+                            style={{
+                              minWidth: 0,
+                              fontSize: 12,
+                              color: 'var(--fg-muted)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {`${check.title} · ${shortDay(check.date, true)}`}
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 15,
+                              fontWeight: 700,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {check.title}
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              fontSize: 12.5,
+                              color: 'var(--fg-muted)',
+                              marginTop: 3,
+                            }}
+                          >
+                            <span
+                              style={{
+                                minWidth: 0,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {check.venueName}
+                            </span>
+                            <span
+                              style={{ flex: 'none', whiteSpace: 'nowrap' }}
+                            >
+                              {` · ${shortDay(check.date, true)} · ${COPY.watching(check.watching)}`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       <div
                         style={{
-                          fontSize: 15,
-                          fontWeight: 700,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                          gap: 16,
                         }}
                       >
-                        {check.title}
+                        <Side
+                          label={COPY.listedNow}
+                          side={check.listed}
+                          words={words}
+                        />
+                        <Side
+                          label={COPY.priceCheck}
+                          side={check.check}
+                          tone="var(--accent)"
+                          words={words}
+                        />
                       </div>
+                      {/* Desktop stacks the three answers (`06/prices-price-
+                        checks`, 32px); the phone gives the ticket page its own
+                        full-width row, then Use and Keep side by side
+                        (`06/price-checks-mobile`, ruled order A3 4d #20). */}
                       <div
                         style={{
                           display: 'flex',
-                          fontSize: 12.5,
-                          color: 'var(--fg-muted)',
-                          marginTop: 3,
+                          flexDirection: 'column',
+                          gap: isPhone ? 8 : 6,
+                          alignItems: 'stretch',
                         }}
                       >
-                        <span
+                        {isSafeHttpUrl(check.ticketUrl) && (
+                          <SafeExternalLink
+                            href={check.ticketUrl}
+                            style={{
+                              ...ticketStyle,
+                              height: isPhone ? 40 : 32,
+                              fontSize: isPhone ? 13.5 : 12.5,
+                            }}
+                          >
+                            <ExternalLink
+                              size={14}
+                              strokeWidth={1.8}
+                              aria-hidden="true"
+                            />
+                            {isPhone ? COPY.openTicketPage : COPY.ticketPage}
+                          </SafeExternalLink>
+                        )}
+                        <div
                           style={{
-                            minWidth: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            flexDirection: isPhone ? 'row' : 'column',
+                            gap: isPhone ? 8 : 6,
                           }}
                         >
-                          {check.venueName}
-                        </span>
-                        <span style={{ flex: 'none', whiteSpace: 'nowrap' }}>
-                          {` · ${shortDay(check.date, true)} · ${COPY.watching(check.watching)}`}
-                        </span>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void decide(check, 'use')}
+                            style={{
+                              ...useButtonStyle,
+                              height: isPhone ? 38 : 32,
+                              fontSize: isPhone ? 13 : 12.5,
+                              ...(isPhone ? { flex: 1 } : {}),
+                              ...(busy
+                                ? { opacity: 0.6, cursor: 'default' }
+                                : {}),
+                            }}
+                          >
+                            {COPY.takeAnswer(asked)}
+                          </button>
+                          <AdminButton
+                            variant="ghost"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => void decide(check, 'keep')}
+                            style={
+                              isPhone
+                                ? { flex: 1, height: 38, fontSize: 13 }
+                                : { height: 30 }
+                            }
+                          >
+                            {COPY.keepAnswer(listed)}
+                          </AdminButton>
+                        </div>
                       </div>
-                    </div>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                        gap: 16,
-                      }}
-                    >
-                      <Side
-                        label={COPY.listedNow}
-                        side={check.listed}
-                        words={words}
-                      />
-                      <Side
-                        label={COPY.priceCheck}
-                        side={check.check}
-                        tone="var(--accent)"
-                        words={words}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: 6,
-                        justifyContent: isPhone ? 'stretch' : 'flex-end',
-                      }}
-                    >
-                      {isSafeHttpUrl(check.ticketUrl) && (
-                        <SafeExternalLink
-                          href={check.ticketUrl}
+                      {errors[check.contestId] && (
+                        <div
+                          role="alert"
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 6,
-                            height: 28,
-                            padding: '0 10px',
-                            borderRadius: 9,
-                            fontSize: 12.5,
-                            fontWeight: 600,
-                            whiteSpace: 'nowrap',
-                            color: 'var(--fg)',
-                            background: 'var(--surface-2)',
-                            border: '1px solid var(--border-strong)',
-                            textDecoration: 'none',
+                            gridColumn: '1 / -1',
+                            fontSize: 13,
+                            color: 'var(--danger-fg)',
                           }}
                         >
-                          {isPhone ? null : (
-                            <ExternalLink size={14} strokeWidth={1.8} />
-                          )}
-                          {COPY.ticketPage}
-                        </SafeExternalLink>
+                          {errors[check.contestId]}
+                        </div>
                       )}
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void decide(check, 'use')}
-                        style={{
-                          ...useButtonStyle,
-                          ...(isPhone ? { flex: 1 } : {}),
-                          ...(busy ? { opacity: 0.6, cursor: 'default' } : {}),
-                        }}
-                      >
-                        {COPY.takeAnswer(asked)}
-                      </button>
-                      <AdminButton
-                        variant="ghost"
-                        size="sm"
-                        disabled={busy}
-                        onClick={() => void decide(check, 'keep')}
-                        style={isPhone ? { flex: 1 } : undefined}
-                      >
-                        {COPY.keepAnswer(listed)}
-                      </AdminButton>
-                    </div>
-                    {errors[check.contestId] && (
-                      <div
-                        role="alert"
-                        style={{
-                          gridColumn: '1 / -1',
-                          fontSize: 13,
-                          color: 'var(--danger-fg)',
-                        }}
-                      >
-                        {errors[check.contestId]}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            {!isPhone && (
-              <p
-                style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-muted)' }}
-              >
-                {COPY.footnote}
-              </p>
-            )}
-          </>
-        )
-      ) : resolved.length === 0 ? (
-        <EmptyState
-          icon={Tag}
-          title={COPY.resolved.empty.title}
-          body={COPY.resolved.empty.body}
-        />
-      ) : (
-        <div
-          style={{
-            borderRadius: 14,
-            border: '1px solid var(--border)',
-            background: 'var(--surface-1)',
-            overflow: 'hidden',
-          }}
-        >
+                    </li>
+                  );
+                })}
+              </ul>
+              {!isPhone && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12.5,
+                    color: 'var(--fg-muted)',
+                  }}
+                >
+                  {COPY.footnote}
+                </p>
+              )}
+            </>
+          )
+        ) : resolved.length === 0 ? (
+          <EmptyState
+            icon={Tag}
+            title={COPY.resolved.empty.title}
+            body={COPY.resolved.empty.body}
+          />
+        ) : (
           <div
-            aria-hidden="true"
             style={{
-              ...smallLabel,
-              display: 'flex',
-              gap: 12,
-              padding: '12px 18px',
-              letterSpacing: '0.14em',
+              borderRadius: 14,
+              border: '1px solid var(--border)',
+              background: 'var(--surface-1)',
+              overflow: 'hidden',
             }}
           >
-            <span style={{ flex: 1.6 }}>{COPY.resolved.columns.show}</span>
-            <span style={{ flex: 1 }}>{COPY.resolved.columns.answer}</span>
-            <span style={{ flex: 1 }}>{COPY.resolved.columns.decided}</span>
-          </div>
-          <ul
-            aria-label={COPY.resolvedLabel}
-            style={{ listStyle: 'none', margin: 0, padding: 0 }}
-          >
-            {resolved.map((row) => (
-              <li
-                key={row.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 18px',
-                  borderTop: '1px solid var(--border)',
-                }}
-              >
-                <div style={{ flex: 1.6, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 13.5,
-                      fontWeight: 600,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {row.title ?? ''}
+            <div
+              aria-hidden="true"
+              style={{
+                ...smallLabel,
+                display: 'flex',
+                gap: 12,
+                padding: '12px 18px',
+                letterSpacing: '0.14em',
+              }}
+            >
+              <span style={{ flex: 1.6 }}>{COPY.resolved.columns.show}</span>
+              <span style={{ flex: 1 }}>{COPY.resolved.columns.answer}</span>
+              <span style={{ flex: 1 }}>{COPY.resolved.columns.decided}</span>
+            </div>
+            <ul
+              aria-label={COPY.resolvedLabel}
+              style={{ listStyle: 'none', margin: 0, padding: 0 }}
+            >
+              {resolved.map((row) => (
+                <li
+                  key={row.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '10px 18px',
+                    borderTop: '1px solid var(--border)',
+                  }}
+                >
+                  <div style={{ flex: 1.6, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {row.title ?? ''}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--fg-muted)',
+                        marginTop: 2,
+                      }}
+                    >
+                      {[
+                        row.venueName,
+                        row.date === null ? '' : shortDay(row.date),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        height: 22,
+                        padding: '0 9px',
+                        borderRadius: 999,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        color:
+                          row.answer === 'used'
+                            ? 'var(--success)'
+                            : 'var(--fg-muted)',
+                        background: `color-mix(in srgb, ${row.answer === 'used' ? 'var(--success)' : 'var(--fg-subtle)'} 14%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${row.answer === 'used' ? 'var(--success)' : 'var(--fg-subtle)'} 32%, transparent)`,
+                      }}
+                    >
+                      {row.answer === 'used'
+                        ? COPY.resolved.used(
+                            row.price === null ? '' : dollars(row.price),
+                          )
+                        : COPY.resolved.kept(
+                            row.price === null ? '' : dollars(row.price),
+                          )}
+                    </span>
                   </div>
                   <div
                     style={{
-                      fontSize: 12,
+                      flex: 1,
+                      fontSize: 12.5,
                       color: 'var(--fg-muted)',
-                      marginTop: 2,
                     }}
                   >
                     {[
-                      row.venueName,
-                      row.date === null ? '' : shortDay(row.date),
+                      row.decidedBy === null ? null : `@${row.decidedBy}`,
+                      decidedWhen(row.decidedAt),
                     ]
                       .filter(Boolean)
                       .join(' · ')}
                   </div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      height: 22,
-                      padding: '0 9px',
-                      borderRadius: 999,
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      color:
-                        row.answer === 'used'
-                          ? 'var(--success)'
-                          : 'var(--fg-muted)',
-                      background: `color-mix(in srgb, ${row.answer === 'used' ? 'var(--success)' : 'var(--fg-subtle)'} 14%, transparent)`,
-                      border: `1px solid color-mix(in srgb, ${row.answer === 'used' ? 'var(--success)' : 'var(--fg-subtle)'} 32%, transparent)`,
-                    }}
-                  >
-                    {row.answer === 'used'
-                      ? COPY.resolved.used(
-                          row.price === null ? '' : dollars(row.price),
-                        )
-                      : COPY.resolved.kept(
-                          row.price === null ? '' : dollars(row.price),
-                        )}
-                  </span>
-                </div>
-                <div
-                  style={{ flex: 1, fontSize: 12.5, color: 'var(--fg-muted)' }}
-                >
-                  {[
-                    row.decidedBy === null ? null : `@${row.decidedBy}`,
-                    decidedWhen(row.decidedAt),
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </div>
-              </li>
-            ))}
-          </ul>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '12px 18px',
-              borderTop: '1px solid var(--border)',
-              fontSize: 12.5,
-              color: 'var(--fg-subtle)',
-            }}
-          >
-            <span>{COPY.resolved.showing(resolved.length, resolvedTotal)}</span>
-            <span style={{ flex: 1 }} />
-            {more === 'failed' && (
-              <span role="alert" style={{ color: 'var(--danger)' }}>
-                {COPY.resolved.loadMoreFailed}
+                </li>
+              ))}
+            </ul>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 18px',
+                borderTop: '1px solid var(--border)',
+                fontSize: 12.5,
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              <span>
+                {COPY.resolved.showing(resolved.length, resolvedTotal)}
               </span>
-            )}
-            {resolvedTotal > resolved.length && (
-              <AdminButton
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-disabled={more === 'loading' || undefined}
-                onClick={() => {
-                  if (more !== 'loading') void loadMoreResolved();
-                }}
-              >
-                {more === 'loading'
-                  ? COPY.resolved.loadingMore
-                  : COPY.resolved.loadMore}
-              </AdminButton>
-            )}
+              <span style={{ flex: 1 }} />
+              {more === 'failed' && (
+                <span role="alert" style={{ color: 'var(--danger)' }}>
+                  {COPY.resolved.loadMoreFailed}
+                </span>
+              )}
+              {resolvedTotal > resolved.length && (
+                <AdminButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-disabled={more === 'loading' || undefined}
+                  onClick={() => {
+                    if (more !== 'loading') void loadMoreResolved();
+                  }}
+                >
+                  {more === 'loading'
+                    ? COPY.resolved.loadingMore
+                    : COPY.resolved.loadMore}
+                </AdminButton>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
