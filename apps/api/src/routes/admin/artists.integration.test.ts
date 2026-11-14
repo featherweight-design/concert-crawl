@@ -2,7 +2,7 @@
 // PR-C Task 9, Step 25). Auth is stubbed at the Clerk boundary; the DB and the
 // audit-log write are real.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 const { authState } = vi.hoisted(() => ({
   authState: {
@@ -323,6 +323,206 @@ describe('admin artists routes', () => {
         headers: ADMIN_HEADERS,
       });
       expect(res.status).toBe(403);
+    });
+  });
+
+  // The list carries the matched candidate's genres and a wrong_photo count
+  // without shipping the whole candidates snapshot.
+  describe('GET /v1/admin/artists genres and wrong-photo count', () => {
+    const candidate = (id: string, genres: string[] | null) => ({
+      id,
+      name: `Artist ${id}`,
+      imageUrl: null,
+      genres,
+      spotifyUrl: null,
+    });
+
+    const listOne = async (
+      canonicalName: string,
+    ): Promise<Record<string, unknown>> => {
+      const res = await app.request(
+        `/v1/admin/artists?search=${encodeURIComponent(canonicalName)}`,
+        { headers: ADMIN_HEADERS },
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        data: Array<Record<string, unknown>>;
+      };
+      const row = body.data.find(
+        (item) => item.canonicalName === canonicalName,
+      );
+      if (!row) throw new Error(`no row for ${canonicalName}`);
+      return row;
+    };
+
+    it('returns the genres of the candidate the row is matched to', async () => {
+      await seedArtist({
+        canonicalName: 'genre match',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp2',
+        spotifyCandidates: [
+          candidate('sp1', ['wrong']),
+          candidate('sp2', ['indie pop', 'dream pop']),
+        ],
+      });
+
+      const row = await listOne('genre match');
+      expect(row.genres).toEqual(['indie pop', 'dream pop']);
+      // Off To check the snapshot itself still stays home.
+      expect(row.candidates).toBeNull();
+    });
+
+    it('keeps an empty genre list empty', async () => {
+      await seedArtist({
+        canonicalName: 'genre empty',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp1',
+        spotifyCandidates: [candidate('sp1', [])],
+      });
+
+      expect((await listOne('genre empty')).genres).toEqual([]);
+    });
+
+    it('takes the first entry when the snapshot repeats the matched id', async () => {
+      await seedArtist({
+        canonicalName: 'genre repeat',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp1',
+        spotifyCandidates: [
+          candidate('sp1', ['first']),
+          candidate('sp1', ['second']),
+        ],
+      });
+
+      expect((await listOne('genre repeat')).genres).toEqual(['first']);
+    });
+
+    it('is null when the row has no match id', async () => {
+      await seedArtist({
+        canonicalName: 'genre unmatched',
+        matchStatus: 'ambiguous',
+        spotifyArtistId: null,
+        spotifyCandidates: [candidate('sp1', ['indie pop'])],
+      });
+
+      expect((await listOne('genre unmatched')).genres).toBeNull();
+    });
+
+    it('is null when there is no snapshot', async () => {
+      await seedArtist({
+        canonicalName: 'genre no snapshot',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp1',
+        spotifyCandidates: null,
+      });
+
+      expect((await listOne('genre no snapshot')).genres).toBeNull();
+    });
+
+    it('is null when no snapshot entry has the match id', async () => {
+      await seedArtist({
+        canonicalName: 'genre no entry',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp9',
+        spotifyCandidates: [candidate('sp1', ['indie pop'])],
+      });
+
+      expect((await listOne('genre no entry')).genres).toBeNull();
+    });
+
+    it('is null when the matched entry has null genres', async () => {
+      await seedArtist({
+        canonicalName: 'genre null',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp1',
+        spotifyCandidates: [candidate('sp1', null)],
+      });
+
+      expect((await listOne('genre null')).genres).toBeNull();
+    });
+
+    it('is null, not an error, when the snapshot is not an array', async () => {
+      const id = await seedArtist({
+        canonicalName: 'genre bad snapshot',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp1',
+      });
+      // Written past the column's type on purpose: the guard is for a row
+      // that drifted from it.
+      await testDb
+        .update(artists)
+        .set({
+          spotifyCandidates: sql`'{"id":"sp1","genres":["indie pop"]}'::jsonb`,
+        })
+        .where(eq(artists.id, id));
+
+      expect((await listOne('genre bad snapshot')).genres).toBeNull();
+    });
+
+    it('is null when the matched entry carries genres that are not a list', async () => {
+      const id = await seedArtist({
+        canonicalName: 'genre bad genres',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp1',
+      });
+      await testDb
+        .update(artists)
+        .set({
+          spotifyCandidates: sql`'[{"id":"sp1","genres":"indie pop"}]'::jsonb`,
+        })
+        .where(eq(artists.id, id));
+
+      expect((await listOne('genre bad genres')).genres).toBeNull();
+    });
+
+    it('counts only open wrong_photo reports', async () => {
+      const id = await seedArtist({
+        canonicalName: 'photo reported',
+        matchStatus: 'matched',
+      });
+      const otherId = await seedArtist({
+        canonicalName: 'photo elsewhere',
+        matchStatus: 'matched',
+      });
+      await testDb.insert(artistReports).values([
+        { artistId: id, reporterId: 'fan_1', reason: 'wrong_photo' },
+        { artistId: id, reporterId: 'fan_2', reason: 'wrong_photo' },
+        // Another reason counts as open but not as wrong photo.
+        { artistId: id, reporterId: 'fan_3', reason: 'different_artist' },
+        // Resolved wrong_photo reports are not open.
+        {
+          artistId: id,
+          reporterId: 'fan_4',
+          reason: 'wrong_photo',
+          status: 'fixed',
+          resolvedAt: new Date(),
+        },
+        {
+          artistId: id,
+          reporterId: 'fan_5',
+          reason: 'wrong_photo',
+          status: 'dismissed',
+          resolvedAt: new Date(),
+        },
+        // Another artist's report stays with that artist.
+        { artistId: otherId, reporterId: 'fan_1', reason: 'wrong_photo' },
+      ]);
+
+      const row = await listOne('photo reported');
+      expect(row.openReportCount).toBe(3);
+      expect(row.wrongPhotoReportCount).toBe(2);
+      expect((await listOne('photo elsewhere')).wrongPhotoReportCount).toBe(1);
+    });
+
+    it('is zero for an artist with no reports', async () => {
+      await seedArtist({
+        canonicalName: 'photo clean',
+        matchStatus: 'matched',
+      });
+
+      const row = await listOne('photo clean');
+      expect(row.openReportCount).toBe(0);
+      expect(row.wrongPhotoReportCount).toBe(0);
     });
   });
 

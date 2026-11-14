@@ -29,6 +29,7 @@ import {
   userProfiles,
   type SpotifyCandidateSnapshot,
 } from '@concert-crawl/db';
+import type { ArtistReportReason } from '@concert-crawl/types';
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical';
 import { getAuthUser } from '../../middleware/auth.js';
 import {
@@ -144,6 +145,30 @@ const outerArtistId = (): SQL => sql.raw('"artists"."id"');
 
 const openReportOn = (): SQL =>
   sql`exists (select 1 from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`;
+
+const WRONG_PHOTO: ArtistReportReason = 'wrong_photo';
+
+// The same open-report count as `openReportCount`, narrowed to wrong_photo.
+const openWrongPhotoReportCountExpr = (): SQL<number> =>
+  sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open' and ${artistReports.reason} = ${WRONG_PHOTO})`;
+
+const outerSpotifyCandidates = (): SQL =>
+  sql.raw('"artists"."spotify_candidates"');
+const outerSpotifyArtistId = (): SQL =>
+  sql.raw('"artists"."spotify_artist_id"');
+
+/**
+ * The matched Spotify artist's genres, as the detail endpoint derives them:
+ * the snapshot entry whose `id` is the row's `spotify_artist_id` (the first,
+ * as `Array.find` takes it), else null. Read in SQL so the list never ships
+ * the whole candidates blob. A snapshot that is null or not an array reads as
+ * empty, a null match id compares to nothing, and an entry's `genres` that is
+ * not an array reads as null, so the row can only carry an array or null.
+ */
+const matchedGenresExpr = (): SQL<string[] | null> =>
+  sql<
+    string[] | null
+  >`(select case when jsonb_typeof(candidate.value -> 'genres') = 'array' then candidate.value -> 'genres' end from jsonb_array_elements(case when jsonb_typeof(${outerSpotifyCandidates()}) = 'array' then ${outerSpotifyCandidates()} else '[]'::jsonb end) with ordinality as candidate(value, position) where candidate.value ->> 'id' = ${outerSpotifyArtistId()} order by candidate.position limit 1)`;
 
 /**
  * Whether to hide artists with no show left to see. Defaults ON.
@@ -274,6 +299,8 @@ artistsAdminRouter.get(
         // changed, and it can only do that if it knows the bucket it came from.
         isExhausted: isExhaustedBucketExpr(),
         openReportCount: sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`,
+        wrongPhotoReportCount: openWrongPhotoReportCountExpr(),
+        genres: matchedGenresExpr(),
         upcomingCount: upcomingShowCountExpr(),
         watchingCount: watchingCountExpr(outerCanonicalName()),
         // Next show in SQL, one subquery per row. The detail panel reads it
