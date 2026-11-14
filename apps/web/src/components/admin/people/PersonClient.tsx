@@ -68,12 +68,20 @@ export function PersonClient({ userId }: { userId: string }) {
   const [signingOut, setSigningOut] = useState<'ask' | 'busy' | null>(null);
   const [signOutError, setSignOutError] = useState(false);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Only the newest load may draw. The load effect's cleanup bumps it too, so
+  // a load still in flight at unmount (or for a previous user) settles into
+  // nothing instead of setting state on a page that is gone.
+  const latest = useRef(0);
 
   const load = useCallback(async () => {
+    latest.current += 1;
+    const ticket = latest.current;
     setFailed(false);
     try {
-      setPerson(await api.get(userId));
+      const next = await api.get(userId);
+      if (ticket === latest.current) setPerson(next);
     } catch (err: unknown) {
+      if (ticket !== latest.current) return;
       if (refusedStatus(err) === 404) setMissing(true);
       else setFailed(true);
     }
@@ -81,6 +89,9 @@ export function PersonClient({ userId }: { userId: string }) {
 
   useEffect(() => {
     void load();
+    return () => {
+      latest.current += 1;
+    };
   }, [load]);
 
   const name = person ? personName(person) : null;
