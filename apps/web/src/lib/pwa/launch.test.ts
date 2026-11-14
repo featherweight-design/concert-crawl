@@ -89,7 +89,10 @@ describe('LAUNCH_DETECT', () => {
     expect(style.getPropertyValue('--ll-h')).toBe('640');
   });
 
-  it('hands the CSS the durations from LAUNCH_MS', () => {
+  it('hands the CSS the durations from LAUNCH_MS, before it marks', () => {
+    expect(LAUNCH_DETECT.indexOf('--ll-total')).toBeLessThan(
+      LAUNCH_DETECT.indexOf('setAttribute'),
+    );
     detect();
     const style = document.documentElement.style;
     expect(style.getPropertyValue('--ll-total')).toBe(`${LAUNCH_MS.total}ms`);
@@ -203,8 +206,9 @@ describe('timeline', () => {
 
   // The head script's timer is the backstop for a document with no overlay:
   // it must not clear the attribute while the longer run is still playing.
-  it('clears data-launch only after the whole run', () => {
-    expect(LAUNCH_END_MS).toBe(LAUNCH_MS.total + 1500);
+  // The timer that uses it is asserted in LAUNCH_DETECT's own tests.
+  it('leaves the backstop timer 1.5s of slack past the whole run', () => {
+    expect(LAUNCH_END_MS - LAUNCH_MS.total).toBeGreaterThanOrEqual(1500);
   });
 });
 
@@ -243,7 +247,7 @@ describe('launch.css', () => {
         `animation: ll-${name} var(--ll-total) linear forwards`,
       );
     }
-    expect(css).not.toMatch(/animation:[^;]*\d+m?s/);
+    expect(css).not.toMatch(/animation[\w-]*:[^;]*\d+m?s/);
   });
 
   it.each([
