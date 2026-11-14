@@ -6,7 +6,7 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import CrewError from './error';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
   usePathname: () => '/crews/abc',
 }));
 vi.mock('@clerk/nextjs', () => ({
@@ -42,5 +42,19 @@ describe('CrewError', () => {
         name: CONSUMER_COPY.errorReport.card.heading,
       }),
     ).toBeTruthy();
+  });
+
+  // The drawn in-app board (addendum-2 18-error-page/error-in-app-m) is a crew
+  // page: the app header stands where the logo bar was, never a second one
+  // under it.
+  it('renders the in-app error page, with no logo bar of its own', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<CrewError error={new Error('x')} reset={vi.fn()} />);
+    const page = screen.getByTestId('standalone-error');
+    expect(page.getAttribute('data-in-app')).toBe('true');
+    expect(page.querySelector('header')).toBeNull();
+    expect(
+      screen.queryByRole('link', { name: CONSUMER_COPY.error.homeLinkLabel }),
+    ).toBeNull();
   });
 });

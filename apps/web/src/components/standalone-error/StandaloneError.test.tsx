@@ -104,6 +104,55 @@ describe('StandaloneError', () => {
     });
   });
 
+  describe('in the app shell (addendum-2 §18, error-in-app-m)', () => {
+    it('standalone: its own logo bar, the full viewport and its own ground', () => {
+      render(<StandaloneError errorId="1" onRetry={vi.fn()} />);
+      const page = screen.getByTestId('standalone-error');
+      expect(page.querySelector('header')).not.toBeNull();
+      expect(page.style.minHeight).toBe('100dvh');
+      expect(page.style.background).toContain('var(--bg)');
+      expect(page.hasAttribute('data-in-app')).toBe(false);
+    });
+
+    it('in-app: no logo bar, no viewport height, no ground of its own', () => {
+      render(<StandaloneError inApp errorId="1" onRetry={vi.fn()} />);
+      const page = screen.getByTestId('standalone-error');
+      expect(page.querySelector('header')).toBeNull();
+      expect(
+        screen.queryByRole('link', { name: copy.homeLinkLabel }),
+      ).toBeNull();
+      expect(page.style.minHeight).toBe('');
+      expect(page.style.background).toBe('');
+      expect(page.getAttribute('data-in-app')).toBe('true');
+    });
+
+    it('in-app keeps the error, the card and the error ID as the standalone page draws them', () => {
+      const onSignOut = vi.fn();
+      const { container } = render(
+        <StandaloneError
+          inApp
+          errorId="2849"
+          onRetry={vi.fn()}
+          onSignOut={onSignOut}
+        >
+          <p>card</p>
+        </StandaloneError>,
+      );
+      expect(
+        screen.getByRole('heading', { name: copy.errorHeading }),
+      ).toBeTruthy();
+      expect(screen.getByText(copy.errorBody)).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: copy.signOutButton }),
+      ).toBeTruthy();
+      expect(container.querySelector('.cc-se-aside')?.textContent).toBe('card');
+      expect(screen.getByText('2849')).toBeTruthy();
+      // The desktop split is the standalone one, untouched.
+      const css = container.querySelector('style')?.textContent ?? '';
+      expect(css).toContain("grid-template-areas: 'copy aside' 'chip aside'");
+    });
+  });
+
   describe('layout', () => {
     it('splits into two columns on a wide screen only when it carries a card', () => {
       const { container, rerender } = render(
