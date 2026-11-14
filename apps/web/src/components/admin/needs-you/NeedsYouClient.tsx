@@ -282,6 +282,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       },
       true,
     );
+    // A partial approval leaves the rest waiting: they come back as their own
+    // item, so read the queue again rather than treat the batch as done.
+    if (submissionIds.length < row.submissionIds.length) void load();
   };
 
   const runSnooze = async (row: QueueRow, action: () => Promise<void>) => {
@@ -507,6 +510,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
         // Review on a batch opens its own panel on desktop
         // (`10-needs-you-panels/price-batch-d`); the phone has the sheet.
         <PriceBatchPanel
+          key={selectedRow.key}
           row={{
             key: selectedRow.key,
             submissionIds: selectedRow.submissionIds,

@@ -34,6 +34,7 @@ export const PriceBatchPanel = ({
     <SidePanel
       inline
       onClose={onClose}
+      dismissible={!batch.busy}
       eyebrow={<KindLabel kind={kindLabelOf('price-batch')} />}
       title={copy.title(batch.count)}
       subtitle={copy.panelSub}

@@ -1,0 +1,19 @@
+{
+  "feature": "Admin P47-4C · Needs you price batch panel (desktop)",
+  "note": "P47-4 PR C. CONTACT_SHEET_ROLE=admin. Desktop only (the phone keeps its sheet, shot in admin-2b-needs-you). Board: addendum-3 10-needs-you-panels/price-batch-d. Needs a price-batch item in the queue.",
+  "widths": [{ "label": "desktop", "width": 1300, "height": 900 }],
+  "rows": [
+    {
+      "id": "batch-panel",
+      "label": "A price batch's docked panel",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"price-batch:\"]"
+        },
+        { "click": "[data-item-key^=\"price-batch:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"price-batch-panel\"]", "settle": 800 }
+      ]
+    }
+  ]
+}
