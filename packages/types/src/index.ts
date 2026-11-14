@@ -1953,6 +1953,36 @@ export interface AdminEmailDelivery {
   hours: number;
 }
 
+/** One email in Operations › Emails (GET /admin/notifications/test-email/options). */
+export interface AdminTestEmailOption {
+  key: string;
+  label: string;
+  group: 'Customer' | 'Operational';
+}
+
+/**
+ * GET /admin/notifications/test-email/:emailKey/preview: the email built from
+ * its sample payload, exactly as "Send me a test" sends it. `html` is empty
+ * for a text-only email.
+ */
+export interface AdminEmailPreview {
+  emailKey: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/**
+ * POST /admin/notifications/test-email. Every test goes to ADMIN_EMAIL;
+ * `sentTo` is that address masked (`h***@gmail.com`).
+ */
+export type AdminTestEmailResult =
+  | { sent: true; resendId: string | null; sentTo: string }
+  | {
+      sent: false;
+      reason: 'missing_api_key' | 'missing_admin_email' | 'send_failed';
+    };
+
 // The admin page an audit action belongs to: the Activity log's WHERE column
 // and its "Any page" filter. One per admin sidebar page; the label is the
 // web's to draw. Derived from the action key's first segment (`venue.update`

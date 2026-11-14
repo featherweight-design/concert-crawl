@@ -97,7 +97,8 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
-import { forgetPeopleScan, maskEmail } from './people.js';
+import { forgetPeopleScan } from './people.js';
+import { maskEmail } from '../../lib/mask-email.js';
 
 const app = createApp();
 
