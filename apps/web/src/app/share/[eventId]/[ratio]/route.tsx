@@ -6,10 +6,12 @@ import { ApiError, publicApiClient } from '@/lib/api';
 import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts';
 import { mintMeta, posterFingerprint, shareCacheKey } from '@/lib/share/mint';
 import { toPosterEvent } from '@/lib/share/poster-event';
+import { sharePhotoSources, toShareCard } from '@/lib/share/share-layout';
+import { loadSharePhoto } from '@/lib/share/share-photo';
 import {
   etagMatches,
   parseShareRequest,
-  SHARE_CACHE_CONTROL,
+  shareCacheControl,
 } from '@/lib/share/share-request';
 
 // The poster PNG.
@@ -91,15 +93,12 @@ export const GET = async (
       : problem(502, 'event lookup failed');
   }
 
-  let fonts: LoadedShareFont[];
-  try {
-    fonts = await loadShareFonts(originFontLoader(request));
-  } catch (err) {
-    console.error('[share card] font load failed', { err });
-    return problem(502, 'share fonts unavailable');
-  }
-
   const poster = toPosterEvent(event);
+  const card = toShareCard(event);
+  const photoSources = sharePhotoSources(event);
+  // A countdown card expires at the venue's midnight, so "4 DAYS AWAY" is
+  // never served on the day it reads 3.
+  const cacheControl = shareCacheControl(card.countdown, event.venue.timezone);
   // The mint is what makes the ETag content-addressed: change the price status
   // and the hash moves, so a cached card for a now-sold-out show expires on
   // its own rather than on a timer.
@@ -109,37 +108,46 @@ export const GET = async (
       ? { id: parsed.handle, handle: parsed.handle }
       : { id: 'anon' },
   );
-  // The mint alone is too coarse to cache on — see `posterFingerprint`.
+  // The mint alone is too coarse to cache on — see `posterFingerprint`. The
+  // countdown is in here, so the tag moves with the day count too.
   const drawn = posterFingerprint([
-    poster.artist,
-    poster.venue,
-    poster.city,
+    card.artist,
+    card.venue,
+    card.city,
     poster.dateShort,
-    poster.showTime,
-    poster.state,
-    poster.dropLabel,
+    card.showTime,
+    card.chip?.label ?? null,
+    card.countdown,
+    photoSources.join(' '),
   ]);
   const etag = `"${shareCacheKey(poster.id, parsed.handle ?? 'anon', mint.contentHash)}:${parsed.ratio}:${parsed.theme}:${drawn}"`;
 
   if (etagMatches(request.headers.get('if-none-match'), etag)) {
     return new Response(null, {
       status: 304,
-      headers: { ETag: etag, 'Cache-Control': SHARE_CACHE_CONTROL },
+      headers: { ETag: etag, 'Cache-Control': cacheControl },
     });
   }
 
+  // The photo never fails the card: a slow or broken host falls through to
+  // the next source, then to IdentityArt.
+  const photoPromise = loadSharePhoto(photoSources);
+  let fonts: LoadedShareFont[];
+  try {
+    fonts = await loadShareFonts(originFontLoader(request));
+  } catch (err) {
+    console.error('[share card] font load failed', { err });
+    return problem(502, 'share fonts unavailable');
+  }
+  const photo = await photoPromise;
+
   return new ImageResponse(
-    <PosterCard
-      event={poster}
-      ratio={parsed.ratio}
-      tokens={parsed.tokens}
-      handle={parsed.handle}
-    />,
+    <PosterCard card={card} ratio={parsed.ratio} photo={photo} />,
     {
       ...SC_RATIOS[parsed.ratio],
       fonts,
       headers: {
-        'Cache-Control': SHARE_CACHE_CONTROL,
+        'Cache-Control': cacheControl,
         ETag: etag,
       },
     },

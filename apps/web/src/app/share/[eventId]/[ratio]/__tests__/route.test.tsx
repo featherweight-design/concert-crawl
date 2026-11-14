@@ -232,7 +232,8 @@ describe('GET /share/[eventId]/[ratio]', () => {
     expect(new Set(tags).size).toBe(tags.length);
   }, 30_000);
 
-  it('renders a different card for a signed share than an anonymous one', async () => {
+  // The B+ boards draw no handle, so a signed share draws the same card.
+  it('draws the same card for a signed share as an anonymous one', async () => {
     const anon = await digest(
       await call(`http://localhost/share/${EVENT_ID}/square`, {
         eventId: EVENT_ID,
@@ -245,7 +246,45 @@ describe('GET /share/[eventId]/[ratio]', () => {
         ratio: 'square',
       }),
     );
-    expect(anon).not.toBe(signed);
+    expect(anon).toBe(signed);
+  }, 30_000);
+
+  // A broken photo host costs the photo, never the card: IdentityArt draws.
+  it('renders the fallback when the photo cannot be fetched', async () => {
+    getMock.mockResolvedValue({
+      ...event,
+      artistPhotoUrl: 'https://photos.invalid/missing.jpg',
+    });
+    const response = await call(`http://localhost/share/${EVENT_ID}/link`, {
+      eventId: EVENT_ID,
+      ratio: 'link',
+    });
+    expect(response.status).toBe(200);
+  }, 30_000);
+
+  // "4 DAYS AWAY" is only true until the venue's midnight: the tag moves with
+  // the day count, and no cache may hold the card past that midnight.
+  it('keys and expires a countdown card on the venue’s day', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      getMock.mockResolvedValue({ ...event, date: '2026-11-13' });
+      const at = async (iso: string) => {
+        vi.setSystemTime(new Date(iso));
+        return call(`http://localhost/share/${EVENT_ID}/link`, {
+          eventId: EVENT_ID,
+          ratio: 'link',
+        });
+      };
+      // 22:00 MST Nov 9, then 01:00 MST Nov 10.
+      const before = await at('2026-11-10T05:00:00Z');
+      const after = await at('2026-11-10T08:00:00Z');
+      expect(before.headers.get('Cache-Control')).toBe(
+        'public, max-age=3600, s-maxage=7200',
+      );
+      expect(before.headers.get('ETag')).not.toBe(after.headers.get('ETag'));
+    } finally {
+      vi.useRealTimers();
+    }
   }, 30_000);
 
   it('ignores an implausible handle instead of drawing it', async () => {
