@@ -912,6 +912,10 @@ export const ADMIN_COPY = {
       iconNone: 'Fans see a plain pin until you add one.',
       hero: 'Hero setting',
       heroNone: 'Not picked. The venue page uses the plain backdrop.',
+      // `details-d` / `details-m`. The desktop board's "(addendum 4)" is a
+      // design note, so both use the phone's wording.
+      shortName: 'Short name',
+      shortNameHint: 'Optional. Used under small tiles.',
     },
     errors: {
       nameRequired: 'Give the venue a name.',
@@ -919,6 +923,8 @@ export const ADMIN_COPY = {
       draftFailed: 'Couldn’t draft it. Try again.',
       draftUnreachable: 'Couldn’t reach the server. Try again.',
       aboutTooLong: 'Keep it to 280 characters.',
+      // #318's cap (VENUE_SHORT_NAME_MAX).
+      shortNameTooLong: 'Keep it to 20 characters.',
     },
     saveBar: {
       unsaved: (count: number) =>

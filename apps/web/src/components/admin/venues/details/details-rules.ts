@@ -1,4 +1,5 @@
 import type { TicketVendor, Venue } from '@concert-crawl/types';
+import { VENUE_SHORT_NAME_MAX } from '@concert-crawl/types';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { googleMapsUrl } from '@/components/consumer/definitions/lib';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -39,6 +40,7 @@ export const DETAILS_COLUMNS = [
   'priceUrl',
   'contactEmail',
   'city',
+  'shortName',
 ] as const satisfies ReadonlyArray<Exclude<keyof Venue, NotDetails>>;
 export type DetailsColumn = (typeof DETAILS_COLUMNS)[number];
 export type DetailsColumns = Pick<Venue, DetailsColumn>;
@@ -57,6 +59,7 @@ export const detailsColumnsOf = (venue: DetailsColumns): DetailsColumns => ({
   priceUrl: venue.priceUrl,
   contactEmail: venue.contactEmail,
   city: venue.city,
+  shortName: venue.shortName,
 });
 
 /** The ticket sellers the API takes, in the select's order. */
@@ -176,6 +179,7 @@ export interface DetailsDraft {
   priceUrl: string;
   contactEmail: string;
   city: string;
+  shortName: string;
 }
 export type DetailsField = keyof DetailsDraft;
 export const DRAFT_KEYS = [
@@ -191,6 +195,7 @@ export const DRAFT_KEYS = [
   'priceUrl',
   'contactEmail',
   'city',
+  'shortName',
 ] as const satisfies ReadonlyArray<DetailsField>;
 
 export const draftOf = (columns: DetailsColumns): DetailsDraft => ({
@@ -207,6 +212,7 @@ export const draftOf = (columns: DetailsColumns): DetailsDraft => ({
   priceUrl: columns.priceUrl ?? '',
   contactEmail: columns.contactEmail ?? '',
   city: columns.city,
+  shortName: columns.shortName ?? '',
 });
 
 /**
@@ -264,6 +270,7 @@ export const columnsOf = (draft: DetailsDraft): DetailsColumns => {
     priceUrl: orNull(draft.priceUrl),
     contactEmail: orNull(draft.contactEmail),
     city: draft.city.trim() || 'Denver',
+    shortName: orNull(draft.shortName),
   };
 };
 
@@ -351,6 +358,14 @@ export const validateDetails = (
   // trimmed: a longer About is refused here, never cut.
   if (edited.has('about') && draft.about.trim().length > ABOUT_MAX) {
     errors.about = COPY.errors.aboutTooLong;
+  }
+  // The API caps the trimmed short name at VENUE_SHORT_NAME_MAX (#318): a
+  // longer one is refused here, never cut.
+  if (
+    edited.has('shortName') &&
+    draft.shortName.trim().length > VENUE_SHORT_NAME_MAX
+  ) {
+    errors.shortName = COPY.errors.shortNameTooLong;
   }
   const priceUrl = draft.priceUrl.trim();
   if (edited.has('priceUrl') && priceUrl !== '' && !isSafeHttpUrl(priceUrl)) {

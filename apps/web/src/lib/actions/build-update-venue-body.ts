@@ -80,6 +80,9 @@ export function buildUpdateVenueBody(
   const venueType = ifPresent('venueType', trimmedOrNull);
   const about = ifPresent('about', trimmedOrNull);
   const neighborhood = ifPresent('neighborhood', trimmedOrNull);
+  // Blank clears it (the API also turns '' into null); over 20 characters is
+  // the API's to refuse, never cut here.
+  const shortName = ifPresent('shortName', trimmedOrNull);
 
   const isTrue = (raw: FormDataEntryValue): boolean => raw === 'true';
   const featured = ifPresent('featured', isTrue);
@@ -162,6 +165,7 @@ export function buildUpdateVenueBody(
     venueType,
     about,
     neighborhood,
+    shortName,
     featured,
     priceUrl,
     contactEmail,

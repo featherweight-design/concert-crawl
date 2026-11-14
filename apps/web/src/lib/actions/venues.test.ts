@@ -91,6 +91,21 @@ describe('buildUpdateVenueBody — API integration fields', () => {
   });
 });
 
+describe('buildUpdateVenueBody — short name (addendum 4, item 4 A)', () => {
+  it('sends a trimmed short name, null when blank, and nothing when absent', () => {
+    expect(
+      buildUpdateVenueBody(formDataFrom({ shortName: '  Ball Arena ' }))
+        .shortName,
+    ).toBe('Ball Arena');
+    expect(
+      buildUpdateVenueBody(formDataFrom({ shortName: '   ' })).shortName,
+    ).toBeNull();
+    expect(
+      buildUpdateVenueBody(formDataFrom({ name: 'Ball Arena' })).shortName,
+    ).toBeUndefined();
+  });
+});
+
 describe('buildUpdateVenueBody — Details contact fields (3b part 5)', () => {
   it('sends the map pin as numbers and a trimmed contact email', () => {
     const body = buildUpdateVenueBody(
