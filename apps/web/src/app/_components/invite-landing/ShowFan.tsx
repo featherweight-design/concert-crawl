@@ -36,14 +36,17 @@ const CARD_SCRIM =
   'linear-gradient(180deg, transparent 30%, rgba(5, 6, 15, 0.94))'; // fwd-allow-hex: board art colour
 const CARD_FG = '#F4F6FF'; // fwd-allow-hex: board art colour
 const CARD_FG_MUTED = '#C9D1E6'; // fwd-allow-hex: board art colour
-const CHIP_BG = '#171D3A'; // fwd-allow-hex: board art colour
-const CHIP_BORDER = '#1F2748'; // fwd-allow-hex: board art colour
-const CHIP_FG = '#B8C2DA'; // fwd-allow-hex: board art colour
-export const TONIGHT_BG = '#FF7BD4'; // fwd-allow-hex: board art colour
-export const TONIGHT_FG = '#070A1A'; // fwd-allow-hex: board art colour
-const EYE_BG = 'rgba(7, 10, 26, 0.5)'; // fwd-allow-hex: board art colour
-const EYE_BORDER = '#2C3661'; // fwd-allow-hex: board art colour
-const EYE_FG = '#E8F3FF'; // fwd-allow-hex: board art colour
+// The chip, the TONIGHT pill and the eye button keep the fixed board colours
+// below on the dark themes. On Light (`inv-light`) `globals.css` sets the
+// `--invite-*` variables under `data-theme='light'`, which override them.
+const CHIP_BG = 'var(--invite-chip-bg, #171D3A)'; // fwd-allow-hex: board art colour
+const CHIP_BORDER = 'var(--invite-chip-border, #1F2748)'; // fwd-allow-hex: board art colour
+const CHIP_FG = 'var(--invite-chip-fg, #B8C2DA)'; // fwd-allow-hex: board art colour
+export const TONIGHT_BG = 'var(--invite-tonight-bg, #FF7BD4)'; // fwd-allow-hex: board art colour
+export const TONIGHT_FG = 'var(--invite-tonight-fg, #070A1A)'; // fwd-allow-hex: board art colour
+const EYE_BG = 'var(--invite-eye-bg, rgba(7, 10, 26, 0.5))'; // fwd-allow-hex: board art colour
+const EYE_BORDER = 'var(--invite-eye-border, #2C3661)'; // fwd-allow-hex: board art colour
+const EYE_FG = 'var(--invite-eye-fg, #E8F3FF)'; // fwd-allow-hex: board art colour
 
 const metaLine = (show: InviteShow): string =>
   [show.tonight ? COPY.tonight : show.dateShort, show.showTimeShort, show.venue]
@@ -172,7 +175,20 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
             }}
           >
             <GenreDot genre={show.genre} />
-            {show.genre}
+            {/* Two genres read "ALTERNATIVE / METAL" (`inv-mob`, `inv-desk`);
+                the dot and the ring take the first. */}
+            <span
+              style={{
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {show.genreExtra
+                ? `${show.genre} / ${show.genreExtra}`
+                : show.genre}
+            </span>
           </span>
         )}
         <span

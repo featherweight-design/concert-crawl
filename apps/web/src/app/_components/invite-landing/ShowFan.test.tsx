@@ -16,6 +16,7 @@ const show = (id: string, imageUrl: string | null): InviteShow => ({
   showTime: '8:00 PM',
   showTimeShort: '8 PM',
   genre: 'rock',
+  genreExtra: null,
   imageUrl,
   artistPhotoUrl: null,
 });
@@ -30,6 +31,22 @@ describe('ShowFan', () => {
     const img = container.querySelector('img');
     expect(img?.getAttribute('src')).toBe(src);
     expect(img?.hasAttribute('srcset')).toBe(false);
+  });
+
+  // `inv-mob`, `inv-desk`: a show with two genres reads "ALTERNATIVE / METAL".
+  it('reads two genres on the chip, and one when there is one', () => {
+    const { container, rerender } = render(
+      <ShowFan
+        shows={[
+          { ...show('a', null), genre: 'alternative', genreExtra: 'metal' },
+        ]}
+      />,
+    );
+    expect(container.textContent).toContain('alternative / metal');
+
+    rerender(<ShowFan shows={[show('a', null)]} />);
+    expect(container.textContent).toContain('rock');
+    expect(container.textContent).not.toContain(' / ');
   });
 
   it('tilts the cards -9, -2 and 8 degrees', () => {
@@ -95,16 +112,18 @@ describe('ShowFan', () => {
     expect(drops[2]).toBeCloseTo(21 / 165, 3);
   });
 
-  it('draws the TONIGHT pill fixed #FF7BD4 on #070A1A, no theme token', () => {
+  it('draws the TONIGHT pill #FF7BD4 on #070A1A, with Light overrides by variable', () => {
     const { container } = render(
       <ShowFan shows={[{ ...show('a', null), tonight: true }]} />,
     );
     const pill = [...container.querySelectorAll<HTMLElement>('span')].find(
       (node) => node.style.borderRadius === '999px',
     );
-    expect(pill?.style.background).toContain('rgb(255, 123, 212)');
-    expect(pill?.style.color).toBe('rgb(7, 10, 26)');
-    expect(pill?.getAttribute('style')).not.toContain('var(--');
+    // jsdom drops a `var()` colour, so read the declared fallbacks from the
+    // attribute: the dark-theme values stay the board's, Light overrides them.
+    const style = pill?.getAttribute('style') ?? '';
+    expect(style).toContain('var(--invite-tonight-bg, #FF7BD4)');
+    expect(style).toContain('var(--invite-tonight-fg, #070A1A)');
   });
 
   it('keeps the scrim fixed dark, with no theme token', () => {

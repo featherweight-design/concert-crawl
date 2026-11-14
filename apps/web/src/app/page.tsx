@@ -153,6 +153,7 @@ async function fetchLandingShows(): Promise<LandingShows> {
         showTime: formatTickerTime(row.showTime ?? null) ?? '',
         showTimeShort: formatShowTimeShort(row.showTime ?? null) ?? '',
         genre: row.genre?.[0] ?? null,
+        genreExtra: row.genre?.[1] ?? null,
         imageUrl: row.imageUrl,
         artistPhotoUrl: row.artistPhotoUrl ?? null,
       }));

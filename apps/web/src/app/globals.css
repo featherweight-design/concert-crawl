@@ -121,6 +121,17 @@
     --price-text-signal: color-mix(in oklab, var(--signal) 85%, var(--fg));
     --price-text-accent: color-mix(in oklab, var(--accent) 82%, var(--fg));
     --price-text-danger: color-mix(in oklab, var(--danger) 80%, var(--fg));
+    /* `inv-light`: on Light the invite fan's genre chip and eye button are
+       pale and the TONIGHT pill is the deeper pink; the dark themes keep the
+       dark values the components fall back to. */
+    --invite-chip-bg: color-mix(in oklab, var(--bg) 88%, transparent);
+    --invite-chip-border: var(--border);
+    --invite-chip-fg: var(--fg-muted);
+    --invite-eye-bg: color-mix(in oklab, var(--bg) 72%, transparent);
+    --invite-eye-border: var(--border-strong);
+    --invite-eye-fg: var(--fg);
+    --invite-tonight-bg: var(--accent);
+    --invite-tonight-fg: var(--bg);
   }
 
   * {

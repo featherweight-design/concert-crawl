@@ -53,7 +53,8 @@ export function InviteLanding({
         padding: '0 16px',
         borderRadius: 10,
         border: '1px solid var(--border-strong)',
-        background: 'transparent',
+        // `inv-mob`: a filled surface, not a transparent button on the wash.
+        background: 'var(--surface-1)',
         color: 'var(--fg)',
         fontFamily: 'Inter, system-ui',
         fontWeight: 700,
