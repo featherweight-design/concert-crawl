@@ -35,8 +35,9 @@ const hostOf = (url: string | null): string | null => {
 /**
  * The Price card (`06/event-edit`): the listed price, the Submitted prices
  * that stand, the ticket page, and Edit price, which opens the shared price
- * sheet (`06/edit-price-desktop`, 4b#19): the admin's own submission when
- * there is one, else a new one. Either saves as the admin's submission, so
+ * sheet (`06/edit-price-desktop`, 4b#19): on a priced show it replaces the
+ * listed price; on an unpriced one it edits the admin's own submission when
+ * there is one, else adds a new one. Each saves as the admin's submission, so
  * Submitted prices keeps the history.
  */
 export const PriceCard = ({
@@ -62,11 +63,13 @@ export const PriceCard = ({
       detail.mySubmission.status === 'corroborated')
       ? detail.mySubmission
       : null;
-  // Always on (`06/edit-price-desktop`). With the admin's own price it edits
-  // that; on a show with none it adds one; over a fan's listed price it
-  // replaces it, as the admin's own, without telling the fans (Hugh,
-  // 2026-11-14).
-  const replacing = mine === null && detail.priceMin !== null;
+  // Always on (`06/edit-price-desktop`). On a priced show it always replaces
+  // the listed price, as the admin's own, without telling the fans (Hugh,
+  // 2026-11-14), even over the admin's own pending or corroborated price:
+  // editing that one alone could leave a cheaper fan price listed. On a show
+  // with no listed price it edits the admin's own price, else adds one.
+  const replacing = detail.priceMin !== null;
+  const editingMine = !replacing && mine !== null ? mine : null;
   // The admin's own price under an open Price check waits for the check (the
   // server refuses any price write on the show while one is open).
   const lockedByCheck = detail.mySubmission?.status === 'disputed';
@@ -131,22 +134,23 @@ export const PriceCard = ({
       <div style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
         {past ? ADMIN_COPY.eventEdit.past.priceRecord : COPY.note}
       </div>
-      {open && (mine !== null || replacing) && (
+      {open && (editingMine !== null || replacing) && (
         <EditPricePanel
           single
           row={{
             title: detail.title,
             venueName: detail.venueName,
             date: detail.date,
-            priceMin: mine?.priceMin ?? detail.priceMin ?? '',
-            priceMax: mine !== null ? mine.priceMax : detail.priceMax,
+            priceMin: editingMine?.priceMin ?? detail.priceMin ?? '',
+            priceMax:
+              editingMine !== null ? editingMine.priceMax : detail.priceMax,
           }}
           onClose={close}
           onSave={async (priceMin, priceMax) => {
             try {
-              if (mine !== null) {
+              if (editingMine !== null) {
                 await submittedApi(getToken).editPrice(
-                  mine.id,
+                  editingMine.id,
                   priceMin,
                   priceMax,
                 );
@@ -159,6 +163,10 @@ export const PriceCard = ({
               }
             } catch (err) {
               const status = refusedStatus(err);
+              // The replace route's 409 is only ever an open Price check.
+              if (editingMine === null && status === 409) {
+                return COPY.priceCheckOpen;
+              }
               return status === 409 || status === 404
                 ? EDIT.notEditable
                 : EDIT.saveFailed;

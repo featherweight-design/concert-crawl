@@ -23,6 +23,17 @@ vi.mock('@/components/admin/prices/submitted-api', () => ({
 vi.mock('@/components/admin/prices/prices-api', () => ({
   pricesApi: () => ({ addPrice: (...args: unknown[]) => addPrice(...args) }),
 }));
+// A refusal here is any thrown value carrying an HTTP status.
+const hasStatus = (err: unknown): err is { status: number } =>
+  typeof err === 'object' &&
+  err !== null &&
+  'status' in err &&
+  typeof err.status === 'number';
+vi.mock('@/components/admin/invite-codes/codes-api', () => ({
+  refusedStatus: (err: unknown) => (hasStatus(err) ? err.status : null),
+}));
+// What the sheet was told to show after each save.
+const saveResults: (string | null)[] = [];
 // The sheets have their own tests; here only which one opens, with what.
 vi.mock('@/components/admin/prices/EditPricePanel', () => ({
   EditPricePanel: ({
@@ -32,7 +43,12 @@ vi.mock('@/components/admin/prices/EditPricePanel', () => ({
     row: { priceMin: string };
     onSave: (min: string, max: string | null) => Promise<string | null>;
   }) => (
-    <button type="button" onClick={() => void onSave('14', null)}>
+    <button
+      type="button"
+      onClick={() =>
+        void onSave('14', null).then((result) => saveResults.push(result))
+      }
+    >
       {`edit sheet ${row.priceMin}`}
     </button>
   ),
@@ -84,6 +100,7 @@ beforeEach(() => {
   editPrice.mockReset();
   replaceListedPrice.mockReset();
   addPrice.mockReset();
+  saveResults.length = 0;
 });
 afterEach(cleanup);
 
@@ -164,13 +181,60 @@ describe('PriceCard', () => {
     expect(screen.getByText('add sheet single')).toBeInTheDocument();
   });
 
-  it('opens and saves the admin’s own price when there is one', async () => {
+  it('replaces the listed price on a priced show even over the admin’s own pending price', async () => {
+    replaceListedPrice.mockResolvedValue(undefined);
+    const onSaved = vi.fn();
+    render(
+      <PriceCard
+        detail={{
+          ...DETAIL,
+          mySubmission: {
+            id: 'sub-1',
+            priceMin: '15.00',
+            priceMax: null,
+            status: 'pending',
+          },
+        }}
+        phone={false}
+        past={false}
+        onSaved={onSaved}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('event-edit-price-edit'));
+    // The sheet opens on the listed price, not the admin's own.
+    fireEvent.click(screen.getByText(`edit sheet ${DETAIL.priceMin ?? ''}`));
+    await vi.waitFor(() =>
+      expect(replaceListedPrice).toHaveBeenCalledWith(DETAIL.id, '14', null),
+    );
+    expect(editPrice).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+  });
+
+  it('says a Price check is open when the replacement is refused with a 409', async () => {
+    replaceListedPrice.mockRejectedValue({ status: 409 });
+    const onSaved = vi.fn();
+    render(
+      <PriceCard
+        detail={DETAIL}
+        phone={false}
+        past={false}
+        onSaved={onSaved}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('event-edit-price-edit'));
+    fireEvent.click(screen.getByText(`edit sheet ${DETAIL.priceMin ?? ''}`));
+    await vi.waitFor(() => expect(saveResults).toEqual([COPY.priceCheckOpen]));
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it('opens and saves the admin’s own price on a show with no listed price', async () => {
     editPrice.mockResolvedValue(undefined);
     const onSaved = vi.fn();
     render(
       <PriceCard
         detail={{
           ...DETAIL,
+          priceMin: null,
           mySubmission: {
             id: 'sub-1',
             priceMin: '12.00',

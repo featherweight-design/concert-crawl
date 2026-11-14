@@ -4487,6 +4487,10 @@ export const ADMIN_COPY = {
       ticketValue: (host: string, checked: string | null) =>
         checked === null ? host : `${host} · checked ${checked}`,
       edit: 'Edit price',
+      // The replace route's 409: a Price check on the show holds every price
+      // write until it is resolved.
+      priceCheckOpen:
+        'A Price check is open on this show. Resolve it from Price checks.',
       submitted: 'Submitted prices',
       note: 'Edit price opens the same price sheet as Prices, and is saved as your submission, so the history stays in one place.',
     },
