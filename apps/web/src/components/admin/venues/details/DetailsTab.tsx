@@ -8,7 +8,8 @@ import { updateVenue } from '@/lib/actions/venues';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminCard as Card, useIsPhone } from '@/components/admin/primitives';
 import { inputStyle } from '../source/source-parts';
-import { Field, Pair } from './details-parts';
+import { Field, LookCard, OtherCard, Pair } from './details-parts';
+import { DetailsAbout } from './DetailsAbout';
 import { DetailsSaveBar } from './DetailsSaveBar';
 import {
   CAPACITY_TYPES,
@@ -52,11 +53,11 @@ const selectStyle = (invalid: boolean): CSSProperties => ({
 });
 
 /**
- * The venue page's Details tab (3b part 5): the Venue, Tickets and Contact
- * cards, with their own Save bar. Only the Details columns it changed are
- * ever sent: never a Source column (the Website is Source's calendar page,
- * shown read-only, ruling b) or a crawl rule. About and City are not edited
- * here yet, so they are never sent; the shell's older sections own them.
+ * The venue page's Details tab (3b part 5): the Venue, About, Tickets,
+ * Contact and Look cards, plus Other (ruling g), with its own Save bar. Only
+ * the Details columns it changed are ever sent: never a Source column (the
+ * Website is Source's calendar page, shown read-only, ruling b) or a crawl
+ * rule.
  */
 export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   const router = useRouter();
@@ -307,6 +308,17 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
     </Card>
   );
 
+  const aboutCard = (
+    <DetailsAbout
+      venueId={venue.id}
+      id={idOf('about')}
+      draft={draft}
+      error={errors.about}
+      saving={saving}
+      edit={edit}
+    />
+  );
+
   const ticketsCard = (
     <Card title={COPY.cards.tickets} phone={false} testId="details-tickets">
       <Field
@@ -364,6 +376,16 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
     </Card>
   );
 
+  const otherCard = (
+    <OtherCard name={venue.name}>
+      <Field id={idOf('city')} label={FIELDS.city} error={errors.city}>
+        {text('city')}
+      </Field>
+    </OtherCard>
+  );
+
+  const lookCard = <LookCard slug={venue.slug} name={venue.name} />;
+
   const column: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -385,11 +407,14 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
       style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
       {phone ? (
-        // `details-m`: Venue, Tickets, Contact.
+        // `details-m`: Venue, Tickets, Contact, Look, About, then Other.
         <div style={column}>
           {venueCard}
           {ticketsCard}
           {contactCard}
+          {lookCard}
+          {aboutCard}
+          {otherCard}
         </div>
       ) : (
         // `details-d`: two balanced columns, 1fr each (rule 5).
@@ -401,10 +426,15 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
             alignItems: 'start',
           }}
         >
-          <div style={column}>{venueCard}</div>
+          <div style={column}>
+            {venueCard}
+            {aboutCard}
+          </div>
           <div style={column}>
             {ticketsCard}
             {contactCard}
+            {lookCard}
+            {otherCard}
           </div>
         </div>
       )}

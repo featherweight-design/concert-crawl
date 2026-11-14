@@ -11,13 +11,40 @@ import {
 } from '@testing-library/react';
 
 const mockUpdateVenue = vi.fn();
+const mockGenerate = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
   updateVenue: (...args: unknown[]) => mockUpdateVenue(...args),
+  generateVenueAbout: (...args: unknown[]) => mockGenerate(...args),
 }));
 
 const mockRefresh = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: mockRefresh, push: vi.fn(), replace: vi.fn() }),
+}));
+
+vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
+  IdentityArt: () => null,
+}));
+
+// The review UI has its own suite; this stub accepts the draft on a click.
+vi.mock('@/components/admin/generate-field/GenerateField', () => ({
+  GenerateField: ({
+    state,
+    result,
+    onAccept,
+  }: {
+    state: string;
+    result?: { content: string };
+    onAccept: (content: string) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid={`generate-${state}`}
+      onClick={() => onAccept(result?.content ?? '')}
+    >
+      accept
+    </button>
+  ),
 }));
 
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -42,6 +69,7 @@ const venue: DetailsVenue = {
   id: 'venue-1',
   websiteUrl: 'https://www.ballarena.com/events',
   name: 'Ball Arena',
+  // A slug with a drawn glyph, so the Look card shows its icon and hero.
   slug: 'ball-arena',
   address: '1000 Chopper Cir, Denver, CO 80204',
   neighborhood: 'Central Platte Valley',
@@ -76,22 +104,31 @@ describe('DetailsTab', () => {
     mockUpdateVenue.mockReset();
     mockUpdateVenue.mockResolvedValue({ success: true });
     mockRefresh.mockReset();
+    mockGenerate.mockReset();
   });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
   });
 
-  it('draws the Venue, Tickets and Contact cards, with the venue’s values', () => {
+  it('draws the five cards and Other, with the venue’s values', () => {
     render(<DetailsTab venue={venue} />);
     const titles = screen
       .getAllByRole('region')
       .map((region) => region.getAttribute('aria-label'));
+    // Desktop: the left column, then the right.
     expect(titles).toEqual([
       COPY.cards.venue,
+      COPY.cards.about,
       COPY.cards.tickets,
       COPY.cards.contact,
+      COPY.cards.look,
+      COPY.cards.other,
     ]);
+    expect(input(FIELDS.city).value).toBe('Denver');
+    expect(
+      screen.getByRole('textbox', { name: COPY.cards.about }),
+    ).toHaveProperty('value', 'Denver’s big indoor arena.');
     expect(input(FIELDS.name).value).toBe('Ball Arena');
     expect(input(FIELDS.mapPin.label).value).toBe('39.7487, −105.0077');
     expect(input(FIELDS.capacity.label).value).toBe('19,500');
@@ -290,7 +327,7 @@ describe('DetailsTab', () => {
     expect(input(FIELDS.neighborhood).value).toBe('LoDo');
   });
 
-  it('never sends About or City, which this tab does not edit yet', async () => {
+  it('never sends About or City unless they were edited', async () => {
     render(<DetailsTab venue={{ ...venue, city: '' }} />);
     fireEvent.change(input(FIELDS.address), { target: { value: '1 Main St' } });
     save();
@@ -298,7 +335,121 @@ describe('DetailsTab', () => {
     expect([...sentForm().keys()]).toEqual(['address']);
   });
 
-  it('stacks the cards in the phone order: Venue, Tickets, Contact', () => {
+  it('saves edited About and City through its own bar', async () => {
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(screen.getByRole('textbox', { name: COPY.cards.about }), {
+      target: { value: 'A new line.' },
+    });
+    fireEvent.change(input(FIELDS.city), { target: { value: 'Boulder' } });
+    expect(
+      screen.getByText(COPY.saveBar.unsaved(2), { exact: false }),
+    ).toBeTruthy();
+    save();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    expect([...sentForm().keys()].sort()).toEqual(['about', 'city']);
+    expect(sentForm().get('about')).toBe('A new line.');
+    expect(sentForm().get('city')).toBe('Boulder');
+  });
+
+  it('accepting a drafted About also takes its capacity, type and neighborhood', async () => {
+    mockGenerate.mockResolvedValue({
+      success: true,
+      data: {
+        about: 'A drafted line.',
+        capacity: 18000,
+        venueType: 'Amphitheater',
+        neighborhood: 'LoDo',
+      },
+    });
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    expect(
+      screen.getByRole('textbox', { name: COPY.cards.about }),
+    ).toHaveProperty('value', 'A drafted line.');
+    expect(input(FIELDS.capacity.label).value).toBe('18,000');
+    expect(input(FIELDS.neighborhood).value).toBe('LoDo');
+    expect(screen.getByLabelText(FIELDS.capacityType.label)).toHaveProperty(
+      'value',
+      COPY.capacityTypes.outdoor,
+    );
+  });
+
+  it('an accepted draft is an edit until saved, and saves its four columns', async () => {
+    mockGenerate.mockResolvedValue({
+      success: true,
+      data: {
+        about: 'A drafted line.',
+        capacity: 18000,
+        venueType: 'Amphitheater',
+        neighborhood: 'LoDo',
+      },
+    });
+    render(<DetailsTab venue={venue} />);
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
+    save();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    expect([...sentForm().keys()].sort()).toEqual([
+      'about',
+      'capacity',
+      'neighborhood',
+      'venueType',
+    ]);
+  });
+
+  it('a draft with no capacity or neighborhood keeps the venue’s own', async () => {
+    mockGenerate.mockResolvedValue({
+      success: true,
+      data: {
+        about: 'A drafted line.',
+        capacity: null,
+        venueType: 'Arena',
+        neighborhood: '',
+      },
+    });
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    expect(input(FIELDS.capacity.label).value).toBe('19,500');
+    expect(input(FIELDS.neighborhood).value).toBe('Central Platte Valley');
+  });
+
+  it('a failed draft says so and changes nothing', async () => {
+    mockGenerate.mockResolvedValue({ success: false });
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    expect(await screen.findByTestId('generate-error')).toBeTruthy();
+    expect(screen.queryByTestId('details-save-bar')).toBeNull();
+  });
+
+  it('draws the Look card before an icon (`details-no-icon`), with no held actions', () => {
+    render(<DetailsTab venue={{ ...venue, slug: 'not-a-glyph-venue' }} />);
+    const look = screen.getByRole('region', { name: COPY.cards.look });
+    expect(within(look).getByText(COPY.look.iconNone)).toBeTruthy();
+    expect(within(look).getByText(COPY.look.heroNone)).toBeTruthy();
+    expect(within(look).queryAllByRole('button')).toEqual([]);
+  });
+
+  it('names the hero setting of a venue that has one', () => {
+    render(<DetailsTab venue={venue} />);
+    const hero = screen.getByTestId('details-look-hero');
+    expect(within(hero).getByText(COPY.capacityTypes.arena)).toBeTruthy();
+  });
+
+  it('rolls the fallback art as a preview, never an edit', () => {
+    render(<DetailsTab venue={venue} />);
+    const art = screen.getByTestId('details-fallback-art');
+    fireEvent.click(
+      within(art).getByRole('button', { name: COPY.fallbackArt.roll }),
+    );
+    expect(within(art).getByText(COPY.fallbackArt.hint)).toBeTruthy();
+    expect(screen.queryByTestId('details-save-bar')).toBeNull();
+  });
+
+  it('stacks the cards in the phone order: Venue, Tickets, Contact, Look, About, Other', () => {
     phone = true;
     render(<DetailsTab venue={venue} />);
     const titles = screen
@@ -308,20 +459,33 @@ describe('DetailsTab', () => {
       COPY.cards.venue,
       COPY.cards.tickets,
       COPY.cards.contact,
+      COPY.cards.look,
+      COPY.cards.about,
+      COPY.cards.other,
     ]);
-    // One column: all three cards share a parent (desktop splits them).
+    // One column: every card shares a parent (desktop splits them).
     const parentOf = (id: string) => screen.getByTestId(id).parentElement;
-    expect(parentOf('details-venue')).toBe(parentOf('details-contact'));
+    expect(parentOf('details-venue')).toBe(parentOf('details-other'));
     // details-m draws the cards at 16/18 on phone too, unlike Source's 14.
-    for (const id of ['details-venue', 'details-tickets', 'details-contact']) {
+    for (const id of [
+      'details-venue',
+      'details-about',
+      'details-tickets',
+      'details-contact',
+      'details-look',
+      'details-other',
+    ]) {
       expect(screen.getByTestId(id).style.padding).toBe('16px 18px');
     }
   });
 
-  it('puts Venue in its own column on desktop', () => {
+  it('puts Venue and About on the left on desktop, the rest on the right', () => {
     render(<DetailsTab venue={venue} />);
     const parentOf = (id: string) => screen.getByTestId(id).parentElement;
+    expect(parentOf('details-venue')).toBe(parentOf('details-about'));
     expect(parentOf('details-venue')).not.toBe(parentOf('details-contact'));
-    expect(parentOf('details-tickets')).toBe(parentOf('details-contact'));
+    for (const id of ['details-tickets', 'details-look', 'details-other']) {
+      expect(parentOf(id)).toBe(parentOf('details-contact'));
+    }
   });
 });
