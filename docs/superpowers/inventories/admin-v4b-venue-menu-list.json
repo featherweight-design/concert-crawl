@@ -1,0 +1,53 @@
+{
+  "feature": "Admin v4b · Venue menu rows and icons, hidden-venue crawl row, venue page gap",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 04-venues/the-menu (A3/03/venue-menu-states), 04-venues/hide-from-site, 04-venues/venue-overview and venue-mobile (the content column's gap:18px), 07/loading-venue-page. Read-only: rows open the ⋯ menu and look, never choose an item. The venue page is server-fetched, out of a route mock's reach, and the scratch branch has no hidden venue, so the pre-PR run points the web server's API at a local read-only proxy that answers GET /v1/admin/venues/<Ball Arena> with active:false (hidden Nov 2 by hugh, venue closed). Without that proxy the hidden-menu row draws Ball Arena's live menu and fails its wait. The menu rows settle after the header before the click: on the first cell of a run the click otherwise lands before hydration and the menu never opens. Not a row: the loading.tsx skeleton (07/loading-venue-page). The kit fails any cell with [aria-busy=\"true\"] visible and has no per-row opt-in, so it was photographed in the pre-PR run (the same proxy holding GET /v1/admin/venues/<Larimer Lounge> 25 s, then a click from /admin/venues) and is walked by hand. Also hand-walked: a hidden venue whose crawl is paused (Resume row, RefreshCw), and a taken-down venue's menu.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1440, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "menu-live",
+      "label": "Live venue, ⋯ menu open: Pause, flagship, Hide (Eye), Take down (X) (Bluebird)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "wait": "[data-testid=\"venue-header\"]",
+          "settle": 2000
+        },
+        { "click": "[data-testid=\"venue-menu\"]:visible" },
+        {
+          "wait": "[role=\"menu\"] [data-testid=\"venue-menu-hide\"]",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "menu-hidden",
+      "label": "Hidden venue, ⋯ menu open: crawl row kept (Design item 22), Show on site, Delete (X) (Ball Arena, proxied active:false)",
+      "steps": [
+        {
+          "goto": "/admin/venues/ca9d0ca0-c0fb-4a35-a4e8-e11f9e44a125",
+          "wait": "[data-testid=\"venue-header\"]",
+          "settle": 2000
+        },
+        { "click": "[data-testid=\"venue-menu\"]:visible" },
+        {
+          "wait": "[role=\"menu\"] [data-testid=\"venue-menu-delete\"]",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "page-gap",
+      "label": "Venue page, 18 between header, tabs and panel (Bluebird Overview)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "wait": "[data-testid=\"venue-tabs\"]"
+        },
+        { "wait": "[data-testid=\"venue-panel-overview\"]", "settle": 1200 }
+      ]
+    }
+  ]
+}
