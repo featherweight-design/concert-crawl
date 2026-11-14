@@ -29,7 +29,7 @@ interface RowMenuProps {
 }
 
 const ITEM_CLASS =
-  'flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 bg-transparent px-3 text-left font-semibold text-[var(--fg)] no-underline hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--accent)]';
+  'flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 bg-transparent px-3 text-left font-bold text-[var(--fg)] no-underline hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:shadow-[0_0_0_2px_var(--bg-elevated),0_0_0_4px_var(--signal)]';
 
 export const RowMenu = ({
   tense,
@@ -106,7 +106,7 @@ export const RowMenu = ({
   const sub = (line: string) =>
     isMobile ? (
       <span
-        className="mt-0.5 block text-[13px] font-normal"
+        className="mt-0.5 block text-[12.5px] font-normal"
         style={{ color: 'var(--fg-muted)' }}
       >
         {line}
@@ -114,8 +114,8 @@ export const RowMenu = ({
     ) : null;
 
   const itemSize = isMobile
-    ? 'min-h-[52px] py-2 text-[17px]'
-    : 'min-h-11 text-[13.5px]';
+    ? 'min-h-[52px] rounded-none border-t border-[var(--border)] py-1 text-[17px] first:border-t-0'
+    : 'min-h-11 text-[14px]';
 
   const items = (
     <div
@@ -123,7 +123,7 @@ export const RowMenu = ({
       role="menu"
       aria-label={HISTORY_COPY.menu.trigger(artist)}
       onKeyDown={onMenuKeyDown}
-      className={isMobile ? 'flex flex-col' : '-m-1.5 flex flex-col p-1'}
+      className="flex flex-col"
     >
       <Link
         role="menuitem"
@@ -131,7 +131,9 @@ export const RowMenu = ({
         className={`${ITEM_CLASS} ${itemSize}`}
         onClick={() => setOpen(false)}
       >
-        <CalendarIcon />
+        <Tile mobile={isMobile}>
+          <CalendarIcon />
+        </Tile>
         <span className="min-w-0">
           {HISTORY_COPY.menu.open}
           {!past && sub(HISTORY_COPY.menu.openSub)}
@@ -143,7 +145,9 @@ export const RowMenu = ({
         className={`${ITEM_CLASS} ${itemSize}`}
         onClick={() => pick(onShare)}
       >
-        <ShareIcon />
+        <Tile mobile={isMobile}>
+          <ShareIcon />
+        </Tile>
         <span className="min-w-0">
           {past ? HISTORY_COPY.menu.share : HISTORY_COPY.menu.shareUpcoming}
           {!past && sub(HISTORY_COPY.menu.shareSub)}
@@ -162,7 +166,9 @@ export const RowMenu = ({
         className={`${ITEM_CLASS} ${itemSize} ${past ? '!text-[var(--danger)]' : ''}`}
         onClick={() => pick(onRemove)}
       >
-        {past ? <RemoveIcon /> : <CrossIcon />}
+        <Tile mobile={isMobile} danger={past}>
+          {past ? <RemoveIcon /> : <CrossIcon />}
+        </Tile>
         <span className="min-w-0">
           {past ? HISTORY_COPY.menu.remove : HISTORY_COPY.menu.removeUpcoming}
           {!past && sub(HISTORY_COPY.menu.removeUpcomingSub)}
@@ -187,7 +193,7 @@ export const RowMenu = ({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((was) => !was)}
-        className={`inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 text-[var(--fg-muted)] transition-opacity duration-[var(--motion-fast)] ease-[var(--motion-ease)] focus-visible:opacity-100 lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100 ${open ? 'bg-[var(--surface-3,var(--surface-2))] lg:opacity-100' : 'bg-transparent'}`}
+        className={`relative inline-flex h-11 w-11 shrink-0 cursor-pointer lg:h-8 lg:w-8 lg:before:absolute lg:before:-inset-1.5 lg:before:content-[''] items-center justify-center rounded-lg border text-[var(--fg-muted)] transition-opacity duration-[var(--motion-fast)] ease-[var(--motion-ease)] focus-visible:opacity-100 lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100 ${open ? 'border-[var(--border-strong)] bg-[var(--border)] lg:opacity-100' : 'border-transparent bg-transparent'}`}
       >
         <DotsIcon />
       </button>
@@ -214,7 +220,10 @@ export const RowMenu = ({
             anchor={anchor}
             placement="bottom"
             align="end"
-            width={240}
+            width={250}
+            padding={6}
+            radius={14}
+            arrow={false}
             onClose={close}
           >
             {items}
@@ -239,7 +248,7 @@ const SheetTitle = ({
       style={{
         fontFamily: 'var(--font-ui)',
         fontWeight: 800,
-        fontSize: 20,
+        fontSize: 18,
         letterSpacing: '-0.02em',
         color: 'var(--fg)',
       }}
@@ -250,8 +259,8 @@ const SheetTitle = ({
       className="uppercase"
       style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: 11.5,
-        letterSpacing: '0.06em',
+        fontSize: 10.5,
+        letterSpacing: '0.04em',
         color: 'var(--fg-muted)',
       }}
     >
@@ -259,6 +268,28 @@ const SheetTitle = ({
     </span>
   </div>
 );
+
+/** The phone sheet seats each icon in a 34px tile at radius 9 (`past-menu-m`,
+ * `upcoming-menu-m`); the desktop popover draws the bare icon. */
+const Tile = ({
+  mobile,
+  danger = false,
+  children,
+}: {
+  mobile: boolean;
+  danger?: boolean;
+  children: ReactNode;
+}) =>
+  mobile ? (
+    <span
+      aria-hidden="true"
+      className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[var(--surface-2)] [&>svg]:h-4 [&>svg]:w-4 ${danger ? 'text-[var(--danger)]' : 'text-[var(--fg-muted)]'}`}
+    >
+      {children}
+    </span>
+  ) : (
+    <>{children}</>
+  );
 
 const Icon = ({ children }: { children: ReactNode }) => (
   <svg

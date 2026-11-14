@@ -56,6 +56,8 @@ interface BottomSheetProps {
    * share one row (the Add sheet's CONCERTS and Done).
    */
   eyebrow?: string;
+  /** Draws the eyebrow in the muted ink instead of the signal one. */
+  eyebrowMuted?: boolean;
   children: React.ReactNode;
 }
 
@@ -86,6 +88,7 @@ export const BottomSheet = ({
   pinned = false,
   handle = false,
   eyebrow,
+  eyebrowMuted = false,
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -238,7 +241,9 @@ export const BottomSheet = ({
           {...drag.zoneProps}
         >
           {eyebrow !== undefined && (
-            <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.14em] text-signal">
+            <span
+              className={`font-mono text-[9.5px] font-bold uppercase tracking-[0.14em] ${eyebrowMuted ? 'text-fg-muted' : 'text-signal'}`}
+            >
               {eyebrow}
             </span>
           )}
