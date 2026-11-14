@@ -184,11 +184,11 @@ async function main(): Promise<void> {
 
   if (summaryFile !== undefined) {
     const lines = [
-      `## Repair event artists — ${dryRun ? 'DRY RUN (nothing written)' : 'APPLIED'}`,
+      `## Repair event artists — ${dryRun ? 'DRY RUN (no events or artists written; the Haiku spend is recorded)' : 'APPLIED'}`,
       '',
       `Scanned ${result.scanned} · derived ${result.derived} · ` +
         `${dryRun ? 'would update' : 'updated'} ${result.updated} · ` +
-        `hidden ${result.hidden} · Haiku calls ${adjudicationCost.calls} · $${adjudicationCost.costUsd.toFixed(4)}` +
+        `hidden ${result.hidden} · Haiku calls ${adjudicationCost.calls} · $${adjudicationCost.costUsd.toFixed(4)} ` +
         `of the $${maxCostUsd} cap${result.stopped ? ' (COST CAP HIT, the pass stopped early)' : ''}`,
       '',
       'Strategies: ' +

@@ -2093,6 +2093,37 @@ describe('crawlVenue — LLM cost tracking', () => {
       }
     });
 
+    it('records the adjudication row when the crawl fails after adjudicating', async () => {
+      const venue = mockExtractionWithTwoAdjudications();
+      // Fail the crawl after the adjudication loop: the extraction 'claude'
+      // row is written later in the success path, so throwing there sends the
+      // crawl to its failure branch with both adjudications already spent.
+      const realInsert = db.insert.bind(db);
+      const insertSpy = vi.spyOn(db, 'insert').mockImplementation(((
+        table: any,
+      ) => {
+        const builder: any = realInsert(table);
+        const values = builder.values;
+        builder.values = (row: any) => {
+          if (table?._t === 'costTracking' && row?.service === 'claude') {
+            throw new Error('claude row write failed');
+          }
+          return values(row);
+        };
+        return builder;
+      }) as typeof db.insert);
+
+      try {
+        const run = await crawlVenue(venue.id, mockBrowser);
+
+        expect(run.status).toBe('failed');
+        expect(adjudicateEventWithUsage).toHaveBeenCalledTimes(2);
+        expect(rowsFor('artist-adjudication')).toHaveLength(1);
+      } finally {
+        insertSpy.mockRestore();
+      }
+    });
+
     it('writes no adjudication row when no adjudication was answered', async () => {
       const venue = seedVenue();
       mockFetchPage.mockResolvedValue({
