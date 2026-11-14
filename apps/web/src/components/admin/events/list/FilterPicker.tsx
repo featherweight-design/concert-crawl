@@ -322,6 +322,8 @@ export const FilterPicker = ({
   unticked,
   stale = false,
   menu,
+  sheetTitle,
+  menuWidth,
   onApply,
 }: {
   /** The placeholder words, and the popover's or sheet's name. */
@@ -352,9 +354,15 @@ export const FilterPicker = ({
   stale?: boolean;
   /**
    * A menu that draws its own rows and applies each pick at once
-   * (`36/past-status-menu-d`), in place of the checkbox list and Show N.
+   * (`36/past-status-menu-d`), in place of the checkbox list and Show N. A
+   * single-select menu takes `close`, to shut the menu on its pick and hand
+   * focus back to the chip (`37/log-filter-menus`).
    */
-  menu?: ReactNode;
+  menu?: ReactNode | ((close: () => void) => ReactNode);
+  /** The phone sheet's title, when the board names it apart from `label`. */
+  sheetTitle?: string;
+  /** The desktop popover's width, when the board draws `menu` wider. */
+  menuWidth?: number;
   onApply: (keys: string[]) => void;
 }) => {
   const isPhone = useIsPhone();
@@ -445,6 +453,12 @@ export const FilterPicker = ({
     </div>
   );
 
+  const closeMenu = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+  const menuBody = typeof menu === 'function' ? menu(closeMenu) : menu;
+
   const isPicked = selected.length > 0;
   const trigger = (
     <button
@@ -499,10 +513,10 @@ export const FilterPicker = ({
         (isPhone ? (
           <AdminSheet
             onClose={() => setOpen(false)}
-            title={label}
+            title={sheetTitle ?? label}
             footer={menu === undefined ? footer : undefined}
           >
-            <div data-testid={testId}>{menu ?? body}</div>
+            <div data-testid={testId}>{menuBody ?? body}</div>
           </AdminSheet>
         ) : (
           <div
@@ -517,7 +531,8 @@ export const FilterPicker = ({
               zIndex: 30,
               // 240 as `36/past-status-menu-d` draws its menu.
               width:
-                menu !== undefined ? 240 : search === undefined ? 280 : 300,
+                menuWidth ??
+                (menu !== undefined ? 240 : search === undefined ? 280 : 300),
               padding: 8,
               borderRadius: 14,
               border: '1px solid var(--border-strong)',
@@ -525,7 +540,7 @@ export const FilterPicker = ({
               boxShadow: '0 18px 40px rgba(0, 0, 0, 0.5)',
             }}
           >
-            {menu ?? (
+            {menuBody ?? (
               <>
                 {body}
                 {footer}

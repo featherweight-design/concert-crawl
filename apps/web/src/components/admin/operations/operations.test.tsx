@@ -298,11 +298,15 @@ describe('Activity log', () => {
 
   // `37/log-day-picker-d` draws Anyone and Any page idle; their menus are the
   // next change, so for now they are text and read everyone, every page.
-  it('draws Anyone and Any page as idle text, then the day stepper', async () => {
+  it('draws Anyone and Any page idle, then the day stepper', async () => {
     renderLog();
     await screen.findByTestId('activity-log-table');
-    expect(screen.getByText(COPY.log.anyone).tagName).toBe('SPAN');
-    expect(screen.getByText(COPY.log.anyPage).tagName).toBe('SPAN');
+    expect(screen.getByTestId('activity-log-anyone-chip')).toHaveTextContent(
+      COPY.log.anyone,
+    );
+    expect(screen.getByTestId('activity-log-any-page-chip')).toHaveTextContent(
+      COPY.log.anyPage,
+    );
     expect(screen.getByTestId('activity-log-day-chip')).toHaveTextContent(
       COPY.log.today,
     );
@@ -311,6 +315,150 @@ describe('Activity log', () => {
     ).toBeDisabled();
     expect(logCalls().at(-1)?.searchParams.has('actorHandle')).toBe(false);
     expect(logCalls().at(-1)?.searchParams.has('area')).toBe(false);
+  });
+
+  describe('Anyone and Any page', () => {
+    const actorsBody = (count: number) =>
+      json({
+        success: true,
+        data: [
+          {
+            handle: 'hugh',
+            avatarColor: 'warning',
+            avatarSecondColor: 'success',
+            count: 31,
+            you: true,
+          },
+          {
+            handle: 'jules',
+            avatarColor: null,
+            avatarSecondColor: null,
+            count: 8,
+            you: false,
+          },
+          ...Array.from({ length: count }, (_, i) => ({
+            handle: `staff${i}`,
+            avatarColor: null,
+            avatarSecondColor: null,
+            count: 0,
+            you: false,
+          })),
+        ],
+      });
+    let extraStaff = 0;
+    const actorCalls = () =>
+      fetchMock.mock.calls
+        .map(([input]) => new URL(String(input)))
+        .filter((url) => url.pathname === '/v1/admin/audit-log/actors');
+
+    beforeEach(() => {
+      extraStaff = 0;
+      fetchMock.mockImplementation(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = new URL(String(input));
+          if (url.pathname === '/v1/admin/audit-log/actors')
+            return actorsBody(extraStaff);
+          if (url.pathname === '/v1/admin/audit-log') return logPage(url, init);
+          return json({ success: true, data: [] });
+        },
+      );
+    });
+
+    it("lists every admin with the day's count, you first, and filters to one", async () => {
+      renderLog();
+      await screen.findByTestId('activity-log-table');
+      fireEvent.click(screen.getByTestId('activity-log-anyone-chip'));
+      const menu = await screen.findByTestId('activity-log-anyone');
+      const hugh = await within(menu).findByRole('button', { name: '@hugh' });
+      expect(hugh).toHaveTextContent(`${COPY.log.you} · 31 today`);
+      expect(
+        within(menu).getByRole('button', { name: '@jules' }),
+      ).toHaveTextContent('8 today');
+      expect(menu).toHaveTextContent(COPY.log.anyoneNote);
+      // Eight people or fewer: no search.
+      expect(within(menu).queryByRole('searchbox')).not.toBeInTheDocument();
+
+      fireEvent.click(within(menu).getByRole('button', { name: '@jules' }));
+      expect(
+        screen.queryByTestId('activity-log-anyone'),
+      ).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(logCalls().at(-1)?.searchParams.get('actorHandle')).toBe(
+          'jules',
+        ),
+      );
+      const chip = screen.getByTestId('activity-log-anyone-chip');
+      expect(chip).toHaveTextContent('@jules');
+      expect(chip).toHaveAccessibleName(COPY.log.pickedActor('jules'));
+
+      fireEvent.click(screen.getByTestId('activity-log-anyone-clear'));
+      await waitFor(() =>
+        expect(logCalls().at(-1)?.searchParams.has('actorHandle')).toBe(false),
+      );
+    });
+
+    it('offers a search once there are more than eight people', async () => {
+      extraStaff = 7;
+      renderLog();
+      await screen.findByTestId('activity-log-table');
+      fireEvent.click(screen.getByTestId('activity-log-anyone-chip'));
+      const menu = await screen.findByTestId('activity-log-anyone');
+      const search = await within(menu).findByRole('searchbox', {
+        name: COPY.log.findAdmin,
+      });
+      fireEvent.change(search, { target: { value: '@jul' } });
+      expect(within(menu).getByRole('button', { name: '@jules' }));
+      expect(
+        within(menu).queryByRole('button', { name: '@hugh' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("lists the sidebar's pages in its order and filters to one", async () => {
+      renderLog();
+      await screen.findByTestId('activity-log-table');
+      fireEvent.click(screen.getByTestId('activity-log-any-page-chip'));
+      const menu = await screen.findByTestId('activity-log-any-page');
+      const names = within(menu)
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label'));
+      expect(names).toEqual([
+        COPY.log.anyPage,
+        'Needs you',
+        'Health',
+        'Venues',
+        'Events',
+        'Artists',
+        'Prices',
+        'People',
+        'Feature flags',
+        'Crawl runs',
+        'Operations',
+      ]);
+      fireEvent.click(within(menu).getByRole('button', { name: 'Prices' }));
+      await waitFor(() =>
+        expect(logCalls().at(-1)?.searchParams.get('area')).toBe('prices'),
+      );
+      // The counts follow the page.
+      await waitFor(() =>
+        expect(actorCalls().at(-1)?.searchParams.get('area')).toBe('prices'),
+      );
+      expect(
+        screen.getByTestId('activity-log-any-page-chip'),
+      ).toHaveTextContent('Prices');
+    });
+
+    it('opens Anyone as a sheet on the phone, drawn without counts', async () => {
+      setPhone(true);
+      renderLog();
+      await screen.findAllByTestId('activity-log-card');
+      fireEvent.click(screen.getByTestId('activity-log-anyone-chip'));
+      const sheet = await screen.findByRole('dialog', {
+        name: COPY.log.whoSheet,
+      });
+      const hugh = await within(sheet).findByRole('button', { name: '@hugh' });
+      expect(hugh).not.toHaveTextContent('today');
+      expect(sheet).not.toHaveTextContent(COPY.log.anyoneNote);
+    });
   });
 
   it('steps back a day, ends it with the days either side, and comes back', async () => {
@@ -511,8 +659,11 @@ describe('Activity log', () => {
     const card = (await screen.findAllByTestId('activity-log-card'))[0];
     expect(card).toHaveTextContent('Revoked invite code SHARED1');
     expect(card).toHaveTextContent(/@hugh · \d{1,2}:\d{2} [AP]M · People/);
-    // Anyone and Any page open sheets on the phone, the next change.
-    expect(screen.queryByText(COPY.log.anyone)).not.toBeInTheDocument();
+    // `37/log-m`: Anyone and Any page under the stepper.
+    expect(screen.getByTestId('activity-log-anyone-chip')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('activity-log-any-page-chip'),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: COPY.log.nextDay }),
     ).toBeDisabled();
