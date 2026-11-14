@@ -25,7 +25,7 @@
  * ("Rossi" and "Rossi.") the pair is listed for the admin artists queue.
  */
 
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import {
   artists,
   auditLog,
@@ -454,10 +454,21 @@ export async function mergeDuplicateNights(
         }
         unwritten = values;
         if (fields.length > 0) {
-          await db
+          // A bill fill re-checks the lineup lock at write time, as Repair
+          // does: an admin may save the lineup after the re-read above.
+          const fillsBill = fields.includes('headliners');
+          const written = await db
             .update(events)
             .set({ ...values, updatedAt: new Date() })
-            .where(eq(events.id, survivor.id));
+            .where(
+              fillsBill
+                ? and(eq(events.id, survivor.id), isNull(events.lineupEditedAt))
+                : eq(events.id, survivor.id),
+            )
+            .returning({ id: events.id });
+          if (written.length === 0) {
+            throw new Error('lineup saved during the fill; nothing written');
+          }
           await db.insert(auditLog).values({
             actorId: CLEANUP_ACTOR,
             action: 'event.fill_from_merge',
