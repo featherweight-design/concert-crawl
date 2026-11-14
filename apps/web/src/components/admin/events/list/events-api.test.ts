@@ -17,18 +17,36 @@ const ROW = {
 };
 
 describe('rowFrom', () => {
-  it('reads the listing URL', () => {
-    expect(rowFrom({ ...ROW, sourceUrl: 'https://x.example/1' })).toMatchObject(
-      { sourceUrl: 'https://x.example/1' },
-    );
+  it('links the show’s own page over the calendar it was crawled from', () => {
+    expect(
+      rowFrom({
+        ...ROW,
+        eventUrl: 'https://x.example/shows/1',
+        sourceUrl: 'https://x.example/calendar',
+      }),
+    ).toMatchObject({ venueUrl: 'https://x.example/shows/1' });
   });
 
-  it('reads a row from an API that predates sourceUrl as no link, not a failure', () => {
-    expect(rowFrom(ROW)).toMatchObject({ id: 'evt-1', sourceUrl: null });
+  it('falls back to the calendar when the show page is unsafe or missing', () => {
+    expect(
+      rowFrom({
+        ...ROW,
+        eventUrl: 'javascript:alert(1)',
+        sourceUrl: 'https://x.example/calendar',
+      }),
+    ).toMatchObject({ venueUrl: 'https://x.example/calendar' });
+    expect(
+      rowFrom({ ...ROW, eventUrl: null, sourceUrl: 'javascript:alert(1)' }),
+    ).toMatchObject({ venueUrl: null });
   });
 
-  it('refuses a non-text sourceUrl', () => {
+  it('reads a row from an API that predates the URLs as no link, not a failure', () => {
+    expect(rowFrom(ROW)).toMatchObject({ id: 'evt-1', venueUrl: null });
+  });
+
+  it('refuses a non-text URL', () => {
     expect(rowFrom({ ...ROW, sourceUrl: 42 })).toBeNull();
+    expect(rowFrom({ ...ROW, eventUrl: 42 })).toBeNull();
   });
 });
 

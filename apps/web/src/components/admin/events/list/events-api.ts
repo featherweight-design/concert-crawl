@@ -12,6 +12,7 @@ import {
   isTextOrNull,
   type GetToken,
 } from '../../invite-codes/codes-api';
+import { resolveVenueCheckUrl } from '@/lib/admin/missing';
 import {
   apiParams,
   isEventListStatus,
@@ -29,8 +30,12 @@ export interface EventListRow {
   venueName: string | null;
   /** Picks the venue's icon tile. */
   venueSlug: string | null;
-  /** The listing we crawled; `null` for a show with no source page. */
-  sourceUrl: string | null;
+  /**
+   * "View on the venue's site": the show's own page, else the calendar page it
+   * was crawled from, each scheme-checked (`resolveVenueCheckUrl`); `null`
+   * when neither is a safe http(s) URL.
+   */
+  venueUrl: string | null;
   status: EventListStatus;
   hidden: boolean;
   hiddenReason: HiddenReason | null;
@@ -95,8 +100,9 @@ export const rowFrom = (value: unknown): EventListRow | null => {
     return null;
   }
   // Absent on an API older than this web build (they deploy apart): no link.
+  const eventUrl = value['eventUrl'] ?? null;
   const sourceUrl = value['sourceUrl'] ?? null;
-  if (!isTextOrNull(sourceUrl)) return null;
+  if (!isTextOrNull(eventUrl) || !isTextOrNull(sourceUrl)) return null;
   const hiddenReason = hiddenReasonOf(value['hiddenReason']);
   const priceMin = priceOf(value['priceMin']);
   const priceMax = priceOf(value['priceMax']);
@@ -113,7 +119,7 @@ export const rowFrom = (value: unknown): EventListRow | null => {
     date: value['date'],
     venueName: value['venueName'],
     venueSlug: value['venueSlug'],
-    sourceUrl,
+    venueUrl: resolveVenueCheckUrl(eventUrl, sourceUrl),
     status: value['status'],
     hidden: value['hidden'],
     hiddenReason,

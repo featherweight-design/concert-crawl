@@ -26,7 +26,7 @@ const row = (overrides: Partial<EventListRow>): EventListRow => ({
   date: '2026-11-12',
   venueName: 'Red Rocks',
   venueSlug: 'red-rocks',
-  sourceUrl: null,
+  venueUrl: null,
   status: 'available',
   hidden: false,
   hiddenReason: null,
@@ -47,7 +47,10 @@ const setPhone = (matches: boolean) => {
 };
 
 beforeEach(() => setPhone(false));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe('EventsList on desktop', () => {
   it('keeps a hidden show’s status chip and adds the Hidden chip (4b#8)', () => {
@@ -129,18 +132,14 @@ describe('EventsList on desktop', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('offers View on the venue’s site only for a safe listing URL', () => {
+  it('offers View on the venue’s site only when the row has a venue page', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     render(
       <EventsList
         when="upcoming"
         rows={[
-          row({ sourceUrl: 'https://redrocks.example/shows/1' }),
-          row({
-            id: 'evt-2',
-            title: 'Unsafe',
-            sourceUrl: 'javascript:alert(1)',
-          }),
+          row({ venueUrl: 'https://redrocks.example/shows/1' }),
+          row({ id: 'evt-2', title: 'Unsafe', venueUrl: null }),
         ]}
       />,
     );
@@ -161,7 +160,6 @@ describe('EventsList on desktop', () => {
     expect(
       screen.queryByRole('menuitem', { name: new RegExp(COPY.menu.viewVenue) }),
     ).toBeNull();
-    open.mockRestore();
   });
 });
 
