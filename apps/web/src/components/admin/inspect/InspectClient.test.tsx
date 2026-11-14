@@ -7,6 +7,7 @@ import {
   screen,
   cleanup,
   fireEvent,
+  waitFor,
   within,
 } from '@testing-library/react';
 import type * as ApiModule from '@/lib/api';
@@ -405,7 +406,7 @@ describe('InspectClient', () => {
     expect(stopped.style.color).toBe('var(--warning)');
     expect(well.style.position).toBe('relative');
     expect(well.style.overflowY).toBe('auto');
-    expect(scrollTop).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(scrollTop).toHaveBeenCalledTimes(1));
     expect(scrollTop.mock.calls[0]?.[0]).toBe(480);
     expect(scrollTop.mock.contexts[0]).toBe(well);
   });
@@ -417,11 +418,14 @@ describe('InspectClient', () => {
     const pages = [first, page({ id: 'page-2', httpStatus: 503 })];
     render(<InspectClient {...props({ pages, page: first })} />);
     await screen.findByTestId('inspect-stopped-here');
-    expect(scrollTop).toHaveBeenCalledTimes(1);
+    // Wait for the opening scroll itself, not only the marker it targets.
+    await waitFor(() => expect(scrollTop).toHaveBeenCalledTimes(1));
     const tabs = within(screen.getByTestId('inspect-tabs'));
     fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.text }));
     fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.html }));
     expect(screen.getByTestId('inspect-stopped-here')).toBeTruthy();
+    // fireEvent runs in act, which flushes every effect: a second scroll
+    // would have landed by now.
     expect(scrollTop).toHaveBeenCalledTimes(1);
   });
 

@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { Flag } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -251,7 +258,10 @@ const TabPanel = ({
   const wellRef = useRef<HTMLDivElement>(null);
   const markerRef = useRef<HTMLDivElement>(null);
   const openedAt = useRef<string | null>(null);
-  useEffect(() => {
+  // A layout effect: the well is scrolled in the same commit that draws the
+  // marker, before paint, so it never shows the top and then jumps (and a
+  // test that sees the marker sees the scroll).
+  useLayoutEffect(() => {
     if (tab !== 'html' || stopped === null || openedAt.current === pageId) {
       return;
     }
