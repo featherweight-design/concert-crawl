@@ -75,7 +75,8 @@ describe('pickPriceCheckOutcome', () => {
         row('old', { updatedAt: daysAgo(9) }),
         row('counter', { disputedSubmissionId: 'live', updatedAt: daysAgo(2) }),
       ],
-      { disputed: 'old' },
+      // The live row carries the newest decision's stamp.
+      { disputed: 'old', updatedAt: daysAgo(2) },
     );
     expect(outcome?.outcome).toBe('held');
   });
@@ -84,11 +85,13 @@ describe('pickPriceCheckOutcome', () => {
     expect(
       pick([row('old', { updatedAt: daysAgo(PRICE_CHECK_OUTCOME_DAYS + 1) })], {
         disputed: 'old',
+        updatedAt: daysAgo(PRICE_CHECK_OUTCOME_DAYS + 1),
       }),
     ).toBeNull();
     expect(
       pick([row('old', { updatedAt: daysAgo(PRICE_CHECK_OUTCOME_DAYS) })], {
         disputed: 'old',
+        updatedAt: daysAgo(PRICE_CHECK_OUTCOME_DAYS),
       })?.outcome,
     ).toBe('updated');
   });
