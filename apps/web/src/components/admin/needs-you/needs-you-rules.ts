@@ -358,13 +358,17 @@ export const mountainDay = (iso: string): string | null => {
   return parts ? `${parts.month} ${parts.day}` : null;
 };
 
+/** "3 AM" or "3:02 AM" from `mountainParts`' hour, minute and period. */
+const clockOf = (
+  parts: NonNullable<ReturnType<typeof mountainParts>>,
+): string =>
+  `${parts.minute === '00' ? parts.hour : `${parts.hour}:${parts.minute}`} ${parts.period}`;
+
 /** "Nov 9, 3 AM" or "Nov 9, 3:02 AM", an instant in Mountain Time. */
 export const mountainStamp = (iso: string): string | null => {
   const parts = mountainParts(iso);
   if (!parts) return null;
-  const clock =
-    parts.minute === '00' ? parts.hour : `${parts.hour}:${parts.minute}`;
-  return `${parts.month} ${parts.day}, ${clock} ${parts.period}`;
+  return `${parts.month} ${parts.day}, ${clockOf(parts)}`;
 };
 
 /**
@@ -375,10 +379,8 @@ export const mountainStamp = (iso: string): string | null => {
 export const nextCrawlWhen = (iso: string, now: Date): string | null => {
   const parts = mountainParts(iso);
   if (!parts) return null;
-  const clock =
-    parts.minute === '00' ? parts.hour : `${parts.hour}:${parts.minute}`;
   const sameDay = mountainDay(iso) === mountainDay(now.toISOString());
-  return `${sameDay ? 'Today' : 'Tonight'}, ${clock} ${parts.period}`;
+  return `${sameDay ? 'Today' : 'Tonight'}, ${clockOf(parts)}`;
 };
 
 /** The days from `today` to `fanDate`, or null when there is no date. */

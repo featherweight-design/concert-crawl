@@ -156,33 +156,33 @@ describe('admin needs-you routes', () => {
     setAuth('admin');
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
     const other = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
-    const at = new Date(Date.now() - 2 * 3_600_000);
+    // A nightly two days back, at the cron time, so it is always inside the
+    // window and long finished.
+    const at = new Date();
+    at.setUTCDate(at.getUTCDate() - 2);
+    at.setUTCHours(9, 8, 0, 0);
     await seedCrawlRun(venue.id, { createdAt: at });
     await seedCrawlRun(other.id, {
       createdAt: new Date(at.getTime() + 60_000),
       status: 'failed',
       reason: 'timeout',
     });
-    expect(
-      (
-        await snooze(`venue-failing:${venue.id}`, {
-          until: inHours(48).toISOString(),
-        })
-      ).status,
-    ).toBe(200);
+    // A season-long snooze counts; a two-day one does not.
+    const hold = (venueId: string, hours: number) =>
+      snooze(`venue-failing:${venueId}`, {
+        until: inHours(hours).toISOString(),
+      });
+    expect((await hold(venue.id, 24 * 10)).status).toBe(200);
+    expect((await hold(other.id, 48)).status).toBe(200);
 
     const res = await app.request('/v1/admin/needs-you/facts');
     const body: { data: AllClearFacts } = await res.json();
     expect(body.data.snoozedVenues).toBe(1);
-    // The nightly window is the Mountain Time night, so two runs two hours
-    // ago may fall in last night's or be too recent to group: only the shape
-    // is pinned when one is found.
-    if (body.data.lastCrawl) {
-      expect(body.data.lastCrawl.total).toBeGreaterThanOrEqual(1);
-      expect(body.data.lastCrawl.ok).toBeLessThanOrEqual(
-        body.data.lastCrawl.total,
-      );
-    }
+    expect(body.data.lastCrawl).toEqual({
+      ok: 1,
+      total: 2,
+      at: at.toISOString(),
+    });
   });
 
   it('snooze hides the item and audits it against the key and actor', async () => {

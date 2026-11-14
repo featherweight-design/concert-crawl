@@ -6,7 +6,7 @@ import {
   CRAWLER_DAILY_CRON_UTC,
   lastNightlyFact,
   nextCrawlAfter,
-  snoozedVenueCount,
+  venuesOfKeys,
 } from './all-clear-facts.js';
 
 describe('CRAWLER_DAILY_CRON_UTC', () => {
@@ -49,25 +49,20 @@ describe('nextCrawlAfter', () => {
   });
 });
 
-describe('snoozedVenueCount', () => {
-  it('counts each venue once however it is held, and ignores other kinds', () => {
-    const count = snoozedVenueCount({
-      keys: new Set([
+describe('venuesOfKeys', () => {
+  it('counts each venue once however many of its items are held', () => {
+    expect(
+      venuesOfKeys([
         'venue-failing:v1',
         'venue-blocked:v1:evidence',
         'venue-failing:v2',
-        'artist:a1',
-        'price-check:p1',
       ]),
-      notUseful: new Set(['venue-failing:v2', 'venue-blocked:v3', 'bug:v9']),
-    });
-    expect(count).toBe(3);
+    ).toBe(2);
   });
 
-  it('is zero with nothing snoozed', () => {
-    expect(snoozedVenueCount({ keys: new Set(), notUseful: new Set() })).toBe(
-      0,
-    );
+  it('is zero with nothing snoozed, and skips a key it cannot read', () => {
+    expect(venuesOfKeys([])).toBe(0);
+    expect(venuesOfKeys(['nope'])).toBe(0);
   });
 });
 
@@ -106,6 +101,20 @@ describe('lastNightlyFact', () => {
     });
     expect(fact).toMatchObject({ ok: 2, total: 3 });
     expect(fact?.at).toBe('2026-11-13T09:08:00.000Z');
+  });
+
+  it('skips a night still running, so a half-done sweep is not read as clean', () => {
+    expect(
+      lastNightlyFact({
+        runs: [
+          run('a', '2026-11-13T09:08:00Z'),
+          run('b', '2026-11-13T09:09:00Z'),
+        ],
+        triggers: [],
+        // Two minutes after the last run: the crawl is still going.
+        now: new Date('2026-11-13T09:11:00Z'),
+      }),
+    ).toBeNull();
   });
 
   it('is null when no nightly ran', () => {

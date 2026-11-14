@@ -6,8 +6,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { and, asc, desc, eq, gte, isNull, lt, sql } from 'drizzle-orm';
-import { crawlRuns, crawlTriggers, db, venues } from '@concert-crawl/db';
+import { asc, isNull } from 'drizzle-orm';
+import { db, venues } from '@concert-crawl/db';
 import type {
   CrawlAllEstimate,
   CrawlBatch,
@@ -20,16 +20,12 @@ import {
   groupCrawlBatches,
   parseBatchKey,
   usualNightly,
-  type BatchRunInput,
-  type BatchTriggerInput,
 } from './lib/crawl-batches.js';
+import { readWindow } from './lib/crawl-window.js';
 import { crawlAllSkipReason } from './lib/crawl-all.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-// A run row's error text is the whole message the crawl threw; the list only
-// needs the start of it, cut in SQL so the rest never leaves the database.
-const MAX_ERROR_CHARS = 500;
 
 const listQuerySchema = z.object({
   kind: z.enum(['all', 'nightly', 'by_hand', 'not_ok']).default('all'),
@@ -37,55 +33,6 @@ const listQuerySchema = z.object({
 });
 
 const keyParamSchema = z.object({ key: z.string().min(1).max(300) });
-
-export const readWindow = async (
-  from: Date,
-  to: Date,
-): Promise<{ runs: BatchRunInput[]; triggers: BatchTriggerInput[] }> => {
-  const [runRows, triggerRows] = await Promise.all([
-    db
-      .select({
-        id: crawlRuns.id,
-        venueId: crawlRuns.venueId,
-        venueName: venues.name,
-        status: crawlRuns.status,
-        reason: crawlRuns.reason,
-        eventsFound: crawlRuns.eventsFound,
-        eventsInserted: crawlRuns.eventsInserted,
-        durationMs: crawlRuns.durationMs,
-        llmCostUsd: crawlRuns.llmCostUsd,
-        // The first of the message only: a run stores everything the crawl threw.
-        errorMessage: sql<
-          string | null
-        >`left(${crawlRuns.errorMessage}, ${MAX_ERROR_CHARS})`,
-        createdAt: crawlRuns.createdAt,
-      })
-      .from(crawlRuns)
-      .leftJoin(venues, eq(venues.id, crawlRuns.venueId))
-      .where(and(gte(crawlRuns.createdAt, from), lt(crawlRuns.createdAt, to)))
-      .orderBy(desc(crawlRuns.createdAt)),
-    db
-      .select({
-        id: crawlTriggers.id,
-        venueId: crawlTriggers.venueId,
-        triggeredBy: crawlTriggers.triggeredBy,
-        status: crawlTriggers.status,
-        crawlRunId: crawlTriggers.crawlRunId,
-        createdAt: crawlTriggers.createdAt,
-      })
-      .from(crawlTriggers)
-      .where(
-        and(
-          gte(crawlTriggers.createdAt, from),
-          lt(crawlTriggers.createdAt, to),
-        ),
-      ),
-  ]);
-  return {
-    runs: runRows,
-    triggers: triggerRows,
-  };
-};
 
 const withoutRuns = (detail: CrawlBatchDetail): CrawlBatch => {
   const { runs: _runs, ...batch } = detail;
