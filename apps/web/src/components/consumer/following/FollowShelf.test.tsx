@@ -244,11 +244,20 @@ describe('FollowShelf', () => {
 
   // The head carries the count and See all (addendum 2, #178 item 20), and
   // each card opens the show it is advertising, not the artist's page.
-  it('some: names the follow count, with See all and the card as its links', () => {
+  it('some: names the follow count, and the card is its only link at five or fewer', () => {
     renderShelf({ mode: 'some', followCount: 4, artists: [artist()] });
     expect(screen.getByText(FOLLOWING_COPY.yoursEyebrow(4))).toBeTruthy();
     expect(screen.getByText(FOLLOWING_COPY.yoursTitle)).toBeTruthy();
     expect(screen.queryByText(FOLLOWING_COPY.starterAction)).toBeNull();
+    const hrefs = screen
+      .getAllByRole('link')
+      .map((node) => node.getAttribute('href'));
+    // See all only appears past five (addendum 2, U19).
+    expect(hrefs).toEqual(['/events/evt-ratbag']);
+  });
+
+  it('some: offers See all past five follows', () => {
+    renderShelf({ mode: 'some', followCount: 6, artists: [artist()] });
     const hrefs = screen
       .getAllByRole('link')
       .map((node) => node.getAttribute('href'));
