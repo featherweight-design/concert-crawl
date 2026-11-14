@@ -29,6 +29,8 @@ export interface EventListRow {
   venueName: string | null;
   /** Picks the venue's icon tile. */
   venueSlug: string | null;
+  /** The listing we crawled; `null` for a show with no source page. */
+  sourceUrl: string | null;
   status: EventListStatus;
   hidden: boolean;
   hiddenReason: HiddenReason | null;
@@ -87,6 +89,7 @@ const rowFrom = (value: unknown): EventListRow | null => {
     !isText(value['date']) ||
     !isTextOrNull(value['venueName']) ||
     !isTextOrNull(value['venueSlug']) ||
+    !isTextOrNull(value['sourceUrl']) ||
     !isEventListStatus(value['status']) ||
     typeof value['hidden'] !== 'boolean'
   ) {
@@ -108,6 +111,7 @@ const rowFrom = (value: unknown): EventListRow | null => {
     date: value['date'],
     venueName: value['venueName'],
     venueSlug: value['venueSlug'],
+    sourceUrl: value['sourceUrl'],
     status: value['status'],
     hidden: value['hidden'],
     hiddenReason,

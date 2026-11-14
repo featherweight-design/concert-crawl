@@ -2,7 +2,13 @@
 
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { EventListRow } from './events-api';
 
@@ -20,6 +26,7 @@ const row = (overrides: Partial<EventListRow>): EventListRow => ({
   date: '2026-11-12',
   venueName: 'Red Rocks',
   venueSlug: 'red-rocks',
+  sourceUrl: null,
   status: 'available',
   hidden: false,
   hiddenReason: null,
@@ -120,6 +127,41 @@ describe('EventsList on desktop', () => {
     expect(screen.getByText(COPY.status.played)).toBeInTheDocument();
     expect(screen.getByText(COPY.went(14))).toBeInTheDocument();
     expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('offers View on the venue’s site only for a safe listing URL', () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    render(
+      <EventsList
+        when="upcoming"
+        rows={[
+          row({ sourceUrl: 'https://redrocks.example/shows/1' }),
+          row({
+            id: 'evt-2',
+            title: 'Unsafe',
+            sourceUrl: 'javascript:alert(1)',
+          }),
+        ]}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('Clipse & J.I.D') }),
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: new RegExp(COPY.menu.viewVenue) }),
+    );
+    expect(open).toHaveBeenCalledWith(
+      'https://redrocks.example/shows/1',
+      '_blank',
+      'noopener',
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('Unsafe') }),
+    );
+    expect(
+      screen.queryByRole('menuitem', { name: new RegExp(COPY.menu.viewVenue) }),
+    ).toBeNull();
+    open.mockRestore();
   });
 });
 
