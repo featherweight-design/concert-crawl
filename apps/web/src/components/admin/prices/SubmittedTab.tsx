@@ -187,7 +187,11 @@ export const SubmittedTab = ({
   // A link to `?handle=` while the tab is mounted changes the prop, not the
   // mount (as PricesClient does for `?tab=`).
   useEffect(() => {
-    if (initialFan === null) return;
+    // A link without `?handle=` clears the chip it left behind.
+    if (initialFan === null) {
+      setFan(null);
+      return;
+    }
     setFilter('all');
     setTyped('');
     setSearch('');

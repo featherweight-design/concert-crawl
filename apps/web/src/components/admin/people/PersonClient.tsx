@@ -202,8 +202,9 @@ export function PersonClient({ userId }: { userId: string }) {
       onSelect: () => setSigningOut('ask'),
     });
   }
-  if (person.handle !== null && person.stats.submittedPrices > 0) {
-    const handle = person.handle;
+  // An empty handle has nothing to filter on, same as none.
+  const handle = person.handle?.trim() ?? '';
+  if (handle !== '' && person.stats.submittedPrices > 0) {
     menuItems.push({
       key: 'see-prices',
       icon: MENU_ICONS.prices,

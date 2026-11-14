@@ -1,0 +1,42 @@
+{
+  "feature": "Admin · See their Submitted prices from the person ⋯ (P47-13 PR C, SH26)",
+  "note": "Board: design_handoff_admin_redesign/addendum-3/boards/12-people-codes-operations/person-menu-d. CONTACT_SHEET_ROLE=admin. Read-only: opening the menu and following the item sends no write. The first person in the local People list has a handle and Submitted prices. Which people get the item (no handle, no prices, your own page) is pinned by person-menu.test.tsx.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "person-menu",
+      "label": "Person ⋯ open",
+      "steps": [
+        {
+          "goto": "/admin/people",
+          "wait": "main a[href^='/admin/people/']",
+          "settle": 800
+        },
+        { "click": "main a[href^='/admin/people/'] >> nth=0" },
+        { "wait": "[data-testid='person-menu']", "settle": 800 },
+        { "click": "[data-testid='person-menu']" },
+        { "wait": "text=See their Submitted prices", "settle": 500 }
+      ]
+    },
+    {
+      "id": "their-prices",
+      "label": "Submitted prices, opened filtered to them",
+      "steps": [
+        {
+          "goto": "/admin/people",
+          "wait": "main a[href^='/admin/people/']",
+          "settle": 800
+        },
+        { "click": "main a[href^='/admin/people/'] >> nth=0" },
+        { "wait": "[data-testid='person-menu']", "settle": 800 },
+        { "click": "[data-testid='person-menu']" },
+        { "clickRole": "menuitem", "name": "See their Submitted prices" },
+        { "wait": "[data-testid='fan-filter']", "settle": 1200 }
+      ]
+    }
+  ]
+}
