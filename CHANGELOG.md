@@ -1,3 +1,23 @@
+# [1.447.0](https://github.com/featherweight-design/concert-crawl/compare/v1.446.0...v1.447.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** keep the run helper the all-clear tests still use ([52565cd](https://github.com/featherweight-design/concert-crawl/commit/52565cdb87cc61cf7bd158b91bf165b016c3399d))
+* **web:** address the Add sheet review ([a882939](https://github.com/featherweight-design/concert-crawl/commit/a882939c8c1350c3c184a68fb52be739aaa57ca7))
+* **web:** draw the Maps link arrow as text, as the board does; reuse the fan Maps URL helper ([e75cd5d](https://github.com/featherweight-design/concert-crawl/commit/e75cd5dc9333818b07636bee6e119620b7da1546))
+* **web:** error report review fixes ([27a0b3f](https://github.com/featherweight-design/concert-crawl/commit/27a0b3fbf966c268a500db29bc42db21efb3be2b))
+* **web:** refused report copy: Limit in CSS caps, no 'below' for the beside-on-desktop chip ([506455c](https://github.com/featherweight-design/concert-crawl/commit/506455cb25ac82f98c0521eb3728db63d12ce78e))
+
+
+### Features
+
+* **admin:** leave the snooze return time and Undo, count every snooze on all clear ([d78e671](https://github.com/featherweight-design/concert-crawl/commit/d78e6718ebc4a153beb0ae4399ea920aa253454a))
+* **admin:** open the venue address in Maps from the map pin field ([a9d783d](https://github.com/featherweight-design/concert-crawl/commit/a9d783d994a9437ad8b8d653960656c9ffa468c2))
+* **web:** link the What's new Prices card to How prices work ([6a5686c](https://github.com/featherweight-design/concert-crawl/commit/6a5686c857c9ab4a40bdf4d15d12e0ee78edef47))
+* **web:** refused and signed-out report states, signed-in Tell us on the root error page ([a74f0e4](https://github.com/featherweight-design/concert-crawl/commit/a74f0e4939c5cc3fbb48b84549cb6f7e0f631109))
+* **web:** the Add sheet frame, header, rows and states as the B+ boards draw them ([a6701f8](https://github.com/featherweight-design/concert-crawl/commit/a6701f8e5bc18a4741210b960c412cfd895a1e29))
+
 # [1.446.0](https://github.com/featherweight-design/concert-crawl/compare/v1.445.0...v1.446.0) (2026-11-14)
 
 
