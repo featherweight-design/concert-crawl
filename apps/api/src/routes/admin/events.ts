@@ -891,8 +891,11 @@ eventsAdminRouter.post(
         .where(activeSoldOutWhere(id))
         .limit(1);
     // One path, under the event's row lock. lockEventForSaleWrite checks
-    // existence and the past lock with today read after the lock, so a PATCH
-    // that moved the date, or midnight passing while this waited, is caught.
+    // existence, the past lock (today read after the lock, so a PATCH that
+    // moved the date, or midnight passing while this waited, is caught) and
+    // that the show is on sale: a cancelled, postponed or delisted show is
+    // 409 `not_on_sale`, also before idempotency, so re-marking one that is
+    // already sold out is refused too.
     // The past lock answers before idempotency, so re-marking a PAST show
     // that is already sold out is 409 `past_locked`, not the idempotent 200
     // it was before the lock: its sale state is history either way, and the
