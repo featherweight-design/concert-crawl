@@ -630,6 +630,9 @@ export const CONSUMER_COPY = {
   // ── User menu ───────────────────────────────────────────────────
   // Shown in the account dropdown menu (desktop popover + mobile bottom sheet) accessible from the avatar in the top-right corner of the nav.
   userMenu: {
+    // An account with no handle and no name (addendum-3 lane 9d): never the
+    // email, which the menu would otherwise print under the avatar.
+    identityFallback: 'Your account',
     ariaLabels: {
       accountMenu: 'Account menu',
       accountMenuSignedOut: 'Account menu: sign up or sign in',

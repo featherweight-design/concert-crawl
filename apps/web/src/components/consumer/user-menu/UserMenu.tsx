@@ -394,13 +394,12 @@ export function AccountMenuProvider({
 
   // Derive user display values
   // Addendum 2 item 25: @handle, else the display name. With neither, the row
-  // shows the email, as it does on main.
+  // reads "Your account" (addendum 3, lane 9d), not the email.
   const identityLabel = avatarHandle
     ? `@${avatarHandle}`
     : user?.fullName?.trim() ||
       user?.firstName?.trim() ||
-      user?.emailAddresses[0]?.emailAddress ||
-      '';
+      CONSUMER_COPY.userMenu.identityFallback;
 
   // CustomJwtSessionClaims is augmented in apps/web/src/types/clerk.d.ts — no cast needed
   const isAdmin = sessionClaims?.metadata?.role === 'admin';

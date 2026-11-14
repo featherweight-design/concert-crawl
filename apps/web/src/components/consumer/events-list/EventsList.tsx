@@ -149,9 +149,26 @@ export const EventsList = ({
             // stays on the button while the next page loads.
             aria-disabled={isFetchingNextPage || undefined}
             aria-busy={isFetchingNextPage || undefined}
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-border-strong bg-surface-2 px-4 text-[15px] font-bold text-signal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1 aria-disabled:cursor-default aria-disabled:text-fg-subtle"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-transparent px-4 text-[15px] font-semibold text-fg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1 aria-disabled:cursor-default aria-disabled:text-fg-subtle"
           >
             {isFetchingNextPage ? copy.loadingShows : copy.loadMore}
+            {/* `bp-s-extras_board`: a dashed button with a chevron, not a filled
+                signal one. */}
+            {!isFetchingNextPage && (
+              <svg
+                aria-hidden
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3.5 5.5L7 9l3.5-3.5" />
+              </svg>
+            )}
           </button>
         </div>
       )}

@@ -1,10 +1,10 @@
 // The Artists route fallback (B+ rule 9, `06-states/bp-s-load_artists_m`):
-// the sub-tab bar renders for real, then the header, the group heading and six
-// carded rows, the last two fading out as the board draws them.
+// the sub-tab bar renders for real, then the group heading and six carded rows,
+// the last two fading out as the board draws them. The live Artists page draws
+// no headline block, so neither does its skeleton (addendum-3 B12).
 
 import {
   MyShowsGroupSkeleton,
-  MyShowsHeadlineSkeleton,
   MyShowsRowSkeleton,
   rowFadeFor,
 } from '@/components/consumer/history/MyShowsSkeleton';
@@ -18,7 +18,6 @@ export default function FollowingLoading() {
       <NavProgress />
       {/* The column and the real sub-tab bar are the My shows layout's. */}
       <main className="w-full flex-1">
-        <MyShowsHeadlineSkeleton />
         <MyShowsGroupSkeleton />
         <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3">
           {Array.from({ length: ROWS }).map((_, idx) => (
