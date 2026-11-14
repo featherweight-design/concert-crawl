@@ -13,21 +13,17 @@ beforeEach(() => {
   requireAdminUser.mockReset().mockResolvedValue({});
 });
 
-const render = async (query: Record<string, string> = {}) => {
+const render = async () => {
   const { default: Page } = await import('./page');
-  return Page({ searchParams: Promise.resolve(query) });
+  return Page();
 };
 
 describe('/admin/operations', () => {
-  it('checks the admin, then draws the client on the Feedback tab', async () => {
+  // The client reads `?tab=` off the URL itself, so the page passes nothing.
+  it('checks the admin, then draws the client', async () => {
     const element = await render();
     expect(requireAdminUser).toHaveBeenCalledOnce();
-    expect(element.props).toEqual({ initialTab: 'feedback' });
-  });
-
-  it('opens the Activity log at ?tab=log', async () => {
-    const element = await render({ tab: 'log' });
-    expect(element.props).toEqual({ initialTab: 'log' });
+    expect(element.props).toEqual({});
   });
 
   it('draws nothing when the admin check throws', async () => {

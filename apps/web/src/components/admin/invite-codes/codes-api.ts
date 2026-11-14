@@ -179,6 +179,25 @@ export interface NewCode {
 export type GetToken = () => Promise<string | null>;
 
 /**
+ * A signal that aborts when any of `signals` does, with that one's reason:
+ * `AbortSignal.any` where the browser has it, wired by hand where it doesn't.
+ */
+const anySignal = (signals: AbortSignal[]): AbortSignal => {
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any(signals);
+  const controller = new AbortController();
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      break;
+    }
+    signal.addEventListener('abort', () => controller.abort(signal.reason), {
+      once: true,
+    });
+  }
+  return controller.signal;
+};
+
+/**
  * The envelope's `data`, unchecked; each caller narrows it with a guard. The
  * People list (`../people/people-api`) makes its calls through it too.
  */
@@ -195,11 +214,13 @@ export const call = async (
 export const callEnvelope = async (
   getToken: GetToken,
   path: string,
-  init: { method?: string; body?: unknown } = {},
+  init: { method?: string; body?: unknown; signal?: AbortSignal } = {},
 ): Promise<Record<string, unknown>> => {
   const token = await getToken();
   if (!token) throw new ShapeError('no token');
   const hasBody = init.body !== undefined;
+  // A hung request must not trap the admin in a pending confirm.
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   const res = await fetch(`${API_BASE}${path}`, {
     method: init.method ?? 'GET',
     headers: {
@@ -207,8 +228,7 @@ export const callEnvelope = async (
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
-    // A hung request must not trap the admin in a pending confirm.
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: init.signal ? anySignal([init.signal, timeout]) : timeout,
   });
   const body: unknown = await res.json().catch(() => null);
   if (

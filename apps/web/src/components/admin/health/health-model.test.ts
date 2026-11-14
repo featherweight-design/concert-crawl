@@ -10,6 +10,7 @@ import {
   missedCrawlAt,
   monthSeries,
   monthToDate,
+  mtTodayWindow,
   newFailuresInNeedsYou,
   summarizeCrawl,
   windowNight,
@@ -153,6 +154,56 @@ describe('lastNightWindow', () => {
     expect(windowOf('2026-03-08T16:00:00Z')).toEqual([
       '2026-03-08T07:00:00.000Z',
       '2026-03-09T06:00:00.000Z',
+    ]);
+  });
+});
+
+// The Activity log's day: MT midnight to the next, with no cron hour.
+describe('mtTodayWindow', () => {
+  const todayOf = (now: string) => {
+    const { start, end } = mtTodayWindow(new Date(now));
+    return [iso(start), iso(end), (end - start) / 3_600_000];
+  };
+
+  it('spans 23 hours on the day the clocks spring forward', () => {
+    expect(todayOf('2026-03-08T18:00:00Z')).toEqual([
+      '2026-03-08T07:00:00.000Z',
+      '2026-03-09T06:00:00.000Z',
+      23,
+    ]);
+  });
+
+  it('spans 25 hours on the day the clocks fall back', () => {
+    expect(todayOf('2026-11-01T18:00:00Z')).toEqual([
+      '2026-11-01T06:00:00.000Z',
+      '2026-11-02T07:00:00.000Z',
+      25,
+    ]);
+  });
+
+  it('rolls over the end of the month', () => {
+    expect(todayOf('2026-01-31T20:00:00Z')).toEqual([
+      '2026-01-31T07:00:00.000Z',
+      '2026-02-01T07:00:00.000Z',
+      24,
+    ]);
+  });
+
+  // Denver trails UTC, so the UTC date turns over before the MT one does:
+  // 11:30 PM MST on the 13th is already the 14th in UTC.
+  it('is still the MT day before midnight, though UTC has moved on', () => {
+    expect(todayOf('2026-11-14T06:30:00Z')).toEqual([
+      '2026-11-13T07:00:00.000Z',
+      '2026-11-14T07:00:00.000Z',
+      24,
+    ]);
+  });
+
+  it('is the new MT day just after its midnight', () => {
+    expect(todayOf('2026-11-14T07:01:00Z')).toEqual([
+      '2026-11-14T07:00:00.000Z',
+      '2026-11-15T07:00:00.000Z',
+      24,
     ]);
   });
 });
