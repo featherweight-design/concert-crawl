@@ -1,0 +1,45 @@
+{
+  "feature": "Admin Events · the Past tab: venue and status filters, rows that open the editor, No new date yet (B+ addendum 6, item 36a)",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: design/design_handoff_bplus_redesign/addendum-6/boards/36-past-shows/past-d, past-status-menu-d, past-m (on PR #590's branch until it merges). Read-only. The hover chevron is a hover state the sheet doesn't press; EventsList.test.tsx covers it. A postponed show past its date (the amber line) appears only if scratch has one; otherwise the line is covered by tests.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 900, "touch": true },
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "past-list",
+      "label": "Past tab with Any venue / Any status and the Load older footer",
+      "steps": [
+        {
+          "goto": "/admin/events?when=past",
+          "wait": "[data-testid=\"events-list\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "past-status-menu",
+      "label": "Past status menu (phone: sheet)",
+      "steps": [
+        {
+          "goto": "/admin/events?when=past",
+          "wait": "[data-testid=\"events-list\"]"
+        },
+        { "click": "[data-testid=\"status-filter-chip\"]" },
+        { "wait": "[data-testid=\"past-status-menu\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "past-played",
+      "label": "Past, Played picked",
+      "steps": [
+        {
+          "goto": "/admin/events?when=past&statuses=played",
+          "wait": "[data-testid=\"events-list\"], [data-testid=\"empty-state\"]",
+          "settle": 2000
+        }
+      ]
+    }
+  ]
+}
