@@ -36,7 +36,8 @@ import {
 import { RobotsDisallowedError } from './lib/robots-fetch.js';
 import { extractJsonLd } from './lib/extractors/json-ld.js';
 import { extractTicketure } from './lib/extractors/ticketure.js';
-import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js';
+import { extractWithLlm } from './lib/extractors/llm.js';
+import { createAdjudicationCost } from './lib/adjudication-cost.js';
 import { LLM_EXTRACTION_MODEL } from './lib/llm-models.js';
 import {
   LlmBudgetSpentError,
@@ -613,6 +614,12 @@ export async function crawlVenue(
     return isAiUseAllowed(sourceUrl, CRAWLER_USER_AGENT);
   };
 
+  // Every adjudication this crawl makes adds its usage here, and the total is
+  // written once as an 'artist-adjudication' cost_tracking row in the
+  // `finally` below. Never folded into llmCostUsd (extraction only), so the
+  // budget counts each adjudication dollar once (lib/adjudication-cost.ts).
+  const adjudicationCost = createAdjudicationCost();
+
   try {
     // Platform fetcher dispatch (#623). If the venue is on a known
     // platform (AEG today; Etix / Ticketmaster / AXS in follow-up PRs),
@@ -1045,7 +1052,7 @@ export async function crawlVenue(
       !llmStopped &&
       (await aiUseAllowedFor(evt.sourceUrl)) &&
       (await payloadAiUseAllowed())
-        ? adjudicateEvent
+        ? adjudicationCost.adjudicate
         : null;
 
     for (const evt of survivingEvents) {
@@ -1879,7 +1886,8 @@ export async function crawlVenue(
 
     // Written directly, not through recordLlmCost, and 'claude' is not in
     // LLM_SERVICES: these dollars are already in crawl_runs.llm_cost_usd, which
-    // the LLM budget sums, so counting this row too would double them.
+    // the LLM budget sums, so counting this row too would double them. Both
+    // hold extraction only; adjudication is its own row (finally, below).
     if (tokenUsage && llmCostUsd !== null) {
       await db.insert(costTracking).values({
         service: 'claude',
@@ -2194,5 +2202,10 @@ export async function crawlVenue(
     });
 
     return { ...crawlRun, insertedEventIds: [] };
+  } finally {
+    // One row per venue crawl, on success and on failure alike: a crawl that
+    // adjudicated and then failed still spent the money. record() never
+    // throws, so the ledger can't fail or mask the crawl's own outcome.
+    await adjudicationCost.record({ venueId, crawlRunId: id });
   }
 }

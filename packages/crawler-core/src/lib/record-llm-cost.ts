@@ -24,8 +24,9 @@ export const LLM_SERVICES = [
   'genre-tagger',
   // The admin's generate-about route (venue About drafts).
   'venue-about',
-  // The crawler's artist adjudicator. Reserved: nothing writes it yet
-  // (adjudicateEvent drops its usage); the adjudication-cost PR wires it.
+  // The crawler's artist adjudicator: one row per venue crawl, and one per
+  // rederive-event-artists pass (adjudication-cost.ts). Never also in
+  // crawl_runs.llm_cost_usd, which is extraction only.
   'artist-adjudication',
 ] as const;
 

@@ -10,7 +10,8 @@
 //
 // Month-to-date spend is extraction cost (crawl_runs.llm_cost_usd, what the
 // admin cost tile sums) plus the cost_tracking rows of the services in
-// LLM_SERVICES, from the first of the current Mountain Time month. On, the
+// LLM_SERVICES (artist adjudication, genre tagging, venue About drafts), from
+// the first of the current Mountain Time month. On, the
 // switch also skips adjudication and genre tagging, so no Haiku call is made
 // at all.
 //
