@@ -146,6 +146,13 @@ export const navItem = (key: NavKey): NavItem => {
   return item;
 };
 
+/**
+ * Set on the root element while Needs you couldn't load: the phone tab bar's
+ * badge hides under it (addendum-3 item 21, `01/couldnt-load-m`). The desktop
+ * sidebar keeps its badge, as `02/couldnt-load` draws it.
+ */
+export const NEEDS_YOU_FAILED_ATTR = 'data-admin-needs-you-failed';
+
 /** Only Needs you carries a badge. */
 export const badgeCountFor = (
   key: NavKey,

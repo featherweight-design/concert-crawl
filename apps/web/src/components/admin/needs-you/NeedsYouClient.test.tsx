@@ -12,6 +12,7 @@ import {
 import type { SubmittedRow } from '@/components/admin/prices/submitted-api';
 import { NeedsYouClient } from './NeedsYouClient';
 import { mountainDayAhead } from './needs-you-rules';
+import { NEEDS_YOU_FAILED_ATTR } from '@/components/admin/shell/nav';
 
 const { getTokenMock, replaceMock, mockList } = vi.hoisted(() => ({
   getTokenMock: async () => 'token',
@@ -579,5 +580,51 @@ describe('NeedsYouClient', () => {
     );
     render(<NeedsYouClient item={null} />);
     expect(await screen.findByTestId('couldnt-load')).toBeInTheDocument();
+  });
+
+  it('keeps the page title above Couldn’t load (02/couldnt-load)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 500 })),
+    );
+    render(<NeedsYouClient item={null} />);
+    await screen.findByTestId('couldnt-load');
+    const title = screen.getByRole('heading', { level: 1, name: 'Needs you' });
+    // `02/couldnt-load` draws the title 28/800 with no letter-spacing.
+    expect(title.style.fontSize).toBe('28px');
+    expect(title.style.letterSpacing).toBe('');
+    expect(
+      screen.getByRole('heading', { name: "Couldn't load Needs you" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('couldnt-load-page')).toContainElement(title);
+    expect(screen.getByTestId('couldnt-load')).toHaveClass(
+      'admin-couldnt-load-fill',
+    );
+  });
+
+  it('draws the loaded title 28/800 at -0.02em', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    const title = screen.getByRole('heading', { level: 1, name: 'Needs you' });
+    expect(title.style.fontSize).toBe('28px');
+    expect(title.style.letterSpacing).toBe('-0.02em');
+  });
+
+  it('flags the root while the queue couldn’t load, so the phone badge hides (addendum-3 #21)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 500 })),
+    );
+    const { unmount } = render(<NeedsYouClient item={null} />);
+    await screen.findByTestId('couldnt-load');
+    expect(document.documentElement).toHaveAttribute(NEEDS_YOU_FAILED_ATTR);
+    unmount();
+    expect(document.documentElement).not.toHaveAttribute(NEEDS_YOU_FAILED_ATTR);
+  });
+
+  it('leaves the badge alone when the queue loads', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    expect(document.documentElement).not.toHaveAttribute(NEEDS_YOU_FAILED_ATTR);
   });
 });

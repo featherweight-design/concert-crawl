@@ -86,6 +86,10 @@ export const MobileBottomBar = ({
             )}
             {count > 0 && (
               <span
+                // admin.css hides it while Needs you couldn't load
+                // (NEEDS_YOU_FAILED_ATTR, `01/couldnt-load-m`).
+                className="admin-tab-bar-badge"
+                data-testid="admin-tab-bar-badge"
                 style={{
                   position: 'absolute',
                   top: 5,

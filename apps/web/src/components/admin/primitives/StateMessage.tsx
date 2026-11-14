@@ -1,10 +1,40 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+
+/**
+ * The failure boards draw their X at stroke 1.8 in a 16 grid at 24px, which
+ * is 2.7 in Lucide's 24 grid.
+ */
+export const COULDNT_LOAD_X_STROKE = 2.7;
+
+/**
+ * The 52 tile. Tinted is the failure boards' rgba(255,122,138,0.08) fill and
+ * 0.4 edge, the tone over nothing; the rest keep their tone-mixed tile.
+ */
+export const stateTileStyle = (
+  tone: string,
+  tinted: boolean,
+): CSSProperties => ({
+  width: 52,
+  height: 52,
+  borderRadius: 15,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: tone,
+  background: tinted
+    ? `color-mix(in srgb, ${tone} 8%, transparent)`
+    : `color-mix(in srgb, ${tone} 10%, var(--bg-elevated))`,
+  border: tinted
+    ? `1px solid color-mix(in srgb, ${tone} 40%, transparent)`
+    : `1px solid color-mix(in srgb, ${tone} 30%, transparent)`,
+});
 
 /**
  * The centred icon, title, line and actions that empty, couldn't-load and
  * not-found share (`02/couldnt-load`, `07/not-found`). Only the content area
- * changes; the page chrome stays.
+ * changes; the page chrome stays. Every state board stacks the four 10 apart
+ * with no extra margins, and draws a 52 tile at radius 15 holding a 24 icon.
  */
 export const StateMessage = ({
   icon: Icon,
@@ -14,6 +44,10 @@ export const StateMessage = ({
   actions,
   testId,
   role,
+  tinted = false,
+  // Lucide's own default.
+  iconStrokeWidth = 2,
+  className,
 }: {
   icon: LucideIcon;
   tone: string;
@@ -22,38 +56,40 @@ export const StateMessage = ({
   actions?: ReactNode;
   testId: string;
   role?: 'alert' | 'status';
+  /**
+   * The failure boards' tile: the tone at 8% over nothing, with a 40% edge
+   * (`02/couldnt-load`, `10/panel-couldnt-load`, `inspect-couldnt-load`).
+   */
+  tinted?: boolean;
+  /** The icon's stroke in Lucide's 24 grid, when a board draws it heavier. */
+  iconStrokeWidth?: number;
+  /** A hook for admin.css to place the state (padding, centring). */
+  className?: string;
 }) => (
   <div
     data-testid={testId}
     role={role}
+    className={className}
     style={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       textAlign: 'center',
       gap: 10,
-      padding: '64px 16px',
+      // A var, so admin.css can place a state per board and breakpoint.
+      padding: 'var(--state-message-padding, 64px 16px)',
     }}
   >
     <span
       aria-hidden
-      style={{
-        width: 52,
-        height: 52,
-        borderRadius: 12,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: tone,
-        background: `color-mix(in srgb, ${tone} 10%, var(--bg-elevated))`,
-        border: `1px solid color-mix(in srgb, ${tone} 30%, transparent)`,
-      }}
+      data-testid={`${testId}-tile`}
+      style={stateTileStyle(tone, tinted)}
     >
-      <Icon size={22} />
+      <Icon size={24} strokeWidth={iconStrokeWidth} />
     </span>
     <h2
       style={{
-        margin: '4px 0 0',
+        margin: 0,
         fontSize: 18,
         fontWeight: 800,
         color: 'var(--fg)',
@@ -81,7 +117,6 @@ export const StateMessage = ({
           gap: 8,
           flexWrap: 'wrap',
           justifyContent: 'center',
-          marginTop: 4,
         }}
       >
         {actions}

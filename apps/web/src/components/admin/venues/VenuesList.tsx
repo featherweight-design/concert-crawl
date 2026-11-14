@@ -9,6 +9,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AddVenueModal } from '@/components/admin/AddVenueModal';
 import {
   CouldntLoad,
+  CouldntLoadPage,
   EmptyState,
   VenueStatus,
   useIsPhone,
@@ -411,7 +412,28 @@ export const VenuesList = ({
   const someShown = pickedShown > 0 && !allShown;
 
   if (venues === null) {
-    return <CouldntLoad page={COPY.title} onRetry={() => router.refresh()} />;
+    // The chrome stays (README 02, `02/couldnt-load`): the page title as that
+    // board draws it, over the state. The phone's top bar carries the title.
+    return (
+      <CouldntLoadPage
+        title={
+          !isPhone && (
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 28,
+                fontWeight: 800,
+                color: 'var(--fg)',
+              }}
+            >
+              {COPY.title}
+            </h1>
+          )
+        }
+      >
+        <CouldntLoad fill page={COPY.title} onRetry={() => router.refresh()} />
+      </CouldntLoadPage>
+    );
   }
 
   const search = (

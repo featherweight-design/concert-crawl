@@ -27,6 +27,27 @@ export interface PageSkeletonProps {
 }
 
 /**
+ * Values `07/loading-any-list-on-mobile` draws differently from the desktop
+ * boards. Each is a var holding the desktop value as its fallback; admin.css
+ * `.page-skeleton` sets the phone value at the breakpoint, so the server
+ * fallback needs no viewport hook.
+ */
+export const PHONE_VAR = {
+  /** Search box radius: desktop 12, phone 10. */
+  searchRadius: 'var(--page-skeleton-search-radius, 12px)',
+  /** Filter pill height: desktop 31, phone 32. */
+  pillHeight: 'var(--page-skeleton-pill-height, 31px)',
+  /** Row title bar height: desktop 12, phone 13. */
+  titleHeight: 'var(--page-skeleton-title-height, 12px)',
+  /** Row second bar width: desktop 35%, phone 40%. */
+  subWidth: 'var(--page-skeleton-sub-width, 35%)',
+  /** Row second bar radius: desktop 5, phone 6. */
+  subRadius: 'var(--page-skeleton-sub-radius, 5px)',
+  /** Gap between the row's two bars: desktop 8, phone 7. */
+  barGap: 'var(--page-skeleton-bar-gap, 8px)',
+} as const;
+
+/**
  * Loading in the page's final shape (rule 9): the same tabs, filters and rows,
  * fading toward the bottom. The sweep comes from `SkeletonBlock`, which the
  * global reduced-motion rule already stills. No hooks, so a route's
@@ -45,6 +66,7 @@ export const PageSkeleton = ({
 }: PageSkeletonProps) => (
   <div
     data-testid="page-skeleton"
+    className="page-skeleton"
     aria-busy="true"
     style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
   >
@@ -54,9 +76,15 @@ export const PageSkeleton = ({
         <SkeletonBlock width="min(380px, 80%)" height={12} radius={6} />
       </div>
     )}
-    {search && !inlineSearch && <SkeletonBlock height={36} radius={12} />}
+    {search && !inlineSearch && (
+      <SkeletonBlock height={36} radius={PHONE_VAR.searchRadius} />
+    )}
     {inlineSearch && filters === 0 && (
-      <SkeletonBlock width="min(260px, 100%)" height={36} radius={12} />
+      <SkeletonBlock
+        width="min(260px, 100%)"
+        height={36}
+        radius={PHONE_VAR.searchRadius}
+      />
     )}
     {tabs > 0 && (
       <div style={{ display: 'flex', gap: 8 }}>
@@ -74,13 +102,17 @@ export const PageSkeleton = ({
         }}
       >
         {inlineSearch && (
-          <SkeletonBlock width="min(260px, 100%)" height={36} radius={12} />
+          <SkeletonBlock
+            width="min(260px, 100%)"
+            height={36}
+            radius={PHONE_VAR.searchRadius}
+          />
         )}
         {Array.from({ length: filters }, (_, i) => (
           <SkeletonBlock
             key={i}
             width={i === 0 ? 90 : 80}
-            height={31}
+            height={PHONE_VAR.pillHeight}
             radius={999}
           />
         ))}
@@ -130,15 +162,19 @@ export const PageSkeleton = ({
               flex: card ? '1 0 40%' : 1,
               display: 'flex',
               flexDirection: 'column',
-              gap: 8,
+              gap: PHONE_VAR.barGap,
             }}
           >
             <SkeletonBlock
               width={`${55 + ((row * 13) % 30)}%`}
-              height={12}
+              height={PHONE_VAR.titleHeight}
               radius={6}
             />
-            <SkeletonBlock width="35%" height={10} radius={5} />
+            <SkeletonBlock
+              width={PHONE_VAR.subWidth}
+              height={10}
+              radius={PHONE_VAR.subRadius}
+            />
           </div>
           {card ? (
             // A status pill and short value bars, as the table boards draw.
@@ -158,9 +194,40 @@ export const PageSkeleton = ({
               ))}
             </div>
           ) : (
-            Array.from({ length: Math.max(0, columns - 2) }, (_, col) => (
-              <SkeletonBlock key={col} width={70} height={20} radius={999} />
-            ))
+            columns > 2 && (
+              <>
+                <div
+                  data-testid="page-skeleton-tail-desktop"
+                  className="page-skeleton-tail-desktop"
+                  // `display` lives in admin.css so the breakpoint can hide it.
+                  style={{ alignItems: 'center', gap: 12 }}
+                >
+                  {Array.from({ length: columns - 2 }, (_, col) => (
+                    <SkeletonBlock
+                      key={col}
+                      width={70}
+                      height={20}
+                      radius={999}
+                    />
+                  ))}
+                </div>
+                {/* `07/loading-any-list-on-mobile`: a 48 × 11 bar over one
+                    70 × 20 pill, right-aligned, 6 apart. */}
+                <div
+                  data-testid="page-skeleton-tail-phone"
+                  className="page-skeleton-tail-phone"
+                  style={{
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: 6,
+                    flex: 'none',
+                  }}
+                >
+                  <SkeletonBlock width={48} height={11} radius={6} />
+                  <SkeletonBlock width={70} height={20} radius={999} />
+                </div>
+              </>
+            )
           )}
         </div>
       ))}
