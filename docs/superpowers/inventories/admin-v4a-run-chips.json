@@ -1,0 +1,355 @@
+{
+  "feature": "Admin v4a · Run chips (Blocked, robots.txt, Not run) and reason-first run words",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: A3/09/run-result-chips, B+/A5/14/run-chips-partial, G2/run-detail-sheet, 07/a-runs-detail, 10-needs-you-panels/venue-failing (LAST 4 RUNS is drawn on venue-failing only).Read-only. The scratch branch has real Partial and Unchanged runs (Sheet Paused Venue) but no blocked_http, robots_* or llm_account runs, so mocked bodies (the API's { success, data } envelope) answer Load more on Bluebird (the first page is server-fetched, out of reach) and the Needs you list. The nightly batch detail (07/a-runs-detail, \"18 min · $0.71 · 1 failure went to Needs you\") is not built on this branch, so no row.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1440, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "runs-real",
+      "label": "Runs tab, real Partial and Unchanged chips (Sheet Paused Venue)",
+      "steps": [
+        {
+          "goto": "/admin/venues/e4e87c16-2822-402e-a21a-e7b7b070e097?tab=runs",
+          "wait": "[data-testid=\"run-chip\"]:has-text(\"Unchanged\")"
+        },
+        {
+          "wait": "[data-testid=\"run-chip\"]:has-text(\"Partial\")",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "runs-mocked",
+      "label": "Runs tab, mocked Load more: Blocked, robots.txt, Not run beside Partial, Unchanged, Failed, Skipped, OK (Bluebird)",
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/runs*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-000000000001",
+                "status": "failed",
+                "reason": "blocked_http",
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "durationMs": 4200,
+                "llmCostUsd": null,
+                "errorMessage": "HTTP 403",
+                "createdAt": "2026-11-13T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000002",
+                "status": "skipped",
+                "reason": "robots_disallowed",
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "durationMs": 800,
+                "llmCostUsd": null,
+                "errorMessage": null,
+                "createdAt": "2026-11-12T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000003",
+                "status": "failed",
+                "reason": "llm_account",
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "durationMs": 9100,
+                "llmCostUsd": 0,
+                "errorMessage": "Anthropic account refused the request",
+                "createdAt": "2026-11-11T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000004",
+                "status": "partial",
+                "reason": null,
+                "eventsFound": 41,
+                "eventsInserted": 2,
+                "durationMs": 61000,
+                "llmCostUsd": 0.04,
+                "errorMessage": null,
+                "createdAt": "2026-11-10T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000005",
+                "status": "skipped",
+                "reason": "page_unchanged",
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "durationMs": 1200,
+                "llmCostUsd": null,
+                "errorMessage": null,
+                "createdAt": "2026-11-09T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000006",
+                "status": "failed",
+                "reason": "timeout",
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "durationMs": 30000,
+                "llmCostUsd": null,
+                "errorMessage": "Timed out at 30 s",
+                "createdAt": "2026-11-08T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000007",
+                "status": "skipped",
+                "reason": "crawl_paused",
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "durationMs": null,
+                "llmCostUsd": null,
+                "errorMessage": null,
+                "createdAt": "2026-11-07T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000008",
+                "status": "success",
+                "reason": null,
+                "eventsFound": 63,
+                "eventsInserted": 1,
+                "durationMs": 212000,
+                "llmCostUsd": 0.14,
+                "errorMessage": null,
+                "createdAt": "2026-11-06T10:02:00.000Z"
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=runs",
+          "wait": "[data-testid=\"run-row\"]"
+        },
+        { "clickRole": "button", "name": "^Load .* more$" },
+        { "wait": "[data-testid=\"run-chip\"]:has-text(\"Not run\")" },
+        { "wait": "[data-testid=\"run-chip\"]:has-text(\"robots.txt\")" },
+        {
+          "wait": "[data-testid=\"run-chip\"]:has-text(\"Blocked\")",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "run-detail-desktop",
+      "label": "Desktop run-detail panel, mocked Blocked run (Bluebird)",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/runs*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-000000000001",
+                "status": "failed",
+                "reason": "blocked_http",
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "durationMs": 4200,
+                "llmCostUsd": null,
+                "errorMessage": "HTTP 403",
+                "createdAt": "2026-11-13T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000008",
+                "status": "success",
+                "reason": null,
+                "eventsFound": 63,
+                "eventsInserted": 1,
+                "durationMs": 212000,
+                "llmCostUsd": 0.14,
+                "errorMessage": null,
+                "createdAt": "2026-11-06T10:02:00.000Z"
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/admin/crawl/runs/*/pages",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000a1",
+                "url": "https://www.bluebirdtheater.net/events",
+                "finalUrl": null,
+                "httpStatus": 403,
+                "bytes": 512,
+                "fetchMode": "browser"
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=runs",
+          "wait": "[data-testid=\"run-row\"]"
+        },
+        { "clickRole": "button", "name": "^Load .* more$" },
+        { "wait": "[data-testid=\"run-chip\"]:has-text(\"Blocked\")" },
+        { "click": "[data-testid=\"run-row\"] >> nth=0" },
+        {
+          "wait": "[data-testid=\"run-detail\"] [data-testid=\"run-page\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "run-sheet-phone",
+      "label": "Phone run-detail sheet, named by date and outcome (Blocked)",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "route": "**/v1/admin/crawl/runs*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-000000000001",
+                "status": "failed",
+                "reason": "blocked_http",
+                "eventsFound": 0,
+                "eventsInserted": 0,
+                "durationMs": 4200,
+                "llmCostUsd": null,
+                "errorMessage": "HTTP 403",
+                "createdAt": "2026-11-13T10:02:00.000Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000008",
+                "status": "success",
+                "reason": null,
+                "eventsFound": 63,
+                "eventsInserted": 1,
+                "durationMs": 212000,
+                "llmCostUsd": 0.14,
+                "errorMessage": null,
+                "createdAt": "2026-11-06T10:02:00.000Z"
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/admin/crawl/runs/*/pages",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000a1",
+                "url": "https://www.bluebirdtheater.net/events",
+                "finalUrl": null,
+                "httpStatus": 403,
+                "bytes": 512,
+                "fetchMode": "browser"
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=runs",
+          "wait": "[data-testid=\"run-row\"]"
+        },
+        { "clickRole": "button", "name": "^Load .* more$" },
+        { "wait": "[data-testid=\"run-chip\"]:has-text(\"Blocked\")" },
+        { "click": "[data-testid=\"run-row\"] >> nth=0" },
+        { "waitDialog": "^Nov 13 · .*, Blocked$" },
+        { "wait": "[data-testid=\"run-detail-summary\"]", "settle": 1000 }
+      ]
+    },
+    {
+      "id": "needs-you-last-runs",
+      "label": "Needs you venue-failing item, LAST 4 RUNS reads Blocked, Not run, robots.txt (mocked queue; venue-blocked draws no LAST 4 RUNS)",
+      "fullPage": true,
+      "steps": [
+        {
+          "route": "**/v1/admin/needs-you",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "key": "venue-failing:685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+                "kind": "venue-failing",
+                "title": "Bluebird Theater crawl is failing",
+                "venueId": "685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+                "venueName": "Bluebird Theater",
+                "fanDate": null,
+                "watchers": 0,
+                "cause": "timeout",
+                "okStreakBefore": 12,
+                "venueLive": true,
+                "pausedAt": "2026-11-13T10:03:00.000Z",
+                "showCount": 63,
+                "evidence": [
+                  { "label": "Consecutive failures", "value": "3" },
+                  { "label": "Error", "value": "timeout" }
+                ],
+                "lastRuns": [
+                  {
+                    "at": "2026-11-13T10:02:00.000Z",
+                    "status": "failed",
+                    "reason": "timeout",
+                    "errorMessage": "Timed out at 30 s",
+                    "eventsFound": 0,
+                    "httpStatus": null
+                  },
+                  {
+                    "at": "2026-11-12T10:02:00.000Z",
+                    "status": "failed",
+                    "reason": "blocked_http",
+                    "errorMessage": "HTTP 403",
+                    "eventsFound": 0,
+                    "httpStatus": 403
+                  },
+                  {
+                    "at": "2026-11-11T10:02:00.000Z",
+                    "status": "failed",
+                    "reason": "llm_account",
+                    "errorMessage": "Anthropic account refused the request",
+                    "eventsFound": 0,
+                    "httpStatus": null
+                  },
+                  {
+                    "at": "2026-11-10T10:02:00.000Z",
+                    "status": "skipped",
+                    "reason": "robots_disallowed",
+                    "errorMessage": null,
+                    "eventsFound": 0,
+                    "httpStatus": null
+                  }
+                ],
+                "answers": [
+                  {
+                    "slug": "re_crawl_now",
+                    "label": "Re-crawl now",
+                    "notifiesFans": false,
+                    "undoable": false,
+                    "suggested": false
+                  },
+                  {
+                    "slug": "keep_paused",
+                    "label": "Keep paused",
+                    "notifiesFans": false,
+                    "undoable": false,
+                    "suggested": false
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"venue-failing:\"]"
+        },
+        { "click": "[data-item-key^=\"venue-failing:\"]:visible >> nth=0" },
+        {
+          "wait": "[data-testid=\"last-runs\"]:has-text(\"Blocked\")",
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}
