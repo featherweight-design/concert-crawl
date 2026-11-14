@@ -6,7 +6,11 @@
  * card. The count comes from `/count`: the list's own `count` sits beside
  * `data`, outside the envelope `call` unwraps.
  */
-import type { NeedsYouCount, NeedsYouKind } from '@concert-crawl/types';
+import type {
+  AllClearFacts,
+  NeedsYouCount,
+  NeedsYouKind,
+} from '@concert-crawl/types';
 import {
   call,
   isCount,
@@ -346,6 +350,34 @@ const rowFrom = (value: unknown): QueueRow | null => {
   };
 };
 
+const factsFrom = (value: unknown): AllClearFacts | null => {
+  if (
+    !isRecord(value) ||
+    !isText(value['nextCrawlAt']) ||
+    !isCount(value['snoozedVenues'])
+  )
+    return null;
+  const last = value['lastCrawl'];
+  if (last === null)
+    return {
+      lastCrawl: null,
+      nextCrawlAt: value['nextCrawlAt'],
+      snoozedVenues: value['snoozedVenues'],
+    };
+  if (
+    !isRecord(last) ||
+    !isCount(last['ok']) ||
+    !isCount(last['total']) ||
+    !isText(last['at'])
+  )
+    return null;
+  return {
+    lastCrawl: { ok: last['ok'], total: last['total'], at: last['at'] },
+    nextCrawlAt: value['nextCrawlAt'],
+    snoozedVenues: value['snoozedVenues'],
+  };
+};
+
 const countFrom = (value: unknown): NeedsYouCount | null => {
   if (
     !isRecord(value) ||
@@ -390,6 +422,12 @@ export const needsYouApi = (getToken: GetToken) => ({
     const count = countFrom(await call(getToken, '/v1/admin/needs-you/count'));
     if (!count) throw new Error('needs-you count');
     return count;
+  },
+  /** The All clear card's facts. Read only once the queue is empty. */
+  facts: async (): Promise<AllClearFacts> => {
+    const facts = factsFrom(await call(getToken, '/v1/admin/needs-you/facts'));
+    if (!facts) throw new Error('needs-you facts');
+    return facts;
   },
   /** One answer. `auditId` is what Undo points at; null when it can't be undone. */
   /** `params` are the answer's own fields (a picked artist, a reason). */

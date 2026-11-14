@@ -367,6 +367,20 @@ export const mountainStamp = (iso: string): string | null => {
   return `${parts.month} ${parts.day}, ${clock} ${parts.period}`;
 };
 
+/**
+ * The All clear card's "Next crawl" value: "Tonight, 3:07 AM", or "Today, ..."
+ * when the crawl is still ahead on today's Mountain Time date. Null when the
+ * instant does not parse.
+ */
+export const nextCrawlWhen = (iso: string, now: Date): string | null => {
+  const parts = mountainParts(iso);
+  if (!parts) return null;
+  const clock =
+    parts.minute === '00' ? parts.hour : `${parts.hour}:${parts.minute}`;
+  const sameDay = mountainDay(iso) === mountainDay(now.toISOString());
+  return `${sameDay ? 'Today' : 'Tonight'}, ${clock} ${parts.period}`;
+};
+
 /** The days from `today` to `fanDate`, or null when there is no date. */
 const daysUntil = (fanDate: string | null, today: string): number | null =>
   fanDate ? Math.round(dayNumber(fanDate) - dayNumber(today)) : null;

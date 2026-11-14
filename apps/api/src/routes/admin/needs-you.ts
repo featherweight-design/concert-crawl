@@ -24,6 +24,8 @@ import {
 } from './lib/needs-you/index.js';
 import { NEEDS_YOU_KINDS, isKind, parseItemKey } from './lib/needs-you/keys.js';
 import { loadNeedsYouItems } from './lib/needs-you/sources.js';
+import { readAllClearFacts } from './lib/needs-you/all-clear-facts.js';
+import { readWindow } from './crawl-batches.js';
 
 const logger = createLogger('admin:needs-you');
 
@@ -190,6 +192,15 @@ needsYouAdminRouter.delete(
 
 needsYouAdminRouter.get('/count', async (ctx) => {
   return ctx.json({ success: true, data: await countNeedsYou(new Date()) });
+});
+
+// The All clear card's three facts. Its own read, not part of /count: the
+// sidebar badge polls /count, and the facts walk a few nights of crawl runs.
+needsYouAdminRouter.get('/facts', async (ctx) => {
+  return ctx.json({
+    success: true,
+    data: await readAllClearFacts(new Date(), readWindow),
+  });
 });
 
 needsYouAdminRouter.post(

@@ -16,6 +16,7 @@ import {
   mountainDay,
   mountainDayAhead,
   mountainStamp,
+  nextCrawlWhen,
   pagePathOf,
   priceRangeOf,
   snoozeDayLabel,
@@ -86,6 +87,20 @@ describe('panel helpers', () => {
     expect(mountainStamp('2026-11-09T10:00:00Z')).toBe('Nov 9, 3 AM');
     expect(mountainStamp('2026-11-11T10:02:00Z')).toBe('Nov 11, 3:02 AM');
     expect(mountainStamp('nope')).toBeNull();
+  });
+
+  it('says the next crawl as tonight, or today when it is still ahead today', () => {
+    // 09:07 UTC is 2:07 AM Mountain in winter, 3:07 AM in summer.
+    expect(
+      nextCrawlWhen('2026-11-14T09:07:00Z', new Date('2026-11-13T20:00:00Z')),
+    ).toBe('Tonight, 2:07 AM');
+    expect(
+      nextCrawlWhen('2026-07-14T09:07:00Z', new Date('2026-07-13T20:00:00Z')),
+    ).toBe('Tonight, 3:07 AM');
+    expect(
+      nextCrawlWhen('2026-11-14T09:07:00Z', new Date('2026-11-14T07:00:00Z')),
+    ).toBe('Today, 2:07 AM');
+    expect(nextCrawlWhen('nope', new Date())).toBeNull();
   });
 
   it('builds the when chip', () => {

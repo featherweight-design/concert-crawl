@@ -2662,6 +2662,15 @@ export const ADMIN_COPY = {
           ? `Nothing needs a decision. You handled ${handledToday} today.`
           : 'Nothing needs a decision.',
       openHealth: 'Open Health',
+      // The facts card under the line (`02-needs-you/all-clear`).
+      facts: {
+        lastCrawl: "Last night's crawl",
+        lastCrawlValue: (ok: number, total: number) => `${ok} of ${total} OK`,
+        nextCrawl: 'Next crawl',
+        snoozed: 'Snoozed',
+        snoozedValue: (count: number) =>
+          `${count} ${count === 1 ? 'venue' : 'venues'} off-season`,
+      },
     },
     // The price batch sheet (`02-needs-you/a-batch-of-prices`): a phone bottom
     // sheet that lists the batch's prices to untick before Approve.

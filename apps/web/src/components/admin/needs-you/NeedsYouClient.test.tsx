@@ -334,6 +334,33 @@ describe('NeedsYouClient', () => {
     ).toBeInTheDocument();
   });
 
+  it('draws the facts card under All clear, leaving out rows it has no number for', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.endsWith('/needs-you/count'))
+          return json({
+            ...COUNT,
+            decisions: 0,
+            byKind: { ...COUNT.byKind, 'show-dropped': 0, bug: 0 },
+          });
+        if (url.endsWith('/needs-you/facts'))
+          return json({
+            lastCrawl: { ok: 20, total: 21, at: '2026-11-13T09:08:00.000Z' },
+            nextCrawlAt: '2099-01-01T09:07:00.000Z',
+            snoozedVenues: 0,
+          });
+        return json([]);
+      }),
+    );
+    render(<NeedsYouClient item={null} />);
+    const facts = await screen.findByTestId('needs-you-facts');
+    expect(facts).toHaveTextContent('Last night’s crawl20 of 21 OK');
+    expect(facts).toHaveTextContent(/Next crawlTonight, 2:07 AM/);
+    // Nothing snoozed: no "Snoozed" row.
+    expect(facts).not.toHaveTextContent('Snoozed');
+  });
+
   it('keeps the skeleton up while the queue loads', async () => {
     vi.stubGlobal(
       'fetch',

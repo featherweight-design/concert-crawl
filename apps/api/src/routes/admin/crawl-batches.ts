@@ -38,7 +38,7 @@ const listQuerySchema = z.object({
 
 const keyParamSchema = z.object({ key: z.string().min(1).max(300) });
 
-const readWindow = async (
+export const readWindow = async (
   from: Date,
   to: Date,
 ): Promise<{ runs: BatchRunInput[]; triggers: BatchTriggerInput[] }> => {
