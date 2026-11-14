@@ -1,5 +1,11 @@
 'use client';
 
+import {
+  boardChipClass,
+  boardGroupLabelStyle,
+  type FieldLook,
+} from './boardFieldLook';
+
 interface ChipOption {
   value: string;
   label: string;
@@ -25,6 +31,9 @@ interface ChipGroupProps {
   // sourceCategory='boxoffice' auto-fills it to 'VenueBoxOffice' — otherwise
   // the UI shows e.g. "AXS" selected while the payload sends "Venue".
   disabled?: boolean;
+  // `board` draws the B+ price-sheet look: sentence-case Inter label, taller
+  // chips, a struck-through chip when it is taken in another tier card.
+  look?: FieldLook;
 }
 
 export function ChipGroup({
@@ -35,18 +44,24 @@ export function ChipGroup({
   error,
   req,
   disabled,
+  look = 'plain',
 }: ChipGroupProps) {
+  const board = look === 'board';
   return (
     <div className="flex flex-col gap-2">
       <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          fontWeight: 700,
-          color: error ? 'var(--warning)' : 'var(--fg-subtle)',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-        }}
+        style={
+          board
+            ? boardGroupLabelStyle(Boolean(error))
+            : {
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                fontWeight: 700,
+                color: error ? 'var(--warning)' : 'var(--fg-subtle)',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+              }
+        }
       >
         {label}
         {req && (
@@ -69,16 +84,25 @@ export function ChipGroup({
               aria-pressed={isActive}
               disabled={isDisabled}
               onClick={() => onChange(opt.value)}
-              className={[
-                'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
-                isDisabled
-                  ? 'border-border text-fg-muted cursor-not-allowed opacity-60'
-                  : isActive
-                    ? 'border-signal text-signal bg-signal/10'
-                    : error
-                      ? 'border-warning text-fg hover:border-fg-muted'
-                      : 'border-border-strong text-fg hover:border-fg-muted',
-              ].join(' ')}
+              className={
+                board
+                  ? boardChipClass({
+                      active: isActive,
+                      disabled: Boolean(disabled),
+                      invalid: Boolean(error),
+                      struck: Boolean(opt.disabled) && !isActive,
+                    })
+                  : [
+                      'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
+                      isDisabled
+                        ? 'border-border text-fg-muted cursor-not-allowed opacity-60'
+                        : isActive
+                          ? 'border-signal text-signal bg-signal/10'
+                          : error
+                            ? 'border-warning text-fg hover:border-fg-muted'
+                            : 'border-border-strong text-fg hover:border-fg-muted',
+                    ].join(' ')
+              }
             >
               {opt.label}
             </button>

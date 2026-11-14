@@ -879,24 +879,24 @@ export function SubmitPriceModal({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              borderRadius: 8,
-              background: 'var(--surface-2)',
+              gap: 12,
+              borderRadius: 12,
               border: '1px solid var(--border)',
-              padding: '10px 12px',
+              padding: '14px 16px',
             }}
           >
             <ShieldCheck
-              size={14}
-              style={{ flexShrink: 0, color: 'var(--fg-muted)' }}
+              size={18}
+              aria-hidden="true"
+              style={{ flexShrink: 0, color: 'var(--signal)' }}
             />
             <p
               style={{
                 margin: 0,
                 fontFamily: 'var(--font-ui)',
-                fontSize: 12,
+                fontSize: 14,
                 color: 'var(--fg-muted)',
-                lineHeight: 1.5,
+                lineHeight: 1.45,
               }}
             >
               {CONSUMER_COPY.submitPriceV2.capNote.beforeCap}
@@ -939,6 +939,7 @@ export function SubmitPriceModal({
               })
             }
             error={bundleErrors['sourceCategory']}
+            look="board"
             req
             // Edit mode: PATCH /v1/submissions/:id intentionally preserves
             // any non-null sourceCategory on the existing row and does not
@@ -982,13 +983,15 @@ export function SubmitPriceModal({
           {panels.map((panel, panelIndex) => (
             <div
               key={panel.uid}
+              data-testid="tier-card"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 18,
-                ...(panelIndex > 0
-                  ? { borderTop: '1px solid var(--border)', paddingTop: 18 }
-                  : {}),
+                borderRadius: 14,
+                border: '1px solid var(--border)',
+                background: 'var(--surface-1)',
+                padding: 14,
               }}
             >
               {panels.length > 1 && !isEditMode && (
@@ -1004,7 +1007,7 @@ export function SubmitPriceModal({
                       fontFamily: 'var(--font-mono)',
                       fontSize: 10,
                       fontWeight: 700,
-                      color: 'var(--fg-subtle)',
+                      color: 'var(--signal)',
                       letterSpacing: '0.14em',
                       textTransform: 'uppercase',
                     }}
@@ -1046,6 +1049,7 @@ export function SubmitPriceModal({
                 value={panel.tier}
                 onChange={(val) => updatePanel(panelIndex, { tier: val })}
                 error={panelErrors[panelIndex]?.['tier']}
+                look="board"
                 // Edit mode never converts a single into a bundle — tier is locked
                 // (spec §4). The PATCH endpoint identifies the row; changing tier is
                 // still possible via the API but the bundle form disallows it.
@@ -1067,6 +1071,7 @@ export function SubmitPriceModal({
                     onChange={(val) => updatePanel(panelIndex, { floor: val })}
                     placeholder={CONSUMER_COPY.submitPriceV2.floorPlaceholder}
                     required
+                    look="board"
                     error={panelErrors[panelIndex]?.['floor']}
                     warning={panelWarnings[panelIndex]?.['floor']}
                   />
@@ -1080,6 +1085,7 @@ export function SubmitPriceModal({
                       updatePanel(panelIndex, { ceiling: val })
                     }
                     placeholder={CONSUMER_COPY.submitPriceV2.ceilingPlaceholder}
+                    look="board"
                     error={panelErrors[panelIndex]?.['ceiling']}
                   />
                 </div>
@@ -1109,7 +1115,7 @@ export function SubmitPriceModal({
                 cursor: 'pointer',
                 alignSelf: 'flex-start',
                 fontFamily: 'var(--font-ui)',
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 700,
                 color: 'var(--signal)',
                 letterSpacing: '-0.005em',

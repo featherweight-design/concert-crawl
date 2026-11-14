@@ -593,6 +593,43 @@ describe('SubmitPriceModal — multi-tier panels (#832)', () => {
   });
 });
 
+// B+ more-p-submit_m / _two_m: Tier and Floor/Ceiling sit in one bordered card,
+// each extra tier gets its own; the required asterisk is on the source question
+// only; a tier taken in another card is struck through.
+describe('SubmitPriceModal — tier cards and field look (B+)', () => {
+  it('wraps Tier and Floor/Ceiling in one card, and each added tier in its own', async () => {
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
+    const [first] = screen.getAllByTestId('tier-card');
+    expect(first?.contains(screen.getByText('Tier'))).toBe(true);
+    expect(first?.contains(screen.getByText('Floor'))).toBe(true);
+    expect(first?.contains(screen.getByText('Ceiling'))).toBe(true);
+    fireEvent.click(screen.getByText('+ Add another tier'));
+    expect(screen.getAllByTestId('tier-card')).toHaveLength(2);
+  });
+
+  it('marks only "Where’s this price from?" as required', async () => {
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
+    const source = screen.getByText("Where's this price from?");
+    expect(source.textContent).toContain('*');
+    expect(screen.getByText(/Where it's listed/).textContent).not.toContain(
+      '*',
+    );
+    expect(screen.getByText('Floor').textContent).not.toContain('*');
+  });
+
+  it('strikes a tier taken in another card', async () => {
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
+    fireEvent.click(screen.getByText('GA'));
+    fireEvent.click(screen.getByText('+ Add another tier'));
+    const gaChips = screen.getAllByRole('button', { name: /^GA$/ });
+    expect(gaChips[0]?.className).not.toContain('line-through');
+    expect(gaChips[1]?.className).toContain('line-through');
+  });
+});
+
 describe('SubmitPriceModal — edit mode constraints (#832)', () => {
   it('edit mode locks the tier, hides add-tier, and labels the button "Save changes"', async () => {
     global.fetch = vi.fn().mockResolvedValue({

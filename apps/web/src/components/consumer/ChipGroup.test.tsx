@@ -101,3 +101,62 @@ describe('ChipGroup — per-option disabled', () => {
     expect(gaButton?.disabled).toBe(true);
   });
 });
+
+// The price sheet's board look (more-p-submit_two_m): sentence-case Inter
+// label, and a chip taken in another tier card drawn struck through.
+describe('ChipGroup — board look', () => {
+  it('draws the label in Inter, not mono caps', () => {
+    render(
+      <ChipGroup
+        label="Tier"
+        options={[{ value: 'GA', label: 'GA' }]}
+        value={null}
+        onChange={vi.fn()}
+        look="board"
+      />,
+    );
+    const label = screen.getByText('Tier');
+    expect(label.style.fontFamily).toBe('var(--font-ui)');
+    expect(label.style.textTransform).toBe('');
+  });
+
+  it('strikes through a chip disabled for its own option, not a group lock', () => {
+    const { rerender } = render(
+      <ChipGroup
+        label="Tier"
+        options={[{ value: 'VIP', label: 'VIP', disabled: true }]}
+        value={null}
+        onChange={vi.fn()}
+        look="board"
+      />,
+    );
+    expect(screen.getByText('VIP').closest('button')?.className).toContain(
+      'line-through',
+    );
+    rerender(
+      <ChipGroup
+        label="Tier"
+        options={[{ value: 'VIP', label: 'VIP' }]}
+        value={null}
+        onChange={vi.fn()}
+        look="board"
+        disabled
+      />,
+    );
+    expect(screen.getByText('VIP').closest('button')?.className).not.toContain(
+      'line-through',
+    );
+  });
+
+  it('keeps the plain look unless asked', () => {
+    render(
+      <ChipGroup
+        label="Tier"
+        options={[{ value: 'GA', label: 'GA' }]}
+        value={null}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Tier').style.textTransform).toBe('uppercase');
+  });
+});
