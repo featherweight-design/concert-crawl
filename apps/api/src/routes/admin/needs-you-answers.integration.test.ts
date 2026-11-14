@@ -378,6 +378,15 @@ describe('admin needs-you answers', () => {
       expect(body.data.result?.watchersNotified).toBe(2);
     });
 
+    it('reports the Watchers told for Cancelled too', async () => {
+      setAuth('admin');
+      const { key, eventId } = await droppedItem();
+      await seedUserEvent('told-c1', eventId);
+      const res = await answer(key, { answer: 'cancelled' });
+      const body: AnswerBody = await res.json();
+      expect(body.data.result?.watchersNotified).toBe(1);
+    });
+
     it('reports zero when no one was Watching', async () => {
       setAuth('admin');
       const { key } = await droppedItem();
