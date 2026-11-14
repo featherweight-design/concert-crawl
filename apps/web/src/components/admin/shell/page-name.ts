@@ -18,7 +18,6 @@ const PAGE_NAMES = new Map<string, string>([
   ['crawl', ADMIN_COPY.crawlPage.sectionTitle],
   ['feedback', ADMIN_COPY.feedback.title],
   ['operations', ADMIN_COPY.operations.title],
-  ['settings', ADMIN_COPY.settings.page.title],
   ['more', ADMIN_COPY.shell.more.title],
 ]);
 

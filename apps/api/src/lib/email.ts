@@ -274,7 +274,7 @@ export async function sendTransactionalEmail<
 /**
  * Send a rendered sample of any email the app can produce to ADMIN_EMAIL, for
  * pre-launch review of how each template lands in a real inbox. Backs the
- * Admin > Settings email picker.
+ * Operations > Emails "Send me a test".
  *
  * Deliberately NOT the transactional pipeline: no email_send_log row, no Clerk
  * recipient lookup, no per-template kill switch — so the same template can be

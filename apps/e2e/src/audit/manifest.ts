@@ -252,8 +252,9 @@ const manifest: AuditManifest = validateManifest([
     auth: 'admin',
   },
   {
-    id: 'admin-settings',
-    path: '/admin/settings',
+    // /admin/settings redirects here: its test-email tool moved to Emails.
+    id: 'admin-operations-emails',
+    path: '/admin/operations?tab=emails',
     tags: ['admin'],
     auth: 'admin',
   },
