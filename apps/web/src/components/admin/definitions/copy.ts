@@ -1396,7 +1396,7 @@ export const ADMIN_COPY = {
       editorial: {
         eyebrow: '04 · editorial',
         title: 'About',
-        subtitle: "These fields render on the venue's public page.",
+        subtitle: "Shown on the venue's public page.",
         llmNote: 'LLM-assisted',
         llmSuffix: '— every generation needs your sign-off before it saves.',
       },

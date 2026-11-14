@@ -309,14 +309,9 @@ describe('DetailsTab', () => {
       COPY.cards.tickets,
       COPY.cards.contact,
     ]);
-    // The cards take the phone padding, as Source's do.
+    // details-m draws the cards at 16/18 on phone too, unlike Source's 14.
     for (const id of ['details-venue', 'details-tickets', 'details-contact']) {
-      expect(screen.getByTestId(id).style.padding).toBe('14px');
+      expect(screen.getByTestId(id).style.padding).toBe('16px 18px');
     }
-  });
-
-  it('the cards keep the desktop padding off a phone', () => {
-    render(<DetailsTab venue={venue} />);
-    expect(screen.getByTestId('details-venue').style.padding).toBe('16px 18px');
   });
 });

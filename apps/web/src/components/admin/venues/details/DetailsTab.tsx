@@ -184,8 +184,10 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
     (type) => capacityTypeLabel(type) === draft.venueType,
   );
 
+  // `details-m` draws the cards at 16/18 on phone too (Source's Card takes 14
+  // there), so the cards never take the phone padding.
   const venueCard = (
-    <Card title={COPY.cards.venue} phone={phone} testId="details-venue">
+    <Card title={COPY.cards.venue} phone={false} testId="details-venue">
       <Field id={idOf('name')} label={FIELDS.name} error={errors.name}>
         {text('name')}
       </Field>
@@ -306,7 +308,7 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   );
 
   const ticketsCard = (
-    <Card title={COPY.cards.tickets} phone={phone} testId="details-tickets">
+    <Card title={COPY.cards.tickets} phone={false} testId="details-tickets">
       <Field
         id={idOf('ticketVendor')}
         label={FIELDS.ticketSeller.label}
@@ -340,7 +342,7 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   );
 
   const contactCard = (
-    <Card title={COPY.cards.contact} phone={phone} testId="details-contact">
+    <Card title={COPY.cards.contact} phone={false} testId="details-contact">
       {/* Ruling b: Website is Source's calendar page, the one `website_url`.
           Shown here, edited and saved there. */}
       <Field id={idOf('website')} label={FIELDS.website}>
