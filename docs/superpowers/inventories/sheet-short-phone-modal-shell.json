@@ -1,0 +1,211 @@
+{
+  "feature": "Addendum 6 item 15a · the sheet rule on ModalShell: every sheet at 320 x 568 (pinned footer, 24px top stop, rail hairline, fade)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/screens/15-sheet-overflow/sheet-short-phone (Confirm price at 320 x 568, opened and scrolled to the end). Every sheet built on ModalShell: Confirm price, Price update, Submit a price (open and two tiers), feedback, report, and the crews sheets. Needs CC_PENDING_EVENT_ID (an upcoming event with a pending price from another account), CC_EVENT_ID (an upcoming show) and CC_CREW_ID (a crew the audit user is in, 2+ members). Electric and Light.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": { "cc-theme": "electric" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": { "cc-theme": "light" },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    { "label": "short", "width": 320, "height": 568, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "confirm-open",
+      "label": "Confirm price, opened",
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"pending-confirm\"]"
+        },
+        { "settle": 3000 },
+        { "click": "[data-testid=\"pending-confirm\"]" },
+        { "waitDialog": "^Corroborate price submission$" },
+        { "wait": "[data-testid=\"confirm-rail\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "confirm-end",
+      "label": "Confirm price, scrolled to the end (the link last in the body, fade gone)",
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"pending-confirm\"]"
+        },
+        { "settle": 3000 },
+        { "click": "[data-testid=\"pending-confirm\"]" },
+        { "waitDialog": "^Corroborate price submission$" },
+        { "wait": "[data-testid=\"confirm-rail\"]" },
+        { "scrollTo": "text=/Submit an update instead/", "settle": 800 }
+      ]
+    },
+    {
+      "id": "price-update",
+      "label": "Price update (CounterSubmitSheet, from a disputed price's Submit an update)",
+      "steps": [
+        {
+          "goto": "/events/${CC_POSTPONED_EVENT_ID}",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        { "settle": 3000 },
+        { "clickRole": "button", "name": "^Submit an update$" },
+        { "wait": "[data-testid=\"counter-rail-header\"]", "settle": 1000 }
+      ]
+    },
+    {
+      "id": "submit-form",
+      "label": "Submit a price, open",
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"submit-another-cta\"]"
+        },
+        { "settle": 3000 },
+        { "click": "[data-testid=\"submit-another-cta\"]" },
+        { "waitDialog": "^Submit price$" },
+        { "wait": "[data-testid=\"submit-rail\"]", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "submit-two-tiers",
+      "label": "Submit a price, two tier cards",
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"submit-another-cta\"]"
+        },
+        { "settle": 3000 },
+        { "click": "[data-testid=\"submit-another-cta\"]" },
+        { "waitDialog": "^Submit price$" },
+        { "wait": "[data-testid=\"submit-rail\"]", "settle": 1200 },
+        { "clickRole": "button", "name": "^GA$" },
+        { "clickRole": "button", "name": "^\\+ Add another tier$" },
+        { "wait": "[aria-label=\"Remove GA\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "feedback",
+      "label": "Feedback",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        { "wait": "[data-testid=\"event-row\"]" },
+        {
+          "click": "button[aria-label=\"Send feedback\"]",
+          "settle": 500,
+          "waitDialog": "^Feedback$"
+        },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "report",
+      "label": "Report a status change",
+      "steps": [
+        {
+          "goto": "/events/${CC_CANCELLED_EVENT_ID}",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        { "settle": 3000 },
+        { "scrollTo": "[data-testid=\"report-icon-tile\"]" },
+        { "click": "[data-testid=\"report-icon-tile\"]" },
+        { "waitDialog": "^Report a status change$", "settle": 800 }
+      ]
+    },
+    {
+      "id": "crew-create",
+      "label": "Crews: Start a crew",
+      "steps": [
+        { "goto": "/crews", "settle": 1000 },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        { "wait": "a[href^=\"/crews/\"]" },
+        { "clickRole": "button", "name": "^Start a crew" },
+        { "wait": "[role=\"dialog\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "crew-options",
+      "label": "Crews: Crew options",
+      "steps": [
+        { "goto": "/crews", "settle": 1000 },
+        { "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"] >> nth=0" },
+        { "wait": "[data-testid=\"crew-name\"]" },
+        { "click": "button[aria-label=\"Crew options\"]" },
+        { "wait": "[role=\"dialog\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "crew-invite",
+      "label": "Crews: Invite people",
+      "steps": [
+        { "goto": "/crews", "settle": 1000 },
+        { "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"] >> nth=0" },
+        { "wait": "[data-testid=\"crew-name\"]" },
+        { "clickRole": "button", "name": "^Invite people" },
+        { "wait": "[role=\"dialog\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "crew-rename",
+      "label": "Crews: Rename crew",
+      "steps": [
+        { "goto": "/crews", "settle": 1000 },
+        { "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"] >> nth=0" },
+        { "wait": "[data-testid=\"crew-name\"]" },
+        { "click": "button[aria-label=\"Crew options\"]" },
+        { "wait": "[role=\"dialog\"]" },
+        { "clickRole": "button", "name": "^Rename crew" },
+        { "settle": 1000 },
+        { "wait": "[role=\"dialog\"]" }
+      ]
+    },
+    {
+      "id": "crew-new-patch",
+      "label": "Crews: New patch",
+      "steps": [
+        { "goto": "/crews", "settle": 1000 },
+        { "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"] >> nth=0" },
+        { "wait": "[data-testid=\"crew-name\"]" },
+        { "click": "button[aria-label=\"Crew options\"]" },
+        { "wait": "[role=\"dialog\"]" },
+        { "clickRole": "button", "name": "^New patch" },
+        { "settle": 1000 },
+        { "wait": "[role=\"dialog\"]" }
+      ]
+    },
+    {
+      "id": "crew-leave",
+      "label": "Crews: Leave crew",
+      "steps": [
+        { "goto": "/crews", "settle": 1000 },
+        { "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"] >> nth=0" },
+        { "wait": "[data-testid=\"crew-name\"]" },
+        { "click": "button[aria-label=\"Crew options\"]" },
+        { "wait": "[role=\"dialog\"]" },
+        { "clickRole": "button", "name": "^Leave crew" },
+        { "settle": 1000 },
+        { "wait": "[role=\"dialog\"]" }
+      ]
+    }
+  ]
+}
