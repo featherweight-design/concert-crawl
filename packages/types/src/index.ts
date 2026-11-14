@@ -38,6 +38,9 @@ export * from './latin-extended-map.js';
 export * from './crawler-identity.js';
 // The daily crawl's schedule: the API's next nightly and the web's night time.
 export * from './crawl-schedule.js';
+// A crawl batch's RESULT and the Not OK rule: the API's not_ok filter and the
+// web's chip read one implementation.
+export * from './crawl-batch-result.js';
 
 // Concert Crews (#1226) — /v1/crews and invite-resolution response contracts,
 // shared by the API handlers and every web crew surface.

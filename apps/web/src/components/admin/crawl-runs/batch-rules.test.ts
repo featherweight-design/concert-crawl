@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { finalBatchCounts, isNotOkBatch } from '@concert-crawl/types';
 import { batchesPath, parseBatchPage, type BatchRow } from './batch-data';
 import {
   appendBatches,
@@ -11,8 +12,6 @@ import {
   crawlRunsHref,
   filterFromParam,
   isClickableBatch,
-  finalCounts,
-  isNotOkBatch,
   keepForFilter,
   notOkCountOf,
 } from './batch-rules';
@@ -235,7 +234,11 @@ describe('finalCounts (a retried night, M1)', () => {
       counts: { ...COUNTS, ok: 21, notOk: 21, failed: 21, total: 42 },
       retry: { at: '2026-11-11T11:10:00.000Z', counts: ALL_OK },
     });
-    expect(finalCounts(night)).toMatchObject({ ok: 21, notOk: 0, failed: 0 });
+    expect(finalBatchCounts(night)).toMatchObject({
+      ok: 21,
+      notOk: 0,
+      failed: 0,
+    });
     expect(batchSummary(night)).toBe('21 venues · 21 OK · retried at 4:10 AM');
     expect(batchStatus(night)).toMatchObject({
       key: 'done',
@@ -249,12 +252,16 @@ describe('finalCounts (a retried night, M1)', () => {
       counts: { ...COUNTS, notOk: 42, failed: 42, total: 42 },
       retry: { at: '2026-11-11T11:10:00.000Z', counts: ALL_FAILED },
     });
-    expect(finalCounts(night)).toMatchObject({ ok: 0, notOk: 21, failed: 21 });
+    expect(finalBatchCounts(night)).toMatchObject({
+      ok: 0,
+      notOk: 21,
+      failed: 21,
+    });
     expect(batchStatus(night).key).toBe('failed');
   });
 
   it('keeps the counts as sent without a retry', () => {
-    expect(finalCounts(nightly())).toEqual(nightly().counts);
+    expect(finalBatchCounts(nightly())).toEqual(nightly().counts);
   });
 
   it('counts a paused venue once though it skipped in both waves', () => {
@@ -272,7 +279,11 @@ describe('finalCounts (a retried night, M1)', () => {
         counts: { ...COUNTS, ok: 20, skipped: 1, total: 21 },
       },
     });
-    expect(finalCounts(night)).toMatchObject({ ok: 20, skipped: 1, notOk: 0 });
+    expect(finalBatchCounts(night)).toMatchObject({
+      ok: 20,
+      skipped: 1,
+      notOk: 0,
+    });
   });
 });
 
