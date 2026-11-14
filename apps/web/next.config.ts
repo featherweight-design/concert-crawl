@@ -24,8 +24,10 @@ const config: NextConfig = {
   // route module on the 8 GB Standard machine (4 cores). Two workers hold fewer
   // route graphs at once, and webpack's memory mode trades some speed for a
   // lower peak in the compile that precedes them.
+  // The worker cap is for that 8 GB machine only: CI and local builds keep
+  // Next's own default.
   experimental: {
-    cpus: 2,
+    ...(process.env['VERCEL'] ? { cpus: 2 } : {}),
     webpackMemoryOptimizations: true,
   },
   env: {
