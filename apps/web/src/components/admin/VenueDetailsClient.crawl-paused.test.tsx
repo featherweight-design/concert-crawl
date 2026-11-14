@@ -35,7 +35,7 @@ vi.mock('@clerk/nextjs', () => ({
 }));
 
 vi.mock('@/components/admin/shell/PageTitleContext', () => ({
-  usePageTitle: () => ({ setPageTitle: vi.fn() }),
+  usePageTitle: () => ({ setPageTitle: vi.fn(), setPhoneBack: vi.fn() }),
 }));
 
 vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
