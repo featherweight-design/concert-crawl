@@ -13,8 +13,13 @@ import { SaveFailedToast } from './SaveFailedToast';
 export type PinnedSaveBarLook = {
   gap: number;
   padding: string;
-  /** Lets the message take a row of its own (Source on the phone). */
+  /** Lets the message wrap onto a row of its own when the bar runs short. */
   wrap?: boolean;
+  /**
+   * Message on one row, Discard and Save on a row under it, both `gap` apart
+   * (Source on the phone, `G4/source-feed-edited`).
+   */
+  stack?: boolean;
   messageStyle: CSSProperties;
   discardVariant: NonNullable<ComponentProps<typeof AdminButton>['variant']>;
   discardStyle?: CSSProperties;
@@ -73,6 +78,29 @@ export const PinnedSaveBar = ({
       </div>
     );
 
+  const buttons = (
+    <>
+      <AdminButton
+        type="button"
+        variant={look.discardVariant}
+        disabled={saving}
+        onClick={onDiscard}
+        style={look.discardStyle}
+      >
+        {labels.discard}
+      </AdminButton>
+      <AdminButton
+        type="button"
+        variant="gradient"
+        disabled={saving}
+        onClick={onSave}
+        style={look.saveStyle}
+      >
+        {saving ? labels.saving : labels.save}
+      </AdminButton>
+    </>
+  );
+
   if (!dirty) {
     if (toast === null) return null;
     return (
@@ -103,7 +131,9 @@ export const PinnedSaveBar = ({
         bottom: 0,
         zIndex: 30,
         display: 'flex',
-        alignItems: 'center',
+        ...(look.stack === true
+          ? { flexDirection: 'column' }
+          : { alignItems: 'center' }),
         gap: look.gap,
         ...(look.wrap === true ? { flexWrap: 'wrap' } : {}),
         padding: look.padding,
@@ -126,24 +156,11 @@ export const PinnedSaveBar = ({
         </div>
       )}
       <span style={look.messageStyle}>{message}</span>
-      <AdminButton
-        type="button"
-        variant={look.discardVariant}
-        disabled={saving}
-        onClick={onDiscard}
-        style={look.discardStyle}
-      >
-        {labels.discard}
-      </AdminButton>
-      <AdminButton
-        type="button"
-        variant="gradient"
-        disabled={saving}
-        onClick={onSave}
-        style={look.saveStyle}
-      >
-        {saving ? labels.saving : labels.save}
-      </AdminButton>
+      {look.stack === true ? (
+        <div style={{ display: 'flex', gap: look.gap }}>{buttons}</div>
+      ) : (
+        buttons
+      )}
     </div>
   );
 };

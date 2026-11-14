@@ -522,11 +522,11 @@ describe('SourceTab — its own save bar', () => {
   // Style contract only (jsdom has no layout): Source's look on the shared
   // PinnedSaveBar, which differs from Details' on purpose.
   it.each([
-    [false, '10px 16px', ''],
-    [true, '10px 16px 24px', '1'],
+    [false, '10px 16px', 'wrap', '', '', ''],
+    [true, '10px 16px 24px', '', 'column', '1', '44px'],
   ])(
     'draws the Save bar in Source’s look (phone %s)',
-    (isPhone, padding, saveFlexGrow) => {
+    (isPhone, padding, flexWrap, flexDirection, saveFlexGrow, height) => {
       phone = isPhone;
       render(<SourceTab venue={venue} />);
       fireEvent.change(calendarInput(), {
@@ -534,14 +534,21 @@ describe('SourceTab — its own save bar', () => {
       });
       const bar = screen.getByTestId('source-save-bar');
       expect(bar.style.gap).toBe('8px');
-      expect(bar.style.flexWrap).toBe('wrap');
+      expect(bar.style.flexWrap).toBe(flexWrap);
+      expect(bar.style.flexDirection).toBe(flexDirection);
       expect(bar.style.padding).toBe(padding);
       expect(
         screen.getByText(COPY.saveBar.unsaved(COPY.read.title)).style.color,
       ).toBe('var(--fg-muted)');
-      expect(
-        screen.getByRole('button', { name: COPY.saveBar.save }).style.flexGrow,
-      ).toBe(saveFlexGrow);
+      const save = screen.getByRole('button', { name: COPY.saveBar.save });
+      const discard = screen.getByRole('button', {
+        name: COPY.saveBar.discard,
+      });
+      expect(save.style.flexGrow).toBe(saveFlexGrow);
+      expect(save.style.height).toBe(height);
+      expect(discard.style.height).toBe(height);
+      // On the phone the buttons share a row under the message.
+      expect(save.parentElement === bar).toBe(!isPhone);
     },
   );
 

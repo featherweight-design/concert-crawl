@@ -43,11 +43,18 @@ export const DetailsSaveBar = ({
       padding: phone ? '12px 16px 24px' : '13px 16px',
       messageStyle: { fontSize: 12.5, color: 'var(--warning)', flex: 1 },
       discardVariant: 'ghost',
-      discardStyle: { height: 38, fontSize: 13.5, fontWeight: 600 },
-      saveStyle: {
-        height: 38,
-        padding: '0 22px',
+      // `details-m` draws both buttons 42 tall and Save at 14px; `details-d`
+      // draws them 38 tall at 13.5px. Both round them to 9.
+      discardStyle: {
+        height: phone ? 42 : 38,
         fontSize: 13.5,
+        fontWeight: 600,
+        borderRadius: 9,
+      },
+      saveStyle: {
+        height: phone ? 42 : 38,
+        padding: '0 22px',
+        fontSize: phone ? 14 : 13.5,
         borderRadius: 9,
       },
     }}
