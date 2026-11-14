@@ -118,7 +118,7 @@ const VibeChip = ({
       disabled={disabled}
       data-testid={testId}
       onClick={onToggle}
-      className={`inline-flex h-[30px] cursor-pointer items-center gap-2 rounded-full border pr-3.5 pl-3 text-[13.5px] disabled:cursor-not-allowed disabled:opacity-40 ${MOTION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
+      className={`relative inline-flex h-[30px] cursor-pointer items-center gap-2 rounded-full border pr-3.5 pl-3 text-[13.5px] before:absolute before:inset-x-0 before:-inset-y-[7px] before:content-[''] disabled:cursor-not-allowed disabled:opacity-40 ${MOTION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
       style={{
         borderColor: on ? color : 'var(--border-strong)',
         background: on
