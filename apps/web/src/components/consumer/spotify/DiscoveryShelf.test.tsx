@@ -260,7 +260,7 @@ describe('DiscoveryShelf', () => {
     }).className;
     expect(railClass).toContain('overflow-y-hidden');
     expect(railClass).toContain('py-1');
-    expect(railClass).toContain('sm:px-1');
+    expect(railClass).toContain('lg:px-1');
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(2);
 
