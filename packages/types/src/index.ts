@@ -1162,6 +1162,11 @@ export interface EventDetailResponse extends EventWithVenue {
   priceApprovedAt?: string | null;
   // Alternate corroborated submissions (other vendors/sources beyond the primary)
   priceAlternates?: Array<{
+    // The submission's id, to open that price's card. Optional so a response
+    // from an API that predates it still types.
+    id?: string;
+    // The tier this alternate was priced at. Optional for the same reason.
+    tier?: Tier;
     vendor: string | null;
     priceMin: string;
     priceMax: string | null;

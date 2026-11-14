@@ -1281,6 +1281,121 @@ describe('GET /v1/events/:id — integration', () => {
     expect(body.data.counterSubmission).toBeNull();
   });
 
+  it('gives each price alternate its id and tier, and nothing more', async () => {
+    const venue = await seedVenue({ name: 'Alt Tiers', slug: 'alt-tiers' });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    });
+    const owner = await seedUserProfile('alt-tiers-owner', {
+      handle: 'alt-tiers-owner',
+    });
+    const altFan = await seedUserProfile('alt-tiers-fan', {
+      handle: 'alt-tiers-fan',
+    });
+    const challenger = await seedUserProfile('alt-tiers-challenger', {
+      handle: 'alt-tiers-challenger',
+    });
+    // Box office leads on trust rank.
+    const primary = await seedPriceSubmission(event.id, owner.userId, {
+      tier: 'GA',
+      vendor: 'VenueBoxOffice',
+      priceMin: '30',
+      status: 'corroborated',
+    });
+    // Resale ranks last of the live prices.
+    const resale = await seedPriceSubmission(event.id, altFan.userId, {
+      tier: 'VIP',
+      vendor: 'StubHub',
+      priceMin: '90',
+      priceMax: '120',
+      status: 'corroborated',
+      note: 'alt-tiers secret note',
+    });
+    // Two primary-market sellers: the newer one first.
+    const older = await seedPriceSubmission(event.id, altFan.userId, {
+      tier: 'Lawn',
+      vendor: 'Ticketmaster',
+      priceMin: '40',
+      status: 'corroborated',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    });
+    const newer = await seedPriceSubmission(event.id, altFan.userId, {
+      tier: 'Reserved',
+      vendor: 'AXS',
+      priceMin: '50',
+      status: 'corroborated',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+    });
+    // A price under a check, alone in its tier, is never offered as an
+    // alternate.
+    const checked = await seedPriceSubmission(event.id, altFan.userId, {
+      tier: 'Pit',
+      vendor: 'AXS',
+      priceMin: '70',
+      status: 'disputed',
+    });
+    await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'Pit',
+      vendor: 'AXS',
+      priceMin: '65',
+      status: 'pending',
+      disputedSubmissionId: checked.id,
+    });
+
+    const res = await app.request(`/v1/events/${event.id}`);
+    const body = (await res.json()) as {
+      data: {
+        priceSubmissionId: string | null;
+        priceAlternates: Array<Record<string, unknown>>;
+      };
+    };
+
+    expect(body.data.priceSubmissionId).toBe(primary.id);
+    expect(body.data.priceAlternates).toEqual([
+      {
+        id: newer.id,
+        tier: 'Reserved',
+        vendor: 'AXS',
+        priceMin: newer.priceMin,
+        priceMax: null,
+        sourceCategory: newer.sourceCategory,
+      },
+      {
+        id: older.id,
+        tier: 'Lawn',
+        vendor: 'Ticketmaster',
+        priceMin: older.priceMin,
+        priceMax: null,
+        sourceCategory: older.sourceCategory,
+      },
+      {
+        id: resale.id,
+        tier: 'VIP',
+        vendor: 'StubHub',
+        priceMin: resale.priceMin,
+        priceMax: resale.priceMax,
+        sourceCategory: resale.sourceCategory,
+      },
+    ]);
+    for (const alt of body.data.priceAlternates) {
+      expect(Object.keys(alt).sort()).toEqual([
+        'id',
+        'priceMax',
+        'priceMin',
+        'sourceCategory',
+        'tier',
+        'vendor',
+      ]);
+    }
+    expect(body.data.priceAlternates.map((alt) => alt['id'])).not.toContain(
+      checked.id,
+    );
+    const altsJson = JSON.stringify(body.data.priceAlternates);
+    expect(altsJson).not.toContain(altFan.userId);
+    expect(altsJson).not.toContain('alt-tiers secret note');
+  });
+
   it('leaves a disputed parent off when its only counter is at another tier', async () => {
     const venue = await seedVenue({ name: 'Cross Tier', slug: 'cross-tier' });
     const event = await seedEvent(venue.id, {
