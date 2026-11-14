@@ -1,0 +1,22 @@
+{
+  "feature": "Admin venue Details tab · City beside Neighborhood, the Look card drawn to the boards",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: addendum-3/04-venues details-d (desktop) and details-m (phone). Read state only: the Venue card with Neighborhood and City side by side, and the Look card. Nothing is edited or saved.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/b1-details-city-sheet",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 1400, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 1200 }
+  ],
+  "rows": [
+    {
+      "id": "details",
+      "label": "Venue page, Details read state (Bluebird Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "wait": "[data-testid=\"details-venue\"]"
+        },
+        { "settle": 2500 }
+      ]
+    }
+  ]
+}
