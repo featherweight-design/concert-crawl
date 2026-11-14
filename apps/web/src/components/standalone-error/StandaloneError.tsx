@@ -235,6 +235,12 @@ const LAYOUT_CSS = `
 .cc-se-heading { font-size: 30px; }
 .cc-se-actions { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 4px; margin-top: 12px; }
 .cc-se-try { width: 100%; min-height: 52px; border-radius: 16px; font-size: 17px; }
+/* In the app shell on a phone (addendum-2 18-error-page/error-in-app-m): the
+   app header stands where the logo bar was, and the mark sits 26px under it.
+   From 900px the page is the standalone one, unchanged. */
+@media (max-width: 899px) {
+  .cc-se-grid[data-in-app='true'] { padding-top: 0; }
+}
 @media (min-width: 900px) {
   .cc-se-grid { max-width: 1100px; padding-top: 96px; row-gap: 0; }
   .cc-se-grid[data-split='true'] {
@@ -275,31 +281,58 @@ export interface StandaloneErrorProps {
   onSignOut?: (() => void) | undefined;
   /** Shown under the chip: the signed-in Tell us card. */
   children?: ReactNode;
+  /**
+   * Rendered by a route boundary inside the (main) app layout (addendum-2
+   * §18, board `error-in-app-m`): the app header and bottom nav stay, so the
+   * page drops its own logo bar, its full-viewport height and its background,
+   * and sits in the shell. Everything else is the standalone page.
+   */
+  inApp?: boolean | undefined;
 }
+
+// The standalone page owns the whole viewport and paints its own ground.
+const STANDALONE_FRAME: CSSProperties = {
+  minHeight: '100dvh',
+  padding: '24px 20px 48px',
+  background:
+    'radial-gradient(120% 60% at 0% 0%, color-mix(in oklch, var(--accent) 14%, transparent), transparent 60%), var(--bg)',
+};
+
+// Inside the shell the page's ambient ground shows through. 26px under the app
+// header and 16px gutters as drawn; the 80px foot clears the fixed bottom nav,
+// as every page in the shell does (see PHONE_SHELL_CLASS).
+const IN_APP_FRAME: CSSProperties = {
+  padding: '26px 16px 80px',
+};
 
 export const StandaloneError = ({
   errorId,
   onRetry,
   onSignOut,
   children,
+  inApp = false,
 }: StandaloneErrorProps) => (
   <div
     data-testid="standalone-error"
+    data-in-app={inApp ? 'true' : undefined}
     style={{
-      minHeight: '100dvh',
+      ...(inApp ? IN_APP_FRAME : STANDALONE_FRAME),
       boxSizing: 'border-box',
-      padding: '24px 20px 48px',
-      background:
-        'radial-gradient(120% 60% at 0% 0%, color-mix(in oklch, var(--accent) 14%, transparent), transparent 60%), var(--bg)',
       color: 'var(--fg)',
       fontFamily: 'var(--font-ui, system-ui, sans-serif)',
     }}
   >
     <style>{LAYOUT_CSS}</style>
-    <header>
-      <Logo />
-    </header>
-    <main className="cc-se-grid" data-split={children ? 'true' : undefined}>
+    {inApp ? null : (
+      <header>
+        <Logo />
+      </header>
+    )}
+    <main
+      className="cc-se-grid"
+      data-split={children ? 'true' : undefined}
+      data-in-app={inApp ? 'true' : undefined}
+    >
       <div className="cc-se-copy">
         <BrokenMark />
         <p

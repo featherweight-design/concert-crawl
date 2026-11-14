@@ -1,15 +1,11 @@
 'use client';
 
-// The crew home boundary is the same standalone error page as every other
-// route (README B20a). A bad crew id never lands here: the page maps it to
-// not-found, so this only ever means a real failure.
-import { useEffect } from 'react';
-import { useClerk } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
-
-import { ErrorReport } from '@/components/consumer/error-report';
-import { StandaloneError } from '@/components/standalone-error/StandaloneError';
-import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
+// The crew home boundary is the in-app error page, the one (main)/error.tsx
+// renders (addendum-2 §18: the drawn in-app board is a crew page). It stays
+// only to keep its own console label; it draws nothing of its own. A bad crew
+// id never lands here: the page maps it to not-found, so this only ever means
+// a real failure.
+import { InAppError } from '@/components/standalone-error/InAppError';
 
 export default function CrewError({
   error,
@@ -18,21 +14,11 @@ export default function CrewError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const { signOut } = useClerk();
-  const router = useRouter();
-  const retry = useErrorBoundaryRetry(reset);
-
-  useEffect(() => {
-    console.error('[crews] crew home boundary', error);
-  }, [error]);
-
   return (
-    <StandaloneError
-      errorId={error.digest}
-      onRetry={retry}
-      onSignOut={() => void signOut(() => router.push('/'))}
-    >
-      <ErrorReport error={error} variant="card" />
-    </StandaloneError>
+    <InAppError
+      error={error}
+      reset={reset}
+      logLabel="[crews] crew home boundary"
+    />
   );
 }
