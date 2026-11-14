@@ -26,8 +26,11 @@ const COPY = ADMIN_COPY.venueRuns;
 const GRADIENT_BORDER =
   'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box';
 
-/** A pill in the All / Not OK filter (`04/venue-runs`). */
-const pill = (on: boolean): CSSProperties => ({
+/**
+ * A pill in the All / Not OK filter (`04/venue-runs`), and the Activity log's
+ * filters (`07/activity-log`), which draw the same pill.
+ */
+export const pill = (on: boolean): CSSProperties => ({
   display: 'inline-flex',
   alignItems: 'center',
   gap: 7,
