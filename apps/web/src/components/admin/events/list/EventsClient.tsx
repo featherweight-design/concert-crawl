@@ -37,6 +37,13 @@ const COPY = ADMIN_COPY.eventsList;
 export const EVENTS_PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
 
+interface Loaded {
+  /** The filters' URL, so a page is only ever extended for its own filters. */
+  key: string;
+  when: When;
+  data: EventListPage;
+}
+
 /** A pill on `06/events`; `on` draws the board's selected Upcoming edge. */
 const chipStyle = (on: boolean): CSSProperties => ({
   display: 'inline-flex',
@@ -81,14 +88,25 @@ export const EventsClient = () => {
     [paramsKey],
   );
 
-  const [page, setPage] = useState<EventListPage | null>(null);
+  const filtersKey = eventsListHref(filters);
+
+  // The page on screen, with the filters it was loaded for, so Load more and
+  // the rows never mix one side's or one search's page with another's.
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
   const [loadState, setLoadState] = useState<LoadMoreState>('idle');
   const [text, setText] = useState(filters.query);
+  // The search this page last put in the URL. Only a URL search that differs
+  // from it (Back, a link) rewrites the box, so typing during a pending
+  // navigation is never dropped.
+  const navigatedQuery = useRef(filters.query);
 
   const navigate = useCallback(
-    (next: EventFilters) =>
-      router.replace(eventsListHref(next), { scroll: false }),
+    (next: EventFilters) => {
+      navigatedQuery.current = next.query.trim();
+      router.replace(eventsListHref(next), { scroll: false });
+    },
     [router],
   );
 
@@ -97,13 +115,17 @@ export const EventsClient = () => {
   const load = useCallback(async () => {
     const mine = ++latestLoad.current;
     setLoadState('idle');
+    setPending(true);
     try {
-      const next = await api.list(filters, 0, EVENTS_PAGE_SIZE);
+      const data = await api.list(filters, 0, EVENTS_PAGE_SIZE);
       if (mine !== latestLoad.current) return;
-      setPage(next);
+      setLoaded({ key: eventsListHref(filters), when: filters.when, data });
       setFailed(false);
-    } catch {
+    } catch (err) {
+      console.error('[admin events] list failed', err);
       if (mine === latestLoad.current) setFailed(true);
+    } finally {
+      if (mine === latestLoad.current) setPending(false);
     }
   }, [api, filters]);
 
@@ -111,8 +133,7 @@ export const EventsClient = () => {
     void load();
   }, [load]);
 
-  // Typing settles before it reaches the URL. A URL change from elsewhere
-  // (Clear filters) brings the box along, without trimming a space as typed.
+  // Typing settles before it reaches the URL.
   useEffect(() => {
     if (text.trim() === filters.query) return undefined;
     const timer = setTimeout(
@@ -124,29 +145,42 @@ export const EventsClient = () => {
 
   const urlQuery = filters.query;
   useEffect(() => {
-    setText((current) => (current.trim() === urlQuery ? current : urlQuery));
+    if (urlQuery === navigatedQuery.current) return;
+    navigatedQuery.current = urlQuery;
+    setText(urlQuery);
   }, [urlQuery]);
 
   const onLoadMore = async () => {
-    if (page === null) return;
+    // A page loaded for other filters, or a load still in flight, would
+    // append the wrong rows at the wrong offset.
+    if (loaded === null || pending || loaded.key !== filtersKey) return;
     const mine = latestLoad.current;
+    const { key } = loaded;
     setLoadState('loading');
     try {
-      const next = await api.list(filters, page.rows.length, EVENTS_PAGE_SIZE);
+      const next = await api.list(
+        filters,
+        loaded.data.rows.length,
+        EVENTS_PAGE_SIZE,
+      );
       if (mine !== latestLoad.current) return;
-      setPage((current) => {
-        if (current === null) return next;
-        const seen = new Set(current.rows.map((row) => row.id));
+      setLoaded((current) => {
+        if (current === null || current.key !== key) return current;
+        const seen = new Set(current.data.rows.map((row) => row.id));
         return {
-          ...next,
-          rows: [
-            ...current.rows,
-            ...next.rows.filter((row) => !seen.has(row.id)),
-          ],
+          ...current,
+          data: {
+            ...next,
+            rows: [
+              ...current.data.rows,
+              ...next.rows.filter((row) => !seen.has(row.id)),
+            ],
+          },
         };
       });
       setLoadState('idle');
-    } catch {
+    } catch (err) {
+      console.error('[admin events] load more failed', err);
       if (mine === latestLoad.current) setLoadState('failed');
     }
   };
@@ -162,6 +196,9 @@ export const EventsClient = () => {
   };
 
   const past = filters.when === 'past';
+  // A page loaded for the other side is never drawn under this one.
+  const page =
+    loaded !== null && loaded.when === filters.when ? loaded.data : null;
   const counts = page?.counts;
 
   const header = (
@@ -191,7 +228,7 @@ export const EventsClient = () => {
     </header>
   );
 
-  if (failed && page === null) {
+  if (failed && loaded === null) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {header}
@@ -200,7 +237,7 @@ export const EventsClient = () => {
     );
   }
 
-  if (page === null || counts === undefined) {
+  if (loaded === null) {
     return (
       <PageSkeleton
         heading
@@ -285,25 +322,35 @@ export const EventsClient = () => {
     </div>
   );
 
-  const shown = page.rows.length;
-  const footer = (
-    <div style={{ padding: isPhone ? '0 0 12px' : '0 18px 14px' }}>
-      <LoadMoreFooter
-        shown={shown}
-        total={page.total}
-        step={Math.min(EVENTS_PAGE_SIZE, Math.max(0, page.total - shown))}
-        more={shown < page.total}
-        state={loadState}
-        onLoadMore={() => void onLoadMore()}
-        note={past ? COPY.pastNote : undefined}
-        failedLabel={COPY.loadMoreFailed}
-        testId="events-load-more"
-      />
-    </div>
-  );
+  const footer = (shownPage: EventListPage) => {
+    const shown = shownPage.rows.length;
+    return (
+      <div style={{ padding: isPhone ? '0 0 12px' : '0 18px 14px' }}>
+        <LoadMoreFooter
+          shown={shown}
+          total={shownPage.total}
+          step={Math.min(
+            EVENTS_PAGE_SIZE,
+            Math.max(0, shownPage.total - shown),
+          )}
+          more={shown < shownPage.total}
+          // Nothing more loads while a search or side change is in flight.
+          state={pending ? 'loading' : loadState}
+          onLoadMore={() => void onLoadMore()}
+          note={past ? COPY.pastNote : undefined}
+          failedLabel={COPY.loadMoreFailed}
+          testId="events-load-more"
+        />
+      </div>
+    );
+  };
 
   const content = failed ? (
     <CouldntLoad page={COPY.title} onRetry={() => void load()} />
+  ) : page === null ? (
+    // The other side's page is still on hand: the table's skeleton until
+    // this side's arrives (`07/loading-events`).
+    <PageSkeleton card rows={8} columns={5} rowHeight={65} />
   ) : page.total === 0 ? (
     <EmptyState
       title={COPY.empty.title}
@@ -319,7 +366,7 @@ export const EventsClient = () => {
   ) : isPhone ? (
     <div>
       <EventsList rows={page.rows} when={filters.when} />
-      {footer}
+      {footer(page)}
     </div>
   ) : (
     <div
@@ -331,7 +378,7 @@ export const EventsClient = () => {
       }}
     >
       <EventsList rows={page.rows} when={filters.when} />
-      {footer}
+      {footer(page)}
     </div>
   );
 

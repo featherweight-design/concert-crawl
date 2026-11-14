@@ -27,8 +27,9 @@ const subLabelFor = (item: NavItem, pathname: string): string => {
 /** The section root a route lives under, ignoring interim query strings. */
 const isSectionRoot = (item: NavItem, pathname: string): boolean => {
   const root = item.href.split('?')[0];
+  // The old Review All events tab still sits beside the Events list.
   return (
-    pathname === root || (item.key === 'events' && pathname === '/admin/events')
+    pathname === root || (item.key === 'events' && pathname === '/admin/review')
   );
 };
 
