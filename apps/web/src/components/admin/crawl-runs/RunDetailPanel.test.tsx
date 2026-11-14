@@ -389,12 +389,32 @@ describe('RunDetailPanel', () => {
     await waitFor(() => expect(screen.getByText(DETAIL.noPages)).toBeTruthy());
   });
 
-  it('is a bottom sheet on the phone, titled by the summary', async () => {
+  it('is a bottom sheet on the phone, titled by date · time and the chip, with the summary in the body', async () => {
     mockGet.mockResolvedValue([]);
     renderPanel(row(), true);
     expect(screen.getByTestId('admin-sheet')).toBeTruthy();
-    expect(screen.getByRole('dialog', { name: '28 shows' })).toBeTruthy();
-    expect(screen.getByText('Nov 9 · 3:02 AM · 212 s · $0.14')).toBeTruthy();
+    const sheet = screen.getByRole('dialog', { name: 'Nov 9 · 3:02 AM' });
+    const heading = within(sheet).getByRole('heading');
+    expect(heading.textContent).toBe(`Nov 9 · 3:02 AM${RUN.partial}`);
+    expect(within(heading).getByTestId('run-chip').textContent).toBe(
+      RUN.partial,
+    );
+    expect(screen.getByTestId('run-detail-summary').textContent).toBe(
+      '28 shows',
+    );
+    // G2/run-detail-sheet draws no meta line under the title.
+    expect(screen.queryByText('Nov 9 · 3:02 AM · 212 s · $0.14')).toBeNull();
+    await waitFor(() => expect(screen.getByText(DETAIL.noPages)).toBeTruthy());
+  });
+
+  it('keeps an Unchanged run’s sentence under its summary on the phone', async () => {
+    mockGet.mockResolvedValue([]);
+    renderPanel(
+      row({ status: 'skipped', reason: 'page_unchanged', eventsFound: 0 }),
+      true,
+    );
+    const summary = screen.getByTestId('run-detail-summary');
+    expect(summary.querySelectorAll('p')).toHaveLength(2);
     await waitFor(() => expect(screen.getByText(DETAIL.noPages)).toBeTruthy());
   });
 });

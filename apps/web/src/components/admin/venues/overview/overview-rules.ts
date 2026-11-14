@@ -44,18 +44,51 @@ type LatestRun = Pick<
 >;
 
 /**
- * The big outcome word (`run-result-chips`): OK, Unchanged, Partial, Failed or
- * Skipped, in `venuesList.latestRun`'s words. Low is HOLD (it needs What's
- * normal), so a low run reads OK.
+ * A run's result chip (`A3/09/run-result-chips`, `B+/A5/14/run-chips-partial`).
+ * Low and Quiet are HOLD (they need What's normal), so a low run reads OK.
  */
-export const runOutcome = (
+export type RunOutcomeKey =
+  | 'success'
+  | 'unchanged'
+  | 'partial'
+  | 'failed'
+  | 'blocked'
+  | 'skipped'
+  | 'robots'
+  | 'notRun';
+
+/**
+ * Which chip a run reads. The reason wins over the status: a 403 or 429 is
+ * Blocked, any robots.txt stop is robots.txt, and the account-wide LLM refusal
+ * is Not run (not a venue failure), whatever status the run was stored with.
+ */
+export const runOutcomeKey = (
   run: Pick<LatestRun, 'status' | 'reason'>,
-): string => {
-  if (run.status === 'success') return RUN.success;
-  if (run.status === 'partial') return RUN.partial;
-  if (run.status === 'failed') return RUN.failed;
-  return run.reason === 'page_unchanged' ? RUN.unchanged : RUN.skipped;
+): RunOutcomeKey => {
+  switch (run.reason) {
+    case 'blocked_http':
+      return 'blocked';
+    case 'robots_disallowed':
+    case 'robots_unreachable':
+    case 'robots_crawl_delay':
+      return 'robots';
+    case 'llm_account':
+      return 'notRun';
+    default:
+      break;
+  }
+  if (run.status === 'success') return 'success';
+  if (run.status === 'partial') return 'partial';
+  if (run.status === 'failed') return 'failed';
+  return run.reason === 'page_unchanged' ? 'unchanged' : 'skipped';
 };
+
+/**
+ * The big outcome word: OK, Unchanged, Partial, Failed, Blocked, Skipped,
+ * robots.txt or Not run, in `venuesList.latestRun`'s words.
+ */
+export const runOutcome = (run: Pick<LatestRun, 'status' | 'reason'>): string =>
+  RUN[runOutcomeKey(run)];
 
 /** True for the one run Re-crawl anyway is offered on. */
 export const isUnchanged = (run: Pick<LatestRun, 'status' | 'reason'>) =>

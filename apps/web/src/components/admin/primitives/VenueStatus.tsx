@@ -36,17 +36,23 @@ const NOT_CRAWLED = {
 const textTone = (tone: string): string =>
   tone === 'var(--fg-subtle)' ? 'var(--fg-muted)' : tone;
 
-const Chip = ({
+/**
+ * The venue chip (`01/venues-list-status-columns`, `09/run-result-chips`):
+ * 22 tall, 11.5px, a 14% tint of the tone with a 32% ring and a plain dot.
+ * Shared with the run result chip.
+ */
+export const VenueChip = ({
   tone,
   label,
   testId,
 }: {
   tone: string;
   label: string;
-  testId: string;
+  testId?: string;
 }) => (
   <span
-    data-testid={testId}
+    {...(testId !== undefined && { 'data-testid': testId })}
+    data-tone={tone}
     style={{
       display: 'inline-flex',
       alignItems: 'center',
@@ -139,14 +145,14 @@ export const VenueStatus = ({
       }}
     >
       {only !== 'crawling' && (
-        <Chip
+        <VenueChip
           tone={onSite.tone}
           label={onSite.label}
           testId="venue-status-on-site"
         />
       )}
       {only !== 'onSite' && (
-        <Chip
+        <VenueChip
           tone={crawling.tone}
           label={crawlingLabel ?? crawling.label}
           testId="venue-status-crawling"
