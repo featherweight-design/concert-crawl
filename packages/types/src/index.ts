@@ -632,8 +632,11 @@ export interface CrawlAllEstimate {
    * confirm then drops its time and cost line).
    */
   usual: UsualNightly | null;
-  /** The next scheduled daily crawl, ISO (the confirm's "Tonight's 2:07 AM"). */
-  nextCrawlAt: string;
+  /**
+   * The next scheduled daily crawl, ISO (the confirm's "Tonight's 2:07 AM").
+   * Null outside production, where this API starts no daily crawl.
+   */
+  nextCrawlAt: string | null;
 }
 
 // CrawlRun — represents the JSON-serialized API response shape.

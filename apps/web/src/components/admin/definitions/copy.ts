@@ -231,6 +231,8 @@ export const ADMIN_COPY = {
     crawlAll: {
       trigger: 'Crawl all venues…',
       queued: 'Queued ✓',
+      // When the number queued differs from the one confirmed.
+      queuedCount: (count: number) => `Queued ${count} ✓`,
       title: 'Crawl all venues now?',
       loading: 'Counting venues…',
       // "{eligible} of {total}", or "All {total}" when nothing is skipped.

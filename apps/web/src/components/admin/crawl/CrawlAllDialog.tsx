@@ -23,7 +23,10 @@ import {
   useIsPhoneResolved,
 } from '@/components/admin/primitives';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
-import { formatMtTime } from '@/components/admin/health/health-model';
+import {
+  formatMtTime,
+  formatUsd,
+} from '@/components/admin/health/health-model';
 import { apiClient } from '@/lib/api';
 
 const COPY = ADMIN_COPY.crawl.crawlAll;
@@ -44,7 +47,8 @@ const estimateSchema = z.object({
   skipped: z.array(z.object({ name: z.string(), reason: z.string() })),
   usual: z.object({ durationMs: z.number(), costUsd: z.number() }).nullable(),
   // The next daily crawl, ISO; shown in Mountain Time.
-  nextCrawlAt: z.string(),
+  // Optional so a web deploy ahead of the API still reads the estimate.
+  nextCrawlAt: z.string().datetime().nullable().optional(),
 });
 export type CrawlAllEstimateView = z.infer<typeof estimateSchema>;
 
@@ -74,7 +78,7 @@ export const crawlAllBody = (estimate: CrawlAllEstimateView): string => {
   }
   if (estimate.usual) {
     const minutes = Math.max(1, Math.round(estimate.usual.durationMs / 60000));
-    parts.push(COPY.usual(minutes, `$${estimate.usual.costUsd.toFixed(2)}`));
+    parts.push(COPY.usual(minutes, formatUsd(estimate.usual.costUsd)));
   }
   return parts.join(' ');
 };
@@ -149,8 +153,11 @@ type PostState = 'idle' | 'posting' | 'failed';
 
 export interface CrawlAllDialogProps {
   onClose: () => void;
-  /** The POST was taken: the caller closes the dialog. */
-  onStarted: () => void;
+  /**
+   * The POST was taken: the caller closes the dialog. `queuedCount` is the
+   * number actually queued when it differs from the one confirmed, else null.
+   */
+  onStarted: (queuedCount: number | null) => void;
 }
 
 /**
@@ -169,20 +176,35 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
 
   const start = async () => {
     if (postingRef.current) return;
+    // The count the admin confirmed, read before the request goes out.
+    const confirmed =
+      estimateState?.kind === 'loaded' ? estimateState.estimate.eligible : null;
     postingRef.current = true;
     setPost('posting');
     try {
       const res = await fetch(CRAWL_ALL_ENDPOINT, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const parsed = postSchema.safeParse(await res.json().catch(() => null));
-      if (parsed.success && parsed.data.data.count === 0) {
+      const raw: unknown = await res.json().catch((err: unknown) => {
+        // The POST was taken; only its count is unknown, so it still counts
+        // as started.
+        console.warn('CrawlAllDialog: could not read the crawl-all response', {
+          status: res.status,
+          err,
+        });
+        return null;
+      });
+      const parsed = postSchema.safeParse(raw);
+      const count = parsed.success ? parsed.data.data.count : null;
+      if (count === 0) {
         // Nothing was queued: everything went ineligible since the count was
         // read. Count again so the dialog says what is true now.
         setPost('idle');
         retry();
         return;
       }
-      onStarted();
+      // A different number than the one confirmed (venues changed in
+      // between) is still a start, but the trigger names the real count.
+      onStarted(count !== null && count !== confirmed ? count : null);
     } catch (err: unknown) {
       console.warn('CrawlAllDialog: could not start the crawl', { err });
       setPost('failed');
@@ -317,11 +339,13 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
     body = COPY.noneBody(estimate.total);
   } else {
     body = crawlAllBody(estimate);
-    extra = (
+    // No next crawl (an API outside production, or one older than this
+    // field): the line goes rather than naming a time that isn't true.
+    extra = estimate.nextCrawlAt ? (
       <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
         {COPY.nightlyStillRuns(formatMtTime(estimate.nextCrawlAt))}
       </div>
-    );
+    ) : null;
   }
 
   if (resolvedPhone === null) return null;
@@ -429,7 +453,9 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
 export const CrawlAllButton = () => {
   const phone = useIsPhone();
   const [open, setOpen] = useState(false);
-  const [queued, setQueued] = useState(false);
+  // Set for 5 s after a start; `count` only when it differs from the
+  // number confirmed.
+  const [queued, setQueued] = useState<{ count: number | null } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -444,7 +470,7 @@ export const CrawlAllButton = () => {
         type="button"
         variant="outline"
         icon={RefreshCw}
-        disabled={queued}
+        disabled={queued !== null}
         onClick={() => setOpen(true)}
         data-testid="crawl-all-trigger"
         fullWidth={phone}
@@ -453,18 +479,26 @@ export const CrawlAllButton = () => {
           height: phone ? 40 : 36,
           borderRadius: 9,
           fontSize: phone ? 13.5 : 13,
-          ...(queued && { color: 'var(--success)', cursor: 'default' }),
+          ...(queued !== null && {
+            color: 'var(--success)',
+            cursor: 'default',
+          }),
         }}
       >
-        {queued ? COPY.queued : COPY.trigger}
+        {queued === null
+          ? COPY.trigger
+          : queued.count === null
+            ? COPY.queued
+            : COPY.queuedCount(queued.count)}
       </AdminButton>
       {open && (
         <CrawlAllDialog
           onClose={() => setOpen(false)}
-          onStarted={() => {
+          onStarted={(queuedCount) => {
             setOpen(false);
-            setQueued(true);
-            timer.current = setTimeout(() => setQueued(false), 5000);
+            setQueued({ count: queuedCount });
+            if (timer.current) clearTimeout(timer.current);
+            timer.current = setTimeout(() => setQueued(null), 5000);
           }}
         />
       )}
