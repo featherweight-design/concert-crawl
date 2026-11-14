@@ -12,5 +12,7 @@ export default async function AdminEventPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  redirect(editEventHref(id));
+  // `id` arrives decoded: re-encode it so a `%2F`, `%3F` or `%23` stays
+  // inside its segment.
+  redirect(editEventHref(encodeURIComponent(id)));
 }
