@@ -144,6 +144,27 @@ const missingItems: Adapter = async ({ now }) => {
       .orderBy(asc(events.date)),
   );
   const watchers = await watcherCounts(rows.map((row) => row.id));
+  // The new listing's time and last crawl, for the moved card's meta. A row of
+  // our own events table: no request to any venue.
+  const targetIds = rows.flatMap((row) =>
+    row.classification === 'moved' && row.movedCandidate
+      ? [row.movedCandidate.id]
+      : [],
+  );
+  const targets = new Map(
+    targetIds.length === 0
+      ? []
+      : (
+          await db
+            .select({
+              id: events.id,
+              showTime: events.showTime,
+              lastSeenAt: events.lastSeenAt,
+            })
+            .from(events)
+            .where(inArray(events.id, targetIds))
+        ).map((target) => [target.id, target] as const),
+  );
   const crawledFine = await otherShowsCrawledFineByVenue(
     [
       ...new Set(
@@ -183,6 +204,8 @@ const missingItems: Adapter = async ({ now }) => {
           eventId: target.id,
           title: target.title,
           venueName: target.venueName,
+          showTime: targets.get(target.id)?.showTime ?? null,
+          crawledAt: targets.get(target.id)?.lastSeenAt?.toISOString() ?? null,
         },
         evidence: [
           ...evidence,
