@@ -1,5 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { countsFrom } from './events-api';
+import { countsFrom, rowFrom } from './events-api';
+
+const ROW = {
+  id: 'evt-1',
+  title: 'Clipse',
+  date: '2026-11-12',
+  venueName: 'Red Rocks',
+  venueSlug: 'red-rocks',
+  status: 'available',
+  hidden: false,
+  hiddenReason: null,
+  priceMin: '65.00',
+  priceMax: null,
+  watchingCount: 3,
+  wentCount: null,
+};
+
+describe('rowFrom', () => {
+  it('reads the listing URL', () => {
+    expect(rowFrom({ ...ROW, sourceUrl: 'https://x.example/1' })).toMatchObject(
+      { sourceUrl: 'https://x.example/1' },
+    );
+  });
+
+  it('reads a row from an API that predates sourceUrl as no link, not a failure', () => {
+    expect(rowFrom(ROW)).toMatchObject({ id: 'evt-1', sourceUrl: null });
+  });
+
+  it('refuses a non-text sourceUrl', () => {
+    expect(rowFrom({ ...ROW, sourceUrl: 42 })).toBeNull();
+  });
+});
 
 const VENUE = {
   venueId: '0b9c4f3e-1d2a-4c5b-8e7f-a1b2c3d4e5f6',
