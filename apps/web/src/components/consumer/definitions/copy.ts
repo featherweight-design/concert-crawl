@@ -1575,7 +1575,8 @@ export const CONSUMER_COPY = {
       stale: 'No second fan in time',
       archived: 'A newer price replaced it',
     },
-    submissionCredEarned: '+1 cred',
+    // The sort note at the right end of the filter row (desktop only).
+    submissionsNewestFirst: 'Newest first',
     submissionDisputed: 'Someone disputed this. Tap to see what they saw.',
 
     // ── EditProfileForm ───────────────────────────────────────────

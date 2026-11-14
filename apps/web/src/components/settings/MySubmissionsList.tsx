@@ -43,33 +43,54 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        role="group"
-        aria-label={SETTINGS_COPY.submissionsFilterAria}
-        className="flex flex-wrap gap-1.5 min-[400px]:gap-2"
-      >
-        {SUBMISSION_FILTERS.map((key) => {
-          const active = key === filter;
-          return (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setFilter(key)}
-              className="shrink-0 whitespace-nowrap rounded-full border px-3 py-2 text-[13px] font-semibold min-[400px]:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-              style={{
-                borderColor: active ? 'var(--accent)' : 'var(--border)',
-                background: active ? 'var(--surface-2)' : 'transparent',
-                color: active ? 'var(--fg)' : 'var(--fg-muted)',
-              }}
-            >
-              {SETTINGS_COPY.submissionFilterLabel(
-                SETTINGS_COPY.submissionFilters[key],
-                counts[key],
-              )}
-            </button>
-          );
-        })}
+      {/* `submitted-prices-m`: one line that runs off the right edge (the row
+          bleeds to the screen edge and scrolls sideways), not a wrapping
+          pair of lines. From `lg` the sort note sits at the far end. */}
+      <div className="-mx-4 flex items-center justify-between gap-3 lg:mx-0">
+        <div
+          role="group"
+          aria-label={SETTINGS_COPY.submissionsFilterAria}
+          className="flex flex-1 gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] min-[400px]:gap-2 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden"
+        >
+          {SUBMISSION_FILTERS.map((key) => {
+            const active = key === filter;
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setFilter(key)}
+                className="shrink-0 whitespace-nowrap rounded-full border px-3 py-2 text-[13px] font-semibold min-[400px]:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                style={
+                  active
+                    ? {
+                        // The gradient ring (signal, accent, border) on surface-2.
+                        border: '1px solid transparent',
+                        background:
+                          'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+                        color: 'var(--fg)',
+                      }
+                    : {
+                        borderColor: 'var(--border)',
+                        background: 'transparent',
+                        color: 'var(--fg-muted)',
+                      }
+                }
+              >
+                {SETTINGS_COPY.submissionFilterLabel(
+                  SETTINGS_COPY.submissionFilters[key],
+                  counts[key],
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <span
+          className="hidden shrink-0 text-[10px] uppercase tracking-[0.14em] text-fg-subtle lg:block"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          {SETTINGS_COPY.submissionsNewestFirst}
+        </span>
       </div>
 
       {months.map((month) => (

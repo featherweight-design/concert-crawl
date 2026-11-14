@@ -60,14 +60,6 @@ export function SubmissionItem({
               {SETTINGS_COPY.submissionClosedReason[submission.closedReason]}
             </span>
           )}
-          {submission.status === 'confirmed' && (
-            <span
-              className="text-[10px] font-bold uppercase tracking-[0.12em]"
-              style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}
-            >
-              {SETTINGS_COPY.submissionCredEarned}
-            </span>
-          )}
           {submission.status === 'disputed' && (
             <span className="text-[12px]" style={{ color: 'var(--danger)' }}>
               {SETTINGS_COPY.submissionDisputed}

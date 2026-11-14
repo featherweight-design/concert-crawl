@@ -979,7 +979,6 @@ function MenuBody({
               ),
             }
           : {})}
-        kbd="P"
         leading={
           <RowTile tint="var(--success)">
             <Tag {...TILE_ICON_PROPS} />
