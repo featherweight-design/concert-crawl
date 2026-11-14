@@ -293,13 +293,20 @@ export const RunListRow = ({
   );
 };
 
-/** `A3/09/runs-filter-empty-d`: nothing under the filter, and Show all. */
+/**
+ * `A3/09/runs-filter-empty-d`: nothing under the filter, and Show all. The
+ * line is the venue Runs tab's "All N runs here were OK." unless the list
+ * passes its own `message`.
+ */
 export const RunsFilterEmpty = ({
-  count,
+  count = 0,
+  message,
   onShowAll,
 }: {
-  count: number;
-  onShowAll: () => void;
+  count?: number;
+  message?: string;
+  /** Left out, the line stands alone (a list with nothing to show at all). */
+  onShowAll?: () => void;
 }) => (
   <div
     role="status"
@@ -322,21 +329,23 @@ export const RunsFilterEmpty = ({
       style={{ color: 'var(--success)', flex: 'none' }}
     />
     <span style={{ flex: 1, minWidth: 0, fontSize: 14 }}>
-      {COPY.filterEmpty(count)}
+      {message ?? COPY.filterEmpty(count)}
     </span>
-    <AdminButton
-      type="button"
-      variant="outline"
-      onClick={onShowAll}
-      style={{
-        height: 30,
-        fontSize: 12.5,
-        borderRadius: 9,
-        background: 'var(--surface-2)',
-      }}
-    >
-      {COPY.showAll}
-    </AdminButton>
+    {onShowAll && (
+      <AdminButton
+        type="button"
+        variant="outline"
+        onClick={onShowAll}
+        style={{
+          height: 30,
+          fontSize: 12.5,
+          borderRadius: 9,
+          background: 'var(--surface-2)',
+        }}
+      >
+        {COPY.showAll}
+      </AdminButton>
+    )}
   </div>
 );
 

@@ -1216,6 +1216,81 @@ export const ADMIN_COPY = {
     tryAgain: 'Try again',
   },
 
+  // 1d Crawl runs, the batch list (`07/crawl-runs-desktop`,
+  // `A3/09/runs-filters-m`, `A3/09/runs-filter-empty-d`, `A3/09/load-more`).
+  crawlRuns: {
+    title: 'Crawl runs',
+    subtitle:
+      'Every crawl, nightly and by hand. Each venue’s own runs are on its Runs tab.',
+    // Addendum-3 row 26: one string on both viewports; the schedule is fixed.
+    nextNightly: 'Next nightly crawl: tonight at 3:00 AM MT',
+    filters: {
+      label: 'Which crawls',
+      all: 'All',
+      nightly: 'Nightly',
+      by_hand: 'By hand',
+      not_ok: 'Not OK',
+      // The count beside Not OK, read out after the name.
+      notOkCount: (count: number) => `${count.toLocaleString('en-US')} not OK`,
+    },
+    columns: {
+      when: 'When',
+      what: 'What',
+      result: 'Result',
+      summary: 'Summary',
+      time: 'Time',
+      cost: 'Cost',
+    },
+    // WHAT: "Nightly", "Crawl all · by @hugh", "Re-crawl · Ball Arena".
+    nightly: 'Nightly',
+    crawlAll: 'Crawl all',
+    recrawlVenue: (venue: string) => `Re-crawl · ${venue}`,
+    recrawlVenues: (count: number) =>
+      `Re-crawl · ${count.toLocaleString('en-US')} venues`,
+    by: (handle: string) => `by @${handle}`,
+    status: {
+      running: 'Running',
+      done: 'Done',
+      didntStart: 'Didn’t start',
+      failed: 'Failed',
+    },
+    // SUMMARY: "21 venues · 14 OK · 4 unchanged · 1 failed".
+    venues: (count: number) =>
+      count === 1 ? '1 venue' : `${count.toLocaleString('en-US')} venues`,
+    ok: (count: number) => `${count.toLocaleString('en-US')} OK`,
+    unchanged: (count: number) => `${count.toLocaleString('en-US')} unchanged`,
+    failed: (count: number) => `${count.toLocaleString('en-US')} failed`,
+    blocked: (count: number) => `${count.toLocaleString('en-US')} blocked`,
+    // Partial, robots.txt and Not run, which the batch counts don't split.
+    otherNotOk: (count: number) => `${count.toLocaleString('en-US')} not OK`,
+    shows: (count: number) => showCount(count),
+    soFar: (done: number, of: number) =>
+      `${done.toLocaleString('en-US')} of ${of.toLocaleString('en-US')} so far`,
+    // Ruling 18: a night's retry folds into its one row.
+    retriedAt: (time: string) => `retried at ${time}`,
+    parts: (parts: readonly string[]) => parts.join(' · '),
+    // A night that didn't start has no run time: the schedule's.
+    scheduledTime: '3:00 AM',
+    minutes: (count: number) => `${count.toLocaleString('en-US')} min`,
+    noTime: '—',
+    // A row's accessible name: "Nov 11, 3:00 AM: Nightly, Done, 21 venues · 14 OK".
+    rowLabel: (when: string, what: string, status: string, summary: string) =>
+      summary === ''
+        ? `${when}: ${what}, ${status}`
+        : `${when}: ${what}, ${status}, ${summary}`,
+    whenLabel: (date: string, time: string) => `${date}, ${time}`,
+    // `A3/09/runs-filter-empty-d`. The board's "in the last 30 days" is left
+    // off: the list pages back past 30 days.
+    // Under All, nothing has ever run: no empty board is drawn, so the line.
+    filterEmpty: {
+      all: 'No crawls yet.',
+      nightly: 'No nightly crawls.',
+      by_hand: 'No by-hand crawls.',
+      not_ok: 'Every crawl here was OK.',
+    },
+    loadMoreFailed: 'Couldn’t load more crawls.',
+  },
+
   // A run's detail: the desktop side panel and the phone sheet
   // (`07/a-runs-detail`, `G2/run-detail-sheet`). Shared with 1d.
   runDetail: {
