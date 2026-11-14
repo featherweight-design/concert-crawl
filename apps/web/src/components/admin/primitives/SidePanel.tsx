@@ -12,6 +12,12 @@ export interface SidePanelProps {
   title: ReactNode;
   /** A `KindLabel` or similar, above the title. */
   eyebrow?: ReactNode;
+  /**
+   * The title sits in the close button's row at 18px instead of under it,
+   * as `12/code-taken-d` draws the new-code panel. It shows no eyebrow and
+   * no subtitle.
+   */
+  titleInHeader?: boolean;
   /** The accessible name, when it should say more than the visible title. */
   label?: string;
   /** A ⋯ menu, just before the close button. */
@@ -38,6 +44,7 @@ const PanelBody = ({
   title,
   titleId,
   eyebrow,
+  titleInHeader = false,
   menu,
   subtitle,
   children,
@@ -50,7 +57,22 @@ const PanelBody = ({
 }) => (
   <>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {eyebrow}
+      {titleInHeader ? (
+        <h2
+          id={titleId}
+          style={{
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 800,
+            color: 'var(--fg)',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {title}
+        </h2>
+      ) : (
+        eyebrow
+      )}
       <span style={{ flex: 1 }} />
       {menu}
       {/* Mid-request the ✕ is off too, like the scrim and Escape, so a reply
@@ -74,27 +96,33 @@ const PanelBody = ({
         <X size={18} aria-hidden />
       </button>
     </div>
-    <div>
-      <h2
-        id={titleId}
-        style={{
-          margin: 0,
-          fontSize: 20,
-          fontWeight: 800,
-          color: 'var(--fg)',
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {title}
-      </h2>
-      {subtitle && (
-        <p
-          style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--fg-muted)' }}
+    {!titleInHeader && (
+      <div>
+        <h2
+          id={titleId}
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 800,
+            color: 'var(--fg)',
+            overflowWrap: 'anywhere',
+          }}
         >
-          {subtitle}
-        </p>
-      )}
-    </div>
+          {title}
+        </h2>
+        {subtitle && (
+          <p
+            style={{
+              margin: '4px 0 0',
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {subtitle}
+          </p>
+        )}
+      </div>
+    )}
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>{children}</div>
     {footer && (
       <div

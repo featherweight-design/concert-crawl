@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { postersHref } from '@/lib/poster/posters-href';
+import { INVITE_CODES_HREF, postersHref } from '@/lib/poster/posters-href';
 
 const COPY = ADMIN_COPY.codesPage;
 
@@ -46,7 +46,7 @@ export const PeopleTabs = ({
     },
     {
       key: 'codes',
-      href: '/admin/invite-codes',
+      href: INVITE_CODES_HREF,
       label: isPhone ? COPY.tabs.codesShort : COPY.tabs.codes,
       count: counts.codes,
     },

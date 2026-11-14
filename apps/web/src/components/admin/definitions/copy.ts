@@ -3098,7 +3098,10 @@ export const ADMIN_COPY = {
     },
     form: {
       editNote: 'The code itself can’t change; printed posters use it.',
+      // `07/new-code-mobile` (the sheet).
       newTitle: 'New code',
+      // `12/code-taken-d` (the desktop panel).
+      newPanelTitle: 'New invite code',
       label: 'Label (only you see it)',
       code: 'Code',
       codeHint:
@@ -3277,7 +3280,6 @@ export const ADMIN_COPY = {
       prices: 'Prices',
       people: 'People',
       featureFlags: 'Feature flags',
-      inviteCodes: 'Invite codes',
       crawlRuns: 'Crawl runs',
       operations: 'Operations',
       groups: { manage: 'MANAGE', system: 'SYSTEM' },

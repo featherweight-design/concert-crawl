@@ -3,8 +3,8 @@ import { postersHref, readSelection } from '@/lib/poster/posters-href';
 
 /**
  * `/admin/invite-codes/[id]/poster`, the old one-code print page. The Posters
- * tab prints the same sheet, so this only forwards there with the code, look
- * and tabs kept.
+ * tab (now under People) prints the same sheet, so this only forwards there
+ * with the code, look and tabs kept.
  */
 export default async function InviteCodePosterRedirect({
   params,

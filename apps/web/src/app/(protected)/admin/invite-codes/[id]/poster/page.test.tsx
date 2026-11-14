@@ -16,12 +16,15 @@ const visit = (query: Record<string, string> = {}) =>
 
 describe('old poster URL', () => {
   it.each([
-    [{}, '/admin/invite-codes/posters?code=code-1'],
+    [{}, '/admin/people/invite-codes/posters?code=code-1'],
     [
       { look: 'paper', tabs: '1' },
-      '/admin/invite-codes/posters?code=code-1&look=paper&tabs=1',
+      '/admin/people/invite-codes/posters?code=code-1&look=paper&tabs=1',
     ],
-    [{ look: 'neon', tabs: 'yes' }, '/admin/invite-codes/posters?code=code-1'],
+    [
+      { look: 'neon', tabs: 'yes' },
+      '/admin/people/invite-codes/posters?code=code-1',
+    ],
   ])('redirects %o to the Posters tab', async (query, href) => {
     await expect(visit(query)).rejects.toThrow(`NEXT_REDIRECT ${href}`);
   });

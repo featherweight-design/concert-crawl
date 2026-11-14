@@ -38,7 +38,6 @@ describe('admin NAV', () => {
       'artists',
       'prices',
       'people',
-      'invite-codes',
       'feature-flags',
       'crawl-runs',
       'operations',
@@ -97,7 +96,9 @@ describe('activeNavKey', () => {
     ['/admin/users/abc', '', 'people'],
     ['/admin/people', '', 'people'],
     ['/admin/people', 'code=abc', 'people'],
-    ['/admin/invite-codes/posters', '', 'invite-codes'],
+    // 5b: Codes and Posters are People's tabs, so People stays lit.
+    ['/admin/people/invite-codes', '', 'people'],
+    ['/admin/people/invite-codes/posters', 'code=abc', 'people'],
     ['/admin/crawl', '', 'crawl-runs'],
     ['/admin/feedback', '', 'operations'],
     ['/admin/feature-flags', '', 'feature-flags'],

@@ -1,12 +1,11 @@
-import { requireAdminUser } from '@/lib/auth';
-import { siteOrigin } from '@/lib/share/site-origin';
-import { InviteCodesClient } from '@/components/admin/invite-codes/InviteCodesClient';
+import { redirect } from 'next/navigation';
+import { INVITE_CODES_HREF, withSearchParams } from '@/lib/poster/posters-href';
 
-/**
- * 5b Invite codes. The list loads in the browser with the admin's token, so
- * Try again and every edit refresh it without a navigation.
- */
-export default async function AdminInviteCodesPage() {
-  await requireAdminUser();
-  return <InviteCodesClient origin={siteOrigin()} />;
+/** Codes moved under People (5b); old links and bookmarks land there. */
+export default async function AdminInviteCodesRedirect({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  redirect(withSearchParams(INVITE_CODES_HREF, (await searchParams) ?? {}));
 }

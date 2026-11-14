@@ -38,6 +38,20 @@ describe('AdminSidebar', () => {
     );
   });
 
+  // `07/invite-codes`, `07/loading-invite-codes`: People lit, and the
+  // interim Invite codes row is gone.
+  it.each(['/admin/people/invite-codes', '/admin/people/invite-codes/posters'])(
+    'lights People on %s and draws no Invite codes row',
+    (pathname) => {
+      renderAt(pathname);
+      expect(screen.getByRole('link', { name: 'People' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
+      expect(screen.queryByRole('link', { name: 'Invite codes' })).toBeNull();
+    },
+  );
+
   it('follows the interim Review tab', () => {
     renderAt('/admin/review', 'tab=all-events');
     expect(screen.getByRole('link', { name: 'Events' })).toHaveAttribute(

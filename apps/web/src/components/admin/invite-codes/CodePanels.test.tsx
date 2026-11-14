@@ -299,3 +299,65 @@ describe('EditCodePanel saving', () => {
     );
   });
 });
+
+// `07/a-code-in-flow`: each fact and each joiner sits under a 1px rule, 8px
+// above and below.
+describe('CodePanel rules', () => {
+  it('rules Expires, Last used and every Who-joined row', async () => {
+    render(
+      <CodePanel
+        code={code()}
+        status="active"
+        api={{
+          ...codesApi(async () => null),
+          redemptions: vi.fn(async () => ({
+            data: [
+              {
+                userId: 'user_9',
+                handle: 'mira',
+                role: null,
+                redeemedAt: '2026-11-09T18:00:00Z',
+                avatarColor: null,
+                avatarSecondColor: null,
+              },
+            ],
+            total: 1,
+          })),
+        }}
+        onCopy={vi.fn()}
+        onAddSeats={vi.fn()}
+        onRevoke={vi.fn()}
+        onReactivate={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    for (const label of ['Expires', 'Last used']) {
+      const row = screen.getByText(label).parentElement!;
+      expect(row.style.borderTop).toBe('1px solid var(--border)');
+      expect(row.style.padding).toBe('8px 0px');
+    }
+    const [joiner] = await screen.findAllByTestId('code-joined-row');
+    expect(joiner!.style.borderTop).toBe('1px solid var(--border)');
+    expect(joiner!.style.padding).toBe('8px 0px');
+  });
+});
+
+describe('NewCodePanel header', () => {
+  // `12/code-taken-d`: "New invite code" beside ✕, no INVITE CODE eyebrow.
+  it('titles the desktop panel New invite code with no eyebrow', () => {
+    render(
+      <NewCodePanel create={vi.fn()} onCreated={vi.fn()} onClose={vi.fn()} />,
+    );
+    const title = screen.getByRole('heading', { name: 'New invite code' });
+    expect(title.style.fontSize).toBe('18px');
+    expect(screen.queryByText('INVITE CODE')).not.toBeInTheDocument();
+    expect(screen.queryByText('New code')).not.toBeInTheDocument();
+  });
+
+  // `07/a-code-in-flow` keeps the eyebrow on an existing code.
+  it('keeps the eyebrow on the code panel', async () => {
+    renderPanel(code(), 'active');
+    await screen.findByText('Who joined with it · 4');
+    expect(screen.getByText('INVITE CODE')).toBeInTheDocument();
+  });
+});

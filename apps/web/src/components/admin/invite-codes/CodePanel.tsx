@@ -29,11 +29,14 @@ import { SeatsBar } from './SeatsBar';
 
 const COPY = ADMIN_COPY.codesPage;
 
+/** `07/a-code-in-flow`: Expires and Last used, each under a hairline. */
 const KV_ROW = {
   display: 'flex',
   justifyContent: 'space-between',
+  gap: 12,
   fontSize: 13,
-  padding: '6px 0',
+  padding: '8px 0',
+  borderTop: '1px solid var(--border)',
 } as const;
 
 /** The panel's buttons as drawn: 12.5px semibold, 9px corners. */
@@ -182,7 +185,7 @@ export const CodePanel = ({
             <span style={{ color: 'var(--fg-muted)' }}>
               {COPY.panel.expires}
             </span>
-            <span>
+            <span style={{ textAlign: 'right' }}>
               {code.expiresAt ? shortDate(code.expiresAt) : COPY.never}
             </span>
           </div>
@@ -190,7 +193,7 @@ export const CodePanel = ({
             <span style={{ color: 'var(--fg-muted)' }}>
               {COPY.panel.lastUsed}
             </span>
-            <span>
+            <span style={{ textAlign: 'right' }}>
               {code.lastUsedAt ? shortDate(code.lastUsedAt) : COPY.never}
             </span>
           </div>
@@ -204,11 +207,13 @@ export const CodePanel = ({
             return (
               <li
                 key={person.userId}
+                data-testid="code-joined-row"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  padding: '7px 0',
+                  padding: '8px 0',
+                  borderTop: '1px solid var(--border)',
                 }}
               >
                 <PersonAvatar
