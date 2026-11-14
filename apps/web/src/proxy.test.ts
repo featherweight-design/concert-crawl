@@ -376,6 +376,22 @@ describe('proxy — auth gate (#841)', () => {
     expect(result).toBeUndefined();
   });
 
+  it('lets the signed-out keep-warm ping through, and nothing under it', async () => {
+    const { middlewareHandler } = await import('./proxy');
+
+    // The Vercel cron GETs /api/warm with no session; gated, every ping would
+    // 307 to /sign-in and warm nothing but the redirect.
+    const ping = new NextRequest('http://localhost/api/warm');
+    expect(await middlewareHandler(makeAuth(null), ping)).toBeUndefined();
+
+    const under = new NextRequest('http://localhost/api/warm/x');
+    const auth = makeAuth(null);
+    await expect(middlewareHandler(auth, under)).rejects.toThrow(
+      'Unauthorized',
+    );
+    expect(auth.protect).toHaveBeenCalled();
+  });
+
   it('does not make paths under /api/revalidate public', async () => {
     const { middlewareHandler } = await import('./proxy');
 

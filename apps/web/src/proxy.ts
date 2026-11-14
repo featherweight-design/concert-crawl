@@ -47,6 +47,10 @@ const isAlwaysPublic = createRouteMatcher([
   // when that is unset — Clerk was simply the wrong gate for a non-browser
   // caller. Exact path, not a prefix.
   '/api/revalidate',
+  // The keep-warm ping: a Vercel cron GETs it every 5 minutes with no session.
+  // It answers "ok" and touches neither the DB nor Clerk's API (the Neon
+  // compute must stay free to suspend). Exact path, not a prefix.
+  '/api/warm',
   // The error page's Tell us send. Behind `auth.protect`, a lost session 307s
   // this POST to /sign-in, the browser's fetch follows it to a 200 HTML page,
   // and the report reads as sent. The route checks the session itself and
