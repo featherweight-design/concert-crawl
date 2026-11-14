@@ -36,9 +36,9 @@ const CARD_SCRIM =
   'linear-gradient(180deg, transparent 30%, rgba(5, 6, 15, 0.94))'; // fwd-allow-hex: board art colour
 const CARD_FG = '#F4F6FF'; // fwd-allow-hex: board art colour
 const CARD_FG_MUTED = '#C9D1E6'; // fwd-allow-hex: board art colour
-// The chip, the TONIGHT pill and the eye button are dark on the dark themes
-// (the values below) and light on Light (`inv-light`): the Light values come
-// from the `--invite-*` variables `globals.css` sets under `data-theme='light'`.
+// The chip, the TONIGHT pill and the eye button keep the fixed board colours
+// below on the dark themes. On Light (`inv-light`) `globals.css` sets the
+// `--invite-*` variables under `data-theme='light'`, which override them.
 const CHIP_BG = 'var(--invite-chip-bg, #171D3A)'; // fwd-allow-hex: board art colour
 const CHIP_BORDER = 'var(--invite-chip-border, #1F2748)'; // fwd-allow-hex: board art colour
 const CHIP_FG = 'var(--invite-chip-fg, #B8C2DA)'; // fwd-allow-hex: board art colour
@@ -177,9 +177,18 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
             <GenreDot genre={show.genre} />
             {/* Two genres read "ALTERNATIVE / METAL" (`inv-mob`, `inv-desk`);
                 the dot and the ring take the first. */}
-            {show.genreExtra
-              ? `${show.genre} / ${show.genreExtra}`
-              : show.genre}
+            <span
+              style={{
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {show.genreExtra
+                ? `${show.genre} / ${show.genreExtra}`
+                : show.genre}
+            </span>
           </span>
         )}
         <span
