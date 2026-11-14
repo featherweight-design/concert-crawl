@@ -234,7 +234,7 @@ describe('Posters on a phone (07/posters-mobile)', () => {
     expect(posters()).toHaveAttribute('aria-current', 'page');
     expect(posters()).toHaveAttribute(
       'href',
-      '/admin/invite-codes/posters?code=hidive',
+      '/admin/people/invite-codes/posters?code=hidive',
     );
 
     fireEvent.click(screen.getByRole('button', { name: copy.phone.change }));
@@ -244,7 +244,7 @@ describe('Posters on a phone (07/posters-mobile)', () => {
     // Tapping it lands on the page as it is, never a bare /posters.
     expect(posters()).toHaveAttribute(
       'href',
-      '/admin/invite-codes/posters?code=larimer&look=paper&tabs=1',
+      '/admin/people/invite-codes/posters?code=larimer&look=paper&tabs=1',
     );
   });
 

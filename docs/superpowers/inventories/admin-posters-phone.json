@@ -1,6 +1,6 @@
 {
   "feature": "Admin · Posters on the phone (P47-15 PR2)",
-  "note": "Board: design_handoff_admin_redesign/boards/07-people-flags-operations/posters-mobile. CONTACT_SHEET_ROLE=admin. Read-only: nothing is printed or saved. Desktop is included to show it unchanged. This branch is cut from main before the route move (#523), so it walks the current Posters URL.",
+  "note": "Board: design_handoff_admin_redesign/boards/07-people-flags-operations/posters-mobile. CONTACT_SHEET_ROLE=admin. Read-only: nothing is printed or saved. Desktop is included to show it unchanged.",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 740, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -12,7 +12,7 @@
       "label": "Posters, a code picked",
       "steps": [
         {
-          "goto": "/admin/invite-codes/posters",
+          "goto": "/admin/people/invite-codes/posters",
           "wait": "[data-testid='posters-tab']",
           "settle": 2500
         }
@@ -24,7 +24,7 @@
       "widths": ["phone-320", "phone"],
       "steps": [
         {
-          "goto": "/admin/invite-codes/posters",
+          "goto": "/admin/people/invite-codes/posters",
           "wait": "[data-testid='posters-tab']",
           "settle": 2500
         },
@@ -38,7 +38,7 @@
       "widths": ["phone-320", "phone"],
       "steps": [
         {
-          "goto": "/admin/invite-codes/posters",
+          "goto": "/admin/people/invite-codes/posters",
           "wait": "[data-testid='posters-tab']",
           "settle": 2500
         },
