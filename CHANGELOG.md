@@ -1,3 +1,17 @@
+# [1.438.0](https://github.com/featherweight-design/concert-crawl/compare/v1.437.0...v1.438.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** keep the check card's link focus ring and a Light-safe label ([5438c43](https://github.com/featherweight-design/concert-crawl/commit/5438c43f9ad0b037b08ed30d3eddf17e80e37201))
+* **web:** state the /bot pace claim the crawler actually keeps ([b205f74](https://github.com/featherweight-design/concert-crawl/commit/b205f7484c8f9f221b77e94bfed868ca08751466))
+
+
+### Features
+
+* **web:** draw the price check card on single-tier events and give the update pointer an anchor ([825c7cb](https://github.com/featherweight-design/concert-crawl/commit/825c7cbaf9589cf61620d7a6565b6d8ae569bbe6))
+* **web:** the price check card as the B+ board draws it, with the submitter and updater views ([cb9f542](https://github.com/featherweight-design/concert-crawl/commit/cb9f542fb5d494fdad96d91487fc50447585bfcd))
+
 # [1.437.0](https://github.com/featherweight-design/concert-crawl/compare/v1.436.0...v1.437.0) (2026-11-14)
 
 
