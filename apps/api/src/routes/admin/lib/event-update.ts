@@ -56,10 +56,12 @@ export type EventPatch = z.input<typeof eventPatchSchema>;
 
 /**
  * Thrown inside the update transaction when a past show's PATCH changes a
- * locked field (admin 4a-3b: "past rows accept only `hiddenFromConsumer`, and
- * anything else returns 409 `past_locked`"). A postponed past show may also
- * move its date, times and status, or it could never be rescheduled. The
- * throw rolls the transaction back, so nothing is written.
+ * locked field. A past show takes `hiddenFromConsumer` and the corrections
+ * (B+ addendum 5 §4, addendum 6 item 36: "Title, lineup, venue and times stay
+ * editable as corrections and notify nobody"); status, price and the rest stay
+ * locked. A postponed past show may instead move its date, times and status,
+ * or it could never be rescheduled. The throw rolls the transaction back, so
+ * nothing is written.
  */
 export class PastLockedError extends Error {
   constructor() {
@@ -74,8 +76,20 @@ type PatchKey = keyof EventPatch & keyof EventRow;
 const isPatchKey = (key: string): key is PatchKey =>
   key in eventPatchSchema.shape;
 
-/** Every past show may change this. */
-const PAST_ALLOWED: ReadonlySet<PatchKey> = new Set(['hiddenFromConsumer']);
+/**
+ * A past show may change these as corrections that notify nobody (addendum 5
+ * §4). `artist` is the headliner text the PATCH carries for the lineup. The
+ * date counts with the times, but only to another past date: moving a played
+ * show into the future is not a correction.
+ */
+const PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
+  'hiddenFromConsumer',
+  'title',
+  'artist',
+  'date',
+  'doorsTime',
+  'showTime',
+]);
 
 /** A postponed past show may also be rescheduled. */
 const POSTPONED_PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
@@ -86,11 +100,13 @@ const POSTPONED_PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
   'status',
 ]);
 
-/** True when the patch sets any field a past show may lock. */
-const setsPastLockedField = (body: EventPatch): boolean =>
+/**
+ * True when the patch sets anything but `hiddenFromConsumer`: a field a past
+ * show locks, or a correction whose side effects a past show must skip.
+ */
+const setsPastCheckedField = (body: EventPatch): boolean =>
   Object.entries(body).some(
-    ([key, value]) =>
-      value !== undefined && !(isPatchKey(key) && PAST_ALLOWED.has(key)),
+    ([key, value]) => value !== undefined && key !== 'hiddenFromConsumer',
   );
 
 // Postgres hands back `time` as HH:MM:SS and `numeric` as a scale-2 string,
@@ -129,9 +145,11 @@ const changedKeys = (body: EventPatch, stored: EventRow): PatchKey[] =>
 export interface UpdateEventOptions {
   /**
    * Today's date in Denver (`YYYY-MM-DD`). When given, a show dated before it
-   * (the list's Past side) refuses any change but `hiddenFromConsumer` with
-   * PastLockedError; a postponed one may also change its date, times and
-   * status. Read from the locked row, never from the request.
+   * (the list's Past side) takes only `hiddenFromConsumer` and the
+   * corrections (title, headliner, times, a date still in the past), which
+   * fire no watcher fan-out; anything else is PastLockedError. A postponed one
+   * instead may change its date, times and status, and its watchers hear.
+   * Read from the locked row, never from the request.
    */
   lockPastBefore?: string;
 }
@@ -147,7 +165,7 @@ export const updateEventNotifying = async (
 ) => {
   // Set only when the patch reaches past `hiddenFromConsumer`, so the past
   // lock has something to check.
-  const pastLockBefore = setsPastLockedField(body)
+  const pastLockBefore = setsPastCheckedField(body)
     ? options.lockPastBefore
     : undefined;
   // Read the locked pre-state row only when something needs it: a status or
@@ -165,6 +183,9 @@ export const updateEventNotifying = async (
   // sees the new state and computes category=null.
   const result = await db.transaction(async (tx) => {
     let preUpdate: EventRow | undefined;
+    // A played (non-postponed) past show taking a correction: it notifies
+    // nobody (addendum 5 §4), so the fan-out below stays off.
+    let pastCorrection = false;
     if (readsPreState) {
       const rows = await tx
         .select()
@@ -181,13 +202,23 @@ export const updateEventNotifying = async (
         preUpdate &&
         preUpdate.date < pastLockBefore
       ) {
-        const allowed =
-          preUpdate.status === 'postponed'
-            ? POSTPONED_PAST_ALLOWED
-            : PAST_ALLOWED;
-        if (changedKeys(body, preUpdate).some((key) => !allowed.has(key))) {
+        const postponed = preUpdate.status === 'postponed';
+        const allowed = postponed ? POSTPONED_PAST_ALLOWED : PAST_ALLOWED;
+        const changed = changedKeys(body, preUpdate);
+        if (changed.some((key) => !allowed.has(key))) {
           throw new PastLockedError();
         }
+        // A correction keeps a played show in the past: a date on or after
+        // today would put it back on sale with no one told.
+        if (
+          !postponed &&
+          changed.includes('date') &&
+          typeof body.date === 'string' &&
+          body.date >= pastLockBefore
+        ) {
+          throw new PastLockedError();
+        }
+        pastCorrection = !postponed;
       }
     }
 
@@ -238,7 +269,7 @@ export const updateEventNotifying = async (
     // watch.postponed. If both a status flip AND a date change land in the
     // same PATCH, we still fan out only once — status transitions win.
     let category: 'watch.cancelled' | 'watch.postponed' | null = null;
-    if (preUpdate && updated) {
+    if (preUpdate && updated && !pastCorrection) {
       // Confirming a delisted show as cancelled is a real transition:
       // the sweep told nobody.
       const wasDelisted = preUpdate.delistedAt !== null;
