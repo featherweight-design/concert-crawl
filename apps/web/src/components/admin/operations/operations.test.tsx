@@ -166,7 +166,7 @@ describe('Operations shell', () => {
 });
 
 describe('Activity log', () => {
-  it("reads today's Mountain Time day at the largest page", async () => {
+  it("reads today's Mountain Time day, a page of 50 at a time", async () => {
     renderLog();
     await screen.findByTestId('activity-log-table');
     const [call] = logCalls();
@@ -177,7 +177,7 @@ describe('Activity log', () => {
     expect(call?.searchParams.get('until')).toBe(
       new Date(day.end).toISOString(),
     );
-    expect(call?.searchParams.get('limit')).toBe('100');
+    expect(call?.searchParams.get('limit')).toBe('50');
     const midnight = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/Denver',
       hour: 'numeric',
@@ -187,87 +187,71 @@ describe('Activity log', () => {
     expect(midnight).toBe('00:00');
   });
 
-  it('walks the cursor, stops at 1000 rows, warns and says so', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  // README §37: a day past 50 changes gets Load more before its end line.
+  it('reads the next page on Load more, then ends the day', async () => {
     let page = 0;
     logPage = () => {
       page += 1;
-      return rowsPage(page, 100, `cursor-${page}`);
-    };
-    renderLog();
-    await waitFor(() =>
-      expect(screen.getAllByTestId('activity-log-row')).toHaveLength(1000),
-    );
-    expect(logCalls()).toHaveLength(10);
-    expect(logCalls()[1]?.searchParams.get('cursor')).toBe('cursor-1');
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('1000'));
-    expect(screen.getByTestId('activity-log-capped')).toHaveTextContent(
-      COPY.log.capped,
-    );
-  });
-
-  it('reads a day of exactly 1000 rows whole: no warning, no notice', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    let page = 0;
-    logPage = () => {
-      page += 1;
-      return rowsPage(page, 100, page < 10 ? `cursor-${page}` : null);
-    };
-    renderLog();
-    await waitFor(() =>
-      expect(screen.getAllByTestId('activity-log-row')).toHaveLength(1000),
-    );
-    expect(logCalls()).toHaveLength(10);
-    expect(warn).not.toHaveBeenCalled();
-    expect(screen.queryByTestId('activity-log-capped')).not.toBeInTheDocument();
-  });
-
-  it('stops at 10 pages even when the pages run short', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    let page = 0;
-    logPage = () => {
-      page += 1;
-      return rowsPage(page, 5, `cursor-${page}`);
+      return rowsPage(
+        page,
+        page === 1 ? 50 : 3,
+        page === 1 ? 'cursor-1' : null,
+      );
     };
     renderLog();
     await waitFor(() =>
       expect(screen.getAllByTestId('activity-log-row')).toHaveLength(50),
     );
-    expect(logCalls()).toHaveLength(10);
-    expect(screen.getByTestId('activity-log-capped')).toBeInTheDocument();
-  });
-
-  it('ends the walk at an empty page, even one with a cursor', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    logPage = () => json({ success: true, data: [], nextCursor: 'again' });
-    renderLog();
-    expect(await screen.findByTestId('activity-log-empty')).toBeInTheDocument();
     expect(logCalls()).toHaveLength(1);
-    expect(warn).not.toHaveBeenCalled();
+    // The day isn't over yet, so its standing footer waits.
+    expect(screen.queryByText(COPY.log.footer)).not.toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByTestId('activity-log-load-more')).getByRole('button'),
+    );
+    await waitFor(() =>
+      expect(screen.getAllByTestId('activity-log-row')).toHaveLength(53),
+    );
+    expect(logCalls()[1]?.searchParams.get('cursor')).toBe('cursor-1');
+    expect(
+      within(screen.getByTestId('activity-log-load-more')).queryByRole(
+        'button',
+      ),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(COPY.log.footer)).toBeInTheDocument();
   });
 
-  // All or nothing for a day: the rows before a failed page are not drawn.
-  it("falls into Couldn't load when a later page fails, with no rows", async () => {
+  it('keeps the rows shown when Load more fails, and offers Try again', async () => {
     let page = 0;
     logPage = () => {
       page += 1;
       return page === 1
-        ? rowsPage(page, 100, 'cursor-1')
+        ? rowsPage(page, 50, 'cursor-1')
         : json({ success: false }, 500);
     };
     renderLog();
-    expect(await screen.findByTestId('couldnt-load')).toBeInTheDocument();
-    expect(logCalls()).toHaveLength(2);
-    expect(screen.queryAllByTestId('activity-log-row')).toHaveLength(0);
+    const more = await screen.findByTestId('activity-log-load-more');
+    fireEvent.click(within(more).getByRole('button'));
+    expect(await within(more).findByRole('alert')).toHaveTextContent(
+      COPY.log.loadMoreFailed,
+    );
+    expect(screen.getAllByTestId('activity-log-row')).toHaveLength(50);
+    expect(screen.queryByTestId('couldnt-load')).not.toBeInTheDocument();
   });
 
-  it('aborts the walk on unmount, silently', async () => {
+  it('ends the day at an empty page, even one with a cursor', async () => {
+    logPage = () => json({ success: true, data: [], nextCursor: 'again' });
+    renderLog();
+    expect(await screen.findByTestId('activity-log-empty')).toBeInTheDocument();
+    expect(logCalls()).toHaveLength(1);
+    expect(
+      screen.queryByTestId('activity-log-load-more'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('aborts the read on unmount, silently', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     let pending: AbortSignal | null = null;
-    let page = 0;
     logPage = (_url, init) => {
-      page += 1;
-      if (page === 1) return rowsPage(page, 100, 'cursor-1');
       const signal = init?.signal ?? null;
       pending = signal;
       // As fetch does: a request rejects with an AbortError when aborted.
@@ -312,21 +296,135 @@ describe('Activity log', () => {
     expect(within(table).getAllByRole('cell')).toHaveLength(4);
   });
 
-  // `07/activity-log` draws Anyone and Today highlighted, Any page not. No
-  // menu is drawn for them, so they are static text and read the whole day.
-  it('draws Anyone, Any page and Today as static pills', async () => {
+  // `37/log-day-picker-d` draws Anyone and Any page idle; their menus are the
+  // next change, so for now they are text and read everyone, every page.
+  it('draws Anyone and Any page as idle text, then the day stepper', async () => {
     renderLog();
     await screen.findByTestId('activity-log-table');
-    expect(screen.queryByRole('group')).not.toBeInTheDocument();
-    const filters = screen.getByText(COPY.log.anyone).parentElement;
-    if (!filters) throw new Error('no pills');
-    expect(filters).toHaveTextContent(
-      `${COPY.log.anyone}${COPY.log.anyPage}${COPY.log.today}`,
+    expect(screen.getByText(COPY.log.anyone).tagName).toBe('SPAN');
+    expect(screen.getByText(COPY.log.anyPage).tagName).toBe('SPAN');
+    expect(screen.getByTestId('activity-log-day-chip')).toHaveTextContent(
+      COPY.log.today,
     );
-    expect(within(filters).queryByRole('combobox')).not.toBeInTheDocument();
-    expect(within(filters).queryByRole('button')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: COPY.log.nextDay }),
+    ).toBeDisabled();
     expect(logCalls().at(-1)?.searchParams.has('actorHandle')).toBe(false);
     expect(logCalls().at(-1)?.searchParams.has('area')).toBe(false);
+  });
+
+  it('steps back a day, ends it with the days either side, and comes back', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-14T18:00:00Z'));
+    renderLog();
+    await screen.findByTestId('activity-log-table');
+    fireEvent.click(screen.getByRole('button', { name: COPY.log.previousDay }));
+    await waitFor(() => expect(logCalls()).toHaveLength(2));
+    expect(logCalls()[1]?.searchParams.get('since')).toBe(
+      '2026-11-13T07:00:00.000Z',
+    );
+    expect(screen.getByTestId('activity-log-day-chip')).toHaveTextContent(
+      'Fri, Nov 13',
+    );
+    const end = await screen.findByTestId('activity-log-day-end');
+    expect(end).toHaveTextContent(COPY.log.dayEnd('Fri, Nov 13'));
+    expect(within(end).getByRole('button', { name: '‹ Thu, Nov 12' }));
+    expect(screen.queryByText(COPY.log.footer)).not.toBeInTheDocument();
+    // The day after is today, so its link says so.
+    fireEvent.click(
+      within(end).getByRole('button', { name: `${COPY.log.today} ›` }),
+    );
+    await waitFor(() => expect(logCalls()).toHaveLength(3));
+    expect(logCalls()[2]?.searchParams.get('since')).toBe(
+      '2026-11-14T07:00:00.000Z',
+    );
+  });
+
+  it('opens the month with dots, bars the future, and Today comes back', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-14T18:00:00Z'));
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/v1/admin/audit-log/days')
+        return json({ success: true, data: ['2026-11-02', '2026-11-10'] });
+      if (url.pathname === '/v1/admin/audit-log') return logPage(url);
+      return json({ success: true, data: [] });
+    });
+    renderLog();
+    await screen.findByTestId('activity-log-table');
+    fireEvent.click(screen.getByTestId('activity-log-day-chip'));
+    const month = screen.getByRole('dialog', { name: 'November 2026' });
+    await waitFor(() =>
+      expect(within(month).getAllByTestId('activity-log-dot')).toHaveLength(2),
+    );
+    const days = fetchMock.mock.calls
+      .map(([input]) => new URL(String(input)))
+      .find((url) => url.pathname === '/v1/admin/audit-log/days');
+    expect(days?.searchParams.get('month')).toBe('2026-11');
+    expect(
+      within(month).getByRole('button', { name: 'Sun, Nov 15, 2026' }),
+    ).toBeDisabled();
+    expect(
+      within(month).getByRole('button', { name: COPY.log.nextMonth }),
+    ).toBeDisabled();
+    // The chosen day takes focus, inside the trapped popover.
+    expect(
+      within(month).getByRole('button', { name: 'Sat, Nov 14, 2026' }),
+    ).toHaveFocus();
+    fireEvent.click(
+      within(month).getByRole('button', { name: 'Tue, Nov 10, 2026' }),
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(logCalls().at(-1)?.searchParams.get('since')).toBe(
+        '2026-11-10T07:00:00.000Z',
+      ),
+    );
+    fireEvent.click(screen.getByTestId('activity-log-day-chip'));
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: COPY.log.today,
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('activity-log-day-chip')).toHaveTextContent(
+        COPY.log.today,
+      ),
+    );
+  });
+
+  it('closes the month on Escape, back to the chip', async () => {
+    renderLog();
+    await screen.findByTestId('activity-log-table');
+    const chip = screen.getByTestId('activity-log-day-chip');
+    fireEvent.click(chip);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(chip).toHaveFocus();
+  });
+
+  // #24: each admin in their own colours.
+  it("draws the actor's avatar in their own colours", async () => {
+    logPage = () =>
+      json({
+        success: true,
+        data: [
+          item({
+            actorAvatar: {
+              avatarColor: 'warning',
+              avatarSecondColor: 'success',
+            },
+          }),
+        ],
+        nextCursor: null,
+      });
+    renderLog();
+    const row = (await screen.findAllByTestId('activity-log-row'))[0];
+    if (!row) throw new Error('no row');
+    const avatar = within(row).getByTestId('person-avatar');
+    expect(avatar).toHaveAttribute('data-avatar-first', 'warning');
+    expect(avatar).toHaveAttribute('data-avatar-second', 'success');
   });
 
   it('draws the row and links WHAT to the thing it changed', async () => {
@@ -343,13 +441,20 @@ describe('Activity log', () => {
     expect(screen.getByText(COPY.log.footer)).toBeInTheDocument();
   });
 
-  it('shows the empty day', async () => {
+  it('shows the empty day, pointing at another day', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-14T18:00:00Z'));
     logPage = () => json({ success: true, data: [], nextCursor: null });
     renderLog();
     const empty = await screen.findByTestId('activity-log-empty');
     expect(empty).toHaveTextContent(COPY.log.emptyTitle);
-    // No day picker yet, so it names no other day to pick.
-    expect(empty).not.toHaveTextContent(/pick/i);
+    expect(empty).toHaveTextContent(COPY.log.emptyBody);
+    fireEvent.click(screen.getByRole('button', { name: COPY.log.previousDay }));
+    await waitFor(() =>
+      expect(screen.getByTestId('activity-log-empty')).toHaveTextContent(
+        COPY.log.emptyDayTitle('Fri, Nov 13'),
+      ),
+    );
   });
 
   it("falls into Couldn't load", async () => {
@@ -358,13 +463,46 @@ describe('Activity log', () => {
     expect(await screen.findByTestId('couldnt-load')).toBeInTheDocument();
   });
 
+  it('picks a day from the OS date picker on the phone, then ends it', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-14T18:00:00Z'));
+    setPhone(true);
+    renderLog();
+    await screen.findAllByTestId('activity-log-card');
+    const input = screen.getByTestId('activity-log-day-input');
+    expect(input).toHaveAttribute('max', '2026-11-14');
+    // A typed future day is ignored, as the OS picker would bar it.
+    fireEvent.change(input, { target: { value: '2026-11-20' } });
+    expect(logCalls()).toHaveLength(1);
+    fireEvent.change(input, { target: { value: '2026-11-10' } });
+    await waitFor(() => expect(logCalls()).toHaveLength(2));
+    expect(logCalls()[1]?.searchParams.get('since')).toBe(
+      '2026-11-10T07:00:00.000Z',
+    );
+    const end = await screen.findByTestId('activity-log-day-end');
+    expect(end).toHaveTextContent(COPY.log.dayEnd('Nov 10'));
+    fireEvent.click(within(end).getByRole('button', { name: '‹ Nov 9' }));
+    await waitFor(() =>
+      expect(logCalls().at(-1)?.searchParams.get('since')).toBe(
+        '2026-11-09T07:00:00.000Z',
+      ),
+    );
+  });
+
   it('draws cards on the phone: sentence, then handle, time and page', async () => {
     setPhone(true);
     renderLog();
     const card = (await screen.findAllByTestId('activity-log-card'))[0];
     expect(card).toHaveTextContent('Revoked invite code SHARED1');
     expect(card).toHaveTextContent(/@hugh · \d{1,2}:\d{2} [AP]M · People/);
+    // Anyone and Any page open sheets on the phone, the next change.
     expect(screen.queryByText(COPY.log.anyone)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: COPY.log.nextDay }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByTestId('activity-log-day-end'),
+    ).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('operations-tabs')).getByRole('tab', {
         name: 'Log',

@@ -3399,8 +3399,21 @@ export const ADMIN_COPY = {
       footer:
         'Every admin change is kept, with who made it. Each row links to the thing it changed.',
       emptyTitle: 'No changes yet today',
-      // Over the rows when the day passed the read's cap.
-      capped: 'Showing the newest 1,000 changes from today.',
+      // An earlier day with nothing on it (undrawn: only Today's is worded).
+      emptyDayTitle: (day: string) => `No changes on ${day}`,
+      emptyBody: 'Pick another day, or anyone, to see earlier changes.',
+      // `37/log-day-picker-d`: the stepper, its day chip and the month.
+      previousDay: 'Previous day',
+      nextDay: 'Next day',
+      chooseDay: (day: string) => `Showing ${day}. Choose a day`,
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+      dotLegend: 'A dot: changes that day',
+      // `37/log-older-day-d`: the line that ends an earlier day.
+      dayEnd: (day: string) => `That’s everything on ${day}.`,
+      // Load more's failure, beside its Try again (`A3/09/load-more`).
+      loadMoreFailed: 'Couldn’t load more changes.',
       system: 'System',
       noPage: '—',
       // A target that has since been deleted (or couldn't be looked up): the
