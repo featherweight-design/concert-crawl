@@ -115,7 +115,9 @@ export function CodeEnded({ onEnterAnother }: { onEnterAnother: () => void }) {
         </div>
         <p
           style={{
-            margin: '18px 0 0',
+            // The board stacks the page in a 14px-gap column and gives the link
+            // an 18px margin: 32px under the buttons. This column has no gap.
+            margin: '32px 0 0',
             fontSize: 14,
             color: 'var(--fg-muted)',
           }}
