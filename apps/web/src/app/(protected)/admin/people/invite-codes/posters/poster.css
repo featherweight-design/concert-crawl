@@ -355,6 +355,12 @@
   .poster-sheet * {
     visibility: visible !important;
   }
+  /* The enlarged viewer holds a second copy of the sheet: print only the
+     page's own. */
+  .pt-enlarged,
+  .pt-enlarged * {
+    display: none !important;
+  }
   .poster-fit {
     opacity: 1 !important;
   }
@@ -1172,6 +1178,115 @@
   font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
+  color: var(--bg);
+}
+
+/* 32/poster-preview-m: Enlarge sits on the preview's bottom-right corner. */
+.pt-enlarge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* 32/poster-enlarged-m: the poster full screen on solid black, over the
+   shell's bottom bar. A fixed art colour, like the poster mat. */
+.pt-enlarged {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: #03050c;
+  color: var(--fg);
+}
+.pt-enlarged-top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 16px;
+}
+.pt-enlarged-top b {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+}
+.pt-enlarged-top span {
+  font-size: 12.5px;
+  color: var(--fg-muted);
+}
+.pt-enlarged-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: none;
+  color: var(--fg);
+}
+.pt-enlarged-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 16px;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+.pt-enlarged-stage .poster-mat {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.pt-enlarged-hint {
+  flex: none;
+  margin: 8px 0;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--fg-muted);
+}
+.pt-enlarged-bar {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  padding: 0 16px max(28px, env(safe-area-inset-bottom));
+}
+.pt-enlarged-back,
+.pt-enlarged-print {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.pt-enlarged-back {
+  flex: 1;
+  background: var(--bg-elevated);
+  font-weight: 600;
+  color: var(--fg);
+}
+.pt-enlarged-print {
+  flex: 2;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--signal), #de96df);
+  font-weight: 700;
   color: var(--bg);
 }
 
