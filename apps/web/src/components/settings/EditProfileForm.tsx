@@ -151,7 +151,10 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
   }
 
   const formContent = (
-    <div className="mx-auto max-w-md">
+    // In the desktop dialog the form fills it, so the header hairline runs the
+    // dialog's full width as the board draws it (more-s-edit_d); the page keeps
+    // its narrow column.
+    <div className={onClose ? undefined : 'mx-auto max-w-md'}>
       {/* Header with Cancel + Save */}
       <div className="flex items-center justify-between border-b border-border px-4 py-4">
         {onClose ? (
