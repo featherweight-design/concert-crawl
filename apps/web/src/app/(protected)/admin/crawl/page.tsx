@@ -1,109 +1,8 @@
 import { permanentRedirect } from 'next/navigation';
 import { z } from 'zod';
-import { auth, requireAdminUser } from '@/lib/auth';
+import { requireAdminUser } from '@/lib/auth';
 import { venueTabHref } from '@/lib/admin/venue-tabs';
-import { apiClient } from '@/lib/api';
-import { StatCard, SectionHead } from '@/components/admin/primitives';
-import {
-  CrawlSplitView,
-  CrawlAllButton,
-} from '@/components/admin/crawl/CrawlSplitView';
-import type { InspectorTab } from '@/components/admin/crawl/InspectorTabs';
-import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner';
-import {
-  formatSweepHint,
-  formatRunsBreakdown,
-  formatLlmCost,
-} from './crawl-stats';
-import type {
-  AdminDailyCosts,
-  CrawlRun,
-  ExtractionStrategy,
-} from '@concert-crawl/types';
-import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-
-export interface CrawlStatusRow {
-  venueId: string;
-  venueName: string;
-  websiteUrl: string;
-  status: string;
-  lastRunStatus: string;
-  lastRunAt: string | null;
-  eventsFound: number;
-  eventsInserted: number;
-  eventsUpdated: number;
-  llmCostUsd: number | null;
-  durationMs: number | null;
-  httpStatusCode: number | null;
-  consecutiveFailures: number;
-  blockedAt: string | null;
-  strategy: string;
-  error: string | null;
-}
-
-interface RawVenueStatus {
-  id: string;
-  name: string;
-  websiteUrl: string;
-  active: boolean;
-  verified: boolean;
-  consecutiveFailures: number;
-  blockedAt: string | null;
-  lastCrawledAt: string | null;
-  // Configured strategy on the venue row — falls back into the Strategy
-  // column when `lastRun.extractionStrategyUsed` is null (never-crawled
-  // or currently-failing venues) so the column doesn't blank out (#1074).
-  // Typed against the canonical `ExtractionStrategy` union to keep invalid
-  // values from slipping through.
-  extractionStrategy: ExtractionStrategy | null;
-  lastRun: {
-    id: string;
-    venueId: string;
-    status: string;
-    createdAt: string;
-    eventsFound: number;
-    eventsInserted: number;
-    eventsUpdated: number;
-    llmCostUsd: number | null;
-    errorMessage: string | null;
-    // `string | null`, not `ExtractionStrategy` — the crawler stores
-    // `platform:<slug>` values on platform-routed runs (see
-    // `packages/crawler-core/src/crawl.ts`), so narrowing here would
-    // misrepresent the API contract.
-    extractionStrategyUsed: string | null;
-    httpStatusCode: number | null;
-    durationMs: number | null;
-  } | null;
-}
-
-function deriveVenueStatus(venue: RawVenueStatus): string {
-  if (venue.blockedAt != null && venue.lastRun?.status !== 'success')
-    return 'blocked';
-  if (!venue.active) return 'paused';
-  return venue.lastRun?.status ?? 'never';
-}
-
-function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
-  return {
-    venueId: venue.id,
-    venueName: venue.name,
-    websiteUrl: venue.websiteUrl,
-    status: deriveVenueStatus(venue),
-    lastRunStatus: venue.lastRun?.status ?? 'never',
-    lastRunAt: venue.lastRun?.createdAt ?? null,
-    eventsFound: venue.lastRun?.eventsFound ?? 0,
-    eventsInserted: venue.lastRun?.eventsInserted ?? 0,
-    eventsUpdated: venue.lastRun?.eventsUpdated ?? 0,
-    llmCostUsd: venue.lastRun?.llmCostUsd ?? null,
-    durationMs: venue.lastRun?.durationMs ?? null,
-    httpStatusCode: venue.lastRun?.httpStatusCode ?? null,
-    consecutiveFailures: venue.consecutiveFailures,
-    blockedAt: venue.blockedAt,
-    strategy:
-      venue.lastRun?.extractionStrategyUsed ?? venue.extractionStrategy ?? '—',
-    error: venue.lastRun?.errorMessage ?? null,
-  };
-}
+import { CrawlRunsClient } from '@/components/admin/crawl-runs/CrawlRunsClient';
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -115,162 +14,20 @@ interface Props {
  */
 const venueIdSchema = z.uuid();
 
+/**
+ * 1d Crawl runs: every crawl, nightly and by hand, as batches. The list loads
+ * in the browser with the admin's token; its filter lives in `?kind=`.
+ */
 export default async function AdminCrawlPage({ searchParams }: Props) {
   await requireAdminUser();
-  const resolvedParams = await searchParams;
-  const rawVenueId = resolvedParams.venueId;
-  const initialVenueId =
+  const rawVenueId = (await searchParams).venueId;
+  const venueId =
     (Array.isArray(rawVenueId) ? rawVenueId[0] : rawVenueId) || undefined;
   // Every other param (`tab`, `hasAlert`) is dropped with the redirect: the
   // Runs tab has no Diagnostics or staged apply (A3 §3b row 8).
-  const redirectTo = venueIdSchema.safeParse(initialVenueId);
+  const redirectTo = venueIdSchema.safeParse(venueId);
   if (redirectTo.success) {
     permanentRedirect(venueTabHref(redirectTo.data, 'runs'));
   }
-
-  const { getToken } = await auth();
-  const token = await getToken();
-  if (!token) return null;
-  const rawTab = resolvedParams.tab;
-  const initialTab = (Array.isArray(rawTab) ? rawTab[0] : rawTab) || undefined;
-  // Previously only `history` was forwarded, so a `?tab=diagnostics` deep link
-  // silently landed on Overview.
-  const isInspectorTab = (tab: string | undefined): tab is InspectorTab =>
-    tab === 'overview' || tab === 'diagnostics' || tab === 'history';
-  // #804 introduced a page-level `?hasAlert=true` filter surfaced through a
-  // "Show alerts only" CTA next to Run all. The CTA read as inert to admins
-  // (its effect landed inside the per-venue History tab, not the top-level
-  // stats or venue list) — see #1077. The visible toggle was removed; the
-  // History tab now always shows the unfiltered run list. Blocked / failed
-  // venues remain surfaced through the IssuesBanner just below.
-
-  const [rawStatus, runs, todayCosts] = await Promise.all([
-    apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
-    apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
-    // Today's LLM spend as the Health tile and the monthly budget count it
-    // (extraction plus the other LLM services), not just these runs'.
-    apiClient.get<AdminDailyCosts>('/v1/admin/costs/daily?days=1', token),
-  ]);
-  const todayLlmCostUsd = todayCosts.days.at(-1)?.costUsd ?? 0;
-  const status = rawStatus.map(toStatusRow);
-  const todayStrMT = new Date().toLocaleDateString('en-US', {
-    timeZone: 'America/Denver',
-  });
-  const todayRuns = runs.filter(
-    (run) =>
-      new Date(run.createdAt).toLocaleDateString('en-US', {
-        timeZone: 'America/Denver',
-      }) === todayStrMT,
-  );
-
-  const sweepHint = formatSweepHint(todayRuns);
-  const runsBreakdown = formatRunsBreakdown(todayRuns);
-  const totalInserted = todayRuns.reduce(
-    (sum, run) => sum + run.eventsInserted,
-    0,
-  );
-  const totalUpdated = todayRuns.reduce(
-    (sum, run) => sum + run.eventsUpdated,
-    0,
-  );
-  const eventsHintParts: string[] = [];
-  if (totalInserted > 0) eventsHintParts.push(`${totalInserted} new`);
-  if (totalUpdated > 0) eventsHintParts.push(`${totalUpdated} updated`);
-  const eventsHint =
-    eventsHintParts.join(' · ') || ADMIN_COPY.crawlPage.statEventsHintFallback;
-
-  const mostRecentRun = runs[0];
-  const lastSweepMinutes = mostRecentRun?.createdAt
-    ? Math.round(
-        (Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000,
-      )
-    : null;
-  let lastSweepValue = '—';
-  if (lastSweepMinutes !== null) {
-    if (lastSweepMinutes >= 60) {
-      const hours = Math.floor(lastSweepMinutes / 60);
-      const mins = lastSweepMinutes % 60;
-      lastSweepValue = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-    } else {
-      lastSweepValue = `${lastSweepMinutes}m`;
-    }
-  }
-  const lastSweepUnit = lastSweepMinutes !== null ? 'ago' : undefined;
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 24,
-      }}
-    >
-      <SectionHead
-        eyebrow={ADMIN_COPY.crawlPage.sectionEyebrow}
-        title={ADMIN_COPY.crawlPage.sectionTitle}
-        subtitle={ADMIN_COPY.crawlPage.sectionSubtitle}
-        actions={<CrawlAllButton />}
-        actionsFullWidthOnPhone
-      />
-
-      <IssuesBanner
-        blockedVenues={status.filter(
-          (row) =>
-            row.status === 'blocked' ||
-            row.status === 'failed' ||
-            row.status === 'paused',
-        )}
-      />
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 16,
-        }}
-      >
-        <StatCard
-          label={ADMIN_COPY.crawlPage.statLastSweep}
-          value={lastSweepValue}
-          {...(lastSweepUnit !== undefined && {
-            unit: ADMIN_COPY.crawlPage.statLastSweepUnit,
-          })}
-          iconName="RefreshCw"
-          kind="neutral"
-          hint={sweepHint}
-        />
-        <StatCard
-          label={ADMIN_COPY.crawlPage.statTodaysRuns}
-          value={String(todayRuns.length)}
-          iconName="Activity"
-          kind="signal"
-          hint={runsBreakdown}
-        />
-        <StatCard
-          label={ADMIN_COPY.crawlPage.statEventsIngested}
-          value={String(totalInserted + totalUpdated)}
-          unit={ADMIN_COPY.crawlPage.statEventsIngestedUnit}
-          iconName="CalendarCheck2"
-          kind="success"
-          hint={eventsHint}
-        />
-        <StatCard
-          label={ADMIN_COPY.crawlPage.statLlmCost}
-          value={formatLlmCost(todayLlmCostUsd) || '$0.00'}
-          iconName="DollarSign"
-          kind="signal"
-          compact
-        />
-      </div>
-
-      <CrawlSplitView
-        initialStatus={status}
-        initialRuns={runs}
-        {...(initialVenueId !== undefined && {
-          initialSelectedId: initialVenueId,
-        })}
-        {...(isInspectorTab(initialTab) && { initialTab })}
-      />
-    </div>
-  );
+  return <CrawlRunsClient />;
 }
