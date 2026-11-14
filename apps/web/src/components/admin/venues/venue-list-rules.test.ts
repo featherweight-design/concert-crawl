@@ -315,20 +315,28 @@ describe('the failure streak', () => {
   });
 
   it('groups the failures by Mountain Time day, not UTC day', () => {
-    // 5 AM and 6 AM UTC on Nov 13 are 10 PM and 11 PM on Nov 12 in Denver.
+    // 5:00, 6:00 and 6:30 AM UTC on Nov 13 are 10:00, 11:00 and 11:30 PM on
+    // Nov 12 in Denver: one Mountain Time day, so three failures on Nov 12.
     expect(
       autoPaused({
-        consecutiveFailures: 2,
-        failureStreak: ['2026-11-13T05:00:00Z', '2026-11-13T06:00:00Z'],
+        failureStreak: [
+          '2026-11-13T05:00:00Z',
+          '2026-11-13T06:00:00Z',
+          '2026-11-13T06:30:00Z',
+        ],
       }),
-    ).toBe('Failed 2 times on Nov 12');
-    // 5 AM and 10 AM UTC on Nov 13 are Nov 12 and Nov 13 in Denver: two days.
+    ).toBe('Failed 3 times on Nov 12');
+    // 5 AM and 10 AM UTC on Nov 13 are Nov 12 and Nov 13 in Denver: two days,
+    // so the dates are fewer than the failures and the count is said.
     expect(
       autoPaused({
-        consecutiveFailures: 2,
-        failureStreak: ['2026-11-13T05:00:00Z', '2026-11-13T10:00:00Z'],
+        failureStreak: [
+          '2026-11-13T05:00:00Z',
+          '2026-11-13T10:00:00Z',
+          '2026-11-13T11:00:00Z',
+        ],
       }),
-    ).toBe('Failed Nov 12, 13');
+    ).toBe('Failed 3 times on Nov 12, 13');
   });
 
   it('says the month once per month, and a day once', () => {
