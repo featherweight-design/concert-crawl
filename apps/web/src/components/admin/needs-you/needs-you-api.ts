@@ -8,6 +8,7 @@
  */
 import type {
   AllClearFacts,
+  CrawlPauseRequest,
   NeedsYouCount,
   NeedsYouKind,
 } from '@concert-crawl/types';
@@ -444,6 +445,24 @@ export const needsYouApi = (getToken: GetToken) => ({
       { method: 'POST', body: { ...params, answer: slug } },
     );
     if (!isRecord(data)) throw new Error('needs-you answer');
+    const auditId = isText(data['auditId']) ? data['auditId'] : null;
+    return { auditId, undoable: data['undoable'] === true && auditId !== null };
+  },
+  /**
+   * Keep paused / Pause crawling with the Pause panel's own body (reason, note,
+   * resume). The API takes the same body as the venue's pause route.
+   */
+  pause: async (
+    key: string,
+    slug: string,
+    body: CrawlPauseRequest,
+  ): Promise<AnswerResult> => {
+    const data = await call(
+      getToken,
+      `/v1/admin/needs-you/items/${encodeURIComponent(key)}/answer`,
+      { method: 'POST', body: { ...body, answer: slug } },
+    );
+    if (!isRecord(data)) throw new Error('needs-you pause');
     const auditId = isText(data['auditId']) ? data['auditId'] : null;
     return { auditId, undoable: data['undoable'] === true && auditId !== null };
   },
