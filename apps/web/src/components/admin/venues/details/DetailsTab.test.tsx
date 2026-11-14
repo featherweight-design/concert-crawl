@@ -194,29 +194,92 @@ describe('DetailsTab', () => {
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
   });
 
-  it('a failed save snaps back and offers Try again', async () => {
+  it('a failed save keeps the edit and offers Try again', async () => {
     mockUpdateVenue.mockResolvedValueOnce({ success: false, error: 'Down.' });
     render(<DetailsTab venue={venue} />);
     fireEvent.change(input(FIELDS.address), { target: { value: '1 Main St' } });
     save();
     await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
     expect(screen.getByText(COPY.failed.title)).toBeTruthy();
-    expect(input(FIELDS.address).value).toBe(venue.address);
+    expect(input(FIELDS.address).value).toBe('1 Main St');
+    expect(screen.getByTestId('details-save-bar')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(2));
     expect(sentForm().get('address')).toBe('1 Main St');
   });
 
-  it('remakes the link from the name', () => {
+  it('a thrown save keeps the edit too', async () => {
+    mockUpdateVenue.mockRejectedValueOnce(new Error('network'));
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.address), { target: { value: '1 Main St' } });
+    save();
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(input(FIELDS.address).value).toBe('1 Main St');
+    spy.mockRestore();
+  });
+
+  it('Try again moves the attempt onto a newer row, never writing it back', async () => {
+    mockUpdateVenue.mockResolvedValueOnce({ success: false, error: 'Down.' });
+    const { rerender } = render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.address), { target: { value: '1 Main St' } });
+    save();
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+
+    // Someone else's save lands before the retry.
+    rerender(<DetailsTab venue={{ ...venue, neighborhood: 'LoDo' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(2));
+    expect([...sentForm().keys()]).toEqual(['address']);
+    expect(input(FIELDS.neighborhood).value).toBe('LoDo');
+    expect(input(FIELDS.address).value).toBe('1 Main St');
+  });
+
+  it('a save lays its columns over a row that landed mid-save', async () => {
+    let resolve: (value: { success: true }) => void = () => undefined;
+    mockUpdateVenue.mockReturnValueOnce(
+      new Promise((res) => {
+        resolve = res;
+      }),
+    );
+    const { rerender } = render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.address), { target: { value: '1 Main St' } });
+    save();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+
+    rerender(<DetailsTab venue={{ ...venue, neighborhood: 'LoDo' }} />);
+    resolve({ success: true });
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    // The baseline holds both: no edit is counted against the newer row.
+    expect(screen.queryByTestId('details-save-bar')).toBeNull();
+    expect(input(FIELDS.neighborhood).value).toBe('LoDo');
+    expect(input(FIELDS.address).value).toBe('1 Main St');
+  });
+
+  it('remakes the link from the name, with no native tooltip', () => {
     render(<DetailsTab venue={venue} />);
     fireEvent.change(input(FIELDS.name), {
       target: { value: 'Ball Arena Denver!' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: FIELDS.link.regenerate }),
-    );
+    const regenerate = screen.getByRole('button', {
+      name: FIELDS.link.regenerate,
+    });
+    expect(regenerate.hasAttribute('title')).toBe(false);
+    fireEvent.click(regenerate);
     expect(input(FIELDS.link.label).value).toBe('ball-arena-denver');
+  });
+
+  it('a stored value the rules refuse never blocks saving another field', async () => {
+    render(
+      <DetailsTab
+        venue={{ ...venue, contactEmail: 'bookings at ballarena' }}
+      />,
+    );
+    fireEvent.change(input(FIELDS.address), { target: { value: '1 Main St' } });
+    save();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    expect([...sentForm().keys()]).toEqual(['address']);
   });
 
   it('keeps an edit when a newer row arrives, and takes the rest', () => {
@@ -246,5 +309,14 @@ describe('DetailsTab', () => {
       COPY.cards.tickets,
       COPY.cards.contact,
     ]);
+    // The cards take the phone padding, as Source's do.
+    for (const id of ['details-venue', 'details-tickets', 'details-contact']) {
+      expect(screen.getByTestId(id).style.padding).toBe('14px');
+    }
+  });
+
+  it('the cards keep the desktop padding off a phone', () => {
+    render(<DetailsTab venue={venue} />);
+    expect(screen.getByTestId('details-venue').style.padding).toBe('16px 18px');
   });
 });

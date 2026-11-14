@@ -37,8 +37,14 @@ const FIELDS = COPY.fields;
 
 export type DetailsVenue = DetailsColumns & Pick<Venue, 'id' | 'websiteUrl'>;
 
-/** What went wrong on the last save, for the toast. */
-type Failure = { attempt: DetailsDraft | null; saved: string };
+/** A failed save's draft and the baseline it was made against. */
+type RetryFrom = { attempt: DetailsDraft; base: DetailsColumns };
+
+/**
+ * What went wrong on the last save, for the toast. `retryFrom` is null for a
+ * refusal that names its field: a retry would only be refused again.
+ */
+type Failure = { saved: string; retryFrom: RetryFrom | null };
 
 const selectStyle = (invalid: boolean): CSSProperties => ({
   ...inputStyle(invalid),
@@ -95,7 +101,8 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   };
 
   const save = async (attempt: DetailsDraft) => {
-    const invalid = validateDetails(attempt);
+    const pristine = draftOf(baseline);
+    const invalid = validateDetails(attempt, pristine);
     if (Object.keys(invalid).length > 0) {
       setErrors(invalid);
       return;
@@ -103,18 +110,29 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
     const keys = changedColumns(attempt, baseline);
     if (keys.length === 0) {
       // Only formatting changed ("19500" for "19,500"): nothing to send.
-      setDraft(draftOf(baseline));
+      setDraft(pristine);
       return;
     }
     const target = applyColumns(baseline, attempt, keys);
     setErrors({});
     setFailure(null);
     setSaving(true);
+    // Every failure keeps the draft, so no edit is lost: the toast's "as they
+    // were" is about the saved row, which a failed save leaves untouched.
+    const retryFrom = { attempt, base: baseline };
     try {
       const result = await updateVenue(venue.id, detailsFormData(target, keys));
       if (result.success) {
-        setBaseline(target);
-        setDraft(draftOf(target));
+        // A newer server row may have landed mid-save: lay the sent columns
+        // over whatever the baseline is now, not the one this save began on.
+        setBaseline((current) => applyColumns(current, attempt, keys));
+        const sent = draftOf(target);
+        const sentFields = editedFields(attempt, pristine);
+        setDraft((current) => {
+          const next = { ...current };
+          for (const key of sentFields) next[key] = sent[key];
+          return next;
+        });
         router.refresh();
         return;
       }
@@ -122,21 +140,28 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
       const field = detailsFieldOf(result.field);
       if (field !== null && result.error !== undefined) {
         // A refusal names its input (the slug 409 lands on Link); a retry
-        // would only be refused again, so the edit stays for fixing.
+        // would only be refused again, so there is no Try again.
         setErrors({ [field]: result.error });
-        setFailure({ attempt: null, saved });
+        setFailure({ saved, retryFrom: null });
         return;
       }
-      // Rule 10: snap back to what is saved, and offer Try again.
-      setDraft(draftOf(baseline));
-      setFailure({ attempt, saved });
+      setFailure({ saved, retryFrom });
     } catch (err) {
       console.error('DetailsTab: save failed', { venueId: venue.id, err });
-      setDraft(draftOf(baseline));
-      setFailure({ attempt, saved: COPY.failed.saved });
+      setFailure({ saved: COPY.failed.saved, retryFrom });
     } finally {
       setSaving(false);
     }
+  };
+
+  /**
+   * Try again: the failed attempt moved onto the current baseline first, so a
+   * server row that landed since is never written back over.
+   */
+  const retry = ({ attempt, base }: RetryFrom) => {
+    const next = rebaseDraft(attempt, draftOf(base), draftOf(baseline));
+    setDraft(next);
+    void save(next);
   };
 
   /** A one-line text input bound to a draft field. */
@@ -160,7 +185,7 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   );
 
   const venueCard = (
-    <Card title={COPY.cards.venue} phone={false} testId="details-venue">
+    <Card title={COPY.cards.venue} phone={phone} testId="details-venue">
       <Field id={idOf('name')} label={FIELDS.name} error={errors.name}>
         {text('name')}
       </Field>
@@ -216,7 +241,6 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
             type="button"
             disabled={saving}
             aria-label={FIELDS.link.regenerate}
-            title={FIELDS.link.regenerate}
             onClick={() => edit({ slug: slugify(draft.name) })}
             style={{
               flex: 'none',
@@ -282,7 +306,7 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   );
 
   const ticketsCard = (
-    <Card title={COPY.cards.tickets} phone={false} testId="details-tickets">
+    <Card title={COPY.cards.tickets} phone={phone} testId="details-tickets">
       <Field
         id={idOf('ticketVendor')}
         label={FIELDS.ticketSeller.label}
@@ -316,7 +340,7 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   );
 
   const contactCard = (
-    <Card title={COPY.cards.contact} phone={false} testId="details-contact">
+    <Card title={COPY.cards.contact} phone={phone} testId="details-contact">
       {/* Ruling b: Website is Source's calendar page, the one `website_url`.
           Shown here, edited and saved there. */}
       <Field id={idOf('website')} label={FIELDS.website}>
@@ -345,15 +369,13 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
     minWidth: 0,
   };
 
-  const retry =
-    failure?.attempt == null
-      ? undefined
-      : () => {
-          const { attempt } = failure;
-          if (attempt === null) return;
-          setDraft(attempt);
-          void save(attempt);
-        };
+  const pendingRetry = failure?.retryFrom ?? null;
+  const barFailure =
+    failure === null
+      ? null
+      : pendingRetry === null
+        ? { saved: failure.saved }
+        : { saved: failure.saved, onRetry: () => retry(pendingRetry) };
 
   return (
     <div
@@ -389,14 +411,7 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
         phone={phone}
         edited={edited.length}
         saving={saving}
-        failure={
-          failure === null
-            ? null
-            : {
-                saved: failure.saved,
-                ...(retry === undefined ? {} : { onRetry: retry }),
-              }
-        }
+        failure={barFailure}
         onDiscard={discard}
         onSave={() => void save(draft)}
       />

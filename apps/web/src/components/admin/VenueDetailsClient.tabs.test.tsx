@@ -431,4 +431,30 @@ describe('VenueDetailsClient — the older City and About sections', () => {
     expect([...formData.keys()].sort()).toEqual(['about', 'city']);
     expect(formData.get('about')).toBe('A new line.');
   });
+
+  // Details' own bar pins to the bottom edge, so the page's bar sits in the
+  // panel's flow there; a second sticky bar would cover the first.
+  it('sits in flow on Details beside Details’ bar, and pins elsewhere', () => {
+    render(<VenueDetailsClient venue={venue} initialTab="details" />);
+    fireEvent.change(screen.getByLabelText(OLD.fields.about.label), {
+      target: { value: 'A new line.' },
+    });
+    fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
+
+    const bars = screen.getAllByTestId('venue-legacy-save-bar');
+    expect(bars).toHaveLength(1);
+    const [inFlow] = bars;
+    expect(panel('details').contains(inFlow ?? null)).toBe(true);
+    expect(inFlow?.style.position).not.toBe('sticky');
+    expect(
+      screen.getByRole('button', { name: OLD.saveBar.saveChanges }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: TABS.overview }));
+    const pinned = screen
+      .getAllByTestId('venue-legacy-save-bar')
+      .find((bar) => !panel('details').contains(bar));
+    expect(pinned?.style.position).toBe('sticky');
+  });
 });

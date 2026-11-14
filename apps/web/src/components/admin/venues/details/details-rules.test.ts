@@ -48,6 +48,13 @@ describe('nearestCapacityType (ruling f)', () => {
     expect(nearestCapacityType(raw)).toBe(type);
   });
 
+  it.each(['Barn', 'Sparks', 'Ballpark Barbecue', 'Townhallway'])(
+    'places a word only when whole: %s is unmapped',
+    (raw) => {
+      expect(nearestCapacityType(raw)).toBeNull();
+    },
+  );
+
   it('leaves an unplaceable or empty value unmapped', () => {
     expect(nearestCapacityType('Black box')).toBeNull();
     expect(nearestCapacityType('  ')).toBeNull();
@@ -74,6 +81,29 @@ describe('the map pin', () => {
     expect(parsePin('91, 0')).toBeNull();
     expect(parsePin('0, 181')).toBeNull();
     expect(parsePin('north, west')).toBeNull();
+  });
+
+  it.each(['39.7487,', ',', ', -105.0077', '1e1, 2', '0x10, 0', '39.7487, .5'])(
+    'refuses a missing or non-decimal half: %j',
+    (text) => {
+      expect(parsePin(text)).toBeNull();
+    },
+  );
+});
+
+describe('capacity', () => {
+  const capacityError = (capacity: string) =>
+    validateDetails({ ...draftOf(saved), capacity }, draftOf(saved)).capacity;
+
+  it.each(['1e3', '0x10', '1e20', '2147483648', '12.5', '-4', '0'])(
+    'refuses %s',
+    (capacity) => {
+      expect(capacityError(capacity)).toBeDefined();
+    },
+  );
+
+  it.each(['1', '19,500', '2147483647', ' 900 '])('takes %s', (capacity) => {
+    expect(capacityError(capacity)).toBeUndefined();
   });
 });
 
@@ -154,19 +184,22 @@ describe('rebaseDraft', () => {
 
 describe('validateDetails', () => {
   it('passes a saved row', () => {
-    expect(validateDetails(draftOf(saved))).toEqual({});
+    expect(validateDetails(draftOf(saved), draftOf(saved))).toEqual({});
   });
 
   it('names each bad field', () => {
-    const errors = validateDetails({
-      ...draftOf(saved),
-      name: ' ',
-      slug: '',
-      mapPin: '39.7',
-      capacity: '0',
-      priceUrl: 'javascript:alert(1)',
-      contactEmail: 'not-an-email',
-    });
+    const errors = validateDetails(
+      {
+        ...draftOf(saved),
+        name: ' ',
+        slug: '',
+        mapPin: '39.7',
+        capacity: '0',
+        priceUrl: 'javascript:alert(1)',
+        contactEmail: 'not-an-email',
+      },
+      draftOf(saved),
+    );
     expect(Object.keys(errors).sort()).toEqual([
       'capacity',
       'contactEmail',
@@ -175,6 +208,19 @@ describe('validateDetails', () => {
       'priceUrl',
       'slug',
     ]);
+  });
+
+  it('checks only the edited fields, so a stored value it refuses never blocks another save', () => {
+    const legacy = draftOf({
+      ...saved,
+      contactEmail: 'bookings at ballarena',
+      priceUrl: 'ftp://ballarena.com/tickets',
+    });
+    const draft = { ...legacy, address: '1 Colfax Ave' };
+    expect(validateDetails(draft, legacy)).toEqual({});
+    expect(
+      validateDetails({ ...draft, contactEmail: 'still bad' }, legacy),
+    ).toEqual({ contactEmail: expect.any(String) });
   });
 });
 
