@@ -57,8 +57,10 @@ export function PosterEnlarged({
           <X size={16} strokeWidth={1.8} aria-hidden />
         </button>
       </div>
-      <div className="pt-enlarged-stage">{children}</div>
-      <p className="pt-enlarged-hint">{phoneCopy.pinchHint}</p>
+      <div className="pt-enlarged-stage">
+        {children}
+        <p className="pt-enlarged-hint">{phoneCopy.pinchHint}</p>
+      </div>
       <div className="pt-enlarged-bar">
         <button type="button" className="pt-enlarged-back" onClick={onClose}>
           {phoneCopy.back}
