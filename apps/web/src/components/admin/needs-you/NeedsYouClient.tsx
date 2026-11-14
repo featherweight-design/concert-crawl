@@ -535,6 +535,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           onClose={() => setPausing(null)}
           onSubmit={async (body) => {
             const { row, answer } = pausing;
+            setFailure(null);
             try {
               const result = await api.pause(row.key, answer.slug, body);
               setPausing(null);
@@ -552,8 +553,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
               );
               return null;
             } catch (err) {
-              // The API's 422 is a date it won't take; the panel words it.
-              if (refusedStatus(err) === 422)
+              // A 422 on a picked resume date is a date the API won't take, as
+              // the panel words it; any other refusal is the answer failing.
+              if (refusedStatus(err) === 422 && body.resume?.mode === 'on')
                 return ADMIN_COPY.pausePanel.dateError('');
               return `${COPY.answerFailed.title}. ${COPY.answerFailed.saved}`;
             }
