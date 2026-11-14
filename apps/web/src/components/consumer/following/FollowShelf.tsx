@@ -232,7 +232,7 @@ export const FollowShelf = ({
               onGatedTap={() => {
                 if (resolved) openGate();
               }}
-              onEntitlementRequired={() => setPickerOpen(true)}
+              onEntitlementRequired={openGate}
             />
           ))}
         </ul>
