@@ -1,3 +1,23 @@
+# [1.428.0](https://github.com/featherweight-design/concert-crawl/compare/v1.427.0...v1.428.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** record generate-about's cost off the request path ([39ceddb](https://github.com/featherweight-design/concert-crawl/commit/39ceddbc92716c58fce58897ae912c2d1381368c))
+* **api:** track generate-about's LLM cost ([ebf14e2](https://github.com/featherweight-design/concert-crawl/commit/ebf14e2c883eeb0c3a7f90da8e434a330bcf9596))
+* **web:** address the mix two picker review and scope the chip colour ([dbb7620](https://github.com/featherweight-design/concert-crawl/commit/dbb7620f4611451fec443591f0244c75e81ddaee))
+* **web:** keep About drafts and edits safe across accept, cancel and the breakpoint ([bebd93c](https://github.com/featherweight-design/concert-crawl/commit/bebd93cfccd9319703f25a6a6189c5260b6ae8b5))
+* **web:** keep About's limit, later drafts, Discard and saves honest ([616c4f1](https://github.com/featherweight-design/concert-crawl/commit/616c4f1c83d1bb6a3944380a5f348a761cd82ff2))
+* **web:** let the edit profile header hairline span the dialog ([844ae99](https://github.com/featherweight-design/concert-crawl/commit/844ae99d68778459d2f55e33b753c9c500259dad))
+* **web:** match the board's city and handle input padding ([b1ef1ee](https://github.com/featherweight-design/concert-crawl/commit/b1ef1ee56cecf078bb3900a320460d26dcb83548))
+
+
+### Features
+
+* **web:** release note for two-colour avatars ([d84db8f](https://github.com/featherweight-design/concert-crawl/commit/d84db8f617697c4d1f7863f4ad8807da31574ab6))
+* **web:** the Edit avatar Mix two picker and Edit profile preview ([abdd9da](https://github.com/featherweight-design/concert-crawl/commit/abdd9da963affe4e9cf4a694a30f5e25d2b76dd3))
+* **web:** venue Details tab, About, Look and Other cards (3b part 5b) ([0e10014](https://github.com/featherweight-design/concert-crawl/commit/0e10014623e520b2fecb51350af8318c7a984476))
+
 # [1.427.0](https://github.com/featherweight-design/concert-crawl/compare/v1.426.0...v1.427.0) (2026-11-14)
 
 
