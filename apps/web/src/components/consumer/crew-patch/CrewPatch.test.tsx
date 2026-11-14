@@ -36,6 +36,52 @@ describe('CrewPatch determinism', () => {
   });
 });
 
+// The generic patch (addendum 5 item 13): where no crew exists yet, the same
+// patch for everyone, in the default chord (signal and accent).
+describe('CrewPatch generic', () => {
+  const generic = (crewId: string): string => {
+    const { container } = render(<CrewPatch crewId={crewId} generic />);
+    const svg = container.querySelector('svg');
+    if (svg === null) throw new Error('CrewPatch rendered no svg');
+    return svg.innerHTML.replace(/cp[A-Za-z0-9_]+?(?=-clip|-w)/g, 'UID');
+  };
+
+  it('is the same patch whatever crew id it is handed', () => {
+    expect(generic('crew-alpha')).toBe(generic('crew-beta'));
+    expect(generic('')).toBe(generic('crew-alpha'));
+  });
+
+  it('draws the board hex glyph: a filled inner hex in signal, an outlined one in accent', () => {
+    const { container } = render(<CrewPatch crewId="" generic />);
+    const filled = container.querySelector(
+      'path[d="M28 21l6 3.5v7L28 35l-6-3.5v-7z"]',
+    );
+    const outlined = container.querySelector(
+      'path[d="M28 15l11 6.5v13L28 41l-11-6.5v-13z"]',
+    );
+    expect(filled?.getAttribute('fill')).toBe('var(--signal)');
+    expect(outlined?.getAttribute('stroke')).toBe('var(--accent)');
+    // A short spoke leaves each of the six vertices.
+    expect(
+      container.querySelectorAll('g[transform^="scale"] line'),
+    ).toHaveLength(6);
+  });
+
+  it('keeps the frame: the rim in the accent, the glow from 56px up', () => {
+    const { container } = render(<CrewPatch crewId="" generic size={96} />);
+    const rim = container.querySelector('rect[stroke="var(--accent)"]');
+    expect(rim).not.toBeNull();
+    expect(container.querySelector('svg')?.style.filter).toContain(
+      'drop-shadow',
+    );
+  });
+
+  it('does not change a real crew patch', () => {
+    const { container } = render(<CrewPatch crewId="crew-alpha" />);
+    expect(container.querySelector('g[transform^="scale"] line')).toBeNull();
+  });
+});
+
 describe('CrewPatch rendering', () => {
   it('is decorative: hidden from assistive tech and unfocusable', () => {
     const { container } = render(<CrewPatch crewId="crew-alpha" />);

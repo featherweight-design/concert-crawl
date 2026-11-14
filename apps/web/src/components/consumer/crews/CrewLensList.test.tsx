@@ -12,7 +12,6 @@ describe('CrewLensList', () => {
       <CrewLensList
         crewId="crew-1"
         crewName="The Regulars"
-        patchSalt={0}
         shows={[]}
         failed
         clearLensHref="/events?view=cal"
@@ -29,7 +28,6 @@ describe('CrewLensList', () => {
       <CrewLensList
         crewId="crew-1"
         crewName="The Regulars"
-        patchSalt={0}
         shows={[]}
         clearLensHref="/events?view=cal&genre=rock"
       />,
