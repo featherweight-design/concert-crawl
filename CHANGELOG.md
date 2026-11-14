@@ -1,3 +1,22 @@
+# [1.449.0](https://github.com/featherweight-design/concert-crawl/compare/v1.448.0...v1.449.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** address the breakpoint switch review ([b90e827](https://github.com/featherweight-design/concert-crawl/commit/b90e82775160cbffb4b9958e8fac8a2d616b77d5))
+* **web:** clear the bottom nav through 1023 and keep the shell toasts above it ([3b84742](https://github.com/featherweight-design/concert-crawl/commit/3b847425231159dd7fb89eacf3cceb14790ce457))
+* **web:** convert every sm: token on the lines the nav-clearance change already touched ([4207da7](https://github.com/featherweight-design/concert-crawl/commit/4207da73361e15c9d0863e7e889aef05b87e14de))
+* **web:** move the venues filter bar and its test with the popover ([2987c82](https://github.com/featherweight-design/concert-crawl/commit/2987c82b271ee229c39884be66d38fbd79067442))
+* **web:** the sheet comments say lg after the Add sheet rebase ([5951f9b](https://github.com/featherweight-design/concert-crawl/commit/5951f9b3dc21f1cc63bc3f8ed211833fd6b2d7ce))
+
+
+### Features
+
+* **web:** hold the Browse, Watching, My shows, Concerts and Passport layouts to 1023 ([14ef4c2](https://github.com/featherweight-design/concert-crawl/commit/14ef4c22b1924bc5d111566fb3e4d548c988b6b7))
+* **web:** hold the phone header, nav, hero band and sheet shell to 1023 ([2de2cb0](https://github.com/featherweight-design/concert-crawl/commit/2de2cb0a77f4adc5a4920b36091fa602172c7531))
+* **web:** hold the phone layout to 1023 in every JS and CSS twin of the switch ([55f8594](https://github.com/featherweight-design/concert-crawl/commit/55f8594a00c60949fc1d817f14557d7ec899a635))
+* **web:** hold the remaining user-app layouts to 1023 ([57479f8](https://github.com/featherweight-design/concert-crawl/commit/57479f8644e1e3656a1b0610c350909c64b10494))
+
 # [1.448.0](https://github.com/featherweight-design/concert-crawl/compare/v1.447.0...v1.448.0) (2026-11-14)
 
 
