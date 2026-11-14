@@ -4182,6 +4182,9 @@ export const ADMIN_COPY = {
       discard: 'Discard',
       save: 'Save',
       saving: 'Saving…',
+      // A delisted show reads "No longer listed" to fans until a status save
+      // ends the delisting.
+      relists: 'Saving lists the show again.',
     },
     saveFailed: {
       what: 'the show',
