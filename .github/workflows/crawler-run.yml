@@ -211,6 +211,7 @@ jobs:
           VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
           ADMIN_URL: ${{ vars.ADMIN_URL }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          EMAIL_DAILY_SEND_CAP: ${{ vars.EMAIL_DAILY_SEND_CAP }}
           SENTRY_ENVIRONMENT: ${{ vars.SENTRY_ENVIRONMENT }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL }}
           GIT_SHA: ${{ steps.sha.outputs.sha }}
@@ -248,6 +249,9 @@ jobs:
           put REVALIDATE_SECRET "$REVALIDATE_SECRET"
           put ADMIN_URL "$ADMIN_URL"
           put ADMIN_EMAIL "$ADMIN_EMAIL"
+          # The account-wide daily email cap, the API's own value, so both
+          # judge the shared 80% warning against one cap. Unset means 30.
+          put EMAIL_DAILY_SEND_CAP "$EMAIL_DAILY_SEND_CAP"
           put SENTRY_ENVIRONMENT "$SENTRY_ENVIRONMENT"
           put LOG_LEVEL "$LOG_LEVEL"
           # The deployed commit, read by apps/crawler/src/instrument.ts as the
