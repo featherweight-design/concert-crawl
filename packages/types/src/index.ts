@@ -506,6 +506,9 @@ export interface VenueWithCrawlHealth extends Venue {
   lastFullRun?: VenueLastFullRun | null;
   // The latest run of any status, in the list's shape; null when never crawled.
   latestRun?: VenueLatestRun | null;
+  // When the next daily crawl starts (ISO), from the cron; null outside
+  // production, which starts no daily crawl. Optional for the same reason.
+  nextCrawlAt?: string | null;
 }
 
 /** The latest run that read the venue's shows (`success`), for "Found in the last full run". */

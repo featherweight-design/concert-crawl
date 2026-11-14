@@ -1022,7 +1022,8 @@ export const ADMIN_COPY = {
       paceValue: (seconds: string) =>
         `${seconds} s minimum between pages, plus jitter`,
       schedule: 'Schedule',
-      scheduleValue: 'Daily, 3 AM MT',
+      // The cron's real Mountain time ("2:07 AM"), from the API.
+      scheduleValue: (time: string) => `Daily, ${time} MT`,
       autoPause: 'Auto-pause',
       autoPauseValue: 'After 3 failures in a row',
       footnote: 'Shown, not editable.',
@@ -1465,7 +1466,9 @@ export const ADMIN_COPY = {
       eyebrow: 'new venue',
       title: 'Add a crawl target',
       subtitle:
-        "Point us at an events page. We'll respect robots.txt and crawl daily at 3 AM MT.",
+        // No clock time: the modal has no read of the cron, and a fixed one
+        // was wrong (it runs 2:07 AM MST, 3:07 AM MDT).
+        "Point us at an events page. We'll respect robots.txt and crawl it daily.",
     },
     fields: {
       name: {

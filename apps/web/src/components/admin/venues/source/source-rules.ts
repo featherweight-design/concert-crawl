@@ -1,6 +1,8 @@
+import { z } from 'zod';
 import type { Venue } from '@concert-crawl/types';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { formatMtTime } from '@/components/admin/health/health-model';
 
 const COPY = ADMIN_COPY.venueSource;
 
@@ -364,6 +366,23 @@ export const paceLine = (crawlDelayMs: number): string => {
   return COPY.rules.paceValue(
     Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(1),
   );
+};
+
+/** The venue read's `nextCrawlAt`, as GET /crawl/estimate's is checked. */
+const nextCrawlAtSchema = z.string().datetime().nullable().optional();
+
+/**
+ * "Daily, 2:07 AM MT": the daily crawl's real start, from the API's next
+ * crawl (the cron, so it follows MST and MDT). Null when there is none to
+ * name (outside production, where no daily crawl runs) or the field is
+ * malformed: the Schedule row is dropped rather than guessed.
+ */
+export const scheduleLine = (nextCrawlAt: unknown): string | null => {
+  const parsed = nextCrawlAtSchema.safeParse(nextCrawlAt);
+  if (!parsed.success || parsed.data === null || parsed.data === undefined) {
+    return null;
+  }
+  return COPY.rules.scheduleValue(formatMtTime(parsed.data));
 };
 
 /** What is still saved, for the save-failed toast. */

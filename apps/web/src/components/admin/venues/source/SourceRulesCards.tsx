@@ -5,7 +5,7 @@ import { CRAWLER_USER_AGENT, type Venue } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { runWhen } from '../overview/overview-rules';
 import { Card, Row } from './source-parts';
-import { paceLine, robotsStateOf } from './source-rules';
+import { paceLine, robotsStateOf, scheduleLine } from './source-rules';
 
 const COPY = ADMIN_COPY.venueSource;
 /** "ConcertCrawl/1.0", the product part of the one user agent. */
@@ -18,10 +18,11 @@ export const SourceRulesCards = ({
   venue: Pick<
     Venue,
     'crawlDelayMs' | 'robotsTxtAllowed' | 'robotsTxtCheckedAt'
-  >;
+  > & { nextCrawlAt?: string | null };
   phone: boolean;
 }) => {
   const robots = robotsStateOf(venue.robotsTxtAllowed);
+  const schedule = scheduleLine(venue.nextCrawlAt);
   return (
     <>
       <Card
@@ -80,7 +81,9 @@ export const SourceRulesCards = ({
       <Card title={COPY.rules.title} phone={phone} testId="source-rules">
         <div>
           <Row label={COPY.rules.pace}>{paceLine(venue.crawlDelayMs)}</Row>
-          <Row label={COPY.rules.schedule}>{COPY.rules.scheduleValue}</Row>
+          {schedule !== null && (
+            <Row label={COPY.rules.schedule}>{schedule}</Row>
+          )}
           <Row label={COPY.rules.autoPause}>{COPY.rules.autoPauseValue}</Row>
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
