@@ -3,14 +3,26 @@
 // "If it runs out" trips at a number the admin never saw.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { authState } = vi.hoisted(() => ({
-  authState: {
-    current: null as {
-      userId: string;
-      sessionClaims: { metadata?: { role?: string } };
-    } | null,
-  },
+interface AuthState {
+  current: {
+    userId: string;
+    sessionClaims: { metadata?: { role?: string } };
+  } | null;
+}
+
+const { authState } = vi.hoisted((): { authState: AuthState } => ({
+  authState: { current: null },
 }));
+
+// The response is parsed, not cast, so a shape change fails here loudly.
+const dailyResponseSchema = z.object({
+  data: z.object({
+    days: z.array(z.object({ date: z.string(), costUsd: z.number() })),
+    totalUsd: z.number(),
+  }),
+});
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -20,7 +32,7 @@ vi.mock('@hono/clerk-auth', () => ({
 
 import { adminSettings, costTracking, crawlRuns } from '@concert-crawl/db';
 import { readLlmBudgetStatus } from '@concert-crawl/crawler-core';
-import type { AdminDailyCosts } from '@concert-crawl/types';
+import { z } from 'zod';
 import { createApp } from '../../app.js';
 import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -65,7 +77,7 @@ describe('admin costs: the panel month equals the budget month', () => {
 
     const res = await app.request('/v1/admin/costs/daily?days=31');
     expect(res.status).toBe(200);
-    const { data } = (await res.json()) as { data: AdminDailyCosts };
+    const { data } = dailyResponseSchema.parse(await res.json());
     // The page sums this month's own days (admin/page.tsx), so do the same.
     const monthPrefix = mountainDateString(now).slice(0, 7);
     const panelMonthUsd = data.days
@@ -75,5 +87,25 @@ describe('admin costs: the panel month equals the budget month', () => {
     const budget = await readLlmBudgetStatus();
     expect(budget.spentUsd).toBeCloseTo(0.92, 6);
     expect(panelMonthUsd).toBeCloseTo(budget.spentUsd, 4);
+  });
+
+  it('leaves out LLM rows recorded before the window', async () => {
+    const now = new Date();
+    await testDb.insert(costTracking).values([
+      { service: 'genre-tagger', costUsd: '0.3', recordedAt: now },
+      {
+        service: 'genre-tagger',
+        costUsd: '5',
+        recordedAt: new Date(now.getTime() - 10 * DAY_MS),
+      },
+    ]);
+
+    const res = await app.request('/v1/admin/costs/daily?days=3');
+    const { data } = dailyResponseSchema.parse(await res.json());
+
+    expect(data.totalUsd).toBeCloseTo(0.3, 6);
+    expect(
+      data.days.find((day) => day.date === mountainDateString(now)),
+    ).toMatchObject({ costUsd: 0.3 });
   });
 });

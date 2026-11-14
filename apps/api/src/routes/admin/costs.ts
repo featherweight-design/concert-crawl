@@ -68,8 +68,10 @@ export const listWindowDates = (days: number, endDate: string): string[] => {
 // CostText renders 4 decimals below $1, so the API must carry them.
 const roundUsd = (value: number): number => Math.round(value * 10000) / 10000;
 
-// Day-bucket expression shared by both endpoints: the MT-local calendar day
-// a run happened on. Qualified column reference, safe under joins/aliases.
+// Day-bucket expression: the MT-local calendar day of a timestamp column, by
+// default a run's created_at (both endpoints); /daily also buckets
+// cost_tracking.recorded_at with it. Qualified column reference, safe under
+// joins/aliases.
 // Built per-request (not at module scope) so importing this router never
 // invokes drizzle's `sql` tag — several route test suites mock 'drizzle-orm'
 // with only the operators they use, and a module-level fragment would throw

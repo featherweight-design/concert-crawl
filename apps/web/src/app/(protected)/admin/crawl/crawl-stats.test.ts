@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatSweepHint,
   formatRunsBreakdown,
-  formatLlmCostTotal,
+  formatLlmCost,
   formatCostValue,
   formatEventsBreakdown,
 } from './crawl-stats';
@@ -66,21 +66,13 @@ describe('formatRunsBreakdown', () => {
   });
 });
 
-describe('formatLlmCostTotal', () => {
-  it('returns empty string when no runs', () => {
-    expect(formatLlmCostTotal([])).toBe('');
+describe('formatLlmCost', () => {
+  it('returns empty string for zero', () => {
+    expect(formatLlmCost(0)).toBe('');
   });
 
-  it('returns empty string when all costs are null', () => {
-    expect(
-      formatLlmCostTotal([{ llmCostUsd: null }, { llmCostUsd: null }]),
-    ).toBe('');
-  });
-
-  it('sums costs and formats as dollar amount with 4 decimal places', () => {
-    expect(
-      formatLlmCostTotal([{ llmCostUsd: 0.001 }, { llmCostUsd: 0.0005 }]),
-    ).toBe('$0.0015');
+  it('formats as a dollar amount with 4 decimal places', () => {
+    expect(formatLlmCost(0.0015)).toBe('$0.0015');
   });
 });
 
