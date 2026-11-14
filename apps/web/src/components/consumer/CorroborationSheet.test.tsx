@@ -276,8 +276,6 @@ describe('CorroborationSheet self-locked state (confirm_self_m)', () => {
   });
 });
 
-// Regression: a resale submission reached the sheet as community and showed
-// the Community pill (addendum 4 item 5, the shared TrustPill).
 // Addendum 5 item 1: the accent is the price's own trust colour, signal for a
 // community price and gold (the warning token) for a box-office one, on the
 // rail dot and code and on the CTA, which is solid with dark text.
@@ -302,6 +300,20 @@ describe('CorroborationSheet accent (addendum 5 item 1)', () => {
     expect(cta.style.color).toBe('var(--fg-on-accent)');
   });
 
+  it('draws a resale price in signal, as community', () => {
+    render(
+      <CorroborationSheet
+        submission={{ ...submission, vendor: 'StubHub', kind: 'resale' }}
+        open
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        onSubmitUpdate={vi.fn()}
+      />,
+    );
+    const cta = screen.getByRole('button', { name: /Confirm: same number/ });
+    expect(cta.style.background).toBe('var(--signal)');
+  });
+
   it('draws a box-office price in gold', () => {
     renderKind('boxoffice');
     const cta = screen.getByRole('button', { name: /Confirm: same number/ });
@@ -309,6 +321,8 @@ describe('CorroborationSheet accent (addendum 5 item 1)', () => {
   });
 });
 
+// Regression: a resale submission reached the sheet as community and showed
+// the Community pill (addendum 4 item 5, the shared TrustPill).
 describe('CorroborationSheet trust pill', () => {
   beforeEach(cleanup);
 
