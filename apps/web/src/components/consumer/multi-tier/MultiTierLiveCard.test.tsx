@@ -3,6 +3,7 @@
 import React from 'react';
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
+import type { PriceCheckOutcome } from '@concert-crawl/types';
 import { MultiTierLiveCard } from './MultiTierLiveCard';
 
 afterEach(() => {
@@ -176,5 +177,58 @@ describe('MultiTierLiveCard staleness marker', () => {
   it('renders no stamp when the observation time is unknown', () => {
     renderAt(null);
     expect(screen.queryByText(/as of/)).toBeNull();
+  });
+});
+
+// How the last price check ended (more-st-disputes_board, "After review").
+describe('MultiTierLiveCard price check outcome', () => {
+  const renderWith = (checkOutcome: PriceCheckOutcome | null) =>
+    render(
+      <MultiTierLiveCard
+        headline={{ floor: 44, tier: 'GA', vendor: 'AXS', kind: 'community' }}
+        alternates={[]}
+        checkOutcome={checkOutcome}
+      />,
+    );
+
+  it('says an admin held the price', () => {
+    renderWith({
+      outcome: 'held',
+      resolvedAt: '2026-11-13T12:00:00.000Z',
+      previous: null,
+    });
+    expect(screen.getByTestId('price-check-outcome').dataset['outcome']).toBe(
+      'held',
+    );
+    expect(
+      screen.getByText('Checked by an admin. This number held.'),
+    ).toBeDefined();
+  });
+
+  it('says the price was updated, and what it was', () => {
+    renderWith({
+      outcome: 'updated',
+      resolvedAt: '2026-11-13T12:00:00.000Z',
+      previous: { floor: 44, ceiling: null },
+    });
+    expect(
+      screen.getByText('Updated after a price check. Was $44.'),
+    ).toBeDefined();
+  });
+
+  it('draws a previous range as a range', () => {
+    renderWith({
+      outcome: 'updated',
+      resolvedAt: '2026-11-13T12:00:00.000Z',
+      previous: { floor: 44, ceiling: 60 },
+    });
+    expect(
+      screen.getByText('Updated after a price check. Was $44–$60.'),
+    ).toBeDefined();
+  });
+
+  it('draws nothing when there is no outcome', () => {
+    renderWith(null);
+    expect(screen.queryByTestId('price-check-outcome')).toBeNull();
   });
 });

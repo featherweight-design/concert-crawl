@@ -1523,6 +1523,11 @@ export function EventDetailPriceBlock({
             observedAt={headlineBlock.headline?.observedAt ?? null}
             eventId={event.id}
             submissionId={headlineBlock.headline?.submissionId ?? null}
+            // The outcome is for the event's primary price, which is the
+            // headline only when there is one tier.
+            checkOutcome={
+              blocks.length === 1 ? (event.priceCheckOutcome ?? null) : null
+            }
           />
           {outboundLink !== null && outboundKind !== null && (
             <div className="mt-3">
