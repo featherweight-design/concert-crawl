@@ -737,12 +737,15 @@ eventsAdminRouter.patch(
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
 
-    // Past lock (admin 4a-3b), on this PATCH only: a show whose stored date
-    // is before today in Denver (the list's Past side) may change only
-    // `hiddenFromConsumer`. A past show stored as postponed may also change
-    // `date`, `doorsTime`, `showTime` and `status`, so it can be rescheduled.
-    // A field re-sent at its stored value is not a change. Anything else is
-    // 409 `past_locked`, read under the row lock, and not audited.
+    // Past lock, on this PATCH only: a show whose stored date is before today
+    // in Denver (the list's Past side) may change `hiddenFromConsumer` and the
+    // corrections of B+ addendum 5 §4 (`title`, `artist`, `doorsTime`,
+    // `showTime`, and `date` to another past date), which tell no watcher. A
+    // past show stored as postponed may instead change `date`, `doorsTime`,
+    // `showTime` and `status`, so it can be rescheduled. A field re-sent at
+    // its stored value is not a change. Anything else is 409 `past_locked`,
+    // read under the row lock, and not audited. Corrections audit as
+    // `event.update`, like every other edit.
     let updated: Awaited<ReturnType<typeof updateEvent>>;
     try {
       updated = await updateEvent(id, body, {

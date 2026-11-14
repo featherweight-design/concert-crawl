@@ -27,29 +27,29 @@
 
 ## Rulings that settle board questions (from addendum-3 "4b Events", READINESS, and 4a)
 
-| # | Question | Settled |
-| --- | --- | --- |
-| 4b#2 | Last seen raw title | No source exists, so only the date shows. |
-| 4b#3 | Open the crawl run | No event-to-run link exists, so the menu line is dropped. |
-| 4b#4 | Phone edit fields | Every desktop field, stacked. Cancelled opens `mark-cancelled-mobile`. |
-| 4b#5 | No longer listed | Not settable. It shows as read-only status text with "Listed again" (clears `delisted_at` and `first_missing_at`, using today's PATCH `firstMissingAt: null` and `endDelisting`). |
-| 4b#6 | Postponed | `10/postponed-d` and `10/postponed-m`. Notifies Watchers through today's PATCH (`watch.postponed`). |
-| 4b#8 | A hidden row | The status chip stays, plus a second Hidden chip with its reason. The reasons go to copy-review. |
-| 4b#9 | Hide and Delete | `04/hide-from-site` and `04/delete-venue`. The edit toggle opens the same Hide dialog. |
-| 4b#10 | Delete | **Eng decision:** only manual rows get the line and the API (`DELETE /:id` returns 409 `not_manual` on a crawled row). Others use Hide. The board says "Only for shows added by mistake". |
-| 4b#11, #12 | Add a show | `11/add-a-show-lineup-d`: lineup chips, the first is the headliner, drag to reorder. There is a duplicate warning. The price is added after save. |
-| 4b#13 | Phone Add a show | Full screen, the same fields stacked. |
-| 4b#14 | "added by @dlo" | `events.created_by` (4a). Older manual rows read "added by hand". |
-| 4b#15 | Desktop merge | The gap-1 pick step is the panel's first view, then compare. |
-| 4b#16 | Which reports move | `event_reports` (4a decision 7). The compare's Reports row counts this listing's open event reports, named by kind. Wrong-artist reports are artist-keyed and never move. |
-| 4b#17 | Merge Watching count | Deduplicated (the distinct Watchers of both rows). The merge is silent (`notifyWatchers: false`). |
-| 4b#18 | Crawler match key | 4a-1: the redirect carries the source crawl key, and the crawl updates the kept row. |
-| 4b#19, #20 | Price sheet | 4d settled the fields in `AddPricePanel` / `EditPricePanel`, which is the shared sheet. Edit price opens it for the admin's own submission on this show. Sold out lives in Status only. |
-| 4b#21 | Played | Muted chip, past only. |
-| 4b#22 | Past | **Eng:** "went" counts `user_events` marked going for the show (the Concerts count). The past edit locks every field except Hidden and lineup (shown read-only). Phone uses the list's Past toggle. |
-| 4b#23 | Phone filters | Past toggle and Add a show. Venue and status open `AdminSheet`s with the popover's contents. |
-| 4b#24 | Paging | `09/load-more` ("Showing 25 of N", "Load 25 more"). It replaces the drawn "Showing Nov 12–29 · 1,196 more" footer. |
-| A3 | Merge across venue or day | Drop the shared header, and add Venue and Day as the first rows of each card. |
+| #          | Question                  | Settled                                                                                                                                                                                                                                                                                                                                                               |
+| ---------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4b#2       | Last seen raw title       | No source exists, so only the date shows.                                                                                                                                                                                                                                                                                                                             |
+| 4b#3       | Open the crawl run        | No event-to-run link exists, so the menu line is dropped.                                                                                                                                                                                                                                                                                                             |
+| 4b#4       | Phone edit fields         | Every desktop field, stacked. Cancelled opens `mark-cancelled-mobile`.                                                                                                                                                                                                                                                                                                |
+| 4b#5       | No longer listed          | Not settable. It shows as read-only status text with "Listed again" (clears `delisted_at` and `first_missing_at`, using today's PATCH `firstMissingAt: null` and `endDelisting`).                                                                                                                                                                                     |
+| 4b#6       | Postponed                 | `10/postponed-d` and `10/postponed-m`. Notifies Watchers through today's PATCH (`watch.postponed`).                                                                                                                                                                                                                                                                   |
+| 4b#8       | A hidden row              | The status chip stays, plus a second Hidden chip with its reason. The reasons go to copy-review.                                                                                                                                                                                                                                                                      |
+| 4b#9       | Hide and Delete           | `04/hide-from-site` and `04/delete-venue`. The edit toggle opens the same Hide dialog.                                                                                                                                                                                                                                                                                |
+| 4b#10      | Delete                    | **Eng decision:** only manual rows get the line and the API (`DELETE /:id` returns 409 `not_manual` on a crawled row). Others use Hide. The board says "Only for shows added by mistake".                                                                                                                                                                             |
+| 4b#11, #12 | Add a show                | `11/add-a-show-lineup-d`: lineup chips, the first is the headliner, drag to reorder. There is a duplicate warning. The price is added after save.                                                                                                                                                                                                                     |
+| 4b#13      | Phone Add a show          | Full screen, the same fields stacked.                                                                                                                                                                                                                                                                                                                                 |
+| 4b#14      | "added by @dlo"           | `events.created_by` (4a). Older manual rows read "added by hand".                                                                                                                                                                                                                                                                                                     |
+| 4b#15      | Desktop merge             | The gap-1 pick step is the panel's first view, then compare.                                                                                                                                                                                                                                                                                                          |
+| 4b#16      | Which reports move        | `event_reports` (4a decision 7). The compare's Reports row counts this listing's open event reports, named by kind. Wrong-artist reports are artist-keyed and never move.                                                                                                                                                                                             |
+| 4b#17      | Merge Watching count      | Deduplicated (the distinct Watchers of both rows). The merge is silent (`notifyWatchers: false`).                                                                                                                                                                                                                                                                     |
+| 4b#18      | Crawler match key         | 4a-1: the redirect carries the source crawl key, and the crawl updates the kept row.                                                                                                                                                                                                                                                                                  |
+| 4b#19, #20 | Price sheet               | 4d settled the fields in `AddPricePanel` / `EditPricePanel`, which is the shared sheet. Edit price opens it for the admin's own submission on this show. Sold out lives in Status only.                                                                                                                                                                               |
+| 4b#21      | Played                    | Muted chip, past only.                                                                                                                                                                                                                                                                                                                                                |
+| 4b#22      | Past                      | **Eng:** "went" counts `user_events` marked going for the show (the Concerts count). The past edit locks every field except Hidden and lineup (shown read-only). Phone uses the list's Past toggle. **Superseded 2026-11-14** by B+ addendum 5 §4 / addendum 6 item 36: title, lineup, venue and times are editable on a past show as corrections that notify nobody. |
+| 4b#23      | Phone filters             | Past toggle and Add a show. Venue and status open `AdminSheet`s with the popover's contents.                                                                                                                                                                                                                                                                          |
+| 4b#24      | Paging                    | `09/load-more` ("Showing 25 of N", "Load 25 more"). It replaces the drawn "Showing Nov 12–29 · 1,196 more" footer.                                                                                                                                                                                                                                                    |
+| A3         | Merge across venue or day | Drop the shared header, and add Venue and Day as the first rows of each card.                                                                                                                                                                                                                                                                                         |
 
 ## Open (blocks part of 4b; sent to the orchestrator)
 
@@ -96,13 +96,13 @@ Every write is Zod-validated and audited (the merge already is).
 
 ## PR split (each from fresh `main` after its dependencies merge; none stacked)
 
-| PR | Content | Boards | Depends on |
-| --- | --- | --- | --- |
-| **4b-1** Events list | `/admin/events` desktop table and phone cards; search; Upcoming/Past; Any venue and Any status popovers (phone sheets); No price and Hidden chips with counts; Load more; no results, loading and couldn't load; the ⋯ menu (Edit, both View links, Hide…, Delete… on manual rows; Merge… lands in 4b-4); Past list (Played, CONCERTS "went"); `?tab=all-events` redirect; old list removed | events, events-mobile, events-no-results, venue-filter, status-filter, event-menu, past-shows, loading-events | 4a-3a |
-| **4b-2** Event edit | Desktop two columns and the phone stack; Show card (Title, lineup chips with Add an artist via 4c's artist search, venue picker, date and times); From the crawl; Status pills (no Moved until Hugh rules) with the Postponed dialog and sheet; Hide toggle and dialog; Price card (rows, Edit price opening the shared sheet, the Submitted prices link); Save bar with the dirty count, Discard, snap-back; past lock; loading, couldn't load, not found; old editor removed | event-edit, event-edit-mobile, edit-price-desktop, loading-event-edit, 10/postponed-d/m, 04/hide-from-site | 4a-3a, 4a-3b (lineup), 4b-1 |
-| **4b-3** Add a show by hand | Desktop side panel and phone full screen; duplicate warning with "Open it"; lineup chips with roles; save failed | add-a-show-by-hand, 11/add-a-show-lineup-d | 4a-3b, 4b-1 |
-| **4b-4** Merge | Desktop panel (pick then compare); phone full screen (pick, pick loading, nothing found, compare at 390 and 320, keep the second, loading, merging, couldn't merge); across-venue rows (A3) | merge-duplicates, gap-1 × 9 | 4a-3b, 4b-1 |
-| **4b-5** Mark cancelled | Dialog (desktop) and sheet (phone), with Refund info | event-edit-mark-cancelled-desktop, mark-cancelled-mobile | **Hugh 4b#7**, 4b-2 |
+| PR                          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Boards                                                                                                        | Depends on                  |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| **4b-1** Events list        | `/admin/events` desktop table and phone cards; search; Upcoming/Past; Any venue and Any status popovers (phone sheets); No price and Hidden chips with counts; Load more; no results, loading and couldn't load; the ⋯ menu (Edit, both View links, Hide…, Delete… on manual rows; Merge… lands in 4b-4); Past list (Played, CONCERTS "went"); `?tab=all-events` redirect; old list removed                                                                                    | events, events-mobile, events-no-results, venue-filter, status-filter, event-menu, past-shows, loading-events | 4a-3a                       |
+| **4b-2** Event edit         | Desktop two columns and the phone stack; Show card (Title, lineup chips with Add an artist via 4c's artist search, venue picker, date and times); From the crawl; Status pills (no Moved until Hugh rules) with the Postponed dialog and sheet; Hide toggle and dialog; Price card (rows, Edit price opening the shared sheet, the Submitted prices link); Save bar with the dirty count, Discard, snap-back; past lock; loading, couldn't load, not found; old editor removed | event-edit, event-edit-mobile, edit-price-desktop, loading-event-edit, 10/postponed-d/m, 04/hide-from-site    | 4a-3a, 4a-3b (lineup), 4b-1 |
+| **4b-3** Add a show by hand | Desktop side panel and phone full screen; duplicate warning with "Open it"; lineup chips with roles; save failed                                                                                                                                                                                                                                                                                                                                                               | add-a-show-by-hand, 11/add-a-show-lineup-d                                                                    | 4a-3b, 4b-1                 |
+| **4b-4** Merge              | Desktop panel (pick then compare); phone full screen (pick, pick loading, nothing found, compare at 390 and 320, keep the second, loading, merging, couldn't merge); across-venue rows (A3)                                                                                                                                                                                                                                                                                    | merge-duplicates, gap-1 × 9                                                                                   | 4a-3b, 4b-1                 |
+| **4b-5** Mark cancelled     | Dialog (desktop) and sheet (phone), with Refund info                                                                                                                                                                                                                                                                                                                                                                                                                           | event-edit-mark-cancelled-desktop, mark-cancelled-mobile                                                      | **Hugh 4b#7**, 4b-2         |
 
 Each PR stays within about 20 files and 800 lines. 4b-2 is the largest; if it runs over, it splits before opening (2a: the Show and From the crawl cards plus the Save bar; 2b: Status, Hide and Price).
 
@@ -110,26 +110,26 @@ Each PR stays within about 20 files and 800 lines. 4b-2 is the largest; if it ru
 
 Widths for every row are `phone-320`, `phone` (390) and `desktop` (1300). CONTACT_SHEET_ROLE is admin.
 
-| PR | Row id | Route / step | Wait on |
-| --- | --- | --- | --- |
-| 4b-1 | list | `/admin/events` | `[aria-label="Events"] table, [data-testid="events-list"]` |
-| 4b-1 | venue-filter | list, then click Any venue | `[role="dialog"], [data-testid="venue-filter"]` |
-| 4b-1 | status-filter | list, then click Any status | `[data-testid="status-filter"]` |
-| 4b-1 | no-price | `/admin/events?noPrice=1` | list |
-| 4b-1 | hidden | `/admin/events?hidden=1` | list |
-| 4b-1 | no-results | `/admin/events?q=zzzzzz` | `[data-testid="empty-state"]` |
-| 4b-1 | row-menu | list, then the first row's ⋯ | `[role="menu"]` |
-| 4b-1 | past | `/admin/events?when=past` | list |
-| 4b-2 | edit | `/admin/events/<fixture>/edit` | `[data-testid="event-edit"]` |
-| 4b-2 | edit-price | edit, then Edit price | `[role="dialog"]` |
-| 4b-2 | postponed | edit, then Postponed | `[role="dialog"]` |
-| 4b-2 | hide | edit, then the Hide toggle | `[role="dialog"]` |
-| 4b-2 | past-edit | `/admin/events/<past fixture>/edit` | `[data-testid="event-edit"]` |
-| 4b-3 | add-show | list, then Add a show | `[data-testid="add-show"]` |
-| 4b-3 | add-show-duplicate | add-show filled with the fixture venue, date and title | `[data-testid="duplicate-warning"]` |
-| 4b-4 | merge-pick | edit ⋯, then Merge with another listing… | `[data-testid="merge-pick"]` |
-| 4b-4 | merge-compare | pick, then the likely duplicate | `[data-testid="merge-compare"]` |
-| 4b-5 | mark-cancelled | edit, then Cancelled | `[role="dialog"]` |
+| PR   | Row id             | Route / step                                           | Wait on                                                    |
+| ---- | ------------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
+| 4b-1 | list               | `/admin/events`                                        | `[aria-label="Events"] table, [data-testid="events-list"]` |
+| 4b-1 | venue-filter       | list, then click Any venue                             | `[role="dialog"], [data-testid="venue-filter"]`            |
+| 4b-1 | status-filter      | list, then click Any status                            | `[data-testid="status-filter"]`                            |
+| 4b-1 | no-price           | `/admin/events?noPrice=1`                              | list                                                       |
+| 4b-1 | hidden             | `/admin/events?hidden=1`                               | list                                                       |
+| 4b-1 | no-results         | `/admin/events?q=zzzzzz`                               | `[data-testid="empty-state"]`                              |
+| 4b-1 | row-menu           | list, then the first row's ⋯                           | `[role="menu"]`                                            |
+| 4b-1 | past               | `/admin/events?when=past`                              | list                                                       |
+| 4b-2 | edit               | `/admin/events/<fixture>/edit`                         | `[data-testid="event-edit"]`                               |
+| 4b-2 | edit-price         | edit, then Edit price                                  | `[role="dialog"]`                                          |
+| 4b-2 | postponed          | edit, then Postponed                                   | `[role="dialog"]`                                          |
+| 4b-2 | hide               | edit, then the Hide toggle                             | `[role="dialog"]`                                          |
+| 4b-2 | past-edit          | `/admin/events/<past fixture>/edit`                    | `[data-testid="event-edit"]`                               |
+| 4b-3 | add-show           | list, then Add a show                                  | `[data-testid="add-show"]`                                 |
+| 4b-3 | add-show-duplicate | add-show filled with the fixture venue, date and title | `[data-testid="duplicate-warning"]`                        |
+| 4b-4 | merge-pick         | edit ⋯, then Merge with another listing…               | `[data-testid="merge-pick"]`                               |
+| 4b-4 | merge-compare      | pick, then the likely duplicate                        | `[data-testid="merge-compare"]`                            |
+| 4b-5 | mark-cancelled     | edit, then Cancelled                                   | `[role="dialog"]`                                          |
 
 **Walked by hand** (each named in the inventory's `note`):
 

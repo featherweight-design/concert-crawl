@@ -28,6 +28,17 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }));
 
+// A pass-through spy on the watcher fan-out (bell rows and push), so the past
+// corrections can prove nothing outward fired.
+vi.mock('@concert-crawl/push', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@concert-crawl/push')>();
+  return {
+    ...actual,
+    fanoutWatchNotification: vi.fn(actual.fanoutWatchNotification),
+  };
+});
+
+import { fanoutWatchNotification } from '@concert-crawl/push';
 import { createApp } from '../../app.js';
 import {
   clearTables,
@@ -2078,11 +2089,14 @@ describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
   });
 });
 
-// Admin 4a-3b: "past rows accept only `hiddenFromConsumer`, and anything else
-// returns 409 `past_locked`." Past is dated before today in Denver.
+// Admin 4a-3b locked past rows to `hiddenFromConsumer`; B+ addendum 5 §4 /
+// addendum 6 item 36 reopen "Title, lineup, venue and times ... as corrections
+// and notify nobody". Everything else returns 409 `past_locked`. Past is dated
+// before today in Denver.
 describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
   beforeEach(() => {
     setAdminAuth();
+    vi.mocked(fanoutWatchNotification).mockClear();
     return clearTables();
   });
 
@@ -2099,24 +2113,133 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
       .from(auditLog)
       .where(eq(auditLog.targetId, id));
 
-  it('refuses a title change on a past show, leaves the row alone and audits nothing', async () => {
+  it('accepts title, headliner, times and a past date as corrections, stores each and audits each', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(-7),
       title: 'Played Show',
+      artist: 'Played Artist',
+      doorsTime: '19:00',
+      showTime: '20:00',
     });
+    const correctedDate = futureDate(-8);
 
-    const res = await patch(event.id, { title: 'Rewritten' });
+    const responses = [
+      await patch(event.id, { title: 'Corrected Title' }),
+      await patch(event.id, { artist: 'Corrected Artist' }),
+      await patch(event.id, { doorsTime: '18:30', showTime: '19:30' }),
+      await patch(event.id, { date: correctedDate }),
+    ];
 
-    expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
+    expect(responses.map((res) => res.status)).toEqual([200, 200, 200, 200]);
     const [row] = await testDb
-      .select({ title: events.title, updatedAt: events.updatedAt })
+      .select({
+        title: events.title,
+        artist: events.artist,
+        doorsTime: events.doorsTime,
+        showTime: events.showTime,
+        date: events.date,
+        status: events.status,
+      })
       .from(events)
       .where(eq(events.id, event.id));
-    expect(row?.title).toBe('Played Show');
+    expect(row).toEqual({
+      title: 'Corrected Title',
+      artist: 'Corrected Artist',
+      doorsTime: '18:30:00',
+      showTime: '19:30:00',
+      date: correctedDate,
+      status: 'upcoming',
+    });
+    expect(await auditRowsFor(event.id)).toEqual([
+      { action: 'event.update' },
+      { action: 'event.update' },
+      { action: 'event.update' },
+      { action: 'event.update' },
+    ]);
+  });
+
+  it('tells nobody about a date or time correction on a past show', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      verified: true,
+      status: 'upcoming',
+    });
+    const WATCHER = 'user_past_correction_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+
+    const dateRes = await patch(event.id, { date: futureDate(-9) });
+    const timeRes = await patch(event.id, { showTime: '21:00' });
+
+    expect(dateRes.status).toBe(200);
+    expect(timeRes.status).toBe(200);
+    expect(fanoutWatchNotification).not.toHaveBeenCalled();
+    expect(await testDb.select().from(notifications)).toEqual([]);
+    expect(await testDb.select().from(eventRedirects)).toEqual([]);
+    expect(await auditRowsFor(event.id)).toEqual([
+      { action: 'event.update' },
+      { action: 'event.update' },
+    ]);
+  });
+
+  it('still refuses status and price on a past show', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      status: 'upcoming',
+    });
+
+    const statusRes = await patch(event.id, { status: 'cancelled' });
+    const priceRes = await patch(event.id, { ticketPriceMin: '30' });
+    const mixedRes = await patch(event.id, {
+      title: 'Corrected',
+      ticketPriceMax: '40',
+    });
+
+    for (const res of [statusRes, priceRes, mixedRes]) {
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'past_locked',
+      });
+    }
+    const [row] = await testDb
+      .select({
+        title: events.title,
+        status: events.status,
+        updatedAt: events.updatedAt,
+      })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.title).toBe(event.title);
+    expect(row?.status).toBe('upcoming');
     expect(row?.updatedAt).toEqual(event.updatedAt);
     expect(await auditRowsFor(event.id)).toEqual([]);
+  });
+
+  it('still tells the watchers of an upcoming show whose date moves', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      verified: true,
+      status: 'upcoming',
+    });
+    const WATCHER = 'user_upcoming_moved_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+
+    const res = await patch(event.id, {
+      date: futureDate(14),
+      showTime: '21:00',
+    });
+
+    expect(res.status).toBe(200);
+    expect(fanoutWatchNotification).toHaveBeenCalledTimes(1);
+    const rows = await testDb
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows.map((notice) => notice.userId)).toEqual([WATCHER]);
   });
 
   it('refuses a date change that would move a past show into the future', async () => {
