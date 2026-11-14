@@ -2105,6 +2105,10 @@ export const CONSUMER_COPY = {
     // No "Copy link" — a passport has no public page to link to, and offering
     // one would imply the card is shareable by URL when it is deliberately not.
     shareLabel: 'Share…',
+    // The phone top bar's two icon buttons (`more-r3-passport_m`): screen-reader
+    // names only, the bar draws a chevron and the share glyph.
+    topBarBack: 'Back to Concerts',
+    topBarShare: 'Share your Passport',
     // The card is drawn on demand and takes a moment. Held on the share button
     // until the image is in hand, because a button that looks ready and then
     // does nothing for several seconds reads as broken.
