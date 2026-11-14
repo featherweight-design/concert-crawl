@@ -13,8 +13,11 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { StateCounts, SubmittedRow } from './submitted-api';
 import type { StateFilter } from './submitted-rules';
 
+// A stable token getter: a new one each render rebuilds the API, so every
+// render reloads and the load counts mean nothing.
+const getToken = () => Promise.resolve('token');
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: () => Promise.resolve('token') }),
+  useAuth: () => ({ getToken }),
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
