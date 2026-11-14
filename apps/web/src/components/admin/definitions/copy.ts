@@ -4263,7 +4263,7 @@ export const ADMIN_COPY = {
     // count left the header with it (orchestrator ruling); a show with no
     // venue reads its date alone.
     meta: (date: string, venue: string | null) =>
-      venue === null ? date : `${date} · ${venue}`,
+      venue ? `${date} · ${venue}` : date,
     menu: {
       merge: 'Merge with another listing…',
       mergeHint: 'For duplicates. Keeps Watchers and prices',

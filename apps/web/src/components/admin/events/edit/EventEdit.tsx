@@ -182,23 +182,39 @@ const Header = ({
           )}
         </div>
         {/* `19/event-edit-hidden-header`: desktop draws chip, tag and meta on
-            one line; the phone puts the meta under the title and the chips
-            on their own wrapping row below it. */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: phone ? 'column-reverse' : 'row',
-            alignItems: phone ? 'flex-start' : 'center',
-            flexWrap: phone ? 'nowrap' : 'wrap',
-            gap: 8,
-            marginTop: phone ? 4 : 8,
-          }}
-        >
-          <StatusChips row={detail} />
-          <span style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-            {COPY.meta(metaDate(detail.date), detail.venueName)}
-          </span>
-        </div>
+            one line; the phone puts the meta (12.5px) under the title and the
+            chips on their own wrapping row below it, in that reading order. */}
+        {phone ? (
+          <>
+            <div
+              data-testid="event-edit-meta"
+              style={{ fontSize: 12.5, color: 'var(--fg-muted)', marginTop: 4 }}
+            >
+              {COPY.meta(metaDate(detail.date), detail.venueName)}
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <StatusChips row={detail} />
+            </div>
+          </>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginTop: 8,
+            }}
+          >
+            <StatusChips row={detail} />
+            <span
+              data-testid="event-edit-meta"
+              style={{ fontSize: 13, color: 'var(--fg-muted)' }}
+            >
+              {COPY.meta(metaDate(detail.date), detail.venueName)}
+            </span>
+          </div>
+        )}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <a
