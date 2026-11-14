@@ -17,3 +17,12 @@
  */
 export const PHONE_SHELL_CLASS =
   'page-ambient flex min-h-dvh flex-col overflow-x-clip pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] lg:pb-0';
+
+/**
+ * The page column under the header and above the bottom nav (tablet option A,
+ * `10-tablet/tablet-a`): the phone layout holds to 1023, and from 640 up its
+ * column stops at 640 and centres, while the header and the nav keep the full
+ * width. From 1024 the pages draw their own desktop containers.
+ */
+export const PHONE_COLUMN_CLASS =
+  'mx-auto flex w-full max-w-[640px] flex-1 flex-col lg:max-w-none';

@@ -1,5 +1,8 @@
 import { AppHeader } from '@/components/consumer/app-header';
-import { PHONE_SHELL_CLASS } from '@/components/consumer/app-shell/phone-shell';
+import {
+  PHONE_COLUMN_CLASS,
+  PHONE_SHELL_CLASS,
+} from '@/components/consumer/app-shell/phone-shell';
 import { AccountMenuProvider } from '@/components/consumer/user-menu';
 import { SearchPaletteProvider } from '@/components/consumer/search-palette/SearchPaletteProvider';
 import { BottomNav } from '@/components/consumer/bottom-nav';
@@ -58,7 +61,9 @@ export default function MainLayout({
               two are independent — someone can arrive carrying either, or both. */}
             <PendingTierPicker />
           </Suspense>
-          {children}
+          <div data-testid="phone-column" className={PHONE_COLUMN_CLASS}>
+            {children}
+          </div>
           <BottomNav />
         </SearchPaletteProvider>
       </AccountMenuProvider>
