@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { Flag } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -105,21 +105,50 @@ const SOURCE_STYLE = {
   overflowX: 'hidden',
 } as const;
 
-const StoppedHere = ({ page }: { page: number }) => (
-  <div
-    data-testid="inspect-stopped-here"
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-      fontSize: 12.5,
-      color: 'var(--warning)',
-    }}
-  >
-    <Flag size={12} aria-hidden />
-    {COPY.stoppedHere(page)}
-  </div>
-);
+/**
+ * "Stopped here", inside the HTML where the next page never came: after the
+ * body (`G2/inspect-fetched`), and scrolled to on open ("Opens at the
+ * highlight"). The board's highlighted line (the next-page link) needs the
+ * stop's offset, which isn't stored (A3 §3b row 27, Eng), so nothing is
+ * highlighted yet. A span, as a <pre> holds phrasing content only.
+ *
+ * Only the source well scrolls, never the page or its other ancestors: its
+ * `scrollTop` moves to the marker, whose `offsetTop` is measured from the
+ * well (it is `position: relative`). No well or marker, no scroll.
+ */
+const StoppedHere = ({
+  page,
+  wellRef,
+}: {
+  page: number;
+  wellRef: RefObject<HTMLPreElement | null>;
+}) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const well = wellRef.current;
+    const marker = ref.current;
+    if (well === null || marker === null) return;
+    well.scrollTop = marker.offsetTop;
+  }, [wellRef]);
+  return (
+    <span
+      ref={ref}
+      data-testid="inspect-stopped-here"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 6,
+        fontFamily: "'Inter', sans-serif",
+        fontSize: 12,
+        color: 'var(--warning)',
+      }}
+    >
+      <Flag size={12} aria-hidden style={{ flex: 'none' }} />
+      {COPY.stoppedHere(page)}
+    </span>
+  );
+};
 
 // Venue pages assume a white page, whatever the admin theme.
 const FRAME_BACKGROUND = '#fff';
@@ -178,11 +207,14 @@ const TabPanel = ({
   html,
   page,
   phone,
+  stopped,
 }: {
   tab: InspectTab;
   html: string;
   page: string;
   phone: boolean;
+  /** The page the run stopped at, after this one; null if it didn't. */
+  stopped: number | null;
 }) => {
   // Parsed only when the Text tab is open, and once per body.
   const text = useMemo(
@@ -198,11 +230,18 @@ const TabPanel = ({
       return cached.value;
     };
   }, [html]);
+  const wellRef = useRef<HTMLPreElement>(null);
   if (tab === 'html') {
-    // React text: escaped, never parsed as HTML.
+    // React text: escaped, never parsed as HTML. Relative, so the marker's
+    // offsetTop is measured from the well.
     return (
-      <pre data-testid="inspect-html" style={SOURCE_STYLE}>
+      <pre
+        ref={wellRef}
+        data-testid="inspect-html"
+        style={{ ...SOURCE_STYLE, position: 'relative' }}
+      >
         {html}
+        {stopped !== null && <StoppedHere page={stopped} wellRef={wellRef} />}
       </pre>
     );
   }
@@ -326,17 +365,13 @@ export const InspectFetched = ({
         {state === null ? (
           <BodySkeleton />
         ) : (
-          <>
-            {tab === 'html' && stopped !== null && (
-              <StoppedHere page={stopped} />
-            )}
-            <TabPanel
-              tab={tab}
-              html={state.html}
-              page={shortUrl(page.url, null)}
-              phone={phone}
-            />
-          </>
+          <TabPanel
+            tab={tab}
+            html={state.html}
+            page={shortUrl(page.url, null)}
+            phone={phone}
+            stopped={stopped}
+          />
         )}
       </div>
       <p style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-muted)' }}>

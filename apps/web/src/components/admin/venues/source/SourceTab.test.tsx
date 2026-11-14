@@ -330,6 +330,16 @@ describe('SourceTab — Advanced', () => {
     expect(screen.queryByTestId('source-advanced')).toBeNull();
   });
 
+  it('the collapsed line never promises the held debug HTML toggle', () => {
+    render(<SourceTab venue={venue} />);
+    expect(
+      screen.getByText(
+        'Page loading, wait-for selector, reader. Rarely needed.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/debug html/i)).toBeNull();
+  });
+
   it('opens to page loading, wait until, wait for and the reader', () => {
     render(
       <SourceTab
@@ -370,6 +380,7 @@ describe('SourceTab — Advanced', () => {
     );
   const option = (name: string) => screen.getByRole('radio', { name });
 
+  // ⏸ removal waits on Design item 18: the reader selector stays for now.
   it('a detail-page venue reads as Detail pages, among the other readers', () => {
     render(<SourceTab venue={{ ...venue, platform: 'detail-page' }} />);
     openAdvanced();
@@ -405,13 +416,32 @@ describe('SourceTab — Advanced', () => {
     });
   });
 
-  it('page loading offers Automatic, and picking it sends a null crawl mode', async () => {
-    render(<SourceTab venue={venue} />);
+  // ⏸ pending Design item 18: Automatic is a third segment in the drawn control.
+  it('page loading offers Automatic, selected for a venue with no stored mode', async () => {
+    render(<SourceTab venue={{ ...venue, crawlMode: null }} />);
     openAdvanced();
+    const group = within(
+      screen.getByRole('radiogroup', { name: COPY.advanced.pageLoading.label }),
+    );
+    expect(
+      group.getAllByRole('radio').map((input) => input.getAttribute('value')),
+    ).toEqual(['auto', 'http', 'browser']);
     expect(loadingRadio(COPY.advanced.pageLoading.auto)).toHaveProperty(
       'checked',
-      false,
+      true,
     );
+    expect(saveButton()).toBeNull();
+    fireEvent.click(loadingRadio(COPY.advanced.pageLoading.browser));
+    clickSave();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    expect(Object.fromEntries(sentFormData().entries())).toEqual({
+      crawlMode: 'browser',
+    });
+  });
+
+  it('switching back to Automatic sends a null crawl mode', async () => {
+    render(<SourceTab venue={venue} />);
+    openAdvanced();
     expect(loadingRadio(COPY.advanced.pageLoading.http)).toHaveProperty(
       'checked',
       true,
@@ -510,9 +540,6 @@ describe('SourceTab — its own save bar', () => {
       target: { value: 'https://gothic.example/calendar' },
     });
     expect(saveButton()).toBeTruthy();
-    expect(
-      screen.getByText(COPY.saveBar.unsaved(COPY.read.title)),
-    ).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: COPY.saveBar.discard }));
     expect(saveButton()).toBeNull();
@@ -521,37 +548,108 @@ describe('SourceTab — its own save bar', () => {
 
   // Style contract only (jsdom has no layout): Source's look on the shared
   // PinnedSaveBar, which differs from Details' on purpose.
-  // Desktop keeps AdminButton's own 32px height, which it always sets inline.
-  it.each([
-    [false, '10px 16px', 'wrap', '', '', '32px'],
-    [true, '10px 16px 24px', '', 'column', '1', '44px'],
-  ])(
-    'draws the Save bar in Source’s look (phone %s)',
-    (isPhone, padding, flexWrap, flexDirection, saveFlexGrow, height) => {
-      phone = isPhone;
-      render(<SourceTab venue={venue} />);
-      fireEvent.change(calendarInput(), {
-        target: { value: 'https://gothic.example/calendar' },
-      });
-      const bar = screen.getByTestId('source-save-bar');
-      expect(bar.style.gap).toBe('8px');
-      expect(bar.style.flexWrap).toBe(flexWrap);
-      expect(bar.style.flexDirection).toBe(flexDirection);
-      expect(bar.style.padding).toBe(padding);
-      expect(
-        screen.getByText(COPY.saveBar.unsaved(COPY.read.title)).style.color,
-      ).toBe('var(--fg-muted)');
-      const save = screen.getByRole('button', { name: COPY.saveBar.save });
-      const discard = screen.getByRole('button', {
-        name: COPY.saveBar.discard,
-      });
-      expect(save.style.flexGrow).toBe(saveFlexGrow);
-      expect(save.style.height).toBe(height);
-      expect(discard.style.height).toBe(height);
-      // On the phone the buttons share a row under the message.
-      expect(save.parentElement === bar).toBe(!isPhone);
-    },
-  );
+  // The phone keeps the pinned two-row bar (`G4/source-feed-edited`).
+  it('draws the phone Save bar pinned, in Source’s look', () => {
+    phone = true;
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    expect(screen.queryByTestId('source-save-row')).toBeNull();
+    const bar = screen.getByTestId('source-save-bar');
+    expect(bar.style.position).toBe('sticky');
+    expect(bar.style.gap).toBe('8px');
+    expect(bar.style.flexWrap).toBe('');
+    expect(bar.style.flexDirection).toBe('column');
+    expect(bar.style.padding).toBe('10px 16px 24px');
+    expect(
+      screen.getByText(COPY.saveBar.unsaved(COPY.read.title)).style.color,
+    ).toBe('var(--fg-muted)');
+    const save = screen.getByRole('button', { name: COPY.saveBar.save });
+    const discard = screen.getByRole('button', { name: COPY.saveBar.discard });
+    expect(save.style.flexGrow).toBe('1');
+    expect(save.style.height).toBe('44px');
+    expect(discard.style.height).toBe('44px');
+    // The buttons share a row under the message.
+    expect(save.parentElement === bar).toBe(false);
+  });
+
+  // `04/venue-source`: an inline row under the cards, right-aligned, gap 8;
+  // borderless Discard 36/13, gradient Save 36/13.5, radius 9.
+  it('draws desktop’s Discard and Save as an inline right-aligned row', () => {
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    expect(screen.queryByTestId('source-save-bar')).toBeNull();
+    expect(
+      screen.queryByText(COPY.saveBar.unsaved(COPY.read.title)),
+    ).toBeNull();
+    const row = screen.getByTestId('source-save-row');
+    expect(row.style.position).not.toBe('sticky');
+    expect(row.style.justifyContent).toBe('flex-end');
+    expect(row.style.gap).toBe('8px');
+    const discard = within(row).getByRole('button', {
+      name: COPY.saveBar.discard,
+    });
+    expect(discard.style).toMatchObject({
+      height: '36px',
+      fontSize: '13px',
+      borderRadius: '9px',
+      background: 'transparent',
+    });
+    expect(discard.style.border).toBe('1px solid transparent');
+    const save = within(row).getByRole('button', { name: COPY.saveBar.save });
+    expect(save.style).toMatchObject({
+      height: '36px',
+      fontSize: '13.5px',
+      borderRadius: '9px',
+      padding: '0px 16px',
+    });
+  });
+
+  it('floats a failed save’s toast over desktop’s row while the edit stays', async () => {
+    mockUpdateVenue.mockResolvedValue({
+      success: false,
+      error: 'Full browser needs a selector.',
+      field: 'crawlWaitForSelector',
+    });
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    clickSave();
+    const toast = await screen.findByTestId('save-failed');
+    expect(screen.getByTestId('source-save-row').contains(toast)).toBe(true);
+  });
+
+  it('a desktop save hands focus to the Source heading as the row goes', async () => {
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    screen.getByRole('button', { name: COPY.saveBar.save }).focus();
+    clickSave();
+    await waitFor(() =>
+      expect(screen.queryByTestId('source-save-row')).toBeNull(),
+    );
+    const heading = screen.getByRole('heading', { name: COPY.read.title });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    expect(heading.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('a failed desktop save hands focus to its toast', async () => {
+    mockUpdateVenue.mockRejectedValueOnce(new Error('network'));
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    clickSave();
+    const toast = await screen.findByTestId('save-failed');
+    expect(screen.queryByTestId('source-save-row')).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(toast));
+    expect(toast.getAttribute('tabindex')).toBe('-1');
+  });
 
   it('a radio picked and picked back is not a change', () => {
     render(<SourceTab venue={venue} />);
@@ -698,6 +796,7 @@ describe('SourceTab — robots.txt', () => {
     render(<SourceTab venue={venue} />);
     const card = screen.getByTestId('source-robots');
     expect(within(card).getByText(COPY.robots.allowed)).toBeTruthy();
+    // No ", before the run": the check is stamped as the run ends.
     expect(within(card).getByText('Nov 11 · 3:00 AM')).toBeTruthy();
     expect(within(card).getByText('ConcertCrawl/1.0')).toBeTruthy();
     expect(within(card).getByText(COPY.robots.footnote)).toBeTruthy();

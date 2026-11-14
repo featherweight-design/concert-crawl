@@ -544,6 +544,8 @@ describe('the read-only cards', () => {
     expect(paceLine(4500)).toBe(COPY.rules.paceValue('4.5'));
     expect(paceLine(3999)).toBe(COPY.rules.paceValue('4'));
     expect(paceLine(3240)).toBe(COPY.rules.paceValue('3.2'));
+    // `G4/source-mobile`: between pages, not requests.
+    expect(paceLine(3000)).toBe('3 s minimum between pages, plus jitter');
   });
 
   it('reads the stored robots verdict', () => {

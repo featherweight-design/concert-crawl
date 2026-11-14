@@ -54,6 +54,8 @@ export const SourceRulesCards = ({
               </span>
             )}
           </Row>
+          {/* No ", before the run" (the board's): the check time is stamped
+              as the run ends, not before it. */}
           <Row label={COPY.robots.lastChecked}>
             {venue.robotsTxtCheckedAt === null
               ? COPY.robots.never

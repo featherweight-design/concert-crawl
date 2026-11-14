@@ -2,7 +2,7 @@
 
 /** The Source tab's building blocks: shared field styles, Card, Row, and its radio controls. */
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, ReactNode, Ref } from 'react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { ReadMode } from './source-rules';
 
@@ -66,12 +66,15 @@ export const Card = ({
   phone,
   testId,
   warning = false,
+  headingRef,
   children,
 }: {
   title: string;
   phone: boolean;
   testId: string;
   warning?: boolean;
+  /** Makes the title a focus target (tabIndex -1), for focus after a save. */
+  headingRef?: Ref<HTMLHeadingElement>;
   children: ReactNode;
 }) => (
   <section
@@ -94,7 +97,13 @@ export const Card = ({
       minWidth: 0,
     }}
   >
-    <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{title}</h2>
+    <h2
+      ref={headingRef}
+      {...(headingRef === undefined ? {} : { tabIndex: -1 })}
+      style={{ margin: 0, fontSize: 15, fontWeight: 700, outline: 'none' }}
+    >
+      {title}
+    </h2>
     {children}
   </section>
 );

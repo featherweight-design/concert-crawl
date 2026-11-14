@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PlatformProbeResult, Venue } from '@concert-crawl/types';
 import { updateVenue, probeVenuePlatform } from '@/lib/actions/venues';
@@ -8,6 +8,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
   PinnedSaveBar,
+  SaveFailedToast,
   useIsPhone,
 } from '@/components/admin/primitives';
 import {
@@ -66,6 +67,21 @@ const probeReason = (
       ? PROBE.reasons.schemaError
       : PROBE.reasons.fetchError;
 
+/** Desktop's inline save row (`04/venue-source`): 36 tall, radius 9. */
+const SAVE_ROW_BUTTON: CSSProperties = { height: 36, borderRadius: 9 };
+const SAVE_ROW_DISCARD: CSSProperties = {
+  ...SAVE_ROW_BUTTON,
+  padding: '0 12px',
+  fontSize: 13,
+  fontWeight: 600,
+};
+const SAVE_ROW_SAVE: CSSProperties = {
+  ...SAVE_ROW_BUTTON,
+  padding: '0 16px',
+  fontSize: 13.5,
+  fontWeight: 700,
+};
+
 /** What went wrong on the last save, for the toast. */
 type Failure = { attempt: SourceDraft | null; saved: string };
 
@@ -90,6 +106,32 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
   const [failure, setFailure] = useState<Failure | null>(null);
   const [probe, setProbe] = useState<ProbeStatus>({ kind: 'idle' });
   const probeRun = useRef(0);
+
+  // Desktop's inline save row unmounts once a save settles, taking focus
+  // with it: a save hands focus to the Source heading, a failure to its
+  // toast. Set by `save`, used once by the render that shows the outcome.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const focusAfterSave = useRef<'heading' | 'toast' | null>(null);
+  useEffect(() => {
+    const next = focusAfterSave.current;
+    if (next === null) return;
+    focusAfterSave.current = null;
+    if (next === 'heading') {
+      headingRef.current?.focus();
+      return;
+    }
+    const toast = rootRef.current?.querySelector<HTMLElement>(
+      '[data-testid="save-failed"]',
+    );
+    if (toast === null || toast === undefined) return;
+    toast.setAttribute('tabindex', '-1');
+    toast.focus();
+  });
+  const focusNext = (target: 'heading' | 'toast') => {
+    if (!phone) focusAfterSave.current = target;
+  };
+
   // Clearing the probe also retires any request still in flight.
   const resetProbe = () => {
     probeRun.current += 1;
@@ -143,6 +185,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
       if (result.success) {
         setBaseline(target);
         setDraft(draftOf(target));
+        focusNext('heading');
         router.refresh();
         return;
       }
@@ -158,15 +201,18 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
         setErrors({ [field]: result.error });
         if (field === 'waitFor') setAdvancedOpen(true);
         setFailure({ attempt: null, saved });
+        focusNext('toast');
         return;
       }
       // Rule 10: snap back to what is saved, and offer Try again.
       setDraft(draftOf(baseline));
       setFailure({ attempt, saved });
+      focusNext('toast');
     } catch (err) {
       console.error('SourceTab: save failed', { venueId: venue.id, err });
       setDraft(draftOf(baseline));
       setFailure({ attempt, saved: stillSavedLine(baseline) });
+      focusNext('toast');
     } finally {
       setSaving(false);
     }
@@ -340,7 +386,12 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
   );
 
   const howWeReadIt = (
-    <Card title={COPY.read.title} phone={phone} testId="source-read">
+    <Card
+      title={COPY.read.title}
+      phone={phone}
+      testId="source-read"
+      headingRef={headingRef}
+    >
       <div
         role="radiogroup"
         aria-label={COPY.read.title}
@@ -406,6 +457,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
 
   return (
     <div
+      ref={rootRef}
       data-testid="venue-source"
       style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
@@ -425,45 +477,100 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
         </div>
       </div>
 
-      {/* With nothing unsaved, a failed save's toast floats 24px above the
-          screen's bottom (`G4/source-save-failed`). */}
-      <PinnedSaveBar
-        phone={phone}
-        dirty={dirty}
-        saving={saving}
-        testId="source-save-bar"
-        message={COPY.saveBar.unsaved(COPY.read.title)}
-        labels={COPY.saveBar}
-        failure={barFailure}
-        onDiscard={discard}
-        onSave={() => void save(draft)}
-        look={{
-          gap: 8,
-          // `G4/source-feed-edited` stacks the message over the buttons.
-          ...(phone ? { stack: true } : { wrap: true }),
-          padding: phone ? '10px 16px 24px' : '10px 16px',
-          messageStyle: phone
-            ? { fontSize: 12, color: 'var(--fg-muted)' }
-            : { fontSize: 12, color: 'var(--fg-muted)', flex: 1 },
-          discardVariant: 'outline',
-          ...(phone
-            ? {
-                discardStyle: {
-                  height: 44,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  borderRadius: 9,
-                },
-                saveStyle: {
-                  flex: 1,
-                  height: 44,
-                  fontSize: 15,
-                  borderRadius: 9,
-                },
-              }
-            : {}),
-        }}
-      />
+      {/* Desktop draws Discard and Save as an inline row under the cards
+          (`04/venue-source`), not a pinned bar. With nothing unsaved, a
+          failed save's toast floats 24px above the screen's bottom
+          (`G4/source-save-failed`), through the pinned bar's anchor. */}
+      {!phone && dirty ? (
+        <div
+          data-testid="source-save-row"
+          style={{
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 8,
+          }}
+        >
+          {barFailure !== null && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 'calc(100% + 12px)',
+                zIndex: 30,
+              }}
+            >
+              {/* One shadow, passed to the toast as the pinned bar does. */}
+              <SaveFailedToast
+                title={barFailure.title}
+                saved={barFailure.saved}
+                retrying={saving}
+                shadow="0 14px 30px rgba(0,0,0,0.45)"
+                {...(barFailure.onRetry === undefined
+                  ? {}
+                  : { onRetry: barFailure.onRetry })}
+              />
+            </div>
+          )}
+          <AdminButton
+            type="button"
+            variant="ghost"
+            disabled={saving}
+            onClick={discard}
+            style={SAVE_ROW_DISCARD}
+          >
+            {COPY.saveBar.discard}
+          </AdminButton>
+          <AdminButton
+            type="button"
+            variant="gradient"
+            disabled={saving}
+            onClick={() => void save(draft)}
+            style={SAVE_ROW_SAVE}
+          >
+            {saving ? COPY.saveBar.saving : COPY.saveBar.save}
+          </AdminButton>
+        </div>
+      ) : (
+        <PinnedSaveBar
+          phone={phone}
+          dirty={dirty}
+          saving={saving}
+          testId="source-save-bar"
+          message={COPY.saveBar.unsaved(COPY.read.title)}
+          labels={COPY.saveBar}
+          failure={barFailure}
+          onDiscard={discard}
+          onSave={() => void save(draft)}
+          look={{
+            gap: 8,
+            // `G4/source-feed-edited` stacks the message over the buttons.
+            ...(phone ? { stack: true } : { wrap: true }),
+            padding: phone ? '10px 16px 24px' : '10px 16px',
+            messageStyle: phone
+              ? { fontSize: 12, color: 'var(--fg-muted)' }
+              : { fontSize: 12, color: 'var(--fg-muted)', flex: 1 },
+            discardVariant: 'outline',
+            ...(phone
+              ? {
+                  discardStyle: {
+                    height: 44,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    borderRadius: 9,
+                  },
+                  saveStyle: {
+                    flex: 1,
+                    height: 44,
+                    fontSize: 15,
+                    borderRadius: 9,
+                  },
+                }
+              : {}),
+          }}
+        />
+      )}
     </div>
   );
 };

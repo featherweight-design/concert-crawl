@@ -967,10 +967,13 @@ export const ADMIN_COPY = {
     },
     advanced: {
       label: 'Advanced',
-      // The board's line names Save debug HTML, which is held (Hugh, row 13).
+      // Names only the controls that are built. ⏸ add 'save debug HTML' when
+      // the held toggle ships (board 04/venue-source). The reader stays named
+      // while its selector does (⏸ removal waits on Design item 18).
       collapsedLine: 'Page loading, wait-for selector, reader. Rarely needed.',
       pageLoading: {
         label: 'Page loading',
+        // ⏸ pending Design item 18: undrawn, kept because main offers it.
         auto: 'Automatic',
         http: 'Plain fetch',
         browser: 'Full browser',
@@ -987,6 +990,7 @@ export const ADMIN_COPY = {
         hint: 'Optional. We read the page once this appears.',
         placeholder: '.event-list',
       },
+      // ⏸ removal waits on Design item 18: the board draws no reader.
       reader: {
         label: 'Reader',
         auto: 'Automatic',
@@ -1016,7 +1020,7 @@ export const ADMIN_COPY = {
       title: 'Fixed by the crawl rules',
       pace: 'Pace',
       paceValue: (seconds: string) =>
-        `${seconds} s minimum between requests, plus jitter`,
+        `${seconds} s minimum between pages, plus jitter`,
       schedule: 'Schedule',
       scheduleValue: 'Daily, 3 AM MT',
       autoPause: 'Auto-pause',
