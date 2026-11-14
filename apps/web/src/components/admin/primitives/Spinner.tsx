@@ -3,13 +3,20 @@
  * faint ring with a quarter arc, in the current colour. It turns only when
  * motion is allowed.
  */
-export const Spinner = ({ size }: { size: number }) => (
+export const Spinner = ({
+  size,
+  tone = 'currentColor',
+}: {
+  size: number;
+  /** The stroke; the venue header's Crawling now turns it signal. */
+  tone?: string;
+}) => (
   <svg
     width={size}
     height={size}
     viewBox="0 0 24 24"
     fill="none"
-    stroke="currentColor"
+    stroke={tone}
     strokeWidth={2.4}
     strokeLinecap="round"
     aria-hidden

@@ -49,9 +49,11 @@ import {
   CRAWL_ALL_ENDPOINT,
   CrawlAllButton,
   CrawlAllDialog,
+  TRIGGER_CLASS,
   type CrawlAllEstimateView,
 } from './CrawlAllDialog';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { adminButtonVariantStyle } from '@/components/admin/primitives/AdminButton';
 
 const COPY = ADMIN_COPY.crawl.crawlAll;
 const TRY_AGAIN = ADMIN_COPY.states.saveFailed.tryAgain;
@@ -315,6 +317,9 @@ describe('CrawlAllDialog', () => {
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain(COPY.failedTitle);
     expect(alert.textContent).toContain(COPY.failedBody);
+    // Desktop keeps 07/save-failed's gap and cross.
+    expect(alert.style.gap).toBe('12px');
+    expect(alert.querySelector('svg')?.getAttribute('stroke-width')).toBe('2');
     expect(onStarted).not.toHaveBeenCalled();
     // The confirm reads as it did before.
     expect(screen.getByRole('button', { name: 'Crawl all 19' })).toBeTruthy();
@@ -349,6 +354,33 @@ describe('CrawlAllDialog', () => {
     const text = await body();
     expect(text).toContain('19 of 21 venues are queued now');
     expect(screen.getByRole('button', { name: 'Crawl all 19' })).toBeTruthy();
+  });
+
+  it('draws the phone failed toast as crawl-all-failed-m: gap 10, cross 2.2', async () => {
+    phone = true;
+    mockGet.mockResolvedValue(estimate());
+    mockFetch.mockResolvedValue({ ok: false, status: 502 });
+    renderDialog();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Crawl all 19' }),
+    );
+    const alert = await screen.findByRole('alert');
+    expect(alert.style.gap).toBe('10px');
+    expect(alert.style.padding).toBe('12px');
+    expect(alert.querySelector('svg')?.getAttribute('stroke-width')).toBe(
+      '2.2',
+    );
+  });
+
+  it('draws Open Venues with AdminButton’s gradient', async () => {
+    mockGet.mockResolvedValue(estimate({ eligible: 0 }));
+    renderDialog();
+    const link = await screen.findByRole('link', { name: COPY.openVenues });
+    // The link sets no weight of its own, so the variant's 700 shows it
+    // spread the shared style (jsdom may not keep var()-based colours).
+    const gradient = adminButtonVariantStyle('gradient');
+    expect(gradient.fontWeight).toBe(700);
+    expect(link.style.fontWeight).toBe('700');
   });
 
   it('scrolls a long phone body on its own, so the buttons stay on screen', async () => {
@@ -416,6 +448,20 @@ describe('CrawlAllButton', () => {
       await screen.findByRole('button', { name: 'Crawl all 19' }),
     );
   };
+
+  it('sizes itself by the admin breakpoint in CSS, not by a JS media query', () => {
+    // A JS phone flag that never resolves must not change the trigger.
+    phone = null;
+    render(<CrawlAllButton />);
+    const trigger = screen.getByTestId('crawl-all-trigger');
+    expect(trigger.className).toBe(TRIGGER_CLASS);
+    expect(trigger.className).toContain('max-[720px]:w-full');
+    expect(trigger.className).toContain('max-[720px]:h-10');
+    // No inline size to beat the classes.
+    expect(trigger.style.height).toBe('');
+    expect(trigger.style.width).toBe('');
+    expect(trigger.style.fontSize).toBe('');
+  });
 
   it('opens the confirm', async () => {
     mockGet.mockResolvedValue(estimate());

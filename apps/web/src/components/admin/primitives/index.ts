@@ -1,5 +1,5 @@
 export { StatusBadge } from './StatusBadge';
-export { AdminButton } from './AdminButton';
+export { AdminButton, adminButtonVariantStyle } from './AdminButton';
 export { MonoLabel } from './MonoLabel';
 export { CostText } from './CostText';
 export { RelTime } from './RelTime';
