@@ -94,12 +94,12 @@ const STYLE_CONTENT = [
   '.cjp-pop.scale{opacity:0;transform:translateY(16px)}',
   // The popover grows from the jump cue: WeekStripHeader measures the cue's
   // centre and sets --cjp-origin-x on the positioner when it opens.
-  '@media (min-width:640px){.cjp-pop.scale{transform:scale(.95);transform-origin:var(--cjp-origin-x, 24px) -6px}}',
+  '@media (min-width:1024px){.cjp-pop.scale{transform:scale(.95);transform-origin:var(--cjp-origin-x, 24px) -6px}}',
   '.cjp-pop.cjp-in{transform:none;opacity:1}',
   // Popover width on desktop, full-width sheet under 640px (design §2/§10). CSS
   // media query keeps this SSR-safe — no JS viewport read, no hydration skew.
   '.cjp-w{width:min(340px, calc(100vw - 24px))}',
-  '@media (max-width:639.98px){.cjp-w{width:100%}}',
+  '@media (max-width:1023.98px){.cjp-w{width:100%}}',
   '.cjp-day{cursor:pointer;transition:background var(--motion-fast) var(--motion-ease)}',
   '.cjp-day.cjp-dis{cursor:default}',
   '.cjp-hit:hover:not(.cjp-dis):not([aria-selected="true"]){background:var(--overlay-hover)}',

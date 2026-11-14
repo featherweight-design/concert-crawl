@@ -15,8 +15,9 @@ import {
   takeCameFromMenu,
 } from '@/components/consumer/user-menu/menu-return';
 import { NotifMenuPanel } from './NotifMenuPanel';
+import { DESKTOP_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
-const WIDE_QUERY = '(min-width: 640px)';
+const WIDE_QUERY = DESKTOP_VIEWPORT_QUERY;
 const BROWSE_HREF = '/events';
 
 export const NotificationsPage = () => {

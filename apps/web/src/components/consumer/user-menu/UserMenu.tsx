@@ -58,6 +58,7 @@ import {
   NOTIFICATIONS_PAGE_HREF,
 } from './menu-return';
 import type { SheetDragZone } from '@/lib/hooks/useSheetDrag';
+import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
 
@@ -238,7 +239,7 @@ export function AccountMenuProvider({
   }, [userId]);
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)');
+    const mql = window.matchMedia(MOBILE_VIEWPORT_QUERY);
     setIsMobile(mql.matches);
     const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
     mql.addEventListener('change', handler);
@@ -535,7 +536,7 @@ export function UserMenu() {
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)');
+    const mql = window.matchMedia(MOBILE_VIEWPORT_QUERY);
     setIsMobile(mql.matches);
     const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
     mql.addEventListener('change', handler);

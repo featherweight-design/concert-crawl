@@ -12,6 +12,7 @@ import type {
   PointerEvent as ReactPointerEvent,
   TransitionEvent as ReactTransitionEvent,
 } from 'react';
+import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 import { prefersReducedMotion } from '@/lib/motion';
 
 /** Finger travel below this is still a tap, so a close button keeps its click. */
@@ -29,9 +30,9 @@ export const shouldDismiss = (distance: number, elapsedMs: number): boolean => {
   return distance / Math.max(elapsedMs, 1) >= DISMISS_FLICK_SPEED;
 };
 
-// The sheet layout switches to a centred modal at 640px; only the bottom sheet
+// The sheet layout switches to a centred modal at 1024px; only the bottom sheet
 // is a drag-down surface.
-const SHEET_QUERY = '(max-width: 639px)';
+const SHEET_QUERY = MOBILE_VIEWPORT_QUERY;
 
 // Not `useMediaQuery`: that one calls `window.matchMedia` outright, and a sheet
 // rendered where there is none (a jsdom test of a surface that merely contains a
@@ -94,7 +95,7 @@ export type SheetDragZone = SheetDrag['zoneProps'];
  * middle of a drag or a settle never leaves the sheet pushed down on reopen.
  *
  * `phoneQuery` is the width range where the sheet is a bottom sheet. It is
- * under 640px unless a sheet stays one longer (the filters sheet, to 1023px).
+ * the shared phone range unless a sheet stays one longer.
  */
 export function useSheetDrag(
   onDismiss: () => void,

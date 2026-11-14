@@ -13,6 +13,7 @@ import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { useAnchoredPosition } from '@/components/ui/cc-overlay/lib/use-anchored-position';
 import { CREWS_COPY } from './definitions/copy';
+import { DESKTOP_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 const COPY = CREWS_COPY;
 
@@ -155,7 +156,7 @@ export const CrewOptionsSheet = (props: CrewOptionsSheetProps) => {
   const [wide, setWide] = useState(false);
 
   useEffect(() => {
-    const mql = window.matchMedia('(min-width: 640px)');
+    const mql = window.matchMedia(DESKTOP_VIEWPORT_QUERY);
     setWide(mql.matches);
     const handler = (ev: MediaQueryListEvent) => setWide(ev.matches);
     mql.addEventListener('change', handler);

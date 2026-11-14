@@ -39,7 +39,7 @@ beforeAll(() => {
 const stubViewport = (phone: boolean) => {
   vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
     // Only the sheet query matches; reduced motion stays off.
-    matches: phone && query.includes('max-width: 639px'),
+    matches: phone && query.includes('max-width: 1023px'),
     media: query,
     onchange: null,
     addEventListener: () => undefined,

@@ -34,7 +34,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
-    matches: query.includes('max-width: 639px'),
+    matches: query.includes('max-width: 1023px'),
     media: query,
     onchange: null,
     addEventListener: () => undefined,
