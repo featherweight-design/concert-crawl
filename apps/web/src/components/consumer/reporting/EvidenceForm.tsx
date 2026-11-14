@@ -6,7 +6,7 @@ import { ER_POLICY } from '@concert-crawl/types';
 import { ApiError } from '@/lib/api';
 import { fileEventReport, withdrawEventReport } from '@/lib/events';
 import { REPORTING_COPY } from './definitions/copy';
-import { REPORT_TOKENS } from './reportTokens';
+import { REPORT_TOKENS, type ReportTokenKey } from './reportTokens';
 import { ReportGlyph } from './ReportTypeMark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 import { denverTodayUtcMs } from '@/lib/time';
@@ -183,6 +183,8 @@ export interface EvidenceFormProps {
   onClose: () => void;
   /** The step before this one, when there is one: "← Back" returns to it (more-st-evidence_m). */
   onBack?: (() => void) | undefined;
+  /** The status of the viewer's own open report, which the Already reported body names. */
+  ownReportStatus?: ReportTokenKey | null | undefined;
   reportType: ReportType;
   eventId: string;
   eventDate: string;
@@ -202,6 +204,7 @@ export const EvidenceForm = ({
   open,
   onClose,
   onBack,
+  ownReportStatus,
   reportType,
   eventId,
   eventDate,
@@ -309,7 +312,9 @@ export const EvidenceForm = ({
           onSuccess?.();
           onClose();
         }}
-        statusLabel={tokens.label}
+        statusLabel={
+          ownReportStatus ? REPORT_TOKENS[ownReportStatus].label : null
+        }
         {...(ownReportId !== null && {
           // Back to the form with what they wrote, so they can file again.
           onWithdraw: async () => {
@@ -364,7 +369,7 @@ export const EvidenceForm = ({
                 cursor: 'pointer',
               }}
             >
-              {copy.backButton}
+              {onBack ? copy.backButton : copy.cancelButton}
             </button>
           </div>
           <h2
@@ -815,7 +820,7 @@ function AlreadyReported({
 }: {
   open: boolean;
   onClose: () => void;
-  statusLabel: string;
+  statusLabel: string | null;
   onSeeReport: () => void;
   onWithdraw?: () => Promise<void>;
 }) {

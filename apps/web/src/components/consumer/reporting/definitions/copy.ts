@@ -96,8 +96,8 @@ export const REPORTING_COPY = {
       eyebrow: 'Already reported',
       heading: "You've flagged this one.",
       // Names the status, as the board does ("Your Postponed report...").
-      body: (statusLabel: string) =>
-        `Your ${statusLabel} report is still waiting on fans. One open report per show, so withdraw it first if you got it wrong.`,
+      body: (statusLabel: string | null) =>
+        `Your ${statusLabel === null ? '' : `${statusLabel} `}report is still waiting on fans. One open report per show, so withdraw it first if you got it wrong.`,
       seeReportButton: 'See your report',
       withdrawButton: 'Withdraw',
       withdrawError: "Couldn't withdraw it. Try again.",

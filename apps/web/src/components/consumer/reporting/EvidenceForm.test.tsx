@@ -122,7 +122,9 @@ describe('EvidenceForm back link', () => {
         eventTitle="The Grouch"
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: copy.backButton }));
+    // No step before it: the link says Cancel, not Back.
+    expect(screen.queryByRole('button', { name: copy.backButton })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: copy.cancelButton }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
@@ -130,7 +132,10 @@ describe('EvidenceForm back link', () => {
 describe('EvidenceForm second report', () => {
   const alreadyCopy = copy.alreadyReported;
 
-  const fileAgain = async (ownReportId: string | null) => {
+  const fileAgain = async (
+    ownReportId: string | null,
+    ownReportStatus: 'cancelled' | 'sold-out' | null = 'cancelled',
+  ) => {
     vi.mocked(fileEventReport).mockRejectedValueOnce(
       new ApiError(
         409,
@@ -150,6 +155,7 @@ describe('EvidenceForm second report', () => {
         eventDate="2026-11-20"
         eventTitle="The Grouch"
         ownReportId={ownReportId}
+        ownReportStatus={ownReportStatus}
       />,
     );
     fireEvent.click(screen.getAllByRole('radio')[0]!);
@@ -164,6 +170,22 @@ describe('EvidenceForm second report', () => {
     // The board names the status: "Your Cancelled report is still waiting".
     expect(
       screen.getByText(/^Your Cancelled report is still waiting on fans\./),
+    ).toBeTruthy();
+  });
+
+  // The 409 is about ANY open report of the viewer's, so the word names that
+  // one, not the status they just tried to file.
+  it("names the status of the viewer's own open report, not the one just picked", async () => {
+    await fileAgain('report-9', 'sold-out');
+    expect(
+      screen.getByText(/^Your Sold out report is still waiting on fans\./),
+    ).toBeTruthy();
+  });
+
+  it('says only "Your report" when the page does not know its status', async () => {
+    await fileAgain('report-9', null);
+    expect(
+      screen.getByText(/^Your report is still waiting on fans\./),
     ).toBeTruthy();
     expect(screen.getByText(alreadyCopy.heading)).toBeTruthy();
     expect(

@@ -146,6 +146,26 @@ describe('ConfirmReportSheet', () => {
     expect(link.getAttribute('href')).toBe('https://venue.example/post');
   });
 
+  it('draws no VIEW link for an unsafe evidence URL', () => {
+    render(
+      <ConfirmReportSheet
+        open
+        onClose={vi.fn()}
+        reportType="cancelled"
+        reporter={{ handle: '@sami', url: '' }}
+        evidenceMethod="venue_site"
+        evidenceUrl="javascript:alert(1)"
+        eventId="evt_1"
+        reportId="rep_1"
+      />,
+    );
+    expect(
+      screen.queryByRole('link', {
+        name: REPORTING_COPY.pendingReportBanner.viewEvidenceAria,
+      }),
+    ).toBeNull();
+  });
+
   it("uses the board's option subtitles", () => {
     renderSheet();
     expect(screen.getByText('The link or post they pointed to.')).toBeTruthy();
