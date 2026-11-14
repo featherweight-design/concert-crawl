@@ -52,7 +52,7 @@ export interface PickerOption {
   icon?: ReactNode;
 }
 
-const footButton = (primary: boolean): CSSProperties => ({
+const footButton = (primary: boolean, disabled = false): CSSProperties => ({
   display: 'inline-flex',
   alignItems: 'center',
   height: 28,
@@ -61,7 +61,9 @@ const footButton = (primary: boolean): CSSProperties => ({
   fontSize: 12.5,
   fontWeight: 600,
   whiteSpace: 'nowrap',
-  cursor: 'pointer',
+  // As a locked row draws it.
+  cursor: disabled ? 'default' : 'pointer',
+  opacity: disabled ? 0.45 : 1,
   ...(primary
     ? {
         color: 'var(--signal)',
@@ -252,6 +254,7 @@ export const FilterPicker = ({
   search,
   max,
   unticked,
+  stale = false,
   onApply,
 }: {
   label: string;
@@ -268,6 +271,11 @@ export const FilterPicker = ({
    * every option's count added up.
    */
   unticked: number;
+  /**
+   * The counts are from a load for other filters, with this one in flight:
+   * Show N would be wrong, so it waits (disabled). Ticks stay editable.
+   */
+  stale?: boolean;
   onApply: (keys: string[]) => void;
 }) => {
   const isPhone = useIsPhone();
@@ -347,7 +355,12 @@ export const FilterPicker = ({
       >
         {COPY.clear}
       </button>
-      <button type="button" style={footButton(true)} onClick={apply}>
+      <button
+        type="button"
+        disabled={stale}
+        style={footButton(true, stale)}
+        onClick={apply}
+      >
         {COPY.show(showCount(chosen, countOf, unticked))}
       </button>
     </div>
