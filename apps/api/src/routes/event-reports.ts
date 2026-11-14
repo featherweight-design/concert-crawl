@@ -28,6 +28,8 @@ import {
 import { moderateNote } from '../lib/moderate-note.js';
 import { isImminentEvent } from '../lib/time.js';
 import { clearSoldOut } from '../lib/clear-sold-out.js';
+import { PastLockedError } from '../lib/past-lock.js';
+import { promoteSoldOutReport } from '../lib/promote-sold-out.js';
 import { apiLogger } from '../lib/logger.js';
 import { activeSoldOutWhere } from '../lib/sold-out.js';
 import { redactReportRow } from '../lib/report-privacy.js';
@@ -59,36 +61,22 @@ function isImminent(eventDate: string | null): boolean {
 // Is promoting a report of `reportStatus` going to actually flip user-visible
 // state on this event? Called before the promotion runs so watchers only get
 // notified on real transitions, not on duplicate promotions of the same
-// state (e.g. a second confirmed 'sold-out' report after the first was
-// already promoted).
-//
-// - cancelled/postponed: reflected in events.status. Check the current
-//   value vs. the target.
-// - sold-out: not on events.status; derived from having an active promoted
-//   sold-out report. Check whether another promoted sold-out already exists.
-//   /available flips resolution to 'rejected', so an /available-cleared row
-//   correctly doesn't block the next fanout.
+// state (e.g. a second confirmed 'cancelled' report after the first was
+// already promoted). Cancelled and postponed are reflected in events.status,
+// so this checks the current value against the target. A sold-out's check
+// lives in promoteSoldOutReport, read under the event's row lock.
 async function hasEventStateChanged(
   eventId: string,
-  reportStatus: Exclude<(typeof REPORT_STATUSES)[number], 'available'>,
+  reportStatus: 'cancelled' | 'postponed',
 ): Promise<boolean> {
-  if (reportStatus === 'cancelled' || reportStatus === 'postponed') {
-    const [row] = await db
-      .select({ status: events.status, delistedAt: events.delistedAt })
-      .from(events)
-      .where(eq(events.id, eventId))
-      .limit(1);
-    // A delisted show is cancelled only by the stale sweep (B+ A5), so a
-    // confirmed cancellation of it is news: watchers were never told.
-    return row?.status !== reportStatus || row.delistedAt !== null;
-  }
-  // sold-out
-  const existing = await db
-    .select({ id: eventReports.id })
-    .from(eventReports)
-    .where(activeSoldOutWhere(eventId))
+  const [row] = await db
+    .select({ status: events.status, delistedAt: events.delistedAt })
+    .from(events)
+    .where(eq(events.id, eventId))
     .limit(1);
-  return existing.length === 0;
+  // A delisted show is cancelled only by the stale sweep (B+ A5), so a
+  // confirmed cancellation of it is news: watchers were never told.
+  return row?.status !== reportStatus || row.delistedAt !== null;
 }
 
 // Optional so a client that sends `{}` (or predates the method) still confirms.
@@ -424,17 +412,33 @@ eventReportsRouter.post(
     const threshold = imminent
       ? ER_POLICY.confirmsRequiredImminent
       : ER_POLICY.confirmsRequired;
+    const confirmed = (resolved: boolean) =>
+      ctx.json({
+        success: true,
+        data: { confirmed: true, confirmsCount, resolved },
+      });
 
+    // On a past show a sale report's promotion is a silent no-op: the shared
+    // writes (clearSoldOut, promoteSoldOutReport) throw PastLockedError
+    // before writing, the report stays pending (resolved_at null, resolution
+    // null) with this confirm recorded, nobody hears, and the fan gets the
+    // ordinary not-yet-resolved answer rather than an error.
     let resolved = false;
     if (confirmsCount >= threshold && report.status === 'available') {
       // Tickets available has no state of its own: it is the sold-out it
       // clears. clearSoldOut resolves this pending report as promoted along
       // with the sold-out, and only a sold-out live when it was filed.
-      const cleared = await clearSoldOut(
-        eventId,
-        `cleared by tickets available report ${reportId}`,
-        { filedAt: report.createdAt },
-      );
+      let cleared: string[];
+      try {
+        cleared = await clearSoldOut(
+          eventId,
+          `cleared by tickets available report ${reportId}`,
+          { filedAt: report.createdAt },
+        );
+      } catch (err) {
+        if (!(err instanceof PastLockedError)) throw err;
+        return confirmed(false);
+      }
       if (cleared.length === 0) {
         // The sold-out it answered is already gone: close it as moot rather
         // than record a promotion that changed nothing.
@@ -454,19 +458,29 @@ eventReportsRouter.post(
       // Check pre-state to decide whether promotion actually transitions
       // user-visible state. Fan-out only fires on a real transition — a
       // second cancelled/postponed report promoted after the event was
-      // already in that status shouldn't spam watchers a second time.
-      const isRealTransition = await hasEventStateChanged(
-        eventId,
-        report.status,
-      );
-
-      await db
-        .update(eventReports)
-        .set({
-          resolvedAt: new Date(),
-          resolution: 'promoted',
-        })
-        .where(eq(eventReports.id, reportId));
+      // already in that status shouldn't spam watchers a second time. A
+      // sold-out's check runs inside promoteSoldOutReport, under the row lock.
+      let isRealTransition: boolean;
+      if (report.status === 'sold-out') {
+        try {
+          ({ isRealTransition } = await promoteSoldOutReport(
+            eventId,
+            reportId,
+          ));
+        } catch (err) {
+          if (!(err instanceof PastLockedError)) throw err;
+          return confirmed(false);
+        }
+      } else {
+        isRealTransition = await hasEventStateChanged(eventId, report.status);
+        await db
+          .update(eventReports)
+          .set({
+            resolvedAt: new Date(),
+            resolution: 'promoted',
+          })
+          .where(eq(eventReports.id, reportId));
+      }
 
       // events table has a status column — update it
       // Only map report statuses that correspond to event statuses
@@ -508,10 +522,7 @@ eventReportsRouter.post(
       resolved = true;
     }
 
-    return ctx.json({
-      success: true,
-      data: { confirmed: true, confirmsCount, resolved },
-    });
+    return confirmed(resolved);
   },
 );
 
