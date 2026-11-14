@@ -13,7 +13,7 @@ const usage = {
 describe('calculateCost', () => {
   // Haiku 4.5: $1 in, $5 out, $0.10 cache read, $1.25 cache write per million.
   // 0.002 + 0.0025 + 0.001 + 0.005 = 0.0105
-  it.each<PricedModelId>(['claude-haiku-4-5', 'claude-haiku-4-5-20251001'])(
+  it.each<PricedModelId>(['claude-haiku-4-5-20251001'])(
     'prices %s at Haiku 4.5 rates',
     (model) => {
       expect(calculateCost(usage, model)).toBeCloseTo(0.0105, 10);
@@ -34,7 +34,6 @@ describe('calculateCost', () => {
     );
     const haiku45 = { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 };
     expect(perMillion).toEqual({
-      'claude-haiku-4-5': haiku45,
       'claude-haiku-4-5-20251001': haiku45,
     });
   });

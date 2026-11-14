@@ -14,4 +14,5 @@ export const GENRE_TAG_MODEL =
   'claude-haiku-4-5-20251001' satisfies PricedModelId;
 
 /** The admin's generate-about route (apps/api). */
-export const VENUE_ABOUT_MODEL = 'claude-haiku-4-5' satisfies PricedModelId;
+export const VENUE_ABOUT_MODEL =
+  'claude-haiku-4-5-20251001' satisfies PricedModelId;
