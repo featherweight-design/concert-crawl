@@ -13,8 +13,9 @@ export const PendingErrorReportFlush = () => {
   const { isLoaded, isSignedIn } = useAuth();
   const tried = useRef(false);
 
-  // Waits for a confirmed sign-in so a stored report is not spent on a 401
-  // while Clerk is still loading (a 401 drops it).
+  // Waits for Clerk to say signed in, so the one try per open is not spent on
+  // a 401 while Clerk is still loading. A 401 keeps the report for the next
+  // open; only a refused report is dropped.
   useEffect(() => {
     if (!isLoaded || isSignedIn !== true || tried.current) return;
     tried.current = true;

@@ -76,8 +76,8 @@ describe('flushPendingReport', () => {
   });
 
   // 429 is refused (README §18, Decided 6): retrying it on every app open for
-  // a week was the bug. 401 drops too: the session it was saved under is gone.
-  it.each([400, 401, 403, 413, 422, 429])(
+  // a week was the bug.
+  it.each([400, 403, 413, 422, 429])(
     'drops a report answered %i',
     async (status) => {
       savePendingReport(draft);
@@ -87,7 +87,8 @@ describe('flushPendingReport', () => {
     },
   );
 
-  it.each([408, 425, 500, 502, 503, 504])(
+  // 401 is kept: Clerk's client can say signed in over a stale cookie.
+  it.each([401, 408, 425, 500, 502, 503, 504])(
     'keeps a report answered %i for the next launch',
     async (status) => {
       savePendingReport(draft);

@@ -67,8 +67,8 @@ export const loadPendingReport = (now = Date.now()): PendingReport | null => {
 
 /**
  * Sends a report saved by an earlier failure. Runs once per app open, and the
- * caller only runs it for a signed-in visitor. A transient failure leaves it
- * saved for the next launch; any other answer is final.
+ * caller only runs it for a signed-in visitor. A refused report is dropped;
+ * anything else that fails leaves it saved for the next launch.
  */
 export const flushPendingReport = async (
   userAgent: string,
@@ -80,11 +80,12 @@ export const flushPendingReport = async (
     clearPendingReport();
     return true;
   } catch (err) {
-    // Only a transient failure (408, 425, 5xx, timeout, no network) is worth
-    // another try. A refused report (429 or any other 4xx) gets the same answer
-    // every time, and a 401 means the session it was saved under is gone:
-    // retrying either on every app open for a week only repeats the failure.
-    if (classifyReportFailure(err) !== 'transient') clearPendingReport();
+    // A refused report (429 or any other 4xx but 401, 408 and 425) gets the
+    // same answer every time: retrying it on every app open for a week only
+    // repeats the failure. A transient failure can succeed later, and so can a
+    // 401: Clerk's client can say signed in while the cookie the route reads
+    // has gone stale, and that is no reason to lose the report.
+    if (classifyReportFailure(err) === 'refused') clearPendingReport();
     return false;
   }
 };

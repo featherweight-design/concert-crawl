@@ -11,13 +11,18 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { ErrorTellUsCard } from './ErrorTellUsCard';
 import { loadPendingReport } from './lib/pending-report';
+import { ReportRejectedError } from './lib/send-report';
 
 const copy = CONSUMER_COPY.errorReport.card;
 
 const sendErrorReport = vi.hoisted(() => vi.fn());
 // No Clerk mock: the card posts same-origin and must not need a ClerkProvider,
 // since `global-error` renders without one.
-vi.mock('./lib/send-report', () => ({ sendErrorReport }));
+vi.mock('./lib/send-report', async (importOriginal) => ({
+  // The real error class and classifier; only the network send is faked.
+  ...(await importOriginal<Record<string, unknown>>()),
+  sendErrorReport,
+}));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/venues/bluebird-theater?tab=x',
 }));
@@ -115,6 +120,32 @@ describe('ErrorTellUsCard', () => {
       await screen.findByRole('heading', { name: copy.sentHeading }),
     ).toBeTruthy();
     expect(loadPendingReport()).toBeNull();
+  });
+
+  it('keeps the failed state honest for a refused report (429): saved, as its copy says', async () => {
+    sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
+    render(<ErrorTellUsCard digest="2849204133" />);
+    pick('Searching');
+    fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+
+    // PR 2 gives refused its own, unsaved state; until then the failed state
+    // says "saved", so it is (the flush tries it once, then drops it).
+    expect(
+      await screen.findByRole('heading', { name: copy.failedHeading }),
+    ).toBeTruthy();
+    expect(loadPendingReport()?.doing).toBe('Searching');
+  });
+
+  it('saves a report that got a 401, for the next signed-in launch', async () => {
+    sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(401));
+    render(<ErrorTellUsCard digest="2849204133" />);
+    pick('Searching');
+    fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+
+    expect(
+      await screen.findByRole('heading', { name: copy.failedHeading }),
+    ).toBeTruthy();
+    expect(loadPendingReport()?.doing).toBe('Searching');
   });
 
   it('is a real radio group: one tab stop, arrow keys move the choice', () => {
