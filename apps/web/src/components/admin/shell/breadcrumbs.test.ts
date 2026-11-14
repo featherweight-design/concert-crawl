@@ -41,6 +41,10 @@ describe('buildBreadcrumbs', () => {
   // `07/activity-log` draws "Operations / {tab}".
   it('puts the Operations tab under Operations', () => {
     const operations = { label: 'Operations', href: '/admin/operations' };
+    expect(buildBreadcrumbs('/admin/operations', params('tab=log'))).toEqual([
+      operations,
+      { label: 'Activity log', subtitle: true },
+    ]);
     expect(buildBreadcrumbs('/admin/operations')).toEqual([
       operations,
       { label: 'Feedback', subtitle: true },

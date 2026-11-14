@@ -81,6 +81,15 @@ export interface Window {
   end: number;
 }
 
+/** Today in Mountain Time: its midnight to the next (the Activity log's day). */
+export const mtTodayWindow = (now: Date): Window => {
+  const parts = mtParts(now);
+  return {
+    start: mtMidnight(parts.year, parts.month, parts.day),
+    end: mtMidnight(parts.year, parts.month, parts.day + 1),
+  };
+};
+
 /**
  * "Last night": the MT calendar day of the newest daily crawl that has
  * started. Before the cron hour (2 AM MST, 3 AM MDT) that is yesterday. MT day

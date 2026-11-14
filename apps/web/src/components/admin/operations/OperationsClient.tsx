@@ -1,18 +1,20 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   FeedbackView,
   type FeedbackCounts,
 } from '@/components/admin/feedback/FeedbackView';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminTabs, useIsPhoneResolved } from '@/components/admin/primitives';
+import { ActivityLog } from './ActivityLog';
+import { OPERATIONS_TABS, type OperationsTab } from './operations-tabs';
+
+export { OPERATIONS_TABS, operationsTabOf } from './operations-tabs';
+export type { OperationsTab } from './operations-tabs';
 
 const COPY = ADMIN_COPY.operations;
-
-/** The Activity log and Emails join Feedback once their tabs are built. */
-export const OPERATIONS_TABS = ['feedback'] as const;
-export type OperationsTab = (typeof OPERATIONS_TABS)[number];
 
 const PANEL_ID = 'operations-panel';
 const tabId = (key: OperationsTab) => `operations-tab-${key}`;
@@ -37,11 +39,17 @@ const UnreadCount = ({ count, phone }: { count: number; phone: boolean }) => (
 
 /**
  * `07/activity-log`: Operations' title, subtitle and tabs over the Feedback
- * inbox, which has no heading of its own so the page has one h1. The Feedback
- * tab's count is the inbox's own, reported once it has loaded; until then
- * (or at 0) the tab draws none.
+ * inbox or, at `?tab=log`, the Activity log. The inbox has no heading of its
+ * own so the page has one h1. The Feedback tab's count is the inbox's own,
+ * reported once it has loaded; until then (or at 0) the tab draws none.
  */
-export const OperationsClient = () => {
+export const OperationsClient = ({
+  initialTab = 'feedback',
+}: {
+  initialTab?: OperationsTab;
+}) => {
+  const router = useRouter();
+  const [tab, setTab] = useState<OperationsTab>(initialTab);
   const [feedbackUnread, setFeedbackUnread] = useState<number | null>(null);
   const handleFeedbackCounts = useCallback(
     ({ unread }: FeedbackCounts) => setFeedbackUnread(unread),
@@ -51,16 +59,29 @@ export const OperationsClient = () => {
   // never paints the desktop title and underline tabs for a frame.
   const resolvedPhone = useIsPhoneResolved();
   const isPhone = resolvedPhone === true;
-  const tab: OperationsTab = 'feedback';
+
+  // A link to `?tab=` while the page is mounted changes the prop, not the mount.
+  useEffect(() => setTab(initialTab), [initialTab]);
+
+  const onTab = (next: OperationsTab) => {
+    setTab(next);
+    router.replace(
+      next === 'feedback'
+        ? '/admin/operations'
+        : `/admin/operations?tab=${next}`,
+    );
+  };
 
   const tabs = OPERATIONS_TABS.map((key) => ({
     key,
     label: (
       <>
-        {COPY.tabs[key]}
-        {feedbackUnread !== null && feedbackUnread > 0 && (
-          <UnreadCount count={feedbackUnread} phone={isPhone} />
-        )}
+        {isPhone ? COPY.phoneTabs[key] : COPY.tabs[key]}
+        {key === 'feedback' &&
+          feedbackUnread !== null &&
+          feedbackUnread > 0 && (
+            <UnreadCount count={feedbackUnread} phone={isPhone} />
+          )}
       </>
     ),
   }));
@@ -90,7 +111,7 @@ export const OperationsClient = () => {
         <AdminTabs
           tabs={tabs}
           value={tab}
-          onChange={() => undefined}
+          onChange={onTab}
           label={COPY.tabsLabel}
           tabId={tabId}
           panelId={() => PANEL_ID}
@@ -106,7 +127,12 @@ export const OperationsClient = () => {
         role={resolvedPhone === null ? undefined : 'tabpanel'}
         aria-labelledby={resolvedPhone === null ? undefined : tabId(tab)}
       >
-        <FeedbackView onCounts={handleFeedbackCounts} />
+        {tab === 'feedback' ? (
+          <FeedbackView onCounts={handleFeedbackCounts} />
+        ) : (
+          // The log's rows and cards differ by viewport, so it waits too.
+          resolvedPhone !== null && <ActivityLog isPhone={isPhone} />
+        )}
       </div>
     </div>
   );

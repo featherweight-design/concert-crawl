@@ -111,6 +111,7 @@ describe('activeNavKey', () => {
     ['/admin/crawl', '', 'crawl-runs'],
     ['/admin/feedback', '', 'operations'],
     ['/admin/operations', '', 'operations'],
+    ['/admin/operations', 'tab=log', 'operations'],
     ['/admin/feature-flags', '', 'feature-flags'],
     ['/admin/more', '', null],
     ['/admin/venuesx', '', null],

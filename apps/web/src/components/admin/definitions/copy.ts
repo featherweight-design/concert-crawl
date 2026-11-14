@@ -3349,15 +3349,142 @@ export const ADMIN_COPY = {
     },
   },
 
-  // `07/activity-log`: Operations' shell. The Activity log and Emails tabs
-  // join `tabs` when they are built.
+  // `07/activity-log`: Operations' shell and its Activity log tab. The Emails
+  // tab joins `tabs` when it is built.
   operations: {
     title: 'Operations',
     subtitle: 'Feedback, the emails we send, and a log of every admin change',
     tabsLabel: 'Operations sections',
-    tabs: { feedback: 'Feedback' },
+    tabs: { feedback: 'Feedback', log: 'Activity log' },
     // The tab's count is a bare number on screen; this reads it out.
     unreadCountLabel: (count: number) => `${count} unread`,
+    // `07/activity-log-mobile` names the tab "Log" in the phone's segments.
+    phoneTabs: { feedback: 'Feedback', log: 'Log' },
+    log: {
+      filtersLabel: 'Filter the log',
+      anyone: 'Anyone',
+      anyPage: 'Any page',
+      whoLabel: 'Who',
+      whereLabel: 'Page',
+      today: 'Today',
+      columns: { when: 'WHEN', who: 'WHO', what: 'WHAT', where: 'WHERE' },
+      footer:
+        'Every admin change is kept, with who made it. Each row links to the thing it changed.',
+      emptyTitle: 'No changes yet today',
+      emptyBody: 'Pick another day, or anyone, to see earlier changes.',
+      system: 'System',
+      noPage: '—',
+      // A target that has since been deleted: the API sends no name for it.
+      gone: '(deleted)',
+      // An action this build has no sentence for: its key, made readable.
+      unknown: (words: string) =>
+        [`${words.charAt(0).toUpperCase()}${words.slice(1)} `, ''] as const,
+      sentences: {
+        'artist.match.update': ['Matched ', ''],
+        'artist.match.confirm_auto': ['Confirmed the match for ', ''],
+        'artist.match.auto': ['Matched ', ' to a photo and genre'],
+        'artist.name.update': ['Renamed ', ''],
+        'artist.name.unlock': ['Handed the name of ', ' back to auto-repair'],
+        'artist.name.lock': ['Locked the name of ', ''],
+        'artist.reports.dismiss': ['Dismissed the reports on ', ''],
+        'artist.visibility.update': (args: { on: boolean | null }) =>
+          args.on === false
+            ? (['Showed ', ' again'] as const)
+            : (['Hid ', ''] as const),
+        'contest.resolve': ['Answered a price check on ', ''],
+        'contest.defer': ['Put off a price check on ', ''],
+        'crawl.daily_cron': ['Started the daily crawl', ''],
+        'crawl.trigger': ['Crawled ', ''],
+        'crawl.trigger_all': ['Crawled all venues', ''],
+        'event.auto_cancel.stale': [
+          'Marked ',
+          ' cancelled after the venue stopped listing it',
+        ],
+        'event.bulk_auto_approve': ['Approved a batch of shows', ''],
+        'event.bulk_delete': ['Deleted a batch of shows', ''],
+        'event.bulk_mark_as_concert': [
+          'Marked a batch of shows as concerts',
+          '',
+        ],
+        'event.bulk_mark_non_concert': [
+          'Marked a batch of shows as not concerts',
+          '',
+        ],
+        'event.bulk_unverify': ['Unverified a batch of shows', ''],
+        'event.delete': ['Deleted ', ''],
+        'event.drift_duplicates_merged': ['Merged duplicate listings at ', ''],
+        'event.fill_from_merge': ['Filled in ', ' from a merged listing'],
+        'event.merge': ['Merged a duplicate into ', ''],
+        'event.report.resolve': ['Resolved a report on ', ''],
+        'event.sold_out.mark': ['Marked ', ' sold out'],
+        'event.sold_out.clear': ['Marked ', ' not sold out'],
+        'event.update': ['Edited ', ''],
+        'event.verify': ['Verified ', ''],
+        'feature_flag.toggle': (args: { on: boolean | null }) =>
+          ['Turned ', args.on ? ' on' : ' off'] as const,
+        'feedback.update': ['Updated a feedback item', ''],
+        'invite_code.create': ['Made invite code ', ''],
+        'invite_code.edit': ['Edited invite code ', ''],
+        'invite_code.reactivate': ['Reactivated invite code ', ''],
+        'invite_code.revoke': ['Revoked invite code ', ''],
+        'needs_you.answer': ['Answered an item in Needs you', ''],
+        'needs_you.undo': ['Took back an answer in Needs you', ''],
+        'needs_you.snooze': ['Snoozed an item in Needs you', ''],
+        'needs_you.unsnooze': ['Unsnoozed an item in Needs you', ''],
+        'notification.test_email': ['Sent a test email', ''],
+        'price.promoted': ['Published a price for ', ' a second fan confirmed'],
+        'price.pipeline.run': ['Ran the price pipeline for ', ''],
+        'price.submission.admin_add': ['Added a price for ', ''],
+        'price.submission.edit_price': (args: { range: string | null }) =>
+          [
+            'Changed a price for ',
+            args.range ? `: ${args.range}` : '',
+          ] as const,
+        'price.submission.reject': ['Rejected a price for ', ''],
+        'price.submission.update': ['Updated a price for ', ''],
+        'settings.update': ['Changed the LLM budget', ''],
+        'user.email_shown': ['Showed the email for ', ''],
+        'user.role.update': (args: { role: string | null }) =>
+          [
+            'Changed the role of ',
+            args.role ? ` to ${args.role}` : '',
+          ] as const,
+        'user.seeded': ['Added ', ''],
+        'user.sessions_revoked': ['Signed ', ' out everywhere'],
+        'user.test_account.set': (args: { on: boolean | null }) =>
+          args.on === false
+            ? (['Untagged ', ' as a test account'] as const)
+            : (['Tagged ', ' as a test account'] as const),
+        'venue.create': ['Added ', ''],
+        'venue.update': ['Edited ', ''],
+        'venue.delete': ['Deleted ', ''],
+        'venue.remove': ['Removed ', ''],
+        'venue.hide': ['Hid ', ''],
+        'venue.show': ['Published ', ''],
+        'venue.crawl_pause': (args: { until: string | null }) =>
+          [
+            'Paused crawling ',
+            args.until ? ` until ${args.until}` : '',
+          ] as const,
+        'venue.crawl_resume': ['Resumed crawling ', ''],
+        'venue.crawl_auto_paused': [
+          'Paused crawling ',
+          ' after it kept failing',
+        ],
+        'venue.crawl_auto_resumed': ['Resumed crawling ', ''],
+        'venue.crawl_blocked': ['Flagged ', ' as blocking the crawler'],
+        'venue.fault.acknowledge': ['Acknowledged a fault at ', ''],
+        'venue.fault.unacknowledge': [
+          'Took back a fault acknowledgement at ',
+          '',
+        ],
+        'venue.guide.save': ['Saved the guide for ', ''],
+        'venue.guide.publish': ['Published the guide for ', ''],
+        'venue.guide.unpublish': ['Unpublished the guide for ', ''],
+        'venue.platform_changed': ['Changed the ticket platform of ', ''],
+        'venue.platform_probe': ['Checked the ticket platform of ', ''],
+      },
+    },
   },
 
   featureFlags: {

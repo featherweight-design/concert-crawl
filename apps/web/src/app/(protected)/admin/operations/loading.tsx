@@ -1,10 +1,12 @@
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { FeedbackSkeleton } from '@/components/admin/feedback/FeedbackSkeleton';
+import { OPERATIONS_TABS } from '@/components/admin/operations/operations-tabs';
 
 /**
  * `07/loading-activity-log`'s chrome: the title and subtitle bars, then the
- * tab strip with one pill per drawn tab (only Feedback so far). Feedback is
- * the default tab, so its list skeleton follows, without its own heading.
+ * tab strip with one pill per drawn tab (Feedback and Activity log). Feedback
+ * is the default tab, so its list skeleton follows, without its own heading;
+ * the Activity log draws its own rows skeleton under its filters.
  */
 export default function AdminOperationsLoading() {
   return (
@@ -39,11 +41,14 @@ export default function AdminOperationsLoading() {
           paddingBottom: 12,
         }}
       >
-        <div
-          data-testid="operations-skeleton-tab"
-          className="admin-skeleton"
-          style={{ width: 90, height: 14, borderRadius: 6 }}
-        />
+        {OPERATIONS_TABS.map((key) => (
+          <div
+            key={key}
+            data-testid="operations-skeleton-tab"
+            className="admin-skeleton"
+            style={{ width: 90, height: 14, borderRadius: 6 }}
+          />
+        ))}
       </div>
       <FeedbackSkeleton />
     </div>

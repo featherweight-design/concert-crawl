@@ -186,7 +186,17 @@ export const call = async (
   getToken: GetToken,
   path: string,
   init: { method?: string; body?: unknown } = {},
-): Promise<unknown> => {
+): Promise<unknown> => (await callEnvelope(getToken, path, init))['data'];
+
+/**
+ * The whole successful envelope, for a read that carries more than `data`
+ * (the Activity log's `nextCursor`).
+ */
+export const callEnvelope = async (
+  getToken: GetToken,
+  path: string,
+  init: { method?: string; body?: unknown } = {},
+): Promise<Record<string, unknown>> => {
   const token = await getToken();
   if (!token) throw new ShapeError('no token');
   const hasBody = init.body !== undefined;
@@ -213,7 +223,7 @@ export const call = async (
   if (!res.ok || !isRecord(body) || body['success'] !== true) {
     throw new ShapeError(`status ${res.status}`, res.status);
   }
-  return body['data'];
+  return body;
 };
 
 /** One code back from a write. */
