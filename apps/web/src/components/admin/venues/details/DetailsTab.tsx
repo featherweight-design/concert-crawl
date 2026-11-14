@@ -6,8 +6,8 @@ import { RefreshCw } from 'lucide-react';
 import type { Venue } from '@concert-crawl/types';
 import { updateVenue } from '@/lib/actions/venues';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { useIsPhone } from '@/components/admin/primitives';
-import { Card, inputStyle } from '../source/source-parts';
+import { AdminCard as Card, useIsPhone } from '@/components/admin/primitives';
+import { inputStyle } from '../source/source-parts';
 import { Field, Pair } from './details-parts';
 import { DetailsSaveBar } from './DetailsSaveBar';
 import {
