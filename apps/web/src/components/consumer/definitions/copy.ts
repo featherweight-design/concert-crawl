@@ -1722,8 +1722,8 @@ export const CONSUMER_COPY = {
       // How many more fans it needs, from the data, not a fixed two.
       waitingNotice: (others: number) =>
         others <= 0
-          ? "Your price is pending. You can't confirm your own price, and the confirms it needs are in."
-          : `Your price is pending. You can't confirm your own price, but ${others} other ${others === 1 ? 'fan' : 'fans'} can.`,
+          ? "You can't confirm your own price, and the confirms it needs are in."
+          : `You can't confirm your own price, but ${others} other ${others === 1 ? 'fan' : 'fans'} can.`,
       editButton: 'Edit your price',
       withdrawButton: 'Withdraw',
     },
