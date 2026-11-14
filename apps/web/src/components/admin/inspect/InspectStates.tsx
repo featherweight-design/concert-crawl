@@ -144,6 +144,9 @@ export const InspectCouldntLoad = ({
     tone="var(--danger)"
     tinted
     iconStrokeWidth={COULDNT_LOAD_X_STROKE}
+    // `G2/inspect-couldnt-load` pads the phone state 36px 8px, as every
+    // phone Couldn't load does (admin.css `.admin-couldnt-load`).
+    className="admin-couldnt-load"
     title={COPY.couldntLoad.title}
     body={COPY.couldntLoad.body}
     actions={

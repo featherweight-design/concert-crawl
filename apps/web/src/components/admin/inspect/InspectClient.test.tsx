@@ -541,6 +541,16 @@ describe('InspectClient', () => {
     expect(await screen.findByTestId('inspect-couldnt-load')).toBeTruthy();
   });
 
+  it('Couldn’t load takes the shared placement, so the phone pads it 36px 8px', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockGet.mockRejectedValueOnce(new ApiError(500, 'unreadable'));
+    render(<InspectClient {...props()} />);
+    const failed = await screen.findByTestId('inspect-couldnt-load');
+    // admin.css `.admin-couldnt-load` sets 36px 8px at max-width 720px
+    // (`G2/inspect-couldnt-load`).
+    expect(failed.classList.contains('admin-couldnt-load')).toBe(true);
+  });
+
   it('pages that couldn’t load offer Try again, which refreshes the route', () => {
     render(<InspectClient {...props({ pages: null, page: null })} />);
     fireEvent.click(

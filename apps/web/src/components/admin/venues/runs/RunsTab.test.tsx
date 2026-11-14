@@ -255,6 +255,27 @@ describe('RunsTab', () => {
     ).toBeNull();
   });
 
+  it('Load more draws one rule: its own on desktop, the last row’s on the phone', () => {
+    renderTab();
+    expect(screen.getByTestId('runs-load-more').style.borderTop).toBe(
+      '1px solid var(--border)',
+    );
+    cleanup();
+    vi.stubGlobal('matchMedia', matchMediaStub(true));
+    renderTab();
+    expect(screen.getByTestId('runs-load-more').style.borderTop).toBe('');
+    expect(rows().at(-1)!.style.borderBottom).toBe('1px solid var(--border)');
+  });
+
+  it('Load more keeps its rule on the phone when the filter leaves no rows', () => {
+    vi.stubGlobal('matchMedia', matchMediaStub(true));
+    renderTab([unchanged, ok]);
+    fireEvent.click(screen.getByRole('button', { name: /^Not OK/ }));
+    expect(screen.getByTestId('runs-load-more').style.borderTop).toBe(
+      '1px solid var(--border)',
+    );
+  });
+
   it('Load more re-asks with a bigger limit and shows the longer list', async () => {
     renderTab(manyRuns(20));
     expect(screen.getByTestId('runs-load-more').textContent).toContain(
