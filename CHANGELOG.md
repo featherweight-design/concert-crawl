@@ -1,3 +1,16 @@
+# [1.502.0](https://github.com/featherweight-design/concert-crawl/compare/v1.501.0...v1.502.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** address the sign-up form review ([43e1172](https://github.com/featherweight-design/concert-crawl/commit/43e1172b1a9e7f99bbadb258c1aa111e21cbe774))
+
+
+### Features
+
+* **web:** add the custom sign-up form ([e52e315](https://github.com/featherweight-design/concert-crawl/commit/e52e3152bf398bb998bfbb12f894370a80477ebf))
+* **web:** add the sign-up 5a sheet inventory ([a446fe1](https://github.com/featherweight-design/concert-crawl/commit/a446fe1eae9923d631ba4017657c26878496fa4a))
+
 # [1.501.0](https://github.com/featherweight-design/concert-crawl/compare/v1.500.0...v1.501.0) (2026-11-15)
 
 
