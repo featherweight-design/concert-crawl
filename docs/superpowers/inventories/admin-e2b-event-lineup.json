@@ -1,0 +1,36 @@
+{
+  "feature": "Admin E2-B: Event edit lineup chips (matched, unsure, typed) and Add an artist",
+  "note": "Boards: design_handoff_admin_redesign/boards/06-events-artists-prices/event-edit (desktop) and event-edit-mobile (phone); B+ addendum 5 04/past-show-d for the same field on a played show. CONTACT_SHEET_ROLE=admin. Read-only: types into Add an artist but never presses Save. The editor reads GET /v1/admin/events/:id on the SERVER, so the chips come from the scratch Neon fixture Violet Grohl (6cacabc9-...), as in admin-4b-2d-pickers. For all three tints in one cell, give that show a bill with a matched artist, an artist whose match_status is 'ambiguous' (amber) and a name with no artist row (neutral). By hand: Delete on a focused chip removes it, Alt+arrow moves it, and a failed Save (stop the API) snaps the bill back with 'The lineup is as it was.'",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "lineup-at-rest",
+      "label": "Lineup on the Show card: 24px chips tinted by match, the helper line",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "wait": "[data-testid=\"lineup-chip\"]", "settle": 500 }
+      ]
+    },
+    {
+      "id": "lineup-add-artist",
+      "label": "Add an artist: typing lists matching artists, a pick adds a chip unsaved",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-lineup", "text": "the" },
+        { "settle": 1500 }
+      ]
+    }
+  ]
+}

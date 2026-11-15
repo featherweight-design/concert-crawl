@@ -2,11 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   EMPTY_DRAFT,
   addAct,
+  lineupEntries,
   moveAct,
   removeAct,
+  rolesOf,
   toBody,
   todayInDenver,
   validateDraft,
+  type Act,
   type AddShowDraft,
 } from './add-show-rules';
 
@@ -192,5 +195,43 @@ describe('the bill', () => {
   it('ignores a move from off either end', () => {
     expect(moveAct(bill, -1, 0)).toEqual(bill);
     expect(moveAct(bill, 3, 0)).toEqual(bill);
+  });
+});
+
+// Event edit's bills carry their saved roles; Add a show's carry none.
+describe('rolesOf and lineupEntries', () => {
+  const crawled: Act[] = [
+    { name: 'A', role: 'headliner', artistId: 'a1' },
+    { name: 'B', role: 'headliner' },
+    { name: 'C', role: 'support', artistId: 'c1', unsure: true, slug: 'c' },
+  ];
+
+  it('keeps every headliner on a crawled bill, links and order too', () => {
+    expect(lineupEntries(crawled)).toEqual([
+      { name: 'A', role: 'headliner', artistId: 'a1' },
+      { name: 'B', role: 'headliner' },
+      { name: 'C', role: 'support', artistId: 'c1' },
+    ]);
+  });
+
+  it('reads no roles as Add a show does: the first headlines', () => {
+    expect(rolesOf([{ name: 'A' }, { name: 'B' }])).toEqual([
+      'headliner',
+      'support',
+    ]);
+  });
+
+  it('leads with headliners: the first always is, one after a support is not', () => {
+    expect(rolesOf(moveAct(crawled, 2, 0))).toEqual([
+      'headliner',
+      'headliner',
+      'headliner',
+    ]);
+    expect(rolesOf(moveAct(crawled, 1, 2))).toEqual([
+      'headliner',
+      'support',
+      'support',
+    ]);
+    expect(rolesOf(removeAct(crawled, 0))).toEqual(['headliner', 'support']);
   });
 });

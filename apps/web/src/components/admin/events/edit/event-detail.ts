@@ -2,6 +2,7 @@
  * Event edit's read of `GET /v1/admin/events/:id`, narrowed with type guards
  * so a shape drift fails into Couldn't load rather than into a blank field.
  */
+import { z } from 'zod';
 import { resolveVenueCheckUrl } from '@/lib/admin/missing';
 import {
   isCount,
@@ -58,7 +59,30 @@ export interface EventDetail {
   tourName: string | null;
   /** WHY IT'S SOLD OUT (B+ addendum 7 §6); `null` unless it is sold out. */
   soldOutRecord: SoldOutRecord | null;
+  /** The bill in display order: headliners, then supports. */
+  lineup: LineupItem[];
 }
+
+/**
+ * One act as `GET /v1/admin/events/:id` sends it (`readLineup`). `unsure` is
+ * an artist Artists calls Unsure; a name with no artist has `artistId` null.
+ */
+const lineupItemSchema = z.object({
+  name: z.string(),
+  role: z.enum(['headliner', 'support']),
+  position: z.number(),
+  artistId: z.string().nullable(),
+  slug: z.string().nullable(),
+  unsure: z.boolean(),
+});
+export type LineupItem = z.infer<typeof lineupItemSchema>;
+
+/**
+ * Saved through the Show card, so a drift fails the editor rather than
+ * reading as an empty bill (a lineup save sends back every name it shows,
+ * and would erase the rest).
+ */
+const lineupSchema = z.array(lineupItemSchema);
 
 export type EvidenceMethod =
   'saw_listing' | 'venue_site' | 'bought_myself' | 'other';
@@ -213,6 +237,8 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
   // (a save would then clear it).
   const tourName = value['tourName'];
   if (!isTextOrNull(tourName)) return null;
+  const lineup = lineupSchema.safeParse(value['lineup']);
+  if (!lineup.success) return null;
   const priceMin = priceText(value['ticketPriceMin']);
   const priceMax = priceText(value['ticketPriceMax']);
   if (priceMin === undefined || priceMax === undefined) return null;
@@ -249,6 +275,7 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     venueUrl: resolveVenueCheckUrl(eventUrl, sourceUrl),
     tourName,
     soldOutRecord: soldOutRecordOf(value['soldOutRecord']),
+    lineup: lineup.data,
   };
 };
 

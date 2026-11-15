@@ -41,6 +41,24 @@ const PAYLOAD = {
   sourceUrl: 'https://larimer.example/calendar',
   tourName: null,
   soldOutRecord: null,
+  lineup: [
+    {
+      name: 'Six Foot Blonde',
+      role: 'headliner' as const,
+      position: 0,
+      artistId: 'art-1',
+      slug: 'six-foot-blonde',
+      unsure: false,
+    },
+    {
+      name: 'The Man is Dead',
+      role: 'support' as const,
+      position: 0,
+      artistId: 'art-2',
+      slug: 'the-man-is-dead',
+      unsure: true,
+    },
+  ],
 };
 
 const RECORD = {
@@ -93,7 +111,21 @@ describe('eventDetailFrom', () => {
       venueUrl: 'https://larimer.example/shows/six-foot-blonde',
       tourName: null,
       soldOutRecord: null,
+      lineup: PAYLOAD.lineup,
     });
+  });
+
+  it('refuses a lineup that drifted or went missing (a save would erase it)', () => {
+    const [first] = PAYLOAD.lineup;
+    expect(
+      eventDetailFrom({ ...PAYLOAD, lineup: [{ ...first, unsure: 'no' }] }),
+    ).toBeNull();
+    expect(
+      eventDetailFrom({ ...PAYLOAD, lineup: [{ ...first, role: 'opener' }] }),
+    ).toBeNull();
+    const older: Record<string, unknown> = { ...PAYLOAD };
+    delete older['lineup'];
+    expect(eventDetailFrom(older)).toBeNull();
   });
 
   it('reads the tour name, and refuses one that drifted (a save would clear it)', () => {

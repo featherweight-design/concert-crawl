@@ -1,15 +1,31 @@
 'use client';
 
-/** Consumed by the Add a show form (E3 PR C3). */
+/** Consumed by the Add a show form (E3 PR C3) and Event edit (E2-B). */
 
-import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type KeyboardEvent,
+} from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { PHOTO_PLACEHOLDER } from '../../artists/artist-styles';
 import { POPOVER } from '../edit/pickers';
 import type { ArtistSuggestion } from './add-show-api';
-import { addAct, moveAct, removeAct, type Act } from './add-show-rules';
+import {
+  addAct,
+  moveAct,
+  removeAct,
+  rolesOf,
+  type Act,
+} from './add-show-rules';
 
 const COPY = ADMIN_COPY.addShow.lineupField;
+const EDIT_COPY = ADMIN_COPY.eventEdit.show;
 const SEARCH_DEBOUNCE_MS = 250;
 
 /** The drawn 11px × on a 16 box, stroke 2 (`11/add-a-show-lineup-d`). */
@@ -39,12 +55,37 @@ const BARE: CSSProperties = {
   cursor: 'pointer',
 };
 
+/** Event edit's chip tint: cyan matched, amber unsure, none for a typed name. */
+const toneOf = (act: Act): string | null => {
+  if (act.artistId === undefined) return null;
+  return act.unsure ? 'var(--warning)' : 'var(--signal)';
+};
+
+/**
+ * Where an Event edit chip goes (`06/event-edit`: "Each name links to its
+ * artist. Amber means unsure: opens the match on Artists"). Admin has no page
+ * per artist, so an unsure match opens Artists, where it waits on To check;
+ * a sure one opens its artist page. A typed name, and a pick not yet saved
+ * (no slug), link nowhere.
+ */
+const hrefOf = (act: Act): string | null => {
+  if (act.artistId === undefined) return null;
+  if (act.unsure) return '/admin/artists';
+  return act.slug === undefined ? null : `/artists/${act.slug}`;
+};
+
 /**
  * Add a show's Lineup (`11/add-a-show-lineup-d`): 30px chips in bill order,
  * the first the headliner, then "Add an artist". Typing suggests artists
  * from Artists (a pick links it); Enter adds the name as typed. Drag reorders
  * on desktop (Alt+arrow from the keyboard); the phone moves an act up with
  * an arrow.
+ *
+ * `variant="edit"` is Event edit's (`06/event-edit`, `06/event-edit-mobile`):
+ * 24px chips tinted by match with a 14px avatar dot, each a link to its
+ * artist, and no role tag or ×. Undrawn there, so kept from Add a show
+ * without their marks: Delete on a focused chip removes it, and drag or
+ * Alt+arrow reorders it.
  */
 export const LineupField = ({
   id,
@@ -54,6 +95,7 @@ export const LineupField = ({
   phone,
   invalid,
   describedBy,
+  variant = 'add',
 }: {
   id: string;
   lineup: Act[];
@@ -62,13 +104,16 @@ export const LineupField = ({
   phone: boolean;
   invalid: boolean;
   describedBy?: string | undefined;
+  variant?: 'add' | 'edit';
 }) => {
+  const edit = variant === 'edit';
   const [text, setText] = useState('');
   const [suggestions, setSuggestions] = useState<ArtistSuggestion[]>([]);
   const [active, setActive] = useState(-1);
   const [dragging, setDragging] = useState<number | null>(null);
   const listId = useId();
   const hintId = useId();
+  const keysId = useId();
   const searchRef = useRef(search);
   searchRef.current = search;
 
@@ -104,7 +149,11 @@ export const LineupField = ({
     ...suggestions.map((artist) => ({
       key: artist.id,
       label: artist.name,
-      act: { name: artist.name, artistId: artist.id },
+      act: {
+        name: artist.name,
+        artistId: artist.id,
+        ...(artist.unsure && { unsure: true }),
+      },
     })),
     ...(typed === ''
       ? []
@@ -130,6 +179,7 @@ export const LineupField = ({
     seen.set(act.name, count + 1);
     return `${act.name}\u0000${count}`;
   });
+  const roles = rolesOf(lineup);
 
   return (
     <div>
@@ -141,7 +191,7 @@ export const LineupField = ({
             alignItems: 'center',
             gap: 6,
             minHeight: 44,
-            padding: '6px 8px',
+            padding: edit ? '8px 10px' : '6px 8px',
             borderRadius: 10,
             background: 'var(--bg)',
             border: `1px solid ${invalid ? 'var(--danger)' : 'var(--border-strong)'}`,
@@ -149,7 +199,99 @@ export const LineupField = ({
           }}
         >
           {lineup.map((act, index) => {
-            const role = index === 0 ? COPY.headliner : COPY.support;
+            const role =
+              roles[index] === 'headliner' ? COPY.headliner : COPY.support;
+            if (edit) {
+              const tone = toneOf(act);
+              const href = hrefOf(act);
+              const key = keys[index];
+              const props = {
+                'aria-label': COPY.chipLabel(act.name, role),
+                'aria-describedby': keysId,
+                'data-testid': 'lineup-chip',
+                'data-tone':
+                  tone === null ? 'typed' : act.unsure ? 'unsure' : 'matched',
+                draggable: !phone,
+                onDragStart: () => setDragging(index),
+                onDragEnd: () => setDragging(null),
+                onDragOver: (evt: DragEvent<Element>) => evt.preventDefault(),
+                onDrop: (evt: DragEvent<Element>) => {
+                  evt.preventDefault();
+                  if (dragging !== null) move(dragging, index);
+                  setDragging(null);
+                },
+                onKeyDown: (evt: KeyboardEvent<Element>) => {
+                  if (evt.key === 'Delete' || evt.key === 'Backspace') {
+                    evt.preventDefault();
+                    onChange(removeAct(lineup, index));
+                    return;
+                  }
+                  if (!evt.altKey) return;
+                  if (evt.key === 'ArrowLeft') move(index, index - 1);
+                  if (evt.key === 'ArrowRight') move(index, index + 1);
+                },
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  height: 24,
+                  padding: '0 9px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  color: 'var(--fg)',
+                  textDecoration: 'none',
+                  // A typed name has no match to tint (undrawn): the neutral
+                  // chip of Add a show.
+                  background:
+                    tone === null
+                      ? 'var(--surface-2)'
+                      : `color-mix(in srgb, ${tone} 10%, transparent)`,
+                  border:
+                    tone === null
+                      ? '1px solid var(--border-strong)'
+                      : `1px solid color-mix(in srgb, ${tone} 30%, transparent)`,
+                  opacity: dragging === index ? 0.5 : 1,
+                  maxWidth: '100%',
+                } satisfies CSSProperties,
+              };
+              const body = (
+                <>
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 14,
+                      height: 14,
+                      flex: 'none',
+                      borderRadius: '50%',
+                      background: PHOTO_PLACEHOLDER,
+                    }}
+                  />
+                  <span
+                    style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    {act.name}
+                  </span>
+                </>
+              );
+              // A new tab, so following a name never drops unsaved edits.
+              return href === null ? (
+                <span key={key} role="group" tabIndex={0} {...props}>
+                  {body}
+                </span>
+              ) : (
+                <a
+                  key={key}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  {...props}
+                >
+                  {body}
+                </a>
+              );
+            }
             return (
               <span
                 key={keys[index]}
@@ -272,16 +414,22 @@ export const LineupField = ({
             style={{
               flex: 1,
               minWidth: 120,
-              height: 30,
-              padding: '0 4px',
+              height: edit ? 24 : 30,
+              padding: edit ? 0 : '0 4px',
               border: 'none',
               outline: 'none',
               background: 'transparent',
               color: 'var(--fg)',
-              fontSize: phone ? 16 : 13,
+              // 16px on the phone, so focusing the field never zooms the page.
+              fontSize: phone ? 16 : edit ? 12.5 : 13,
               fontFamily: 'inherit',
             }}
           />
+          {edit && (
+            <span id={keysId} className="sr-only">
+              {EDIT_COPY.lineupKeys}
+            </span>
+          )}
         </div>
         {options.length > 0 && (
           <div
@@ -324,7 +472,7 @@ export const LineupField = ({
         id={hintId}
         style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 5 }}
       >
-        {phone ? COPY.hintPhone : COPY.hint}
+        {edit ? EDIT_COPY.lineupHint : phone ? COPY.hintPhone : COPY.hint}
       </div>
     </div>
   );

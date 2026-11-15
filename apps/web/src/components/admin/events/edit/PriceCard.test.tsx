@@ -91,6 +91,7 @@ const DETAIL: EventDetail = {
   venueUrl: null,
   tourName: null,
   soldOutRecord: null,
+  lineup: [],
 };
 
 beforeEach(() => {

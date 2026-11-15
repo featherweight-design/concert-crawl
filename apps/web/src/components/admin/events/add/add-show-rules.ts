@@ -27,11 +27,47 @@ export const isAddShowField = (value: string): value is AddShowField =>
 
 export type FieldErrors = Partial<Record<AddShowField, AddShowErrorCode>>;
 
-/** One act; `artistId` once picked from Artists, else the name as typed. */
+export type ActRole = 'headliner' | 'support';
+
+/**
+ * One act; `artistId` once picked from Artists, else the name as typed. Add a
+ * show leaves `role` unset (the first is the headliner). Event edit carries
+ * the saved role, so a crawled bill with several headliners keeps them all,
+ * plus the match's `slug` and `unsure` for its chip.
+ */
 export interface Act {
   name: string;
   artistId?: string;
+  role?: ActRole;
+  slug?: string;
+  unsure?: boolean;
 }
+
+/**
+ * Each act's role, in bill order. Headliners lead the bill: the first act is
+ * always one, and an act marked headliner stays one while every act before
+ * it is a headliner too. With no roles set (Add a show) that is the first
+ * act headlining and the rest supporting.
+ */
+export const rolesOf = (lineup: readonly Act[]): ActRole[] => {
+  let leading = true;
+  return lineup.map((act, index) => {
+    leading = leading && (index === 0 || act.role === 'headliner');
+    return leading ? 'headliner' : 'support';
+  });
+};
+
+/** The bill as the API's `lineupEntrySchema` takes it. */
+export const lineupEntries = (
+  lineup: readonly Act[],
+): AddShowBody['lineup'] => {
+  const roles = rolesOf(lineup);
+  return lineup.map((act, index) => ({
+    name: act.name,
+    role: roles[index] ?? 'support',
+    ...(act.artistId !== undefined && { artistId: act.artistId }),
+  }));
+};
 
 export interface AddShowDraft {
   title: string;
@@ -165,11 +201,7 @@ export const toBody = (draft: AddShowDraft): AddShowBody => ({
   doorsTime: draft.doorsTime,
   showTime: draft.showTime,
   ticketUrl: draft.ticketUrl.trim() === '' ? null : draft.ticketUrl.trim(),
-  lineup: draft.lineup.map((act, index) => ({
-    name: act.name,
-    role: index === 0 ? 'headliner' : 'support',
-    ...(act.artistId !== undefined && { artistId: act.artistId }),
-  })),
+  lineup: lineupEntries(draft.lineup),
 });
 
 /**
