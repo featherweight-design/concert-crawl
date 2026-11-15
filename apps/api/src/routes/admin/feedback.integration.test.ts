@@ -575,9 +575,13 @@ describe('admin feedback (integration)', () => {
         },
       });
       const res = await getOne(id);
-      const body = (await res.json()) as {
-        data: { metadata: Record<string, unknown> | null };
-      };
+      const body = z
+        .object({
+          data: z.object({
+            metadata: z.record(z.string(), z.unknown()).nullable(),
+          }),
+        })
+        .parse(await res.json());
       expect(body.data.metadata).toEqual({ device: 'iPhone' });
     });
   });
