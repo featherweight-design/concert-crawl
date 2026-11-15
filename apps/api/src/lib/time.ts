@@ -4,6 +4,14 @@
 export const MT_TIME_ZONE = 'America/Denver';
 
 /**
+ * A nullable timestamptz read through a raw `sql` expression (a scalar
+ * subquery's MAX, say), which the driver hands back as a string or a Date.
+ * For `.mapWith`.
+ */
+export const toNullableDate = (value: string | Date | null): Date | null =>
+  value === null ? null : new Date(value);
+
+/**
  * True when `eventDate` (a `YYYY-MM-DD` string from the events.date column) is
  * within `thresholdDays` of today in Denver, inclusive of the threshold.
  *
