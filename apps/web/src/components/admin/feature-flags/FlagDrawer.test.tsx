@@ -248,6 +248,62 @@ describe('the flag drawer', () => {
     );
   });
 
+  it('only says how big Beta is at Beta, and only introduces people when there are some', () => {
+    openDrawer(flag({ stage: 'everyone' }));
+    const drawer = screen.getByTestId('flag-drawer-crews');
+    expect(within(drawer).queryByText(/Beta is/)).toBeNull();
+    expect(within(drawer).queryByText(/Also on for/)).toBeNull();
+  });
+
+  it('keeps the Undo toast when the re-add fails, so it can be tried again', async () => {
+    del.mockResolvedValue(flag({ people: [] }));
+    post.mockRejectedValue(new Error('boom'));
+    const drawer = openDrawer(flag({ people: [person('theo.wav')] }));
+    fireEvent.click(within(drawer).getByTestId('flag-person-remove-theo.wav'));
+    const toast = await screen.findByTestId('flag-people-toast');
+    fireEvent.click(within(toast).getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        within(drawer).getByText('Could not update the people. Try again.'),
+      ).toBeVisible(),
+    );
+    expect(screen.getByTestId('flag-people-toast')).toBeVisible();
+  });
+
+  it('ignores a second people change while one is in flight', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    del.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    const drawer = openDrawer(
+      flag({ people: [person('theo.wav'), person('sam')] }),
+    );
+    fireEvent.click(within(drawer).getByTestId('flag-person-remove-theo.wav'));
+    await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+    expect(within(drawer).getByTestId('flag-person-remove-sam')).toBeDisabled();
+    fireEvent.click(within(drawer).getByTestId('flag-person-remove-sam'));
+    expect(del).toHaveBeenCalledTimes(1);
+    finish(flag({ people: [person('sam')] }));
+  });
+
+  it('does not close on a press that began inside the panel', () => {
+    const drawer = openDrawer(flag());
+    // A text selection dragged from the panel out onto the scrim.
+    fireEvent.mouseDown(within(drawer).getByText('Crews', { selector: 'h3' }));
+    fireEvent.click(drawer);
+    expect(screen.getByTestId('flag-drawer-crews')).toBeVisible();
+    // A real press on the scrim closes it.
+    fireEvent.mouseDown(drawer);
+    fireEvent.click(drawer);
+    expect(screen.queryByTestId('flag-drawer-crews')).toBeNull();
+  });
+
+  it('keeps focus in the panel when it comes back from the search', () => {
+    const drawer = openDrawer(flag());
+    fireEvent.click(within(drawer).getByTestId('flag-people-add-trigger'));
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Back' }));
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
   it('says so when a people change fails', async () => {
     del.mockRejectedValue(new Error('boom'));
     const drawer = openDrawer(flag({ people: [person('theo.wav')] }));
@@ -340,6 +396,43 @@ describe('adding a person', () => {
       target: { value: 'zzz' },
     });
     await screen.findByText('Could not search. Try again.');
+  });
+
+  it('says so, in the search view, when an add fails', async () => {
+    post.mockRejectedValue(new Error('boom'));
+    await search(flag({ stage: 'beta' }));
+    fireEvent.click(screen.getByTestId('flag-people-add-u-anaya'));
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId('flag-people-search')).getByRole('alert'),
+      ).toHaveTextContent('Could not update the people. Try again.'),
+    );
+  });
+
+  it('treats the Me owner and named people as already seeing it at Me', async () => {
+    get.mockImplementation(async (path: string) =>
+      path.includes('/history') ? [] : results,
+    );
+    const drawer = openDrawer(flag({ stage: 'me', stageOwnerUserId: 'u-ana' }));
+    fireEvent.click(within(drawer).getByTestId('flag-people-add-trigger'));
+    fireEvent.change(screen.getByTestId('flag-people-query'), {
+      target: { value: 'an' },
+    });
+    await screen.findByTestId('flag-people-result-u-ana');
+    expect(screen.getByTestId('flag-people-result-u-ana')).toHaveTextContent(
+      'already sees it',
+    );
+    // A Beta-role person does not see a flag at Me because of the role.
+    expect(screen.getByTestId('flag-people-add-u-anaya')).toBeVisible();
+  });
+
+  it('drops the old rows while a new search is pending', async () => {
+    await search(flag({ stage: 'beta' }));
+    get.mockImplementation(() => new Promise(() => undefined));
+    fireEvent.change(screen.getByTestId('flag-people-query'), {
+      target: { value: 'ana' },
+    });
+    expect(screen.queryByTestId('flag-people-result-u-ana')).toBeNull();
   });
 
   it('goes back to the panel', async () => {

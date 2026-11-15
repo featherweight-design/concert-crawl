@@ -57,14 +57,30 @@ export const FlagDrawer = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<'panel' | 'add'>('panel');
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [changes, setChanges] = useState(0);
   const [removed, setRemoved] = useState<{
     userId: string;
     handle: string;
   } | null>(null);
+  // A press that starts inside the panel and ends on the scrim (a text
+  // selection dragged out) is not a click on the scrim.
+  const pressedOnScrim = useRef(false);
   useDialogKeyboard(
     panelRef,
-    view === 'add' ? () => setView('panel') : onClose,
+    view === 'add' ? () => showView('panel') : onClose,
   );
+
+  // Switching views unmounts the control that had focus: put it back in the
+  // panel. The search view focuses its own field.
+  useEffect(() => {
+    if (view === 'panel') panelRef.current?.focus();
+  }, [view]);
+
+  const showView = (next: 'panel' | 'add') => {
+    setError(null);
+    setView(next);
+  };
 
   const onStaging = flag.environment !== 'production';
   const stage = stageOf(flag);
@@ -77,19 +93,26 @@ export const FlagDrawer = ({
     return () => clearTimeout(timer);
   }, [removed]);
 
+  // One people change at a time: a second click while one is in flight is
+  // ignored, so a slower answer cannot overwrite a newer one.
   const changePeople = async (
     run: (token: string) => Promise<AdminFeatureFlag>,
   ): Promise<boolean> => {
+    if (busy) return false;
+    setBusy(true);
     setError(null);
     try {
       const token = await getToken();
       if (!token) throw new Error('no session token');
       onFlag(await run(token));
+      setChanges((count) => count + 1);
       return true;
     } catch (err) {
       console.error('[admin] feature flag people change failed', flag.key, err);
       setError(DRAWER.peopleError);
       return false;
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -112,18 +135,20 @@ export const FlagDrawer = ({
     if (done) setRemoved({ userId, handle: mention(handle) });
   };
 
+  // The toast stays until the re-add answers, so a failed Undo can be tried again.
   const undoRemove = async () => {
     if (removed === null) return;
-    const { userId } = removed;
-    setRemoved(null);
-    await add(userId);
+    if (await add(removed.userId)) setRemoved(null);
   };
 
-  // What changes the History list: any save moves one of these.
+  // What changes the History list: any save moves one of these, and `changes`
+  // counts people changes so a remove followed by a re-add (same ids, same
+  // updatedAt) still reloads it.
   const version = [
     flag.updatedAt,
     flag.verifiedAt,
     people.map((person) => person.userId).join(','),
+    changes,
   ].join('|');
 
   return (
@@ -140,13 +165,20 @@ export const FlagDrawer = ({
         display: 'flex',
         justifyContent: 'flex-end',
       }}
+      onMouseDown={(evt) => {
+        pressedOnScrim.current = evt.target === evt.currentTarget;
+      }}
       onClick={(evt) => {
-        if (evt.target === evt.currentTarget) onClose();
+        if (evt.target === evt.currentTarget && pressedOnScrim.current) {
+          onClose();
+        }
       }}
     >
       <div
         ref={panelRef}
+        tabIndex={-1}
         style={{
+          outline: 'none',
           width: 460,
           maxWidth: '100%',
           height: '100%',
@@ -213,7 +245,9 @@ export const FlagDrawer = ({
         {view === 'add' ? (
           <FlagPeopleSearch
             flag={flag}
-            onBack={() => setView('panel')}
+            error={error}
+            busy={busy}
+            onBack={() => showView('panel')}
             onAdd={async (userId) => {
               await add(userId);
             }}
@@ -248,16 +282,23 @@ export const FlagDrawer = ({
                 {onStaging ? DRAWER.whoSeesStaging : DRAWER.whoSeesProduction}
               </span>
               <StageLadder flag={flag} onPick={onPick} scope="drawer" />
-              <div
-                style={{
-                  fontSize: 12.5,
-                  color: 'var(--fg-muted)',
-                  marginTop: 4,
-                }}
-              >
-                {betaCount !== null && `${DRAWER.betaIs(betaCount)} `}
-                {DRAWER.alsoOn}
-              </div>
+              {/* "Beta is N people." only says something at Beta, and the named
+                  people are only worth introducing when there are some. */}
+              {(people.length > 0 ||
+                (stage === 'beta' && betaCount !== null)) && (
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    color: 'var(--fg-muted)',
+                    marginTop: 4,
+                  }}
+                >
+                  {stage === 'beta' &&
+                    betaCount !== null &&
+                    `${DRAWER.betaIs(betaCount)} `}
+                  {people.length > 0 && DRAWER.alsoOn}
+                </div>
+              )}
               {people.length === 0 ? (
                 <div
                   data-testid="flag-people-empty"
@@ -320,6 +361,7 @@ export const FlagDrawer = ({
                         </div>
                         <button
                           type="button"
+                          disabled={busy}
                           onClick={() =>
                             void remove(person.userId, person.handle)
                           }
@@ -344,7 +386,7 @@ export const FlagDrawer = ({
               )}
               <button
                 type="button"
-                onClick={() => setView('add')}
+                onClick={() => showView('add')}
                 data-testid="flag-people-add-trigger"
                 style={{
                   display: 'flex',
