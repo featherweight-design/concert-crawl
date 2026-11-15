@@ -7,7 +7,7 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { featureFlagDefaults } from '@concert-crawl/entitlements';
 import type { HistoryResponse } from '@concert-crawl/types';
@@ -90,12 +90,10 @@ describe('HistoryContent, signed in with /v1/users/me failing', () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() =>
-      expect(
-        queryClient.getQueryState(planStateQueryKey('user_test'))?.status,
-      ).toBe('error'),
-    );
-
+    // Concerts no longer reads the plan at all, so a failing /me can't lock it.
     expect(screen.getByText(HISTORY_COPY.empty.headline)).toBeInTheDocument();
+    expect(
+      queryClient.getQueryState(planStateQueryKey('user_test')),
+    ).toBeUndefined();
   });
 });

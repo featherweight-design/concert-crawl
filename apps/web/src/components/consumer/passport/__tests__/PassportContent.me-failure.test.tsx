@@ -7,7 +7,7 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { featureFlagDefaults } from '@concert-crawl/entitlements';
 import type { HistoryShow } from '@concert-crawl/types';
@@ -104,14 +104,12 @@ describe('PassportContent, signed in with /v1/users/me failing', () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() =>
-      expect(
-        queryClient.getQueryState(planStateQueryKey('user_test'))?.status,
-      ).toBe('error'),
-    );
-
+    // Passport no longer reads the plan at all, so a failing /me can't lock it.
     expect(
       screen.getByRole('region', { name: CONSUMER_COPY.passport.bookletLabel }),
     ).toBeInTheDocument();
+    expect(
+      queryClient.getQueryState(planStateQueryKey('user_test')),
+    ).toBeUndefined();
   });
 });
