@@ -1,3 +1,25 @@
+# [1.497.0](https://github.com/featherweight-design/concert-crawl/compare/v1.496.0...v1.497.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **admin:** address the sold-out evidence review ([cd4a2a4](https://github.com/featherweight-design/concert-crawl/commit/cd4a2a428aae9c1b64203075cf5205f87e7f462b))
+* **admin:** decide a test re-crawl batch trigger by trigger ([f08f16a](https://github.com/featherweight-design/concert-crawl/commit/f08f16af0981828e625bcc9b5c74ef5f604d5b3c))
+* **admin:** label a queued test re-crawl batch from its trigger ([055412a](https://github.com/featherweight-design/concert-crawl/commit/055412aa9dd1cf7674cbcf726004a9ffe01f5035))
+* **web:** address the sign-in 3b review ([122f6b9](https://github.com/featherweight-design/concert-crawl/commit/122f6b96c6049c4f205fdad62e535aa78be2b414))
+* **web:** keep a card row's label whole when its value is long ([953542b](https://github.com/featherweight-design/concert-crawl/commit/953542b8986744bea8ef20e250b0ccd2ab99f590))
+* **web:** keep the legacy event editor until its five tools have a home ([0280cad](https://github.com/featherweight-design/concert-crawl/commit/0280cad297c22c829848c2c3a276ba4a64bbce7b))
+
+
+### Features
+
+* **admin:** mark a test re-crawl batch on Crawl runs ([7a99828](https://github.com/featherweight-design/concert-crawl/commit/7a99828a053ac50bf89be5da195392e25194d006))
+* **api:** return the sold-out record and require the mark's method ([325c159](https://github.com/featherweight-design/concert-crawl/commit/325c1599d0f56d43719a1c314b99399d23d1ac67))
+* **db:** track a triggered crawl's page progress (0120) ([bd95043](https://github.com/featherweight-design/concert-crawl/commit/bd950435afb0ec3e9ce428b542020b74e62a5f7f))
+* **types:** carry a trigger's page progress ([ee2c05c](https://github.com/featherweight-design/concert-crawl/commit/ee2c05cd95f7747c83f845aadd671e50af82843f))
+* **web:** add the sign-in email code, device code, throttle and offline screens ([44aefaf](https://github.com/featherweight-design/concert-crawl/commit/44aefafb8c8481d0994714272caac95bf47f057b))
+* **web:** draw Tour name and the sold-out evidence in Event edit ([2c6f4f5](https://github.com/featherweight-design/concert-crawl/commit/2c6f4f5cd96d9c982b15a291af9e0b0b065729a9))
+
 # [1.496.0](https://github.com/featherweight-design/concert-crawl/compare/v1.495.0...v1.496.0) (2026-11-15)
 
 
