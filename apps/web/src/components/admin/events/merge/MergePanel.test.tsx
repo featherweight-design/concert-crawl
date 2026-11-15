@@ -327,7 +327,9 @@ describe('MergePanel: compare and merge', () => {
   });
 
   it('says so when the comparison cannot load, and keeps Merge off', async () => {
-    preview.mockRejectedValue(new Error('down'));
+    // One per direction: the panel reads both when a listing is picked.
+    preview.mockRejectedValueOnce(new Error('down'));
+    preview.mockRejectedValueOnce(new Error('down'));
     renderPanel();
     fireEvent.click(await screen.findByTestId('merge-pick-row'));
     expect(await screen.findByTestId('merge-compare-failed')).toHaveTextContent(
@@ -339,10 +341,12 @@ describe('MergePanel: compare and merge', () => {
   });
 
   it('explains a refusal for one played and one upcoming show', async () => {
-    preview.mockResolvedValue({
+    const refusal: PreviewResult = {
       kind: 'not-mergeable',
       reason: 'past_mismatch',
-    });
+    };
+    preview.mockResolvedValueOnce(refusal);
+    preview.mockResolvedValueOnce(refusal);
     renderPanel();
     fireEvent.click(await screen.findByTestId('merge-pick-row'));
     expect(await screen.findByTestId('merge-compare-failed')).toHaveTextContent(
