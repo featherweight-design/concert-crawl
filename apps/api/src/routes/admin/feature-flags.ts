@@ -1,4 +1,4 @@
-import { db, featureFlags } from '@concert-crawl/db';
+import { db, featureFlagHistory, featureFlags } from '@concert-crawl/db';
 import {
   FEATURE_FLAGS,
   FEATURE_FLAG_KEYS,
@@ -7,6 +7,7 @@ import {
   type AdminFeatureFlag,
 } from '@concert-crawl/entitlements';
 import { getAuth } from '@hono/clerk-auth';
+import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -64,14 +65,33 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
   // 0122): on is Everyone, off is Off.
   const stage = enabled ? 'everyone' : 'off';
 
-  const [row] = await db
-    .insert(featureFlags)
-    .values({ key, enabled, stage, updatedAt, updatedBy: actorId })
-    .onConflictDoUpdate({
-      target: featureFlags.key,
-      set: { enabled, stage, updatedAt, updatedBy: actorId },
-    })
-    .returning();
+  const row = await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ stage: featureFlags.stage })
+      .from(featureFlags)
+      .where(eq(featureFlags.key, key));
+    const [saved] = await tx
+      .insert(featureFlags)
+      .values({ key, enabled, stage, updatedAt, updatedBy: actorId })
+      .onConflictDoUpdate({
+        target: featureFlags.key,
+        set: { enabled, stage, updatedAt, updatedBy: actorId },
+      })
+      .returning();
+    // The ladder's history records the move (a toggle that changes nothing
+    // adds no entry), so it agrees with `stage` from the first change on.
+    if (saved && before?.stage !== stage) {
+      await tx.insert(featureFlagHistory).values({
+        flagKey: key,
+        kind: 'stage_set',
+        fromStage: before?.stage ?? null,
+        toStage: stage,
+        actorUserId: actorId,
+        createdAt: updatedAt,
+      });
+    }
+    return saved;
+  });
 
   if (!row) {
     return ctx.json({ success: false, error: 'Failed to save flag' }, 500);
