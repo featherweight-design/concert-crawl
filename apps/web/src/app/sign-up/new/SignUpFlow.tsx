@@ -246,6 +246,8 @@ export function SignUpFlow({
   // Back keeps the email and the tick; the next press starts a fresh sign-up
   // (Clerk drops the unfinished one when the password goes in again).
   function backToForm() {
+    // A check or a send in flight would finish a sign-up the visitor left.
+    if (busy) return;
     setCode('');
     setCodeLine(null);
     verified.current = false;
@@ -262,6 +264,16 @@ export function SignUpFlow({
     setBusy(true);
     setCodeLine(null);
     const since = Date.now();
+    if (sendSkipped.current) {
+      // A taken email never had a code, and no code is right: it reads as any
+      // wrong code does, so the screen cannot say whether the address has an
+      // account (Clerk's own refusal for it is not the same as a wrong code's).
+      await held(since);
+      setCodeLine('wrong');
+      setCode('');
+      setBusy(false);
+      return;
+    }
     let error: unknown = null;
     if (!verified.current) {
       try {

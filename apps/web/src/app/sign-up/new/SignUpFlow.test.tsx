@@ -507,13 +507,16 @@ describe('SignUpFlow, verify', () => {
     mocks.signUp.password.mockResolvedValue({
       error: clerkError(422, 'form_identifier_exists'),
     });
+    // Whatever Clerk would say for it, a code on a taken email reads wrong.
     mocks.signUp.verifications.verifyEmailCode.mockResolvedValue({
-      error: clerkError(422, 'form_code_incorrect'),
+      error: clerkError(404, 'resource_not_found'),
     });
     await toVerify();
     enterCode();
     await finish();
     expect(screen.getByText(COPY.verify.wrong)).toBeInTheDocument();
+    expect(screen.queryByText(SIGN_IN_COPY.failed)).toBeNull();
+    expect(mocks.signUp.verifications.verifyEmailCode).not.toHaveBeenCalled();
     await settle(60_000);
     fireEvent.click(screen.getByRole('button', { name: COPY.verify.resend }));
     await settle(FLOOR_MS);
@@ -532,6 +535,19 @@ describe('SignUpFlow, verify', () => {
     expect(screen.getByRole('checkbox')).toBeChecked();
     await press();
     expect(mocks.signUp.password).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores Back while a code is being checked, so it cannot finish a sign-up the visitor left', async () => {
+    completeOnVerify();
+    await toVerify();
+    enterCode();
+    fireEvent.click(screen.getByRole('button', { name: COPY.verify.submit }));
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.verify.wrongEmail }),
+    );
+    await settle(FLOOR_MS);
+    expect(screen.queryByLabelText(COPY.form.emailLabel)).toBeNull();
+    expect(mocks.signUp.finalize).toHaveBeenCalledOnce();
   });
 
   it('links to sign in on every verify screen', async () => {
