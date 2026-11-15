@@ -142,7 +142,9 @@ describe('AdminTabs', () => {
       expect(errors).not.toHaveBeenCalled();
       // The look holds: the selected underline tab keeps its 2px rule.
       expect(tab('One').style.borderBottom).toBe('2px solid var(--signal)');
-      expect(tab('One').style.borderTop).toContain('none');
+      // jsdom expands `borderTop: 'none'` into longhands ("medium" width),
+      // so read the style, not the shorthand.
+      expect(tab('One').style.borderTopStyle).toBe('none');
     } finally {
       errors.mockRestore();
     }
