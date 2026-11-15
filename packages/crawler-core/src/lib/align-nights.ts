@@ -1,5 +1,7 @@
 import {
+  canonicalizeSupporting,
   isTwelveHourMisread,
+  nightArtistKey,
   sameNight,
   showTimeKey,
   type NightRow,
@@ -15,8 +17,16 @@ import {
 // Nothing here writes: the one thing the caller must do is stamp a time onto a
 // stored untimed row that a timed listing has just supplied (`promotions`).
 
+/** Who is on a row's bill, as the events columns of the same names hold it. */
+export interface BillNames {
+  headliners?: readonly string[] | null | undefined;
+  supportingArtists?: readonly string[] | null | undefined;
+  canonicalHeadliners?: readonly string[] | null | undefined;
+  canonicalSupporting?: readonly string[] | null | undefined;
+}
+
 /** A night with the show's own page URL, when the listing carries one. */
-export interface UrlNightRow extends NightRow {
+export interface UrlNightRow extends NightRow, BillNames {
   eventUrl?: string | null | undefined;
 }
 
@@ -42,6 +52,33 @@ interface Slot extends UrlNightRow {
 const isTimed = (row: NightRow): boolean => showTimeKey(row.showTime) !== '';
 
 /**
+ * Every canonical name on a row's bill: its artist key, headliners and
+ * supporting acts, each through the crawl's own canonicalizer (the stored
+ * canonical column when there is one) with edge punctuation trimmed as
+ * `sameNight` does. No name-shape rules (#1343): names are compared whole.
+ */
+const billNames = (row: NightRow & BillNames): Set<string> => {
+  const canonical = (
+    stored: readonly string[] | null | undefined,
+    raw: readonly string[] | null | undefined,
+  ): readonly string[] => stored ?? canonicalizeSupporting([...(raw ?? [])]);
+  const names = [
+    row.canonicalArtist,
+    ...canonical(row.canonicalHeadliners, row.headliners),
+    ...canonical(row.canonicalSupporting, row.supportingArtists),
+  ].map(nightArtistKey);
+  return new Set(names.filter((name) => name !== ''));
+};
+
+const sharesAnAct = (
+  left: NightRow & BillNames,
+  right: NightRow & BillNames,
+): boolean => {
+  const leftNames = billNames(left);
+  return [...billNames(right)].some((name) => leftNames.has(name));
+};
+
+/**
  * The show added by hand that a listing with no same-night row lands on, or
  * null to insert it as usual.
  *
@@ -49,17 +86,19 @@ const isTimed = (row: NightRow): boolean => showTimeKey(row.showTime) !== '';
  * ladder's display string, which can be a title ("Jazz Series presents" over
  * ["Kokoroko"]). So the artist test of `sameNight` misses it and the crawl
  * would list the show twice. Instead: EXACTLY ONE manual row on the listing's
- * date, and a show time that does not disagree when both sides have one, so an
- * early and a late show never fold together. Zero or several manual rows, or
- * an untimed manual row while this crawl lists the date at more than one time
- * (which of them it is cannot be told), insert as before and leave the
- * duplicate-night cleanup to judge.
+ * date, at least one act on both bills (so another room's act that night is
+ * never folded under the admin's bill), and a show time that does not
+ * disagree when both sides have one, so an early and a late show never fold
+ * together. Zero or several manual rows, no shared act, or an untimed manual
+ * row while this crawl lists the date at more than one time (which of them it
+ * is cannot be told), insert as before and leave the duplicate-night cleanup
+ * to judge.
  */
 export function manualLandingTarget<
-  S extends NightRow & { manual?: boolean | undefined },
+  S extends NightRow & BillNames & { manual?: boolean | undefined },
 >(
   daySlots: readonly S[],
-  listing: NightRow,
+  listing: NightRow & BillNames,
   listingTimesOnDate: ReadonlySet<string>,
 ): S | null {
   const manual = daySlots.filter(
@@ -67,6 +106,7 @@ export function manualLandingTarget<
   );
   const [only] = manual;
   if (manual.length !== 1 || only === undefined) return null;
+  if (!sharesAnAct(only, listing)) return null;
   const slotTime = showTimeKey(only.showTime);
   const listingTime = showTimeKey(listing.showTime);
   if (slotTime !== '' && listingTime !== '') {

@@ -347,12 +347,18 @@ describe('crawlVenue — shows added by hand (admin 4a)', () => {
       .returning({ id: events.id });
     if (!hand) throw new Error('manual insert returned no row');
 
+    // The venue's performer field names the act, so the ladder bills Kokoroko
+    // (the act both bills share) without the adjudicator.
     mockExtraction([
       makeEvent('Jazz Series presents', date, {
         showTime: '19:00',
         ticketUrl: 'https://tickets.example.org/early',
+        observedPerformers: ['Kokoroko'],
       }),
-      makeEvent('Jazz Series presents', date, { showTime: '22:00' }),
+      makeEvent('Jazz Series presents', date, {
+        showTime: '22:00',
+        observedPerformers: ['Kokoroko'],
+      }),
     ]);
     await crawlVenue(venue.id, mockBrowser);
 
