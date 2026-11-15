@@ -1848,7 +1848,7 @@ describe('EventDetailPriceBlock price check', () => {
     );
   });
 
-  it('keeps the live card on a multi-tier event, with an anchor for the pointer to land on', () => {
+  it('takes the card band when the headline tier of several is under a check, other tiers still live inside it', () => {
     const counter = counterOn('parent-1');
     const event = buildBaseEvent({
       ticketPriceMin: '44.00',
@@ -1865,10 +1865,41 @@ describe('EventDetailPriceBlock price check', () => {
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
     );
+    const card = screen.getByTestId('disputed-price-card');
+    expect(screen.getByTestId('proposed-price').textContent).toBe('$52?');
+    expect(document.getElementById('counter-counter-on-parent-1')).toBe(card);
+    // The VIP row sits inside the card, plain: no check on it.
+    expect(card.textContent).toContain('VIP');
+    expect(screen.queryByTestId('tier-check-row')).toBeNull();
+  });
+
+  it('changes only the row of another tier under a check; the headline stays live', () => {
+    const counter = counterOn('parent-2');
+    const event = buildBaseEvent({
+      ticketPriceMin: '44.00',
+      priceSource: 'community',
+      priceByTier: [
+        makeTierBlock({ tier: 'GA', headline: headline('parent-1') }),
+        makeTierBlock({
+          tier: 'VIP',
+          headline: headline('parent-2'),
+          counterSubmission: counter,
+        }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
     expect(screen.queryByTestId('disputed-price-card')).toBeNull();
+    const row = screen.getByTestId('tier-check-row');
+    expect(row.id).toBe('counter-counter-on-parent-2');
+    expect(row.textContent).toContain('VIP');
+    expect(screen.getByTestId('tier-proposed-price').textContent).toBe('$52?');
+    expect(row.textContent?.toLowerCase()).toContain('update pending');
+    expect(row.textContent).toContain('@rae');
     expect(
-      document.getElementById('counter-counter-on-parent-1'),
-    ).not.toBeNull();
+      screen.getByRole('button', { name: /submit an update/i }),
+    ).toBeTruthy();
   });
 
   // The ended-check notice rides on the price card, and only on the card whose
@@ -1938,6 +1969,6 @@ describe('EventDetailPriceBlock price check', () => {
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
     );
     expect(screen.queryByTestId('disputed-price-card')).toBeNull();
-    expect(screen.queryByTestId('counter-anchor')).toBeNull();
+    expect(screen.queryByTestId('tier-check-row')).toBeNull();
   });
 });
