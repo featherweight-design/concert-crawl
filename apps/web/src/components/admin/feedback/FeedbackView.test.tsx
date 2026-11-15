@@ -458,9 +458,7 @@ describe('an ?item= outside the loaded list', () => {
     nav.set('?tab=feedback&item=f9');
     render(<FeedbackView />);
     expect(await screen.findByTestId('feedback-item')).toBeInTheDocument();
-    expect(screen.getByTestId('feedback-item-quote')).toHaveTextContent(
-      'A done one',
-    );
+    expect(screen.getByTestId('feedback-item')).toHaveTextContent('A done one');
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
@@ -538,16 +536,15 @@ describe('an ?item= outside the loaded list', () => {
     render(<FeedbackView />);
     await waitFor(() => expect(oneCalls('fa')).toHaveLength(1));
     act(() => nav.set('?tab=feedback&item=fb'));
-    expect(await screen.findByTestId('feedback-item-quote')).toHaveTextContent(
+    expect(await screen.findByTestId('feedback-item')).toHaveTextContent(
       'Item B',
     );
     await act(async () => {
       answerA(done('fa', 'Item A'));
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
-    expect(screen.getByTestId('feedback-item-quote')).toHaveTextContent(
-      'Item B',
-    );
+    expect(screen.getByTestId('feedback-item')).toHaveTextContent('Item B');
+    expect(screen.getByTestId('feedback-item')).not.toHaveTextContent('Item A');
     expect(nav.get()).toContain('item=fb');
   });
 
