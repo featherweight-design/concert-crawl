@@ -83,7 +83,8 @@ const RULE = '1px solid var(--border)';
  * changes not published" assumes a draft model this guide doesn't have (it
  * writes live once published), so the bar only shows before the first
  * publish (ruling). Publish runs the panel's publish, without a save: the
- * rows on screen are already saved.
+ * rows on screen are already saved, and the bar is hidden while a panel
+ * holds unsaved edits.
  */
 const UnpublishedBar = ({
   venueId,
@@ -111,9 +112,10 @@ const UnpublishedBar = ({
       setBusy(false);
       if (!result.success)
         return setFailed(result.field === 'accessibility' ? 'gate' : 'publish');
-      onPublished(
-        result.data ?? { ...guide, publishedAt: new Date().toISOString() },
-      );
+      // guideResult always carries the parsed guide on success; no stale
+      // render-time fallback that could overwrite a newer guide.
+      if (result.data === undefined) return setFailed('publish');
+      onPublished(result.data);
     })();
   };
 
@@ -156,6 +158,11 @@ const UnpublishedBar = ({
           {busy ? COPY.publishing : COPY.publish}
         </AdminButton>
       </div>
+      {/* Mounted before the click so "Publishing…" is announced; a failure
+          speaks through the gate line's or the toast's own alert. */}
+      <span role="status" className="sr-only" data-testid="guide-bar-status">
+        {busy ? COPY.publishing : ''}
+      </span>
       {blocked && (
         <p
           id={blockedId}
@@ -356,14 +363,19 @@ export const GuideTab = ({
         <CouldntLoad page={COPY.title} onRetry={() => router.refresh()} />
       ) : (
         <>
-          {guide.publishedAt === null && writtenCount(guide) > 0 && (
-            <UnpublishedBar
-              venueId={venue.id}
-              guide={guide}
-              phone={phone}
-              onPublished={onGuideChange}
-            />
-          )}
+          {/* Hidden while a section panel is open: the panel holds unsaved
+              edits the bar's publish would skip, and docked mode would
+              otherwise show two Publish guide buttons. */}
+          {editing === null &&
+            guide.publishedAt === null &&
+            writtenCount(guide) > 0 && (
+              <UnpublishedBar
+                venueId={venue.id}
+                guide={guide}
+                phone={phone}
+                onPublished={onGuideChange}
+              />
+            )}
           <p
             data-testid="guide-count"
             style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}

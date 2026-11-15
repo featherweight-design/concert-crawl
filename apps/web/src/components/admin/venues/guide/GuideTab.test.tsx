@@ -93,7 +93,7 @@ const stateOf = (section: string) =>
     .getByTestId('guide-state')
     .getAttribute('data-state');
 
-// The panel's Publish guide, not the tab bar's (both say Publish guide).
+// The panel's Publish guide (the tab's bar hides while a panel is open).
 const panelPublish = () => {
   const button = within(screen.getByTestId('side-panel')).getByRole('button', {
     name: COPY.publish,
@@ -479,6 +479,54 @@ describe('GuideTab unpublished bar (item 16)', () => {
     expect(bar()).toBeNull();
   });
 
+  it('hides while a section panel is open, and comes back when it closes', () => {
+    renderTab();
+    expect(bar()).not.toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: COPY.editLabel(COPY.section.parking),
+      }),
+    );
+    expect(screen.getByTestId('side-panel')).toBeTruthy();
+    expect(bar()).toBeNull();
+    // Only the panel's Publish guide is reachable.
+    expect(screen.getAllByRole('button', { name: COPY.publish })).toHaveLength(
+      1,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('side-panel')).toBeNull();
+    expect(bar()).not.toBeNull();
+  });
+
+  it('announces Publishing… through a polite status region', async () => {
+    let resolve: (value: unknown) => void = () => undefined;
+    mockPublish.mockReturnValue(
+      new Promise((done) => {
+        resolve = done;
+      }),
+    );
+    renderTab();
+    const status = screen.getByRole('status');
+    expect(status.textContent).toBe('');
+    const shown = bar();
+    if (shown === null) throw new Error('no bar');
+    fireEvent.click(within(shown).getByRole('button', { name: COPY.publish }));
+    await waitFor(() => expect(status.textContent).toBe(COPY.publishing));
+    resolve({ success: false });
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(screen.getByRole('status').textContent).toBe('');
+  });
+
+  it('a success without a guide is a failure, not a stale overwrite', async () => {
+    mockPublish.mockResolvedValue({ success: true });
+    renderTab();
+    const shown = bar();
+    if (shown === null) throw new Error('no bar');
+    fireEvent.click(within(shown).getByRole('button', { name: COPY.publish }));
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(onGuideChange).not.toHaveBeenCalled();
+  });
+
   it('stacks on the phone with a full-width Publish guide (`16/guide-m`)', async () => {
     phone = true;
     renderTab();
@@ -535,6 +583,33 @@ describe('GuideEditPanel publish footer (item 16)', () => {
       publish.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(save.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('⌘↵ before the first publish saves a draft, and never publishes', async () => {
+    mockSave.mockResolvedValue({ success: true, data: draftGuide });
+    renderTab();
+    openParking();
+    fireEvent.keyDown(screen.getByRole('textbox'), {
+      key: 'Enter',
+      metaKey: true,
+    });
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onGuideChange).toHaveBeenCalledWith(draftGuide));
+    expect(mockPublish).not.toHaveBeenCalled();
+  });
+
+  it('⌘↵ on a live guide saves, then publishes', async () => {
+    const live = { ...draftGuide, publishedAt: '2026-11-01' };
+    mockSave.mockResolvedValue({ success: true, data: live });
+    mockPublish.mockResolvedValue({ success: true, data: live });
+    renderTab(live);
+    openParking();
+    fireEvent.keyDown(screen.getByRole('textbox'), {
+      key: 'Enter',
+      ctrlKey: true,
+    });
+    await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('venue-1'));
+    expect(mockSave).toHaveBeenCalledTimes(1);
   });
 });
 
