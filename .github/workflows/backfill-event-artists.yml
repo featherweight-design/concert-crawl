@@ -1,0 +1,112 @@
+name: Backfill event artists
+
+# Admin 4a-2: fills `event_artists` for every stored event from its artist
+# arrays, by running packages/db/src/scripts/run-backfill-event-artists.ts
+# against the STAGING database by default, or PRODUCTION with
+# `target: production`. Each target runs in its own GitHub environment and reads
+# that environment's own CRAWLER_DATABASE_URL.
+#
+# Safe by default. Dispatching it does a DRY RUN: nothing is written, and the
+# log prints what it would insert, update and delete. Writing needs the `apply`
+# input set to true, a second deliberate dispatch after the dry run's counts
+# have been read.
+#
+# Guards:
+# - Only main's copy of this workflow and its script may read either
+#   environment's secrets: a dispatch from any other branch is skipped.
+# - The job runs in the chosen target's environment and reads only that
+#   environment's secret. The `production` environment has a branch policy but
+#   NO required reviewers (checked 2026-11-14), so the environment alone does
+#   not stop a prod run.
+# - A production run, dry or not, refuses unless `confirm_prod` is exactly
+#   "I have Hugh's OK". Prod runs only with Hugh's OK.
+# - The script itself refuses the prod host unless `--allow-prod` is passed,
+#   which this workflow passes only for `target: production`, after the
+#   confirmation above.
+# - One run per target at a time. Re-running is safe: the backfill is
+#   idempotent and each batch commits on its own.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write the rows. Leave off for a dry run (the default).'
+        type: boolean
+        default: false
+      target:
+        description: 'Which database. Staging is the default; production also needs confirm_prod.'
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      confirm_prod:
+        description: "Production only: type exactly  I have Hugh's OK"
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backfill-event-artists-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    name: ${{ inputs.apply && format('Backfill event artists ({0}, APPLY)', inputs.target) || format('Backfill event artists ({0}, dry run)', inputs.target) }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.target }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the db package's dependencies
+        run: pnpm exec turbo run build --filter=@concert-crawl/db^...
+
+      # Checked by name, never printed.
+      - name: Verify configuration
+        env:
+          TARGET_ENV: ${{ inputs.target }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
+          CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+        run: |
+          case "$TARGET_ENV" in production|staging) ;; *)
+            echo "target must be production or staging (got '$TARGET_ENV')"; exit 1 ;;
+          esac
+          # The production environment has no required reviewers, so this is
+          # the gate: a prod run needs the exact confirmation string.
+          if [ "$TARGET_ENV" = "production" ] && [ "$CONFIRM_PROD" != "I have Hugh's OK" ]; then
+            echo "Refusing production: confirm_prod must be exactly: I have Hugh's OK"
+            exit 1
+          fi
+          if [ -z "$CRAWLER_DATABASE_URL" ]; then
+            echo "Missing $TARGET_ENV-environment secret: CRAWLER_DATABASE_URL"
+            exit 1
+          fi
+
+      - name: Backfill event artists (${{ inputs.apply && 'APPLY' || 'dry run' }})
+        env:
+          DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          APPLY: ${{ inputs.apply }}
+          TARGET_ENV: ${{ inputs.target }}
+        run: |
+          args=()
+          [ "$APPLY" = "true" ] || args+=(--dry-run)
+          [ "$TARGET_ENV" = "production" ] && args+=(--allow-prod)
+          echo "backfill-event-artists ${args[*]}"
+          pnpm --filter @concert-crawl/db run db:backfill-event-artists -- "${args[@]}"
