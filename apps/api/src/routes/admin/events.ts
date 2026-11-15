@@ -788,11 +788,14 @@ eventsAdminRouter.put(
 // can collide on the crawl key, tells Watchers through the relocation copy and
 // audits under its own keys, none of which the field-by-field PATCH does.
 // The rules live in moveEventVenue (@concert-crawl/db):
-//   - a show still to come (or postponed) is the Moved flow: the old crawl key
+//   - a crawled show still to come (or postponed) is 409 `crawled_show`,
+//     nothing written: its venue's calendar owns it;
+//   - a manual show still to come (or postponed) is the Moved flow: the old crawl key
 //     goes on a 'moved' redirect so the old venue's next crawl drops the
 //     listing instead of inserting it again, Watchers hear the new room
 //     (unless the show is cancelled), audit `event.venue.move`;
-//   - a played show is a silent correction, audit `event.venue.correct`;
+//   - a played show, crawled or manual, is a silent correction, audit
+//     `event.venue.correct`;
 //   - the same venue changes nothing (`outcome: 'unchanged'`, no audit);
 //   - an unknown or removed venue is 400 `venue_not_found`, as Add a show;
 //   - an upcoming show whose key is held at the new venue is 409
@@ -818,7 +821,17 @@ eventsAdminRouter.post(
     } catch (err) {
       // A row that took the key after the pre-check: the update failed on the
       // unique index and the transaction rolled back.
-      if (!isUniqueViolationOn(err, EVENT_NIGHT_UNIQUE_INDEX)) throw err;
+      if (!isUniqueViolationOn(err, EVENT_NIGHT_UNIQUE_INDEX)) {
+        apiLogger.error(
+          { err, eventId: id, venueId },
+          'admin venue move: write failed',
+        );
+        throw err;
+      }
+      apiLogger.warn(
+        { eventId: id, venueId },
+        'admin venue move: race lost to a show taking the key',
+      );
       const existingId = await keyHolderAt(id, venueId);
       return ctx.json(
         { success: false, error: 'duplicate_show', existingId } as const,
@@ -833,6 +846,11 @@ eventsAdminRouter.post(
         return zodIssuesResponse(ctx, [
           { code: 'custom', path: ['venueId'], message: 'venue_not_found' },
         ]);
+      case 'crawled_show':
+        return ctx.json(
+          { success: false, error: 'crawled_show' } as const,
+          409,
+        );
       case 'duplicate':
         return ctx.json(
           {
@@ -859,7 +877,14 @@ eventsAdminRouter.post(
           eventId: id,
           category: 'watch.postponed',
           transition: `venue:${result.updatedAt.toISOString()}`,
-          relocated: { fromVenueName: result.before.venueName },
+          // Both rooms as the committing transaction saw them, so a second
+          // move landing before this runs cannot mix them.
+          relocated: {
+            fromVenueName: result.before.venueName,
+            ...(result.after.venueName !== null && {
+              toVenueName: result.after.venueName,
+            }),
+          },
         },
       );
       watchersNotified = sent.watchersNotified;
@@ -1053,6 +1078,7 @@ eventsAdminRouter.patch(
         return ctx.json(PAST_LOCKED_BODY, 409);
       }
       if (isUniqueViolationOn(err, EVENT_NIGHT_UNIQUE_INDEX)) {
+        apiLogger.warn({ eventId: id }, 'admin event PATCH: duplicate_show');
         return ctx.json(
           { success: false, error: 'duplicate_show' } as const,
           409,

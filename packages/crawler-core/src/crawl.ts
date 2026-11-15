@@ -432,10 +432,13 @@ async function markEventsSeenForVenue(
  *
  * A listing is routed only when its key has no live row of its own: none in
  * `existingIdFor`, or the one there is the merged-away source (an admin merged
- * it while this crawl was extracting). A target no longer upcoming takes
- * nothing, and the listing is upserted as any relisted show is. A target an
- * admin moved to another venue takes nothing either, and the listing is
- * dropped: its fields and seen marks belong to the old venue's page.
+ * it while this crawl was extracting), or the one there is the target itself
+ * and it is now at another venue (an admin moved the show, admin E2-C, after
+ * this crawl loaded `existingIdFor`; upserting would insert it at this venue
+ * again). A target no longer upcoming takes nothing, and the listing is
+ * upserted as any relisted show is. A target at another venue (merged into a
+ * show elsewhere, or moved) takes nothing either, and the listing is dropped:
+ * its fields and seen marks belong to this venue's page.
  *
  * Returns the listings left to upsert and the keys it consumed.
  */
@@ -496,9 +499,15 @@ async function routeMergedListings<
     );
     const redirect = redirectByKey.get(key);
     const existingId = existingIdFor(listing);
+    const stillHeldHere =
+      existingId !== undefined &&
+      existingId !== redirect?.sourceId &&
+      !(
+        existingId === redirect?.targetId && redirect.targetVenueId !== venueId
+      );
     if (
       redirect === undefined ||
-      (existingId !== undefined && existingId !== redirect.sourceId) ||
+      stillHeldHere ||
       redirect.targetStatus !== 'upcoming'
     ) {
       remaining.push(listing);

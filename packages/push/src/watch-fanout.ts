@@ -80,7 +80,15 @@ export interface FanoutInput {
    * the event context cannot supply: the fan-out fires on the target event,
    * whose venue is already the new one.
    */
-  relocated?: { fromVenueName: string | null };
+  relocated?: {
+    fromVenueName: string | null;
+    /**
+     * The new room as the committing transaction saw it. Without it the copy
+     * reads the event's venue after the commit, which a second move landing
+     * in between would already have changed.
+     */
+    toVenueName?: string;
+  };
   /**
    * Limit the fan-out to these users. Without it the helper notifies every
    * watcher of `eventId`, which is wrong after a merge: the watch rows have
@@ -156,7 +164,7 @@ const composeMessage = (
         ? watchNotificationCopy.relocated(
             ctx.artist,
             input.relocated.fromVenueName,
-            ctx.venueName,
+            input.relocated.toVenueName ?? ctx.venueName,
           )
         : watchNotificationCopy.postponed(artistAtVenue, shortDate(ctx.date));
     case 'watch.soldout':

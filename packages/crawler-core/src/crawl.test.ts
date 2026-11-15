@@ -42,6 +42,9 @@ const stores = vi.hoisted(() => ({
   notifications: [] as any[],
   costTracking: [] as any[],
   crawlRunPages: [] as any[],
+  // Rows in the projected shape routeMergedListings selects (the mock's
+  // innerJoin is a no-op, so the target's venue and status ride on the row).
+  eventRedirects: [] as any[],
 }));
 
 // Mock the entire @concert-crawl/db module with an in-memory chainable builder.
@@ -165,7 +168,8 @@ vi.mock('@concert-crawl/db', () => {
     }),
     venues,
     events,
-    // Admin 4a: merged-listing routing reads redirects; none exist here.
+    // Admin 4a: merged-listing routing reads redirects; empty unless a case
+    // seeds `stores.eventRedirects`.
     eventRedirects: { _t: 'eventRedirects' },
     crawlRuns,
     crawlRunPages,
@@ -286,6 +290,7 @@ beforeEach(() => {
   stores.notifications.length = 0;
   stores.costTracking.length = 0;
   stores.crawlRunPages.length = 0;
+  stores.eventRedirects.length = 0;
   mockFetchPage.mockClear();
   mockFetchPageHttp.mockClear();
   mockExtractWithLlm.mockClear();
@@ -3371,5 +3376,98 @@ describe('crawlVenue — page progress (re-crawl progress)', () => {
     );
 
     expect(onPageProgress).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Admin 4a / E2-C: a listing whose crawl key is on a redirect to a show now at
+// another venue (merged into a show elsewhere, or moved there by an admin) is
+// dropped, never inserted at this venue again.
+describe('crawlVenue — a redirect to a show at another venue', () => {
+  // The mock's selects ignore WHERE, so a row seeded at another venue also
+  // lands in this crawl's existing-rows map: exactly the stale map a crawl
+  // holds when the admin's move commits after it loaded its rows.
+  function seedShowElsewhere(canonicalArtist: string) {
+    const show = {
+      id: crypto.randomUUID(),
+      venueId: crypto.randomUUID(),
+      title: 'Metallica Live',
+      artist: 'Metallica',
+      canonicalArtist,
+      canonicalTitle: canonicalizeTitle('Metallica Live'),
+      date: METALLICA_EVENT.date,
+      doorsTime: null,
+      showTime: null,
+      description: null,
+      headliners: null,
+      supportingArtists: null,
+      canonicalHeadliners: null,
+      canonicalSupporting: null,
+      sourceHash: null,
+      verified: false,
+      eventUrl: null,
+      ticketUrl: null,
+      manual: true,
+      lineupEditedAt: null,
+      status: 'upcoming',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    stores.events.push(show);
+    return show;
+  }
+
+  function seedRedirectTo(show: { id: string; venueId: string }) {
+    stores.eventRedirects.push({
+      sourceId: crypto.randomUUID(),
+      targetId: show.id,
+      targetVenueId: show.venueId,
+      targetStatus: 'upcoming',
+      canonicalArtist: 'metallica',
+      date: METALLICA_EVENT.date,
+      showTime: null,
+    });
+  }
+
+  function mockMetallicaListing(venue: { websiteUrl: string }) {
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+  }
+
+  it('drops the listing when the stale map still holds the moved show itself', async () => {
+    const venue = seedVenue();
+    const moved = seedShowElsewhere('metallica');
+    seedRedirectTo(moved);
+    mockMetallicaListing(venue);
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.eventsInserted).toBe(0);
+    expect(stores.events.map((row: { id: string }) => row.id)).toEqual([
+      moved.id,
+    ]);
+    expect(stores.events[0].venueId).toBe(moved.venueId);
+    expect(stores.events[0].ticketUrl).toBeNull();
+  });
+
+  it('drops the listing when its key has no row here and the target is elsewhere', async () => {
+    const venue = seedVenue();
+    const target = seedShowElsewhere('metallica at the new room');
+    seedRedirectTo(target);
+    mockMetallicaListing(venue);
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.eventsInserted).toBe(0);
+    expect(stores.events.map((row: { id: string }) => row.id)).toEqual([
+      target.id,
+    ]);
+    expect(stores.events[0].ticketUrl).toBeNull();
   });
 });

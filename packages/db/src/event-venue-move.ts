@@ -41,6 +41,8 @@ export type MoveEventVenueResult =
   | { kind: 'not_found' }
   | { kind: 'venue_not_found' }
   | { kind: 'unchanged' }
+  /** A crawled show still to come: its venue's calendar owns it. */
+  | { kind: 'crawled_show' }
   | { kind: 'duplicate'; existingId: string }
   | {
       /** `moved` is the Moved flow; `corrected` a played show's silent fix. */
@@ -99,26 +101,38 @@ export const findUpcomingKeyHolder = async (
  * the delete guard take them; no `user_events` row is touched, because the
  * event keeps its id and so keeps its Watchers.
  *
- * A show still to come (or postponed, whatever its date) is the Moved flow:
+ * A show still to come (or postponed, whatever its date) moves only if an
+ * admin added it (`manual`). A crawled one is refused `crawled_show`: its
+ * venue's calendar owns it, and at the new venue Pass 2 would stamp it
+ * missing and the stale sweep cancel it. A manual move is the Moved flow:
  *   - the old crawl key goes on an `event_redirects` row with reason 'moved',
  *     targeting the show. The old venue's next crawl of the listing finds the
  *     key there, sees the target is at another venue and drops the listing
  *     instead of inserting the show again (`routeMergedListings` in
- *     crawler-core). The redirect's `source_id` is a fresh id, not the
- *     event's: the event still answers at its own id, and a later merge of it
- *     must not overwrite this key (the merge upserts on `source_id`);
- *   - a moved-redirect whose key is the one the show now holds (it moved back)
- *     is deleted, since the show answers to that key itself;
+ *     crawler-core, which also drops it when that crawl loaded its rows
+ *     before the move and still sees the show at the old venue). A crawl
+ *     that had already read the redirects before this commits cannot see the
+ *     move, and may list the show at the old venue once more. The redirect's
+ *     `source_id` is a fresh id, not the event's: the event still answers at
+ *     its own id, and a later merge of it must not overwrite this key (the
+ *     merge upserts on `source_id`);
+ *   - any redirect onto this show whose key is the one the show now holds
+ *     again (it moved back) has its `source_*` key cleared, since the show
+ *     answers to that key itself. The row stays: a merge redirect's
+ *     `source_id` is a real former event id that must keep its 307;
+ *   - the old room's page goes (`event_url` cleared; `source_url` stays as
+ *     crawl provenance), and the seen marks restart (`first_missing_at`
+ *     cleared, `last_seen_at` now) so nothing stale carries over;
  *   - Watchers are told after the commit, unless the show is cancelled (they
  *     already heard it is off, as the PATCH's date change rule says).
  *
- * A played show (dated before today in Denver and not postponed) is a silent
- * correction: no redirect, nobody told.
+ * A played show (dated before today in Denver and not postponed), crawled or
+ * manual, is a silent correction: no redirect, nobody told.
  *
  * Both audit inside the transaction (`event.venue.move` or
- * `event.venue.correct`, with the venue before and after), so the move, its
- * redirect and its record commit together. The same venue changes nothing and
- * audits nothing.
+ * `event.venue.correct`, with the venue, ticket links and event page before
+ * and after), so the move, its redirect and its record commit together. The
+ * same venue changes nothing and audits nothing.
  *
  * An upcoming show whose key is already held at the new venue comes back
  * `duplicate` with the holder, before anything is written. A holder inserted
@@ -139,13 +153,20 @@ export const moveEventVenue = async ({
         canonicalArtist: events.canonicalArtist,
         showTime: events.showTime,
         status: events.status,
+        manual: events.manual,
         ticketUrl: events.ticketUrl,
+        ticketLinks: events.ticketLinks,
+        eventUrl: events.eventUrl,
       })
       .from(events)
       .where(eq(events.id, eventId))
       .for('update');
     if (!row) return { kind: 'not_found' };
     if (row.venueId === venueId) return { kind: 'unchanged' };
+
+    // Today is read now that the row is locked.
+    const corrected = row.date < today() && row.status !== 'postponed';
+    if (!corrected && !row.manual) return { kind: 'crawled_show' };
 
     // A removed venue is gone to the admin too, as for Add a show.
     const [venue] = await tx
@@ -169,8 +190,6 @@ export const moveEventVenue = async ({
             .from(venues)
             .where(eq(venues.id, row.venueId));
 
-    const corrected = row.date < today() && row.status !== 'postponed';
-
     if (row.status === 'upcoming') {
       const existingId = await findUpcomingKeyHolder(
         tx,
@@ -185,12 +204,20 @@ export const moveEventVenue = async ({
       if (existingId !== null) return { kind: 'duplicate', existingId };
     }
 
+    const now = new Date();
+    const ticketLinks = deriveTicketLinks(row.ticketUrl, venue);
+    const eventUrl = corrected ? row.eventUrl : null;
     const [updated] = await tx
       .update(events)
       .set({
         venueId,
-        ticketLinks: deriveTicketLinks(row.ticketUrl, venue),
-        updatedAt: new Date(),
+        ticketLinks,
+        updatedAt: now,
+        ...(!corrected && {
+          eventUrl: null,
+          firstMissingAt: null,
+          lastSeenAt: now,
+        }),
       })
       .where(eq(events.id, eventId))
       .returning({ updatedAt: events.updatedAt });
@@ -199,7 +226,13 @@ export const moveEventVenue = async ({
     let redirectSourceId: string | null = null;
     if (!corrected) {
       await tx
-        .delete(eventRedirects)
+        .update(eventRedirects)
+        .set({
+          sourceVenueId: null,
+          sourceDate: null,
+          sourceCanonicalArtist: null,
+          sourceShowTime: null,
+        })
         .where(
           and(
             eq(eventRedirects.targetId, eventId),
@@ -237,6 +270,8 @@ export const moveEventVenue = async ({
         after,
         date: row.date,
         status: row.status,
+        ticketLinks: { before: row.ticketLinks, after: ticketLinks },
+        eventUrl: { before: row.eventUrl, after: eventUrl },
         redirectSourceId,
         notifyWatchers,
       },
