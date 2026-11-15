@@ -132,7 +132,9 @@ describe('RowMenu', () => {
       />,
     );
     const trigger = screen.getByRole('button', { name: 'Price actions' });
-    expect(trigger).toBeDisabled();
+    // aria-disabled, so it keeps focus; a press still does nothing.
+    expect(trigger).not.toBeDisabled();
+    expect(trigger).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(trigger);
     expect(screen.queryByRole('menu')).toBeNull();
     expect(onOpenChange).not.toHaveBeenCalled();

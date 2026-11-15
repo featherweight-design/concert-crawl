@@ -63,7 +63,7 @@ interface EditPricePanelProps {
 
 /**
  * Edit price on a waiting or published submission: the Add a price sheet
- * (`06/prices-row-menu` says "Same sheet as Add a price") with the price fields
+ * (the row menu's Edit price, "Change the number before it goes live.") with the price fields
  * only, filled with what is stored. A right-docked panel on a desktop, a
  * bottom sheet on a phone.
  */

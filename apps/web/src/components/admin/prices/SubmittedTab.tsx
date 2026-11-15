@@ -32,7 +32,7 @@ import {
 } from '@/components/admin/primitives';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
-import { refusedStatus } from '../invite-codes/codes-api';
+import { refusedCode, refusedStatus } from '../invite-codes/codes-api';
 import { EditPricePanel } from './EditPricePanel';
 import { RejectPriceDialog } from './RejectPriceDialog';
 import {
@@ -62,11 +62,21 @@ const FAILED_SHADOW = '0 14px 30px rgba(0,0,0,.45)';
 /** A row mid-Approve, or one whose Approve just failed. */
 type RowStatus = 'approving' | 'failed';
 
-/** The one toast the tab shows at a time. */
-type Notice =
+/**
+ * The one toast the tab shows at a time, tagged with the list (filter,
+ * search, fan) it was raised under: it shows only while that list is on screen.
+ */
+type Notice = { key: string } & (
   | { kind: 'approved'; price: string; show: string }
   | { kind: 'failed'; row: SubmittedRow }
-  | { kind: 'not-waiting' };
+  | { kind: 'not-waiting'; priceCheck: boolean }
+);
+
+const listKeyOf = (
+  filter: StateFilter,
+  search: string,
+  fan: string | null,
+): string => JSON.stringify([filter, search, fan]);
 
 const withoutKey = <T,>(
   record: Record<string, T>,
@@ -260,45 +270,70 @@ export const SubmittedTab = ({
 
   // Only the newest load may write.
   const latest = useRef(0);
-  const load = useCallback(async () => {
-    const mine = ++latest.current;
-    setBusy(true);
-    setMore('idle');
-    try {
-      const [list, nextCounts] = await Promise.all([
-        api.list(filter, search, 0, PAGE, fan),
-        api.counts(search, fan),
-      ]);
-      if (mine !== latest.current) return;
-      setRows(list.rows);
-      setTotal(list.total);
-      setCounts(nextCounts);
-      setCountsFan(fan);
-      // A fresh list drops a failed Approve's tint; one in flight keeps its.
-      setRowStatus((prev) =>
-        Object.fromEntries(
-          Object.entries(prev).filter(([, status]) => status === 'approving'),
-        ),
-      );
-      setFailed(false);
-      setLoaded(true);
-      setBusy(false);
-    } catch {
-      if (mine === latest.current) {
-        setFailed(true);
+  // `keepFailed`: the row whose Approve just failed keeps its Didn't approve
+  // through this load while it is still waiting (its Try again is up).
+  const load = useCallback(
+    async (keepFailed: string | null = null) => {
+      const mine = ++latest.current;
+      setBusy(true);
+      setMore('idle');
+      try {
+        const [list, nextCounts] = await Promise.all([
+          api.list(filter, search, 0, PAGE, fan),
+          api.counts(search, fan),
+        ]);
+        if (mine !== latest.current) return;
+        setRows(list.rows);
+        setTotal(list.total);
+        setCounts(nextCounts);
+        setCountsFan(fan);
+        // A fresh list drops a failed Approve's tint; one in flight keeps its.
+        const stillWaiting = list.rows.some(
+          (row) => row.id === keepFailed && row.state === 'waiting',
+        );
+        setRowStatus((prev) =>
+          Object.fromEntries(
+            Object.entries(prev).filter(
+              ([id, status]) =>
+                status === 'approving' ||
+                (stillWaiting && id === keepFailed && status === 'failed'),
+            ),
+          ),
+        );
+        setFailed(false);
+        setLoaded(true);
         setBusy(false);
+      } catch {
+        if (mine === latest.current) {
+          setFailed(true);
+          setBusy(false);
+        }
       }
-    }
-  }, [api, filter, search, fan]);
+    },
+    [api, filter, search, fan],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  // The current list's load, for an Approve that settles after the filter,
+  // search or fan moved on: its own render's `load` would fetch the old list.
+  const loadRef = useRef(load);
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
+  const reload = (keepFailed: string | null = null) =>
+    void loadRef.current(keepFailed);
+
+  const listKey = listKeyOf(filter, search, fan);
   // Another filter, search or fan is another list: its toast goes with it.
   useEffect(() => {
     setNotice(null);
-  }, [filter, search, fan]);
+  }, [listKey]);
+  // An Approve that settles after the list changed raised its toast under the
+  // old key: it never shows (nor offers a Try again for an off-screen row).
+  const shownNotice = notice !== null && notice.key === listKey ? notice : null;
 
   // The approved toast, and the not-waiting one (no Try again), leave on
   // their own. A failure with Try again stays until it's used.
@@ -319,22 +354,31 @@ export const SubmittedTab = ({
   const approve = async (row: SubmittedRow) => {
     if (rowStatus[row.id] === 'approving') return;
     const mine = latest.current;
+    const key = listKey;
     setNotice(null);
     setRowStatus((prev) => ({ ...prev, [row.id]: 'approving' }));
     try {
       await api.approve(row.id);
     } catch (err) {
+      console.warn('[admin] Submitted prices: approve failed', err);
       const status = refusedStatus(err);
       // Decided elsewhere (approved, rejected, gone, or in a Price check):
       // say so and show the list as it is now.
       if (status === 409 || status === 404) {
         setRowStatus((prev) => withoutKey(prev, row.id));
-        setNotice({ kind: 'not-waiting' });
-        void load();
+        setNotice({
+          key,
+          kind: 'not-waiting',
+          priceCheck: refusedCode(err) === 'price_check',
+        });
+        reload();
         return;
       }
       setRowStatus((prev) => ({ ...prev, [row.id]: 'failed' }));
-      setNotice({ kind: 'failed', row });
+      setNotice({ key, kind: 'failed', row });
+      // A timeout or a 5xx may still have published it: show the list as
+      // the server has it (a still-waiting row keeps its Didn't approve).
+      reload(row.id);
       return;
     }
     setRowStatus((prev) => withoutKey(prev, row.id));
@@ -345,7 +389,9 @@ export const SubmittedTab = ({
         each.id === row.id ? { ...each, state: 'published' } : each,
       ),
     );
-    // A load since the tap counted afresh; otherwise move one price across.
+    // No load since the tap: move one price across. A load that began during
+    // the request may have read the list and counts from before it
+    // committed, so load again to settle them.
     if (mine === latest.current) {
       setCounts((prev) =>
         prev === null
@@ -356,8 +402,11 @@ export const SubmittedTab = ({
               published: prev.published + 1,
             },
       );
+    } else {
+      reload();
     }
     setNotice({
+      key,
       kind: 'approved',
       price: priceRange(row.priceMin, row.priceMax),
       show: showName(row),
@@ -371,8 +420,12 @@ export const SubmittedTab = ({
     try {
       const list = await api.list(filter, search, rows.length, PAGE, fan);
       if (mine !== latest.current) return;
-      const seen = new Set(rows.map((row) => row.id));
-      setRows([...rows, ...list.rows.filter((row) => !seen.has(row.id))]);
+      // From the rows as they are now, so an Approve that landed meanwhile
+      // keeps its Published.
+      setRows((prev) => {
+        const seen = new Set(prev.map((row) => row.id));
+        return [...prev, ...list.rows.filter((row) => !seen.has(row.id))];
+      });
       setTotal(list.total);
       setMore('idle');
     } catch {
@@ -613,8 +666,11 @@ export const SubmittedTab = ({
           type="button"
           aria-label={COPY.menu.label}
           aria-haspopup="dialog"
-          disabled={approving}
-          onClick={() => setSheetRow(row)}
+          // aria-disabled, so focus stays on it mid-request.
+          aria-disabled={approving || undefined}
+          onClick={() => {
+            if (!approving) setSheetRow(row);
+          }}
           style={{
             ...button,
             fontSize: 13,
@@ -1145,31 +1201,35 @@ export const SubmittedTab = ({
       )}
 
       {/* No Undo (Hugh): the price goes out to fans at once. */}
-      {notice?.kind === 'approved' && (
+      {shownNotice?.kind === 'approved' && (
         <Toast
           testId="approve-toast"
-          title={COPY.approve.doneTitle(notice.price, notice.show)}
+          title={COPY.approve.doneTitle(shownNotice.price, shownNotice.show)}
           // No fan notice exists, so no "the fan is told" line (Hugh).
           body={null}
         />
       )}
-      {notice?.kind === 'failed' && (
+      {shownNotice?.kind === 'failed' && (
         <ToastDock>
           <SaveFailedToast
             title={COPY.approve.failedTitle}
             body={COPY.approve.failedBody}
-            onRetry={() => void approve(notice.row)}
+            onRetry={() => void approve(shownNotice.row)}
             crossStroke={2.2}
             shadow={FAILED_SHADOW}
           />
         </ToastDock>
       )}
-      {notice?.kind === 'not-waiting' && (
+      {shownNotice?.kind === 'not-waiting' && (
         <ToastDock>
           {/* Trying again would only be refused again: no Try again. */}
           <SaveFailedToast
             title={COPY.approve.failedTitle}
-            body={COPY.approve.notWaitingBody}
+            body={
+              shownNotice.priceCheck
+                ? COPY.approve.priceCheckBody
+                : COPY.approve.notWaitingBody
+            }
             crossStroke={2.2}
             shadow={FAILED_SHADOW}
           />

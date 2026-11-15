@@ -4117,6 +4117,8 @@ export const ADMIN_COPY = {
       failedTitle: 'Couldn’t approve that price.',
       failedBody: 'It’s still waiting. Nothing changed.',
       notWaitingBody: 'That price isn’t waiting any more.',
+      // A 409 `price_check`: the price is held by an open Price check.
+      priceCheckBody: 'It has an open Price check, so it waits there.',
     },
     reject: {
       eyebrow: 'Reject price',
