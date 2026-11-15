@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const notFound = vi.fn(() => {
-  throw new Error('NEXT_NOT_FOUND');
-});
+const { notFound } = vi.hoisted(() => ({
+  notFound: vi.fn(() => {
+    throw new Error('NEXT_NOT_FOUND');
+  }),
+}));
 vi.mock('next/navigation', () => ({ notFound }));
 vi.mock('@/components/auth/flow/AuthParts', () => ({
   AuthParts: () => null,
