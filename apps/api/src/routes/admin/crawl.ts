@@ -20,6 +20,7 @@ import { idSchema } from '../../lib/id-schema.js';
 import { queueVenueCrawl, queueVenueTrial } from './lib/crawl-trigger.js';
 import { venueRemovedBody } from './lib/venue-hide.js';
 import { crawlAllSkipReason } from './lib/crawl-all.js';
+import { readTriggerProgress } from './lib/crawl-trigger-progress.js';
 
 const logger = createLogger('admin:crawl');
 
@@ -330,7 +331,9 @@ crawlAdminRouter.post(
   },
 );
 
-// GET /v1/admin/crawl/triggers/:id — poll a single trigger by ID
+// GET /v1/admin/crawl/triggers/:id — poll a single trigger by ID. The row
+// plus `progress` (lib/crawl-trigger-progress.ts): queue place, page
+// progress and the venue's typical crawl time, for the re-crawl states.
 crawlAdminRouter.get(
   '/triggers/:id',
   zValidator('param', triggerIdSchema, validationHook),
@@ -343,7 +346,8 @@ crawlAdminRouter.get(
     if (!trigger) {
       return ctx.json({ success: false, error: 'Trigger not found' }, 404);
     }
-    return ctx.json({ success: true, data: trigger });
+    const progress = await readTriggerProgress(trigger);
+    return ctx.json({ success: true, data: { ...trigger, progress } });
   },
 );
 

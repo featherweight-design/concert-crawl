@@ -14,6 +14,23 @@ vi.mock('../../lib/crawler-dispatch.js', () => ({
     mockDispatchCrawler(...args),
 }));
 
+// The trigger read's progress queries are covered by
+// crawl-trigger-progress.integration.test.ts; here they are a fixed answer.
+const { MOCK_PROGRESS } = vi.hoisted(() => ({
+  MOCK_PROGRESS: {
+    status: 'pending',
+    pagesDone: null,
+    pagesTotal: null,
+    progressAt: null,
+    queuePosition: 0,
+    runningAhead: false,
+    estimateMs: null,
+  },
+}));
+vi.mock('./lib/crawl-trigger-progress.js', () => ({
+  readTriggerProgress: async () => MOCK_PROGRESS,
+}));
+
 // Spread the real module so a new drizzle-orm import elsewhere in the app
 // doesn't break this suite; only the operators it inspects are mocked.
 vi.mock('drizzle-orm', async (importOriginal) => ({
@@ -458,6 +475,7 @@ describe('Admin crawl routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.id).toBe(TRIGGER_ID);
       expect(body.data.status).toBe('pending');
+      expect(body).toMatchObject({ data: { progress: MOCK_PROGRESS } });
     });
   });
 

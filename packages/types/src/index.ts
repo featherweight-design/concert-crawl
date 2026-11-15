@@ -790,6 +790,36 @@ export interface CrawlTrigger {
   progressAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Present on GET /v1/admin/crawl/triggers/:id. */
+  progress?: CrawlTriggerProgress;
+}
+
+/**
+ * Where a re-crawl stands, for its drawn states (`A3/03/re-crawl-states`):
+ * "Starts after the run in progress · about 2 min" while queued, "Page 2 of
+ * 4" while crawling.
+ */
+export interface CrawlTriggerProgress {
+  status: CrawlTriggerStatus;
+  /** Null until the crawler reports a page, and on a pending trigger. */
+  pagesDone: number | null;
+  pagesTotal: number | null;
+  progressAt: string | null;
+  /**
+   * Pending triggers (any venue) the crawler will claim first, oldest first;
+   * 0 when this one is next. Always 0 once it is no longer pending.
+   */
+  queuePosition: number;
+  /** A pending trigger only: another trigger is being crawled right now. */
+  runningAhead: boolean;
+  /**
+   * How long a whole crawl of this venue typically takes: the median duration
+   * of its last 10 successful non-trial runs. Null with fewer than 3 such
+   * runs, and once the trigger has settled. The time left is this minus the
+   * time since the run started, which the reader works out against its own
+   * clock (the API keeps no claim time once progress writes move updatedAt).
+   */
+  estimateMs: number | null;
 }
 
 export interface ActiveCrawlAlert {
