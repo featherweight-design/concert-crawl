@@ -109,6 +109,16 @@ describe('AdminSheet full screen', () => {
     expect(screen.getByText('Show')).toBeInTheDocument();
   });
 
+  it('keeps a form page flush at the bottom even with no footer', () => {
+    render(
+      <AdminSheet formPage fullScreen title="Form" onClose={vi.fn()}>
+        <p>Body</p>
+      </AdminSheet>,
+    );
+    const panel = screen.getByTestId('admin-sheet');
+    expect(panel.style.padding).toMatch(/^12px 16px 0(px)?$/);
+  });
+
   it('ignores the page props on a bottom sheet', () => {
     render(
       <AdminSheet

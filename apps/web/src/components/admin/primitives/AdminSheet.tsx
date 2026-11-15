@@ -93,9 +93,12 @@ export const AdminSheet = ({
   const pinnedFooter = formPage || (fullScreen && pinnedFooterProp);
   const compactBack = formPage || (fullScreen && compactBackProp);
   const titleSize = titleSizeProp ?? (formPage ? 22 : 18);
-  // The pinned bar carries the bottom inset, so the panel drops its own.
+  // The pinned bar carries the bottom inset, so the panel drops its own. A
+  // form page always ended flush (as it did before the props were split).
   const panelBottom =
-    pinnedFooter && footer ? '0' : 'calc(22px + env(safe-area-inset-bottom))';
+    formPage || (pinnedFooter && footer)
+      ? '0'
+      : 'calc(22px + env(safe-area-inset-bottom))';
   const panelTop = pageBackground ? 12 : fullScreen ? 16 : 8;
 
   return (
