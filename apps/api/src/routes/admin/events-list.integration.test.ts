@@ -459,7 +459,7 @@ describe('GET /v1/admin/events/list', () => {
     expect((await list('?query=bluebird')).data.total).toBe(2);
   });
 
-  it('reads Moved from a confirmed-move redirect only, and filters and counts it', async () => {
+  it('reads Moved from a confirmed-move redirect off another venue only, and filters and counts it', async () => {
     const venue = await seedVenue({ name: 'Larimer Lounge' });
     const moved = await seedEvent(venue.id, {
       artist: 'Moved Act',
@@ -474,12 +474,41 @@ describe('GET /v1/admin/events/list', () => {
       date: dayOffset(5),
       status: 'cancelled',
     });
+    const rescheduled = await seedEvent(venue.id, {
+      artist: 'Rescheduled Act',
+      date: dayOffset(6),
+    });
+    // The room each show left: a key, not a reference, so any id will do.
+    const otherRoomId = randomUUID();
     await testDb.insert(eventRedirects).values([
-      { sourceId: randomUUID(), targetId: moved.id, reason: 'moved' },
+      {
+        sourceId: randomUUID(),
+        targetId: moved.id,
+        reason: 'moved',
+        sourceVenueId: otherRoomId,
+      },
       // A plain duplicate merge says nothing about a move.
-      { sourceId: randomUUID(), targetId: merged.id, reason: null },
+      {
+        sourceId: randomUUID(),
+        targetId: merged.id,
+        reason: null,
+        sourceVenueId: otherRoomId,
+      },
       // A cancelled show keeps its own status.
-      { sourceId: randomUUID(), targetId: cancelled.id, reason: 'moved' },
+      {
+        sourceId: randomUUID(),
+        targetId: cancelled.id,
+        reason: 'moved',
+        sourceVenueId: otherRoomId,
+      },
+      // A confirmed move at the same venue (a new date) did not move venue.
+      {
+        sourceId: randomUUID(),
+        targetId: rescheduled.id,
+        reason: 'moved',
+        sourceVenueId: venue.id,
+        sourceDate: dayOffset(2),
+      },
     ]);
 
     const all = await list();
@@ -489,6 +518,7 @@ describe('GET /v1/admin/events/list', () => {
     expect(byTitle.get(moved.title)).toBe('moved');
     expect(byTitle.get(merged.title)).toBe('available');
     expect(byTitle.get(cancelled.title)).toBe('cancelled');
+    expect(byTitle.get(rescheduled.title)).toBe('available');
     expect(all.data.counts.byStatus['moved']).toBe(1);
 
     const filtered = await list('?statuses=moved');

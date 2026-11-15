@@ -3,12 +3,15 @@ import {
   asc,
   desc,
   eq,
+  exists,
   gte,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   lt,
   max,
+  ne,
   or,
   sql,
   type SQL,
@@ -19,6 +22,7 @@ import { db, eventRedirects, events, venues } from '@concert-crawl/db';
 import { idSchema } from '../../../lib/id-schema.js';
 import { containsPattern } from '../../../lib/escape-like.js';
 import { isSoldOutSql } from '../../../lib/sold-out.js';
+import { toNullableDate } from '../../../lib/time.js';
 import { watchingCountOf, wentCountOf } from './event-counts.js';
 
 /**
@@ -70,30 +74,36 @@ export const eventListQuerySchema = z.object({
 export type EventListQuery = z.infer<typeof eventListQuerySchema>;
 
 /**
- * When the row in scope last absorbed a listing through a confirmed move: the
- * latest `event_redirects` row targeting it with reason 'moved' (the venue
- * move route's redirect, or a Moved merge's). Null when it never moved. The
- * one rule for Moved: the list status and the admin detail's `moved` read it.
+ * The one rule for Moved: the `event_redirects` rows that say the row in scope
+ * moved venue. A row qualifies when it targets the show with reason 'moved'
+ * (the venue move route's redirect, or a confirmed-move merge's) and its old
+ * crawl key names a venue other than the one the show is at now. So a
+ * date-only move at the same venue does not count, nor a key a move back
+ * cleared. The list status (as EXISTS) and the admin detail's `moved.at` (as
+ * MAX) both read these rows.
  */
+export const movedRedirectWhere = () =>
+  and(
+    eq(eventRedirects.targetId, events.id),
+    eq(eventRedirects.reason, 'moved'),
+    isNotNull(eventRedirects.sourceVenueId),
+    ne(eventRedirects.sourceVenueId, events.venueId),
+  );
+
+/** When the row in scope last moved venue, or null; see `movedRedirectWhere`. */
 export const movedAtSql = (): SQL<Date | null> =>
-  sql<Date | null>`(${db
+  sql`(${db
     .select({ at: max(eventRedirects.createdAt) })
     .from(eventRedirects)
-    .where(
-      and(
-        eq(eventRedirects.targetId, events.id),
-        eq(eventRedirects.reason, 'moved'),
-      ),
-    )})`.mapWith((value: string | Date | null) =>
-    value === null ? null : new Date(value),
-  );
+    .where(movedRedirectWhere())})`.mapWith(toNullableDate);
 
 /**
  * The fan-facing status of the row in scope, as SQL so the list can filter,
  * count and return the same value. Sold out is a promoted sold-out report
  * (`isSoldOutSql`), as on the fan side; No longer listed is a cancelled row
- * the stale sweep delisted (B+ A5). Moved is an upcoming show that absorbed
- * a listing through a confirmed move (`event_redirects.reason`); a cancelled,
+ * the stale sweep delisted (B+ A5). Moved is an upcoming show that moved
+ * venue (`movedRedirectWhere`, as EXISTS so the list's page, facet and count
+ * queries stay cheap per row); a cancelled,
  * postponed or already-played show keeps its own status, and a moved show
  * that is also sold out reads as Moved, the newer news for a fan.
  */
@@ -103,7 +113,12 @@ export const eventListStatusSql = (today: string): SQL<EventListStatus> =>
     WHEN ${events.status} = 'cancelled' THEN 'cancelled'
     WHEN ${events.status} = 'postponed' THEN 'postponed'
     WHEN ${events.date} < ${today} THEN 'played'
-    WHEN ${movedAtSql()} IS NOT NULL THEN 'moved'
+    WHEN ${exists(
+      db
+        .select({ one: sql`1` })
+        .from(eventRedirects)
+        .where(movedRedirectWhere()),
+    )} THEN 'moved'
     WHEN ${isSoldOutSql()} THEN 'soldout'
     ELSE 'available'
   END`;

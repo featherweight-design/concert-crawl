@@ -39,7 +39,7 @@ vi.mock('@concert-crawl/db', async (importOriginal) => {
 });
 
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   auditLog,
@@ -520,12 +520,40 @@ describe('GET /v1/admin/events/:id — moved', () => {
     return detailSchema.parse(await res.json()).data;
   };
 
+  /** The show's status on the admin list, which must agree with the detail. */
+  const listedStatus = async (id: string) => {
+    const res = await app.request('/v1/admin/events/list', {
+      headers: HEADERS,
+    });
+    expect(res.status).toBe(200);
+    const body = z
+      .object({
+        data: z.object({
+          rows: z.array(z.object({ id: z.string(), status: z.string() })),
+        }),
+      })
+      .parse(await res.json());
+    return body.data.rows.find((row) => row.id === id)?.status;
+  };
+
+  const merge = (sourceId: string, targetId: string) =>
+    app.request(`/v1/admin/events/${sourceId}/merge`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ targetId }),
+    });
+
   /** The latest 'moved' redirect onto the show, as the ISO `at` names it. */
   const latestMovedAt = async (id: string) => {
     const rows = await testDb
       .select({ createdAt: eventRedirects.createdAt })
       .from(eventRedirects)
-      .where(eq(eventRedirects.targetId, id));
+      .where(
+        and(
+          eq(eventRedirects.targetId, id),
+          eq(eventRedirects.reason, 'moved'),
+        ),
+      );
     const times = rows.map((row) => row.createdAt.getTime());
     return new Date(Math.max(...times)).toISOString();
   };
@@ -604,11 +632,92 @@ describe('GET /v1/admin/events/:id — moved', () => {
     expect((await moveVenue(show.id, to.id)).status).toBe(200);
     expect((await moveVenue(show.id, from.id)).status).toBe(200);
 
+    // The first move's key was cleared; the second's names Globe Hall, a
+    // venue other than the one the show is at, so it reads Moved.
     const detail = await getDetail(show.id);
     expect(detail.listStatus).toBe('moved');
     expect(detail.moved).toEqual({
       toVenueName: 'Larimer Lounge',
       at: await latestMovedAt(show.id),
     });
+  });
+
+  it('a newer merge redirect does not change when the show moved', async () => {
+    const { from, to } = await seedRooms();
+    const show = await seedManual(from.id, { date: dayOffset(12) });
+    expect((await moveVenue(show.id, to.id)).status).toBe(200);
+    const movedAt = await latestMovedAt(show.id);
+    await testDb.insert(eventRedirects).values({
+      sourceId: randomUUID(),
+      targetId: show.id,
+      reason: null,
+      sourceVenueId: from.id,
+      sourceDate: show.date,
+      sourceCanonicalArtist: 'someone else',
+      sourceShowTime: null,
+      createdAt: new Date(Date.parse(movedAt) + 60_000),
+    });
+
+    const detail = await getDetail(show.id);
+    expect(detail.moved).toEqual({ toVenueName: 'Globe Hall', at: movedAt });
+  });
+
+  it('a confirmed move at the same venue (a new date) is not a venue move', async () => {
+    const { from } = await seedRooms();
+    const show = await seedManual(from.id, { date: dayOffset(12) });
+    await testDb.insert(eventRedirects).values({
+      sourceId: randomUUID(),
+      targetId: show.id,
+      reason: 'moved',
+      sourceVenueId: from.id,
+      sourceDate: dayOffset(10),
+      sourceCanonicalArtist: show.canonicalArtist,
+      sourceShowTime: null,
+    });
+
+    const detail = await getDetail(show.id);
+    expect(detail.listStatus).toBe('available');
+    expect(await listedStatus(show.id)).toBe('available');
+    expect(detail.moved).toBeNull();
+  });
+
+  it('a plain merge of a show that never moved does not make the survivor Moved', async () => {
+    const { from, to } = await seedRooms();
+    const source = await seedManual(from.id, {
+      artist: 'Dup Listing',
+      date: dayOffset(12),
+    });
+    const target = await seedManual(to.id, {
+      artist: 'Kept Listing',
+      date: dayOffset(12),
+    });
+
+    expect((await merge(source.id, target.id)).status).toBe(200);
+
+    const detail = await getDetail(target.id);
+    expect(detail.listStatus).toBe('available');
+    expect(await listedStatus(target.id)).toBe('available');
+    expect(detail.moved).toBeNull();
+  });
+
+  it('a plain merge of a show that moved venue carries its move to the survivor', async () => {
+    const { from, to } = await seedRooms();
+    const source = await seedManual(from.id, {
+      artist: 'Moved Listing',
+      date: dayOffset(12),
+    });
+    const target = await seedManual(to.id, {
+      artist: 'Kept Listing',
+      date: dayOffset(12),
+    });
+    expect((await moveVenue(source.id, to.id)).status).toBe(200);
+    const movedAt = await latestMovedAt(source.id);
+
+    expect((await merge(source.id, target.id)).status).toBe(200);
+
+    const detail = await getDetail(target.id);
+    expect(detail.listStatus).toBe('moved');
+    expect(await listedStatus(target.id)).toBe('moved');
+    expect(detail.moved).toEqual({ toVenueName: 'Globe Hall', at: movedAt });
   });
 });

@@ -3599,6 +3599,39 @@ describe('a merged-away event keeps answering at its old id', () => {
     });
   });
 
+  it('a merge over an existing redirect for the source stamps it with the merge time', async () => {
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, {
+      date: '2099-09-02',
+      artist: 'Re-merged Source',
+    });
+    const target = await seedEvent(venue.id, {
+      date: '2099-09-09',
+      artist: 'Re-merged Target',
+    });
+    const stale = new Date('2026-01-01T00:00:00Z');
+    await testDb.insert(eventRedirects).values({
+      sourceId: source.id,
+      targetId: target.id,
+      reason: null,
+      createdAt: stale,
+    });
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id, notifyWatchers: true }),
+    });
+    expect(res.status).toBe(200);
+
+    const [row] = await testDb
+      .select()
+      .from(eventRedirects)
+      .where(eq(eventRedirects.sourceId, source.id));
+    expect(row?.reason).toBe('moved');
+    expect(row?.createdAt.getTime()).toBeGreaterThan(stale.getTime());
+  });
+
   it('keeps a chain one hop: merging the survivor away repoints the earlier redirect', async () => {
     const venue = await seedVenue();
     const first = await seedEvent(venue.id, {

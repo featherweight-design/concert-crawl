@@ -85,7 +85,7 @@ import {
   mergePreviewQuerySchema,
 } from './lib/event-merge-preview.js';
 import { loadSoldOutRecord } from './lib/sold-out-record.js';
-import { todayInDenver } from '../../lib/time.js';
+import { todayInDenver, toNullableDate } from '../../lib/time.js';
 import { isUniqueViolationOn } from '../../lib/pg-errors.js';
 import {
   createEventSchema,
@@ -999,12 +999,11 @@ async function loadEventDetail(id: string, actorId: string) {
         .where(
           and(eq(priceSubmissions.eventId, events.id), submittedPriceWhere()),
         )})`.mapWith(Number),
-      priceRetrievedAt: sql<Date | null>`(${db
+      priceRetrievedAt: sql`(${db
         .select({ at: max(priceRetrievalLog.attemptedAt) })
         .from(priceRetrievalLog)
         .where(eq(priceRetrievalLog.eventId, events.id))})`.mapWith(
-        (value: string | Date | null) =>
-          value === null ? null : new Date(value),
+        toNullableDate,
       ),
     })
     .from(events)
@@ -1014,9 +1013,10 @@ async function loadEventDetail(id: string, actorId: string) {
 
   if (!row) return null;
   const { bill, movedAt, ...fields } = row;
-  // Where the show moved to and when, exactly when its status reads Moved
-  // (an upcoming show with a 'moved' redirect; a cancelled, postponed or
-  // played one keeps its own status). Null with no venue row to name.
+  // Where the show moved venue to and when, exactly when its status reads
+  // Moved: an upcoming show with a redirect `movedRedirectWhere` counts (a
+  // cancelled, postponed or played one keeps its own status). `at` is the
+  // latest such redirect. Null with no venue row to name.
   const moved =
     fields.listStatus === 'moved' && movedAt !== null && fields.venueName
       ? { toVenueName: fields.venueName, at: movedAt.toISOString() }
