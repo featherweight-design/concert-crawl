@@ -1,0 +1,15 @@
+{
+  "feature": "Admin 33 · Health Emails line counts failed sends",
+  "note": "Board: design_handoff_bplus_redesign/addendum-6/boards/33-health-emails/emails-states (sending, 2 failed, quiet). CONTACT_SHEET_ROLE=admin. Health reads the delivery counts server-side, so a browser route fixture can't set the state: the sheet shows the scratch branch's real state, and the failed and quiet wordings are pinned by DoneForYou.test.tsx (emailLine table and the SiteCard render). The Emails row is on the desktop Site card only; the phone draws the SITE tile, unchanged here. The board's 'row opens Operations › Emails filtered to Failed' is a ⏸ gap (no send log exists; sent to Design).",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "health-emails",
+      "label": "Health: the Emails line (desktop Site card) and the SITE tile (phone)",
+      "steps": [{ "goto": "/admin", "wait": "text=Emails", "settle": 3000 }]
+    }
+  ]
+}
