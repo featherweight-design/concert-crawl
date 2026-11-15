@@ -4422,7 +4422,7 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
     expect(await res.json()).toEqual({
       success: false,
       error: 'has_dependents',
-      counts: { watchers: 2, submittedPrices: 0, redirects: 0 },
+      counts: { watchers: 2, concerts: 0, submittedPrices: 0, redirects: 0 },
     });
     expect(await stillThere(event.id)).toBe(true);
   });
@@ -4441,7 +4441,7 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
     expect(await res.json()).toEqual({
       success: false,
       error: 'has_dependents',
-      counts: { watchers: 0, submittedPrices: 1, redirects: 0 },
+      counts: { watchers: 0, concerts: 0, submittedPrices: 1, redirects: 0 },
     });
     expect(await stillThere(event.id)).toBe(true);
   });
@@ -4463,7 +4463,7 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
     expect(await res.json()).toEqual({
       success: false,
       error: 'has_dependents',
-      counts: { watchers: 0, submittedPrices: 0, redirects: 1 },
+      counts: { watchers: 0, concerts: 0, submittedPrices: 0, redirects: 1 },
     });
     expect(await stillThere(event.id)).toBe(true);
     expect(
@@ -4555,12 +4555,12 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
       {
         id: watched.id,
         reason: 'has_dependents',
-        counts: { watchers: 1, submittedPrices: 0, redirects: 0 },
+        counts: { watchers: 1, concerts: 0, submittedPrices: 0, redirects: 0 },
       },
       {
         id: priced.id,
         reason: 'has_dependents',
-        counts: { watchers: 0, submittedPrices: 1, redirects: 0 },
+        counts: { watchers: 0, concerts: 0, submittedPrices: 1, redirects: 0 },
       },
     ];
     expect(body.data.skipped).toHaveLength(3);
@@ -4573,13 +4573,86 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
 
     const audits = await deleteAudits('event.bulk_delete');
     expect(audits).toHaveLength(1);
-    expect(audits[0]?.targetId).toBe(clean.id);
+    expect(audits[0]?.targetId).toBeNull();
     expect(audits[0]?.metadata).toMatchObject({
-      title: clean.title,
-      venueId: venue.id,
-      venueName: 'Bluebird Theater',
-      date: clean.date,
+      deletedIds: [clean.id],
+      deleted: [
+        {
+          id: clean.id,
+          title: clean.title,
+          venueId: venue.id,
+          venueName: 'Bluebird Theater',
+          date: clean.date,
+        },
+      ],
       skipped: expect.arrayContaining(skipped),
     });
+  });
+
+  it('refuses a manual row with only a Concert', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      manual: true,
+    });
+    // Attendance-only: no Watching relationship, just the Concert.
+    await seedUserEvent('fan_1', event.id, {
+      status: null,
+      attendingAt: new Date(),
+    });
+
+    const res = await deleteEvent(event.id);
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'has_dependents',
+      counts: { watchers: 0, concerts: 1, submittedPrices: 0, redirects: 0 },
+    });
+    expect(await stillThere(event.id)).toBe(true);
+  });
+
+  it('bulk: records one audit row even when every row is refused', async () => {
+    const venue = await seedVenue();
+    const crawled = await seedEvent(venue.id, {
+      artist: 'Crawled',
+      date: futureDate(7),
+    });
+    const watched = await seedEvent(venue.id, {
+      artist: 'Watched',
+      date: futureDate(8),
+      manual: true,
+    });
+    await seedUserEvent('fan_1', watched.id, { status: 'watching' });
+
+    const res = await app.request('/v1/admin/events/bulk/delete', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({
+        ids: [crawled.id, watched.id],
+        confirmation: 'DELETE',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const skipped = [
+      { id: crawled.id, reason: 'not_manual' },
+      {
+        id: watched.id,
+        reason: 'has_dependents',
+        counts: { watchers: 1, concerts: 0, submittedPrices: 0, redirects: 0 },
+      },
+    ];
+    const audits = await deleteAudits('event.bulk_delete');
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.targetId).toBeNull();
+    // Two ids in, so containing both refusals is the whole list.
+    expect(audits[0]?.metadata).toEqual({
+      deletedIds: [],
+      deleted: [],
+      skipped: expect.arrayContaining(skipped),
+    });
+    expect(await stillThere(crawled.id)).toBe(true);
+    expect(await stillThere(watched.id)).toBe(true);
   });
 });
