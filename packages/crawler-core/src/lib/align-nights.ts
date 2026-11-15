@@ -89,17 +89,23 @@ const sharesAnAct = (
  * date, at least one act on both bills (so another room's act that night is
  * never folded under the admin's bill), and a show time that does not
  * disagree when both sides have one, so an early and a late show never fold
- * together. Zero or several manual rows, no shared act, or an untimed manual
- * row while this crawl lists the date at more than one time (which of them it
- * is cannot be told), insert as before and leave the duplicate-night cleanup
- * to judge.
+ * together. Zero or several manual rows, or no shared act, insert as before
+ * and leave the duplicate-night cleanup to judge. So do two cases that cannot
+ * be told apart or written safely:
+ *   - one side untimed while this crawl lists the manual row's act (any
+ *     listing sharing an act with it; another room's act does not count) at
+ *     more than one time that date: which show it is would be a guess;
+ *   - an untimed manual row whose act already has a row at the listing's time:
+ *     dating the manual row would collide with it on the unique index.
+ *
+ * `datedListings` is every listing of this crawl on the listing's date.
  */
 export function manualLandingTarget<
   S extends NightRow & BillNames & { manual?: boolean | undefined },
 >(
   daySlots: readonly S[],
   listing: NightRow & BillNames,
-  listingTimesOnDate: ReadonlySet<string>,
+  datedListings: readonly (NightRow & BillNames)[],
 ): S | null {
   const manual = daySlots.filter(
     (slot) => slot.manual === true && slot.date === listing.date,
@@ -112,7 +118,25 @@ export function manualLandingTarget<
   if (slotTime !== '' && listingTime !== '') {
     return slotTime === listingTime ? only : null;
   }
-  if (slotTime === '' && listingTimesOnDate.size > 1) return null;
+  const actTimes = new Set(
+    datedListings
+      .filter(
+        (row) =>
+          row.date === only.date && isTimed(row) && sharesAnAct(only, row),
+      )
+      .map((row) => showTimeKey(row.showTime)),
+  );
+  if (actTimes.size > 1) return null;
+  if (slotTime === '' && listingTime !== '') {
+    const actKey = nightArtistKey(only.canonicalArtist);
+    const taken = daySlots.some(
+      (slot) =>
+        slot !== only &&
+        nightArtistKey(slot.canonicalArtist) === actKey &&
+        showTimeKey(slot.showTime) === listingTime,
+    );
+    if (taken) return null;
+  }
   return only;
 }
 
@@ -163,14 +187,13 @@ export function alignToNights<T extends UrlNightRow>(
   for (const row of [...existing].sort((a, b) => a.id.localeCompare(b.id))) {
     slotsOn(row.date).push({ ...row });
   }
-  // The times this crawl lists each date at, so an untimed manual row is not
-  // guessed onto one of an early and a late show.
-  const listingTimesByDate = new Map<string, Set<string>>();
+  // This crawl's listings by date, so a manual row is not guessed onto one of
+  // an early and a late show of its act.
+  const listingsByDate = new Map<string, T[]>();
   for (const row of incoming) {
-    if (!isTimed(row)) continue;
-    const times = listingTimesByDate.get(row.date) ?? new Set<string>();
-    times.add(showTimeKey(row.showTime));
-    listingTimesByDate.set(row.date, times);
+    const dated = listingsByDate.get(row.date) ?? [];
+    dated.push(row);
+    listingsByDate.set(row.date, dated);
   }
   const promotions = new Map<string, NightPromotion>();
   const aligned = incoming.slice();
@@ -198,7 +221,7 @@ export function alignToNights<T extends UrlNightRow>(
         ? manualLandingTarget(
             daySlots,
             listing,
-            listingTimesByDate.get(listing.date) ?? new Set(),
+            listingsByDate.get(listing.date) ?? [],
           )
         : null;
     if (landing) matches.push(landing);

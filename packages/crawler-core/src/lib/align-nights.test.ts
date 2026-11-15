@@ -324,6 +324,42 @@ describe('alignToNights: landing on a show added by hand', () => {
     expect(promotions).toEqual([]);
   });
 
+  it('inserts rather than date an untimed manual row onto a time its act already holds', () => {
+    const { aligned, promotions } = alignToNights(
+      [titled('19:00:00')],
+      [stored('c', 'kokoroko', '19:00:00'), manual('m', 'kokoroko', null)],
+    );
+    expect(aligned[0]).toEqual(titled('19:00:00'));
+    expect(promotions).toEqual([]);
+  });
+
+  it('does not guess an untimed listing onto a timed manual row the crawl lists at two times', () => {
+    // The late show is titled differently, so the untimed listing matches no
+    // same-night row and only the manual fallback could take it.
+    const late = {
+      ...listing('late set', '22:00:00'),
+      headliners: ['Kokoroko'],
+    };
+    const { aligned } = alignToNights(
+      [titled(null), titled('19:00:00'), late],
+      [manual('m', 'kokoroko', '19:00:00')],
+    );
+    expect(aligned).toEqual([titled(null), landed('19:00:00'), late]);
+  });
+
+  it('lands on an untimed manual row while another room lists a different act that night', () => {
+    const otherRoom = {
+      ...listing('nubya garcia', '22:00:00'),
+      headliners: ['Nubya Garcia'],
+    };
+    const { aligned, promotions } = alignToNights(
+      [titled('19:00:00'), otherRoom],
+      [manual('m', 'kokoroko', null)],
+    );
+    expect(aligned).toEqual([landed('19:00:00'), otherRoom]);
+    expect(promotions).toEqual([{ id: 'm', showTime: '19:00:00' }]);
+  });
+
   it('never lands on a manual row of another date', () => {
     const { aligned } = alignToNights(
       [{ ...titled(null), date: '2026-12-13' }],
@@ -349,7 +385,7 @@ describe('manualLandingTarget', () => {
     ...listing('kokoroko', showTime),
     manual: isManual,
   });
-  const none = new Set<string>();
+  const none: ReturnType<typeof listing>[] = [];
   // A listing keyed on something else that bills the manual row's act.
   const act = (showTime: string | null) => ({
     ...listing('x', showTime),
@@ -378,5 +414,45 @@ describe('manualLandingTarget', () => {
     expect(
       manualLandingTarget([slot('19:00:00')], listing('x', '19:00'), none),
     ).toBeNull();
+  });
+
+  it('refuses to date an untimed manual row onto a time its act already holds', () => {
+    // A crawled `kokoroko @ 19:00` beside the manual untimed `kokoroko`:
+    // dating the manual row to 19:00 would break the unique index.
+    const crawled = { ...listing('kokoroko', '19:00:00'), manual: false };
+    expect(
+      manualLandingTarget([slot(null), crawled], act('19:00'), [act('19:00')]),
+    ).toBeNull();
+    // The same act at another time does not block it.
+    const other = { ...listing('kokoroko', '22:00:00'), manual: false };
+    const row = slot(null);
+    expect(
+      manualLandingTarget([row, other], act('19:00'), [act('19:00')]),
+    ).toBe(row);
+  });
+
+  it('refuses an untimed listing when this crawl lists the act at two times', () => {
+    const row = slot('19:00:00');
+    expect(
+      manualLandingTarget([row], act(null), [
+        act(null),
+        act('19:00'),
+        act('22:00'),
+      ]),
+    ).toBeNull();
+    expect(
+      manualLandingTarget([row], act(null), [act(null), act('19:00')]),
+    ).toBe(row);
+  });
+
+  it('counts only listings that share an act toward the two-times guard', () => {
+    const row = slot(null);
+    const otherRoom = {
+      ...listing('nubya garcia', '22:00'),
+      headliners: ['Nubya Garcia'],
+    };
+    expect(
+      manualLandingTarget([row], act('19:00'), [act('19:00'), otherRoom]),
+    ).toBe(row);
   });
 });
