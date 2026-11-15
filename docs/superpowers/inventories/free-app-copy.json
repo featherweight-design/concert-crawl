@@ -1,0 +1,23 @@
+{
+  "feature": "Free-app close-out PR 1 · fan copy: the Watching vs Going tip and the signed-out Watching page",
+  "note": "Sweep: ~/Downloads/fwd-handoff/plans/cc-free-app-closeout-sweep-2026-11-15.md (W1, W11). The tip opens from the info button beside the event page's Watching/Going CTAs. The second row is signed out (no CONTACT_SHEET_ROLE), so set it per row run.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "event-tip",
+      "label": "Event page, Watching vs Going tip open (W1)",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "main a[href^=\"/events/\"]",
+          "settle": 1500
+        },
+        { "click": "main a[href^=\"/events/\"]", "settle": 2500 },
+        { "clickRole": "button", "name": "Going vs. Watching", "settle": 1000 }
+      ]
+    }
+  ]
+}
