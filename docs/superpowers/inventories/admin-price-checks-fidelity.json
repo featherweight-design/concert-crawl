@@ -50,7 +50,15 @@
                   "answer": "used",
                   "price": "45.00",
                   "decidedBy": "hugh",
-                  "decidedAt": "2026-11-11T16:40:00.000Z"
+                  "decidedAt": "2026-11-11T16:40:00.000Z",
+                  "eventId": null,
+                  "ticketUrl": null,
+                  "note": null,
+                  "parent": null,
+                  "challenger": null,
+                  "told": null,
+                  "decidedByAvatar": null,
+                  "snapshot": true
                 },
                 {
                   "id": "r2",
@@ -60,7 +68,15 @@
                   "answer": "kept",
                   "price": "1250.00",
                   "decidedBy": "hugh",
-                  "decidedAt": "2026-11-10T22:05:00.000Z"
+                  "decidedAt": "2026-11-10T22:05:00.000Z",
+                  "eventId": null,
+                  "ticketUrl": null,
+                  "note": null,
+                  "parent": null,
+                  "challenger": null,
+                  "told": null,
+                  "decidedByAvatar": null,
+                  "snapshot": true
                 },
                 {
                   "id": "r3",
@@ -70,7 +86,15 @@
                   "answer": "used",
                   "price": "89.50",
                   "decidedBy": null,
-                  "decidedAt": "2026-11-09T15:00:00.000Z"
+                  "decidedAt": "2026-11-09T15:00:00.000Z",
+                  "eventId": null,
+                  "ticketUrl": null,
+                  "note": null,
+                  "parent": null,
+                  "challenger": null,
+                  "told": null,
+                  "decidedByAvatar": null,
+                  "snapshot": true
                 }
               ],
               "total": 17
