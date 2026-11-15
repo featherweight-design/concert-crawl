@@ -1,0 +1,94 @@
+{
+  "feature": "Admin E2-D: a show's venue on Event edit (the picker, the crawled read-only state, the Moved pill and line) and Add a show's shared venue list",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: design/design_handoff_admin_redesign 06-events-artists-prices/event-edit and event-edit-mobile (Venue field, Status pills, the Moved line); addendum 5 04-event-edit/venue-picker-d and venue-picker-m (the open list). Replace MANUAL_SHOW_ID with a manual upcoming scratch show with NO Watchers, CRAWLED_SHOW_ID with a crawled upcoming show, and MOVED_SHOW_ID with a manual show already moved once (a 'moved' redirect off another venue). Rows never press Save, so they write nothing; the moved row needs a real move done beforehand. By hand: the move confirm (shown only when the show has Watchers, which comes from the server-side GET, so a route stub can't reach it; it reuses the Postponed/Hide confirm), the refusal toasts (duplicate show with Open it, crawled race, venue gone) and the partial-save toast, all covered by EventEdit.test.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "venue-at-rest",
+      "label": "Event edit, a manual upcoming show: the Venue field (desktop trigger with tile and chevron; phone plain text) and the Status pills",
+      "steps": [
+        {
+          "goto": "/admin/events/MANUAL_SHOW_ID/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 2000 }
+      ]
+    },
+    {
+      "id": "venue-open",
+      "label": "Event edit: the venue list open (desktop 5 rows plus Type to find the other N…; phone sheet)",
+      "steps": [
+        {
+          "goto": "/admin/events/MANUAL_SHOW_ID/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 2000 },
+        { "click": "#event-edit-venue" },
+        { "wait": "[data-testid=\"venue-search\"]" },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "venue-picked",
+      "label": "Event edit: Globe Hall picked, not saved (the Save bar counts the change)",
+      "steps": [
+        {
+          "goto": "/admin/events/MANUAL_SHOW_ID/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 2000 },
+        { "click": "#event-edit-venue" },
+        { "fill": "[data-testid=\"venue-search\"]", "text": "Globe Hall" },
+        { "clickRole": "option", "name": "Globe Hall" },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "venue-crawled",
+      "label": "Event edit, a crawled upcoming show: the venue read-only at 38px with its reason line",
+      "steps": [
+        {
+          "goto": "/admin/events/CRAWLED_SHOW_ID/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 2000 }
+      ]
+    },
+    {
+      "id": "add-show-venues",
+      "label": "Add a show: the shared venue list open (its gap and tile edges changed with this PR, toward the board)",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"events-list\"]",
+          "settle": 800
+        },
+        { "clickRole": "button", "name": "Add a show" },
+        { "wait": "[data-testid=\"add-show\"]", "settle": 400 },
+        { "click": "#add-show-venueId" },
+        { "wait": "[data-testid=\"venue-search\"]" },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "moved",
+      "label": "Event edit, a moved show: the Moved pill chosen, the Moved line under the pills, the header Moved chip",
+      "steps": [
+        {
+          "goto": "/admin/events/MOVED_SHOW_ID/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 2000 }
+      ]
+    }
+  ]
+}
