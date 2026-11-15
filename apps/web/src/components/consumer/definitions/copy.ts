@@ -1575,7 +1575,8 @@ export const CONSUMER_COPY = {
     submissionClosedReason: {
       stale: 'No second fan in time',
       archived: 'A newer price replaced it',
-      // An admin set it aside, or a Price check where the listed price stood.
+      // An admin rejected it, or a Price check update that wasn't used (it
+      // lost, or another update or the resolution settled the check).
       // Neutral on purpose: no reason, no note, no claim that anything
       // replaced it.
       not_used: "We didn't use this price",
