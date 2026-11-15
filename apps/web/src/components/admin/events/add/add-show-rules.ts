@@ -1,28 +1,14 @@
 /**
  * Add a show's form rules (4b-3): the draft, the checks the API also makes
  * (`04/add-show-errors-d`), the bill's order and the body the API takes.
+ * The limits mirror `createEventSchema` in
+ * apps/api/src/routes/admin/lib/event-create.ts exactly.
  */
-
-/** The API's field codes (`ADD_SHOW_ERROR_CODES` in apps/api event-create). */
-export const ADD_SHOW_ERROR_CODES = [
-  'title_required',
-  'title_too_long',
-  'venue_required',
-  'venue_not_found',
-  'date_required',
-  'date_past',
-  'time_invalid',
-  'show_before_doors',
-  'ticket_url_invalid',
-  'headliner_required',
-  'lineup_name_required',
-  'lineup_name_too_long',
-  'lineup_name_invalid',
-  'lineup_role_invalid',
-  'lineup_too_long',
-  'artist_not_found',
-] as const;
-export type AddShowErrorCode = (typeof ADD_SHOW_ERROR_CODES)[number];
+import {
+  canonicalizeArtist,
+  type AddShowErrorCode,
+} from '@concert-crawl/types';
+import { localDateString } from '@/lib/time';
 
 /** The form's fields, named as the API body names them. */
 export const ADD_SHOW_FIELDS = [
@@ -84,10 +70,37 @@ export interface AddShowBody {
   }[];
 }
 
+// The API's limits (event-create.ts TITLE_MAX, NAME_MAX, LINEUP_MAX,
+// TICKET_URL_MAX). Change them there and here together.
 const TITLE_MAX = 300;
+const NAME_MAX = 200;
+const LINEUP_MAX = 50;
+const TICKET_URL_MAX = 2048;
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-/** A full http(s) link, as the API's `httpUrl` takes it. */
+/**
+ * Today as `YYYY-MM-DD` in America/Denver, the day the API's `date_past`
+ * check reads. Pass it to `validateDraft`: on a Denver evening UTC's date is
+ * already tomorrow, so the browser's own UTC or local day would disagree.
+ */
+export const todayInDenver = (): string => localDateString('America/Denver');
+
+/**
+ * A real calendar day as YYYY-MM-DD: the API's `isCalendarDate`, so a shape
+ * like 2026-02-30 is `date_required` here as it is there.
+ */
+const isCalendarDate = (value: string): boolean => {
+  if (!DATE_REGEX.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+};
+
+/** A full http(s) link within the API's length, as its `httpUrl` takes it. */
 const isFullLink = (text: string): boolean => {
+  if (text.length > TICKET_URL_MAX) return false;
   try {
     const url = new URL(text);
     return url.protocol === 'https:' || url.protocol === 'http:';
@@ -96,9 +109,28 @@ const isFullLink = (text: string): boolean => {
   }
 };
 
+/** The API's per-act name check (`lineupEntrySchema`), or null when it passes. */
+const actNameError = (name: string): AddShowErrorCode | null => {
+  const trimmed = name.trim();
+  if (trimmed === '') return 'lineup_name_required';
+  if (trimmed.length > NAME_MAX) return 'lineup_name_too_long';
+  if (canonicalizeArtist(trimmed) === '') return 'lineup_name_invalid';
+  return null;
+};
+
+const lineupError = (lineup: readonly Act[]): AddShowErrorCode | null => {
+  if (lineup.length === 0) return 'headliner_required';
+  if (lineup.length > LINEUP_MAX) return 'lineup_too_long';
+  for (const act of lineup) {
+    const error = actNameError(act.name);
+    if (error) return error;
+  }
+  return null;
+};
+
 /**
  * The errors the form can tell before saving. `today` is `YYYY-MM-DD` in
- * Mountain Time, the day the API checks against.
+ * Mountain Time, the day the API checks against: pass `todayInDenver()`.
  */
 export const validateDraft = (
   draft: AddShowDraft,
@@ -109,14 +141,15 @@ export const validateDraft = (
   if (title === '') errors.title = 'title_required';
   else if (title.length > TITLE_MAX) errors.title = 'title_too_long';
   if (draft.venueId === '') errors.venueId = 'venue_required';
-  if (draft.date === '') errors.date = 'date_required';
+  if (!isCalendarDate(draft.date)) errors.date = 'date_required';
   else if (draft.date < today) errors.date = 'date_past';
   // `04/add-show-errors-d` puts "Before doors." under Show.
   if (draft.doorsTime && draft.showTime && draft.showTime < draft.doorsTime)
     errors.showTime = 'show_before_doors';
   const link = draft.ticketUrl.trim();
   if (link !== '' && !isFullLink(link)) errors.ticketUrl = 'ticket_url_invalid';
-  if (draft.lineup.length === 0) errors.lineup = 'headliner_required';
+  const lineup = lineupError(draft.lineup);
+  if (lineup) errors.lineup = lineup;
   return errors;
 };
 
@@ -134,14 +167,21 @@ export const toBody = (draft: AddShowDraft): AddShowBody => ({
   })),
 });
 
-const sameName = (one: string, two: string): boolean =>
-  one.trim().toLocaleLowerCase('en-US') ===
-  two.trim().toLocaleLowerCase('en-US');
-
-/** Adds an act at the end, unless it's blank or already on the bill. */
+/**
+ * Adds an act at the end, unless it's blank or already on the bill. "Already"
+ * is the API's rule (`billFromLineup`): two names whose `canonicalizeArtist`
+ * keys match are one act, and the API would drop the second, so the form
+ * never shows it. A name with no canonical key isn't deduped here;
+ * `validateDraft` refuses it as `lineup_name_invalid`.
+ */
 export const addAct = (lineup: readonly Act[], act: Act): Act[] => {
   const name = act.name.trim();
-  if (name === '' || lineup.some((each) => sameName(each.name, name)))
+  if (name === '') return [...lineup];
+  const key = canonicalizeArtist(name);
+  if (
+    key !== '' &&
+    lineup.some((each) => canonicalizeArtist(each.name) === key)
+  )
     return [...lineup];
   return [...lineup, { ...act, name }];
 };

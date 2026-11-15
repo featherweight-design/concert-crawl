@@ -54,6 +54,10 @@ export * from './artist.js';
 // web code-entry page.
 export * from './invite-code.js';
 
+// Admin Add a show's field codes, shared by the API's create schema and the
+// web form that maps each to its copy.
+export * from './add-show.js';
+
 // User roles — mirrors Clerk publicMetadata.role
 // Role always takes precedence over plan in access checks:
 //   admin/promoter/beta/sub_admin get full premium access regardless of subscription.
