@@ -108,24 +108,32 @@ describe('InviteCodesClient unmounted mid-load', () => {
   // A request that answers after the tab has gone must not set state. Under
   // jsdom teardown that is a "window is not defined" throw inside load(), an
   // unhandled rejection that failed whichever web shard it landed in. The test
-  // takes `window` away after the unmount to make any such update throw here.
+  // makes the state update's `window.event` read throw after the unmount.
   const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
   /**
-   * Runs `settle` with `window` gone, waits for the rejection to surface, and
-   * hands back the unhandled-rejection spy. The globals and the listener are
-   * put back even when something in between throws.
+   * Runs `settle` while any React state update throws, waits for the rejection
+   * to surface, and hands back the unhandled-rejection spy. React reads
+   * `window.event` before it queues an update, which is where the teardown
+   * "window is not defined" comes from; making only that read throw keeps the
+   * scheduler and the event system working for everything else. The override
+   * and the listener are removed even when something in between throws.
    */
   const afterUnmount = async (settle: () => void) => {
     const unhandled = vi.fn();
     process.on('unhandledRejection', unhandled);
+    Object.defineProperty(window, 'event', {
+      configurable: true,
+      get() {
+        throw new Error('window is not defined');
+      },
+    });
     try {
-      vi.stubGlobal('window', undefined);
       settle();
       await flush();
       await flush();
     } finally {
-      vi.unstubAllGlobals();
+      Reflect.deleteProperty(window, 'event');
       process.off('unhandledRejection', unhandled);
     }
     return unhandled;
