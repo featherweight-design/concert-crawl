@@ -425,7 +425,9 @@ const MAX_STREAK_DATES = 5;
  * those can be this streak's, even if a strike ever went unrecorded. Two
  * failed runs never count as a strike, so they are left out here too: an
  * account-wide LLM refusal, and a robots.txt disallow (written before the
- * crawl, which never touches the counter). Both lookups ride
+ * crawl, which never touches the counter). A test re-crawl's run is left out
+ * of both lookups: it never moves the counter either, so it neither resets the
+ * streak nor adds to it. Both lookups ride
  * `crawl_runs_venue_status_created_idx`.
  */
 const failureStreakOf = async (venueId: string): Promise<Date[]> => {
@@ -435,6 +437,7 @@ const failureStreakOf = async (venueId: string): Promise<Date[]> => {
     .where(
       and(
         eq(crawlRuns.venueId, venueId),
+        eq(crawlRuns.trial, false),
         or(
           eq(crawlRuns.status, 'success'),
           and(
@@ -450,6 +453,7 @@ const failureStreakOf = async (venueId: string): Promise<Date[]> => {
     .where(
       and(
         eq(crawlRuns.venueId, venueId),
+        eq(crawlRuns.trial, false),
         eq(crawlRuns.status, 'failed'),
         or(
           isNull(crawlRuns.reason),
@@ -515,11 +519,13 @@ venuesAdminRouter.get('/', async (ctx) => {
   //
   // One query serves the latest run and the last full run: DISTINCT ON the
   // venue and whether the run succeeded returns each venue's latest success
-  // and its latest other run, as the detail does for one venue.
+  // and its latest other run, as the detail does for one venue. A test
+  // re-crawl's run is not the venue's own crawl, so it is never either.
   const succeeded = sql`(${crawlRuns.status} = 'success')`;
   const latestRuns = await db
     .selectDistinctOn([crawlRuns.venueId, succeeded], latestRunColumns())
     .from(crawlRuns)
+    .where(eq(crawlRuns.trial, false))
     .orderBy(crawlRuns.venueId, succeeded, desc(crawlRuns.createdAt));
 
   const latestByVenueId = new Map<string, (typeof latestRuns)[number]>();
@@ -648,6 +654,9 @@ venuesAdminRouter.get('/:id', async (ctx) => {
         .where(
           and(
             eq(crawlRuns.venueId, id),
+            // The health card is the venue's own crawls: a test re-crawl
+            // moves none of it (7-day %, sparkline, Latest run, last full).
+            eq(crawlRuns.trial, false),
             gte(crawlRuns.createdAt, sevenDaysAgo),
           ),
         )
@@ -738,7 +747,7 @@ venuesAdminRouter.get('/:id', async (ctx) => {
     const older = await db
       .selectDistinctOn([succeeded], latestRunColumns())
       .from(crawlRuns)
-      .where(eq(crawlRuns.venueId, id))
+      .where(and(eq(crawlRuns.venueId, id), eq(crawlRuns.trial, false)))
       .orderBy(succeeded, desc(crawlRuns.createdAt));
     lastFull ??= older.find((run) => run.status === 'success');
     latestRun ??= older.reduce<Parameters<typeof latestRunOf>[0]>(

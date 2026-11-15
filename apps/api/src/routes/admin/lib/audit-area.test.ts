@@ -20,6 +20,7 @@ describe('areaOfAction', () => {
   it('files a single-venue crawl under Venues and a crawl-all under Crawl runs', () => {
     expect(areaOfAction('crawl.trigger')).toBe('venues');
     expect(areaOfAction('crawl.trigger_all')).toBe('crawl-runs');
+    expect(areaOfAction('crawl.trigger_trial')).toBe('venues');
   });
 
   it('never reads an override off the prototype', () => {

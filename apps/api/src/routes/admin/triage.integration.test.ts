@@ -333,6 +333,39 @@ describe('GET /v1/admin/triage', () => {
     expect((await fetchTriage()).faults).toEqual([]);
   });
 
+  it('reads no test re-crawl: its success does not clear a failing crawl', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({
+      name: 'Hi-Dive',
+      slug: 'hi-dive',
+      consecutiveFailures: 2,
+    });
+    const failed = {
+      status: 'failed' as const,
+      eventsFound: 0,
+      eventsUsable: 0,
+      errorMessage: 'Navigation timeout of 30000ms exceeded',
+    };
+    await seedRuns(venue.id, [
+      { status: 'success', eventsFound: 8, eventsUsable: 8 },
+      failed,
+      failed,
+    ]);
+    // The newest run, and a success, but a trial: the venue's own streak is
+    // what triage reads.
+    await testDb.insert(crawlRuns).values({
+      venueId: venue.id,
+      status: 'success',
+      eventsFound: 8,
+      eventsUsable: 8,
+      trial: true,
+    });
+
+    const [fault] = (await fetchTriage()).faults;
+    expect(fault?.condition).toBe('failed');
+    expect(fault?.evidence['failures']).toBe(2);
+  });
+
   // ── ceiling ───────────────────────────────────────────────────────
   it('surfaces a pinned event count and clears it when the count moves', async () => {
     setAuth('admin');

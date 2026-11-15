@@ -200,6 +200,40 @@ describe('admin venues API, redesign 3a', () => {
         // went unrecorded, and no earlier failure stands in for it.
         expect(await streakOf()).toEqual(isos([6, 5]));
       });
+
+      it('ignores a test re-crawl: its failure is no strike, its success no reset', async () => {
+        const venue = await seedVenue({
+          name: 'Trial',
+          slug: 'trial',
+          consecutiveFailures: 3,
+          crawlPausedAt: at(5),
+        });
+        for (const day of [2, 3, 4]) {
+          await seedCrawlRun(venue.id, {
+            status: 'failed',
+            createdAt: at(day),
+          });
+        }
+        await seedCrawlRun(venue.id, {
+          status: 'success',
+          trial: true,
+          createdAt: at(6),
+        });
+        await seedCrawlRun(venue.id, {
+          status: 'failed',
+          trial: true,
+          createdAt: at(7),
+        });
+        expect(await streakOf()).toEqual(isos([4, 3, 2]));
+        const body = (await (await json('GET', 'venues')).json()) as {
+          data: {
+            lastFullRunAt: string | null;
+            latestRun: { at: string } | null;
+          }[];
+        };
+        expect(body.data[0]?.lastFullRunAt).toBeNull();
+        expect(body.data[0]?.latestRun?.at).toBe(at(4).toISOString());
+      });
     });
 
     it('has no streak and no last full run for a venue that never read shows', async () => {

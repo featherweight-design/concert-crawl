@@ -291,7 +291,10 @@ const okStreakBeforeFailure = async (
       ),
     })
     .from(crawlRuns)
-    .where(inArray(crawlRuns.venueId, venueIds))
+    // Test re-crawls are not readings of the venue's own streak.
+    .where(
+      and(inArray(crawlRuns.venueId, venueIds), eq(crawlRuns.trial, false)),
+    )
     .as('ranked');
   const rows = await db
     .select({ venueId: ranked.venueId, status: ranked.status })
@@ -394,6 +397,8 @@ const otherShowsCrawledFineByVenue = async (
       and(
         inArray(crawlRuns.venueId, venueIds),
         eq(crawlRuns.status, 'success'),
+        // The venue's own latest crawl, as everywhere a fault is judged.
+        eq(crawlRuns.trial, false),
       ),
     )
     .orderBy(
@@ -445,6 +450,8 @@ const venueFaultItems: Adapter = async ({ now }) => {
       // to answer, and its re-crawl answer could only be refused. The venue
       // list leaves it out the same way.
       .where(and(eq(venues.verified, true), isNull(venues.removedAt))),
+    // A test re-crawl's run never moves the venue's streak, so it raises no
+    // fault and is no reading here.
     db.execute(sql`
       SELECT id, venue_id, status, reason, http_status_code, error_message,
              events_found, events_usable, events_inserted, events_updated,
@@ -460,6 +467,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
         FROM ${crawlRuns} cr
         JOIN ${venues} vn ON vn.id = cr.venue_id AND vn.verified = true
           AND vn.removed_at IS NULL
+        WHERE cr.trial = false
       ) ranked
       WHERE rn <= ${TRIAGE_HISTORY_RUN_COUNT}
     `),

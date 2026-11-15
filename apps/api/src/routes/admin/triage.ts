@@ -264,7 +264,8 @@ triageAdminRouter.get('/', async (ctx) => {
   // One grouped window function for the whole run history. The classifiers
   // need enough depth to walk back to the start of the current streak, so this
   // reads the last TRIAGE_HISTORY_RUN_COUNT runs per venue in a single pass
-  // rather than a query per venue.
+  // rather than a query per venue. A test re-crawl's run is left out: it never
+  // moves the venue's streak, so it is no reading of the venue's health.
   const runRowsPromise = db.execute(sql`
     SELECT id, venue_id, status, http_status_code, error_message,
            events_found, events_usable, events_inserted, events_updated,
@@ -279,6 +280,7 @@ triageAdminRouter.get('/', async (ctx) => {
              ) AS rn
       FROM crawl_runs cr
       JOIN venues vn ON vn.id = cr.venue_id AND vn.verified = true
+      WHERE cr.trial = false
     ) ranked
     WHERE rn <= ${TRIAGE_HISTORY_RUN_COUNT}
   `);

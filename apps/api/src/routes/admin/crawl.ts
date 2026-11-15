@@ -34,41 +34,49 @@ const triggerIdSchema = z.object({ id: z.guid('id must be a UUID') });
 // default force to false. When force=true the crawler bypasses both hash-skip
 // short-circuits and re-extracts + re-upserts every event — used to reprocess
 // legacy rows whose listings are unchanged (e.g. backfilling supportingArtists).
+// `trial` (one venue only) queues a test re-crawl of a crawl-paused venue
+// (lib/crawl-trigger.ts); Crawl all never reads it.
 const triggerBodySchema = z.object({
   force: z.boolean().optional().default(false),
+  trial: z.boolean().optional().default(false),
 });
 
-// Parse force from the request body without requiring one. The admin UI (and
-// the Next.js proxy routes) POST no body — often with a `Content-Type:
-// application/json` header but an empty payload — so an empty body silently
-// resolves to force=false. A *non-empty* body that is present but wrong — either
-// unparseable JSON or valid JSON that fails the schema (e.g. `{"force":"true"}`)
-// — is a caller/proxy bug worth surfacing: we warn (house rule: every catch
-// logs) and still default to false rather than 400-ing the trigger.
-async function parseForce(ctx: {
+type TriggerBody = z.infer<typeof triggerBodySchema>;
+
+const DEFAULT_TRIGGER_BODY: TriggerBody = { force: false, trial: false };
+
+// Parse the request body without requiring one. The admin UI (and the Next.js
+// proxy routes) POST no body — often with a `Content-Type: application/json`
+// header but an empty payload — so an empty body silently resolves to
+// force=false, trial=false. A *non-empty* body that is present but wrong —
+// either unparseable JSON or valid JSON that fails the schema (e.g.
+// `{"force":"true"}`) — is a caller/proxy bug worth surfacing: we warn (house
+// rule: every catch logs) and still default both to false rather than 400-ing
+// the trigger. A bad body therefore never queues a trial.
+async function parseTriggerBody(ctx: {
   req: { text: () => Promise<string> };
-}): Promise<boolean> {
+}): Promise<TriggerBody> {
   const body = (await ctx.req.text()).trim();
-  if (body === '') return false;
+  if (body === '') return DEFAULT_TRIGGER_BODY;
   let raw: unknown;
   try {
     raw = JSON.parse(body);
   } catch (err: unknown) {
     logger.warn(
       { err },
-      'crawl trigger: malformed JSON body — defaulting force=false',
+      'crawl trigger: malformed JSON body — defaulting force=false, trial=false',
     );
-    return false;
+    return DEFAULT_TRIGGER_BODY;
   }
   const result = triggerBodySchema.safeParse(raw);
   if (!result.success) {
     logger.warn(
       { issues: result.error.issues },
-      'crawl trigger: body failed schema validation — defaulting force=false',
+      'crawl trigger: body failed schema validation — defaulting force=false, trial=false',
     );
-    return false;
+    return DEFAULT_TRIGGER_BODY;
   }
-  return result.data.force;
+  return result.data;
 }
 
 // Subset of notification.metadata shape this route cares about (#804).
@@ -149,7 +157,7 @@ crawlAdminRouter.post('/', async (ctx) => {
     return ctx.json({ success: true, data: { triggerIds: [], count: 0 } }, 202);
   }
 
-  const force = await parseForce(ctx);
+  const { force } = await parseTriggerBody(ctx);
   const actor = getAuthUser(ctx).userId;
   const inserted = await db.transaction(async (tx) => {
     // The read above takes no lock, so a removal can commit after it. This
@@ -216,9 +224,9 @@ crawlAdminRouter.post(
   async (ctx) => {
     const { venueId } = ctx.req.valid('param');
 
-    const force = await parseForce(ctx);
+    const { force, trial } = await parseTriggerBody(ctx);
     const actor = getAuthUser(ctx).userId;
-    const queued = await queueVenueCrawl(venueId, actor, force);
+    const queued = await queueVenueCrawl(venueId, actor, force, trial);
 
     if (queued.ok === 'not_found') {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
@@ -235,6 +243,37 @@ crawlAdminRouter.post(
     if (queued.ok === 'paused') {
       return ctx.json(
         { success: false, error: 'Crawling is paused for this venue' },
+        409,
+      );
+    }
+    if (queued.ok === 'not_paused') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'A test re-crawl is only for a venue whose crawl is paused',
+          code: 'not_paused',
+        },
+        409,
+      );
+    }
+    if (queued.ok === 'blocked') {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'This venue is blocked. Clear the block before a test re-crawl.',
+          code: 'blocked',
+        },
+        409,
+      );
+    }
+    if (queued.ok === 'trial_pending') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'A test re-crawl of this venue is already queued',
+          code: 'trial_pending',
+        },
         409,
       );
     }
@@ -256,7 +295,7 @@ crawlAdminRouter.post(
       );
     }
 
-    ctx.set('auditAction', 'crawl.trigger');
+    ctx.set('auditAction', trial ? 'crawl.trigger_trial' : 'crawl.trigger');
     ctx.set('auditTargetId', venueId);
     ctx.set('auditActorId', actor);
 
@@ -492,6 +531,8 @@ crawlAdminRouter.get(
         errorMessage: crawlRuns.errorMessage,
         durationMs: crawlRuns.durationMs,
         llmCostUsd: crawlRuns.llmCostUsd,
+        // The list is a log, so a test re-crawl's run is in it, marked.
+        trial: crawlRuns.trial,
         createdAt: crawlRuns.createdAt,
       })
       .from(crawlRuns)
@@ -550,7 +591,14 @@ crawlAdminRouter.get('/status', async (ctx) => {
             llmCostUsd: crawlRuns.llmCostUsd,
           })
           .from(crawlRuns)
-          .where(inArray(crawlRuns.venueId, venueIds))
+          // A venue's health is its own crawls: a test re-crawl of a paused
+          // venue never stands in for its last run.
+          .where(
+            and(
+              inArray(crawlRuns.venueId, venueIds),
+              eq(crawlRuns.trial, false),
+            ),
+          )
           .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt))
       : [];
 
