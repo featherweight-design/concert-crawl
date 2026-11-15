@@ -403,7 +403,8 @@ describe('GuideTab unpublished bar (item 16)', () => {
     const shown = bar();
     if (shown === null) throw new Error('no bar');
     // The insider tip, Accessibility and Parking are written.
-    expect(shown.textContent).toBe(
+    // The bar also holds its Publish guide button and an empty status line.
+    expect(shown.textContent).toContain(
       '3 sections written. Fans don’t see the guide until you publish it.',
     );
     // It sits above the rows (`16/guide-tab-d`).
