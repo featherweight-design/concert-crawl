@@ -304,7 +304,7 @@ describe('WhereItsSoldCard', () => {
       'where-its-sold-resale',
     );
     expect(word.textContent).toBe('resale');
-    expect(word.style.color).toBe('var(--price-text-danger)');
+    expect(word.style.color).toBe('var(--trust-resale)');
     // The letter tile stays neutral.
     expect(
       within(row as HTMLElement).getByTestId('where-its-sold-tile').style
