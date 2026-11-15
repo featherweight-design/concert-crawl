@@ -65,7 +65,7 @@ describe('MergeCompareCard', () => {
       />,
     );
     // The label is the whole card: tapping its text reaches the radio.
-    fireEvent.click(screen.getByText('CLIPSE with special guest JID'));
+    fireEvent.click(screen.getByTestId('merge-card-second'));
     expect(onKeep).toHaveBeenCalledTimes(1);
     rerender(
       <MergeCompareCard
@@ -78,7 +78,7 @@ describe('MergeCompareCard', () => {
         disabled
       />,
     );
-    fireEvent.click(screen.getByText('CLIPSE with special guest JID'));
+    fireEvent.click(screen.getByTestId('merge-card-second'));
     expect(onKeep).toHaveBeenCalledTimes(1);
   });
 
