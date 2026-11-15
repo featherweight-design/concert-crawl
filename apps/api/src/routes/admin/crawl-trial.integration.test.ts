@@ -145,6 +145,42 @@ describe('POST /v1/admin/crawl/:venueId — a test re-crawl', () => {
     expect(await triggersOf(venue.id)).toHaveLength(2);
   });
 
+  it('holds the place while the crawler is running the trial', async () => {
+    setAuth();
+    const venue = await seedVenue({
+      name: 'Globe Hall',
+      slug: 'globe-hall',
+      crawlPausedAt: pausedAt,
+    });
+    expect((await trial(venue.id)).status).toBe(202);
+    // The crawler has claimed it.
+    await testDb
+      .update(crawlTriggers)
+      .set({ status: 'processing' })
+      .where(eq(crawlTriggers.venueId, venue.id));
+
+    const again = await trial(venue.id);
+    expect(again.status).toBe(409);
+    expect(await again.json()).toMatchObject({ code: 'trial_pending' });
+    expect(await triggersOf(venue.id)).toHaveLength(1);
+  });
+
+  it('reads each body field on its own: a bad force still queues the trial', async () => {
+    setAuth();
+    const venue = await seedVenue({
+      name: 'Cervantes',
+      slug: 'cervantes',
+      crawlPausedAt: pausedAt,
+    });
+    const res = await trigger(
+      venue.id,
+      JSON.stringify({ trial: true, force: 'yes' }),
+    );
+    expect(res.status).toBe(202);
+    const [row] = await triggersOf(venue.id);
+    expect(row).toMatchObject({ trial: true, force: false });
+  });
+
   it('still answers the other gates: robots.txt and active/verified', async () => {
     setAuth();
     const robots = await seedVenue({
@@ -180,8 +216,8 @@ describe('POST /v1/admin/crawl/:venueId — a test re-crawl', () => {
       success: false,
       error: 'Crawling is paused for this venue',
     });
-    // A body that fails the schema falls back to an ordinary trigger, never a
-    // trial.
+    // A `trial` that is not a boolean falls back to an ordinary trigger,
+    // never a trial.
     const bad = await trigger(venue.id, JSON.stringify({ trial: 'yes' }));
     expect(bad.status).toBe(409);
     expect(await bad.json()).toMatchObject({

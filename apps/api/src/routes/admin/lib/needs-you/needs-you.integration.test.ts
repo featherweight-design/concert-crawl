@@ -432,6 +432,46 @@ describe('Needs you sources and ranking', () => {
     ).toMatchObject({ kind: 'show-dropped', otherShowsCrawledFine: 2 });
   });
 
+  it('counts from the venue’s own latest success, never a test re-crawl', async () => {
+    const venue = await seedVenue({ name: 'Moxi', slug: 'moxi' });
+    const ownAt = new Date(Date.now() - 24 * HOUR_MS);
+    const trialAt = new Date(Date.now() - HOUR_MS);
+    await seedCrawlRun(venue.id, {
+      status: 'success',
+      durationMs: 60_000,
+      createdAt: ownAt,
+    });
+    // Newer, and a success, but a trial: were it read, only shows seen since
+    // its start (one) would count.
+    await seedCrawlRun(venue.id, {
+      status: 'success',
+      trial: true,
+      durationMs: 60_000,
+      createdAt: trialAt,
+    });
+    await seedEvent(venue.id, {
+      artist: 'Seen By Own',
+      date: inDays(5),
+      lastSeenAt: new Date(ownAt.getTime() - 30_000),
+    });
+    await seedEvent(venue.id, {
+      artist: 'Seen By Trial',
+      date: inDays(6),
+      lastSeenAt: new Date(trialAt.getTime() - 30_000),
+    });
+    const dropped = await seedEvent(venue.id, {
+      artist: 'Dropped Act',
+      date: inDays(4),
+      lastSeenAt: new Date(ownAt.getTime() - 24 * HOUR_MS),
+      firstMissingAt: new Date(),
+    });
+
+    const items = await listNeedsYou({ kind: 'show-dropped', now: now() });
+    expect(
+      items.find((item) => 'eventId' in item && item.eventId === dropped.id),
+    ).toMatchObject({ kind: 'show-dropped', otherShowsCrawledFine: 2 });
+  });
+
   it('gives no crawled-fine count when the latest successful run has no duration', async () => {
     const venue = await seedVenue({ name: 'No Duration', slug: 'no-duration' });
     await seedCrawlRun(venue.id, { status: 'success', durationMs: null });

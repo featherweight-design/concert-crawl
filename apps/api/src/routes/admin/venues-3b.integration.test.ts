@@ -159,6 +159,99 @@ describe('admin venues API, redesign 3b', () => {
       expect(row?.latestRun).toEqual(data.latestRun);
     });
 
+    describe('reads no test re-crawl', () => {
+      const daysAgo = (days: number): Date =>
+        new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+      it('in the 7-day health, the latest run and the last full run', async () => {
+        const venue = await seedVenue({
+          name: 'Gothic',
+          slug: 'gothic',
+          crawlPausedAt: daysAgo(2),
+        });
+        const ownSuccess = daysAgo(3);
+        const ownFailed = await seedCrawlRun(venue.id, {
+          status: 'failed',
+          createdAt: daysAgo(2),
+        });
+        await seedCrawlRun(venue.id, {
+          status: 'success',
+          eventsFound: 40,
+          createdAt: ownSuccess,
+        });
+        // Newer than both, on days of their own: a trial success and a trial
+        // failure, neither of them the venue's own crawl.
+        await seedCrawlRun(venue.id, {
+          status: 'success',
+          trial: true,
+          eventsFound: 55,
+          createdAt: daysAgo(1),
+        });
+        await seedCrawlRun(venue.id, {
+          status: 'failed',
+          trial: true,
+          createdAt: new Date(),
+        });
+
+        const res = await json('GET', `venues/${venue.id}`);
+        const body: {
+          data: DetailBody['data'] & {
+            crawlHealth: {
+              sevenDayPercent: number;
+              sparkline: { hasRun: boolean }[];
+            };
+          };
+        } = await res.json();
+        expect(body.data.latestRun?.id).toBe(ownFailed.id);
+        expect(body.data.lastFullRun).toEqual({
+          at: ownSuccess.toISOString(),
+          eventsFound: 40,
+        });
+        // Two run days, one green: 50%, from the venue's own runs only.
+        expect(body.data.crawlHealth.sevenDayPercent).toBe(50);
+        expect(
+          body.data.crawlHealth.sparkline.filter((day) => day.hasRun),
+        ).toHaveLength(2);
+      });
+
+      it('in the older-run fallback for the latest and last full run', async () => {
+        const venue = await seedVenue({
+          name: 'Gothic',
+          slug: 'gothic',
+          crawlPausedAt: daysAgo(15),
+        });
+        const ownSuccess = daysAgo(20);
+        await seedCrawlRun(venue.id, {
+          status: 'success',
+          eventsFound: 30,
+          createdAt: ownSuccess,
+        });
+        const ownFailed = await seedCrawlRun(venue.id, {
+          status: 'failed',
+          createdAt: daysAgo(15),
+        });
+        // Both older than seven days, so the detail reads the fallback.
+        await seedCrawlRun(venue.id, {
+          status: 'success',
+          trial: true,
+          eventsFound: 55,
+          createdAt: daysAgo(10),
+        });
+        await seedCrawlRun(venue.id, {
+          status: 'failed',
+          trial: true,
+          createdAt: daysAgo(9),
+        });
+
+        const data = await detail(venue.id);
+        expect(data.latestRun?.id).toBe(ownFailed.id);
+        expect(data.lastFullRun).toEqual({
+          at: ownSuccess.toISOString(),
+          eventsFound: 30,
+        });
+      });
+    });
+
     it('cuts a long error to 300 characters on the latest run', async () => {
       const venue = await seedVenue({ name: 'Gothic', slug: 'gothic' });
       await seedCrawlRun(venue.id, {
