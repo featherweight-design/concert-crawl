@@ -1,94 +1,83 @@
+import Link from 'next/link';
 import type { CrewShow } from '@concert-crawl/types';
 
-import { EventRow, fromCrewShow } from '@/components/consumer/event-row';
-import { EmptyState } from '@/components/consumer/empty-state';
-import { MemberCluster } from './MemberCluster';
-import { groupInOrder } from './lib/format';
+import { CrewComingUpRow } from './CrewComingUpRow';
 import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY;
+const COPY = CREWS_COPY.comingUp;
 
 interface CrewUpcomingProps {
   shows: CrewShow[];
-  wide: boolean;
+  /** The viewer's user id in this crew, or null when they cannot be found. */
+  viewerId: string | null;
 }
 
 /**
- * Coming up. The `crew` surface declares the date as carried context, which is
- * exactly true here (the date headers run the list) and suppresses the price
- * slot, since `CrewShow` carries no price. The going cluster rides `footer` —
- * it is a crew fact, not one of the row's four contract lines.
+ * Coming up (`41/crew-coming-up`): the crew's shows by date, one row each, the
+ * same width on a phone and on a desktop. The API already sorts them, so a
+ * show tonight leads. With nothing yet the card says so and points at Browse,
+ * in the Been there card's dashed style.
  */
-export const CrewUpcoming = ({ shows, wide }: CrewUpcomingProps) => {
+export const CrewUpcoming = ({ shows, viewerId }: CrewUpcomingProps) => {
   if (shows.length === 0) {
     return (
-      <EmptyState
-        state="no-data"
-        density="dense"
-        eyebrow={COPY.empty.noUpcomingEyebrow}
-        title={COPY.empty.noUpcomingTitle}
-        body={COPY.empty.noUpcomingBody}
-        railLabel={COPY.empty.noUpcomingRail}
-      />
+      <div
+        data-testid="crew-coming-up-empty"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 8,
+          padding: '24px 20px',
+          textAlign: 'center',
+          borderRadius: 16,
+          border: '1px dashed var(--border-strong)',
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 900,
+            color: 'var(--fg)',
+          }}
+        >
+          {COPY.nothingTitle}
+        </h3>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 13.5,
+            lineHeight: 1.5,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {COPY.nothingBody}
+        </p>
+        <Link
+          href="/events"
+          style={{
+            marginTop: 10,
+            padding: '10px 18px',
+            borderRadius: 12,
+            fontSize: 15,
+            fontWeight: 700,
+            textDecoration: 'none',
+            color: 'var(--fg-on-accent)',
+            background:
+              'linear-gradient(135deg, var(--signal), var(--cta-end))',
+          }}
+        >
+          {COPY.findShow}
+        </Link>
+      </div>
     );
   }
 
-  const groups = groupInOrder(shows, (show) => show.iso);
-
   return (
-    <div className="flex flex-col gap-5">
-      <p
-        style={{
-          margin: 0,
-          fontFamily: 'var(--font-ui)',
-          fontSize: 13,
-          lineHeight: 1.5,
-          color: 'var(--fg-muted)',
-        }}
-      >
-        {COPY.detail.upcomingSub}
-      </p>
-      {groups.map((group) => (
-        <section key={group.key} className="flex flex-col gap-2">
-          <h3
-            style={{
-              margin: 0,
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9.5,
-              fontWeight: 700,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: 'var(--fg-subtle)',
-            }}
-          >
-            {group.items[0]
-              ? fromCrewShow(group.items[0]).dateLabel
-              : group.key}
-          </h3>
-          <div
-            className={wide ? 'grid grid-cols-2 gap-2' : 'flex flex-col gap-2'}
-          >
-            {group.items.map((show) => (
-              <EventRow
-                key={show.eventId}
-                show={fromCrewShow(show)}
-                surface="crew"
-                // Faces only. The count used to be spelled out beside them;
-                // the row's own crew chip now states it, and saying it twice
-                // on one row reads as two different facts.
-                footer={
-                  <MemberCluster
-                    members={show.going}
-                    memberCount={show.goingCount}
-                    size={wide ? 24 : 22}
-                    max={wide ? 5 : 3}
-                    label={COPY.detail.going}
-                  />
-                }
-              />
-            ))}
-          </div>
-        </section>
+    <div className="flex flex-col gap-2.5">
+      {shows.map((show) => (
+        <CrewComingUpRow key={show.eventId} show={show} viewerId={viewerId} />
       ))}
     </div>
   );

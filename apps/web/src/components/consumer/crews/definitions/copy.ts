@@ -49,7 +49,6 @@ export const CREWS_COPY = {
   detail: {
     tabsLabel: 'Crew sections',
     upcomingTitle: 'Coming up',
-    upcomingSub: "One of you said yes. That's enough to put it here.",
     pastTitle: 'Been there',
     pastSub:
       'Nights at least two of you were at. Solo shows stay in your Concerts.',
@@ -185,6 +184,19 @@ export const CREWS_COPY = {
     filledUp: 'This crew filled up. There is no longer room to join.',
   },
 
+  // The Coming up row (addendum 6 item 41, board `41/crew-coming-up`). The
+  // going line is mono caps: "4 GOING · YOU, MIRA +2".
+  comingUp: {
+    tonight: 'TONIGHT',
+    going: 'GOING',
+    you: 'YOU',
+    imIn: "I'm in",
+    imInAria: (artist: string) => `I'm in for ${artist}`,
+    nothingTitle: 'Nothing coming up.',
+    nothingBody: 'One yes from anyone in the crew puts a show here.',
+    findShow: 'Find a show',
+  },
+
   // Destructive flows. Sober, no cheek.
   confirm: {
     leaveTitle: (crew: string) => `Leave ${crew}?`,
@@ -248,10 +260,6 @@ export const CREWS_COPY = {
 
     // Not 'COMING UP' / 'BEEN THERE': the selected tab renders directly above
     // and already says both.
-    noUpcomingEyebrow: 'NO PLANS',
-    noUpcomingTitle: "Nobody's committed.",
-    noUpcomingBody: 'Not one of you has said yes to anything yet. Bold.',
-    noUpcomingRail: '0 shows',
 
     // Verbatim from crew_been_m. The tab is only this empty at zero nights.
     noPastEyebrow: 'CLEAN SLATE · 0 NIGHTS',

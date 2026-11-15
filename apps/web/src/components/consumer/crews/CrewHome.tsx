@@ -271,7 +271,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
         tabIndex={0}
       >
         {active === 'upcoming' && (
-          <CrewUpcoming shows={crew.upcoming} wide={wide} />
+          <CrewUpcoming shows={crew.upcoming} viewerId={viewerId} />
         )}
         {active === 'nights' && (
           <CrewNights shows={crew.nights} wide={wide} viewerId={viewerId} />
