@@ -304,10 +304,23 @@ describe('FilterBar desktop segmented bar', () => {
       expect(
         screen.getByTestId('filter-segment-bar').getAttribute('data-active'),
       ).toBe('true');
-      // Scopes are modes, not dimensions: still no Clear all.
-      expect(screen.queryByRole('button', { name: copy.clearAll })).toBeNull();
     },
   );
+
+  it('keeps My artists out of Clear all: its chip is the way out', () => {
+    searchParams.current = new URLSearchParams('filterFollowing=1');
+    renderBar({ showCount: 9 });
+    expect(screen.queryByRole('button', { name: copy.clearAll })).toBeNull();
+  });
+
+  // The taste chip is retired (W7), so a stored ?filterTaste=1 link has no
+  // chip to turn it off: Clear all has to.
+  it('offers Clear all for a stored taste link and clears it', () => {
+    searchParams.current = new URLSearchParams('filterTaste=1');
+    renderBar({ showCount: 9 });
+    fireEvent.click(screen.getByRole('button', { name: copy.clearAll }));
+    expect(lastQuery().get('filterTaste')).toBeNull();
+  });
 
   it("offers no clear control beyond Clear all, the phone chip's ✕ and the segment ✕", () => {
     searchParams.current = new URLSearchParams('filterVibe=indie');
