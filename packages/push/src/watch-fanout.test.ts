@@ -223,6 +223,60 @@ describe('fanoutWatchNotification', () => {
     ]);
   });
 
+  // Admin E2-C: the venue move passes the new room as its transaction saw it.
+  // A second move landing before the fan-out runs has already changed the
+  // event's venue, and the notice must still name the room this move made.
+  it('names the passed new room over the event context on a relocation', async () => {
+    const deps = makeDeps();
+    deps.pushSelect([
+      {
+        title: 'The Show',
+        artist: 'Band',
+        venueName: 'Bluebird Theater',
+        date: '2026-08-14',
+      },
+    ]);
+    deps.pushSelect([{ userId: 'user_a' }]);
+    deps.sendPush.mockResolvedValue({ delivered: 1 });
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.postponed',
+      transition: 't1',
+      relocated: { fromVenueName: 'Larimer Lounge', toVenueName: 'Globe Hall' },
+    });
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        title: 'Band at Larimer Lounge moved.',
+        body: 'Your ticket still works. New room: Globe Hall.',
+      }),
+    ]);
+  });
+
+  it('falls back to the event context for the new room when none is passed', async () => {
+    const deps = makeDeps();
+    deps.pushSelect([
+      {
+        title: 'The Show',
+        artist: 'Band',
+        venueName: 'Bluebird Theater',
+        date: '2026-08-14',
+      },
+    ]);
+    deps.pushSelect([{ userId: 'user_a' }]);
+    deps.sendPush.mockResolvedValue({ delivered: 1 });
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.postponed',
+      transition: 't1',
+      relocated: { fromVenueName: 'Larimer Lounge' },
+    });
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        body: 'Your ticket still works. New room: Bluebird Theater.',
+      }),
+    ]);
+  });
+
   it('promises no refund information it cannot deliver', async () => {
     const deps = makeDeps();
     deps.pushSelect([
