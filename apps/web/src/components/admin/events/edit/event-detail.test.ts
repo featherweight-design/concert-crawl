@@ -7,7 +7,27 @@ import {
   fieldTime,
   isPast,
   type EventDetail,
+  type LineupItem,
 } from './event-detail';
+
+const LINEUP: LineupItem[] = [
+  {
+    name: 'Six Foot Blonde',
+    role: 'headliner',
+    position: 0,
+    artistId: 'art-1',
+    slug: 'six-foot-blonde',
+    unsure: false,
+  },
+  {
+    name: 'The Man is Dead',
+    role: 'support',
+    position: 0,
+    artistId: 'art-2',
+    slug: 'the-man-is-dead',
+    unsure: true,
+  },
+];
 
 const PAYLOAD = {
   id: 'evt-1',
@@ -41,24 +61,7 @@ const PAYLOAD = {
   sourceUrl: 'https://larimer.example/calendar',
   tourName: null,
   soldOutRecord: null,
-  lineup: [
-    {
-      name: 'Six Foot Blonde',
-      role: 'headliner' as const,
-      position: 0,
-      artistId: 'art-1',
-      slug: 'six-foot-blonde',
-      unsure: false,
-    },
-    {
-      name: 'The Man is Dead',
-      role: 'support' as const,
-      position: 0,
-      artistId: 'art-2',
-      slug: 'the-man-is-dead',
-      unsure: true,
-    },
-  ],
+  lineup: LINEUP,
 };
 
 const RECORD = {

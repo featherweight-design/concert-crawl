@@ -4604,6 +4604,18 @@ export const ADMIN_COPY = {
       // Undrawn: the keys on a lineup chip, read to screen readers only.
       lineupKeys:
         'Delete removes it. Alt and an arrow key move it along the bill.',
+      // Undrawn: a chip's name for screen readers, since its tint is colour
+      // only.
+      lineupChip: (
+        name: string,
+        role: string,
+        match: 'matched' | 'unsure' | 'typed',
+      ) => {
+        if (match === 'unsure') return `${name}, ${role}, unsure match`;
+        if (match === 'matched') return `${name}, ${role}, matched`;
+        return `${name}, ${role}, no match on Artists`;
+      },
+      lineupNewTab: (label: string) => `${label}, opens in a new tab`,
     },
     crawl: {
       title: 'From the crawl',
@@ -4814,6 +4826,16 @@ export const ADMIN_COPY = {
         `It’s still on ${date}, at the times it had.`,
       // Undrawn: a lineup that didn't save, as the title's line.
       savedLineup: 'The lineup is as it was.',
+      // Undrawn: the fields saved and then the lineup failed. `fields` is a
+      // list of `fieldNames`, e.g. "title and date".
+      savedFields: (fields: string) => `The ${fields} saved.`,
+      fieldNames: {
+        title: 'title',
+        tourName: 'tour name',
+        date: 'date',
+        doorsTime: 'doors time',
+        showTime: 'show time',
+      },
     },
     none: '—',
   },

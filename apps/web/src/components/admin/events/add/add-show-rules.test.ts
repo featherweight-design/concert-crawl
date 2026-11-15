@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   EMPTY_DRAFT,
   addAct,
+  addActWithRole,
   lineupEntries,
   moveAct,
+  moveActKeepingRoles,
   removeAct,
   rolesOf,
   toBody,
@@ -221,17 +223,42 @@ describe('rolesOf and lineupEntries', () => {
     ]);
   });
 
-  it('leads with headliners: the first always is, one after a support is not', () => {
-    expect(rolesOf(moveAct(crawled, 2, 0))).toEqual([
+  it('keeps a stored headliner that does not lead the bill', () => {
+    const late: Act[] = [
+      { name: 'A', role: 'headliner' },
+      { name: 'C', role: 'support' },
+      { name: 'B', role: 'headliner' },
+    ];
+    expect(rolesOf(late)).toEqual(['headliner', 'support', 'headliner']);
+  });
+
+  it('heads the bill with an act moved to the front, and touches no other role', () => {
+    expect(rolesOf(moveActKeepingRoles(crawled, 2, 0))).toEqual([
       'headliner',
       'headliner',
       'headliner',
     ]);
-    expect(rolesOf(moveAct(crawled, 1, 2))).toEqual([
+  });
+
+  it('keeps a moved act’s role anywhere but the front', () => {
+    expect(rolesOf(moveActKeepingRoles(crawled, 1, 2))).toEqual([
       'headliner',
       'support',
-      'support',
+      'headliner',
     ]);
+    expect(rolesOf(moveActKeepingRoles(crawled, 0, 2))).toEqual([
+      'headliner',
+      'support',
+      'headliner',
+    ]);
+  });
+
+  it('pins positional roles before a move, so an unset act never shifts', () => {
+    const added = addActWithRole(crawled, { name: 'D' });
+    expect(added[3]?.role).toBe('support');
+    expect(
+      rolesOf(moveActKeepingRoles([{ name: 'X' }, { name: 'Y' }], 1, 0)),
+    ).toEqual(['headliner', 'headliner']);
     expect(rolesOf(removeAct(crawled, 0))).toEqual(['headliner', 'support']);
   });
 });
