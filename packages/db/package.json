@@ -11,6 +11,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./event-merge-fill": {
+      "types": "./dist/event-merge-fill.d.ts",
+      "import": "./dist/event-merge-fill.js",
+      "default": "./dist/event-merge-fill.js"
+    },
     "./upcoming-events": {
       "types": "./dist/lib/upcoming-events.d.ts",
       "import": "./dist/lib/upcoming-events.js",

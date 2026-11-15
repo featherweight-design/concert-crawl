@@ -24,11 +24,11 @@ import {
   eventReports,
   events,
   adminMergeFill,
-  type MergeFillField,
   priceSubmissions,
   userEvents,
   venues,
 } from '@concert-crawl/db';
+import type { MergeFillField } from '@concert-crawl/db/event-merge-fill';
 import {
   isTwelveHourMisread,
   sameNight,
