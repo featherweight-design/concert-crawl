@@ -130,7 +130,9 @@ describe('validateDraft', () => {
 });
 
 describe('todayInDenver', () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it("is Denver's day on an evening when UTC is already tomorrow", () => {
     vi.useFakeTimers();

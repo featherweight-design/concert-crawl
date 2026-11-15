@@ -131,7 +131,9 @@ describe('addShowApi.create', () => {
   });
 
   describe('when the request times out', () => {
-    afterEach(() => vi.restoreAllMocks());
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
 
     const fireTimeout = () =>
       vi
