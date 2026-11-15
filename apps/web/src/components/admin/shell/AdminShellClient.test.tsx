@@ -6,7 +6,19 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/admin/venues/abc',
   useSearchParams: () => new URLSearchParams('tab=details'),
 }));
-vi.mock('@clerk/nextjs', () => ({ useClerk: () => ({ signOut: vi.fn() }) }));
+vi.mock('@clerk/nextjs', () => ({
+  useClerk: () => ({
+    signOut: vi.fn(),
+    openSignIn: vi.fn(),
+    addListener: () => () => undefined,
+  }),
+  // The shell mounts the session guard: a live session, so it draws nothing.
+  useAuth: () => ({
+    isLoaded: true,
+    isSignedIn: true,
+    getToken: vi.fn().mockResolvedValue('token'),
+  }),
+}));
 
 import { DetailsSaveBar } from '@/components/admin/venues/details/DetailsSaveBar';
 import { AdminShellClient } from './AdminShellClient';

@@ -115,11 +115,13 @@ describe('AdminSessionGuard', () => {
 
   it('clears an overlay a 401 raised on a still-signed-in session once Clerk reports a token again', async () => {
     clerk.auth.getToken = vi.fn().mockResolvedValue(null);
-    render(<AdminSessionGuard />);
+    const { rerender } = render(<AdminSessionGuard />);
     await answer401();
     await waitFor(() => expect(overlay()).toBeInTheDocument());
-    // The admin signs in again in Clerk's modal: isSignedIn never changed.
+    // The admin signs in again in Clerk's modal: isSignedIn never changed, but
+    // Clerk hands the component a new getToken, which is what a re-render is.
     clerk.auth.getToken = vi.fn().mockResolvedValue('fresh-token');
+    rerender(<AdminSessionGuard />);
     await act(async () => {
       for (const listener of clerk.listeners) listener();
     });
