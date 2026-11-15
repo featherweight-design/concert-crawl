@@ -34,7 +34,7 @@
  */
 
 import { and, asc, eq, gt, isNull, like, or } from 'drizzle-orm';
-import { db, events, venues } from '@concert-crawl/db';
+import { db, events, syncEventArtists, venues } from '@concert-crawl/db';
 import {
   CRAWLER_USER_AGENT,
   canonicalizeSupporting,
@@ -544,25 +544,33 @@ export async function rederiveEventArtists(
       // canonical headliner with its raw spelling from `headliners`, the
       // casing and accents canonical form stripped: canonical-only would
       // project 'kokoroko'.
-      await db
-        .update(events)
-        .set({
-          headliners: result.headliners,
-          canonicalHeadliners,
-          supportingArtists: result.supportingArtists,
-          canonicalSupporting,
-          ...(hides ? { hiddenFromConsumer: true } : {}),
-          updatedAt: new Date(),
-        })
-        // Re-checked at write time: an admin may save the lineup while the
-        // run is adjudicating this row.
-        .where(
-          and(
-            eq(events.id, row.id),
-            eq(events.manual, false),
-            isNull(events.lineupEditedAt),
-          ),
-        );
+      //
+      // Admin 4a-2: `event_artists` is rebuilt from the new arrays in the same
+      // transaction, so the two never disagree. A row the write skipped (a
+      // lineup saved meanwhile) is left to whoever saved it.
+      await db.transaction(async (tx) => {
+        const written = await tx
+          .update(events)
+          .set({
+            headliners: result.headliners,
+            canonicalHeadliners,
+            supportingArtists: result.supportingArtists,
+            canonicalSupporting,
+            ...(hides ? { hiddenFromConsumer: true } : {}),
+            updatedAt: new Date(),
+          })
+          // Re-checked at write time: an admin may save the lineup while the
+          // run is adjudicating this row.
+          .where(
+            and(
+              eq(events.id, row.id),
+              eq(events.manual, false),
+              isNull(events.lineupEditedAt),
+            ),
+          )
+          .returning({ id: events.id });
+        if (written.length > 0) await syncEventArtists(tx, [row.id]);
+      });
     }
     if (stopped) break;
   }

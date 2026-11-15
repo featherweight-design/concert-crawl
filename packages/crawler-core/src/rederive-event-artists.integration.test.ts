@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { eq, sql } from 'drizzle-orm';
-import { db, events, venues } from '@concert-crawl/db';
+import { asc, eq, sql } from 'drizzle-orm';
+import { artists, db, eventArtists, events, venues } from '@concert-crawl/db';
 import { rederiveEventArtists } from './rederive-event-artists.js';
 import type { Adjudicator } from './lib/derive-artists.js';
 
@@ -352,6 +352,57 @@ describe('rederive-event-artists integration', () => {
     expect(galdiveAfter.headliners).toEqual(['Galdive', 'rum.gold']);
     expect(galdiveAfter.canonicalHeadliners).toEqual(['galdive', 'rum.gold']);
     expect(galdiveAfter.canonicalArtist).toBe('galdive');
+  });
+
+  // Admin 4a-2: the rewritten bill's `event_artists` rows land with it.
+  it('rebuilds the lineup rows of a row it rewrites, in bill order', async () => {
+    await db.execute(sql`TRUNCATE TABLE artists RESTART IDENTITY CASCADE`);
+    const [galdiveArtist, rumGold] = await db
+      .insert(artists)
+      .values([
+        { name: 'Galdive', canonicalName: 'galdive', slug: 'galdive' },
+        { name: 'rum.gold', canonicalName: 'rum.gold', slug: 'rum-gold' },
+      ])
+      .returning({ id: artists.id });
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      title: 'Galdive & rum.gold',
+      artist: 'Galdive & rum.gold',
+      canonicalArtist: 'galdive',
+      canonicalTitle: 'galdive',
+      date: '2027-02-12',
+      headliners: ['Galdive & rum.gold'],
+      canonicalHeadliners: ['galdive'],
+    });
+    const adjudicate: Adjudicator = vi.fn(async () => ({
+      isConcert: true,
+      headliners: ['Galdive', 'rum.gold'],
+      supportingArtists: [],
+    }));
+
+    await run(adjudicate, true);
+    expect(
+      await db
+        .select()
+        .from(eventArtists)
+        .where(eq(eventArtists.eventId, event.id)),
+    ).toEqual([]);
+
+    await run(adjudicate, false);
+
+    const rows = await db
+      .select({
+        artistId: eventArtists.artistId,
+        role: eventArtists.role,
+        position: eventArtists.position,
+      })
+      .from(eventArtists)
+      .where(eq(eventArtists.eventId, event.id))
+      .orderBy(asc(eventArtists.position));
+    expect(rows).toEqual([
+      { artistId: galdiveArtist!.id, role: 'headliner', position: 0 },
+      { artistId: rumGold!.id, role: 'headliner', position: 1 },
+    ]);
   });
 
   it('reads only flattened billings when asked, and stops at once when told to', async () => {

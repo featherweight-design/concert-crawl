@@ -153,6 +153,14 @@ vi.mock('@concert-crawl/db', () => {
 
   return {
     db,
+    // Admin 4a-2: the lineup rebuild has its own integration tests.
+    syncEventArtists: vi.fn().mockResolvedValue({
+      events: 0,
+      inserted: 0,
+      updated: 0,
+      deleted: 0,
+      unmatched: 0,
+    }),
     venues,
     events,
     // Admin 4a: merged-listing routing reads redirects; none exist here.
