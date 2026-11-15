@@ -221,6 +221,8 @@ export const listAdminEvents = async (query: EventListQuery, today: string) => {
           sourceUrl: events.sourceUrl,
           status,
           hidden: events.hiddenFromConsumer,
+          // An admin-added show: the row menu offers Delete only on these.
+          manual: events.manual,
           hiddenReason: hiddenReasonSql(),
           priceMin: events.ticketPriceMin,
           priceMax: events.ticketPriceMax,

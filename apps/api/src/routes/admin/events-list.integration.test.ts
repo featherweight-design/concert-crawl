@@ -51,6 +51,7 @@ interface ListBody {
       title: string;
       status: string;
       hidden: boolean;
+      manual: boolean;
       hiddenReason: string | null;
       watchingCount: number;
       wentCount: number | null;
@@ -513,6 +514,27 @@ describe('GET /v1/admin/events/list', () => {
       headers: HEADERS,
     });
     expect(res.status).toBe(403);
+  });
+
+  it('says which rows an admin added, the only ones Delete is offered on', async () => {
+    const venue = await seedVenue();
+    const added = await seedEvent(venue.id, {
+      artist: 'Added Act',
+      date: dayOffset(3),
+      manual: true,
+    });
+    const crawled = await seedEvent(venue.id, {
+      artist: 'Crawled Act',
+      date: dayOffset(4),
+    });
+
+    const body = await list();
+    const manualById = new Map(
+      body.data.rows.map((row) => [row.id, row.manual]),
+    );
+
+    expect(manualById.get(added.id)).toBe(true);
+    expect(manualById.get(crawled.id)).toBe(false);
   });
 });
 

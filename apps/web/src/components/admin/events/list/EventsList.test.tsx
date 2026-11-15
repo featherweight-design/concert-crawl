@@ -32,6 +32,7 @@ const row = (overrides: Partial<EventListRow>): EventListRow => ({
   venueUrl: null,
   status: 'available',
   hidden: false,
+  manual: false,
   hiddenReason: null,
   priceMin: '65.00',
   priceMax: '495.00',
