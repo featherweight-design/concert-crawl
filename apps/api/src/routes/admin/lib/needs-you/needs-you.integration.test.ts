@@ -845,6 +845,13 @@ describe('Needs you sources and ranking', () => {
         metadata: { screenshot: 'https://tracker.example.com/pixel.png' },
       },
       {
+        // A row stored before the write check: any string got through.
+        pageUrl: 'https://concertcrawl.app/c',
+        category: 'bug',
+        message: 'Script link',
+        metadata: { screenshot: 'javascript:alert(1)' },
+      },
+      {
         pageUrl: 'https://concertcrawl.app/b',
         category: 'bug',
         message: 'Huge image',
@@ -854,7 +861,7 @@ describe('Needs you sources and ranking', () => {
       },
     ]);
     const items = await listNeedsYou({ kind: 'bug', now: now() });
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(3);
     for (const item of items) {
       expect(item).toMatchObject({ screenshot: null });
     }

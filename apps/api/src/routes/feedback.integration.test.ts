@@ -197,6 +197,78 @@ describe('POST /v1/feedback', () => {
     expect(res.status).toBe(201);
   });
 
+  describe('metadata.screenshot', () => {
+    const postWithScreenshot = async (userId: string, screenshot: unknown) => {
+      setAuth(userId);
+      const res = await app.request('/v1/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'bug',
+          message: 'Something broke.',
+          pageUrl: '/events',
+          metadata: { device: 'Mac', screenshot },
+        }),
+      });
+      const [row] = await testDb
+        .select()
+        .from(feedback)
+        .where(eq(feedback.userId, userId));
+      return { status: res.status, metadata: row?.metadata };
+    };
+
+    it('keeps an inline png, jpeg or webp image the fan form sends', async () => {
+      for (const [index, shot] of [
+        'data:image/png;base64,AAAA',
+        'data:image/jpeg;base64,/9j/4AAQ',
+        'data:image/webp;base64,UklGRg==',
+      ].entries()) {
+        const { status, metadata } = await postWithScreenshot(
+          `screenshot-kept-${index}`,
+          shot,
+        );
+        expect(status).toBe(201);
+        expect(metadata).toMatchObject({ device: 'Mac', screenshot: shot });
+      }
+    });
+
+    it.each([
+      ['a foreign https host', 'https://tracker.example.com/pixel.png'],
+      ['an http URL', 'http://169.254.169.254/latest/meta-data'],
+      ['a javascript: URL', 'javascript:alert(1)'],
+      ['an svg data image', 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='],
+      ['a non-string', { src: 'https://tracker.example.com/pixel.png' }],
+    ])('drops %s but still files the report', async (label, shot) => {
+      const userId = `screenshot-dropped-${label.replace(/\W+/g, '-')}`;
+      const { status, metadata } = await postWithScreenshot(userId, shot);
+      expect(status).toBe(201);
+      expect(metadata).toMatchObject({ device: 'Mac' });
+      expect(metadata).not.toHaveProperty('screenshot');
+    });
+
+    it('does not store a legacy screenshotDataUrl key', async () => {
+      setAuth('screenshot-legacy-key');
+      const res = await app.request('/v1/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'bug',
+          message: 'x',
+          pageUrl: '/events',
+          metadata: {
+            screenshotDataUrl: 'https://tracker.example.com/pixel.png',
+          },
+        }),
+      });
+      expect(res.status).toBe(201);
+      const [row] = await testDb
+        .select()
+        .from(feedback)
+        .where(eq(feedback.userId, 'screenshot-legacy-key'));
+      expect(row?.metadata).not.toHaveProperty('screenshotDataUrl');
+    });
+  });
+
   it('does not consume rate-limit token on 422 (malformed body)', async () => {
     const userId = `rate-limit-after-422-${Date.now()}`;
     setAuth(userId);

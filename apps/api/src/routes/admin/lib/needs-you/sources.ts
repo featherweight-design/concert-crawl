@@ -31,7 +31,7 @@ import {
   type SpotifyCandidateSnapshot,
 } from '@concert-crawl/db';
 import { AUTO_APPROVE_THRESHOLD } from '@concert-crawl/crawler-core';
-import { canonicalizeArtist } from '@concert-crawl/types';
+import { canonicalizeArtist, isFeedbackScreenshot } from '@concert-crawl/types';
 import type {
   NeedsYouAnswerOption,
   NeedsYouArtistCandidate,
@@ -1012,23 +1012,18 @@ const priceBatchItems: Adapter = async ({ now }) => {
 // Bugs
 // ---------------------------------------------------------------------------
 
-const MAX_SCREENSHOT_CHARS = 200_000;
-// Raster images only, as base64: never svg+xml (it can carry script) or text.
-const SCREENSHOT_DATA_URI =
-  /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+// Tighter than the write cap: every unread bug rides in every list and count
+// response.
+const MAX_QUEUE_SCREENSHOT_CHARS = 200_000;
 
 /** The screenshot a reporter attached (`metadata.screenshot`), if it is usable. */
 const screenshotOf = (metadata: unknown): string | null => {
   if (typeof metadata !== 'object' || metadata === null) return null;
-  const shot = Reflect.get(metadata, 'screenshot');
-  // Reporter-controlled: only an inline image under a size cap goes into the
-  // queue (every unread bug rides in every list and count response), and never
-  // a URL the admin's browser would be sent to fetch.
-  return typeof shot === 'string' &&
-    SCREENSHOT_DATA_URI.test(shot) &&
-    shot.length <= MAX_SCREENSHOT_CHARS
-    ? shot
-    : null;
+  const shot: unknown = Reflect.get(metadata, 'screenshot');
+  // Reporter-controlled, and rows stored before the write check may hold
+  // anything: only our own inline image format goes into the queue, never a
+  // URL the admin's browser would be sent to fetch.
+  return isFeedbackScreenshot(shot, MAX_QUEUE_SCREENSHOT_CHARS) ? shot : null;
 };
 
 /** The device line a reporter's widget sent (`metadata.device`), cut to a safe length. */

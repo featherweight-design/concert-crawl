@@ -128,6 +128,9 @@ export * from './events-query.js';
 // Event status
 export * from './event-status.js';
 export * from './records-start.js';
+// The one format a feedback screenshot may take: checked by the API when it
+// stores a report and by every admin surface that renders one.
+export * from './feedback-screenshot.js';
 import type { EventStatus } from './event-status.js';
 
 /**

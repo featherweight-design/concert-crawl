@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { z } from 'zod';
 import { db, feedback } from '@concert-crawl/db';
+import { isFeedbackScreenshot } from '@concert-crawl/types';
 import { checkRateLimit } from '../lib/rate-limit.js';
 import { apiLogger } from '../lib/logger.js';
 
@@ -17,7 +18,15 @@ const feedbackSchema = z.object({
       theme: z.string().optional(),
       build: z.string().optional(),
       device: z.string().optional(),
-      screenshot: z.string().nullish(),
+      // The fan form sends the picked file as an inline data image. Anything
+      // else (an http(s) URL, javascript:, svg) is dropped rather than failing
+      // the request, so the fan's report still lands without it: the admin's
+      // browser must never be sent to a host the reporter chose.
+      screenshot: z
+        .unknown()
+        .transform((value) =>
+          isFeedbackScreenshot(value) ? value : undefined,
+        ),
       // A problem report filed from an error page. The ids tie it to what the
       // team already holds (the server digest, or the browser's Sentry event)
       // and are shape-checked so the column only ever carries an id. The
