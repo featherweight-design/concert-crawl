@@ -6,6 +6,7 @@ import { CONTENT_GUTTER_X, CONTENT_GUTTER_Y } from './content-pane';
 import { ContentPaneSlotContext } from './content-pane-slot';
 import { AdminPhoneHeader, AdminTopbar } from './AdminTopbar';
 import { MobileBottomBar, TAB_BAR_HEIGHT } from './MobileBottomBar';
+import { OfflineBanner } from './OfflineBanner';
 import { MOBILE_BREAKPOINT, type AdminBadgeCounts } from './nav';
 import type { AdminShellUser } from './AdminAvatar';
 
@@ -36,6 +37,7 @@ const PhoneShell = ({ badgeCounts, user, children }: AdminShellClientProps) => (
       flexDirection: 'column',
     }}
   >
+    <OfflineBanner />
     <main
       style={{
         flex: 1,
@@ -69,6 +71,7 @@ const DesktopShell = ({
           overflow: 'hidden',
         }}
       >
+        <OfflineBanner />
         <AdminTopbar />
         <main
           data-admin-content

@@ -4519,6 +4519,12 @@ export const ADMIN_COPY = {
       tryAgain: 'Try again',
       dismiss: 'Dismiss',
     },
+    // `07/offline-mobile`. The board reads "Changes wait until you're back",
+    // which promises a write queue; there is none, a save made offline fails
+    // (copy-review: STALE, reworded to what happens).
+    offline: {
+      banner: "Offline. You can't save until you're back.",
+    },
     notFound: {
       title: "That page isn't here",
       body: 'It may have moved or been deleted.',
