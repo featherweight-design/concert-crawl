@@ -1,0 +1,48 @@
+{
+  "feature": "P47-8a · the admin shell's offline banner (board 07/offline-mobile)",
+  "note": "Board: design/design_handoff_admin_redesign/boards/07-people-flags-operations/offline-mobile.html (phone, 40px warning banner above the page, pushing it down). Wired to useOnlineStatus. The desktop shell puts the same banner above the topbar (undrawn at desktop, resolved from the phone board). Each cell opens an admin page, waits for it, then takes the browser offline. Needs the audit user to be an admin. Dark (electric) and Light.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": { "cc-theme": "electric" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": { "cc-theme": "light" },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    { "label": "short", "width": 320, "height": 568, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "offline-venues",
+      "label": "Admin Venues, offline",
+      "steps": [
+        { "goto": "/admin/venues", "settle": 4000 },
+        { "offline": true, "settle": 1200 },
+        { "wait": "[data-testid=\"admin-offline-banner\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "offline-people",
+      "label": "Admin People, offline",
+      "steps": [
+        { "goto": "/admin/people", "settle": 4000 },
+        { "offline": true, "settle": 1200 },
+        { "wait": "[data-testid=\"admin-offline-banner\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "online-venues",
+      "label": "Admin Venues, online (no banner)",
+      "steps": [{ "goto": "/admin/venues", "settle": 4000 }]
+    }
+  ]
+}
