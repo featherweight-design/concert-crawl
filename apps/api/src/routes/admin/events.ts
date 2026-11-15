@@ -992,9 +992,10 @@ eventsAdminRouter.delete(
 // POST /v1/admin/events/:id/sold-out — admin-authored sold-out event_report,
 // auto-promoted on creation. Idempotent: if an active promoted sold-out report
 // already exists, returns 200 with that row instead of creating a duplicate.
-// The admin says how they know (B+ addendum 7 §6). Every caller sends a
-// method; the old `.default('other')` was dropped once the web build that
-// always sends one was live on prod (the contract step).
+// The mark records how the admin knows (B+ addendum 7 §6). Every web caller
+// sends a method (Event edit's form waits for a pick, and the one-tap actions
+// send `other`), so the old `.default('other')` was dropped once that web
+// build was live on prod (the contract step). A body without one is a 422.
 const markSoldOutSchema = z.object({
   evidenceMethod: z.enum([
     'venue_site',

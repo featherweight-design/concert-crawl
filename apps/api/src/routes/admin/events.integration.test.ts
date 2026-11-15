@@ -237,7 +237,10 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({ evidenceUrl: 'not-a-url' }),
+      body: JSON.stringify({
+        evidenceMethod: 'other',
+        evidenceUrl: 'not-a-url',
+      }),
     });
     expect(res.status).toBe(422);
   });
