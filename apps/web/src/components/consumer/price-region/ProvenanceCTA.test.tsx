@@ -43,7 +43,7 @@ describe('ProvenanceCTA', () => {
       const captionRow = captionText.parentElement as HTMLElement;
       const dot = captionRow.querySelector('[aria-hidden]') as HTMLElement;
       expect(dot).toBeDefined();
-      expect(dot.style.background).toBe('var(--warning)');
+      expect(dot.style.background).toBe('var(--trust-boxoffice)');
 
       // External-link safety
       expect(anchor.getAttribute('target')).toBe('_blank');
@@ -130,7 +130,7 @@ describe('ProvenanceCTA', () => {
       const captionRow = captionText.parentElement as HTMLElement;
       const dot = captionRow.querySelector('[aria-hidden]') as HTMLElement;
       expect(dot).toBeDefined();
-      expect(dot.style.background).toBe('var(--danger)');
+      expect(dot.style.background).toBe('var(--trust-resale)');
 
       // External-link safety
       expect(anchor.getAttribute('target')).toBe('_blank');

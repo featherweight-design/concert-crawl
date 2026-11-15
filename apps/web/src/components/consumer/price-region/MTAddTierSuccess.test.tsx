@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 // The community trust colour as text (TRUST_TOKENS.community.text).
-const AZURE_NORM = 'var(--price-text-signal)';
+const AZURE_NORM = 'var(--trust-community)';
 
 describe('MTAddTierSuccess', () => {
   it('state #1 — first tier submitted: success eyebrow + check glyph + headline + body with azure pending fragment', () => {

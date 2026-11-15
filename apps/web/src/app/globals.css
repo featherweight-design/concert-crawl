@@ -98,11 +98,6 @@
     --genre-comedy: #7a6f00;
   }
 
-  /* Price card text (more-p-price_states, addendum 4 item 5). Dark themes draw
-     the board's tokens as they are. On Light, four of them miss WCAG AA for
-     their size on --surface-1, so they lean toward --fg until they pass:
-     subtle 2.79 -> 4.71, warning 3.65 -> 5.29, signal 4.18 -> 5.44 (4.92 on the
-     8% pill and the 7% strip). Danger already passes (5.14). */
   /* Trust tones (addendum 6 item 38): the trust pills' colours. The theme
      layer sets them per theme (themes.ts); these defaults cover the first
      paint before it runs and any theme that does not name one. */
@@ -112,6 +107,11 @@
     --trust-resale: var(--danger);
   }
 
+  /* Price card text (more-p-price_states, addendum 4 item 5). Dark themes draw
+     the board's tokens as they are. On Light, four of them miss WCAG AA for
+     their size on --surface-1, so they lean toward --fg until they pass:
+     subtle 2.79 -> 4.71, warning 3.65 -> 5.29, signal 4.18 -> 5.44 (4.92 on the
+     8% pill and the 7% strip). Danger already passes (5.14). */
   :root {
     --price-text-subtle: var(--fg-subtle);
     --price-text-warning: var(--warning);

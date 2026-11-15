@@ -754,7 +754,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
       ),
     ).find((dot) => dot.parentElement?.textContent?.includes('Reserved'));
     expect(reservedDot).toBeDefined();
-    expect(reservedDot?.style.background).toBe('var(--warning)');
+    expect(reservedDot?.style.background).toBe('var(--trust-boxoffice)');
   });
 
   // Regression: the "other tiers" row for a pending-only tier took its kind
@@ -812,12 +812,12 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
         'div[style*="border-radius: 2.5px"]',
       ),
     );
-    expect(dots.some((dot) => dot.style.background === 'var(--danger)')).toBe(
-      true,
-    );
-    expect(dots.some((dot) => dot.style.background === 'var(--signal)')).toBe(
-      false,
-    );
+    expect(
+      dots.some((dot) => dot.style.background === 'var(--trust-resale)'),
+    ).toBe(true);
+    expect(
+      dots.some((dot) => dot.style.background === 'var(--trust-community)'),
+    ).toBe(false);
   });
 
   it('STATE #7 all-tiers-pending — every tier is pending-only routes through PendingStack', () => {

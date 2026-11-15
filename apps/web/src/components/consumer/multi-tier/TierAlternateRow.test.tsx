@@ -23,7 +23,7 @@ describe('TierAlternateRow', () => {
       'div[style*="border-radius: 2.5px"]',
     ) as HTMLElement | null;
     expect(dot).not.toBeNull();
-    expect(dot!.style.background).toBe('var(--warning)');
+    expect(dot!.style.background).toBe('var(--trust-boxoffice)');
   });
 
   it('renders community kind with a signal dot', () => {
@@ -34,7 +34,7 @@ describe('TierAlternateRow', () => {
       'div[style*="border-radius: 2.5px"]',
     ) as HTMLElement | null;
     expect(dot).not.toBeNull();
-    expect(dot!.style.background).toBe('var(--signal)');
+    expect(dot!.style.background).toBe('var(--trust-community)');
   });
 
   it('renders resale kind with a danger dot', () => {
@@ -50,7 +50,7 @@ describe('TierAlternateRow', () => {
       'div[style*="border-radius: 2.5px"]',
     ) as HTMLElement | null;
     expect(dot).not.toBeNull();
-    expect(dot!.style.background).toBe('var(--danger)');
+    expect(dot!.style.background).toBe('var(--trust-resale)');
     expect(screen.getByText('StubHub')).toBeDefined();
     expect(screen.getByText('$150')).toBeDefined();
   });
