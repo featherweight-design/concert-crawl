@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { act, render, cleanup } from '@testing-library/react';
 
 const EVENT_ID = '3f1a9c62-8d4b-4e17-9f2a-1b6c7d8e9f01';
 
@@ -64,9 +64,13 @@ const withIntent = (raw: string, label?: string) => {
   searchParams = new URLSearchParams({ intent: raw });
   if (label) searchParams.set('label', label);
 };
+// The follow runs in a promise, then sets state and fires an effect: let all of
+// it settle inside act.
 const flush = async () => {
-  await Promise.resolve();
-  await Promise.resolve();
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 };
 
 describe('ReturnSeamReplay: replaying a watch (#794)', () => {
