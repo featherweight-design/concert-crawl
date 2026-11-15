@@ -1,0 +1,58 @@
+{
+  "feature": "Custom auth PR 8b · arriving with intent: a pending Watch and a pending Follow (/sign-in/new, /sign-up/new)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/06-arriving-with-intent (intent-watch-m and -d, intent-follow-m, intent-signup-watch-m). Signed out. Needs the local API with a seeded database, because the show and artist cards read the public events and artists routes: the rows use a real seeded event id and artist slug filled in by the run (EVENT_ID and ARTIST_SLUG in the environment). No Clerk call is made. The toast (intent-return-m: 'You're watching {show}.' with My shows, and 'You're following {artist}.') only appears after a real sign-in and is hand-walked on staging. No poster thumbnail on the cards (names only, from public data).",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "signin-watch-card",
+      "label": "/sign-in/new: arriving from Watch (the show card)",
+      "steps": [
+        {
+          "goto": "/sign-in/new?redirect_url=%2Fevents%2F${EVENT_ID}%3Fintent%3Dwatch%253A${EVENT_ID}%26label%3DHeadliner",
+          "wait": "h1:has-text('Sign in to watch')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "signin-follow-card",
+      "label": "/sign-in/new: arriving from Follow (the artist card)",
+      "steps": [
+        {
+          "goto": "/sign-in/new?redirect_url=%2Fartists%2F${ARTIST_SLUG}%3Fintent%3Dfollow%253A${ARTIST_SLUG}%26label%3DArtist",
+          "wait": "h1:has-text('Sign in to follow')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "signup-watch-card",
+      "label": "/sign-up/new: the show card over the form",
+      "widths": ["phone", "desktop"],
+      "steps": [
+        {
+          "goto": "/sign-up/new?redirect_url=%2Fevents%2F${EVENT_ID}%3Fintent%3Dwatch%253A${EVENT_ID}%26label%3DHeadliner",
+          "wait": "text=Sign in to watch",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "signup-follow-card",
+      "label": "/sign-up/new: the artist card over the form",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/sign-up/new?redirect_url=%2Fartists%2F${ARTIST_SLUG}%3Fintent%3Dfollow%253A${ARTIST_SLUG}%26label%3DArtist",
+          "wait": "text=Sign in to follow",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}
