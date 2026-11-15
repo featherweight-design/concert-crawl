@@ -138,6 +138,27 @@ describe('CrewUpcoming', () => {
     expect(row).toHaveTextContent('8:00 PM');
   });
 
+  it('describes a postponed link as postponed, and never says Doors on it', () => {
+    render(
+      <CrewUpcoming
+        shows={[
+          show({
+            status: 'postponed',
+            iso: todayMt(),
+            doorsTime: '19:00:00',
+          }),
+        ]}
+        viewerId="me"
+      />,
+    );
+    expect(
+      screen.getByRole('link', { name: 'Marian Hill' }),
+    ).toHaveAccessibleDescription(/Postponed/);
+    expect(screen.getByTestId('crew-coming-up-row')).not.toHaveTextContent(
+      'Doors',
+    );
+  });
+
   it('draws no chip on a show that is on', () => {
     render(<CrewUpcoming shows={[show()]} viewerId="me" />);
     expect(screen.getByTestId('crew-coming-up-row')).not.toHaveTextContent(

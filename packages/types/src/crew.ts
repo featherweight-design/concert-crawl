@@ -188,7 +188,9 @@ export interface CrewShow {
    * `postponed` keeps its row and its surviving date (the board draws the
    * amber POSTPONED chip under the going line). A cancelled show is not here:
    * the query drops it, and when it should leave "after a day" is a Design
-   * call that is still open (addendum 6 item 41, cancelled).
+   * call that is still open (addendum 6 item 41, cancelled). Only the Coming
+   * up row reads it: a past night or the lens list gets the same mapping but
+   * draws no chip.
    */
   status: 'upcoming' | 'postponed';
   title: string;
