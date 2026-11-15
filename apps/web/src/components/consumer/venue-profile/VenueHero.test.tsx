@@ -24,7 +24,7 @@ describe('VenueHero', () => {
     ).not.toBeNull();
   });
 
-  it('draws the phone sign at about 140pt (addendum 5 item 11) and the desktop sign larger', () => {
+  it('draws the phone sign at about 140pt (addendum 5 item 11), and the desktop sign at its own size', () => {
     const { container } = render(
       <VenueHero slug="the-church-nightclub" name="The Church Nightclub" />,
     );
