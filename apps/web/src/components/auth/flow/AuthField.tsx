@@ -31,8 +31,8 @@ export function AuthErrorLine({
 
 interface AuthFieldProps extends Omit<ComponentProps<'input'>, 'size'> {
   label: string;
-  hint?: string;
-  error?: string;
+  hint?: string | undefined;
+  error?: string | undefined;
   /** Sits opposite the label (the Forgot link). */
   labelAside?: ReactNode;
   /** Sits inside the shell, after the input (the Show toggle). */
