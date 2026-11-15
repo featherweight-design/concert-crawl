@@ -98,6 +98,8 @@ const show = (over: Partial<CrewShow> = {}): CrewShow => ({
   eventId: 'e1',
   iso: '2026-09-14',
   showTime: null,
+  doorsTime: null,
+  status: 'upcoming',
   title: 'Turnstile',
   artist: 'Turnstile',
   imageUrl: null,

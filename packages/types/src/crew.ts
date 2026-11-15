@@ -179,6 +179,18 @@ export interface CrewShow {
   /** `YYYY-MM-DD`, straight from `events.date` — no timezone conversion. */
   iso: string;
   showTime: string | null;
+  /**
+   * When the doors open, `HH:MM:SS`, or null when the event has none. The crew
+   * page's Coming up row says "Doors" for a show tonight (addendum 6 item 41).
+   */
+  doorsTime: string | null;
+  /**
+   * `postponed` keeps its row and its surviving date (the board draws the
+   * amber POSTPONED chip under the going line). A cancelled show is not here:
+   * the query drops it, and when it should leave "after a day" is a Design
+   * call that is still open (addendum 6 item 41, cancelled).
+   */
+  status: 'upcoming' | 'postponed';
   title: string;
   /**
    * The derived headliner, on the same terms as every other event payload.

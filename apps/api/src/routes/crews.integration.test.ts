@@ -351,6 +351,74 @@ describe('/v1/crews', () => {
       expect(body.data.upcoming[0]?.title).toBe('An Evening With Khruangbin');
     });
 
+    // Addendum 6 item 41: the Coming up row draws an amber POSTPONED chip and
+    // says "Doors" for a show tonight, so the payload has to carry both.
+    it('carries the show status and the doors time on an upcoming show', async () => {
+      const venue = await seedVenue({ slug: 'doors-venue' });
+      const event = await seedEvent(venue.id, {
+        date: dayOffset(4),
+        artist: 'Doors Act',
+        showTime: '20:00:00',
+        doorsTime: '19:00:00',
+      });
+      await seedUserEvent(KEEPER, event.id, {
+        status: null,
+        attendingAt: new Date(),
+      });
+      const crewId = await seedCrew([KEEPER, MATE]);
+      setAuth();
+
+      const body = (await (
+        await app.request(`/v1/crews/${crewId}`)
+      ).json()) as DetailBody;
+      expect(body.data.upcoming[0]?.status).toBe('upcoming');
+      expect(body.data.upcoming[0]?.doorsTime).toBe('19:00:00');
+    });
+
+    it('keeps a postponed show, with its surviving date, and says it is postponed', async () => {
+      const venue = await seedVenue({ slug: 'postponed-venue' });
+      const event = await seedEvent(venue.id, {
+        date: dayOffset(9),
+        artist: 'Postponed Act',
+        status: 'postponed',
+      });
+      await seedUserEvent(KEEPER, event.id, {
+        status: null,
+        attendingAt: new Date(),
+      });
+      const crewId = await seedCrew([KEEPER, MATE]);
+      setAuth();
+
+      const body = (await (
+        await app.request(`/v1/crews/${crewId}`)
+      ).json()) as DetailBody;
+      expect(body.data.upcoming.map((show) => show.eventId)).toEqual([
+        event.id,
+      ]);
+      expect(body.data.upcoming[0]?.status).toBe('postponed');
+      expect(body.data.upcoming[0]?.doorsTime).toBeNull();
+    });
+
+    it('still drops a cancelled show: when it leaves is a Design call that is open', async () => {
+      const venue = await seedVenue({ slug: 'cancelled-venue' });
+      const event = await seedEvent(venue.id, {
+        date: dayOffset(8),
+        artist: 'Cancelled Act',
+        status: 'cancelled',
+      });
+      await seedUserEvent(KEEPER, event.id, {
+        status: null,
+        attendingAt: new Date(),
+      });
+      const crewId = await seedCrew([KEEPER, MATE]);
+      setAuth();
+
+      const body = (await (
+        await app.request(`/v1/crews/${crewId}`)
+      ).json()) as DetailBody;
+      expect(body.data.upcoming).toEqual([]);
+    });
+
     it('drops a past show with exactly one attendee from both lists', async () => {
       await seedShow(dayOffset(-5), [KEEPER], 'solo-past');
       const crewId = await seedCrew([KEEPER, MATE]);
