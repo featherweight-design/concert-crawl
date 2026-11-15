@@ -22,6 +22,9 @@ export const PANEL_SHADOW = '-18px 0 40px var(--shadow-strong)';
 
 /**
  * The events queue's floating bulk bar: the admin UI handoff
- * (`admin-events.jsx`, BulkActionBar) draws `--shadow-lg`, `0 12px 32px`.
+ * (`admin-events.jsx`, BulkActionBar) draws `--shadow-lg`, which is
+ * `0 12px 32px` in its light theme (`0 16px 40px` in dark). One set of
+ * offsets serves both themes here, on `--shadow-strong`'s colour, as the
+ * other admin shadows do; no B+ board redraws this bar.
  */
 export const FLOATING_BAR_SHADOW = '0 12px 32px var(--shadow-strong)';

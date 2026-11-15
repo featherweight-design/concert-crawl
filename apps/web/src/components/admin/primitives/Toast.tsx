@@ -7,8 +7,8 @@ import { TOAST_SHADOW } from './shadows';
 /**
  * Where a bottom toast sits: centred under the content column on desktop,
  * above the tab bar on the phone, `width` wide (the full row on the phone).
- * Toast uses it, and so does a `SaveFailedToast` that floats in the same
- * place (`43/approve-failed-d`).
+ * Toast uses it. On the phone it sits 32px above the 64px tab bar
+ * (`43/approve-m`).
  */
 export const ToastDock = ({
   children,
