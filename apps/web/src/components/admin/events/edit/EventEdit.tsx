@@ -29,7 +29,7 @@ import { metaDate } from '@/components/admin/needs-you/needs-you-rules';
 import { apiClient } from '@/lib/api';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
-import { MergeEventDialog } from '../editor/MergeEventDialog';
+import { MergePanel } from '../merge/MergePanel';
 import { EventDeleteConfirm } from '../EventDeleteConfirm';
 import { deleteEvent } from '../event-delete';
 import { PriceCard } from './PriceCard';
@@ -393,7 +393,7 @@ const Header = ({
 
 /**
  * The edit page's ⋯ (`06/event-menu`, less Edit, which is this page). Merge
- * opens the existing merge dialog until 4b-4 rebuilds it to the boards.
+ * opens the merge panel (admin 4b E4).
  * Delete… shows on a manual show only; on the phone, whose list has no ⋯,
  * this is its one way in.
  */
@@ -1219,11 +1219,25 @@ export const EventEdit = ({
         />
       )}
       {merging && (
-        <MergeEventDialog
-          sourceId={detail.id}
-          sourceTitle={detail.title}
-          onCancel={() => setMerging(false)}
-          onMerged={(targetId) => router.push(editEventHref(targetId))}
+        <MergePanel
+          phone={phone}
+          current={{
+            id: detail.id,
+            title: detail.title,
+            date: detail.date,
+            venueName: detail.venueName,
+            manual: detail.manual,
+            watchers: detail.watchingCount,
+          }}
+          when={detail.date < today ? 'past' : 'upcoming'}
+          onClose={() => setMerging(false)}
+          onMerged={(keptId) => {
+            setMerging(false);
+            // Kept here: the page's own counts moved. Kept the other one:
+            // this listing is gone, so open the one that stayed.
+            if (keptId === detail.id) router.refresh();
+            else router.push(editEventHref(keptId));
+          }}
         />
       )}
       {deleting && (

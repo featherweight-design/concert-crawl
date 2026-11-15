@@ -33,6 +33,8 @@ interface MergePickListProps {
   /** Search results across all dates; null until a search has run. */
   results: readonly MergePickRow[] | null;
   searching: boolean;
+  /** The last search failed: say so, rather than "No shows match". */
+  searchFailed?: boolean;
 }
 
 const LABEL: CSSProperties = {
@@ -143,6 +145,7 @@ export function MergePickList({
   onQueryChange,
   results,
   searching,
+  searchFailed = false,
 }: MergePickListProps) {
   return (
     <div style={{ display: 'grid', gap: 20 }}>
@@ -220,9 +223,17 @@ export function MergePickList({
             {COPY.searching}
           </div>
         )}
-        {!searching && results !== null && results.length === 0 && (
-          <div style={DashedNote}>{COPY.noResults}</div>
+        {!searching && searchFailed && (
+          <div role="alert" style={DashedNote}>
+            {COPY.searchFailed}
+          </div>
         )}
+        {!searching &&
+          !searchFailed &&
+          results !== null &&
+          results.length === 0 && (
+            <div style={DashedNote}>{COPY.noResults}</div>
+          )}
         {!searching && results !== null && results.length > 0 && (
           <ul style={{ display: 'grid', gap: 8, margin: 0, padding: 0 }}>
             {results.map((row) => (

@@ -122,14 +122,22 @@ export class MergeTimeoutError extends Error {
 const send = async (
   getToken: GetToken,
   path: string,
-  signal?: AbortSignal,
+  init: { signal?: AbortSignal | undefined; body?: unknown } = {},
 ): Promise<{ status: number; body: unknown }> => {
+  const { signal, body: payload } = init;
   const token = await getToken();
   if (!token) throw new Error('no token');
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   try {
     const res = await adminFetch(`${API_BASE}${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      method: payload === undefined ? 'GET' : 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(payload === undefined
+          ? {}
+          : { 'Content-Type': 'application/json' }),
+      },
+      ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
       signal: signal ? anySignal([signal, timeout]) : timeout,
     });
     let body: unknown = null;
@@ -176,7 +184,7 @@ export const mergeApi = (getToken: GetToken) => ({
       await send(
         getToken,
         `/v1/admin/events/${encodeURIComponent(id)}/merge-candidates`,
-        signal,
+        { signal },
       ),
       z.object({ candidates: z.array(candidateSchema) }),
     ).candidates,
@@ -191,12 +199,31 @@ export const mergeApi = (getToken: GetToken) => ({
     const reply = await send(
       getToken,
       `/v1/admin/events/${encodeURIComponent(keptId)}/merge-preview?${query.toString()}`,
-      signal,
+      { signal },
     );
     if (reply.status === 404) return { kind: 'not-found' };
     if (reply.status === 409) {
       return { kind: 'not-mergeable', reason: reasonOf(reply.body) };
     }
     return { kind: 'preview', preview: dataOf(reply, previewSchema) };
+  },
+
+  /**
+   * Merge `sourceId` into `targetId`: the source is deleted, its Watchers,
+   * prices and reports move to the target. Always silent (`notifyWatchers`
+   * false: a de-duplication tells nobody) and never a relocation. A refusal
+   * (past_mismatch, time_taken, a row gone) is `refused`; a transport
+   * failure or a timeout throws.
+   */
+  merge: async (
+    sourceId: string,
+    targetId: string,
+  ): Promise<'merged' | 'refused'> => {
+    const reply = await send(
+      getToken,
+      `/v1/admin/events/${encodeURIComponent(sourceId)}/merge`,
+      { body: { targetId, notifyWatchers: false } },
+    );
+    return reply.status >= 200 && reply.status < 300 ? 'merged' : 'refused';
   },
 });

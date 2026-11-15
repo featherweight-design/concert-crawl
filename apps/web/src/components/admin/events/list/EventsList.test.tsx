@@ -23,6 +23,24 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
+// The panel has its own tests; here only that the row opens it on this row.
+vi.mock('../merge/MergePanel', () => ({
+  MergePanel: ({
+    current,
+    onMerged,
+  }: {
+    current: { id: string };
+    onMerged: (keptId: string) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid="merge-panel"
+      data-current={current.id}
+      onClick={() => onMerged(current.id)}
+    />
+  ),
+}));
+
 import { EVENTS_HEADING_ID, EventsList } from './EventsList';
 
 const COPY = ADMIN_COPY.eventsList;
@@ -243,6 +261,30 @@ describe('EventsList on desktop', () => {
     expect(
       screen.queryByRole('menuitem', { name: new RegExp(COPY.menu.viewVenue) }),
     ).toBeNull();
+  });
+
+  it('opens the merge panel on the row from the ⋯, and reloads when it merges', () => {
+    const onMerged = vi.fn();
+    render(
+      <EventsList
+        when="upcoming"
+        rows={[row({ id: 'evt-9' })]}
+        onMerged={onMerged}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('Clipse & J.I.D') }),
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', {
+        name: new RegExp(ADMIN_COPY.eventEdit.menu.merge),
+      }),
+    );
+    const panel = screen.getByTestId('merge-panel');
+    expect(panel).toHaveAttribute('data-current', 'evt-9');
+    fireEvent.click(panel);
+    expect(onMerged).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('merge-panel')).toBeNull();
   });
 
   it('hides from the ⋯ through the Hide dialog, and offers it only on a shown show', async () => {

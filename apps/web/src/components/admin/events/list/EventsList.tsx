@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  GitMerge,
   Trash2,
 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -31,11 +32,13 @@ import { DateTile } from '../../prices/MissingTab';
 import { shortDate } from '../../prices/prices-rules';
 import { HideEventDialog } from '../edit/StatusCard';
 import { EventDeleteConfirm } from '../EventDeleteConfirm';
+import { MergePanel } from '../merge/MergePanel';
 import type { EventListRow } from './events-api';
 import { STATUS_CHIP, formatPrice, type When } from './events-rules';
 
 const COPY = ADMIN_COPY.eventsList;
 const HIDE_COPY = ADMIN_COPY.eventEdit.hide;
+const MERGE_MENU = ADMIN_COPY.eventEdit.menu;
 const DELETE_COPY = ADMIN_COPY.eventDelete;
 
 /**
@@ -189,19 +192,25 @@ const VenueLine = ({
 /**
  * The row's ⋯ (`06/event-menu`). Only the lines whose action exists today:
  * View on the venue's site shows when the row has a safe venue page
- * (`venueUrl`); Open the crawl run is dropped (4b#3); Merge lands with E4.
+ * (`venueUrl`); Open the crawl run is dropped (4b#3); Merge with another
+ * listing… opens the merge panel (admin 4b E4).
  * Hide from site… opens Event edit's Hide dialog, on a show that isn't
  * hidden. Delete… shows on a manual row only (4b#10), with its dialog.
  */
 const EventMenu = ({
   row,
+  when,
   onHide,
   onDelete,
+  onMerged,
   onDialogClosed,
 }: {
   row: EventListRow;
+  when: When;
   onHide: OnHide;
   onDelete: OnHide;
+  /** A merge finished: the list reloads (one of the two rows is gone). */
+  onMerged: (() => Promise<void> | void) | undefined;
   /**
    * A dialog closed and this row is still drawn: a delete that ran ended
    * without a reload removing the row, so the table drops its focus target.
@@ -211,10 +220,11 @@ const EventMenu = ({
   const router = useRouter();
   const [hiding, setHiding] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [merging, setMerging] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
   // The dialog opened from a menu item that has since unmounted, so focus
   // goes back to the ⋯ itself once the dialog closes.
-  const open = hiding || deleting;
+  const open = hiding || deleting || merging;
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !open) {
@@ -237,6 +247,25 @@ const EventMenu = ({
             onDelete={() => onDelete(row)}
             onCancel={() => setDeleting(false)}
             onDone={() => setDeleting(false)}
+          />
+        )}
+        {merging && (
+          <MergePanel
+            phone={false}
+            current={{
+              id: row.id,
+              title: row.title,
+              date: row.date,
+              venueName: row.venueName,
+              manual: row.manual,
+              watchers: row.watchingCount,
+            }}
+            when={when}
+            onClose={() => setMerging(false)}
+            onMerged={() => {
+              setMerging(false);
+              void onMerged?.();
+            }}
           />
         )}
         {hiding && onHide !== undefined && (
@@ -284,6 +313,13 @@ const EventMenu = ({
                 },
               ]
             : []),
+          {
+            key: 'merge',
+            icon: GitMerge,
+            label: MERGE_MENU.merge,
+            hint: MERGE_MENU.mergeHint,
+            onSelect: () => setMerging(true),
+          },
           ...(onHide !== undefined && !row.hidden
             ? [
                 {
@@ -400,11 +436,13 @@ const DesktopTable = ({
   when,
   onHide,
   onDelete,
+  onMerged,
 }: {
   rows: EventListRow[];
   when: When;
   onHide: OnHide;
   onDelete: OnHide;
+  onMerged: (() => Promise<void> | void) | undefined;
 }) => {
   const past = when === 'past';
   const tableRef = useRef<HTMLTableElement>(null);
@@ -608,8 +646,10 @@ const DesktopTable = ({
                 <td style={{ ...td, textAlign: 'right', paddingRight: 14 }}>
                   <EventMenu
                     row={row}
+                    when={when}
                     onHide={onHide}
                     onDelete={deleteRow}
+                    onMerged={onMerged}
                     onDialogClosed={dropRefocus}
                   />
                 </td>
@@ -760,6 +800,7 @@ export const EventsList = ({
   when,
   onHide,
   onDelete,
+  onMerged,
 }: {
   rows: EventListRow[];
   when: When;
@@ -770,6 +811,8 @@ export const EventsList = ({
    * then reloads the list.
    */
   onDelete?: OnHide;
+  /** Merge with another listing… finished in a row's ⋯: reload the list. */
+  onMerged?: () => Promise<void> | void;
 }) => {
   const isPhone = useIsPhone();
   if (isPhone) {
@@ -792,6 +835,7 @@ export const EventsList = ({
         when={when}
         onHide={onHide}
         onDelete={onDelete}
+        onMerged={onMerged}
       />
     </div>
   );
