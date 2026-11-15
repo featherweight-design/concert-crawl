@@ -1,0 +1,112 @@
+{
+  "feature": "Custom sign-up PR 5a · the form (/sign-up/new)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/05-sign-up (signup-m, signup-320, signup-d, signup-ticked-m, signup-unticked-press-m, signup-unticked-press-d, signup-legal-open-m, signup-legal-open-d, signup-too-short-m, signup-launch-m, signup-light-m). Signed out. The dev server runs with NEXT_PUBLIC_PUBLIC_BROWSE=true, because before launch /sign-up needs a signed invite cookie a sheet cannot mint: so these photograph the AFTER-LAUNCH form (no invite chip, no Beta Agreement, Step 1 of 2). The before-launch form (the invite chip and its 'Use a different code', the three-document consent, Step 2 of 3) and the invite gate are unit-tested and hand-walked on staging. Also hand-walked, because Smart CAPTCHA holds every real sign-up call in an automated browser: the busy state, a weak, a breached and a too-many-tries answer, the bot-check widget, and the verify screen (the next PR).",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "signup-form",
+      "label": "/sign-up/new: the form",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "signup-ticked",
+      "label": "/sign-up/new: the box ticked",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        { "click": "label:has(input[type='checkbox'])" },
+        { "wait": "input[type='checkbox']:checked", "settle": 500 }
+      ]
+    },
+    {
+      "id": "signup-unticked-press",
+      "label": "/sign-up/new: pressed unticked",
+      "widths": ["phone", "desktop"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        {
+          "fill": "input[autocomplete='new-password']",
+          "text": "Quartz-Ember-42!"
+        },
+        { "clickRole": "button", "name": "^Make my account$" },
+        { "wait": "input[type='checkbox'][aria-invalid='true']", "settle": 600 }
+      ]
+    },
+    {
+      "id": "signup-legal-open",
+      "label": "/sign-up/new: the Terms open over the form",
+      "widths": ["phone", "desktop"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "click": "label a[href='/legal/terms']" },
+        { "wait": "[role='dialog']", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "signup-too-short",
+      "label": "/sign-up/new: a password under 8 characters",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        { "fill": "input[autocomplete='new-password']", "text": "short" },
+        { "click": "label:has(input[type='checkbox'])" },
+        { "clickRole": "button", "name": "^Make my account$" },
+        {
+          "wait": "input[autocomplete='new-password'][aria-invalid='true']",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "signup-email-invalid",
+      "label": "/sign-up/new: not an email",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "not an email" },
+        {
+          "fill": "input[autocomplete='new-password']",
+          "text": "Quartz-Ember-42!"
+        },
+        { "click": "label:has(input[type='checkbox'])" },
+        { "clickRole": "button", "name": "^Make my account$" },
+        { "wait": "input[type='email'][aria-invalid='true']", "settle": 600 }
+      ]
+    }
+  ]
+}
