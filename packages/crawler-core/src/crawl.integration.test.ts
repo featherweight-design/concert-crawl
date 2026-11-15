@@ -2031,7 +2031,9 @@ describe('crawlVenue — a trial re-crawl of a paused venue', () => {
   const PAUSED_AT = new Date('2026-11-01T09:00:00.000Z');
 
   // Paused by the crawler at its third strike, the state a trial is for.
-  async function seedPausedVenue(): Promise<{
+  async function seedPausedVenue(
+    overrides: Partial<typeof venues.$inferInsert> = {},
+  ): Promise<{
     id: string;
     name: string;
     url: string;
@@ -2049,6 +2051,7 @@ describe('crawlVenue — a trial re-crawl of a paused venue', () => {
         crawlMode: 'browser',
         consecutiveFailures: 3,
         crawlPausedAt: PAUSED_AT,
+        ...overrides,
       })
       .returning();
     if (!venue) throw new Error('venue insert returned no row');
@@ -2184,6 +2187,84 @@ describe('crawlVenue — a trial re-crawl of a paused venue', () => {
       `${venue.name} answered a test re-crawl with HTTP 403; crawling is blocked`,
     );
     expect(vi.mocked(sendCrawlFailureEmail)).not.toHaveBeenCalled();
+  });
+
+  it('a trial hitting a 429 is a block too', async () => {
+    const venue = await seedPausedVenue();
+    mockFetchPage.mockRejectedValue(
+      new CrawlFetchError(429, 'Too Many Requests'),
+    );
+
+    const run = await crawlTrial(venue.id);
+
+    expect(run.reason).toBe('blocked_http');
+    const row = await venueState(venue.id);
+    expect(row?.blockedAt).toBeInstanceOf(Date);
+    expect(row?.consecutiveFailures).toBe(3);
+    expect(row?.crawlPausedAt?.getTime()).toBe(PAUSED_AT.getTime());
+    const notes = await crawlFailedNotes();
+    expect(notes).toHaveLength(1);
+    expect(String(notes[0]?.body)).toMatch(/429/);
+  });
+
+  it('re-extracts on a trial even when the page is unchanged', async () => {
+    const venue = await seedPausedVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [makeEvent('Trial Artist', futureDate(10), venue.url)],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+
+    await crawlTrial(venue.id); // stores the page hash
+    const second = await crawlTrial(venue.id); // byte-identical page
+
+    expect(second.status).toBe('success');
+    expect(second.reason).not.toBe('page_unchanged');
+    expect(mockExtractWithLlm).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips a trial on a blocked venue without fetching it', async () => {
+    const blockedAt = new Date('2026-11-02T09:00:00.000Z');
+    const venue = await seedPausedVenue({ blockedAt });
+
+    const run = await crawlTrial(venue.id);
+
+    expect(run.status).toBe('skipped');
+    expect(run.trial).toBe(true);
+    expect(mockFetchPage).not.toHaveBeenCalled();
+    expect(mockFetchPageHttp).not.toHaveBeenCalled();
+    const row = await venueState(venue.id);
+    expect(row?.blockedAt?.getTime()).toBe(blockedAt.getTime());
+    expect(row?.consecutiveFailures).toBe(3);
+    expect(row?.crawlPausedAt?.getTime()).toBe(PAUSED_AT.getTime());
+  });
+
+  it('runs a trial on a venue resumed since it was queued as a normal crawl', async () => {
+    const venue = await seedPausedVenue({
+      crawlPausedAt: null,
+      consecutiveFailures: 2,
+    });
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [makeEvent('Resumed Artist', futureDate(10), venue.url)],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+
+    const run = await crawlTrial(venue.id);
+
+    expect(run.status).toBe('success');
+    expect(run.trial).toBe(false);
+    // Counted like any crawl: the success resets the streak.
+    const row = await venueState(venue.id);
+    expect(row?.consecutiveFailures).toBe(0);
   });
 });
 

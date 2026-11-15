@@ -182,6 +182,16 @@ async function isCrawlPaused(venueId: string): Promise<boolean> {
   return row?.crawlPausedAt != null;
 }
 
+// Whether a venue has been deactivated or removed. A trial's venue is paused
+// by definition, so this is the check that stops a trial's price batch.
+async function isVenueGone(venueId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ active: venues.active, removedAt: venues.removedAt })
+    .from(venues)
+    .where(eq(venues.id, venueId));
+  return row === undefined || !row.active || row.removedAt !== null;
+}
+
 // A trial (an admin's test re-crawl of a paused venue) prices the venue's
 // events despite the pause; every other run skips a paused venue.
 async function runPricesForVenue(
@@ -215,10 +225,15 @@ async function runPricesForVenue(
     if (event.venueId === null) continue;
     // Each pipeline run can take a while, so a pause made while this batch is
     // under way has to stop the events still waiting in it. A trial's venue
-    // is paused already, so the check would stop it before it began.
-    if (!trial && (await isCrawlPaused(venueId))) return;
+    // is paused already, so a trial stops instead on a venue deactivated or
+    // removed part-way through.
+    const stop = trial
+      ? await isVenueGone(venueId)
+      : await isCrawlPaused(venueId);
+    if (stop) return;
     try {
       await runPricePipeline({
+        trial,
         eventId: event.id,
         venueId: event.venueId,
         artist: event.artist,
@@ -366,7 +381,9 @@ async function processTrigger(
     }
     if (crawlRun.status !== 'failed') {
       eventsInserted = crawlRun.eventsInserted ?? 0;
-      await runPricesForVenue(trigger.venueId, trigger.trial);
+      // The run's own flag, not the trigger's: a trial whose venue was
+      // resumed before it ran was crawled, and is priced, as a normal run.
+      await runPricesForVenue(trigger.venueId, crawlRun.trial);
       // #763 §10.1: Spotify new-show fan-out for this crawl's inserted
       // events. Awaited (not detached) because this process hard-exits
       // via process.exit(0) — a floating promise would be severed
