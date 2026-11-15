@@ -15,8 +15,10 @@ const mocks = vi.hoisted(() => ({
     status: 'missing_requirements',
     missingFields: [] as string[],
     password: vi.fn(),
-    verifications: { sendEmailCode: vi.fn() },
+    verifications: { sendEmailCode: vi.fn(), verifyEmailCode: vi.fn() },
+    finalize: vi.fn(),
   },
+  router: { replace: vi.fn() },
   fetchStatus: 'idle' as 'idle' | 'fetching',
   clerk: { loaded: true },
 }));
@@ -28,6 +30,7 @@ vi.mock('@clerk/nextjs', () => ({
     fetchStatus: mocks.fetchStatus,
   }),
 }));
+vi.mock('next/navigation', () => ({ useRouter: () => mocks.router }));
 vi.mock('@clerk/nextjs/errors', () => ({
   isClerkAPIResponseError: (err: unknown) =>
     Boolean(err && typeof err === 'object' && 'errors' in err),
@@ -57,6 +60,7 @@ function renderFlow(
 ) {
   return render(
     <SignUpFlow
+      target="/auth/complete?return=%2Fe%2Fabc"
       beta
       inviteCode="BETA-AB12-CD34"
       changeHref="/auth/code"
@@ -99,6 +103,11 @@ beforeEach(() => {
   mocks.signUp.verifications.sendEmailCode
     .mockReset()
     .mockResolvedValue({ error: null });
+  mocks.signUp.verifications.verifyEmailCode
+    .mockReset()
+    .mockResolvedValue({ error: null });
+  mocks.signUp.finalize.mockReset().mockResolvedValue({ error: null });
+  mocks.router.replace.mockReset();
   vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(true);
 });
 afterEach(() => {
@@ -362,6 +371,174 @@ describe('SignUpFlow, the press', () => {
     await press();
     expect(screen.getByText(FLOW.consent.error)).toBeInTheDocument();
     expect(mocks.signUp.verifications.sendEmailCode).not.toHaveBeenCalled();
+  });
+});
+
+const toVerify = async () => {
+  renderFlow();
+  fill();
+  tick();
+  await press();
+};
+const enterCode = (value = '123456') =>
+  fireEvent.change(screen.getByLabelText(FLOW.code.label), {
+    target: { value },
+  });
+const finish = async () => {
+  fireEvent.click(screen.getByRole('button', { name: COPY.verify.submit }));
+  await settle(FLOOR_MS);
+};
+// A right code completes the sign-up at Clerk, and finalize runs `navigate`.
+const completeOnVerify = () => {
+  mocks.signUp.verifications.verifyEmailCode.mockImplementation(async () => {
+    mocks.signUp.status = 'complete';
+    return { error: null };
+  });
+  mocks.signUp.finalize.mockImplementation(
+    async ({
+      navigate,
+    }: {
+      navigate: (args: {
+        session: null;
+        decorateUrl: (url: string) => string;
+      }) => Promise<void>;
+    }) => {
+      await navigate({ session: null, decorateUrl: (url) => url });
+      return { error: null };
+    },
+  );
+};
+
+describe('SignUpFlow, verify', () => {
+  it('checks the code, finishes the sign-up and goes to the target, drawing the form done', async () => {
+    completeOnVerify();
+    await toVerify();
+    enterCode();
+    await finish();
+    expect(mocks.signUp.verifications.verifyEmailCode).toHaveBeenCalledWith({
+      code: '123456',
+    });
+    expect(mocks.signUp.finalize).toHaveBeenCalledOnce();
+    expect(mocks.router.replace).toHaveBeenCalledWith(
+      '/auth/complete?return=%2Fe%2Fabc',
+    );
+    expect(screen.getByRole('button', { name: COPY.form.done })).toBeDisabled();
+    expect(screen.getByText(FLOW.steps.done)).toBeInTheDocument();
+    expect(screen.getByLabelText(COPY.form.emailLabel)).toBeDisabled();
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    expect(screen.getByRole('checkbox')).toBeDisabled();
+  });
+
+  it.each([
+    ['form_code_incorrect', COPY.verify.wrong],
+    ['verification_failed', COPY.verify.wrong],
+    ['verification_expired', COPY.verify.expired],
+  ])('reads %s as its own line and clears the code', async (code, text) => {
+    mocks.signUp.verifications.verifyEmailCode.mockResolvedValue({
+      error: clerkError(422, code),
+    });
+    await toVerify();
+    enterCode();
+    await finish();
+    expect(screen.getByText(text)).toBeInTheDocument();
+    expect(screen.getByLabelText(FLOW.code.label)).toHaveValue('');
+    expect(mocks.signUp.finalize).not.toHaveBeenCalled();
+  });
+
+  it('shows the generic line, not a wrong code, for an unknown refusal', async () => {
+    mocks.signUp.verifications.verifyEmailCode.mockResolvedValue({
+      error: clerkError(400, 'captcha_invalid'),
+    });
+    await toVerify();
+    enterCode();
+    await finish();
+    expect(screen.getByText(SIGN_IN_COPY.failed)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.verify.wrong)).toBeNull();
+  });
+
+  it('locks the code for a wait on a 429', async () => {
+    mocks.signUp.verifications.verifyEmailCode.mockResolvedValue({
+      error: clerkError(429, 'too_many_requests'),
+    });
+    await toVerify();
+    enterCode();
+    await finish();
+    expect(screen.getByLabelText(FLOW.code.label)).toBeDisabled();
+    expect(screen.queryByText(COPY.verify.wrong)).toBeNull();
+  });
+
+  it('only finishes again after a failed finish, never re-checking the code', async () => {
+    completeOnVerify();
+    mocks.signUp.finalize.mockResolvedValueOnce({
+      error: clerkError(500, 'something_else'),
+    });
+    await toVerify();
+    enterCode();
+    await finish();
+    expect(screen.getByText(SIGN_IN_COPY.failed)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: COPY.verify.title }),
+    ).toBeInTheDocument();
+    await finish();
+    expect(mocks.signUp.verifications.verifyEmailCode).toHaveBeenCalledTimes(1);
+    expect(mocks.signUp.finalize).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not finish when Clerk says the sign-up is not complete', async () => {
+    await toVerify();
+    enterCode();
+    await finish();
+    expect(mocks.signUp.finalize).not.toHaveBeenCalled();
+    expect(screen.getByText(SIGN_IN_COPY.failed)).toBeInTheDocument();
+  });
+
+  it('waits a minute to resend, then sends a new code and says so', async () => {
+    await toVerify();
+    const wait = screen.getByRole('button', { name: /Send a new code in/ });
+    expect(wait).toBeDisabled();
+    await settle(60_000);
+    fireEvent.click(screen.getByRole('button', { name: COPY.verify.resend }));
+    await settle(FLOOR_MS);
+    expect(mocks.signUp.verifications.sendEmailCode).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(COPY.verify.sent)).toBeInTheDocument();
+  });
+
+  it('answers a resend for a taken email the same, without sending', async () => {
+    mocks.signUp.password.mockResolvedValue({
+      error: clerkError(422, 'form_identifier_exists'),
+    });
+    mocks.signUp.verifications.verifyEmailCode.mockResolvedValue({
+      error: clerkError(422, 'form_code_incorrect'),
+    });
+    await toVerify();
+    enterCode();
+    await finish();
+    expect(screen.getByText(COPY.verify.wrong)).toBeInTheDocument();
+    await settle(60_000);
+    fireEvent.click(screen.getByRole('button', { name: COPY.verify.resend }));
+    await settle(FLOOR_MS);
+    expect(mocks.signUp.verifications.sendEmailCode).not.toHaveBeenCalled();
+    expect(screen.getByText(COPY.verify.sent)).toBeInTheDocument();
+  });
+
+  it('goes back from "Wrong email?" and the next press makes a fresh sign-up', async () => {
+    await toVerify();
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.verify.wrongEmail }),
+    );
+    expect(screen.getByLabelText(COPY.form.emailLabel)).toHaveValue(
+      'fan+clerk_test@example.com',
+    );
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    await press();
+    expect(mocks.signUp.password).toHaveBeenCalledTimes(2);
+  });
+
+  it('links to sign in on every verify screen', async () => {
+    await toVerify();
+    expect(
+      screen.getByRole('link', { name: COPY.verify.haveAccountLink }),
+    ).toHaveAttribute('href', '/sign-in/new');
   });
 });
 

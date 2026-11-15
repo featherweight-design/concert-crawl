@@ -51,6 +51,7 @@ export default async function SignUpNewPage({ searchParams }: SignUpNewProps) {
 
   return (
     <SignUpFlow
+      target={target}
       beta={beta}
       inviteCode={inviteCode}
       changeHref={changeHref}

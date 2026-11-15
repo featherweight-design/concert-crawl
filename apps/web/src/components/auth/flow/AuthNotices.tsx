@@ -17,7 +17,8 @@ export function StepTrail({
   total: 2 | 3;
   done?: boolean;
 }) {
-  const sizes = ['size-[5px]', 'size-[7px]', 'size-[9px]'] as const;
+  // One dot per step, then the core: a two-step trail draws two.
+  const sizes = ['size-[5px]', 'size-[7px]', 'size-[9px]'].slice(0, total);
   return (
     <div className="flex items-center justify-between">
       <span className="font-mono text-[10px] font-bold tracking-[0.16em] text-signal uppercase">

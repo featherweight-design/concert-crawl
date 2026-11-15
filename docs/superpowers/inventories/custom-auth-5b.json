@@ -1,0 +1,54 @@
+{
+  "feature": "Custom sign-up PR 5b · verify (/sign-up/new)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/05-sign-up (verify-m, verify-wrong-m). Signed out; the dev server runs with NEXT_PUBLIC_PUBLIC_BROWSE=true (the after-launch trail, Step 2 of 2), and Smart CAPTCHA is switched off for the run by the orchestrator, which a sheet needs because Clerk holds every real sign-up call otherwise. Only +clerk_test addresses are used: nothing is emailed, and an unverified sign-up leaves no user. Hand-walked on staging, because no sheet can read an emailed code: the done screen (signup-done-m), an expired code, the resend, a taken email's verify, and the redirect to /auth/complete.",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "verify",
+      "label": "/sign-up/new: the verify screen",
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        {
+          "fill": "input[autocomplete='new-password']",
+          "text": "Quartz-Ember-Sheet-42!"
+        },
+        { "click": "label:has(input[type='checkbox'])" },
+        { "clickRole": "button", "name": "^Make my account$" },
+        { "wait": "h1:has-text('Check your email')", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "verify-wrong",
+      "label": "/sign-up/new: a wrong code",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        {
+          "fill": "input[autocomplete='new-password']",
+          "text": "Quartz-Ember-Sheet-42!"
+        },
+        { "click": "label:has(input[type='checkbox'])" },
+        { "clickRole": "button", "name": "^Make my account$" },
+        { "wait": "h1:has-text('Check your email')", "settle": 800 },
+        { "fill": "input[autocomplete='one-time-code']", "text": "000000" },
+        { "clickRole": "button", "name": "^Finish$" },
+        { "wait": "[aria-invalid='true']", "settle": 800 }
+      ]
+    }
+  ]
+}

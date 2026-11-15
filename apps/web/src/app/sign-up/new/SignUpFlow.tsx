@@ -2,6 +2,7 @@
 
 import { useClerk, useSignUp } from '@clerk/nextjs';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   useEffect,
   useRef,
@@ -20,11 +21,17 @@ import {
   LinkButton,
   PrimaryButton,
 } from '@/components/auth/flow/AuthButtons';
+import { CodeBoxes } from '@/components/auth/flow/CodeBoxes';
 import { ConsentCheck, LegalLink } from '@/components/auth/flow/ConsentCheck';
 import { AUTH_FLOW_COPY } from '@/components/auth/flow/definitions/copy';
 import { LegalSheet } from '@/components/auth/flow/LegalSheet';
 import { AuthBanner, StepTrail } from '@/components/auth/flow/AuthNotices';
-import { classifySignUpError } from '@/lib/auth/clerk-errors';
+import {
+  classifyCodeError,
+  classifySignUpError,
+  codesOf,
+  isRateLimited,
+} from '@/lib/auth/clerk-errors';
 import { held } from '@/lib/auth/timing-pad';
 import { formatClock, useCountdown } from '@/lib/auth/use-countdown';
 import { useOnline } from '@/lib/auth/use-online';
@@ -44,7 +51,11 @@ const WAIT_SECONDS = 60;
 const isEmailShape = (value: string): boolean =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+type CodeLine = 'wrong' | 'expired' | 'sent' | 'failed' | null;
+
 interface SignUpFlowProps {
+  /** `/auth/complete?...`, computed on the server: where a finished sign-up goes. */
+  target: string;
   /** Before launch: the invite chip, the Beta Agreement and three steps. */
   beta: boolean;
   /** The invite the visitor arrived with; null shows no chip. */
@@ -61,6 +72,7 @@ interface SignUpFlowProps {
  * The verify and done screens are the next PR's.
  */
 export function SignUpFlow({
+  target,
   beta,
   inviteCode,
   changeHref,
@@ -70,7 +82,18 @@ export function SignUpFlow({
   const { signUp, fetchStatus } = useSignUp();
   const online = useOnline();
   const throttle = useCountdown();
-  const [screen, setScreen] = useState<'form' | 'verify'>('form');
+  const router = useRouter();
+  const [screen, setScreen] = useState<'form' | 'verify' | 'done'>('form');
+  const [code, setCode] = useState('');
+  const [codeLine, setCodeLine] = useState<CodeLine>(null);
+  const resend = useCountdown();
+  // A 429 on a code must not lock the form's own press.
+  const codeThrottle = useCountdown();
+  // The code was right and the sign-up is complete: a retry only finishes it,
+  // because a finished sign-up takes no further update.
+  const verified = useRef(false);
+  // A taken email never had a code sent, and says "sent" all the same.
+  const sendSkipped = useRef(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -170,6 +193,12 @@ export function SignUpFlow({
     const outcome = error ? classifySignUpError(error) : null;
     if (!error || outcome === 'taken') {
       // A taken email goes on to the same screen as any address.
+      sendSkipped.current = outcome === 'taken';
+      verified.current = false;
+      setCode('');
+      setCodeLine(null);
+      codeThrottle.start(0);
+      resend.start(WAIT_SECONDS);
       setScreen('verify');
     } else if (outcome === 'breached') {
       setPasswordLine('breached');
@@ -195,6 +224,109 @@ export function SignUpFlow({
     setBusy(false);
   }
 
+  // Finishing hands the session to Clerk, which then says where to go: a
+  // pending session task needs a full load, anything else is a client move.
+  async function finish(): Promise<boolean> {
+    const { error } = await signUp.finalize({
+      navigate: async ({ session, decorateUrl }) => {
+        const task = session?.currentTask;
+        if (task) {
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the task page needs a full load, not a client transition
+          window.location.assign(`/sign-in/tasks/${task.key}`);
+          return;
+        }
+        const url = decorateUrl(target);
+        if (url.startsWith('http')) window.location.assign(url);
+        else router.replace(url);
+      },
+    });
+    return !error;
+  }
+
+  // Back keeps the email and the tick; the next press starts a fresh sign-up
+  // (Clerk drops the unfinished one when the password goes in again).
+  function backToForm() {
+    setCode('');
+    setCodeLine(null);
+    verified.current = false;
+    sendSkipped.current = false;
+    createdFor.current = null;
+    setScreen('form');
+  }
+
+  async function onVerify(evt: FormEvent) {
+    evt.preventDefault();
+    if (busy || code.length < 6 || !online || codeThrottle.remaining > 0) {
+      return;
+    }
+    setBusy(true);
+    setCodeLine(null);
+    const since = Date.now();
+    let error: unknown = null;
+    if (!verified.current) {
+      try {
+        error = (await signUp.verifications.verifyEmailCode({ code })).error;
+      } catch (thrown) {
+        error = thrown;
+      }
+      await held(since);
+    }
+    try {
+      if (!error) {
+        // Read fresh: Clerk changes the status across the await above.
+        if (!verified.current && signUp.status !== 'complete') {
+          setCodeLine('failed');
+        } else {
+          verified.current = true;
+          setScreen('done');
+          if (!(await finish())) {
+            setScreen('verify');
+            setCodeLine('failed');
+          }
+        }
+      } else if (codesOf(error).includes('session_exists')) {
+        // Already signed in (another tab): carry on to where they were going.
+        router.replace(target);
+      } else {
+        const outcome = classifyCodeError(error);
+        if (outcome === 'rateLimited') codeThrottle.start(WAIT_SECONDS);
+        else setCodeLine(outcome);
+        if (outcome === 'wrong' || outcome === 'expired') setCode('');
+      }
+    } catch {
+      setScreen('verify');
+      setCodeLine('failed');
+    }
+    setBusy(false);
+  }
+
+  async function onResend() {
+    if (busy || resend.remaining > 0 || !online) return;
+    setBusy(true);
+    const since = Date.now();
+    let error: unknown = null;
+    // A taken email has nothing to resend, and answers the same.
+    if (!sendSkipped.current) {
+      try {
+        error = (await signUp.verifications.sendEmailCode()).error;
+      } catch (thrown) {
+        error = thrown;
+      }
+    }
+    await held(since);
+    setCode('');
+    if (error && isRateLimited(error)) {
+      codeThrottle.start(WAIT_SECONDS);
+      setCodeLine(null);
+    } else if (error) {
+      setCodeLine('failed');
+    } else {
+      setCodeLine('sent');
+      resend.start(WAIT_SECONDS);
+    }
+    setBusy(false);
+  }
+
   const docTitle = {
     terms: COPY.legal.terms,
     privacy: COPY.legal.privacy,
@@ -202,14 +334,72 @@ export function SignUpFlow({
   };
 
   if (screen === 'verify') {
+    const waiting = resend.remaining > 0;
+    const codeLocked = codeThrottle.remaining > 0;
+    const codeError = codeLocked
+      ? SIGN_IN_COPY.rateLimited.message
+      : codeLine === 'wrong'
+        ? COPY.verify.wrong
+        : codeLine === 'expired'
+          ? COPY.verify.expired
+          : undefined;
     return (
-      <AuthPage onBack={() => setScreen('form')}>
+      <AuthPage onBack={backToForm}>
+        {online ? null : <AuthBanner>{FLOW.offline}</AuthBanner>}
         <StepTrail step={beta ? 3 : 2} total={total} />
         <AuthHeading title={COPY.verify.title} sub={COPY.verify.body(email)} />
-        <LinkButton onClick={() => setScreen('form')}>{FLOW.back}</LinkButton>
+        <form noValidate onSubmit={onVerify} className="flex flex-col gap-4">
+          <CodeBoxes
+            value={code}
+            onChange={setCode}
+            error={codeError}
+            disabled={busy || codeLocked}
+          />
+          <div aria-live="polite">
+            {codeLine === 'sent' ? (
+              <p className="m-0 text-[13px] text-fg-muted">
+                {COPY.verify.sent}
+              </p>
+            ) : null}
+            {codeLine === 'failed' ? (
+              <AuthErrorLine>{SIGN_IN_COPY.failed}</AuthErrorLine>
+            ) : null}
+          </div>
+          <PrimaryButton
+            busy={busy}
+            busyLabel={COPY.verify.busy}
+            disabled={code.length < 6 || codeLocked || !online}
+          >
+            {codeLocked
+              ? SIGN_IN_COPY.rateLimited.countdown(
+                  formatClock(codeThrottle.remaining),
+                )
+              : COPY.verify.submit}
+          </PrimaryButton>
+        </form>
+        <LinkButton
+          onClick={onResend}
+          disabled={waiting}
+          aria-disabled={waiting}
+        >
+          {waiting
+            ? COPY.verify.resendIn(formatClock(resend.remaining))
+            : COPY.verify.resend}
+        </LinkButton>
+        <LinkButton onClick={backToForm}>{COPY.verify.wrongEmail}</LinkButton>
+        <p className="m-0 text-center text-sm text-fg-muted">
+          {COPY.verify.haveAccount}{' '}
+          <Link href="/sign-in/new" className="font-bold text-signal">
+            {COPY.verify.haveAccountLink}
+          </Link>
+        </p>
       </AuthPage>
     );
   }
+
+  // The finished account is the form again, every field fixed and the button
+  // turned to "You're in" (board signup-done-m).
+  const finished = screen === 'done';
 
   const lockClock = formatClock(throttle.remaining);
   const botVisible = fetchStatus === 'fetching' || captchaFailed;
@@ -230,7 +420,11 @@ export function SignUpFlow({
   return (
     <AuthPage>
       {online ? null : <AuthBanner>{FLOW.offline}</AuthBanner>}
-      <StepTrail step={formStep} total={total} />
+      <StepTrail
+        step={finished ? total : formStep}
+        total={total}
+        done={finished}
+      />
       <AuthHeading
         title={COPY.form.title}
         sub={beta ? COPY.form.body : COPY.form.bodyLaunch}
@@ -255,7 +449,7 @@ export function SignUpFlow({
           inputMode="email"
           autoCapitalize="none"
           spellCheck={false}
-          disabled={locked}
+          disabled={locked || finished}
           error={emailInvalid ? COPY.form.emailInvalid : undefined}
         />
         <PasswordField
@@ -264,12 +458,13 @@ export function SignUpFlow({
           value={password}
           onChange={(evt) => setPassword(evt.target.value)}
           autoComplete="new-password"
-          disabled={locked}
+          disabled={locked || finished}
           hint={FLOW.password.rule}
           error={passwordError}
         />
         <ConsentCheck
-          checked={agreed}
+          checked={agreed || finished}
+          disabled={finished}
           onChange={(next) => {
             setAgreed(next);
             if (next) setConsentError(false);
@@ -305,6 +500,8 @@ export function SignUpFlow({
           ) : null}
         </div>
         <PrimaryButton
+          done={finished}
+          doneLabel={COPY.form.done}
           busy={busy || fetchStatus === 'fetching'}
           busyLabel={COPY.form.busy}
           disabled={!online || throttle.remaining > 0}

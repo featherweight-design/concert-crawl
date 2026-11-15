@@ -18,6 +18,7 @@ export const SIGN_UP_COPY = {
     passwordLabel: 'Password',
     submit: 'Make my account',
     busy: 'Making your account…',
+    done: 'You’re in',
     foot: 'Already have an account?',
     footLink: 'Sign in',
   },
@@ -37,10 +38,20 @@ export const SIGN_UP_COPY = {
     privacy: 'Privacy Policy',
     beta: 'Private Beta Agreement',
   },
-  // Until the verify screen lands (the next PR).
   verify: {
     title: 'Check your email',
     body: (email: string) =>
       `We sent a 6-digit code to ${email}. Enter it to finish making your account.`,
+    submit: 'Finish',
+    busy: 'Checking…',
+    wrongEmail: 'Wrong email? Go back',
+    // Shown on every verify screen, so it says nothing about this address.
+    haveAccount: 'Already have an account with this email?',
+    haveAccountLink: 'Sign in instead.',
+    resendIn: (clock: string) => `Send a new code in ${clock}`,
+    resend: 'Send a new code',
+    sent: 'New code sent. Use the newest email.',
+    wrong: 'That code isn’t right. Check the latest email and try again.',
+    expired: 'That code has run out. Send a new one.',
   },
 } as const;

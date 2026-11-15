@@ -23,6 +23,7 @@ import {
   classifyPasswordError,
   codesOf,
   isRateLimited,
+  WRONG_CODE_CODES,
 } from '@/lib/auth/clerk-errors';
 import { held, RESET_FLOOR_MS } from '@/lib/auth/timing-pad';
 import { formatClock, useCountdown } from '@/lib/auth/use-countdown';
@@ -35,13 +36,6 @@ const COPY = SIGN_IN_COPY;
 type Screen = 'start' | 'password' | 'emailCode' | 'deviceCode' | 'breached';
 type Line = 'wrong' | 'failed' | 'rateLimited' | null;
 type CodeLine = 'wrong' | 'expired' | 'sent' | 'failed' | null;
-
-/** Clerk's answers for a code that is not the right one. */
-const WRONG_CODE_CODES: ReadonlySet<string> = new Set([
-  'form_code_incorrect',
-  'form_code_invalid',
-  'verification_failed',
-]);
 
 /** How long a throttled or resent screen waits, in seconds. */
 const WAIT_SECONDS = 60;

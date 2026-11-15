@@ -11,6 +11,8 @@ interface ConsentCheckProps {
   error?: string | undefined;
   /** For moving focus to the box after an unticked press. */
   inputRef?: Ref<HTMLInputElement>;
+  /** The finished form: the box stays ticked and cannot be changed. */
+  disabled?: boolean;
   /** The sentence, with a `LegalLink` for each document it names. */
   children: ReactNode;
 }
@@ -25,6 +27,7 @@ export function ConsentCheck({
   onChange,
   error,
   inputRef,
+  disabled,
   children,
 }: ConsentCheckProps) {
   const id = useId();
@@ -40,6 +43,7 @@ export function ConsentCheck({
           id={id}
           type="checkbox"
           checked={checked}
+          disabled={disabled}
           onChange={(evt) => onChange(evt.target.checked)}
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? `${id}-error` : undefined}
