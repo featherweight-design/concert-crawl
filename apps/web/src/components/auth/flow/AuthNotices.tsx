@@ -17,7 +17,8 @@ export function StepTrail({
   total: 2 | 3;
   done?: boolean;
 }) {
-  // One dot per step, then the core: a two-step trail draws two.
+  // One dot per step (the first `total` sizes), then the ring or the core: a
+  // two-step trail draws two dots.
   const sizes = ['size-[5px]', 'size-[7px]', 'size-[9px]'].slice(0, total);
   return (
     <div className="flex items-center justify-between">
