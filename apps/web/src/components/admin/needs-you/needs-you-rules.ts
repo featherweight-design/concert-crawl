@@ -532,7 +532,6 @@ const STATUS_NAMES: Record<string, string> = {
 export const statusPhrase = (status: string): string =>
   STATUS_NAMES[status] ?? `HTTP ${status}`;
 
-/** The panel's title, as the board draws it for each of the four kinds. */
 /** A ticket tier as the board writes it: "GA", "VIP". */
 export const tierWord = (tier: string | null): string | null =>
   tier ? tier.replace(/_/g, ' ').toUpperCase() : null;
@@ -599,6 +598,7 @@ export const pageNameOf = (pageUrl: string): string | null => {
     : name;
 };
 
+/** The panel's title, as the board draws it for each of the four kinds. */
 export const panelTitleOf = (row: QueueRow): string => {
   switch (row.kind) {
     case 'artist': {

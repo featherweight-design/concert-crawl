@@ -74,6 +74,11 @@ describe('adminSubmittedRange (a fan submission)', () => {
     expect(adminSubmittedRange('0.00', null)).toBe('$0');
   });
 
+  it('reads an unreadable top as the single price, not "and up"', () => {
+    expect(adminSubmittedRange('45.00', 'n/a')).toBe('$45');
+    expect(adminSubmittedRange('45.00', '')).toBe('$45');
+  });
+
   it('is null without a readable bottom price', () => {
     expect(adminSubmittedRange(null, null)).toBeNull();
     expect(adminSubmittedRange('', '20.00')).toBeNull();

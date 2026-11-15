@@ -45,7 +45,8 @@ export const adminPriceRange = (min: Amount, max: Amount): string | null => {
 
 /**
  * A fan's submitted price: as adminPriceRange, except that no top reads
- * "$45+", and a free price with no top stays "$0".
+ * "$45+", and a free price with no top stays "$0". A top that is there but
+ * unreadable is not "and up", so it reads as the single price.
  */
 export const adminSubmittedRange = (
   min: Amount,
@@ -54,6 +55,7 @@ export const adminSubmittedRange = (
   const low = adminDollars(min);
   if (low === null) return null;
   const high = adminDollars(max);
-  if (high === null) return Number(min) === 0 ? low : `${low}+`;
-  return range(low, high);
+  if (high !== null) return range(low, high);
+  const openTop = (max === null || max === undefined) && Number(min) !== 0;
+  return openTop ? `${low}+` : low;
 };
