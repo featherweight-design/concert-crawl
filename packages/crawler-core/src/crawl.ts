@@ -76,7 +76,7 @@ import { CalendarNotFoundError } from './lib/fetchers/detail-page.js';
 import { VenuePilotFetchError } from './lib/fetchers/venuepilot.js';
 import { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js';
 import { FetchLog } from './lib/fetch-log.js';
-import { insertCrawlRun } from './lib/record-run.js';
+import { insertCrawlRun, type CrawlRunValues } from './lib/record-run.js';
 import type { PlatformFetcher, PlatformSource } from './lib/fetchers/index.js';
 import {
   detectCrossVenuePresale,
@@ -634,18 +634,23 @@ async function notifyBlocked(params: {
   crawlRunId: string;
   cause: BlockCause;
   consecutiveFailures: number;
+  // A test re-crawl of a paused venue: the body names the test re-crawl and
+  // leaves out the streak, which a trial neither adds to nor stands in for.
+  trial?: boolean;
 }): Promise<void> {
-  const { venueId, venueName, crawlRunId, cause, consecutiveFailures } = params;
+  const { venueId, venueName, crawlRunId, cause, consecutiveFailures, trial } =
+    params;
+  const answered = trial ? 'answered a test re-crawl' : 'answered';
   let what: string;
   if (cause.kind === 'timeout') {
     what = `${venueName} stopped responding (timed out)`;
   } else if (cause.platform === 'venuepilot') {
-    what = `VenuePilot answered with HTTP ${cause.httpStatus} for ${venueName}`;
+    what = `VenuePilot ${answered} with HTTP ${cause.httpStatus} for ${venueName}`;
   } else {
-    what = `${venueName} answered with HTTP ${cause.httpStatus}`;
+    what = `${venueName} ${answered} with HTTP ${cause.httpStatus}`;
   }
   const streak =
-    consecutiveFailures >= 3
+    !trial && consecutiveFailures >= 3
       ? ` after ${consecutiveFailures} failures in a row`
       : '';
   const body = `${what}; crawling is blocked${streak}`;
@@ -673,8 +678,20 @@ export async function crawlVenue(
   // The admin's monthly LLM budget, read once per crawl run by the caller
   // (readLlmBudgetStatus). null means unknown or unread: the LLM step runs.
   llmBudget: LlmBudgetStatus | null = null,
+  // A test re-crawl an admin queued for a crawl-paused venue. It crawls for
+  // real (events kept, robots.txt and pacing honored) past the pause, but it
+  // never moves the venue's failure streak or pause: no strike, no reset, no
+  // auto-pause, no failure notice. A 403 or 429 still flags the venue blocked
+  // and tells the admin, as on any crawl. Its run row is marked `trial`.
+  trial = false,
 ): Promise<CrawlVenueResult> {
   const getBrowser = memoizeBrowser(browser);
+  // Every run row this crawl writes carries the trial flag.
+  const recordRun = (
+    values: CrawlRunValues,
+    log: FetchLog,
+  ): ReturnType<typeof insertCrawlRun> =>
+    insertCrawlRun({ ...values, trial }, log);
   // Budget spent with "If it runs out" on: no Haiku call in this crawl at all,
   // so artist adjudication falls back to its no-adjudicator path too.
   const llmStopped = llmBudgetVerdict(llmBudget) === 'over_stop';
@@ -711,10 +728,11 @@ export async function crawlVenue(
 
   // A crawl pause (an admin's, or the crawler's own at the third consecutive
   // failure) stops every path, manual triggers included, and is not a
-  // failure: no strike, no block, and the venue's shows stay published.
-  if (venue.crawlPausedAt !== null) {
+  // failure: no strike, no block, and the venue's shows stay published. A
+  // trial is the one crawl that runs past it.
+  if (venue.crawlPausedAt !== null && !trial) {
     console.log(JSON.stringify({ event: 'crawl.paused', venueId }));
-    const crawlRun = await insertCrawlRun(
+    const crawlRun = await recordRun(
       {
         id,
         venueId,
@@ -748,7 +766,7 @@ export async function crawlVenue(
         reason: robots.reason,
       }),
     );
-    const crawlRun = await insertCrawlRun(
+    const crawlRun = await recordRun(
       {
         id,
         venueId,
@@ -772,7 +790,7 @@ export async function crawlVenue(
         url: venue.websiteUrl,
       }),
     );
-    const crawlRun = await insertCrawlRun(
+    const crawlRun = await recordRun(
       {
         id,
         venueId,
@@ -807,7 +825,7 @@ export async function crawlVenue(
     { venueId, url: venue.websiteUrl },
   );
   if (crawlDelayMs === null) {
-    const crawlRun = await insertCrawlRun(
+    const crawlRun = await recordRun(
       {
         id,
         venueId,
@@ -1028,7 +1046,7 @@ export async function crawlVenue(
             url: venue.websiteUrl,
           }),
         );
-        const crawlRun = await insertCrawlRun(
+        const crawlRun = await recordRun(
           {
             id,
             venueId,
@@ -1047,7 +1065,8 @@ export async function crawlVenue(
           .update(venues)
           .set({
             lastCrawledAt: new Date(),
-            consecutiveFailures: 0,
+            // A trial never moves the failure streak, either way.
+            ...(trial ? {} : { consecutiveFailures: 0 }),
             robotsTxtAllowed: true,
             robotsTxtCheckedAt: new Date(),
             ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
@@ -2170,7 +2189,7 @@ export async function crawlVenue(
       null,
     );
 
-    const crawlRun = await insertCrawlRun(
+    const crawlRun = await recordRun(
       {
         id,
         venueId,
@@ -2216,8 +2235,10 @@ export async function crawlVenue(
         // tracks hard failures, and auto-pausing a venue whose calendar is
         // genuinely empty would stop us crawling it back to life. The
         // went-dark alert below owns notification for this case.
-        ...(foundNothing ? {} : { consecutiveFailures: 0 }),
-        blockedAt: null,
+        // A trial leaves both alone: it never moves the failure streak, and
+        // trials are refused while a venue is blocked.
+        ...(foundNothing || trial ? {} : { consecutiveFailures: 0 }),
+        ...(trial ? {} : { blockedAt: null }),
         robotsTxtAllowed: true,
         robotsTxtCheckedAt: new Date(),
         // Auto-detect crawlMode write is HTML-path-only. On the platform
@@ -2299,7 +2320,7 @@ export async function crawlVenue(
     // run. That is our choice not to crawl, not a venue failure: record it as
     // skipped and leave the strike count alone, like the pre-fetch skips above.
     if (err instanceof CrawlSkipError) {
-      const crawlRun = await insertCrawlRun(
+      const crawlRun = await recordRun(
         {
           id,
           venueId,
@@ -2361,7 +2382,44 @@ export async function crawlVenue(
     // row and the audit, so a failed notice can never lose either.
     let blockNotice: Parameters<typeof notifyBlocked>[0] | null = null;
 
-    if (!isAccountWide) {
+    if (!isAccountWide && trial) {
+      // A trial's failure is not a strike and never pauses: the streak, the
+      // pause, the auto-pause audit and the failure notice and email are all
+      // left alone. A 403 or 429 is still a block (crawl rule): flag it, audit
+      // it and tell the admin, through the same notice path as any crawl. A
+      // timeout is not read as a block here, since that inference leans on a
+      // streak a trial never adds to.
+      const blockCause = blockCauseOf(err, venue.consecutiveFailures);
+      if (blockCause?.kind === 'http') {
+        await db
+          .update(venues)
+          .set({ blockedAt: new Date(), updatedAt: new Date() })
+          .where(eq(venues.id, venueId));
+        systemAction = {
+          action: 'venue.crawl_blocked',
+          targetId: venueId,
+          metadata: {
+            venueName: venue.name,
+            crawlRunId: id,
+            consecutiveFailures: venue.consecutiveFailures,
+            cause: blockCause.kind,
+            trial: true,
+          },
+        };
+        // Once per block, as on any crawl. Trials are refused while a venue
+        // is blocked, so in practice this is always the run that blocks it.
+        if (venue.blockedAt === null) {
+          blockNotice = {
+            venueId,
+            venueName: venue.name,
+            crawlRunId: id,
+            cause: blockCause,
+            consecutiveFailures: venue.consecutiveFailures,
+            trial: true,
+          };
+        }
+      }
+    } else if (!isAccountWide) {
       const blockCause = blockCauseOf(err, venue.consecutiveFailures);
       const isBlocked = blockCause !== null;
 
@@ -2491,7 +2549,7 @@ export async function crawlVenue(
 
     let crawlRun: Awaited<ReturnType<typeof insertCrawlRun>>;
     try {
-      crawlRun = await insertCrawlRun(
+      crawlRun = await recordRun(
         {
           id,
           venueId,

@@ -2027,6 +2027,166 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
   });
 });
 
+describe('crawlVenue — a trial re-crawl of a paused venue', () => {
+  const PAUSED_AT = new Date('2026-11-01T09:00:00.000Z');
+
+  // Paused by the crawler at its third strike, the state a trial is for.
+  async function seedPausedVenue(): Promise<{
+    id: string;
+    name: string;
+    url: string;
+  }> {
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `Trial Test ${crypto.randomUUID()}`,
+        slug: `trial-${crypto.randomUUID()}`,
+        websiteUrl: 'https://trial-test.example.com',
+        city: 'Denver',
+        timezone: 'America/Denver',
+        active: true,
+        verified: true,
+        crawlMode: 'browser',
+        consecutiveFailures: 3,
+        crawlPausedAt: PAUSED_AT,
+      })
+      .returning();
+    if (!venue) throw new Error('venue insert returned no row');
+    return { id: venue.id, name: venue.name, url: venue.websiteUrl };
+  }
+
+  const crawlTrial = (venueId: string) =>
+    crawlVenue(venueId, mockBrowser, undefined, [], false, null, true);
+
+  async function venueState(venueId: string) {
+    const [row] = await db
+      .select({
+        blockedAt: venues.blockedAt,
+        crawlPausedAt: venues.crawlPausedAt,
+        consecutiveFailures: venues.consecutiveFailures,
+      })
+      .from(venues)
+      .where(eq(venues.id, venueId));
+    return row;
+  }
+
+  async function crawlFailedNotes() {
+    const { notifications } = await import('@concert-crawl/db');
+    return db
+      .select({ title: notifications.title, body: notifications.body })
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.failed'));
+  }
+
+  beforeEach(async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js');
+    vi.mocked(sendCrawlFailureEmail).mockReset();
+    vi.mocked(sendCrawlFailureEmail).mockResolvedValue(undefined);
+  });
+
+  it('crawls past the pause, keeps the events and writes a trial run', async () => {
+    const venue = await seedPausedVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [makeEvent('Trial Artist', futureDate(10), venue.url)],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+
+    const run = await crawlTrial(venue.id);
+
+    expect(run.status).toBe('success');
+    expect(run.trial).toBe(true);
+    expect(run.eventsInserted).toBe(1);
+    const kept = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.venueId, venue.id));
+    expect(kept).toHaveLength(1);
+    // A success does not reset the streak or lift the pause.
+    const row = await venueState(venue.id);
+    expect(row?.consecutiveFailures).toBe(3);
+    expect(row?.crawlPausedAt?.getTime()).toBe(PAUSED_AT.getTime());
+  });
+
+  it('a normal crawl of the same paused venue is still skipped', async () => {
+    const venue = await seedPausedVenue();
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('skipped');
+    expect(run.reason).toBe('crawl_paused');
+    expect(run.trial).toBe(false);
+    expect(mockFetchPage).not.toHaveBeenCalled();
+  });
+
+  it('a failing trial moves neither the streak nor the pause, and sends no failure notice', async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js');
+    const venue = await seedPausedVenue();
+    mockFetchPage.mockRejectedValue(new Error('generic schema error'));
+
+    const run = await crawlTrial(venue.id);
+
+    expect(run.status).toBe('failed');
+    expect(run.trial).toBe(true);
+    const row = await venueState(venue.id);
+    expect(row?.consecutiveFailures).toBe(3);
+    expect(row?.crawlPausedAt?.getTime()).toBe(PAUSED_AT.getTime());
+    expect(row?.blockedAt).toBeNull();
+    expect(vi.mocked(sendCrawlFailureEmail)).not.toHaveBeenCalled();
+    expect(await crawlFailedNotes()).toHaveLength(0);
+    const audits = await db
+      .select({ action: auditLog.action })
+      .from(auditLog)
+      .where(eq(auditLog.targetId, venue.id));
+    expect(audits).toEqual([]);
+  });
+
+  it('a trial timeout is not inferred as a block', async () => {
+    const venue = await seedPausedVenue();
+    const timeoutError = new Error('Timeout exceeded');
+    timeoutError.name = 'TimeoutError';
+    mockFetchPage.mockRejectedValue(timeoutError);
+
+    await crawlTrial(venue.id);
+
+    const row = await venueState(venue.id);
+    expect(row?.blockedAt).toBeNull();
+    expect(row?.consecutiveFailures).toBe(3);
+  });
+
+  it('a trial hitting a 403 still flags the venue blocked, audits it and notifies', async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js');
+    const venue = await seedPausedVenue();
+    mockFetchPage.mockRejectedValue(new CrawlFetchError(403, 'Forbidden'));
+
+    const run = await crawlTrial(venue.id);
+
+    expect(run.reason).toBe('blocked_http');
+    const row = await venueState(venue.id);
+    expect(row?.blockedAt).toBeInstanceOf(Date);
+    expect(row?.consecutiveFailures).toBe(3);
+    expect(row?.crawlPausedAt?.getTime()).toBe(PAUSED_AT.getTime());
+    const audits = await db
+      .select({ action: auditLog.action })
+      .from(auditLog)
+      .where(eq(auditLog.targetId, venue.id));
+    expect(audits.map((audit) => audit.action)).toEqual([
+      'venue.crawl_blocked',
+    ]);
+    const notes = await crawlFailedNotes();
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.title).toBe(`Crawl blocked: ${venue.name}`);
+    expect(notes[0]?.body).toBe(
+      `${venue.name} answered a test re-crawl with HTTP 403; crawling is blocked`,
+    );
+    expect(vi.mocked(sendCrawlFailureEmail)).not.toHaveBeenCalled();
+  });
+});
+
 describe('crawlVenue — insertedEventIds threading (#763)', () => {
   it('returns the DB ids of freshly inserted events on a first crawl', async () => {
     const venue = await seedTestVenue();
