@@ -3,7 +3,7 @@ import '@testing-library/jest-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Search, X } from 'lucide-react';
-import { RowMenu } from './RowMenu';
+import { RowMenu, RowMenuItems } from './RowMenu';
 
 afterEach(cleanup);
 
@@ -149,6 +149,70 @@ describe('RowMenu', () => {
     expect(onOpenChange).toHaveBeenLastCalledWith(true);
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('closes and reports it when the ⋯ goes busy, or the row unmounts, while open', () => {
+    const onOpenChange = vi.fn();
+    const items = [
+      { key: 'a', icon: Search, label: 'A', hint: 'a', onSelect: vi.fn() },
+    ];
+    const { rerender, unmount } = render(
+      <RowMenu
+        label="Price actions"
+        onOpenChange={onOpenChange}
+        items={items}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Price actions' });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menu')).toBeVisible();
+    rerender(
+      <RowMenu
+        label="Price actions"
+        disabled
+        onOpenChange={onOpenChange}
+        items={items}
+      />,
+    );
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+
+    rerender(
+      <RowMenu
+        label="Price actions"
+        onOpenChange={onOpenChange}
+        items={items}
+      />,
+    );
+    fireEvent.click(trigger);
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+    const calls = onOpenChange.mock.calls.length;
+    unmount();
+    expect(onOpenChange).toHaveBeenCalledTimes(calls + 1);
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('draws RowMenuItems as plain buttons outside a menu, marked by testId', () => {
+    const onSelect = vi.fn();
+    const item = {
+      key: 'approve',
+      icon: Search,
+      label: 'Approve',
+      hint: 'Publishes $44 to fans now.',
+      onSelect,
+    };
+    render(
+      <RowMenuItems
+        items={[item]}
+        onPick={(picked) => picked.onSelect()}
+        testId="sheet"
+      />,
+    );
+    expect(screen.queryByRole('menuitem')).toBeNull();
+    const button = screen.getByTestId('sheet-approve');
+    expect(button).not.toHaveAttribute('tabindex');
+    fireEvent.click(button);
+    expect(onSelect).toHaveBeenCalledTimes(1);
   });
 
   it('closes on Escape with focus back on ⋯', () => {
