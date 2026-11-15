@@ -5,7 +5,11 @@ vi.mock('@/lib/api', () => ({
   adminFetch: (...args: unknown[]) => adminFetch(...args),
 }));
 
-import { addShowApi, type DuplicateShow } from './add-show-api';
+import {
+  AddShowTimeoutError,
+  addShowApi,
+  type DuplicateShow,
+} from './add-show-api';
 import { toBody, type AddShowDraft } from './add-show-rules';
 
 const reply = (status: number, body: unknown) =>
@@ -123,23 +127,52 @@ describe('addShowApi.create', () => {
   describe('when the request times out', () => {
     afterEach(() => vi.restoreAllMocks());
 
-    const timeOut = () => {
-      const fired = AbortSignal.abort(
-        new DOMException('timed out', 'TimeoutError'),
-      );
-      vi.spyOn(AbortSignal, 'timeout').mockReturnValue(fired);
+    const fireTimeout = () =>
+      vi
+        .spyOn(AbortSignal, 'timeout')
+        .mockReturnValue(
+          AbortSignal.abort(new DOMException('timed out', 'TimeoutError')),
+        );
+    const rejectWithSignal = () =>
       adminFetch.mockImplementation(
         async (_url: unknown, init: { signal: AbortSignal }) => {
           throw init.signal.reason;
         },
       );
-    };
 
     it('returns timeout, not a failure, since the POST may have saved', async () => {
-      timeOut();
+      fireTimeout();
+      rejectWithSignal();
       await expect(api.create(toBody(DRAFT))).resolves.toEqual({
         kind: 'timeout',
       });
+    });
+
+    it('returns timeout when the clock fires while the body is read', async () => {
+      fireTimeout();
+      adminFetch.mockImplementation(
+        async (_url: unknown, init: { signal: AbortSignal }) => ({
+          status: 201,
+          json: async () => {
+            throw init.signal.reason;
+          },
+        }),
+      );
+      await expect(api.create(toBody(DRAFT))).resolves.toEqual({
+        kind: 'timeout',
+      });
+    });
+
+    it('keeps a caller abort as an abort, never a timeout', async () => {
+      fireTimeout();
+      rejectWithSignal();
+      const caller = new AbortController();
+      caller.abort(new DOMException('newer keystroke', 'AbortError'));
+      const failure = await api
+        .artists('kal', caller.signal)
+        .catch((err: unknown) => err);
+      expect(failure).not.toBeInstanceOf(AddShowTimeoutError);
+      expect(failure).toMatchObject({ name: 'AbortError' });
     });
 
     it('still throws on any other failure', async () => {
@@ -166,23 +199,43 @@ describe('addShowApi.findCreated', () => {
       reply(200, { success: true, data: { duplicates: rows } }),
     );
 
+  const none: ReadonlySet<string> = new Set();
+
   it('finds the show the timed-out POST saved, by venue, date and title', async () => {
     duplicates([row({ id: 'e2', title: 'Kaleo Live' }), row({ id: 'e1' })]);
-    await expect(api.findCreated(body)).resolves.toBe('e1');
+    await expect(api.findCreated(body, none)).resolves.toBe('e1');
     expect(String(adminFetch.mock.calls[0]?.[0])).toContain(
       '/v1/admin/events/duplicate?venueId=v1&date=2026-12-04&title=Kaleo',
     );
   });
 
+  it('never returns an older manual twin, only the new show', async () => {
+    duplicates([row({ id: 'old', title: 'Open Mic' })]);
+    const before = await api.manualIdsBefore({ ...body, title: 'Open Mic' });
+    expect([...before]).toEqual(['old']);
+    const openMic = { ...body, title: 'Open Mic' };
+    await expect(api.findCreated(openMic, before)).resolves.toBeNull();
+    duplicates([
+      row({ id: 'old', title: 'Open Mic' }),
+      row({ id: 'new', title: 'Open Mic' }),
+    ]);
+    await expect(api.findCreated(openMic, before)).resolves.toBe('new');
+  });
+
+  it('records only manual shows as the before set', async () => {
+    duplicates([row({ id: 'e1' }), row({ id: 'c1', manual: false })]);
+    expect([...(await api.manualIdsBefore(body))]).toEqual(['e1']);
+  });
+
   it('is null for a crawled show, another time, none or two', async () => {
     duplicates([row({ manual: false })]);
-    await expect(api.findCreated(body)).resolves.toBeNull();
+    await expect(api.findCreated(body, none)).resolves.toBeNull();
     duplicates([row({ showTime: null })]);
-    await expect(api.findCreated(body)).resolves.toBeNull();
+    await expect(api.findCreated(body, none)).resolves.toBeNull();
     duplicates([]);
-    await expect(api.findCreated(body)).resolves.toBeNull();
+    await expect(api.findCreated(body, none)).resolves.toBeNull();
     duplicates([row({ id: 'e1' }), row({ id: 'e3' })]);
-    await expect(api.findCreated(body)).resolves.toBeNull();
+    await expect(api.findCreated(body, none)).resolves.toBeNull();
   });
 });
 
@@ -221,6 +274,29 @@ describe('addShowApi reads', () => {
     await expect(api.artists('kal')).resolves.toEqual([
       { id: 'a1', name: 'Kaleo' },
     ]);
+  });
+
+  it('asks for 12 and shows six, so dropped rows leave the list full', async () => {
+    adminFetch.mockResolvedValue(
+      reply(200, {
+        success: true,
+        data: Array.from({ length: 12 }, (_, i) => ({
+          id: `a${i}`,
+          name: `Act ${i}`,
+          matchStatus: i < 3 ? 'not_an_artist' : 'matched',
+        })),
+      }),
+    );
+    const shown = await api.artists('act');
+    expect(shown.map((artist) => artist.id)).toEqual([
+      'a3',
+      'a4',
+      'a5',
+      'a6',
+      'a7',
+      'a8',
+    ]);
+    expect(String(adminFetch.mock.calls[0]?.[0])).toContain('limit=12');
   });
 
   it('asks nothing for a blank search', async () => {

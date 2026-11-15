@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 import { adminFetch } from '@/lib/api';
-import type { GetToken } from '../../invite-codes/codes-api';
+import { anySignal, type GetToken } from '../../invite-codes/codes-api';
 import {
   ADD_SHOW_ERROR_CODES,
   type AddShowErrorCode,
@@ -16,6 +16,9 @@ import type { AddShowBody } from './add-show-rules';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 /** A hung request must not leave Add show spinning (rule 10). */
 const REQUEST_TIMEOUT_MS = 20_000;
+/** The lineup shows six suggestions; it asks for twice that (see `artists`). */
+const ARTIST_SUGGESTIONS = 6;
+const ARTIST_FETCH_LIMIT = 12;
 
 const envelopeSchema = z.object({
   success: z.literal(true),
@@ -113,15 +116,22 @@ const send = async (
           : { 'Content-Type': 'application/json' }),
       },
       ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
-      signal:
-        init.signal && typeof AbortSignal.any === 'function'
-          ? AbortSignal.any([init.signal, timeout])
-          : (init.signal ?? timeout),
+      signal: init.signal ? anySignal([init.signal, timeout]) : timeout,
     });
-    const body: unknown = await res.json().catch(() => null);
+    let body: unknown = null;
+    try {
+      body = await res.json();
+    } catch (err) {
+      // An abort while the body streams is the call's failure, not an empty
+      // reply: rethrown for the outer catch to sort timeout from caller.
+      if (timeout.aborted || init.signal?.aborted) throw err;
+      console.warn('[admin] Add a show: a reply with no JSON body', err);
+    }
     return { status: res.status, body };
   } catch (err) {
-    // Only our own clock: the caller's abort (a newer keystroke) stays as is.
+    // Translates or rethrows, never swallows, so the caller logs or shows it.
+    // Only our own clock is a timeout: the caller's abort (a newer
+    // keystroke) stays as is.
     if (timeout.aborted && !init.signal?.aborted)
       throw new AddShowTimeoutError();
     throw err;
@@ -173,6 +183,12 @@ const readDuplicates = async (
   return data.duplicates;
 };
 
+const paramsOf = (body: AddShowBody): DuplicateParams => ({
+  venueId: body.venueId,
+  date: body.date,
+  title: body.title,
+});
+
 export const addShowApi = (getToken: GetToken) => ({
   /** Every venue not taken down, by name; hidden ones carry `active: false`. */
   venues: (): Promise<PickVenue[]> =>
@@ -185,9 +201,11 @@ export const addShowApi = (getToken: GetToken) => ({
   ): Promise<ArtistSuggestion[]> => {
     // A blank search would list the first six artists, which suggests nothing.
     if (search.trim() === '') return [];
+    // Asks for twice the shown count, since not-an-artist rows are dropped
+    // here, after the server's limit.
     const query = new URLSearchParams({
       search,
-      limit: '6',
+      limit: String(ARTIST_FETCH_LIMIT),
       upcoming: 'false',
     });
     const rows = await read(
@@ -196,6 +214,7 @@ export const addShowApi = (getToken: GetToken) => ({
     );
     return rows
       .filter((row) => row.matchStatus !== 'not_an_artist')
+      .slice(0, ARTIST_SUGGESTIONS)
       .map(({ id, name }) => ({ id, name }));
   },
 
@@ -206,12 +225,27 @@ export const addShowApi = (getToken: GetToken) => ({
   ): Promise<DuplicateShow[]> => readDuplicates(getToken, params, signal),
 
   /**
+   * The ids of the manual shows already at the body's venue that night, read
+   * just before the POST so `findCreated` can tell the new show from an older
+   * twin (an Open Mic every week has the same title and time).
+   */
+  manualIdsBefore: async (
+    body: AddShowBody,
+    signal?: AbortSignal,
+  ): Promise<ReadonlySet<string>> => {
+    const rows = await readDuplicates(getToken, paramsOf(body), signal);
+    return new Set(rows.filter((row) => row.manual).map((row) => row.id));
+  },
+
+  /**
    * The create. A refusal, the exact-key 409 and a timeout come back as
    * results; anything else (offline, a 500, a drifted reply) throws for Save
    * failed. On `timeout` the POST may still have committed, so the form must
-   * not offer a plain retry (it would 409 and the show would look lost): it
-   * calls `findCreated(body)` first and opens the show when that finds it,
-   * and only shows Save failed with a retry when it comes back null.
+   * not offer a plain retry blind (it could 409 and the show would look
+   * lost). The flow: `before = await manualIdsBefore(body)`, then `create`;
+   * on `timeout`, `findCreated(body, before)`. An id opens that show. Null
+   * (none, or several) shows Save failed with a retry; if the show did land,
+   * the retry's 409 opens it through the duplicate result.
    */
   create: async (body: AddShowBody): Promise<CreateResult> => {
     let sent: { status: number; body: unknown };
@@ -221,6 +255,8 @@ export const addShowApi = (getToken: GetToken) => ({
         body,
       });
     } catch (err) {
+      // Translates a timeout into its result and rethrows the rest, so the
+      // form logs it with Save failed.
       if (err instanceof AddShowTimeoutError) return { kind: 'timeout' };
       throw err;
     }
@@ -249,24 +285,23 @@ export const addShowApi = (getToken: GetToken) => ({
 
   /**
    * After a `timeout` from `create`, the show that POST may have saved: the
-   * id of the one show added by hand at that venue that night with exactly
-   * this title and show time, read through the duplicate warning's call.
-   * Null when there is none (the save never landed: offer the retry) or more
-   * than one (ambiguous: leave it to the duplicate warning). Throws when the
-   * read itself fails, for Save failed.
+   * id of the one NEW show added by hand at that venue that night (not in
+   * `before`, from `manualIdsBefore`) with exactly this title and show time,
+   * read through the duplicate warning's call. The read carries no headliner,
+   * so title and time are the match. Null when there is none or several:
+   * Save failed with a retry, and the retry's 409 opens a show that did
+   * land. Throws when the read itself fails, for Save failed.
    */
   findCreated: async (
     body: AddShowBody,
+    before: ReadonlySet<string>,
     signal?: AbortSignal,
   ): Promise<string | null> => {
-    const rows = await readDuplicates(
-      getToken,
-      { venueId: body.venueId, date: body.date, title: body.title },
-      signal,
-    );
+    const rows = await readDuplicates(getToken, paramsOf(body), signal);
     const exact = rows.filter(
       (row) =>
         row.manual &&
+        !before.has(row.id) &&
         row.title === body.title &&
         timeKey(row.showTime) === timeKey(body.showTime),
     );

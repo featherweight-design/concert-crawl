@@ -100,14 +100,14 @@ const isCalendarDate = (value: string): boolean => {
 
 /** A full http(s) link within the API's length, as its `httpUrl` takes it. */
 const isFullLink = (text: string): boolean => {
-  if (text.length > TICKET_URL_MAX) return false;
-  try {
-    const url = new URL(text);
-    return url.protocol === 'https:' || url.protocol === 'http:';
-  } catch {
-    return false;
-  }
+  // `URL.canParse` first, so a typo is a plain false and needs no catch.
+  if (text.length > TICKET_URL_MAX || !URL.canParse(text)) return false;
+  const { protocol } = new URL(text);
+  return protocol === 'https:' || protocol === 'http:';
 };
+
+/** `HH:MM` and `HH:MM:SS` compare as the same time (the API's `timeKey`). */
+const timeKey = (value: string): string => value.padEnd(8, ':00');
 
 /** The API's per-act name check (`lineupEntrySchema`), or null when it passes. */
 const actNameError = (name: string): AddShowErrorCode | null => {
@@ -143,8 +143,13 @@ export const validateDraft = (
   if (draft.venueId === '') errors.venueId = 'venue_required';
   if (!isCalendarDate(draft.date)) errors.date = 'date_required';
   else if (draft.date < today) errors.date = 'date_past';
-  // `04/add-show-errors-d` puts "Before doors." under Show.
-  if (draft.doorsTime && draft.showTime && draft.showTime < draft.doorsTime)
+  // `04/add-show-errors-d` puts "Before doors." under Show. Padded as the
+  // API's `timeKey` pads, so 20:00 and 20:00:00 are the same time.
+  if (
+    draft.doorsTime &&
+    draft.showTime &&
+    timeKey(draft.showTime) < timeKey(draft.doorsTime)
+  )
     errors.showTime = 'show_before_doors';
   const link = draft.ticketUrl.trim();
   if (link !== '' && !isFullLink(link)) errors.ticketUrl = 'ticket_url_invalid';
@@ -195,10 +200,12 @@ export const moveAct = (
   from: number,
   to: number,
 ): Act[] => {
+  // A negative `from` would splice from the end, so both ends are guarded.
+  if (from < 0 || from >= lineup.length || to < 0 || to >= lineup.length)
+    return [...lineup];
   const next = [...lineup];
   const [moved] = next.splice(from, 1);
-  if (moved === undefined || to < 0 || to > lineup.length - 1)
-    return [...lineup];
+  if (moved === undefined) return [...lineup];
   next.splice(to, 0, moved);
   return next;
 };

@@ -190,7 +190,7 @@ export type GetToken = () => Promise<string | null>;
  * A signal that aborts when any of `signals` does, with that one's reason:
  * `AbortSignal.any` where the browser has it, wired by hand where it doesn't.
  */
-const anySignal = (signals: AbortSignal[]): AbortSignal => {
+export const anySignal = (signals: AbortSignal[]): AbortSignal => {
   if (typeof AbortSignal.any === 'function') return AbortSignal.any(signals);
   const controller = new AbortController();
   for (const signal of signals) {
