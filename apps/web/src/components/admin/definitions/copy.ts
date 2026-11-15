@@ -4114,7 +4114,6 @@ export const ADMIN_COPY = {
       didntApprove: 'Didn’t approve',
       doneTitle: (price: string, show: string) =>
         `Approved. ${price} is live on ${show}.`,
-      doneBody: 'The fan who sent it is told.',
       failedTitle: 'Couldn’t approve that price.',
       failedBody: 'It’s still waiting. Nothing changed.',
       notWaitingBody: 'That price isn’t waiting any more.',
