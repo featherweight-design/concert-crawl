@@ -291,6 +291,35 @@ describe('admin feedback (integration)', () => {
       expect((await list('?view=done&status=unread')).data).toEqual([]);
     });
 
+    it('hands out only a checked screenshot, never an old unchecked one', async () => {
+      setAuth('admin');
+      const bad = await seedFeedback('unread', 'bug', {
+        metadata: {
+          device: 'Mac',
+          screenshot: 'javascript:alert(1)',
+          screenshotDataUrl: 'https://tracker.example.com/pixel.png',
+        },
+      });
+      const legacy = await seedFeedback('unread', 'bug', {
+        metadata: { screenshotDataUrl: 'data:image/png;base64,AAAA' },
+      });
+      const good = await seedFeedback('unread', 'bug', {
+        metadata: { screenshot: 'data:image/gif;base64,R0lGODlh' },
+      });
+
+      const { data } = await list('?view=to_read');
+      const byId = new Map(data.map((item) => [item.id, item.metadata]));
+      expect(byId.get(bad)).toEqual({ device: 'Mac' });
+      expect(byId.get(legacy)).toEqual({
+        screenshot: 'data:image/png;base64,AAAA',
+      });
+      expect(byId.get(good)).toEqual({
+        screenshot: 'data:image/gif;base64,R0lGODlh',
+      });
+      expect(JSON.stringify(data)).not.toContain('javascript:');
+      expect(JSON.stringify(data)).not.toContain('tracker.example.com');
+    });
+
     it('returns the resolver handle and time per item', async () => {
       setAuth('admin');
       await seedUserProfile('user_jules', { handle: 'jules' });

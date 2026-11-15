@@ -12,6 +12,7 @@ import {
   ADMIN_FEEDBACK_STATUSES,
   ADMIN_FEEDBACK_VIEW_STATUSES,
   FEEDBACK_CATEGORIES,
+  feedbackScreenshotOf,
   type AdminFeedbackCounts,
   type AdminFeedbackItem,
   type AdminFeedbackStatus,
@@ -114,12 +115,33 @@ type ItemRow = Pick<
  * `AdminFeedbackItem.metadata` is typed as an object, so a non-object jsonb
  * value (never written by the feedback endpoint) reads as null.
  */
+const SCREENSHOT_KEYS: ReadonlySet<string> = new Set([
+  'screenshot',
+  'screenshotDataUrl',
+]);
+
+/**
+ * The metadata as a screen may read it: the screenshot (or the legacy
+ * `screenshotDataUrl`) only when it is our own inline image format, under
+ * `screenshot`. Rows stored before the write check may hold any string, and
+ * no admin screen should ever be handed an unchecked one.
+ */
+const sanitisedMetadata = (
+  metadata: Record<string, unknown>,
+): Record<string, unknown> => {
+  const rest = Object.fromEntries(
+    Object.entries(metadata).filter(([key]) => !SCREENSHOT_KEYS.has(key)),
+  );
+  const screenshot = feedbackScreenshotOf(metadata);
+  return screenshot === null ? rest : { ...rest, screenshot };
+};
+
 const toItem = (
   { metadata, ...row }: ItemRow,
   handles: { submittedBy: string | null; resolvedBy: string | null },
 ): AdminFeedbackItem => ({
   ...row,
-  metadata: isRecord(metadata) ? metadata : null,
+  metadata: isRecord(metadata) ? sanitisedMetadata(metadata) : null,
   createdAt: row.createdAt.toISOString(),
   submittedBy: handles.submittedBy,
   resolvedBy: handles.resolvedBy,
