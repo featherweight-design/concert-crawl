@@ -15,10 +15,8 @@ vi.mock('@clerk/nextjs', () => ({
 
 const post = vi.fn();
 const del = vi.fn();
-// The hook narrows failures with `instanceof ApiError`, so the mocked module
-// has to carry a real class — a plain object would make every branded 403 fall
-// through to the generic rollback and the entitlement test would pass for the
-// wrong reason.
+// A real class, so the branded 403 the test throws is a genuine ApiError and
+// the rollback test proves the hook gives it no special path.
 vi.mock('@/lib/api', () => {
   class ApiError extends Error {
     constructor(
@@ -100,31 +98,10 @@ describe('useArtistFollow', () => {
     expect(del).toHaveBeenCalledWith('/v1/artists/wax-harbour/follow', 'token');
   });
 
-  it('sends a branded 403 to the upgrade path instead of failing quietly', async () => {
-    // Following is Premium, so a free tap gets a 403. Rolling back alone reads
-    // as a dead button, which is the whole reason this callback exists.
-    post.mockRejectedValue(
-      new ApiError(403, 'premium', ENTITLEMENT_REQUIRED_CODE),
-    );
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const onEntitlementRequired = vi.fn();
-    const { result } = renderHook(() =>
-      useArtistFollow('wax-harbour', false, onEntitlementRequired),
-    );
-
-    act(() => {
-      result.current.toggle();
-    });
-
-    await waitFor(() => expect(onEntitlementRequired).toHaveBeenCalledTimes(1));
-    expect(result.current.following).toBe(false);
-    expect(warn).not.toHaveBeenCalled();
-    warn.mockRestore();
-  });
-
-  it('warns and rolls back a branded 403 when no caller handles it', async () => {
-    // With no upgrade path to hand the 403 to, returning early would swallow
-    // the failure without a trace. It has to take the ordinary failure path.
+  it('warns and rolls back a branded 403 like any other failure', async () => {
+    // Following is free, so there is no upgrade path to hand a 403 to.
+    // Returning early would swallow the failure without a trace; it has to
+    // take the ordinary failure path.
     post.mockRejectedValue(
       new ApiError(403, 'premium', ENTITLEMENT_REQUIRED_CODE),
     );
@@ -137,23 +114,6 @@ describe('useArtistFollow', () => {
 
     await waitFor(() => expect(warn).toHaveBeenCalledTimes(1));
     expect(result.current.following).toBe(false);
-    warn.mockRestore();
-  });
-
-  it('leaves an unbranded 403 on the generic rollback', async () => {
-    post.mockRejectedValue(new ApiError(403, 'forbidden'));
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const onEntitlementRequired = vi.fn();
-    const { result } = renderHook(() =>
-      useArtistFollow('wax-harbour', false, onEntitlementRequired),
-    );
-
-    act(() => {
-      result.current.toggle();
-    });
-
-    await waitFor(() => expect(result.current.following).toBe(false));
-    expect(onEntitlementRequired).not.toHaveBeenCalled();
     warn.mockRestore();
   });
 

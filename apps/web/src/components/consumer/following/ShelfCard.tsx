@@ -101,41 +101,34 @@ interface ShelfCardProps {
    * "following", which the section heading already said.
    */
   starter: boolean;
-  /** Signed in, but the plan cannot follow. Never true while already following. */
-  locked: boolean;
+  /**
+   * Clerk has not answered yet. The badge draws at rest and a tap goes to
+   * `onGatedTap`, which ignores it: a follow written before the session
+   * resolves would die on a missing token.
+   */
+  resolving: boolean;
   /** No session at all — the badge hands off rather than writing anything. */
   signedOut: boolean;
-  /** Locked or signed-out activation. The shelf owns the sheet. */
+  /** Signed-out (or still-resolving) activation. The shelf owns the hand-off. */
   onGatedTap: () => void;
-  /**
-   * The API answered 403. Separate from `onGatedTap` because that one can
-   * decline to open the sheet while the plan is still resolving, whereas a 403
-   * is the server's settled answer and must always be honoured.
-   */
-  onEntitlementRequired: () => void;
 }
 
 export const ShelfCard = ({
   artist,
   starter,
-  locked,
+  resolving,
   signedOut,
   onGatedTap,
-  onEntitlementRequired,
 }: ShelfCardProps) => {
   // Hooks run unconditionally; a slug-less row simply never renders the badge
   // that would call `toggle` (the follow endpoint is keyed by slug, so there
   // is nothing to call).
-  const follow = useArtistFollow(
-    artist.slug ?? '',
-    artist.following,
-    onEntitlementRequired,
-  );
+  const follow = useArtistFollow(artist.slug ?? '', artist.following);
   const gateId = `nf-shelf-gate-${useId().replace(/:/g, '')}`;
 
-  const gated = locked || signedOut;
-  // Signed out or locked we draw the at-rest skin: there is no relationship to
-  // render for a viewer who has none.
+  const gated = resolving || signedOut;
+  // Signed out (or not yet known) we draw the at-rest skin: there is no
+  // relationship to render for a viewer who has none.
   const on = !gated && follow.following;
   const price = formatPrice(
     artist.price === null ? null : String(artist.price),
@@ -255,7 +248,7 @@ export const ShelfCard = ({
               }
               follow.toggle();
             }}
-            // Locked has no pressed state to report — it is not a toggle.
+            // Gated has no pressed state to report — it is not a toggle.
             aria-pressed={gated ? undefined : on}
             aria-label={
               on

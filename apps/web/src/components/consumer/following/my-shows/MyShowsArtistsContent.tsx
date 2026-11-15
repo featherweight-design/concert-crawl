@@ -8,19 +8,13 @@
 // above it (tabs, headings, footnote, empty state) is shared, so the two can
 // only diverge in box, never in what they say.
 //
-// Every row here is an existing follow, so nothing on this surface is `locked`:
-// DELETE /v1/artists/:slug/follow is deliberately ungated so a downgraded user
-// can still leave. A re-follow that the plan does not cover comes back as a
-// 403 and routes to the tier picker from there.
+// Following is free on every signed-in plan, so nothing on this surface is
+// gated: a follow or re-follow that fails just rolls back.
 
 import { useEffect, useMemo, useState } from 'react';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
 import type { FollowedArtist } from '@concert-crawl/types';
-import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
-import { usePlanState } from '@/lib/queries/use-plan-state';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { SpotifyLogo } from '@/components/brand/spotify-logo/SpotifyLogo';
 import { useMyShowsArtistCount } from '@/components/consumer/history/MyShowsShell';
 import { MY_SHOWS_CTA_GRADIENT } from '@/components/consumer/history/definitions/constants';
@@ -42,17 +36,14 @@ interface MyShowsArtistsContentProps {
    * mistake this surface must never make.
    */
   artists: FollowedArtist[] | undefined;
-  scaRegion: boolean;
+  /** Unread since the tier picker left this surface; removed with PR 7. */
+  scaRegion?: boolean;
 }
 
 export const MyShowsArtistsContent = ({
   artists,
-  scaRegion,
 }: MyShowsArtistsContentProps) => {
-  const { surface } = useEntitlement('following');
   const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync');
-  const { data: planState } = usePlanState();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [narrow, setNarrow] = useState(false);
 
   useEffect(() => {
@@ -68,25 +59,6 @@ export const MyShowsArtistsContent = ({
   const spotifyCount = useMemo(() => spotifyFollowCount(follows), [follows]);
   // The shared tab bar draws it on the Artists tab. A failed read has no count.
   useMyShowsArtistCount(artists === undefined ? undefined : follows.length);
-
-  // Fails OPEN while the plan is resolving: the empty state's CTAs write
-  // nothing either way, and showing a paying subscriber an upgrade-shaped
-  // pitch is the worse of the two wrong answers.
-  const locked = surface !== null && surface !== 'visible-active';
-
-  const onEntitlementRequired = () => setPickerOpen(true);
-
-  const picker = (
-    <TierPickerSheet
-      open={pickerOpen}
-      onClose={() => setPickerOpen(false)}
-      // The picker needs a full PlanState and `usePlanState` is null until it
-      // resolves; the logged-out shape is what every other caller falls back to.
-      planState={planState ?? LOGGED_OUT_PLAN_STATE}
-      scaRegion={scaRegion}
-      entry="paywall"
-    />
-  );
 
   // The fetch failed. Deliberately NOT the empty state: "nobody on your list"
   // is a claim about the account, and we are not in a position to make it.
@@ -107,12 +79,11 @@ export const MyShowsArtistsContent = ({
     return (
       <main className="flex w-full flex-1 flex-col">
         <div className="flex flex-1 flex-col lg:hidden">
-          <ArtistsEmpty locked={locked} />
+          <ArtistsEmpty />
         </div>
         <div className="hidden flex-1 flex-col lg:flex">
-          <ArtistsEmpty locked={locked} desktop />
+          <ArtistsEmpty desktop />
         </div>
-        {picker}
       </main>
     );
   }
@@ -210,7 +181,6 @@ export const MyShowsArtistsContent = ({
                     key={artist.canonicalName}
                     artist={artist}
                     narrow={narrow}
-                    onEntitlementRequired={onEntitlementRequired}
                   />
                 ))}
               </div>
@@ -233,14 +203,12 @@ export const MyShowsArtistsContent = ({
                     key={artist.canonicalName}
                     artist={artist}
                     narrow={narrow}
-                    onEntitlementRequired={onEntitlementRequired}
                   />
                 ))}
               </div>
             </>
           )}
         </div>
-        {picker}
       </div>
 
       {/* Desktop: the shared My shows column, two-up cards, actions in the heading row.
@@ -273,7 +241,6 @@ export const MyShowsArtistsContent = ({
                   key={artist.canonicalName}
                   artist={artist}
                   variant="card"
-                  onEntitlementRequired={onEntitlementRequired}
                 />
               ))}
             </div>
@@ -297,7 +264,6 @@ export const MyShowsArtistsContent = ({
                   key={artist.canonicalName}
                   artist={artist}
                   variant="card"
-                  onEntitlementRequired={onEntitlementRequired}
                 />
               ))}
             </div>

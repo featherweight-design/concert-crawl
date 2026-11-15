@@ -55,9 +55,6 @@ const renderRow = (artist: ArtistSearchResult) =>
       listbox={false}
       onNavigate={() => {}}
       isSignedIn={false}
-      surface={null}
-      onLockedTap={() => {}}
-      onEntitlementRequired={() => {}}
       size="rowWide"
       iconOnly={false}
     />,

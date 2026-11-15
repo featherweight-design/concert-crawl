@@ -1,12 +1,8 @@
 'use client';
 
-import { nfLocked } from '@concert-crawl/entitlements';
 import type { ArtistDetailResponse } from '@concert-crawl/types';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { usePlanState } from '@/lib/queries/use-plan-state';
 import { useTheme } from '@/theme';
 
 import { GenreChips } from '@/components/consumer/GenreChips';
@@ -27,7 +23,6 @@ import { artistGenres } from './lib/artist-genres';
 import { ArtistEmbed } from './embed/ArtistEmbed';
 import { EmptyUpcoming } from './EmptyUpcoming';
 import { FollowBlock } from './FollowBlock';
-import { followLockProps } from './FollowButton';
 import { historyLine } from './lib/history-line';
 import { useArtistFollow } from './lib/use-artist-follow';
 import {
@@ -64,10 +59,10 @@ import { UpcomingShows } from './UpcomingShows';
  */
 export const ArtistPageContent = ({
   data,
-  scaRegion = false,
   olderHref,
 }: {
   data: ArtistDetailResponse;
+  /** Unread since the tier picker left the artist page; removed with PR 7. */
   scaRegion?: boolean;
   /** "Show older" target: the next past-shows window; absent when none. */
   olderHref?: string | undefined;
@@ -82,13 +77,9 @@ export const ArtistPageContent = ({
   // `null` is the API's word for "nobody is signed in" — distinct from `false`,
   // which is a real signed-in user who does not follow this artist.
   const signedOut = data.following === null;
-  const { data: planState } = usePlanState();
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const openUpgrade = useCallback(() => setPickerOpen(true), []);
   const { following, toggle } = useArtistFollow(
     artist.slug,
     data.following ?? false,
-    openUpgrade,
   );
 
   const isDesktop = useIsDesktop();
@@ -100,29 +91,14 @@ export const ArtistPageContent = ({
   const scrolled = useScrolledPast(bandHeight - AP_STICKY_BAR_H);
   const { theme } = useTheme();
 
-  // ONE gate, asked once, passed down. `nfLocked` takes the plan state rather
-  // than a tier string because `roleComped` is an override the matrix does not
-  // encode — never test `plan === 'free'` here.
-  //
-  // Undefined while the plan is still resolving, and `false` is the right
-  // answer for that window: a locked skin that appears a beat after paint is a
-  // worse lie than a live button whose 403 opens the same picker (which is what
-  // `openUpgrade` already handles).
-  //
-  // `&& !following` is the downgrade case, and it is load-bearing: downgrading
-  // never deletes follows, and DELETE is unentitled by design so the user can
-  // always undo one. Gating on the plan alone would draw the locked skin over
-  // an existing follow and strand it.
-  const locked =
-    !signedOut && planState !== undefined && nfLocked(planState) && !following;
-
+  // Following is free on every signed-in plan, so there is no gate to pass
+  // down: signed out goes to sign-in, signed in toggles.
   const followProps = {
     name: artist.name,
     slug: artist.slug,
     following,
     signedOut,
     onToggle: toggle,
-    ...followLockProps(locked, openUpgrade),
   };
 
   // Follow stays under the hero on mobile and scrolls away with it
@@ -137,10 +113,10 @@ export const ArtistPageContent = ({
     </p>
   );
 
-  // The dashed note under the rows. Signed out and locked cannot be
-  // following, so they read the invitation.
+  // The dashed note under the rows. Signed out cannot be following, so it
+  // reads the invitation.
   const upcomingNote =
-    following && !locked && !signedOut
+    following && !signedOut
       ? ARTIST_COPY.upcomingNoteFollowing
       : ARTIST_COPY.upcomingNote;
 
@@ -226,17 +202,6 @@ export const ArtistPageContent = ({
           </div>
         </div>
       </div>
-
-      {/* Following is Premium. This one sheet serves both routes into the
-          upgrade: a locked tap (which never issues a request) and the 403 a
-          request gets when the plan resolved late or lapsed mid-session. */}
-      <TierPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        planState={planState ?? LOGGED_OUT_PLAN_STATE}
-        scaRegion={scaRegion}
-        entry="paywall"
-      />
     </main>
   );
 };

@@ -5,7 +5,6 @@ import {
   render,
   screen,
   fireEvent,
-  act,
   within,
 } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -49,28 +48,12 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(navState.search),
 }));
 
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: undefined }),
-}));
-
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
-    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
-}));
-
 const toggle = vi.fn();
-// Captured so a test can fire the 403 path the way the real hook does, which
-// is the only way to prove it stays live while the gated tap is failing closed.
-let onEntitlementRequired: (() => void) | undefined;
 vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
-  useArtistFollow: (
-    _slug: string,
-    initialFollowing: boolean,
-    onNeedsEntitlement?: () => void,
-  ) => {
-    onEntitlementRequired = onNeedsEntitlement;
-    return { following: initialFollowing, toggle };
-  },
+  useArtistFollow: (_slug: string, initialFollowing: boolean) => ({
+    following: initialFollowing,
+    toggle,
+  }),
 }));
 
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
@@ -113,6 +96,7 @@ describe('FollowShelf', () => {
       surface: 'visible-active',
     };
     toggle.mockClear();
+    push.mockClear();
     navState.search = '';
   });
 
@@ -309,7 +293,10 @@ describe('FollowShelf', () => {
     expect(screen.queryByTestId('shelf-see-all')).toBeNull();
   });
 
-  it('locked viewers get a gated badge that opens the picker', () => {
+  // Following is free on every signed-in plan. Even an entitlement answer
+  // that still reads `paywall-on-tap` is not a gate on the starter shelf: the
+  // badge is an ordinary toggle and the tap writes the follow.
+  it('a signed-in viewer on paywall-on-tap follows directly', () => {
     entitlementState.current = {
       isLoading: false,
       active: false,
@@ -319,12 +306,11 @@ describe('FollowShelf', () => {
     const badge = screen.getByRole('button', {
       name: FOLLOWING_COPY.followAria('Ratbag'),
     });
-    expect(badge.getAttribute('aria-pressed')).toBeNull();
+    expect(badge.getAttribute('aria-pressed')).toBe('false');
+    expect(badge.getAttribute('aria-describedby')).toBeNull();
     fireEvent.click(badge);
-    expect(toggle).not.toHaveBeenCalled();
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'paywall',
-    );
+    expect(toggle).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
   });
 
   // Every row under "Your artists" is followed by definition, so a badge there
@@ -339,7 +325,7 @@ describe('FollowShelf', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('signed-out viewers are sent to sign-in instead of the picker', () => {
+  it('signed-out viewers are sent to sign-in', () => {
     authState.isSignedIn = false;
     entitlementState.current = {
       isLoading: false,
@@ -358,13 +344,11 @@ describe('FollowShelf', () => {
     expect(push).toHaveBeenCalledWith(
       `/sign-in?redirect_url=${encodeURIComponent('/events')}`,
     );
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
-  // Clerk and the entitlement resolve after mount. A tap in that window must
-  // not reach `toggle`: with no token yet it dies on "Not authenticated",
-  // which is not an ApiError and so never reaches the 403 → picker handoff.
-  it('the starter shelf fails closed while auth and entitlement resolve', () => {
+  // Clerk resolves after mount. A tap in that window must not reach `toggle`:
+  // with no token yet it dies on "Not authenticated".
+  it('the starter shelf fails closed while auth resolves', () => {
     authState.isSignedIn = undefined;
     entitlementState.current = {
       isLoading: true,
@@ -378,23 +362,7 @@ describe('FollowShelf', () => {
       }),
     );
     expect(toggle).not.toHaveBeenCalled();
-    // Nor the paywall: `pickerEntry` reads the surface, so an early sheet
-    // would show an entitled viewer the wrong pitch.
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
-  });
-
-  // The gated tap can decline while the plan resolves; a 403 cannot. It is the
-  // server's settled answer, so it opens the sheet whatever the client knows.
-  it('a 403 opens the picker even while the entitlement is unresolved', () => {
-    authState.isSignedIn = undefined;
-    entitlementState.current = {
-      isLoading: true,
-      active: false,
-      surface: null,
-    };
-    renderShelf();
-    act(() => onEntitlementRequired?.());
-    expect(screen.getByTestId('tier-picker')).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('entitled viewers toggle the follow directly', () => {

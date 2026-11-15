@@ -3,8 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 
-import { ApiError, apiClient } from '@/lib/api';
-import { ENTITLEMENT_REQUIRED_CODE } from '@/lib/history';
+import { apiClient } from '@/lib/api';
 
 interface ArtistFollowResult {
   following: boolean;
@@ -29,11 +28,7 @@ const isFollowResponse = (value: unknown): value is { following: boolean } =>
   'following' in value &&
   typeof Reflect.get(value, 'following') === 'boolean';
 
-export const useArtistFollow = (
-  slug: string,
-  initialFollowing: boolean,
-  onEntitlementRequired?: () => void,
-) => {
+export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
   const { getToken } = useAuth();
   const [following, setFollowing] = useState(initialFollowing);
   const [pending, setPending] = useState(false);
@@ -65,27 +60,15 @@ export const useArtistFollow = (
         setFollowing(result.following);
       } catch (err) {
         setFollowing(previous);
-        // Following is Premium. A rollback on its own is indistinguishable
-        // from a dead button, so route the branded 403 to the upgrade path
-        // rather than leaving the tap looking like it did nothing. Only when a
-        // caller owns that path: with no handler the 403 is an ordinary
-        // failure and gets the warning below, not a silent return.
-        if (
-          onEntitlementRequired &&
-          err instanceof ApiError &&
-          err.code === ENTITLEMENT_REQUIRED_CODE
-        ) {
-          console.info('artist follow needs Premium; opening the tier picker');
-          onEntitlementRequired();
-          return;
-        }
+        // Following is free on every signed-in plan, so a 403 is an ordinary
+        // failure: it rolls back like any other, with no upgrade path.
         console.warn('artist follow toggle failed; rolling back', err);
       } finally {
         inFlight.current = false;
         setPending(false);
       }
     })();
-  }, [following, getToken, slug, onEntitlementRequired]);
+  }, [following, getToken, slug]);
 
   const result: ArtistFollowResult = { following, pending, toggle };
   return result;

@@ -1,17 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useAuth } from '@clerk/nextjs';
 import type { ArtistSearchResult } from '@concert-crawl/types';
 import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { usePlanState } from '@/lib/queries/use-plan-state';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { ArtistResultRow } from './ArtistResultRow';
 import { GenreChips } from '../GenreChips';
@@ -91,20 +85,8 @@ function ArtistPageSection({
 }) {
   const listbox = useListboxRows();
   const { isSignedIn } = useAuth();
-  const { surface } = useEntitlement('following');
-  const { data: planState } = usePlanState();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const iconOnly = useMediaQuery(SEARCH_FOLLOW_ICON_ONLY_QUERY);
   const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY);
-
-  // A logged-out tap goes to sign-in; a signed-in locked tap gets the paywall.
-  // `surface` is what the entitlements matrix routes on, so the split is read
-  // from it rather than from `isSignedIn` alone.
-  const goToSignIn = useSignInRedirect();
-  const openGate = () => {
-    if (surface === 'tier-picker-on-tap') goToSignIn();
-    else setPickerOpen(true);
-  };
 
   if (artistPageResults.length === 0) return null;
   return (
@@ -128,24 +110,12 @@ function ArtistPageSection({
                 onNavigateTo('artistPage', { slug: artist.slug })
               }
               isSignedIn={isSignedIn}
-              surface={surface}
-              onLockedTap={openGate}
-              onEntitlementRequired={openGate}
               size={isDesktop ? 'rowWide' : 'row'}
               iconOnly={iconOnly}
             />
           </div>
         );
       })}
-      <TierPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        planState={planState ?? LOGGED_OUT_PLAN_STATE}
-        // Unknowable here and only ever widens the flow, so `true` is the
-        // fail-safe: it asks for the extra confirmation rather than skipping it.
-        scaRegion
-        entry="paywall"
-      />
     </>
   );
 }

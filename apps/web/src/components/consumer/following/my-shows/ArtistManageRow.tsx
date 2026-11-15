@@ -49,24 +49,17 @@ export interface ArtistManageRowProps {
   variant?: 'row' | 'card';
   /** 320px: the row has no width for the word "Following". */
   narrow?: boolean;
-  /** The API answered 403 — open the tier picker. */
-  onEntitlementRequired: () => void;
 }
 
 export const ArtistManageRow = ({
   artist,
   variant = 'row',
   narrow = false,
-  onEntitlementRequired,
 }: ArtistManageRowProps) => {
   // Hooks run unconditionally. A slug-less follow (a Spotify act never billed
   // in Denver) simply never renders the control that would call `toggle` —
   // the follow endpoint is keyed by slug, so there is nothing to call.
-  const follow = useArtistFollow(
-    artist.slug ?? '',
-    true,
-    onEntitlementRequired,
-  );
+  const follow = useArtistFollow(artist.slug ?? '', true);
   // The follows endpoint is deliberately ungated — a user must be able to
   // manage a list they already have — so `source` keeps arriving with the flag
   // off. Naming Spotify is the part that has to stop, not the row.
@@ -181,9 +174,6 @@ export const ArtistManageRow = ({
           signedOut={false}
           size={card ? 'rowWide' : 'row'}
           iconOnly={narrow}
-          // Never locked: every row here is an existing follow, and DELETE is
-          // ungated. A 403 on a re-follow comes back through
-          // `onEntitlementRequired` instead.
           onToggle={follow.toggle}
         />
       )}

@@ -63,14 +63,8 @@ export const MY_SHOWS_ARTISTS_COPY = {
     eyebrow: 'Artists',
     headline: 'Nobody on your list.',
     body: "Follow an artist and we'll tell you the moment they book a Denver date. Even the ones who only come through once a year.",
-    /** Entitled: the real next move is search. */
+    /** The real next move is search. */
     primary: 'Find artists to follow',
-    /**
-     * Locked: following is the thing they can't do yet, so the primary move
-     * becomes the one that always works. The upgrade offer lives on the
-     * follow control itself, not in a second pitch here.
-     */
-    primaryLocked: "See who's playing Denver",
     secondary: "Follow from a show you're watching",
   },
 } as const;

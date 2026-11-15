@@ -21,10 +21,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
 import { useAuth } from '@clerk/nextjs';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { usePlanState } from '@/lib/queries/use-plan-state';
 import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { ShelfCard } from './ShelfCard';
 import { FOLLOWING_COPY } from './definitions/copy';
 import {
@@ -102,21 +99,19 @@ interface FollowShelfProps {
   artists: ShelfArtist[];
   /** Follows the server counted. Drives the `some` eyebrow only. */
   followCount: number;
-  scaRegion: boolean;
+  /** Unread since the tier picker left the shelf; removed with PR 7. */
+  scaRegion?: boolean;
 }
 
 export const FollowShelf = ({
   mode,
   artists,
   followCount,
-  scaRegion,
 }: FollowShelfProps) => {
   const { isSignedIn } = useAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { surface } = useEntitlement('following');
-  const { data: planState } = usePlanState();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const goToSignIn = useSignInRedirect();
   const [seed, setSeed] = useState<number | null>(null);
 
@@ -141,34 +136,18 @@ export const FollowShelf = ({
   if (visible.length === 0) return null;
 
   const signedOut = isSignedIn === false;
-  // Clerk and the entitlement both resolve after mount. Until they do the
-  // starter shelf fails CLOSED: a tap that reached `toggle` before Clerk
-  // answered would find no token and die on "Not authenticated", which is not
-  // an ApiError and so never reaches the 403 → picker handoff.
-  //
-  // The artist page deliberately fails OPEN in the same window
-  // (ArtistPageContent.tsx:96) because a locked skin arriving a beat after
-  // paint would draw over an existing follow there. The starter shelf has no
-  // followed rows by definition and locked renders the same at-rest skin as
-  // idle, so failing closed here costs nothing visible.
-  const resolved = isSignedIn !== undefined && surface !== null;
+  // Clerk resolves after mount. Until it does the starter shelf fails CLOSED: a
+  // tap that reached `toggle` before Clerk answered would find no token and die
+  // on "Not authenticated". The starter shelf has no followed rows by
+  // definition and the gated badge draws the same at-rest skin as idle, so
+  // failing closed costs nothing visible. Following is free on every
+  // signed-in plan, so once Clerk has answered there is nothing else to wait
+  // on; only the starter shelf draws a badge at all.
+  const resolving = mode === 'zero' && isSignedIn === undefined;
 
-  // Scoped to `zero` on purpose. A downgraded viewer still has to be able to
-  // unfollow, and DELETE /v1/artists/:slug/follow is deliberately ungated to
-  // let them (artist-follows.ts:121) — so locking the badge on `some` would
-  // strand them holding follows they cannot release. Only the starter shelf,
-  // whose rows are all not-yet-followed, gates on entitlement.
-  const locked =
-    mode === 'zero' &&
-    (!resolved || (!signedOut && surface !== 'visible-active'));
-
-  // Fail-closed cuts both ways: an unresolved tap must not write a follow, and
-  // it must not show an entitled viewer a paywall either. A signed-out tap goes
-  // to sign-in. A 403 comes back through `onEntitlementRequired` instead, which
-  // never declines — that answer is the server's and is already settled.
-  const openGate = () => {
-    if (surface === 'tier-picker-on-tap') goToSignIn();
-    else setPickerOpen(true);
+  // A signed-out tap goes to sign-in; an unresolved one does nothing.
+  const onGatedTap = () => {
+    if (signedOut) goToSignIn();
   };
 
   // See all turns on the My artists filter in Browse (addendum 2, item 20),
@@ -231,12 +210,9 @@ export const FollowShelf = ({
               key={artist.key}
               artist={artist}
               starter={mode === 'zero'}
-              locked={locked}
+              resolving={resolving}
               signedOut={signedOut}
-              onGatedTap={() => {
-                if (resolved) openGate();
-              }}
-              onEntitlementRequired={openGate}
+              onGatedTap={onGatedTap}
             />
           ))}
         </ul>
@@ -260,14 +236,6 @@ export const FollowShelf = ({
           </SearchLink>
         </div>
       )}
-
-      <TierPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        planState={planState ?? LOGGED_OUT_PLAN_STATE}
-        scaRegion={scaRegion}
-        entry="paywall"
-      />
     </section>
   );
 };
