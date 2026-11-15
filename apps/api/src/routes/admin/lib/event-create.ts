@@ -11,6 +11,7 @@ import {
 import {
   canonicalizeArtist,
   canonicalizeSupporting,
+  type AddShowErrorCode,
 } from '@concert-crawl/types';
 import { canonicalizeTitle } from '@concert-crawl/crawler-core/canonical-title';
 import { deriveTicketLinks } from '@concert-crawl/crawler-core/ticket-links';
@@ -24,30 +25,9 @@ import { todayInDenver } from '../../../lib/time.js';
 // docs/superpowers/plans/2026-11-13-admin-4a-events-data.md.
 //
 // Every field error is a 400 in the shared ZodError body, with the issue's
-// `message` set to one of ADD_SHOW_ERROR_CODES and its `path` naming the
-// field, so the web maps a code to its line of copy
-// (B+ addendum 5 `04/add-show-errors-d`).
-
-export const ADD_SHOW_ERROR_CODES = [
-  'title_required',
-  'title_too_long',
-  'venue_required',
-  'venue_not_found',
-  'date_required',
-  'date_past',
-  'time_invalid',
-  'show_before_doors',
-  'ticket_url_invalid',
-  'headliner_required',
-  'lineup_name_required',
-  'lineup_name_too_long',
-  'lineup_name_invalid',
-  'lineup_role_invalid',
-  'lineup_too_long',
-  'artist_not_found',
-] as const;
-
-export type AddShowErrorCode = (typeof ADD_SHOW_ERROR_CODES)[number];
+// `message` set to one of ADD_SHOW_ERROR_CODES (`@concert-crawl/types`, shared
+// with the web form) and its `path` naming the field, so the web maps a code
+// to its line of copy (B+ addendum 5 `04/add-show-errors-d`).
 
 /** One issue in the shape the validation hook writes, for a refusal found after parsing. */
 export interface FieldIssue {

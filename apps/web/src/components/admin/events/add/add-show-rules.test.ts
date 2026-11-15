@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   EMPTY_DRAFT,
   addAct,
   moveAct,
   removeAct,
   toBody,
+  todayInDenver,
   validateDraft,
   type AddShowDraft,
 } from './add-show-rules';
@@ -64,6 +65,64 @@ describe('validateDraft', () => {
       validateDraft({ ...VALID, title: 'x'.repeat(301) }, TODAY).title,
     ).toBe('title_too_long');
   });
+
+  it('refuses a day the calendar does not have, as the API does', () => {
+    expect(validateDraft({ ...VALID, date: '2026-02-30' }, TODAY).date).toBe(
+      'date_required',
+    );
+    expect(validateDraft({ ...VALID, date: '2026-13-01' }, TODAY).date).toBe(
+      'date_required',
+    );
+    expect(validateDraft({ ...VALID, date: '2028-02-29' }, TODAY).date).toBe(
+      undefined,
+    );
+  });
+
+  it('caps an act name at 200', () => {
+    const at = (name: string) =>
+      validateDraft({ ...VALID, lineup: [{ name }] }, TODAY).lineup;
+    expect(at('x'.repeat(200))).toBeUndefined();
+    expect(at('x'.repeat(201))).toBe('lineup_name_too_long');
+  });
+
+  it('refuses a name with no canonical key', () => {
+    expect(
+      validateDraft({ ...VALID, lineup: [{ name: '́́' }] }, TODAY).lineup,
+    ).toBe('lineup_name_invalid');
+  });
+
+  it('caps the bill at 50 acts', () => {
+    const acts = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({ name: `Act ${i}` }));
+    expect(
+      validateDraft({ ...VALID, lineup: acts(50) }, TODAY).lineup,
+    ).toBeUndefined();
+    expect(validateDraft({ ...VALID, lineup: acts(51) }, TODAY).lineup).toBe(
+      'lineup_too_long',
+    );
+  });
+
+  it('caps the ticket link at 2048', () => {
+    const base = 'https://axs.com/';
+    const link = (length: number) =>
+      validateDraft(
+        { ...VALID, ticketUrl: base + 'x'.repeat(length - base.length) },
+        TODAY,
+      ).ticketUrl;
+    expect(link(2048)).toBeUndefined();
+    expect(link(2049)).toBe('ticket_url_invalid');
+  });
+});
+
+describe('todayInDenver', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("is Denver's day on an evening when UTC is already tomorrow", () => {
+    vi.useFakeTimers();
+    // 8:30 PM MST on 2026-11-20 is 03:30 UTC on 2026-11-21.
+    vi.setSystemTime(new Date('2026-11-21T03:30:00Z'));
+    expect(todayInDenver()).toBe('2026-11-20');
+  });
 });
 
 describe('toBody', () => {
@@ -90,6 +149,13 @@ describe('the bill', () => {
     expect(addAct(bill, { name: ' Four ' }).at(-1)).toEqual({ name: 'Four' });
     expect(addAct(bill, { name: 'two' })).toEqual(bill);
     expect(addAct(bill, { name: '  ' })).toEqual(bill);
+  });
+
+  it('dedupes as the API bills: by canonical key, not just case', () => {
+    const acts = [{ name: 'Beyoncé' }, { name: 'Earl Sweatshirt' }];
+    expect(addAct(acts, { name: 'beyonce' })).toEqual(acts);
+    expect(addAct(acts, { name: 'Earl  Sweatshirt & MIKE' })).toEqual(acts);
+    expect(addAct(acts, { name: 'MIKE' }).at(-1)).toEqual({ name: 'MIKE' });
   });
 
   it('removes an act', () => {
