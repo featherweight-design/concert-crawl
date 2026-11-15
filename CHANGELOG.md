@@ -1,3 +1,10 @@
+## [1.488.1](https://github.com/featherweight-design/concert-crawl/compare/v1.488.0...v1.488.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** say what a fan sees when an admin rejects their price ([7f1e5ba](https://github.com/featherweight-design/concert-crawl/commit/7f1e5ba9f572f180a7375bd465a6c7aa5495bddb))
+
 # [1.488.0](https://github.com/featherweight-design/concert-crawl/compare/v1.487.0...v1.488.0) (2026-11-15)
 
 
