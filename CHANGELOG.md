@@ -1,3 +1,15 @@
+# [1.496.0](https://github.com/featherweight-design/concert-crawl/compare/v1.495.0...v1.496.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **prices:** make the Other prices count match the show chip ([1e15f55](https://github.com/featherweight-design/concert-crawl/commit/1e15f5552615f93feba7e4e69bceba38b082b9b5))
+
+
+### Features
+
+* **prices:** filter Submitted prices to a show's other prices ([0ed71d8](https://github.com/featherweight-design/concert-crawl/commit/0ed71d83dfebc5b483482b2717a1c3f49bec9d69))
+
 # [1.495.0](https://github.com/featherweight-design/concert-crawl/compare/v1.494.0...v1.495.0) (2026-11-15)
 
 
