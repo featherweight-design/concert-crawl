@@ -316,8 +316,7 @@ export function FilterBar({
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   // Never decides what the first paint draws: the phone row and the segmented
   // bar both render and CSS (`lg:`) shows one. It picks only whether a
-  // segment's popover shows, and the taste chip's one home. The server
-  // guesses the phone.
+  // segment's popover shows. The server guesses the phone.
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   // The phone sheet is `lg:hidden`: a phone turned past 1024px would hide it
   // while its focus trap and Escape stayed live, so crossing to desktop

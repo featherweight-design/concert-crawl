@@ -47,11 +47,6 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
 }));
 
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="tier-picker" /> : null,
-}));
-
 import { FilterBar, DESKTOP_QUERY } from './FilterBar';
 import { CREWS_COPY } from '@/components/consumer/crews/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -243,7 +238,6 @@ describe('FilterBar desktop segmented bar', () => {
     expect(toggle.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(toggle);
     expect(lastQuery().get('filterFollowing')).toBe('1');
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   it("an active segment's ✕ clears only its own param", () => {

@@ -227,9 +227,6 @@ export const SPOTIFY_COPY = {
     strip: (artists: readonly string[]) =>
       `You follow ${formatArtistList(artists)} on Spotify`,
   },
-  // Taste filter chip + upsell (#763 PR 7, from the taste-filter.jsx mock).
-  // The chip is the one locked-visible surface in the entitlements matrix —
-  // free/supporter viewers see it locked and tapping opens the upsell.
   // The taste filter's chip and its paid upsell are retired (W7). A stored
   // ?filterTaste=1 link still lands on these banner and empty states.
   tasteFilter: {

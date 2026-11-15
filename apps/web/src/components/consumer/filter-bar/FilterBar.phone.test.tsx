@@ -48,9 +48,6 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
 }));
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: () => null,
-}));
 
 import { FilterBar } from './FilterBar';
 import { CrewPatch } from '@/components/consumer/crew-patch';

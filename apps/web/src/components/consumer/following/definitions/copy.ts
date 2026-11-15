@@ -13,13 +13,8 @@
 export const FOLLOWING_COPY = {
   // ── Scope chip ────────────────────────────────────────────────────────
   // "My artists", not "taste" and not "following": the chip filters on
-  // something you explicitly did, and the row it sits in already has a taste
-  // chip that would otherwise read as its twin.
+  // something you explicitly did.
   chip: 'My artists',
-  // Deliberately parallel to the taste chip's aria, which is the same sentence
-  // plus "on Spotify". The two chips sit in one row, so the only thing a
-  // screen reader should hear between them is the source.
-  //
   // The LOCKED chip reuses `chipAria` rather than carrying its own: the visible
   // label is identical when locked (the #794 identical-pixels rule), and a
   // second key holding the same sentence is just somewhere for drift to hide.
@@ -30,8 +25,8 @@ export const FOLLOWING_COPY = {
   chipGate: 'Filtering to your artists needs your account.',
 
   // ── Scope banner (role="status") ──────────────────────────────────────
-  // The count is SHOWS, not artists, matching the taste chip's banner beside
-  // it and the number the list underneath actually contains. It is rendered
+  // The count is SHOWS, not artists, matching the number the list underneath
+  // actually contains. It is rendered
   // only when the API reports `followingApplied`, so the sentence can never
   // claim a scope the server declined to apply.
   banner: (count: number) => `${count} Denver shows by artists you follow`,
