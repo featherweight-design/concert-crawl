@@ -14,6 +14,11 @@ const mocks = vi.hoisted(() => ({
     status: 'needs_identifier',
     password: vi.fn(),
     finalize: vi.fn(),
+    create: vi.fn(),
+    emailCode: { sendCode: vi.fn(), verifyCode: vi.fn() },
+    mfa: { sendEmailCode: vi.fn(), verifyEmailCode: vi.fn() },
+    supportedSecondFactors: [{ strategy: 'email_code' }] as
+      { strategy: string }[] | null,
   },
   clerk: { loaded: true },
   replace: vi.fn(),
@@ -48,6 +53,19 @@ beforeEach(() => {
   mocks.signIn.status = 'needs_identifier';
   mocks.signIn.password.mockReset().mockResolvedValue({ error: null });
   mocks.signIn.finalize.mockReset().mockResolvedValue({ error: null });
+  mocks.signIn.create.mockReset().mockResolvedValue({ error: null });
+  mocks.signIn.emailCode.sendCode
+    .mockReset()
+    .mockResolvedValue({ error: null });
+  mocks.signIn.emailCode.verifyCode
+    .mockReset()
+    .mockResolvedValue({ error: null });
+  mocks.signIn.mfa.sendEmailCode.mockReset().mockResolvedValue({ error: null });
+  mocks.signIn.mfa.verifyEmailCode
+    .mockReset()
+    .mockResolvedValue({ error: null });
+  mocks.signIn.supportedSecondFactors = [{ strategy: 'email_code' }];
+  vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(true);
   mocks.replace.mockReset();
   mocks.push.mockReset();
 });
@@ -274,6 +292,167 @@ describe('SignInFlow, password', () => {
     await press();
     expect(document.body.textContent).not.toMatch(
       /no account|doesn.t exist|not found|couldn.t find/i,
+    );
+  });
+});
+
+async function toEmailCode() {
+  toPassword();
+  fireEvent.click(
+    screen.getByRole('button', { name: COPY.password.codeInstead }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(FLOOR_MS);
+  });
+}
+
+async function enterCode(code = '123456') {
+  fireEvent.change(screen.getByLabelText('6-digit code'), {
+    target: { value: code },
+  });
+  fireEvent.click(
+    screen.getByRole('button', { name: /^(Sign in|Confirm and sign in)$/ }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(FLOOR_MS);
+  });
+}
+
+describe('SignInFlow, email code', () => {
+  it('shows the same screen whether or not Clerk could send, never leaking', async () => {
+    mocks.signIn.create.mockRejectedValue(new Error('identifier not found'));
+    await toEmailCode();
+    expect(
+      screen.getByRole('heading', { name: COPY.emailCode.title }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(COPY.emailCode.body('fan@example.com')),
+    ).toBeInTheDocument();
+  });
+
+  it('signs in with a right code', async () => {
+    await toEmailCode();
+    mocks.signIn.status = 'complete';
+    await enterCode();
+    expect(mocks.signIn.emailCode.verifyCode).toHaveBeenCalledWith({
+      code: '123456',
+    });
+    expect(mocks.signIn.finalize).toHaveBeenCalledOnce();
+  });
+
+  it('reads a wrong code and an expired one, keeping the screen', async () => {
+    await toEmailCode();
+    mocks.signIn.emailCode.verifyCode.mockResolvedValue({
+      error: clerkError(422, 'form_code_incorrect'),
+    });
+    await enterCode();
+    expect(screen.getByText(COPY.emailCode.wrong)).toBeInTheDocument();
+    mocks.signIn.emailCode.verifyCode.mockResolvedValue({
+      error: clerkError(422, 'verification_expired'),
+    });
+    await enterCode();
+    expect(screen.getByText(COPY.emailCode.expired)).toBeInTheDocument();
+  });
+
+  it('holds Send a new code behind a countdown, then offers it and says it was sent', async () => {
+    await toEmailCode();
+    expect(
+      screen.getByRole('button', { name: COPY.emailCode.resendIn('1:00') }),
+    ).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.emailCode.resend }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FLOOR_MS);
+    });
+    expect(screen.getByText(COPY.emailCode.sent)).toBeInTheDocument();
+  });
+
+  it('goes back to the password screen on Use my password instead', async () => {
+    await toEmailCode();
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.emailCode.usePassword }),
+    );
+    expect(
+      screen.getByRole('heading', { name: COPY.password.title }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('SignInFlow, new device', () => {
+  it('sends an emailed code for a second-factor status, and signs in with it', async () => {
+    toPassword();
+    mocks.signIn.status = 'needs_client_trust';
+    await press();
+    expect(mocks.signIn.mfa.sendEmailCode).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole('heading', { name: COPY.device.title }),
+    ).toBeInTheDocument();
+    mocks.signIn.status = 'complete';
+    await enterCode();
+    expect(mocks.signIn.mfa.verifyEmailCode).toHaveBeenCalledWith({
+      code: '123456',
+    });
+    expect(mocks.signIn.finalize).toHaveBeenCalledOnce();
+  });
+
+  it('says it failed when no emailed-code factor is offered', async () => {
+    toPassword();
+    mocks.signIn.status = 'needs_second_factor';
+    mocks.signIn.supportedSecondFactors = [{ strategy: 'totp' }];
+    await press();
+    expect(screen.getByText(COPY.failed)).toBeInTheDocument();
+    expect(mocks.signIn.mfa.sendEmailCode).not.toHaveBeenCalled();
+  });
+});
+
+describe('SignInFlow, throttle and offline', () => {
+  it('locks the field on a 429 with a countdown, padded like any answer, then wakes', async () => {
+    toPassword();
+    mocks.signIn.password.mockResolvedValue({
+      error: clerkError(429, 'too_many_requests'),
+    });
+    fireEvent.change(screen.getByLabelText(COPY.password.label), {
+      target: { value: 'x' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: COPY.password.submit }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FLOOR_MS - 1);
+    });
+    expect(screen.queryByText(COPY.rateLimited.message)).toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(screen.getByText(COPY.rateLimited.message)).toBeInTheDocument();
+    expect(screen.getByLabelText(COPY.password.label)).toBeDisabled();
+    expect(screen.getByText(COPY.rateLimited.countdown('1:00'))).toBeVisible();
+    expect(screen.queryByText(COPY.password.didntWork)).toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(screen.getByLabelText(COPY.password.label)).not.toBeDisabled();
+  });
+
+  it('shows the offline strip, keeps the fields and sends nothing', async () => {
+    toPassword();
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+    await act(async () => {
+      window.dispatchEvent(new Event('offline'));
+    });
+    expect(screen.getByRole('status')).toHaveTextContent(/offline/i);
+    fireEvent.change(screen.getByLabelText(COPY.password.label), {
+      target: { value: 'Quartz-Ember-42!' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: COPY.password.submit }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FLOOR_MS);
+    });
+    expect(mocks.signIn.password).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(COPY.password.label)).toHaveValue(
+      'Quartz-Ember-42!',
     );
   });
 });

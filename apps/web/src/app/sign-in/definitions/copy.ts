@@ -35,6 +35,7 @@ export const SIGN_IN_COPY = {
     // account, so it never says whether an email has an account.
     didntWork:
       'That email or password isn’t right. Try again, or email yourself a code.',
+    codeInstead: 'Email me a code instead',
     busy: 'Signing in…',
   },
   breached: {
@@ -42,6 +43,30 @@ export const SIGN_IN_COPY = {
     title: 'Time for a new password',
     body: 'This password showed up in a data breach on another site, so it can’t be used here anymore. Reset it to sign in. Your shows and settings stay as they are.',
     button: 'Reset password',
+  },
+  emailCode: {
+    title: 'Check your email',
+    // Worded to read the same whether or not the email has an account.
+    body: (email: string) =>
+      `If ${email} has an account, we sent it a 6-digit code. It works for 10 minutes.`,
+    submit: 'Sign in',
+    resendIn: (clock: string) => `Send a new code in ${clock}`,
+    resend: 'Send a new code',
+    usePassword: 'Use my password instead',
+    wrong: 'That code isn’t right. Check the latest email and try again.',
+    expired: 'That code has run out. Send a new one.',
+    sent: 'New code sent. Use the newest email.',
+  },
+  device: {
+    eyebrow: 'New device',
+    title: 'Confirm it’s you',
+    body: (email: string) =>
+      `You’re signing in somewhere we haven’t seen before, so we sent a 6-digit code to ${email}.`,
+    submit: 'Confirm and sign in',
+  },
+  rateLimited: {
+    message: 'Too many tries. Wait a minute, then try again.',
+    countdown: (clock: string) => `Try again in ${clock}`,
   },
   // Not "on our side": a blocker or a bad connection reads the same.
   failed: 'Something went wrong. Try again.',
