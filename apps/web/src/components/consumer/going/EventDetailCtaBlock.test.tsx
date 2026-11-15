@@ -422,6 +422,20 @@ describe('EventDetailCtaBlock', () => {
     expect(screen.queryByRole('button', { name: EXPLAINER_LABEL })).toBeNull();
   });
 
+  // `hidden` is matched by name, never left to fall through to the working
+  // button: no Going half, and the watch strip survives it.
+  it('suppresses the commitment but keeps the watch strip when Going is hidden', () => {
+    entitlement = { isLoading: false, active: false, surface: 'hidden' };
+    render(
+      <EventDetailCtaBlock event={event()}>
+        <div data-testid="watch-strip" />
+      </EventDetailCtaBlock>,
+    );
+    expect(screen.getByTestId('watch-strip')).toBeInTheDocument();
+    expect(screen.queryByText(GOING_COPY.button.default)).toBeNull();
+    expect(screen.queryByRole('button', { name: EXPLAINER_LABEL })).toBeNull();
+  });
+
   it('drops the watch strip on a past night, as the boards do', () => {
     render(
       <EventDetailCtaBlock event={event({ date: '2020-10-14' })} scaRegion>

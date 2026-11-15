@@ -27,6 +27,7 @@ import { artistGenres } from './lib/artist-genres';
 import { ArtistEmbed } from './embed/ArtistEmbed';
 import { EmptyUpcoming } from './EmptyUpcoming';
 import { FollowBlock } from './FollowBlock';
+import { followLockProps } from './FollowButton';
 import { historyLine } from './lib/history-line';
 import { useArtistFollow } from './lib/use-artist-follow';
 import {
@@ -120,9 +121,8 @@ export const ArtistPageContent = ({
     slug: artist.slug,
     following,
     signedOut,
-    locked,
     onToggle: toggle,
-    onLockedTap: openUpgrade,
+    ...followLockProps(locked, openUpgrade),
   };
 
   // Follow stays under the hero on mobile and scrolls away with it

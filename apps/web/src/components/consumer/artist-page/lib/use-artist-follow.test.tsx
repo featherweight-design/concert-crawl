@@ -122,6 +122,24 @@ describe('useArtistFollow', () => {
     warn.mockRestore();
   });
 
+  it('warns and rolls back a branded 403 when no caller handles it', async () => {
+    // With no upgrade path to hand the 403 to, returning early would swallow
+    // the failure without a trace. It has to take the ordinary failure path.
+    post.mockRejectedValue(
+      new ApiError(403, 'premium', ENTITLEMENT_REQUIRED_CODE),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { result } = renderHook(() => useArtistFollow('wax-harbour', false));
+
+    act(() => {
+      result.current.toggle();
+    });
+
+    await waitFor(() => expect(warn).toHaveBeenCalledTimes(1));
+    expect(result.current.following).toBe(false);
+    warn.mockRestore();
+  });
+
   it('leaves an unbranded 403 on the generic rollback', async () => {
     post.mockRejectedValue(new ApiError(403, 'forbidden'));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});

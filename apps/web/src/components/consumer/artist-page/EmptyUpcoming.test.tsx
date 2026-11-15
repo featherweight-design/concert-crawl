@@ -30,7 +30,6 @@ describe('EmptyUpcoming', () => {
         signedOut={false}
         inlineFollow
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     expect(container.textContent).toContain(ARTIST_COPY.emptyBody);
@@ -44,7 +43,6 @@ describe('EmptyUpcoming', () => {
         signedOut={false}
         inlineFollow
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     expect(active.textContent).toContain(ARTIST_COPY.emptyBodyFollowing);
@@ -59,7 +57,6 @@ describe('EmptyUpcoming', () => {
         signedOut={false}
         inlineFollow
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     const card = container.querySelector('[data-empty-upcoming]');
@@ -77,7 +74,6 @@ describe('EmptyUpcoming', () => {
         signedOut={false}
         inlineFollow
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     expect(queryByRole('button')).not.toBeNull();
@@ -89,7 +85,6 @@ describe('EmptyUpcoming', () => {
         signedOut={false}
         inlineFollow={false}
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     expect(queryByRole('button')).toBeNull();

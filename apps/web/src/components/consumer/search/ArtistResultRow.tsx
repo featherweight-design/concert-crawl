@@ -13,7 +13,10 @@
 
 import type { ArtistSearchResult } from '@concert-crawl/types';
 import type { EntitlementCell } from '@concert-crawl/entitlements';
-import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
+import {
+  FollowButton,
+  followLockProps,
+} from '@/components/consumer/artist-page/FollowButton';
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { AvatarSlot } from '@/components/consumer/image-slot';
@@ -202,11 +205,10 @@ export const ArtistResultRow = ({
         name={artist.name}
         following={follow.following}
         signedOut={signedOut}
-        locked={locked}
         size={size}
         iconOnly={iconOnly}
         onToggle={follow.toggle}
-        onLockedTap={onLockedTap}
+        {...followLockProps(locked, onLockedTap)}
       />
     </div>
   );

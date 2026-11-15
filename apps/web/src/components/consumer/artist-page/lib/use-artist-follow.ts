@@ -67,10 +67,16 @@ export const useArtistFollow = (
         setFollowing(previous);
         // Following is Premium. A rollback on its own is indistinguishable
         // from a dead button, so route the branded 403 to the upgrade path
-        // rather than leaving the tap looking like it did nothing.
-        if (err instanceof ApiError && err.code === ENTITLEMENT_REQUIRED_CODE) {
+        // rather than leaving the tap looking like it did nothing. Only when a
+        // caller owns that path: with no handler the 403 is an ordinary
+        // failure and gets the warning below, not a silent return.
+        if (
+          onEntitlementRequired &&
+          err instanceof ApiError &&
+          err.code === ENTITLEMENT_REQUIRED_CODE
+        ) {
           console.info('artist follow needs Premium; opening the tier picker');
-          onEntitlementRequired?.();
+          onEntitlementRequired();
           return;
         }
         console.warn('artist follow toggle failed; rolling back', err);

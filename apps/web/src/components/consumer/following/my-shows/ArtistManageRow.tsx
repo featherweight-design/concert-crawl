@@ -181,11 +181,10 @@ export const ArtistManageRow = ({
           signedOut={false}
           size={card ? 'rowWide' : 'row'}
           iconOnly={narrow}
+          // Never locked: every row here is an existing follow, and DELETE is
+          // ungated. A 403 on a re-follow comes back through
+          // `onEntitlementRequired` instead.
           onToggle={follow.toggle}
-          // Unreachable: every row here is an existing follow, and DELETE is
-          // ungated, so `locked` is never true. A 403 on a re-follow comes
-          // back through `onEntitlementRequired` instead.
-          onLockedTap={onEntitlementRequired}
         />
       )}
     </div>

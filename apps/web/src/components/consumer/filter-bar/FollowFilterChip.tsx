@@ -82,19 +82,24 @@ export const FollowFilterChip = ({
   const { isLoading, surface } = useEntitlement('following');
   const goToSignIn = useSignInRedirect();
 
+  // Every cell matched by name, so one nobody handled can never fall through
+  // to a working switch: signed in (`visible-active`, or `paywall-on-tap`,
+  // which following no longer has but which still names a signed-in plan)
+  // works; `tier-picker-on-tap` is signed out; `hidden` renders nothing.
   const resolved = !isLoading && surface !== null;
-  const usable = resolved && surface !== 'tier-picker-on-tap';
+  const usable = surface === 'visible-active' || surface === 'paywall-on-tap';
+  const hidden = surface === 'hidden';
 
-  // Signed out with filterFollowing=1 still in the URL: the locked chip can't
-  // toggle it off and Clear all excludes scopes, so release the param rather
-  // than strand the visitor on a list the API will not scope for them. Only
-  // the owning instance releases it.
+  // Signed out or hidden with filterFollowing=1 still in the URL: the locked
+  // chip can't toggle it off, a hidden one isn't there to, and Clear all
+  // excludes scopes, so release the param rather than strand the viewer on a
+  // list the API will not scope for them. Only the owning instance releases it.
   useEffect(() => {
     if (ownsEffects && resolved && !usable && active) onToggle(false);
   }, [ownsEffects, resolved, usable, active, onToggle]);
 
   // Hold rendering while the session resolves — no locked flash.
-  if (!resolved) return null;
+  if (!resolved || hidden) return null;
 
   if (usable) {
     // `absent`: signed in, nothing followed, nothing to scope to. Guarded on
