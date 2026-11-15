@@ -48,7 +48,7 @@ describe('MergeCompareCard', () => {
     expect(card).toHaveTextContent('Red Rocks');
     expect(card).toHaveTextContent('Thu Nov 12');
     expect(card).toHaveTextContent('1 sold-out report');
-    expect(card).toHaveTextContent('added by hand');
+    expect(card).toHaveTextContent('added by @dlo');
     expect(card).toHaveTextContent('no price');
   });
 

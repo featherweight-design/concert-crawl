@@ -40,8 +40,15 @@ export const mergeDateTile = (
 };
 
 /** A row's From: the crawl, or an admin's hand. */
-export const fromLabel = (listing: Pick<MergeListing, 'manual'>): string =>
-  listing.manual ? COPY.fromHand : COPY.fromCrawl;
+export const fromLabel = (
+  listing: Pick<MergeListing, 'manual' | 'addedBy'>,
+): string => {
+  if (!listing.manual) return COPY.fromCrawl;
+  // A2: "added by @handle", or "added by hand" for an admin with no handle.
+  return listing.addedBy === null
+    ? COPY.fromHand
+    : COPY.fromHandle(listing.addedBy.handle);
+};
 
 /** The price a card shows, or "no price". */
 export const priceLabel = (price: MergeListing['price']): string =>
@@ -59,6 +66,7 @@ export const reportsLabel = (reports: MergeListing['reports']): string => {
 export const pickDetail = (row: {
   venueName: string | null;
   manual: boolean;
+  addedBy: MergeListing['addedBy'];
   watchers: number;
 }): string =>
   [row.venueName, fromLabel(row), COPY.watchingCount(row.watchers)]

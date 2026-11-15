@@ -11,6 +11,7 @@ export const CRAWLED: MergeListing = {
   source: 'crawled',
   manual: false,
   createdBy: null,
+  addedBy: null,
   hidden: false,
   status: 'upcoming',
   lineup: [
@@ -46,6 +47,7 @@ export const MANUAL: MergeListing = {
   source: 'manual',
   manual: true,
   createdBy: 'user_admin',
+  addedBy: { handle: 'dlo' },
   lineup: [
     {
       name: 'CLIPSE with special guest JID',
