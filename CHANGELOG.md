@@ -1,3 +1,21 @@
+# [1.499.0](https://github.com/featherweight-design/concert-crawl/compare/v1.498.0...v1.499.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** address the forgot password review ([166974d](https://github.com/featherweight-design/concert-crawl/commit/166974dcccf02af578d61268f2c9ec4ceffb26d4))
+* **web:** gate the test re-crawl like the API and announce its notice ([ab67b0b](https://github.com/featherweight-design/concert-crawl/commit/ab67b0bb61fa044ed890f0a81744f94f8ef663ea))
+* **web:** the tier check row shares its price text with the check card ([c8d7568](https://github.com/featherweight-design/concert-crawl/commit/c8d756880177f2f294c8477ef8fbff6f8de516b8))
+* **web:** the where it's sold line wraps instead of clipping its tier ([bd72172](https://github.com/featherweight-design/concert-crawl/commit/bd721725ba7bb397270fed0029fd0116accd29a2))
+
+
+### Features
+
+* **web:** a price check on one tier changes only that tier ([bfc1779](https://github.com/featherweight-design/concert-crawl/commit/bfc1779f6e7cc74aa5534c47091bd3fb0b8a793c))
+* **web:** add the custom forgot password screens ([c06032d](https://github.com/featherweight-design/concert-crawl/commit/c06032d5f3df283f38d7387f40d65d703507b5fb))
+* **web:** try a test re-crawl from a paused venue's menu ([c27f040](https://github.com/featherweight-design/concert-crawl/commit/c27f040697ca021f684d1b79bbfc37de9ed5b4dc)), closes [#660](https://github.com/featherweight-design/concert-crawl/issues/660)
+* **web:** where it's sold names the tier on box office and draws the resale line ([59745b7](https://github.com/featherweight-design/concert-crawl/commit/59745b7a1fe2d2664f9f6a1d2b03b84ee0dc350f))
+
 # [1.498.0](https://github.com/featherweight-design/concert-crawl/compare/v1.497.0...v1.498.0) (2026-11-15)
 
 
