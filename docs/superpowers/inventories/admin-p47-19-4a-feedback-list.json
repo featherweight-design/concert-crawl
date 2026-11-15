@@ -1,6 +1,6 @@
 {
   "feature": "Admin · Operations, the Feedback list (P47-19 PR 4a)",
-  "note": "Boards: design_handoff_admin_redesign/boards/07-people-flags-operations/feedback, feedback-mobile, feedback-done, feedback-nothing-to-read, loading-feedback. CONTACT_SHEET_ROLE=admin. The empty and failure rows answer the list read from the inventory (`route`), since the scratch branch's inbox is not empty. A row opens today's inline detail; the item screen is 4b. The loading skeleton is covered by FeedbackView.test.tsx and walked by hand.",
+  "note": "Boards: design_handoff_admin_redesign/boards/07-people-flags-operations/feedback, feedback-mobile, feedback-done, feedback-nothing-to-read, loading-feedback; addendum-7/boards/04-feedback-rows/feedback-rows-d (the row marks) and 02-error-reports (ERROR REPORT from metadata.source). CONTACT_SHEET_ROLE=admin. Every row answers the feedback reads from the inventory (`route`) with the boards' own rows: the scratch-contact-sheet branch predates migration 0117, so the live reads 500 there, and the boards' content is what the cells are compared against. CI's integration tests cover the real API. A row opens today's inline detail; the item screen is 4b. The loading skeleton is covered by FeedbackView.test.tsx and walked by hand.",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 740, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -9,75 +9,227 @@
   "rows": [
     {
       "id": "to-read",
-      "label": "Feedback, To read",
+      "label": "Feedback, To read (row marks: Screenshot, Also in Needs you)",
       "steps": [
         {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=to_read**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000a1",
+                "userId": "user_mira",
+                "submittedBy": "mira.k",
+                "pageUrl": "https://concertcrawl.app/artists/vince-staples",
+                "category": "bug",
+                "message": "Map button does nothing on iPhone\nTapped it three times on the Vince Staples page.",
+                "metadata": { "screenshot": "https://img.example/shot.png" },
+                "status": "unread",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-08T18:00:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              },
+              {
+                "id": "00000000-0000-4000-8000-0000000000a2",
+                "userId": "user_dlo",
+                "submittedBy": "dlo",
+                "pageUrl": "https://concertcrawl.app/watching",
+                "category": "bug",
+                "message": "Something went wrong on Watching",
+                "metadata": {
+                  "source": "error",
+                  "doing": "Opening Watching",
+                  "build": "1.431.0",
+                  "device": "iPhone 15, iOS 19"
+                },
+                "status": "unread",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-07T18:00:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              },
+              {
+                "id": "00000000-0000-4000-8000-0000000000a3",
+                "userId": "user_kofi",
+                "submittedBy": "kofi.s",
+                "pageUrl": "https://concertcrawl.app/events",
+                "category": "idea",
+                "message": "Let me paste a ticket link instead of typing the price",
+                "metadata": null,
+                "status": "read",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-05T18:00:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              },
+              {
+                "id": "00000000-0000-4000-8000-0000000000a4",
+                "userId": "user_ana",
+                "submittedBy": "ana.b",
+                "pageUrl": "https://concertcrawl.app/venues",
+                "category": "venue_suggestion",
+                "message": "Dazzle on Curtis has jazz almost every night and nobody lists it",
+                "metadata": null,
+                "status": "read",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-04T18:00:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              }
+            ]
+          }
+        },
+        {
           "goto": "/admin/operations?tab=feedback",
-          "wait": "[data-testid='feedback-chip-to_read']",
-          "settle": 3000
+          "wait": "[data-testid='feedback-list']",
+          "settle": 2000
         }
       ]
     },
     {
       "id": "bugs",
-      "label": "Feedback, Bugs chip",
+      "label": "Feedback, Bugs chip (bug and error report)",
       "steps": [
+        {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=to_read**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000a1",
+                "userId": "user_mira",
+                "submittedBy": "mira.k",
+                "pageUrl": "https://concertcrawl.app/artists/vince-staples",
+                "category": "bug",
+                "message": "Map button does nothing on iPhone",
+                "metadata": { "screenshot": "https://img.example/shot.png" },
+                "status": "unread",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-08T18:00:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              },
+              {
+                "id": "00000000-0000-4000-8000-0000000000a5",
+                "userId": null,
+                "submittedBy": null,
+                "pageUrl": "https://concertcrawl.app/events",
+                "category": "error_report",
+                "message": "TypeError: Cannot read properties of undefined (reading 'price')",
+                "metadata": null,
+                "status": "unread",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-06T18:00:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              }
+            ]
+          }
+        },
         {
           "goto": "/admin/operations?tab=feedback",
           "wait": "[data-testid='feedback-chip-bugs']",
-          "settle": 2000
+          "settle": 1000
         },
         { "click": "[data-testid='feedback-chip-bugs']" },
         {
           "wait": "[data-testid='feedback-chip-bugs'][aria-pressed='true']",
-          "settle": 2500
-        }
-      ]
-    },
-    {
-      "id": "ideas",
-      "label": "Feedback, Ideas chip",
-      "steps": [
-        {
-          "goto": "/admin/operations?tab=feedback",
-          "wait": "[data-testid='feedback-chip-ideas']",
-          "settle": 2000
-        },
-        { "click": "[data-testid='feedback-chip-ideas']" },
-        {
-          "wait": "[data-testid='feedback-chip-ideas'][aria-pressed='true']",
-          "settle": 2500
-        }
-      ]
-    },
-    {
-      "id": "venues",
-      "label": "Feedback, Venues chip (desktop only)",
-      "widths": ["desktop"],
-      "steps": [
-        {
-          "goto": "/admin/operations?tab=feedback",
-          "wait": "[data-testid='feedback-chip-venues']",
-          "settle": 2000
-        },
-        { "click": "[data-testid='feedback-chip-venues']" },
-        {
-          "wait": "[data-testid='feedback-chip-venues'][aria-pressed='true']",
-          "settle": 2500
+          "settle": 1500
         }
       ]
     },
     {
       "id": "done",
-      "label": "Feedback, Done",
+      "label": "Feedback, Done (search, Done by, the caption)",
       "steps": [
+        {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000b1",
+                "userId": "user_jules",
+                "submittedBy": "jules",
+                "pageUrl": "https://concertcrawl.app/events",
+                "category": "bug",
+                "message": "Calendar skips Sundays",
+                "metadata": null,
+                "status": "resolved",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-02T18:00:00Z",
+                "resolvedBy": "hugh",
+                "resolvedAt": "2026-11-03T18:00:00Z"
+              },
+              {
+                "id": "00000000-0000-4000-8000-0000000000b2",
+                "userId": "user_kofi",
+                "submittedBy": "kofi.s",
+                "pageUrl": "https://concertcrawl.app/events",
+                "category": "idea",
+                "message": "Dark mode for the calendar export",
+                "metadata": null,
+                "status": "resolved",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-10-30T18:00:00Z",
+                "resolvedBy": null,
+                "resolvedAt": "2026-10-31T18:00:00Z"
+              }
+            ]
+          }
+        },
         {
           "goto": "/admin/operations?tab=feedback",
           "wait": "[data-testid='feedback-chip-done']",
-          "settle": 2000
+          "settle": 1000
         },
         { "click": "[data-testid='feedback-chip-done']" },
-        { "wait": "input[type='search']", "settle": 2500 }
+        { "wait": "input[type='search']", "settle": 1500 }
       ]
     },
     {
@@ -85,30 +237,30 @@
       "label": "Feedback, Done search with no match",
       "steps": [
         {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=**",
+          "body": { "success": true, "data": [] }
+        },
+        {
           "goto": "/admin/operations?tab=feedback",
           "wait": "[data-testid='feedback-chip-done']",
-          "settle": 2000
+          "settle": 1000
         },
         { "click": "[data-testid='feedback-chip-done']" },
         { "wait": "input[type='search']" },
-        { "fill": "input[type='search']", "text": "zzqqxx-no-such-feedback" },
+        { "fill": "input[type='search']", "text": "zzqqxx" },
         { "wait": "text=No feedback matches", "settle": 1000 }
-      ]
-    },
-    {
-      "id": "expanded",
-      "label": "Feedback, a row opened (inline detail until 4b)",
-      "steps": [
-        {
-          "goto": "/admin/operations?tab=feedback",
-          "wait": "[data-testid='feedback-row']",
-          "settle": 2000
-        },
-        { "click": "[data-testid='feedback-row']" },
-        {
-          "wait": "[data-testid='feedback-row'][aria-expanded='true']",
-          "settle": 1500
-        }
       ]
     },
     {
