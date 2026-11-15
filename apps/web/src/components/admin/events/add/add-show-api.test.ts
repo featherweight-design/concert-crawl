@@ -29,7 +29,13 @@ const DRAFT: AddShowDraft = {
   lineup: [{ name: 'Kaleo' }],
 };
 
-beforeEach(() => adminFetch.mockReset());
+// A block body on purpose: `mockReset()` returns the mock, and a function a
+// beforeEach returns is run by Vitest as that test's cleanup, with no
+// arguments. That calls adminFetch again after every test, and a test whose
+// mock rejects or reads its `init` then fails in the cleanup.
+beforeEach(() => {
+  adminFetch.mockReset();
+});
 
 describe('addShowApi.create', () => {
   it('returns the new show on a 201', async () => {
