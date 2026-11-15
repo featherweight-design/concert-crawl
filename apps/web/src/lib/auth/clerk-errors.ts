@@ -105,6 +105,28 @@ export function classifySignUpError(error: unknown): SignUpOutcome {
   return 'failed';
 }
 
+/** Clerk's answers for an emailed code that is not the right one. */
+export const WRONG_CODE_CODES: ReadonlySet<string> = new Set([
+  'form_code_incorrect',
+  'form_code_invalid',
+  'verification_failed',
+]);
+
+export type CodeOutcome = 'wrong' | 'expired' | 'rateLimited' | 'failed';
+
+/**
+ * What a refused emailed code means to the visitor. A 429 is a wait, an
+ * expired code is its own line, and any other code refusal reads "wrong".
+ * Anything else (a captcha, a stale client, a throw) is not a wrong code.
+ */
+export function classifyCodeError(error: unknown): CodeOutcome {
+  if (isRateLimited(error)) return 'rateLimited';
+  const codes = codesOf(error);
+  if (codes.includes('verification_expired')) return 'expired';
+  if (codes.some((code) => WRONG_CODE_CODES.has(code))) return 'wrong';
+  return 'failed';
+}
+
 export type PasswordOutcome = 'wrong' | 'breached' | 'rateLimited' | 'failed';
 
 /**

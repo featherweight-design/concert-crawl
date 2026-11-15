@@ -149,4 +149,11 @@ describe('StepTrail', () => {
     rerender(<StepTrail step={3} total={3} done />);
     expect(screen.getByText(COPY.steps.done)).toBeInTheDocument();
   });
+
+  it('draws one dot per step and then the core', () => {
+    const { container, rerender } = render(<StepTrail step={1} total={2} />);
+    expect(container.querySelectorAll('i')).toHaveLength(3);
+    rerender(<StepTrail step={2} total={3} />);
+    expect(container.querySelectorAll('i')).toHaveLength(4);
+  });
 });
