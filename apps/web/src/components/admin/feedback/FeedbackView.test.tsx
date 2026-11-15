@@ -263,9 +263,11 @@ describe('FeedbackView (07/feedback)', () => {
     expect(shot).toHaveAttribute('src', 'data:image/png;base64,AAAA');
     expect(shot).toHaveAttribute('referrerpolicy', 'no-referrer');
 
+    // The item view draws no screenshot block at all for a foreign value.
     fireEvent.click(rows[1]!);
-    await screen.findByText(COPY.expanded.screenshotPlaceholder);
-    expect(screen.queryByTestId('feedback-screenshot')).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByTestId('feedback-screenshot')).toBeNull(),
+    );
     expect(
       document.querySelector('img[src*="tracker.example.com"]'),
     ).toBeNull();
