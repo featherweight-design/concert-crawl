@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   render,
   screen,
+  within,
   fireEvent,
   waitFor,
   cleanup,
@@ -66,6 +67,13 @@ const flag = (overrides: Partial<AdminFeatureFlag> = {}): AdminFeatureFlag => ({
 });
 
 const step = (stage: string) => screen.getByTestId(`flag-step-crews-${stage}`);
+
+// The ask's accept button shares its name with the row's Mark verified button,
+// so it is found inside the dialog.
+const acceptButton = () =>
+  within(screen.getByRole('dialog')).getByRole('button', {
+    name: 'Mark verified',
+  });
 
 beforeEach(() => {
   patch.mockReset();
@@ -300,7 +308,7 @@ describe('FeatureFlagControl Mark verified (staging)', () => {
     render(<FeatureFlagControl initial={[flag({ stage: 'me' })]} />);
     fireEvent.click(screen.getByTestId('flag-mark-verified-crews'));
     expect(screen.getByText('Mark Crews verified?')).toBeVisible();
-    const accept = screen.getByRole('button', { name: 'Mark verified' });
+    const accept = acceptButton();
     expect(accept).toBeDisabled();
     for (const key of ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff']) {
       fireEvent.click(screen.getByTestId(`verify-check-${key}`));
@@ -337,7 +345,7 @@ describe('FeatureFlagControl Mark verified (staging)', () => {
     for (const key of ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff']) {
       fireEvent.click(screen.getByTestId(`verify-check-${key}`));
     }
-    fireEvent.click(screen.getByRole('button', { name: 'Mark verified' }));
+    fireEvent.click(acceptButton());
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(post.mock.calls[0]?.[2]).not.toHaveProperty('note');
   });
@@ -357,16 +365,16 @@ describe('FeatureFlagControl Mark verified (staging)', () => {
     for (const key of ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff']) {
       fireEvent.click(screen.getByTestId(`verify-check-${key}`));
     }
-    fireEvent.click(screen.getByRole('button', { name: 'Mark verified' }));
+    fireEvent.click(acceptButton());
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        /Could not update the verified mark/,
-      ),
+      expect(
+        within(screen.getByRole('dialog')).getByRole('alert'),
+      ).toHaveTextContent(/Could not update the verified mark/),
     );
     // Still open, nothing to redo.
     expect(screen.getByRole('dialog')).toBeVisible();
     expect(screen.getByTestId('verify-check-triedAsMe')).toBeChecked();
-    expect(screen.getByRole('button', { name: 'Mark verified' })).toBeEnabled();
+    expect(acceptButton()).toBeEnabled();
   });
 
   it('ignores a second save while one is in flight', async () => {
@@ -390,7 +398,7 @@ describe('FeatureFlagControl Mark verified (staging)', () => {
     for (const key of ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff']) {
       fireEvent.click(screen.getByTestId(`verify-check-${key}`));
     }
-    fireEvent.click(screen.getByRole('button', { name: 'Mark verified' }));
+    fireEvent.click(acceptButton());
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByTestId('flag-undo-verified-spotify-sync'));
     expect(del).not.toHaveBeenCalled();
