@@ -67,7 +67,7 @@ const event = (over: Partial<GoingCtaEvent> = {}): GoingCtaEvent => ({
 });
 
 const renderBlock = (over: Partial<GoingCtaEvent> = {}) =>
-  render(<EventDetailCtaBlock event={event(over)} scaRegion={false} />);
+  render(<EventDetailCtaBlock event={event(over)} />);
 
 const EXPLAINER_LABEL = TIP_CONTENT['going-vs-watch'].label;
 
@@ -414,7 +414,7 @@ describe('EventDetailCtaBlock', () => {
   // the strip down with it.
   it('still renders the watch strip when the commitment is suppressed', () => {
     render(
-      <EventDetailCtaBlock event={event({ status: 'cancelled' })} scaRegion>
+      <EventDetailCtaBlock event={event({ status: 'cancelled' })}>
         <div data-testid="watch-strip" />
       </EventDetailCtaBlock>,
     );
@@ -438,7 +438,7 @@ describe('EventDetailCtaBlock', () => {
 
   it('drops the watch strip on a past night, as the boards do', () => {
     render(
-      <EventDetailCtaBlock event={event({ date: '2020-10-14' })} scaRegion>
+      <EventDetailCtaBlock event={event({ date: '2020-10-14' })}>
         <div data-testid="watch-strip" />
       </EventDetailCtaBlock>,
     );
@@ -462,9 +462,7 @@ describe('EventDetailCtaBlock', () => {
   // showing the second tap rather than flashing back.
   it('holds the latest tap when a stale refresh arrives', () => {
     mutate.mockReturnValue(new Promise(() => {}));
-    const { rerender } = render(
-      <EventDetailCtaBlock event={event()} scaRegion={false} />,
-    );
+    const { rerender } = render(<EventDetailCtaBlock event={event()} />);
 
     fireEvent.click(goingButton());
     fireEvent.click(goingButton());
@@ -475,7 +473,6 @@ describe('EventDetailCtaBlock', () => {
     rerender(
       <EventDetailCtaBlock
         event={event({ attendingAt: '2099-10-01T00:00:00.000Z' })}
-        scaRegion={false}
       />,
     );
     expect(goingButton().getAttribute('aria-label')).toBe(

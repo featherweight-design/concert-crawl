@@ -59,9 +59,6 @@ export interface BillFollowBlockProps {
   artists: BillArtist[];
   /** The public mirror at /e/:id. Rows recruit; the bulk action is withheld. */
   signedOut?: boolean;
-  /** Unread since the tier picker left this block; the scaRegion removal
-   *  takes it off the event pages' call sites. */
-  scaRegion?: boolean;
 }
 
 export const BillFollowBlock = ({

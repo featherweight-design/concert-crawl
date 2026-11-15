@@ -117,12 +117,7 @@ const followButton = () =>
 describe('FollowNudgeCard', () => {
   it('confirms the watch and asks for the follow in one card', () => {
     render(
-      <FollowNudgeCard
-        target={TARGET}
-        variant="inline"
-        scaRegion={false}
-        onAnswer={vi.fn()}
-      />,
+      <FollowNudgeCard target={TARGET} variant="inline" onAnswer={vi.fn()} />,
     );
     expect(
       screen.getByText(FOLLOW_NUDGE_COPY.watchConfirmed),
@@ -137,12 +132,7 @@ describe('FollowNudgeCard', () => {
   it('dismissing answers the nudge', () => {
     const onAnswer = vi.fn();
     render(
-      <FollowNudgeCard
-        target={TARGET}
-        variant="inline"
-        scaRegion={false}
-        onAnswer={onAnswer}
-      />,
+      <FollowNudgeCard target={TARGET} variant="inline" onAnswer={onAnswer} />,
     );
     fireEvent.click(screen.getByText(FOLLOW_NUDGE_COPY.dismiss));
     expect(onAnswer).toHaveBeenCalledTimes(1);
@@ -153,12 +143,7 @@ describe('FollowNudgeCard', () => {
   // `box-shadow` resolving over the top of it at inline priority.
   it('leaves the secondary control a focus ring a keyboard can see', () => {
     render(
-      <FollowNudgeCard
-        target={TARGET}
-        variant="inline"
-        scaRegion={false}
-        onAnswer={vi.fn()}
-      />,
+      <FollowNudgeCard target={TARGET} variant="inline" onAnswer={vi.fn()} />,
     );
     const secondary = screen.getByText(FOLLOW_NUDGE_COPY.dismiss);
     expect(secondary.className).toContain('focus-visible:ring-2');
@@ -169,12 +154,7 @@ describe('FollowNudgeCard', () => {
   it('follows, then stands its ground with a close instead of a decline', async () => {
     const onAnswer = vi.fn();
     render(
-      <FollowNudgeCard
-        target={TARGET}
-        variant="inline"
-        scaRegion={false}
-        onAnswer={onAnswer}
-      />,
+      <FollowNudgeCard target={TARGET} variant="inline" onAnswer={onAnswer} />,
     );
     fireEvent.click(followButton());
     await waitFor(() =>
@@ -201,12 +181,7 @@ describe('FollowNudgeCard', () => {
     (tier) => {
       planState.current = plan({ plan: tier });
       render(
-        <FollowNudgeCard
-          target={TARGET}
-          variant="inline"
-          scaRegion={false}
-          onAnswer={vi.fn()}
-        />,
+        <FollowNudgeCard target={TARGET} variant="inline" onAnswer={vi.fn()} />,
       );
       expect(followButton().querySelector('[data-glyph="lock"]')).toBeNull();
       expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
@@ -246,7 +221,6 @@ describe('FollowNudgeCard', () => {
       <FollowNudgeCard
         target={TARGET}
         variant="floating"
-        scaRegion={false}
         onAnswer={onAnswer}
       />,
     );
@@ -266,12 +240,7 @@ describe('FollowNudgeCard', () => {
   // regresses silently: a 16px glyph in a padded box looks identical.
   it('announces once and gives the close control a 44px target', () => {
     const { container } = render(
-      <FollowNudgeCard
-        target={TARGET}
-        variant="floating"
-        scaRegion={false}
-        onAnswer={vi.fn()}
-      />,
+      <FollowNudgeCard target={TARGET} variant="floating" onAnswer={vi.fn()} />,
     );
     expect(container.querySelector('[role="status"]')).not.toBeNull();
     const close = screen.getByRole('button', {
@@ -285,12 +254,7 @@ describe('FollowNudgeCard', () => {
   // state change they caused, not an interruption to announce.
   it('does not make the inline card a live region', () => {
     const { container } = render(
-      <FollowNudgeCard
-        target={TARGET}
-        variant="inline"
-        scaRegion={false}
-        onAnswer={vi.fn()}
-      />,
+      <FollowNudgeCard target={TARGET} variant="inline" onAnswer={vi.fn()} />,
     );
     expect(container.querySelector('[role="status"]')).toBeNull();
   });

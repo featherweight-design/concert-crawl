@@ -16,8 +16,6 @@ interface WatchZoneProps {
   initialWatching?: boolean;
   /** Headliner name, forwarded to the button's signed-out accessible name. */
   artist?: string | undefined;
-  /** Server-resolved, forwarded to the nudge's tier picker. */
-  scaRegion: boolean;
 }
 
 /**
@@ -45,7 +43,6 @@ export const WatchZone = ({
   eventId,
   initialWatching = false,
   artist,
-  scaRegion,
 }: WatchZoneProps) => {
   const { isSignedIn } = useAuth();
   // Scoped to this show: a watch started elsewhere in the session belongs to
@@ -72,7 +69,6 @@ export const WatchZone = ({
       <FollowNudgeCard
         target={nudge.target}
         variant="inline"
-        scaRegion={scaRegion}
         onAnswer={nudge.answer}
       />
     );

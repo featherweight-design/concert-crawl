@@ -132,7 +132,7 @@ afterEach(() => {
 
 describe('BillFollowBlock — the block itself', () => {
   it('lists the whole bill, headliner first, with the billed count', () => {
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
 
     expect(screen.getByTestId('bill-follow-block')).toBeInTheDocument();
     expect(
@@ -150,7 +150,7 @@ describe('BillFollowBlock — the block itself', () => {
   // ED-08: following is the artist, watching is the show. The block may never
   // imply that a follow moves anything into Watching.
   it('never promises that following puts the show in Watching', () => {
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
 
     expect(screen.getByTestId('bill-follow-block').textContent).not.toMatch(
       /watch/i,
@@ -158,9 +158,7 @@ describe('BillFollowBlock — the block itself', () => {
   });
 
   it('renders nothing at all for a bill with no followable acts', () => {
-    const { container } = render(
-      <BillFollowBlock artists={[]} scaRegion={false} />,
-    );
+    const { container } = render(<BillFollowBlock artists={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
 });
@@ -170,7 +168,7 @@ describe('BillFollowBlock — the header shortcut', () => {
   // section's own CTA. Drawn full-width and filled below the list, it read as
   // the latter. Its home is the header, at the rows' own density.
   it('sits in the header beside the title, quiet and at row density', () => {
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
 
     const bulk = screen.getByTestId('bill-follow-all');
     expect(bulk.style.height).toBe(`${NF_FOLLOW_SIZES.row.height}px`);
@@ -185,7 +183,7 @@ describe('BillFollowBlock — the header shortcut', () => {
 
   // The pill shrank to 28; the target did not (WCAG 2.5.8).
   it('grows an invisible 44px target around the 28px pill', () => {
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
 
     const overlay = screen
       .getByTestId('bill-follow-all')
@@ -206,7 +204,7 @@ describe('BillFollowBlock — the name is the way to the artist', () => {
   });
 
   it('links every act on the bill to its artist page', () => {
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
 
     BILL.forEach((artist) => {
       expect(screen.getByRole('link', { name: artist.name })).toHaveAttribute(
@@ -220,7 +218,7 @@ describe('BillFollowBlock — the name is the way to the artist', () => {
   // so a link from the public mirror at /e/:id would land a visitor on a
   // sign-in wall rather than on an artist.
   it('leaves the name as plain text on the public mirror', () => {
-    render(<BillFollowBlock artists={BILL} signedOut scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} signedOut />);
 
     BILL.forEach((artist) => {
       const name = screen.getByText(artist.name);
@@ -241,7 +239,7 @@ describe('BillFollowBlock — following is on every plan', () => {
       regate.surface = surface;
       routerPush.mockClear();
       followArtistsBulk.mockResolvedValue(bulkOk(BILL.map((row) => row.slug)));
-      render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+      render(<BillFollowBlock artists={BILL} />);
 
       expect(followButtons()).toHaveLength(3);
       const bulk = screen.getByTestId('bill-follow-all');
@@ -262,7 +260,7 @@ describe('BillFollowBlock — following is on every plan', () => {
   );
 
   it('gives a Premium subscriber independent rows and no gate', () => {
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
 
     expect(followButtons()).toHaveLength(3);
     expect(screen.getByTestId('bill-follow-all')).not.toHaveAttribute(
@@ -275,7 +273,7 @@ describe('BillFollowBlock — following is on every plan', () => {
   // plan 'free' renders locked if anything tests the tier string inline.
   it('does not lock a comped free account', () => {
     planState.current = plan({ plan: 'free', roleComped: true });
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
 
     expect(followButtons()).toHaveLength(3);
     expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
@@ -285,7 +283,7 @@ describe('BillFollowBlock — following is on every plan', () => {
     'gives a %s account independent rows and no gate (going free, 2026-10-29)',
     (tier) => {
       planState.current = plan({ plan: tier });
-      render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+      render(<BillFollowBlock artists={BILL} />);
 
       expect(followButtons()).toHaveLength(3);
       expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
@@ -297,7 +295,7 @@ describe('BillFollowBlock — following is on every plan', () => {
   // and the bill stays open row by row with no gate.
   it('stays open row by row when the plan fetch fails for a signed-in viewer', () => {
     planState.current = null;
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
 
     expect(followButtons()).toHaveLength(3);
     expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
@@ -308,7 +306,7 @@ describe('BillFollowBlock — following is on every plan', () => {
   it('recruits row by row when signed out, with no bulk action', () => {
     planState.current = null;
     routerPush.mockClear();
-    render(<BillFollowBlock artists={BILL} signedOut scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} signedOut />);
 
     expect(followButtons()).toHaveLength(0);
     const rows = screen.getAllByRole('button', {
@@ -344,7 +342,7 @@ describe('BillFollowBlock — "Follow all N"', () => {
       BILL[1]!,
       BILL[2]!,
     ];
-    render(<BillFollowBlock artists={artists} scaRegion={false} />);
+    render(<BillFollowBlock artists={artists} />);
 
     const bulk = screen.getByTestId('bill-follow-all');
     // Only the two that are not already followed are on offer.
@@ -387,7 +385,7 @@ describe('BillFollowBlock — "Follow all N"', () => {
       followedCount: 1,
     } satisfies BulkFollowResponse);
 
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
     fireEvent.click(screen.getByTestId('bill-follow-all'));
 
     await waitFor(() =>
@@ -417,7 +415,7 @@ describe('BillFollowBlock — "Follow all N"', () => {
     );
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+    render(<BillFollowBlock artists={BILL} />);
     fireEvent.click(screen.getByTestId('bill-follow-all'));
 
     await waitFor(() =>
@@ -452,7 +450,7 @@ describe('BillFollowBlock — "Follow all N"', () => {
       BILL[1]!,
       BILL[2]!,
     ];
-    render(<BillFollowBlock artists={artists} scaRegion={false} />);
+    render(<BillFollowBlock artists={artists} />);
 
     fireEvent.click(screen.getByTestId('bill-follow-all'));
     await waitFor(() =>
@@ -496,7 +494,6 @@ describe('BillFollowBlock — "Follow all N"', () => {
     render(
       <BillFollowBlock
         artists={BILL.map((artist) => ({ ...artist, following: true }))}
-        scaRegion={false}
       />,
     );
     expect(screen.queryByTestId('bill-follow-all')).toBeNull();
@@ -504,7 +501,7 @@ describe('BillFollowBlock — "Follow all N"', () => {
 
   // Two buttons reading "Follow" in one block is one decision offered twice.
   it('is withheld on a one-act bill, where the row already carries it', () => {
-    render(<BillFollowBlock artists={[BILL[0]!]} scaRegion={false} />);
+    render(<BillFollowBlock artists={[BILL[0]!]} />);
     expect(screen.queryByTestId('bill-follow-all')).toBeNull();
     expect(
       screen.getByRole('button', {
@@ -520,12 +517,7 @@ describe('BillFollowBlock — a single row', () => {
   // instead of ellipsising — the same class as the FollowDateLine defect.
   it('lets a long artist name shrink rather than push the button out', () => {
     const long = 'A Band With A Very Long Name Indeed';
-    render(
-      <BillFollowBlock
-        artists={[{ ...BILL[0]!, name: long }]}
-        scaRegion={false}
-      />,
-    );
+    render(<BillFollowBlock artists={[{ ...BILL[0]!, name: long }]} />);
 
     // By text rather than by tag: the name is wrapped in an anchor when the
     // viewer can reach the artist page and bare when they cannot, and this
@@ -543,12 +535,7 @@ describe('BillFollowBlock — a single row', () => {
   it('takes the server answer rather than keeping the optimistic guess', async () => {
     apiDelete.mockResolvedValue({ following: true });
 
-    render(
-      <BillFollowBlock
-        artists={[{ ...BILL[0]!, following: true }]}
-        scaRegion={false}
-      />,
-    );
+    render(<BillFollowBlock artists={[{ ...BILL[0]!, following: true }]} />);
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -575,7 +562,6 @@ describe('BillFollowBlock — a single row', () => {
     render(
       <BillFollowBlock
         artists={[BILL[0]!, { ...BILL[1]!, following: true }]}
-        scaRegion={false}
       />,
     );
 

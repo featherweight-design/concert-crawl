@@ -189,9 +189,6 @@ export interface OnboardingShellProps {
   pendingTier?: string | null | undefined;
   /** Genre bucket labels, SSR-fetched. Empty is survivable: the step says so. */
   genres?: string[] | undefined;
-  /** Unread since the tier picker left the tour; the scaRegion removal takes
-   *  it off the onboarding page's call site. */
-  scaRegion?: boolean | undefined;
 }
 
 export function OnboardingShell({

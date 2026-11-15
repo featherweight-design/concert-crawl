@@ -98,7 +98,7 @@ describe('EventDetailCtaBlock, signed in with /v1/users/me failing', () => {
     });
     render(
       <QueryClientProvider client={queryClient}>
-        <EventDetailCtaBlock event={event} scaRegion={false} />
+        <EventDetailCtaBlock event={event} />
       </QueryClientProvider>,
     );
 

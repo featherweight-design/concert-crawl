@@ -9,13 +9,6 @@
 // also fired there would put two cards on one screen for one watch. This
 // exclusion is the ONLY thing keeping the two consumers of
 // `useFirstWatchNudge` mutually exclusive.
-//
-// scaRegion is not resolvable here: the layout is static, and reading
-// `headers()` to get the country would make every protected route dynamic for
-// the sake of one legal line in a sheet almost nobody opens from this card.
-// `true` is the fail-safe value (the same call FollowButton makes for its
-// logged-out picker) — it shows the SCA disclosure to some viewers who did not
-// need it, rather than withholding it from one who did.
 
 import { usePathname } from 'next/navigation';
 
@@ -42,7 +35,6 @@ export const FollowNudgeGate = () => {
     <FollowNudgeCard
       target={nudge.target}
       variant="floating"
-      scaRegion
       onAnswer={nudge.answer}
     />
   );

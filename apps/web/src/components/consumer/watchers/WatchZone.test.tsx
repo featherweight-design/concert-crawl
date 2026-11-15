@@ -116,7 +116,7 @@ describe('WatchZone crawl visibility', () => {
       data: { total: 0, named: [] },
       isPending: false,
     });
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     // "All 1" beside your own avatar isn't social proof.
     expect(crawl()).toBeNull();
   });
@@ -126,7 +126,7 @@ describe('WatchZone crawl visibility', () => {
       data: { total: 1, named: named('marisol') },
       isPending: false,
     });
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     expect(crawl()).toBeNull();
   });
 
@@ -136,7 +136,7 @@ describe('WatchZone crawl visibility', () => {
       data: { total: 1, named: named('marisol') },
       isPending: false,
     });
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     expect(crawl()).toHaveAccessibleName(
       `marisol ${CONSUMER_COPY.watchers.one}`,
     );
@@ -147,7 +147,7 @@ describe('WatchZone crawl visibility', () => {
       data: { total: 2, named: named('marisol', 'dev_ftw') },
       isPending: false,
     });
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     expect(crawl()).not.toBeNull();
   });
 
@@ -156,14 +156,14 @@ describe('WatchZone crawl visibility', () => {
       data: { total: 5, named: [] },
       isPending: false,
     });
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     // A roster of dashes is a number, not a crawl.
     expect(crawl()).toBeNull();
   });
 
   it('hides the crawl while the watchers query is still in flight', () => {
     watchersQuery.mockReturnValue({ data: undefined, isPending: true });
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     expect(crawl()).toBeNull();
   });
 
@@ -174,7 +174,7 @@ describe('WatchZone crawl visibility', () => {
       data: { total: 1, named: named('marisol') },
       isPending: false,
     });
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     expect(crawl()).toBeNull();
   });
 });
@@ -184,14 +184,14 @@ describe('WatchZone crawl visibility', () => {
 // objects in the slot at once.
 describe('WatchZone first-watch follow nudge', () => {
   it('leaves the strip alone while there is no nudge to make', () => {
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     expect(screen.getByTestId('watch-strip')).toBeTruthy();
     expect(screen.queryByTestId('follow-nudge')).toBeNull();
   });
 
   it('stands in place of the strip once the watch lands', () => {
     nudgeTarget.mockReturnValue(TARGET);
-    render(<WatchZone eventId="evt_1" scaRegion={false} />);
+    render(<WatchZone eventId="evt_1" />);
     expect(screen.getByTestId('follow-nudge')).toBeTruthy();
     // In place, not above: two watch affordances for one show is the state
     // this replacement exists to avoid.
@@ -200,15 +200,13 @@ describe('WatchZone first-watch follow nudge', () => {
 
   it('restores the watch card when the nudge is answered', () => {
     nudgeTarget.mockReturnValue(TARGET);
-    const { rerender } = render(
-      <WatchZone eventId="evt_1" scaRegion={false} />,
-    );
+    const { rerender } = render(<WatchZone eventId="evt_1" />);
     fireEvent.click(screen.getByText('Answer'));
     expect(answer).toHaveBeenCalledTimes(1);
 
     // The hook clears its own target on answer; this mirrors that.
     nudgeTarget.mockReturnValue(null);
-    rerender(<WatchZone eventId="evt_1" scaRegion={false} />);
+    rerender(<WatchZone eventId="evt_1" />);
     expect(screen.getByTestId('watch-strip')).toBeTruthy();
     expect(screen.queryByTestId('follow-nudge')).toBeNull();
   });

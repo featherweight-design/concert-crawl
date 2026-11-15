@@ -1,7 +1,6 @@
 import { perfRoute } from '@/lib/perf/timing';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import type {
@@ -16,7 +15,6 @@ import { apiClient } from '@/lib/api';
 import { publicCatalogGet } from '@/lib/catalog-cache';
 import { seedFollowedArtists } from '@/lib/following';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
-import { isScaRegion } from '@/lib/sca-region';
 import {
   eventCanonicalPath,
   eventShareMetadata,
@@ -172,7 +170,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   // The new id-keyed /v1/events/:id/related resolves the venue server-side, so
   // all three round-trips run concurrently and the page load drops by one
   // full Vercel→Render hop (~400-700ms warm, much more on cold start).
-  const [event, reports, related, follows, requestHeaders] = await Promise.all([
+  const [event, reports, related, follows] = await Promise.all([
     fetchEvent(id, token),
     fetchReports(id, token),
     fetchRelatedById(id, token),
@@ -183,17 +181,12 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
     // Following and duplicates nothing. Withholding the whole block over a
     // transient prefetch failure would cost more than the wrong glyph does.
     seedFollowedArtists(token),
-    headers(),
   ]);
   if (!event) notFound();
   // A show merged into another answers at its old id with the survivor's data
   // (the API follows the redirect), so a shared link, a share card or an old
   // notification lands on the one page that exists.
   if (event.id !== id) permanentRedirect(eventCanonicalPath(event.id));
-
-  // Monetization spec §1.7: SCA notice gating for the tier picker a locked
-  // "I'm going!" tap can open. Unknown (local dev, header absent) fails safe.
-  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'));
 
   const showTime = formatShowTime(event.showTime);
   const doorsTime = formatShowTime(event.doorsTime);
@@ -375,7 +368,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
 
           {!leadsWithStatus && (
             <div className="mt-3">
-              <EventDetailCtaBlock event={event} scaRegion={scaRegion}>
+              <EventDetailCtaBlock event={event}>
                 {/* Crew presence rides with Going, not with the eye: they are
                   different populations, and a status line belongs to the
                   control it describes. Watching follows it, unchanged. */}
@@ -384,7 +377,6 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
                   eventId={event.id}
                   initialWatching={event.isWatching}
                   artist={event.artist}
-                  scaRegion={scaRegion}
                 />
               </EventDetailCtaBlock>
             </div>
@@ -396,7 +388,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
               that happen to share a card edge. */}
           {bill.length > 0 && (
             <div className="mt-3">
-              <BillFollowBlock artists={bill} scaRegion={scaRegion} />
+              <BillFollowBlock artists={bill} />
             </div>
           )}
 
