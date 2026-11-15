@@ -40,12 +40,13 @@ export interface ArtistProjectionInput {
  * untouched: their slug is a live URL and their display name may have been
  * corrected by an admin.
  *
- * Returns the number of rows inserted. Never throws.
+ * Returns the canonical names of the rows it inserted, so the crawl can link
+ * them to the shows that bill them (admin 4a-2). Never throws.
  */
 export async function projectArtists(
   candidates: ArtistProjectionInput[],
   database: typeof db = db,
-): Promise<number> {
+): Promise<string[]> {
   try {
     // Collapse to one entry per canonical name, first spelling wins — the
     // display name is only a seed here; the backfill's most-frequent-spelling
@@ -57,7 +58,7 @@ export async function projectArtists(
         byCanonical.set(candidate.canonicalName, candidate.name);
       }
     }
-    if (byCanonical.size === 0) return 0;
+    if (byCanonical.size === 0) return [];
 
     // Narrowed deliberately: this runs after every venue crawl and `artists`
     // grows without bound, so a full-table read here would become a hot path.
@@ -99,7 +100,7 @@ export async function projectArtists(
       taken.add(slug);
       values.push({ name, canonicalName, slug });
     }
-    if (values.length === 0) return 0;
+    if (values.length === 0) return [];
 
     // onConflictDoNothing covers the race where a concurrent crawl or the
     // backfill claimed the same canonical name (or the same slug) between the
@@ -109,9 +110,9 @@ export async function projectArtists(
       .insert(artists)
       .values(values)
       .onConflictDoNothing()
-      .returning({ id: artists.id });
+      .returning({ canonicalName: artists.canonicalName });
 
-    return inserted.length;
+    return inserted.map((row) => row.canonicalName);
   } catch (err) {
     reportFailure({
       event: 'crawl.artist_projection_failed',
@@ -119,6 +120,6 @@ export async function projectArtists(
       candidateCount: candidates.length,
       error: err instanceof Error ? err.message : String(err),
     });
-    return 0;
+    return [];
   }
 }

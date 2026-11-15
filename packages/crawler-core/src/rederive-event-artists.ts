@@ -35,6 +35,7 @@
 
 import { and, asc, eq, gt, isNull, like, or } from 'drizzle-orm';
 import { db, events, syncEventArtists, venues } from '@concert-crawl/db';
+import { reportFailure } from '@concert-crawl/logger';
 import {
   CRAWLER_USER_AGENT,
   canonicalizeSupporting,
@@ -334,6 +335,7 @@ export async function rederiveEventArtists(
 
     if (batch.length === 0) break;
     cursor = batch[batch.length - 1]!.id;
+    const rewrittenIds: string[] = [];
 
     for (const row of batch) {
       if (options.shouldStop?.()) {
@@ -544,33 +546,45 @@ export async function rederiveEventArtists(
       // canonical headliner with its raw spelling from `headliners`, the
       // casing and accents canonical form stripped: canonical-only would
       // project 'kokoroko'.
-      //
-      // Admin 4a-2: `event_artists` is rebuilt from the new arrays in the same
-      // transaction, so the two never disagree. A row the write skipped (a
-      // lineup saved meanwhile) is left to whoever saved it.
-      await db.transaction(async (tx) => {
-        const written = await tx
-          .update(events)
-          .set({
-            headliners: result.headliners,
-            canonicalHeadliners,
-            supportingArtists: result.supportingArtists,
-            canonicalSupporting,
-            ...(hides ? { hiddenFromConsumer: true } : {}),
-            updatedAt: new Date(),
-          })
-          // Re-checked at write time: an admin may save the lineup while the
-          // run is adjudicating this row.
-          .where(
-            and(
-              eq(events.id, row.id),
-              eq(events.manual, false),
-              isNull(events.lineupEditedAt),
-            ),
-          )
-          .returning({ id: events.id });
-        if (written.length > 0) await syncEventArtists(tx, [row.id]);
-      });
+      const written = await db
+        .update(events)
+        .set({
+          headliners: result.headliners,
+          canonicalHeadliners,
+          supportingArtists: result.supportingArtists,
+          canonicalSupporting,
+          ...(hides ? { hiddenFromConsumer: true } : {}),
+          updatedAt: new Date(),
+        })
+        // Re-checked at write time: an admin may save the lineup while the
+        // run is adjudicating this row.
+        .where(
+          and(
+            eq(events.id, row.id),
+            eq(events.manual, false),
+            isNull(events.lineupEditedAt),
+          ),
+        )
+        .returning({ id: events.id });
+      // Only a row actually written is rebuilt: one whose lineup was locked
+      // meanwhile keeps its rows, which whoever saved it maintains.
+      if (written.length > 0) rewrittenIds.push(row.id);
+    }
+
+    // Admin 4a-2: one `event_artists` rebuild for the batch's rewritten rows,
+    // after their writes committed. A failure never undoes a bill: it is
+    // reported, and the next crawl of the row or the backfill rebuilds them.
+    if (rewrittenIds.length > 0) {
+      try {
+        await syncEventArtists(db, rewrittenIds);
+      } catch (err) {
+        reportFailure({
+          event: 'rederive.event_artists_sync_failed',
+          severity: 'warn',
+          eventCount: rewrittenIds.length,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
     if (stopped) break;
   }
