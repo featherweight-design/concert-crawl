@@ -1,3 +1,24 @@
+# [1.507.0](https://github.com/featherweight-design/concert-crawl/compare/v1.506.0...v1.507.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** hide the guide bar while a panel is open and tighten publish ([3713d68](https://github.com/featherweight-design/concert-crawl/commit/3713d68d4a1386f399a384814eec02bcb72e9641))
+* **web:** keep focus where the visitor moved while the code boxes were locked ([f8a32d7](https://github.com/featherweight-design/concert-crawl/commit/f8a32d765ba90dfff69d90e537763c95ef08fd78))
+* **web:** keep the two-genre chip on one line and test the light overrides ([1485caa](https://github.com/featherweight-design/concert-crawl/commit/1485caa1a50cc3a3080de9a7f381451927fe19c9))
+* **web:** match the admin date and time pickers to the board, open the time list on the chosen slot ([45cd9d3](https://github.com/featherweight-design/concert-crawl/commit/45cd9d313be9218bc8c961b7fa7997498a5d4c8e))
+* **web:** open the time list near an off-grid time, and clamp it at both ends ([cdb8285](https://github.com/featherweight-design/concert-crawl/commit/cdb8285d52cd57772f9c4b65aff34682909b2725))
+* **web:** promise a hidden venue's crawl only when the nightly run would make it ([6b59526](https://github.com/featherweight-design/concert-crawl/commit/6b59526a0ae6d49cd0c8cb8c1f046b392fc236a8))
+* **web:** return focus to the code boxes after a wrong code ([cc52e8a](https://github.com/featherweight-design/concert-crawl/commit/cc52e8acdd7591a46df7ab692516240683f3f3c0))
+* **web:** treat a disabled focused code input as nowhere, and fix its tests ([8b610fa](https://github.com/featherweight-design/concert-crawl/commit/8b610fac00fa5e1c3d8c2741dd398e4ff0c7a71f))
+
+
+### Features
+
+* **web:** invite fan on Light, two genres and a filled waitlist button ([e873d37](https://github.com/featherweight-design/concert-crawl/commit/e873d3781c89dad8de8c98b063d83de1ae7f36ec))
+* **web:** keep Pause and Resume on a hidden venue's menu, as drawn ([9c1622f](https://github.com/featherweight-design/concert-crawl/commit/9c1622f5278882b3d3a7d4573f3828224bed2c26))
+* **web:** signpost that Publish guide puts the whole guide live ([c11fbff](https://github.com/featherweight-design/concert-crawl/commit/c11fbffbcc1bbc14a55c589c0ac53bdd50105324))
+
 # [1.506.0](https://github.com/featherweight-design/concert-crawl/compare/v1.505.0...v1.506.0) (2026-11-15)
 
 
