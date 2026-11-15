@@ -36,7 +36,7 @@
                 "category": "bug",
                 "message": "Map button does nothing on iPhone\nTapped Directions on the Vince Staples page and nothing happened. Tried twice.",
                 "metadata": {
-                  "screenshot": "https://img.example/shot.png",
+                  "screenshot": "data:image/png;base64,iVBORw0KGgo=",
                   "device": "iPhone · Safari 18",
                   "build": "0.42.1"
                 },

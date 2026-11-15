@@ -198,10 +198,12 @@ const Screenshot = ({ src, phone }: { src: string; phone: boolean }) => (
       overflow: 'hidden',
     }}
   >
-    {/* eslint-disable-next-line @next/next/no-img-element -- the reporter's own image, a stored URL or inline data */}
+    {/* eslint-disable-next-line @next/next/no-img-element -- the reporter's own image, inline data checked by screenshotOf */}
     <img
       src={src}
       alt={COPY.screenshotAlt}
+      // Defence in depth: the src is always a checked data: URI.
+      referrerPolicy="no-referrer"
       data-testid="feedback-screenshot"
       style={{ display: 'block', maxWidth: '100%', maxHeight: '100%' }}
     />

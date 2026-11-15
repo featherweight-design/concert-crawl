@@ -228,14 +228,25 @@ describe('opening an item', () => {
   });
 });
 
+// A screenshot as the fan form sends it: an inline raster image.
+const SHOT = 'data:image/png;base64,iVBORw0KGgo=';
+
 describe('each kind', () => {
+  it('never draws a screenshot that is a URL to fetch', async () => {
+    rows = [
+      item({ metadata: { screenshot: 'https://tracker.example/pixel.png' } }),
+    ];
+    await openFirst();
+    expect(screen.queryByTestId('feedback-screenshot')).toBeNull();
+  });
+
   it('draws a bug: its first line, the rest quoted, the screenshot and its lines', async () => {
     rows = [
       item({
         metadata: {
           device: 'iPhone · Safari 18',
           build: '0.42.1',
-          screenshot: 'https://img.test/shot.png',
+          screenshot: SHOT,
         },
       }),
     ];
@@ -243,10 +254,9 @@ describe('each kind', () => {
     expect(screen.getByTestId('feedback-item-quote')).toHaveTextContent(
       '“Tapped Directions and nothing happened.”',
     );
-    expect(screen.getByTestId('feedback-screenshot')).toHaveAttribute(
-      'src',
-      'https://img.test/shot.png',
-    );
+    const shot = screen.getByTestId('feedback-screenshot');
+    expect(shot).toHaveAttribute('src', SHOT);
+    expect(shot).toHaveAttribute('referrerpolicy', 'no-referrer');
     expect(fieldKeys()).toEqual(['page', 'device', 'build', 'from']);
     expect(screen.getByTestId('feedback-field-page')).toHaveTextContent(
       'Event',

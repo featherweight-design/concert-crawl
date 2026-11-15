@@ -1,5 +1,6 @@
 import {
   ADMIN_FEEDBACK_VIEW_STATUSES,
+  feedbackScreenshotOf,
   type AdminFeedbackItem,
 } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -164,9 +165,12 @@ export const fieldsOf = (
   ];
 };
 
-/** The screenshot sent with a bug, when one was. */
+/**
+ * The screenshot sent with a bug, when one was and it is an image we accept
+ * (`feedbackScreenshotOf`: an inline raster data URL, never a URL to fetch).
+ */
 export const screenshotOf = (item: AdminFeedbackItem): string | undefined =>
-  metaString(item, 'screenshot') ?? metaString(item, 'screenshotDataUrl');
+  feedbackScreenshotOf(item.metadata) ?? undefined;
 
 /** Reply is drawn for a bug or an idea still to read, with a person behind it. */
 export const showsReply = (item: AdminFeedbackItem): boolean => {
