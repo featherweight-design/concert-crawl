@@ -1,13 +1,20 @@
 'use client';
 
-import { useRef } from 'react';
-import { Check, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { Check, Plus, Search, X } from 'lucide-react';
 import type { AdminFeatureFlag } from '@concert-crawl/entitlements';
-import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives';
+import { apiClient } from '@/lib/api';
+import {
+  AdminButton,
+  PersonAvatar,
+  useDialogKeyboard,
+} from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { FlagHistory } from './FlagHistory';
+import { FlagPeopleSearch } from './FlagPeopleSearch';
 import { StageLadder, stageOf, type Stage } from './StageLadder';
-import { mention, shortDate } from './flag-drawer-format';
+import { mention, roleLabel, shortDate } from './flag-drawer-format';
 
 const COPY = ADMIN_COPY.featureFlags;
 const DRAWER = COPY.drawer;
@@ -20,10 +27,14 @@ const SECTION_LABEL = {
   textTransform: 'uppercase',
 } as const;
 
+const TOAST_MS = 6000;
+
 interface FlagDrawerProps {
   flag: AdminFeatureFlag;
   onClose: () => void;
   onPick: (stage: Stage) => void;
+  /** A people change answered with the flag's new state. */
+  onFlag: (flag: AdminFeatureFlag) => void;
   onMarkVerified: () => void;
   onUndoVerified: () => void;
   saving: boolean;
@@ -37,21 +48,108 @@ export const FlagDrawer = ({
   flag,
   onClose,
   onPick,
+  onFlag,
   onMarkVerified,
   onUndoVerified,
   saving,
 }: FlagDrawerProps) => {
+  const { getToken } = useAuth();
   const panelRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<'panel' | 'add'>('panel');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [changes, setChanges] = useState(0);
+  const [removed, setRemoved] = useState<{
+    userId: string;
+    handle: string;
+  } | null>(null);
   // A press that starts inside the panel and ends on the scrim (a text
   // selection dragged out) is not a click on the scrim.
   const pressedOnScrim = useRef(false);
-  useDialogKeyboard(panelRef, onClose);
+  useDialogKeyboard(
+    panelRef,
+    view === 'add' ? () => showView('panel') : onClose,
+  );
+
+  // Switching views unmounts the control that had focus: put it back in the
+  // panel. The search view focuses its own field.
+  useEffect(() => {
+    if (view === 'panel') panelRef.current?.focus();
+  }, [view]);
+
+  const showView = (next: 'panel' | 'add') => {
+    setError(null);
+    setView(next);
+  };
 
   const onStaging = flag.environment !== 'production';
   const stage = stageOf(flag);
+  const people = flag.people ?? [];
+  const betaCount = flag.betaCount ?? null;
 
-  // What changes the History list: any save moves one of these.
-  const version = [flag.updatedAt, flag.verifiedAt].join('|');
+  useEffect(() => {
+    if (removed === null) return;
+    const timer = setTimeout(() => setRemoved(null), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [removed]);
+
+  // One people change at a time: a second click while one is in flight is
+  // ignored, so a slower answer cannot overwrite a newer one.
+  const changePeople = async (
+    run: (token: string) => Promise<AdminFeatureFlag>,
+  ): Promise<boolean> => {
+    if (busy) return false;
+    setBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('no session token');
+      onFlag(await run(token));
+      setChanges((count) => count + 1);
+      return true;
+    } catch (err) {
+      console.error('[admin] feature flag people change failed', flag.key, err);
+      setError(DRAWER.peopleError);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const add = (userId: string) =>
+    changePeople((token) =>
+      apiClient.post<AdminFeatureFlag>(
+        `/v1/admin/feature-flags/${flag.key}/people`,
+        token,
+        { userId },
+      ),
+    );
+
+  const remove = async (userId: string, handle: string | null) => {
+    const done = await changePeople((token) =>
+      apiClient.delete<AdminFeatureFlag>(
+        `/v1/admin/feature-flags/${flag.key}/people/${encodeURIComponent(userId)}`,
+        token,
+      ),
+    );
+    if (done) setRemoved({ userId, handle: mention(handle) });
+  };
+
+  // The toast stays until the re-add answers, so a failed Undo can be tried again.
+  const undoRemove = async () => {
+    if (removed === null) return;
+    if (await add(removed.userId)) setRemoved(null);
+  };
+
+  // What changes the History list: any save moves one of these, and `changes`
+  // counts people changes so a remove followed by a re-add (same ids, same
+  // updatedAt) still reloads it.
+  const version = [
+    flag.updatedAt,
+    flag.verifiedAt,
+    people.map((person) => person.userId).join(','),
+    changes,
+  ].join('|');
 
   return (
     <div
@@ -144,112 +242,301 @@ export const FlagDrawer = ({
           </button>
         </div>
 
-        <div>
-          <h3
-            style={{
-              margin: 0,
-              fontSize: 20,
-              fontWeight: 800,
-              color: 'var(--fg)',
+        {view === 'add' ? (
+          <FlagPeopleSearch
+            flag={flag}
+            error={error}
+            busy={busy}
+            onBack={() => showView('panel')}
+            onAdd={async (userId) => {
+              await add(userId);
             }}
-          >
-            {flag.label}
-          </h3>
-          <div
-            style={{
-              marginTop: 6,
-              fontSize: 13,
-              lineHeight: 1.5,
-              color: 'var(--fg-muted)',
-            }}
-          >
-            {flag.description}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={SECTION_LABEL}>
-            {onStaging ? DRAWER.whoSeesStaging : DRAWER.whoSeesProduction}
-          </span>
-          <StageLadder flag={flag} onPick={onPick} scope="drawer" />
-        </div>
-
-        {flag.verifiedAt ? (
-          <div
-            data-testid="flag-drawer-verified"
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 10,
-              padding: '10px 12px',
-              borderRadius: 10,
-              background: 'color-mix(in oklab, var(--success) 8%, transparent)',
-              border:
-                '1px solid color-mix(in oklab, var(--success) 30%, transparent)',
-            }}
-          >
-            <Check
-              size={14}
-              aria-hidden="true"
-              style={{ color: 'var(--success)', marginTop: 2 }}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, color: 'var(--fg)' }}>
-                {DRAWER.verifiedBy(
-                  shortDate(flag.verifiedAt),
-                  mention(flag.verifiedByHandle ?? null),
-                )}
+          />
+        ) : (
+          <>
+            <div>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color: 'var(--fg)',
+                }}
+              >
+                {flag.label}
+              </h3>
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  color: 'var(--fg-muted)',
+                }}
+              >
+                {flag.description}
               </div>
-              {flag.verifiedNote && (
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <span style={SECTION_LABEL}>
+                {onStaging ? DRAWER.whoSeesStaging : DRAWER.whoSeesProduction}
+              </span>
+              <StageLadder flag={flag} onPick={onPick} scope="drawer" />
+              {/* "Beta is N people." only says something at Beta, and the named
+                  people are only worth introducing when there are some. */}
+              {(people.length > 0 ||
+                (stage === 'beta' && betaCount !== null)) && (
                 <div
                   style={{
-                    marginTop: 2,
-                    fontSize: 12,
+                    fontSize: 12.5,
                     color: 'var(--fg-muted)',
+                    marginTop: 4,
                   }}
                 >
-                  {`“${flag.verifiedNote}”`}
+                  {stage === 'beta' &&
+                    betaCount !== null &&
+                    `${DRAWER.betaIs(betaCount)} `}
+                  {people.length > 0 && DRAWER.alsoOn}
+                </div>
+              )}
+              {people.length === 0 ? (
+                <div
+                  data-testid="flag-people-empty"
+                  style={{ fontSize: 12.5, color: 'var(--fg-subtle)' }}
+                >
+                  {DRAWER.noPeople}
+                </div>
+              ) : (
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  {people.map((person) => {
+                    const role = roleLabel(person.role);
+                    const meta = [
+                      role === null
+                        ? null
+                        : DRAWER.addedOn(role, shortDate(person.addedAt)),
+                      person.isTest ? DRAWER.test : null,
+                    ]
+                      .filter((part) => part !== null)
+                      .join(' · ');
+                    return (
+                      <li
+                        key={person.userId}
+                        data-testid={`flag-person-${person.userId}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 0',
+                          borderTop: '1px solid var(--border)',
+                        }}
+                      >
+                        <PersonAvatar
+                          initialOf={person.handle}
+                          avatarColor={null}
+                          avatarSecondColor={null}
+                          size={28}
+                          initialSize={11}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 13.5,
+                              fontWeight: 700,
+                              color: 'var(--fg)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {mention(person.handle)}
+                          </div>
+                          <div
+                            style={{
+                              marginTop: 2,
+                              fontSize: 12,
+                              color: 'var(--fg-muted)',
+                            }}
+                          >
+                            {meta}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            void remove(person.userId, person.handle)
+                          }
+                          aria-label={DRAWER.removeAriaLabel(
+                            mention(person.handle),
+                          )}
+                          data-testid={`flag-person-remove-${person.userId}`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 8,
+                            color: 'var(--fg-subtle)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <X size={14} aria-hidden="true" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <button
+                type="button"
+                onClick={() => showView('add')}
+                data-testid="flag-people-add-trigger"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  height: 36,
+                  padding: '0 12px',
+                  borderRadius: 10,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-1)',
+                  fontSize: 13,
+                  color: 'var(--fg-subtle)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <Search size={15} aria-hidden="true" />
+                {DRAWER.addTrigger}
+                <Plus
+                  size={14}
+                  aria-hidden="true"
+                  style={{ marginLeft: 'auto' }}
+                />
+              </button>
+              {error !== null && (
+                <div
+                  role="alert"
+                  style={{ fontSize: 12.5, color: 'var(--danger)' }}
+                >
+                  {error}
                 </div>
               )}
             </div>
-            {onStaging && (
-              <button
-                type="button"
-                onClick={onUndoVerified}
-                disabled={saving}
-                aria-label={COPY.markVerified.undoAriaLabel(flag.label)}
-                data-testid="flag-drawer-undo-verified"
+
+            {flag.verifiedAt ? (
+              <div
+                data-testid="flag-drawer-verified"
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '4px 6px',
-                  fontSize: 12,
-                  color: 'var(--fg-muted)',
-                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background:
+                    'color-mix(in oklab, var(--success) 8%, transparent)',
+                  border:
+                    '1px solid color-mix(in oklab, var(--success) 30%, transparent)',
                 }}
               >
-                {COPY.markVerified.undo}
-              </button>
+                <Check
+                  size={14}
+                  aria-hidden="true"
+                  style={{ color: 'var(--success)', marginTop: 2 }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--fg)' }}>
+                    {DRAWER.verifiedBy(
+                      shortDate(flag.verifiedAt),
+                      mention(flag.verifiedByHandle ?? null),
+                    )}
+                  </div>
+                  {flag.verifiedNote && (
+                    <div
+                      style={{
+                        marginTop: 2,
+                        fontSize: 12,
+                        color: 'var(--fg-muted)',
+                      }}
+                    >
+                      {`“${flag.verifiedNote}”`}
+                    </div>
+                  )}
+                </div>
+                {onStaging && (
+                  <button
+                    type="button"
+                    onClick={onUndoVerified}
+                    disabled={saving}
+                    aria-label={COPY.markVerified.undoAriaLabel(flag.label)}
+                    data-testid="flag-drawer-undo-verified"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '4px 6px',
+                      fontSize: 12,
+                      color: 'var(--fg-muted)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {COPY.markVerified.undo}
+                  </button>
+                )}
+              </div>
+            ) : (
+              onStaging &&
+              stage !== 'off' && (
+                <div>
+                  <AdminButton
+                    variant="outline"
+                    size="sm"
+                    onClick={onMarkVerified}
+                    disabled={saving}
+                    data-testid="flag-drawer-mark-verified"
+                  >
+                    {COPY.markVerified.button}
+                  </AdminButton>
+                </div>
+              )
             )}
-          </div>
-        ) : (
-          onStaging &&
-          stage !== 'off' && (
-            <div>
-              <AdminButton
-                variant="outline"
-                size="sm"
-                onClick={onMarkVerified}
-                disabled={saving}
-                data-testid="flag-drawer-mark-verified"
-              >
-                {COPY.markVerified.button}
-              </AdminButton>
-            </div>
-          )
+
+            <FlagHistory flagKey={flag.key} version={version} />
+          </>
         )}
 
-        <FlagHistory flagKey={flag.key} version={version} />
+        {removed !== null && (
+          <div
+            role="status"
+            data-testid="flag-people-toast"
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '10px 14px',
+              borderRadius: 10,
+              fontSize: 13,
+              color: 'var(--fg)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-strong)',
+            }}
+          >
+            <span style={{ flex: 1 }}>{DRAWER.removed(removed.handle)}</span>
+            <button
+              type="button"
+              onClick={() => void undoRemove()}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px 6px',
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: 'var(--signal)',
+                cursor: 'pointer',
+              }}
+            >
+              {DRAWER.undoRemove}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
