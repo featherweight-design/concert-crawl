@@ -152,7 +152,11 @@ export const ReviewPageClient = ({ decisions }: ReviewPageClientProps) => {
     markSoldOut: async (event: AllEvent) => {
       const token = await getToken();
       if (!token) throw new ApiError(401, 'Unauthorized');
-      await apiClient.post(`/v1/admin/events/${event.id}/sold-out`, token, {});
+      // The mark needs a method now; this action asks for none, so it sends
+      // the `other` the API used to fill in.
+      await apiClient.post(`/v1/admin/events/${event.id}/sold-out`, token, {
+        evidenceMethod: 'other',
+      });
     },
     markAvailable: async (event: AllEvent) => {
       const token = await getToken();

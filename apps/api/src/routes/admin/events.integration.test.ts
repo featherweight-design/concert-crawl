@@ -45,9 +45,12 @@ import {
   clearTables,
   seedEvent,
   seedEventReport,
+  seedEventReportConfirm,
   seedPriceRetrievalLog,
   seedPriceSubmission,
   seedUserEvent,
+  seedUserProfile,
+  seedUserRole,
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -139,21 +142,25 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('defaults evidenceMethod to "other" when body is empty', async () => {
+  // B+ addendum 7 §6: the method is required; nothing is stored as `other`.
+  // The route's own hook answers every invalid body 422 (as the bad
+  // evidenceUrl case below).
+  it('refuses a mark with no evidenceMethod, writing nothing', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, { date: futureDate(31) });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ note: 'no method' }),
     });
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as {
-      success: boolean;
-      data: { evidenceMethod: string };
-    };
-    expect(body.data.evidenceMethod).toBe('other');
+    expect(res.status).toBe(422);
+
+    const rows = await testDb
+      .select()
+      .from(eventReports)
+      .where(eq(eventReports.eventId, event.id));
+    expect(rows).toHaveLength(0);
   });
 
   it('is idempotent — second call returns 200 with the existing report', async () => {
@@ -198,7 +205,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
       {
         method: 'POST',
         headers: ADMIN_HEADERS,
-        body: JSON.stringify({}),
+        body: JSON.stringify({ evidenceMethod: 'other' }),
       },
     );
     expect(res.status).toBe(404);
@@ -212,7 +219,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: NON_ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ evidenceMethod: 'other' }),
     });
     expect(res.status).toBe(403);
 
@@ -247,7 +254,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ evidenceMethod: 'other' }),
     });
     expect(res.status).toBe(201);
 
@@ -275,7 +282,7 @@ describe('POST /v1/admin/events/:id/available', () => {
     const markRes = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ evidenceMethod: 'other' }),
     });
     expect(markRes.status).toBe(201);
 
@@ -307,7 +314,7 @@ describe('POST /v1/admin/events/:id/available', () => {
     await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ evidenceMethod: 'other' }),
     });
 
     const availableRes = await app.request(
@@ -354,7 +361,7 @@ describe('POST /v1/admin/events/:id/available', () => {
     await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ evidenceMethod: 'other' }),
     });
 
     setNonAdminAuth();
@@ -388,7 +395,7 @@ describe('POST /v1/admin/events/:id/available', () => {
     await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ evidenceMethod: 'other' }),
     });
     // Clear the notifications table so we only see the backonsale rows.
     await testDb
@@ -430,7 +437,9 @@ describe('POST /v1/admin/events/:id/sold-out and /available — past_locked', ()
     app.request(`/v1/admin/events/${id}/${action}`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify(
+        action === 'sold-out' ? { evidenceMethod: 'other' } : {},
+      ),
     });
 
   const reportsFor = (id: string) =>
@@ -1110,7 +1119,7 @@ describe('GET /v1/admin/events — isSoldOut derivation', () => {
     await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ evidenceMethod: 'other' }),
     });
 
     const listSold = await app.request('/v1/admin/events', {
@@ -3324,6 +3333,129 @@ describe('GET /v1/admin/events/:id — single-event editor payload', () => {
       { method: 'GET', headers: ADMIN_HEADERS },
     );
     expect(res.status).toBe(404);
+  });
+
+  // B+ addendum 7 §6: WHY IT'S SOLD OUT, from the active promoted report.
+  describe('soldOutRecord', () => {
+    const getRecord = async (id: string) => {
+      const res = await app.request(`/v1/admin/events/${id}`, {
+        method: 'GET',
+        headers: ADMIN_HEADERS,
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        data: { isSoldOut: boolean; soldOutRecord: unknown };
+      };
+      return body.data;
+    };
+
+    it('is null on a show that is not sold out, even with a report pending or rejected', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: futureDate(40) });
+      await seedEventReport(event.id, 'fan_pending');
+      await seedEventReport(event.id, 'fan_rejected', {
+        resolvedAt: new Date(),
+        resolution: 'rejected',
+      });
+
+      const data = await getRecord(event.id);
+      expect(data.isSoldOut).toBe(false);
+      expect(data.soldOutRecord).toBeNull();
+    });
+
+    it('reads a promoted fan report: handle, avatar, Fan, evidence, both times and the confirms', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: futureDate(41) });
+      await seedUserProfile('fan_mira', {
+        handle: 'mira.k',
+        avatarColor: 'signal',
+        avatarSecondColor: 'accent',
+      });
+      // A plain member row is not an admin role.
+      await seedUserRole('fan_mira', { role: 'user' });
+      const reportedAt = new Date('2026-11-10T02:15:00Z');
+      const madeLiveAt = new Date('2026-11-10T04:02:00Z');
+      const report = await seedEventReport(event.id, 'fan_mira', {
+        evidenceMethod: 'bought_myself',
+        evidenceUrl: 'https://axs.com/events/52114',
+        note: 'Friday GA gone; pit waitlist still open.',
+        createdAt: reportedAt,
+        resolvedAt: madeLiveAt,
+        resolution: 'promoted',
+        // The admin note is never read for Fan or Admin.
+        adminNote: 'admin-authored — auto-promoted on creation',
+      });
+      await seedEventReportConfirm(report.id, 'fan_one');
+      await seedEventReportConfirm(report.id, 'fan_two');
+
+      const data = await getRecord(event.id);
+      expect(data.isSoldOut).toBe(true);
+      expect(data.soldOutRecord).toEqual({
+        reporter: {
+          handle: 'mira.k',
+          avatarColor: 'signal',
+          avatarSecondColor: 'accent',
+          kind: 'fan',
+        },
+        evidenceMethod: 'bought_myself',
+        evidenceUrl: 'https://axs.com/events/52114',
+        note: 'Friday GA gone; pit waitlist still open.',
+        reportedAt: reportedAt.toISOString(),
+        madeLiveAt: madeLiveAt.toISOString(),
+        confirmsCount: 2,
+      });
+    });
+
+    it('reads an admin mark as Admin, from user_roles, with none recorded where nothing was sent', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: futureDate(42) });
+      await seedUserRole(ADMIN_USER_ID, { role: 'admin' });
+      await seedUserProfile(ADMIN_USER_ID, { handle: 'hugh' });
+
+      const mark = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ evidenceMethod: 'venue_site' }),
+      });
+      expect(mark.status).toBe(201);
+
+      const data = await getRecord(event.id);
+      expect(data.soldOutRecord).toMatchObject({
+        reporter: {
+          handle: 'hugh',
+          avatarColor: null,
+          avatarSecondColor: null,
+          kind: 'admin',
+        },
+        evidenceMethod: 'venue_site',
+        evidenceUrl: null,
+        note: null,
+        confirmsCount: 0,
+      });
+    });
+
+    it('reads a reporter with no profile as a Fan with no handle', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: futureDate(43) });
+      await seedEventReport(event.id, 'fan_no_profile', {
+        evidenceMethod: 'saw_listing',
+        resolvedAt: new Date('2026-11-02T00:00:00Z'),
+        resolution: 'promoted',
+      });
+
+      const data = await getRecord(event.id);
+      expect(data.isSoldOut).toBe(true);
+      expect(data.soldOutRecord).toMatchObject({
+        reporter: {
+          handle: null,
+          avatarColor: null,
+          avatarSecondColor: null,
+          kind: 'fan',
+        },
+        evidenceMethod: 'saw_listing',
+        confirmsCount: 0,
+      });
+    });
   });
 
   it('rejects non-admin callers with 403', async () => {

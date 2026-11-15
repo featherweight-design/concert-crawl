@@ -530,7 +530,9 @@ describe('sale reports under the shared writes', () => {
         userId: 'admin_user',
         sessionClaims: { metadata: { role: 'admin' } },
       };
-      return post(`/v1/admin/events/${eventId}/sold-out`, {});
+      return post(`/v1/admin/events/${eventId}/sold-out`, {
+        evidenceMethod: 'other',
+      });
     };
 
     const soldOutNotices = () =>
