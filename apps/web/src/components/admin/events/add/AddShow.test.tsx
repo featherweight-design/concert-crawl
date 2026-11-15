@@ -339,8 +339,12 @@ describe('AddShow', () => {
     );
     renderIt();
     await fill();
-    fireEvent.click(addShowButton());
-    fireEvent.click(addShowButton());
+    // Held from before the press: mid-save its name is "Adding…".
+    const submitButton = addShowButton();
+    fireEvent.click(submitButton);
+    expect(submitButton).toBeDisabled();
+    expect(submitButton).toHaveAccessibleName(COPY.submitting);
+    fireEvent.click(submitButton);
     await waitFor(() => expect(create).toHaveBeenCalled());
     expect(screen.getByLabelText(COPY.titleField)).toBeDisabled();
     expect(screen.getByLabelText(COPY.ticket)).toBeDisabled();
@@ -349,7 +353,8 @@ describe('AddShow', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     fireEvent.click(screen.getByTestId('side-panel-scrim'));
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.click(addShowButton());
+    fireEvent.click(submitButton);
+    expect(create).toHaveBeenCalledTimes(1);
     resolve({ kind: 'created', id: 'new-1' });
     await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
     expect(create).toHaveBeenCalledTimes(1);
