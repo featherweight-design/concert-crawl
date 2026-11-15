@@ -555,11 +555,19 @@ describe('admin feedback (integration)', () => {
       await seedUserProfile(ADMIN_ID, { handle: 'huey' });
       await seedUserProfile('user_reporter', { handle: 'reporter' });
       const id = await seedFeedback('flagged');
-      await patch(id, { status: 'resolved', adminNotes: 'done' });
+      const patched = await patch(id, {
+        status: 'resolved',
+        adminNotes: 'done',
+      });
+      expect(patched.status).toBe(200);
 
       const res = await getOne(id);
       expect(res.status).toBe(200);
-      const row = (await list()).data.find((each) => each.id === id);
+      // Done holds a resolved row, so the comparison row is pinned there.
+      const row = (await list('?view=done')).data.find(
+        (each) => each.id === id,
+      );
+      expect(row).toBeDefined();
       expect(row?.submittedBy).toBe('reporter');
       expect(row?.resolvedBy).toBe('huey');
       expect(await res.json()).toEqual({ success: true, data: row });
@@ -575,6 +583,7 @@ describe('admin feedback (integration)', () => {
         },
       });
       const res = await getOne(id);
+      expect(res.status).toBe(200);
       const body = z
         .object({
           data: z.object({
