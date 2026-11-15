@@ -109,7 +109,18 @@ describe('FeatureFlagControl (the ladder)', () => {
   });
 
   it('says how many named people a flag has', () => {
-    render(<FeatureFlagControl initial={[flag({ people: ['a', 'b'] })]} />);
+    const person = (userId: string) => ({
+      userId,
+      handle: userId,
+      role: 'user',
+      isTest: false,
+      addedAt: '2026-09-07T00:00:00.000Z',
+    });
+    render(
+      <FeatureFlagControl
+        initial={[flag({ people: [person('a'), person('b')] })]}
+      />,
+    );
     expect(screen.getByTestId('flag-people-crews')).toHaveTextContent(
       '+ 2 people',
     );

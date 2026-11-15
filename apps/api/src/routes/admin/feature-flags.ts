@@ -11,6 +11,7 @@ import {
   featureFlagDefaults,
   isFeatureFlagKey,
   type AdminFeatureFlag,
+  type AdminFlagPerson,
   type FeatureFlagKey,
 } from '@concert-crawl/entitlements';
 import { getAuth } from '@hono/clerk-auth';
@@ -25,6 +26,8 @@ import {
   stepsUp,
   type FlagStage,
 } from '../../lib/flag-ladder.js';
+import { FORMER_ADMIN } from './lib/admin-names.js';
+import { betaRoleIds, identitiesOf, rolesOf } from './lib/flag-audience.js';
 import type { AdminVariables } from './index.js';
 
 export const featureFlagsAdminRouter = new Hono<AdminVariables>();
@@ -53,18 +56,93 @@ const verifySchema = z.object({
 const defaultStage = (key: FeatureFlagKey): FlagStage =>
   featureFlagDefaults()[key] ? 'everyone' : 'off';
 
-const loadPeople = async (key: FeatureFlagKey): Promise<string[]> => {
+interface NamedPerson {
+  userId: string;
+  addedAt: Date;
+}
+
+const loadPeople = async (key: FeatureFlagKey): Promise<NamedPerson[]> => {
   const rows = await db
-    .select({ userId: featureFlagUsers.userId })
+    .select({
+      userId: featureFlagUsers.userId,
+      addedAt: featureFlagUsers.addedAt,
+    })
     .from(featureFlagUsers)
     .where(eq(featureFlagUsers.flagKey, key));
-  return rows.map((row) => row.userId).sort();
+  return rows.sort((left, right) => left.userId.localeCompare(right.userId));
 };
+
+interface FlagEntry {
+  key: FeatureFlagKey;
+  row: FeatureFlagRow | undefined;
+  people: NamedPerson[];
+}
+
+// The flags as the admin page draws them: the ladder state plus each named
+// person's handle, role and test mark, who verified, and the Beta count. One
+// profile query and one Clerk read cover every flag in the call.
+const describeFlags = async (
+  entries: readonly FlagEntry[],
+): Promise<AdminFeatureFlag[]> => {
+  const named = entries.flatMap((entry) =>
+    entry.people.map((person) => person.userId),
+  );
+  const betaIds = await betaRoleIds();
+  const referenced = entries.flatMap((entry) => [
+    ...(entry.row?.verifiedBy ? [entry.row.verifiedBy] : []),
+    ...(entry.row?.stageOwnerUserId ? [entry.row.stageOwnerUserId] : []),
+  ]);
+  const [identities, roles] = await Promise.all([
+    identitiesOf([...named, ...referenced, ...(betaIds ?? [])]),
+    rolesOf(named),
+  ]);
+
+  return entries.map(({ key, row, people }) => {
+    const audience = new Set<string>(betaIds ?? []);
+    for (const person of people) audience.add(person.userId);
+    if (row?.stageOwnerUserId) audience.add(row.stageOwnerUserId);
+    const betaCount =
+      betaIds === null
+        ? null
+        : [...audience].filter((id) => identities.get(id)?.isTest !== true)
+            .length;
+    return toAdminFlag(key, row, {
+      people: people.map((person) => ({
+        userId: person.userId,
+        handle: identities.get(person.userId)?.handle ?? null,
+        role: roles.get(person.userId) ?? null,
+        isTest: identities.get(person.userId)?.isTest === true,
+        addedAt: person.addedAt.toISOString(),
+      })),
+      verifiedByHandle: row?.verifiedBy
+        ? (identities.get(row.verifiedBy)?.handle ?? FORMER_ADMIN)
+        : null,
+      betaCount,
+    });
+  });
+};
+
+const describeFlag = async (
+  key: FeatureFlagKey,
+  row: FeatureFlagRow | undefined,
+): Promise<AdminFeatureFlag> => {
+  const [flag] = await describeFlags([
+    { key, row, people: await loadPeople(key) },
+  ]);
+  if (!flag) throw new Error('describeFlags returned no flag');
+  return flag;
+};
+
+interface FlagAudience {
+  people: AdminFlagPerson[];
+  verifiedByHandle: string | null;
+  betaCount: number | null;
+}
 
 const toAdminFlag = (
   key: FeatureFlagKey,
   row: FeatureFlagRow | undefined,
-  people: string[],
+  { people, verifiedByHandle, betaCount }: FlagAudience,
 ): AdminFeatureFlag => {
   const staging = isStagingEnvironment();
   const stage = row?.stage ?? defaultStage(key);
@@ -79,8 +157,10 @@ const toAdminFlag = (
     stageOwnerUserId: row?.stageOwnerUserId ?? null,
     verifiedAt: row?.verifiedAt?.toISOString() ?? null,
     verifiedBy: row?.verifiedBy ?? null,
+    verifiedByHandle,
     verifiedNote: row?.verifiedNote ?? null,
     people,
+    betaCount,
     environment: staging ? 'staging' : 'production',
     // Production keeps a flag locked until it is verified there: stepping up
     // needs the mark. Stepping down never does.
@@ -140,15 +220,15 @@ featureFlagsAdminRouter.get('/', async (ctx) => {
   ]);
   const stored = new Map(rows.map((row) => [row.key, row]));
 
-  const data: AdminFeatureFlag[] = FEATURE_FLAG_KEYS.map((key) =>
-    toAdminFlag(
+  const data = await describeFlags(
+    FEATURE_FLAG_KEYS.map((key) => ({
       key,
-      stored.get(key),
-      people
+      row: stored.get(key),
+      people: people
         .filter((person) => person.flagKey === key)
-        .map((person) => person.userId)
-        .sort(),
-    ),
+        .map((person) => ({ userId: person.userId, addedAt: person.addedAt }))
+        .sort((left, right) => left.userId.localeCompare(right.userId)),
+    })),
   );
 
   return ctx.json({ success: true, data });
@@ -265,7 +345,7 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
 
   return ctx.json({
     success: true,
-    data: toAdminFlag(key, outcome.row, await loadPeople(key)),
+    data: await describeFlag(key, outcome.row),
   });
 });
 
@@ -304,7 +384,7 @@ featureFlagsAdminRouter.post('/:key/people', async (ctx) => {
   audit(ctx, key, actorId, { kind: 'person_added', userId });
   return ctx.json({
     success: true,
-    data: toAdminFlag(key, row, await loadPeople(key)),
+    data: await describeFlag(key, row),
   });
 });
 
@@ -342,7 +422,7 @@ featureFlagsAdminRouter.delete('/:key/people/:userId', async (ctx) => {
   audit(ctx, key, actorId, { kind: 'person_removed', userId });
   return ctx.json({
     success: true,
-    data: toAdminFlag(key, row, await loadPeople(key)),
+    data: await describeFlag(key, row),
   });
 });
 
@@ -386,7 +466,7 @@ featureFlagsAdminRouter.post('/:key/verify', async (ctx) => {
   audit(ctx, key, actorId, { kind: 'verified' });
   return ctx.json({
     success: true,
-    data: toAdminFlag(key, row, await loadPeople(key)),
+    data: await describeFlag(key, row),
   });
 });
 
@@ -418,7 +498,7 @@ featureFlagsAdminRouter.delete('/:key/verify', async (ctx) => {
   audit(ctx, key, actorId, { kind: 'unverified' });
   return ctx.json({
     success: true,
-    data: toAdminFlag(key, row, await loadPeople(key)),
+    data: await describeFlag(key, row),
   });
 });
 
@@ -433,6 +513,14 @@ featureFlagsAdminRouter.get('/:key/history', async (ctx) => {
     .where(eq(featureFlagHistory.flagKey, key))
     .orderBy(desc(featureFlagHistory.createdAt))
     .limit(100);
+  const identities = await identitiesOf(
+    rows.flatMap((row) => [
+      row.actorUserId,
+      ...(row.subjectUserId ? [row.subjectUserId] : []),
+    ]),
+  );
+  const handleOf = (userId: string | null): string | null =>
+    userId === null ? null : (identities.get(userId)?.handle ?? FORMER_ADMIN);
   return ctx.json({
     success: true,
     data: rows.map((row) => ({
@@ -441,7 +529,9 @@ featureFlagsAdminRouter.get('/:key/history', async (ctx) => {
       fromStage: row.fromStage,
       toStage: row.toStage,
       subjectUserId: row.subjectUserId,
+      subjectHandle: handleOf(row.subjectUserId),
       actorUserId: row.actorUserId,
+      actorHandle: handleOf(row.actorUserId),
       note: row.note,
       checks: row.checks,
       createdAt: row.createdAt.toISOString(),

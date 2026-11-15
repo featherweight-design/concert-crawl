@@ -14,6 +14,7 @@ export {
   flagForEntitlement,
   isFeatureFlagKey,
   type AdminFeatureFlag,
+  type AdminFlagPerson,
   type FeatureFlagDefinition,
   type FeatureFlagKey,
   type FeatureFlagView,

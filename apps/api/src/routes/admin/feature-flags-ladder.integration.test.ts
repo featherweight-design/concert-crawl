@@ -5,10 +5,37 @@ interface TestAuth {
   sessionClaims: { metadata?: { role?: string } };
 }
 
-const { authState } = vi.hoisted(() => {
+const { authState, clerkUsers } = vi.hoisted(() => {
   const state: { current: TestAuth | null } = { current: null };
-  return { authState: state };
+  // The Clerk users the flags page can read: id and role.
+  const users: { current: { id: string; role: string }[] } = { current: [] };
+  return { authState: state, clerkUsers: users };
 });
+
+vi.mock('@clerk/backend', () => ({
+  createClerkClient: () => ({
+    users: {
+      getUserList: async (params: {
+        userId?: string[];
+        limit?: number;
+        offset?: number;
+      }) => {
+        const wanted = params.userId;
+        const all = clerkUsers.current.filter(
+          (user) => wanted === undefined || wanted.includes(user.id),
+        );
+        const offset = params.offset ?? 0;
+        const data = all
+          .slice(offset, offset + (params.limit ?? 10))
+          .map((user) => ({
+            id: user.id,
+            publicMetadata: { role: user.role },
+          }));
+        return { data, totalCount: all.length };
+      },
+    },
+  }),
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
@@ -21,10 +48,12 @@ import {
   featureFlagUsers,
   featureFlags,
 } from '@concert-crawl/db';
+import { FORMER_ADMIN_NAME } from '@concert-crawl/types';
 import { asc, eq } from 'drizzle-orm';
 import { createApp } from '../../app.js';
 import { clearFeatureFlagCache } from '../../lib/feature-flags.js';
-import { clearTables } from '../../test/helpers/seed.js';
+import { clearTables, seedUserProfile } from '../../test/helpers/seed.js';
+import { clearBetaRoleCache } from './lib/flag-audience.js';
 import { testDb } from '../../test/helpers/db.js';
 
 const app = createApp();
@@ -290,5 +319,122 @@ describe('feature flag ladder (production lock)', () => {
     await post('/verify');
     await patch({ stage: 'beta' });
     expect((await storedCrews())?.verifiedAt).not.toBeNull();
+  });
+});
+
+describe('what the flags page draws about people', () => {
+  type Flag = {
+    key: string;
+    people: {
+      userId: string;
+      handle: string | null;
+      role: string | null;
+      isTest: boolean;
+      addedAt: string;
+    }[];
+    verifiedByHandle: string | null;
+    betaCount: number | null;
+  };
+
+  const crews = async (): Promise<Flag> => {
+    const res = await app.request('/v1/admin/feature-flags');
+    const body = (await res.json()) as { data: Flag[] };
+    const found = body.data.find((flag) => flag.key === 'crews');
+    if (!found) throw new Error('crews missing from the list');
+    return found;
+  };
+
+  beforeEach(async () => {
+    process.env['SENTRY_ENVIRONMENT'] = 'staging';
+    await clearTables();
+    clearFeatureFlagCache();
+    clearBetaRoleCache();
+    clerkUsers.current = [];
+    asAdmin();
+  });
+
+  it('gives each named person a handle, role, test mark and added date', async () => {
+    await seedUserProfile('named-a', { handle: 'ana.b' });
+    await seedUserProfile('named-t', {
+      handle: 'andre.r',
+      isTestAccount: true,
+    });
+    clerkUsers.current = [
+      { id: 'named-a', role: 'beta' },
+      { id: 'named-t', role: 'user' },
+    ];
+    await post('/people', { userId: 'named-a' });
+    await post('/people', { userId: 'named-t' });
+    await post('/people', { userId: 'gone-1' });
+
+    const flag = await crews();
+    expect(flag.people.map((person) => person.userId)).toEqual([
+      'gone-1',
+      'named-a',
+      'named-t',
+    ]);
+    expect(flag.people[0]).toMatchObject({ handle: null, isTest: false });
+    expect(flag.people[1]).toMatchObject({
+      handle: 'ana.b',
+      role: 'beta',
+      isTest: false,
+    });
+    expect(flag.people[2]).toMatchObject({
+      handle: 'andre.r',
+      role: 'user',
+      isTest: true,
+    });
+    expect(Date.parse(flag.people[1]?.addedAt ?? '')).not.toBeNaN();
+  });
+
+  it('counts the Beta role, named people and the Me owner, test accounts left out', async () => {
+    await seedUserProfile('beta-1', { handle: 'b1' });
+    await seedUserProfile('beta-test', { handle: 'bt', isTestAccount: true });
+    await seedUserProfile('named-t', { isTestAccount: true });
+    clerkUsers.current = [
+      { id: 'beta-1', role: 'beta' },
+      { id: 'beta-test', role: 'beta' },
+      { id: 'someone', role: 'user' },
+    ];
+    await post('/people', { userId: 'named-1' });
+    await post('/people', { userId: 'named-t' });
+    // beta-1 + named-1 count; beta-test and named-t are test accounts.
+    expect((await crews()).betaCount).toBe(2);
+  });
+
+  it('counts a person who has the role and is also named once', async () => {
+    clerkUsers.current = [{ id: 'both', role: 'beta' }];
+    await post('/people', { userId: 'both' });
+    expect((await crews()).betaCount).toBe(1);
+  });
+
+  it('names who verified, or the former-admin fallback', async () => {
+    await seedUserProfile(ADMIN, { handle: 'hugh' });
+    await post('/verify');
+    expect((await crews()).verifiedByHandle).toBe('hugh');
+    await testDb
+      .update(featureFlags)
+      .set({ verifiedBy: 'deleted-admin' })
+      .where(eq(featureFlags.key, 'crews'));
+    expect((await crews()).verifiedByHandle).toBe(FORMER_ADMIN_NAME);
+  });
+
+  it('names the actor and subject on each history row', async () => {
+    await seedUserProfile(ADMIN, { handle: 'hugh' });
+    await seedUserProfile('named-a', { handle: 'ana.b' });
+    await post('/people', { userId: 'named-a' });
+    const res = await app.request('/v1/admin/feature-flags/crews/history');
+    const body = (await res.json()) as {
+      data: {
+        kind: string;
+        actorHandle: string | null;
+        subjectHandle: string | null;
+      }[];
+    };
+    expect(body.data[0]).toMatchObject({
+      kind: 'person_added',
+      actorHandle: 'hugh',
+      subjectHandle: 'ana.b',
+    });
   });
 });
