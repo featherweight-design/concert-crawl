@@ -356,8 +356,10 @@ describe('FollowShelf', () => {
     );
     expect(toggle).not.toHaveBeenCalled();
     expect(push).toHaveBeenCalledTimes(1);
+    // Back to the artist's page, not to /events: the return seam replays a
+    // follow only there, and would strip it from Browse unread.
     expect(push).toHaveBeenCalledWith(
-      `/sign-in?redirect_url=${encodeURIComponent('/events?intent=follow%3Aratbag&label=Ratbag')}`,
+      `/sign-in?redirect_url=${encodeURIComponent('/artists/ratbag?intent=follow%3Aratbag&label=Ratbag')}`,
     );
   });
 

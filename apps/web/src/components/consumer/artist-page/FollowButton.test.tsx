@@ -9,15 +9,19 @@ import { NF_FOLLOW_SIZES } from './definitions/constants';
 import { FollowButton } from './FollowButton';
 
 const push = vi.fn();
+// Most cases sit on the artist's own page; one renders the button elsewhere.
+const ARTIST_PATH = '/artists/wax-harbour';
+const nav = { pathname: ARTIST_PATH };
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
-  usePathname: () => '/artists/wax-harbour',
+  usePathname: () => nav.pathname,
   useSearchParams: () => new URLSearchParams(),
 }));
 
 afterEach(() => {
   cleanup();
   push.mockReset();
+  nav.pathname = ARTIST_PATH;
 });
 
 // VOCABULARY-BAN-CHECK — this file names the banned glyph to assert its absence.
@@ -97,6 +101,44 @@ describe('FollowButton', () => {
     fireEvent.click(getByRole('button'));
     expect(push).toHaveBeenCalledWith(
       `/sign-in?redirect_url=${encodeURIComponent('/artists/wax-harbour?intent=follow%3Awax-harbour&label=Wax+Harbour')}`,
+    );
+  });
+
+  // The return seam replays a follow only on that artist's page and strips it
+  // anywhere else, so a follow started on /search must come back to the
+  // artist, or it is silently lost after sign-in.
+  it('returns a pending follow to the artist page from anywhere else', () => {
+    nav.pathname = '/search';
+    const { getByRole } = render(
+      <FollowButton
+        name="Wax Harbour"
+        slug="wax-harbour"
+        following={false}
+        signedOut
+        onToggle={noop}
+      />,
+    );
+    fireEvent.click(getByRole('button'));
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/artists/wax-harbour?intent=follow%3Awax-harbour&label=Wax+Harbour')}`,
+    );
+  });
+
+  // Without a slug there is nothing to replay, so they come back where they were.
+  it('returns a slug-less signed-out tap to the current page', () => {
+    nav.pathname = '/search';
+    const { getByRole } = render(
+      <FollowButton
+        name="Wax Harbour"
+        following={false}
+        signedOut
+        onToggle={noop}
+      />,
+    );
+    fireEvent.click(getByRole('button'));
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/search')}`,
     );
   });
 
