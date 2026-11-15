@@ -38,22 +38,38 @@ const SEARCH: CSSProperties = {
   flex: 'none',
 };
 
+/**
+ * The search box over the list, as a combobox: ArrowUp/Down move the active
+ * option, Home/End jump to the ends, Enter picks it (LineupField's pattern).
+ * The active option starts on the chosen venue, else the first.
+ */
 const VenueList = ({
+  id,
   venues,
   value,
   phone,
   onPick,
 }: {
-  venues: PickVenue[] | 'failed' | null;
+  id: string;
+  venues: PickVenue[];
   value: string;
   phone: boolean;
   onPick: (id: string) => void;
 }) => {
   const [query, setQuery] = useState('');
-  if (venues === null || venues === 'failed') return null;
   const rows = ordered(venues, query);
+  const [active, setActive] = useState(() =>
+    Math.max(
+      0,
+      rows.findIndex((venue) => venue.id === value),
+    ),
+  );
+  const listId = `${id}-list`;
+  const optionId = (index: number) => `${listId}-${index}`;
+  const current = rows.length === 0 ? -1 : Math.min(active, rows.length - 1);
   return (
     <div
+      id={id}
       style={{ display: 'flex', flexDirection: 'column', gap: phone ? 12 : 6 }}
     >
       <label style={SEARCH}>
@@ -68,10 +84,40 @@ const VenueList = ({
           autoFocus
           data-testid="venue-search"
           className="admin-add-show-input"
+          role="combobox"
+          aria-expanded={rows.length > 0}
+          aria-controls={rows.length > 0 ? listId : undefined}
+          aria-autocomplete="list"
+          aria-activedescendant={current >= 0 ? optionId(current) : undefined}
           aria-label={COPY.search(venues.length)}
           placeholder={COPY.search(venues.length)}
           value={query}
-          onChange={(evt) => setQuery(evt.target.value)}
+          onChange={(evt) => {
+            setQuery(evt.target.value);
+            setActive(0);
+          }}
+          onKeyDown={(evt) => {
+            if (rows.length === 0) return;
+            const last = rows.length - 1;
+            const moves: Record<string, number> = {
+              ArrowDown: Math.min(last, current + 1),
+              ArrowUp: Math.max(0, current - 1),
+              Home: 0,
+              End: last,
+            };
+            const next = moves[evt.key];
+            if (next !== undefined) {
+              evt.preventDefault();
+              setActive(next);
+              document
+                .getElementById(optionId(next))
+                ?.scrollIntoView?.({ block: 'nearest' });
+            } else if (evt.key === 'Enter') {
+              evt.preventDefault();
+              const venue = rows[current];
+              if (venue) onPick(venue.id);
+            }
+          }}
           style={{
             flex: 1,
             minWidth: 0,
@@ -96,6 +142,7 @@ const VenueList = ({
         </div>
       ) : (
         <div
+          id={listId}
           role="listbox"
           aria-label={COPY.title}
           style={{
@@ -107,29 +154,35 @@ const VenueList = ({
             overflowY: 'auto',
           }}
         >
-          {rows.map((venue) => {
+          {rows.map((venue, index) => {
             const chosen = venue.id === value;
+            const lit = chosen || index === current;
             return (
-              <button
+              // Hidden venues stay pickable: listed last and muted, never
+              // blocked (orchestrator ruling); removed ones never arrive.
+              <div
                 key={venue.id}
-                type="button"
+                id={optionId(index)}
                 role="option"
                 aria-selected={chosen}
+                data-active={index === current || undefined}
+                // Keeps focus in the search box, which owns the keyboard.
+                onMouseDown={(evt) => evt.preventDefault()}
                 onClick={() => onPick(venue.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
+                  flex: 'none',
                   gap: 10,
                   width: '100%',
                   height: phone ? 46 : 40,
                   padding: '0 10px',
                   borderRadius: 9,
-                  border: 'none',
-                  background: chosen ? 'var(--surface-2)' : 'transparent',
+                  boxSizing: 'border-box',
+                  background: lit ? 'var(--surface-2)' : 'transparent',
                   color: venue.active ? 'var(--fg)' : 'var(--fg-subtle)',
                   fontSize: 13.5,
                   fontWeight: chosen ? 600 : 500,
-                  fontFamily: 'inherit',
                   cursor: 'pointer',
                   opacity: venue.active ? 1 : 0.7,
                 }}
@@ -146,7 +199,7 @@ const VenueList = ({
                     aria-hidden
                   />
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
@@ -159,6 +212,11 @@ const VenueList = ({
  * Add a show's Venue field (`06/add-a-show-by-hand`: a 20px tile, no chevron)
  * over the shared venue list (`04/venue-picker-d`, a sheet on the phone,
  * `04/venue-picker-m`).
+ *
+ * `venues` is null while loading and 'failed' after a failed load; the list
+ * opens only once it is an array, so a press while loading opens nothing.
+ * Retry contract: on `onRetry` the parent sets `venues` back to null, then
+ * loads again and sets the array or 'failed'.
  */
 export const VenuePicker = ({
   id,
@@ -181,9 +239,11 @@ export const VenuePicker = ({
   describedBy?: string | undefined;
 }) => {
   const { open, setOpen, close, ref, trigger } = usePopover();
-  const picked = Array.isArray(venues)
-    ? venues.find((venue) => venue.id === value)
-    : undefined;
+  const list = Array.isArray(venues) ? venues : null;
+  // Never an empty shell: the list shows only once the venues are in.
+  const shown = open && list !== null;
+  const listId = `${id}-venues`;
+  const picked = list?.find((venue) => venue.id === value);
   const pick = (venueId: string) => {
     onChange(venueId);
     close();
@@ -220,9 +280,13 @@ export const VenuePicker = ({
         id={id}
         type="button"
         aria-haspopup="listbox"
-        aria-expanded={open}
+        aria-expanded={shown}
+        aria-controls={shown ? listId : undefined}
+        aria-busy={venues === null || undefined}
         aria-describedby={describedBy}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (list !== null) setOpen(!open);
+        }}
         style={{
           ...inputStyle(invalid),
           display: 'flex',
@@ -253,15 +317,22 @@ export const VenuePicker = ({
         )}
       </button>
       {failed}
-      {open && phone && (
+      {shown && phone && (
         <AdminSheet title={COPY.title} onClose={close}>
-          <VenueList venues={venues} value={value} phone onPick={pick} />
+          <VenueList
+            id={listId}
+            venues={list}
+            value={value}
+            phone
+            onPick={pick}
+          />
         </AdminSheet>
       )}
-      {open && !phone && (
+      {shown && !phone && (
         <div data-testid="venue-picker" style={{ ...POPOVER, right: 0 }}>
           <VenueList
-            venues={venues}
+            id={listId}
+            venues={list}
             value={value}
             phone={false}
             onPick={pick}

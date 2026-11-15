@@ -227,6 +227,94 @@ describe('LineupField', () => {
       { name: 'Three' },
       { name: 'One' },
     ]);
+    // Already last: Alt+Right changes nothing.
+    changes.mockClear();
+    fireEvent.keyDown(
+      screen.getByRole('group', { name: COPY.chipLabel('One', COPY.support) }),
+      { key: 'ArrowRight', altKey: true },
+    );
+    expect(changes).not.toHaveBeenCalled();
+  });
+
+  it('drops an act past the last chip to the end of the bill', () => {
+    render(
+      <Harness
+        initial={[{ name: 'One' }, { name: 'Two' }, { name: 'Three' }]}
+      />,
+    );
+    const [first] = chips();
+    if (!first) throw new Error('chips');
+    fireEvent.dragStart(first);
+    fireEvent.dragOver(input());
+    fireEvent.drop(input());
+    expect(changes).toHaveBeenLastCalledWith([
+      { name: 'Two' },
+      { name: 'Three' },
+      { name: 'One' },
+    ]);
+    expect(chips()[2]).toHaveAccessibleName(
+      COPY.chipLabel('One', COPY.support),
+    );
+  });
+
+  it('changes nothing for a chip dropped on itself', () => {
+    render(<Harness initial={[{ name: 'One' }, { name: 'Two' }]} />);
+    const [first] = chips();
+    if (!first) throw new Error('chips');
+    fireEvent.dragStart(first);
+    fireEvent.drop(first);
+    expect(changes).not.toHaveBeenCalled();
+  });
+
+  it('never shows or adds an older query’s late results', async () => {
+    let lateResolve: (found: ArtistSuggestion[]) => void = () => undefined;
+    search.mockImplementationOnce(
+      (_text, _signal) =>
+        new Promise<ArtistSuggestion[]>((resolve) => {
+          lateResolve = resolve;
+        }),
+    );
+    search.mockImplementationOnce(async () => [
+      { id: 'a2', name: 'Kaleo Live' },
+    ]);
+    render(<Harness />);
+    type('kal');
+    await settle();
+    expect(search).toHaveBeenLastCalledWith('kal', expect.any(AbortSignal));
+    type('kaleo');
+    // The old query's reply lands after the newer text, before its search.
+    await act(async () => {
+      lateResolve([{ id: 'a1', name: 'Kal Stale' }]);
+    });
+    expect(screen.queryByRole('option', { name: 'Kal Stale' })).toBeNull();
+    await settle();
+    expect(screen.getByRole('option', { name: 'Kaleo Live' })).toBeVisible();
+    expect(screen.queryByRole('option', { name: 'Kal Stale' })).toBeNull();
+    // Enter with nothing highlighted adds the typed text, never a stale pick.
+    fireEvent.keyDown(input(), { key: 'Enter' });
+    expect(changes).toHaveBeenLastCalledWith([{ name: 'kaleo' }]);
+  });
+
+  it('drops the shown suggestions as soon as the text changes', async () => {
+    render(<Harness />);
+    type('kal');
+    await settle();
+    expect(screen.getByRole('option', { name: 'Kaleo' })).toBeVisible();
+    type('kalx');
+    expect(screen.queryByRole('option', { name: 'Kaleo' })).toBeNull();
+    // Only the typed option until the new search answers.
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+  });
+
+  it('points aria-controls at the list only while it shows', async () => {
+    render(<Harness />);
+    expect(input()).not.toHaveAttribute('aria-controls');
+    type('kal');
+    await settle();
+    expect(input()).toHaveAttribute(
+      'aria-controls',
+      screen.getByRole('listbox').id,
+    );
   });
 
   it('moves an act up with an arrow on the phone, with no drag', () => {
