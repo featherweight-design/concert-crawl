@@ -46,6 +46,14 @@ export function CodeBoxes({
           }
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          // The boxes show the next empty one, so the real caret stays at the
+          // end: a tap or arrow key cannot leave it editing a digit that is
+          // not the highlighted one.
+          onSelect={(evt) => {
+            const end = evt.currentTarget.value.length;
+            if (evt.currentTarget.selectionStart !== end)
+              evt.currentTarget.setSelectionRange(end, end);
+          }}
           disabled={disabled}
           inputMode="numeric"
           autoComplete="one-time-code"
@@ -61,7 +69,7 @@ export function CodeBoxes({
         >
           {Array.from({ length: LENGTH }, (_, index) => {
             const digit = value[index];
-            const isActive = focused && index === active;
+            const isActive = focused && !disabled && index === active;
             const border = invalid
               ? 'border-danger'
               : isActive

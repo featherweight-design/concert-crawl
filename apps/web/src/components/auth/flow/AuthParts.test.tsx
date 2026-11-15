@@ -135,7 +135,9 @@ describe('PrimaryButton', () => {
       </PrimaryButton>,
     );
     const button = screen.getByRole('button', { name: 'Making your account…' });
-    expect(button).toBeDisabled();
+    // Held with aria-disabled, not `disabled`, so focus stays on the button.
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).not.toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
   });
 });

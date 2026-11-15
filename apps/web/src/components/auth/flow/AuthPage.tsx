@@ -51,7 +51,7 @@ export function AuthPage({ children, onBack, venueCount }: AuthPageProps) {
           </Link>
         </div>
         <nav
-          aria-label={COPY.foot.terms}
+          aria-label={COPY.foot.navLabel}
           className="hidden gap-[22px] text-[13px] lg:flex"
         >
           <Link href="/legal/terms" className={FOOT_LINK}>
@@ -93,7 +93,10 @@ export function AuthPage({ children, onBack, venueCount }: AuthPageProps) {
             {COPY.foot.proof(venueCount)}
           </p>
         ) : null}
-        <nav className="flex gap-[18px] lg:hidden" aria-label={COPY.foot.terms}>
+        <nav
+          className="flex gap-[18px] lg:hidden"
+          aria-label={COPY.foot.navLabel}
+        >
           <Link href="/legal/terms" className={FOOT_LINK}>
             {COPY.foot.terms}
           </Link>
