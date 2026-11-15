@@ -67,6 +67,44 @@ export function classifyNewPasswordError(error: unknown): NewPasswordOutcome {
   return 'failed';
 }
 
+export type SignUpOutcome =
+  | 'taken'
+  | 'breached'
+  | 'weak'
+  | 'tooShort'
+  | 'email'
+  | 'legal'
+  | 'rateLimited'
+  | 'captcha'
+  | 'failed';
+
+/**
+ * What a refused sign-up means to the visitor. First match wins. A 429 comes
+ * first (its codes must not read as refusals); a breached password before a
+ * weak one (Clerk can send both). A taken email is not an error to show: the
+ * screen goes on to the same Verify as any address, so it never says whether
+ * an account exists.
+ */
+export function classifySignUpError(error: unknown): SignUpOutcome {
+  if (isRateLimited(error)) return 'rateLimited';
+  const codes = codesOf(error);
+  if (codes.some((code) => BREACHED_NEW_PASSWORD_CODES.has(code))) {
+    return 'breached';
+  }
+  if (codes.includes('form_password_not_strong_enough')) return 'weak';
+  if (codes.includes('form_password_length_too_short')) return 'tooShort';
+  if (codes.includes('form_identifier_exists')) return 'taken';
+  if (
+    codes.includes('form_param_format_invalid') ||
+    codes.includes('form_param_nil')
+  ) {
+    return 'email';
+  }
+  if (codes.some((code) => code.includes('legal_accepted'))) return 'legal';
+  if (codes.some((code) => code.startsWith('captcha_'))) return 'captcha';
+  return 'failed';
+}
+
 export type PasswordOutcome = 'wrong' | 'breached' | 'rateLimited' | 'failed';
 
 /**

@@ -1,39 +1,15 @@
 import { SignUp } from '@clerk/nextjs';
-import { isSafeReturnPath, PENDING_TIER_PARAM } from '@/lib/auth/intent';
-import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier';
+import { completeTarget } from '@/lib/auth/complete-target';
 
 interface SignUpPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
-  // `forceRedirectUrl` outranks Clerk's own `redirect_url` param, so a caller
-  // that appends one is silently ignored unless we forward it ourselves.
-  // Before launch that went unnoticed: /sign-up was invite-gated, middleware
-  // bounced through /auth/code, and the beta funnel stashed the destination in
-  // a signed cookie. Once /sign-up opens, nothing writes that cookie and every
-  // caller's destination was being dropped on the floor.
-  const params = await searchParams;
-  const raw = params['redirect_url'];
-  const requested = typeof raw === 'string' ? raw : null;
-
-  // Sanitised here as well as on read: it arrives from the querystring, so it
-  // is attacker-controllable, and /auth/complete is a redirect.
-  const forwarded = new URLSearchParams();
-  if (isSafeReturnPath(requested) && requested)
-    forwarded.set('return', requested);
-
-  // The tier the picker's Sign up CTA was tapped on (#1284), forwarded for the
-  // same reason as the destination: Clerk drops everything it does not own.
-  const tier = decodePendingTier(
-    typeof params[PENDING_TIER_PARAM] === 'string'
-      ? params[PENDING_TIER_PARAM]
-      : null,
-  );
-  if (tier) forwarded.set(PENDING_TIER_PARAM, tier);
-
-  const query = forwarded.toString();
-  const target = query ? `/auth/complete?${query}` : '/auth/complete';
+  // The destination and the chosen tier are forwarded by hand (see
+  // `completeTarget` for why): Clerk's `forceRedirectUrl` outranks its own
+  // `redirect_url`, and it drops every param it does not own.
+  const target = completeTarget(await searchParams);
 
   return (
     <main className="flex min-h-dvh items-center justify-center">

@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { Check } from 'lucide-react';
+import Link from 'next/link';
+import { Check, Tag } from 'lucide-react';
 import { AUTH_FLOW_COPY } from './definitions/copy';
 
 const COPY = AUTH_FLOW_COPY;
@@ -190,6 +191,44 @@ export function OrDivider() {
       <span className="h-px flex-1 bg-border" />
       {COPY.or}
       <span className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
+/**
+ * The invite the visitor arrived with, above the sign-up form: a gradient
+ * outlined row (tag, "INVITE", the code, the Applied chip) and a way to use a
+ * different code.
+ */
+export function InviteChip({
+  label,
+  code,
+  changeLabel,
+  changeHref,
+}: {
+  label: string;
+  code: string;
+  changeLabel: string;
+  changeHref: string;
+}): ReactNode {
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-center gap-2.5 rounded-xl border border-transparent bg-[linear-gradient(var(--surface-1),var(--surface-1))_padding-box,linear-gradient(90deg,var(--signal),var(--accent))_border-box] px-3 py-2.5">
+        <Tag size={15} strokeWidth={1.6} className="text-signal" aria-hidden />
+        <span className="font-mono text-[9px] font-bold tracking-[0.16em] text-fg-subtle uppercase">
+          {label}
+        </span>
+        <span className="min-w-0 flex-1 truncate font-mono text-[13px] font-semibold tracking-[0.06em] text-fg">
+          {code}
+        </span>
+        <AppliedChip />
+      </div>
+      <Link
+        href={changeHref}
+        className="inline-flex min-h-11 items-center text-sm font-bold text-signal"
+      >
+        {changeLabel}
+      </Link>
     </div>
   );
 }
