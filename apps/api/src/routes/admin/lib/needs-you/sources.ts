@@ -13,7 +13,6 @@ import {
   isNotNull,
   isNull,
   lte,
-  or,
   sql,
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -57,7 +56,13 @@ import {
 } from '../missing-events.js';
 import { TRIAGE_HISTORY_RUN_COUNT, deriveFaults } from '../triage.js';
 import { parseRunRows } from '../../triage.js';
-import { addDays, denverDate } from './keys.js';
+import { denverDate } from './keys.js';
+import {
+  PRICE_BATCH_MAX_DAYS,
+  PRICE_BATCH_MIN_CORROBORATIONS,
+  PRICE_BATCH_MIN_DAYS,
+  forAdminClause,
+} from '../price-for-admin.js';
 import {
   loadPriceByTierByEventId,
   lowestHeadline,
@@ -66,9 +71,11 @@ import {
 // How far out an artist's next show may be for the artist to be worth a human's
 // time, and the price-batch window. Both are product calls from the brief.
 export const ARTIST_HORIZON_DAYS = 60;
-export const PRICE_BATCH_MIN_DAYS = 2;
-export const PRICE_BATCH_MAX_DAYS = 30;
-export const PRICE_BATCH_MIN_CORROBORATIONS = 2;
+export {
+  PRICE_BATCH_MAX_DAYS,
+  PRICE_BATCH_MIN_CORROBORATIONS,
+  PRICE_BATCH_MIN_DAYS,
+} from '../price-for-admin.js';
 
 export interface SourceContext {
   now: Date;
@@ -959,18 +966,9 @@ const priceBatchItems: Adapter = async ({ now }) => {
         eq(events.status, 'upcoming'),
         // A price held for the admin (the "approve prices myself" setting) is
         // always the admin's to decide; any other waits for its corroborations
-        // and the product window.
-        or(
-          isNotNull(priceSubmissions.heldForAdminAt),
-          and(
-            gte(
-              priceSubmissions.corroborationCount,
-              PRICE_BATCH_MIN_CORROBORATIONS,
-            ),
-            gte(events.date, addDays(today, PRICE_BATCH_MIN_DAYS)),
-            lte(events.date, addDays(today, PRICE_BATCH_MAX_DAYS)),
-          ),
-        ),
+        // and the product window. Shared with Submitted prices' Waiting for
+        // you chip, so every price here is under it.
+        forAdminClause(today),
       ),
     )
     .orderBy(asc(events.date), asc(priceSubmissions.id));

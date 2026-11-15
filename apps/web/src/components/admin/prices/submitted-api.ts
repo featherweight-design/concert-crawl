@@ -37,10 +37,11 @@ export interface SubmittedRow {
   backedBy: number;
   state: SubmissionState;
   /**
-   * Held for the admin: a waiting price that waits for you. False when it is
-   * still waiting for another fan to back it.
+   * The admin's to decide: a waiting price that waits for you (held for you,
+   * or backed enough inside the Needs you window). False while it still
+   * waits on fans or the window.
    */
-  held: boolean;
+  forYou: boolean;
   ticketUrl: string | null;
 }
 
@@ -82,8 +83,8 @@ const rowFrom = (value: unknown): SubmittedRow | null => {
     avatarSecondColor: avatarColorOrNull(value['avatarSecondColor']),
     backedBy: value['backedBy'],
     state: value['state'],
-    // An older API sends no `held`: it read every waiting price as yours.
-    held: value['held'] !== false,
+    // An older API sends no `forYou`: it read every waiting price as yours.
+    forYou: typeof value['forYou'] === 'boolean' ? value['forYou'] : true,
     ticketUrl: value['ticketUrl'],
   };
 };

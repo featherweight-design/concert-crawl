@@ -68,7 +68,7 @@ const row = (overrides: Partial<SubmittedRow>): SubmittedRow => ({
   avatarSecondColor: null,
   backedBy: 2,
   state: 'published',
-  held: true,
+  forYou: true,
   ticketUrl: null,
   ...overrides,
 });
@@ -137,6 +137,21 @@ describe('SubmittedTab on a phone', () => {
     const items = await screen.findAllByRole('listitem');
     expect(within(items[0]!).getByText(COPY.states.published)).toBeVisible();
     expect(screen.queryByText('Live')).toBeNull();
+  });
+
+  // Hugh's prod report: a 1-fan price read "Waiting for you".
+  it("reads Pending on a waiting price that isn't yours to decide yet", async () => {
+    list.mockResolvedValue({
+      rows: [
+        row({ id: 'sub-9', state: 'waiting', forYou: false }),
+        row({ id: 'sub-10', state: 'waiting', forYou: true }),
+      ],
+      total: 2,
+    });
+    render(<SubmittedTab />);
+    const items = await screen.findAllByRole('listitem');
+    expect(within(items[0]!).getByText(COPY.phoneStates.pending)).toBeVisible();
+    expect(within(items[1]!).getByText(COPY.phoneStates.waiting)).toBeVisible();
   });
 
   it('draws an avatar beside a handle, and none for "A fan"', async () => {
