@@ -35,7 +35,10 @@ export function CodeBoxes({
   const wasDisabled = useRef(disabled);
   useEffect(() => {
     if (wasDisabled.current && !disabled && hadFocus.current && value === '') {
-      input.current?.focus();
+      // Only if focus is still nowhere: a visitor who moved on while it was
+      // locked keeps the control they went to.
+      const active = document.activeElement;
+      if (!active || active === document.body) input.current?.focus();
     }
     wasDisabled.current = disabled;
   }, [disabled, value]);
