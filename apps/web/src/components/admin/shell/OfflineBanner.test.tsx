@@ -31,16 +31,22 @@ describe('OfflineBanner', () => {
     render(<OfflineBanner />);
     setOnline(false);
     const banner = screen.getByTestId('admin-offline-banner');
-    expect(banner).toHaveAttribute('role', 'status');
     expect(banner).toHaveStyle({ height: '40px' });
+    // It says what will not work, and promises no queue.
+    expect(banner).toHaveTextContent(
+      "Offline. You can't save until you're back.",
+    );
     expect(banner).toHaveTextContent(ADMIN_COPY.states.offline.banner);
     setOnline(true);
     expect(screen.queryByTestId('admin-offline-banner')).toBeNull();
   });
 
-  it('does not promise a queue: it says saving needs a connection', () => {
-    expect(ADMIN_COPY.states.offline.banner).toBe(
-      "Offline. You can't save until you're back.",
-    );
+  it('keeps its live region mounted while online, so the change is announced', () => {
+    render(<OfflineBanner />);
+    const region = screen.getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+    setOnline(false);
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent("You can't save");
   });
 });

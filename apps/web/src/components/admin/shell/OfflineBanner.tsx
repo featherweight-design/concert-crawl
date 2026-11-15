@@ -13,12 +13,20 @@ export const OFFLINE_BANNER_HEIGHT = 40;
  */
 export const OfflineBanner = () => {
   const online = useOnlineStatus();
-  if (online) return null;
 
+  // The live region stays mounted and only its content comes and goes, so a
+  // screen reader announces the change instead of skipping a region that
+  // appeared with its text already in it. Empty, it takes no space.
+  return (
+    <div role="status" aria-live="polite" style={{ flexShrink: 0 }}>
+      {online ? null : <Banner />}
+    </div>
+  );
+};
+
+const Banner = () => {
   return (
     <div
-      role="status"
-      aria-live="polite"
       data-testid="admin-offline-banner"
       style={{
         flexShrink: 0,
