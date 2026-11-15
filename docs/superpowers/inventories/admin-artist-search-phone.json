@@ -1,0 +1,25 @@
+{
+  "feature": "Admin · Artist search, phone full screen: page gradient and pinned footer",
+  "note": "Board: design_handoff_admin_redesign/boards/06-events-artists-prices/artist-search-mobile. CONTACT_SHEET_ROLE=admin. Phone only: under the admin's 720 breakpoint Artist search opens full screen from a To check row's Search (or Pick); desktop opens the side panel, covered by admin-artists-fidelity. Check the app's page gradient behind a transparent panel, the 21px title (not Add a show's 22px), the 14px back chevron on ‹ Artists, and Not an artist on a pinned bar (1px --border rule, --bg-elevated, 12px 16px 24px plus the safe-area inset). Needs at least one To check row. Read-only: opening the search sends no write; the search on open reads the saved candidates only.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true }
+  ],
+  "rows": [
+    {
+      "id": "artist-search-phone",
+      "label": "Artist search full screen, opened from a To check row's Search",
+      "steps": [
+        {
+          "goto": "/admin/artists",
+          "wait": "[data-testid=\"artists-list\"]",
+          "settle": 1000
+        },
+        {
+          "click": "[data-testid=\"artists-list\"] button[aria-label^=\"Search: \"]:visible >> nth=0"
+        },
+        { "wait": "[data-testid=\"admin-sheet\"]", "settle": 1000 }
+      ]
+    }
+  ]
+}

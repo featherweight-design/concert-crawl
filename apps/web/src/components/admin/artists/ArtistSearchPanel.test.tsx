@@ -281,6 +281,27 @@ describe('ArtistSearchPanel on the phone', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('draws the page gradient, a pinned footer, its 21px title and the 14px chevron', async () => {
+    renderPanel(true);
+    expect(screen.getByTestId('admin-sheet-scrim')).toHaveClass('page-ambient');
+    expect(screen.getByTestId('admin-sheet').style.background).toBe(
+      'transparent',
+    );
+    const footerBar = screen.getByRole('button', {
+      name: 'Not an artist',
+    }).parentElement;
+    expect(footerBar?.style.background).toBe('var(--bg-elevated)');
+    expect(footerBar?.style.borderTop).toBe('1px solid var(--border)');
+    const title = screen.getByRole('heading', { level: 2 });
+    expect(title.style.fontSize).toBe('21px');
+    // Not Add a show's tight form-page title.
+    expect(title.style.letterSpacing).toBe('');
+    expect(
+      screen.getByRole('button', { name: 'Artists' }).querySelector('svg'),
+    ).toHaveAttribute('width', '14');
+    await screen.findByText('2 results');
+  });
+
   it('keeps the wrong-artist wording when there are wrong-photo reports', async () => {
     renderPanel(true, { wrongPhotoReportCount: 3 });
     expect(
