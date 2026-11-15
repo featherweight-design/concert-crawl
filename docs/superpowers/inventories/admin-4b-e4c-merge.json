@@ -14,9 +14,10 @@
         {
           "goto": "/admin/events/${CC_MERGE_A}/edit",
           "wait": "[data-testid=\"event-edit\"]",
-          "settle": 600
+          "settle": 1500
         },
         { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "wait": "[data-testid=\"event-edit-menu-merge\"]", "settle": 300 },
         { "click": "[data-testid=\"event-edit-menu-merge\"]" },
         { "wait": "[data-testid=\"merge-pick-row\"]", "settle": 600 }
       ]
@@ -28,9 +29,10 @@
         {
           "goto": "/admin/events/${CC_MERGE_LONE}/edit",
           "wait": "[data-testid=\"event-edit\"]",
-          "settle": 600
+          "settle": 1500
         },
         { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "wait": "[data-testid=\"event-edit-menu-merge\"]", "settle": 300 },
         { "click": "[data-testid=\"event-edit-menu-merge\"]" },
         { "wait": "[data-testid=\"merge-pick-nothing\"]", "settle": 600 }
       ]
@@ -42,9 +44,10 @@
         {
           "goto": "/admin/events/${CC_MERGE_A}/edit",
           "wait": "[data-testid=\"event-edit\"]",
-          "settle": 600
+          "settle": 1500
         },
         { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "wait": "[data-testid=\"event-edit-menu-merge\"]", "settle": 300 },
         { "click": "[data-testid=\"event-edit-menu-merge\"]" },
         { "click": "[data-testid=\"merge-pick-row\"]" },
         { "wait": "[data-testid=\"merge-summary\"]", "settle": 600 }
@@ -57,9 +60,10 @@
         {
           "goto": "/admin/events/${CC_MERGE_A}/edit",
           "wait": "[data-testid=\"event-edit\"]",
-          "settle": 600
+          "settle": 1500
         },
         { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "wait": "[data-testid=\"event-edit-menu-merge\"]", "settle": 300 },
         { "click": "[data-testid=\"event-edit-menu-merge\"]" },
         { "click": "[data-testid=\"merge-pick-row\"]" },
         { "wait": "[data-testid=\"merge-summary\"]" },
@@ -73,9 +77,10 @@
         {
           "goto": "/admin/events/${CC_MERGE_A}/edit",
           "wait": "[data-testid=\"event-edit\"]",
-          "settle": 600
+          "settle": 1500
         },
         { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "wait": "[data-testid=\"event-edit-menu-merge\"]", "settle": 300 },
         { "click": "[data-testid=\"event-edit-menu-merge\"]" },
         { "wait": "[data-testid=\"merge-pick-row\"]" },
         { "fill": "input[type=\"search\"]", "text": "${CC_MERGE_CROSS_TERM}" },
@@ -96,9 +101,10 @@
         {
           "goto": "/admin/events/${CC_MERGE_A}/edit",
           "wait": "[data-testid=\"event-edit\"]",
-          "settle": 600
+          "settle": 1500
         },
         { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "wait": "[data-testid=\"event-edit-menu-merge\"]", "settle": 300 },
         { "click": "[data-testid=\"event-edit-menu-merge\"]" },
         { "click": "[data-testid=\"merge-pick-row\"]" },
         { "wait": "[data-testid=\"merge-summary\"]" },

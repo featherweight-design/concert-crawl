@@ -20,6 +20,7 @@ import {
 import { EMPTY_FILTERS } from '../list/events-rules';
 import { eventsListApi } from '../list/events-api';
 import {
+  MergeTimeoutError,
   mergeApi,
   type MergeCandidate,
   type MergeListing,
@@ -119,6 +120,8 @@ export const MergePanel = ({
   const [otherId, setOtherId] = useState<string | null>(null);
   const [keep, setKeep] = useState<KeepSide>('first');
   const [compare, setCompare] = useState<Compare>({ status: 'loading' });
+  // Bumped after a refusal: the two rows may have changed since they were read.
+  const [compareNonce, setCompareNonce] = useState(0);
   const [merging, setMerging] = useState(false);
   const [failed, setFailed] = useState(false);
   const mergingRef = useRef(false);
@@ -158,7 +161,14 @@ export const MergePanel = ({
             setSearchFailed(false);
             setResults(
               page.rows
-                .filter((row) => row.id !== current.id)
+                // Nothing live to keep on a cancelled or delisted row, and the
+                // pick list's own candidates leave them out too.
+                .filter(
+                  (row) =>
+                    row.id !== current.id &&
+                    row.status !== 'cancelled' &&
+                    row.status !== 'delisted',
+                )
                 .map((row) => ({
                   id: row.id,
                   title: row.title,
@@ -220,7 +230,7 @@ export const MergePanel = ({
       },
     );
     return () => controller.abort();
-  }, [api, current.id, otherId]);
+  }, [api, current.id, otherId, compareNonce]);
 
   const pick = useCallback((id: string) => {
     setOtherId(id);
@@ -249,9 +259,28 @@ export const MergePanel = ({
         onMerged(keptId);
         return;
       }
+      // Refused: a row went, or the pair stopped being mergeable. Read both
+      // again, so a retry runs on what is true now (or the panel says why not).
       setFailed(true);
+      setCompareNonce((nonce) => nonce + 1);
     } catch (err) {
       console.error('[admin merge] merge failed', err);
+      // A timeout can land after the server committed. The source row is
+      // deleted by a merge, so a 404 on it means this one went through.
+      if (err instanceof MergeTimeoutError) {
+        try {
+          const reread = await api.preview(keptId, sourceId);
+          if (reread.kind === 'not-found') {
+            onMerged(keptId);
+            return;
+          }
+        } catch (rereadErr) {
+          console.error(
+            '[admin merge] re-read after timeout failed',
+            rereadErr,
+          );
+        }
+      }
       setFailed(true);
     } finally {
       mergingRef.current = false;

@@ -47,7 +47,9 @@ const merge = vi.fn(
 );
 vi.mock('./merge-api', () => ({
   mergeApi: () => ({ candidates, preview, merge }),
+  MergeTimeoutError: class MergeTimeoutError extends Error {},
 }));
+const { MergeTimeoutError } = await import('./merge-api');
 
 const list = vi.fn(
   async (
@@ -63,6 +65,25 @@ const list = vi.fn(
         venueName: 'Ogden Theatre',
         manual: false,
         watchingCount: 4,
+        status: 'available',
+      },
+      {
+        id: 'e-cancelled',
+        title: 'Clipse cancelled',
+        date: '2026-11-13',
+        venueName: 'Ogden Theatre',
+        manual: false,
+        watchingCount: 0,
+        status: 'cancelled',
+      },
+      {
+        id: 'e-delisted',
+        title: 'Clipse delisted',
+        date: '2026-11-13',
+        venueName: 'Ogden Theatre',
+        manual: false,
+        watchingCount: 0,
+        status: 'delisted',
       },
       {
         id: CRAWLED.id,
@@ -152,7 +173,11 @@ describe('MergePanel: pick', () => {
       when: 'past',
     });
     await screen.findByText('Clipse at Ogden');
+    // The likely duplicate and the one live result: this listing, a cancelled
+    // row and a delisted row are all left out.
     expect(screen.getAllByTestId('merge-pick-row')).toHaveLength(2);
+    expect(screen.queryByText('Clipse cancelled')).toBeNull();
+    expect(screen.queryByText('Clipse delisted')).toBeNull();
   });
 });
 
@@ -228,10 +253,14 @@ describe('MergePanel: compare and merge', () => {
     expect(await screen.findByText(COPY.failedTitle)).toBeInTheDocument();
     expect(screen.getByText(COPY.failedBody)).toBeInTheDocument();
     expect(onMerged).not.toHaveBeenCalled();
-    // The form is as it was: the button is back and KEEP did not move.
-    expect(
-      screen.getByRole('button', { name: COPY.confirm('first') }),
-    ).toBeEnabled();
+    // The two rows are read again, so a retry runs on what is true now; once
+    // that lands the button is back and KEEP did not move.
+    await waitFor(() => expect(preview).toHaveBeenCalledTimes(4));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: COPY.confirm('first') }),
+      ).toBeEnabled(),
+    );
     fireEvent.click(
       screen.getByRole('button', {
         name: ADMIN_COPY.states.saveFailed.tryAgain,
@@ -239,6 +268,30 @@ describe('MergePanel: compare and merge', () => {
     );
     await waitFor(() => expect(onMerged).toHaveBeenCalledWith(CRAWLED.id));
     expect(merge).toHaveBeenNthCalledWith(2, MANUAL.id, CRAWLED.id);
+  });
+
+  it('reads a timed-out merge whose source is gone as done', async () => {
+    merge.mockRejectedValueOnce(new MergeTimeoutError());
+    renderPanel();
+    await toCompare();
+    // The re-read after the timeout finds the source deleted: it went through.
+    preview.mockResolvedValueOnce({ kind: 'not-found' });
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.confirm('first') }),
+    );
+    await waitFor(() => expect(onMerged).toHaveBeenCalledWith(CRAWLED.id));
+    expect(screen.queryByText(COPY.failedTitle)).toBeNull();
+  });
+
+  it('says it failed when a timed-out merge left both rows in place', async () => {
+    merge.mockRejectedValueOnce(new MergeTimeoutError());
+    renderPanel();
+    await toCompare();
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.confirm('first') }),
+    );
+    expect(await screen.findByText(COPY.failedTitle)).toBeInTheDocument();
+    expect(onMerged).not.toHaveBeenCalled();
   });
 
   it('treats a thrown merge as a failure too', async () => {
