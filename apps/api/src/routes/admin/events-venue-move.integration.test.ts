@@ -32,6 +32,12 @@ vi.mock('@concert-crawl/push', async (importOriginal) => {
   };
 });
 
+// A pass-through spy on the move, so one case can lose the race for the key.
+vi.mock('@concert-crawl/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@concert-crawl/db')>();
+  return { ...actual, moveEventVenue: vi.fn(actual.moveEventVenue) };
+});
+
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -39,6 +45,7 @@ import {
   auditLog,
   eventRedirects,
   events,
+  moveEventVenue,
   notifications,
 } from '@concert-crawl/db';
 import { fanoutWatchNotification } from '@concert-crawl/push';
@@ -103,6 +110,12 @@ const moveVenue = (eventId: string, venueId: string) =>
     body: JSON.stringify({ venueId }),
   });
 
+/** A show an admin added: only these move while still to come. */
+const seedManual = (
+  venueId: string,
+  overrides: Parameters<typeof seedEvent>[1] = {},
+) => seedEvent(venueId, { manual: true, ...overrides });
+
 const storedEvent = async (id: string) => {
   const [row] = await testDb.select().from(events).where(eq(events.id, id));
   if (!row) throw new Error(`event ${id} missing`);
@@ -145,7 +158,7 @@ describe('POST /v1/admin/events/:id/venue — an upcoming show (Moved)', () => {
   it('moves the show, writes the old crawl key on a moved redirect, tells Watchers and audits', async () => {
     const { from, to } = await seedRooms();
     const date = dayOffset(20);
-    const show = await seedEvent(from.id, {
+    const show = await seedManual(from.id, {
       artist: 'Moved Artist',
       date,
       showTime: '20:00',
@@ -157,6 +170,10 @@ describe('POST /v1/admin/events/:id/venue — an upcoming show (Moved)', () => {
           url: 'https://globehall.example.com/tickets/moved',
         },
       ],
+      eventUrl: 'https://larimerlounge.example.com/shows/moved',
+      sourceUrl: 'https://larimerlounge.example.com',
+      firstMissingAt: new Date('2026-01-01T00:00:00Z'),
+      lastSeenAt: new Date('2026-01-01T00:00:00Z'),
     });
     await seedUserEvent('watcher-a', show.id, { status: 'watching' });
     await seedUserEvent('curious-b', show.id, { status: 'interested' });
@@ -185,6 +202,14 @@ describe('POST /v1/admin/events/:id/venue — an upcoming show (Moved)', () => {
     // The crawl key's other parts stay, so nothing else moves with the room.
     expect(after.canonicalArtist).toBe(show.canonicalArtist);
     expect(after.date).toBe(date);
+    // The old room's page goes; where the crawl found it stays.
+    expect(after.eventUrl).toBeNull();
+    expect(after.sourceUrl).toBe('https://larimerlounge.example.com');
+    // Nothing stale carries over to the new room.
+    expect(after.firstMissingAt).toBeNull();
+    expect(after.lastSeenAt.getTime()).toBeGreaterThan(
+      show.lastSeenAt.getTime(),
+    );
 
     const redirects = await testDb.select().from(eventRedirects);
     expect(redirects).toHaveLength(1);
@@ -221,6 +246,14 @@ describe('POST /v1/admin/events/:id/venue — an upcoming show (Moved)', () => {
         metadata: expect.objectContaining({
           before: { venueId: from.id, venueName: 'Larimer Lounge' },
           after: { venueId: to.id, venueName: 'Globe Hall' },
+          ticketLinks: {
+            before: show.ticketLinks,
+            after: after.ticketLinks,
+          },
+          eventUrl: {
+            before: 'https://larimerlounge.example.com/shows/moved',
+            after: null,
+          },
           redirectSourceId: redirect?.sourceId,
           notifyWatchers: true,
         }),
@@ -230,7 +263,7 @@ describe('POST /v1/admin/events/:id/venue — an upcoming show (Moved)', () => {
 
   it('reads as Moved on the admin list', async () => {
     const { from, to } = await seedRooms();
-    const show = await seedEvent(from.id, { date: dayOffset(12) });
+    const show = await seedManual(from.id, { date: dayOffset(12) });
 
     expect((await moveVenue(show.id, to.id)).status).toBe(200);
 
@@ -243,26 +276,73 @@ describe('POST /v1/admin/events/:id/venue — an upcoming show (Moved)', () => {
     expect(body.data.listStatus).toBe('moved');
   });
 
-  it('moving back drops the redirect for the key the show holds again', async () => {
+  it('moving back clears the key the show holds again, and a merge redirect keeps its id', async () => {
     const { from, to } = await seedRooms();
-    const show = await seedEvent(from.id, { date: dayOffset(15) });
+    const date = dayOffset(15);
+    const show = await seedManual(from.id, { artist: 'Round Trip', date });
+    // A listing merged into this show earlier, under the same key: its
+    // source_id is a real former event id, which must keep answering.
+    const mergedAwayId = randomUUID();
+    await testDb.insert(eventRedirects).values({
+      sourceId: mergedAwayId,
+      targetId: show.id,
+      reason: null,
+      sourceVenueId: from.id,
+      sourceDate: date,
+      sourceCanonicalArtist: show.canonicalArtist,
+      sourceShowTime: null,
+    });
 
     expect((await moveVenue(show.id, to.id)).status).toBe(200);
     expect((await moveVenue(show.id, from.id)).status).toBe(200);
 
     const redirects = await testDb
       .select({
+        sourceId: eventRedirects.sourceId,
         targetId: eventRedirects.targetId,
         sourceVenueId: eventRedirects.sourceVenueId,
+        sourceDate: eventRedirects.sourceDate,
       })
       .from(eventRedirects);
-    expect(redirects).toEqual([{ targetId: show.id, sourceVenueId: to.id }]);
+    // Every row onto the show survives. Those keyed on the room it is back in
+    // (the merge's and the first move's) lose their key; the second move's
+    // keeps the room it left.
+    expect(redirects).toHaveLength(3);
+    expect(redirects.every((row) => row.targetId === show.id)).toBe(true);
+    expect(redirects.filter((row) => row.sourceVenueId === from.id)).toEqual(
+      [],
+    );
+    expect(redirects.filter((row) => row.sourceVenueId === to.id)).toHaveLength(
+      1,
+    );
+    expect(
+      redirects.find((row) => row.sourceId === mergedAwayId),
+    ).toMatchObject({ sourceVenueId: null, sourceDate: null });
     expect((await storedEvent(show.id)).venueId).toBe(from.id);
+  });
+
+  it('a crawled show still to come is 409 crawled_show, and nothing changes', async () => {
+    const { from, to } = await seedRooms();
+    const show = await seedEvent(from.id, { date: dayOffset(14) });
+    await seedUserEvent('watcher-a', show.id, { status: 'watching' });
+
+    const res = await moveVenue(show.id, to.id);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'crawled_show',
+    });
+    const after = await storedEvent(show.id);
+    expect(after.venueId).toBe(from.id);
+    expect(after.updatedAt).toEqual(show.updatedAt);
+    expect(await testDb.select().from(eventRedirects)).toEqual([]);
+    expect(await venueAudits()).toEqual([]);
+    expect(fanoutWatchNotification).not.toHaveBeenCalled();
   });
 
   it('a cancelled show takes the redirect but tells nobody', async () => {
     const { from, to } = await seedRooms();
-    const show = await seedEvent(from.id, {
+    const show = await seedManual(from.id, {
       date: dayOffset(18),
       status: 'cancelled',
     });
@@ -279,7 +359,7 @@ describe('POST /v1/admin/events/:id/venue — an upcoming show (Moved)', () => {
 
   it('a postponed show with a passed date is still a move', async () => {
     const { from, to } = await seedRooms();
-    const show = await seedEvent(from.id, {
+    const show = await seedManual(from.id, {
       date: dayOffset(-3),
       status: 'postponed',
     });
@@ -295,6 +375,7 @@ describe('POST /v1/admin/events/:id/venue — an upcoming show (Moved)', () => {
 describe('POST /v1/admin/events/:id/venue — a played show (correction)', () => {
   it('changes the venue silently: no redirect, nobody told, audited as a correction', async () => {
     const { from, to } = await seedRooms();
+    // Crawled: a played crawled show may still be corrected.
     const show = await seedEvent(from.id, { date: dayOffset(-10) });
     await seedUserEvent('watcher-a', show.id, { status: 'watching' });
 
@@ -327,7 +408,7 @@ describe('POST /v1/admin/events/:id/venue — refusals', () => {
   it('a show already holding the crawl key at the new venue is 409 duplicate_show with its id, and nothing changes', async () => {
     const { from, to } = await seedRooms();
     const date = dayOffset(25);
-    const show = await seedEvent(from.id, { artist: 'Clash', date });
+    const show = await seedManual(from.id, { artist: 'Clash', date });
     const holder = await seedEvent(to.id, { artist: 'Clash', date });
     await seedUserEvent('watcher-a', show.id, { status: 'watching' });
 
@@ -343,6 +424,33 @@ describe('POST /v1/admin/events/:id/venue — refusals', () => {
     expect(fanoutWatchNotification).not.toHaveBeenCalled();
   });
 
+  // Stands in for a holder inserted between the pre-check and the write: the
+  // mocked move skips the pre-check, so its real update meets the unique
+  // index. The route answers 409 with the holder it finds afterwards.
+  it('a key taken after the pre-check is 409 duplicate_show with the holder', async () => {
+    const { from, to } = await seedRooms();
+    const date = dayOffset(27);
+    const show = await seedManual(from.id, { artist: 'Late Clash', date });
+    const holder = await seedEvent(to.id, { artist: 'Late Clash', date });
+    vi.mocked(moveEventVenue).mockImplementationOnce(
+      async ({ eventId, venueId }) => {
+        await testDb
+          .update(events)
+          .set({ venueId })
+          .where(eq(events.id, eventId));
+        throw new Error('the update above must have failed on the key');
+      },
+    );
+
+    const res = await moveVenue(show.id, to.id);
+    expect(res.status).toBe(409);
+    expect(duplicateBodySchema.parse(await res.json()).existingId).toBe(
+      holder.id,
+    );
+    expect((await storedEvent(show.id)).venueId).toBe(from.id);
+    expect(await venueAudits()).toEqual([]);
+  });
+
   it('a removed venue is 400 venue_not_found', async () => {
     const { from } = await seedRooms();
     const removed = await seedVenue({
@@ -350,7 +458,7 @@ describe('POST /v1/admin/events/:id/venue — refusals', () => {
       slug: 'gone-room',
       removedAt: new Date(),
     });
-    const show = await seedEvent(from.id, { date: dayOffset(9) });
+    const show = await seedManual(from.id, { date: dayOffset(9) });
 
     const res = await moveVenue(show.id, removed.id);
     expect(res.status).toBe(400);
@@ -364,7 +472,7 @@ describe('POST /v1/admin/events/:id/venue — refusals', () => {
 
   it('an unknown venue is 400 venue_not_found', async () => {
     const { from } = await seedRooms();
-    const show = await seedEvent(from.id, { date: dayOffset(9) });
+    const show = await seedManual(from.id, { date: dayOffset(9) });
 
     const res = await moveVenue(show.id, randomUUID());
     expect(res.status).toBe(400);
@@ -374,7 +482,7 @@ describe('POST /v1/admin/events/:id/venue — refusals', () => {
 
   it('the same venue is a no-op: nothing written, nothing audited', async () => {
     const { from } = await seedRooms();
-    const show = await seedEvent(from.id, { date: dayOffset(9) });
+    const show = await seedManual(from.id, { date: dayOffset(9) });
     await seedUserEvent('watcher-a', show.id, { status: 'watching' });
 
     const res = await moveVenue(show.id, from.id);

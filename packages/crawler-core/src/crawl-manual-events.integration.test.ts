@@ -700,9 +700,21 @@ describe('crawlVenue — a merged-away listing (admin 4a, READINESS A1)', () => 
     const elsewhere = await seedTestVenue();
     const date = futureDate(26);
 
-    mockExtraction([makeEvent('Venue Swap', date)]);
-    await crawlVenue(venue.id, mockBrowser);
-    const show = await rowFor('Venue Swap');
+    // Added by hand (only those move while still to come), under the key the
+    // venue's calendar lists it by.
+    const [show] = await db
+      .insert(events)
+      .values({
+        venueId: venue.id,
+        title: 'Venue Swap Live',
+        artist: 'Venue Swap',
+        canonicalArtist: 'venue swap',
+        canonicalTitle: 'venue swap live',
+        date,
+        manual: true,
+      })
+      .returning();
+    if (!show) throw new Error('show insert returned no row');
 
     const moved = await moveEventVenue({
       eventId: show.id,
@@ -713,17 +725,14 @@ describe('crawlVenue — a merged-away listing (admin 4a, READINESS A1)', () => 
     });
     expect(moved.kind).toBe('moved');
 
-    // The old venue still lists it, changed enough to skip the page hash.
-    mockExtraction(
-      [
-        makeEvent('Venue Swap', date, {
-          title: 'Venue Swap (moved)',
-          rawTitle: 'Venue Swap (moved)',
-          ticketUrl: 'https://tickets.example.org/old-room',
-        }),
-      ],
-      `${HTML_BASE}<!-- 2 -->`,
-    );
+    // The old venue still lists it.
+    mockExtraction([
+      makeEvent('Venue Swap', date, {
+        title: 'Venue Swap (moved)',
+        rawTitle: 'Venue Swap (moved)',
+        ticketUrl: 'https://tickets.example.org/old-room',
+      }),
+    ]);
     await crawlVenue(venue.id, mockBrowser);
 
     const atOldVenue = await db
