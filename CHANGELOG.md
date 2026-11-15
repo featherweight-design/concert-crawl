@@ -1,3 +1,15 @@
+# [1.494.0](https://github.com/featherweight-design/concert-crawl/compare/v1.493.0...v1.494.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** address the sign-in 3a review ([2028602](https://github.com/featherweight-design/concert-crawl/commit/202860202c0f64b5cb11e32990db851994a04956))
+
+
+### Features
+
+* **web:** add the custom sign-in start and password screens ([809c747](https://github.com/featherweight-design/concert-crawl/commit/809c7476a93f34ba9cad6d6a68a49f8b0115e5b1))
+
 # [1.493.0](https://github.com/featherweight-design/concert-crawl/compare/v1.492.0...v1.493.0) (2026-11-15)
 
 
