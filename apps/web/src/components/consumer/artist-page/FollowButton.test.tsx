@@ -92,7 +92,6 @@ describe('FollowButton', () => {
         following={false}
         signedOut
         onToggle={() => undefined}
-        onLockedTap={() => undefined}
       />,
     );
     fireEvent.click(getByRole('button'));
