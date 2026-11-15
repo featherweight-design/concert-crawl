@@ -2,8 +2,11 @@ import { describe, it, expect } from 'vitest';
 
 import {
   REJECTION_REASON_PREFIX,
+  REJECTION_REASONS,
   REPLACED_BY_ADMIN_REASON,
+  encodeRejection,
   fanStoredStatus,
+  parseRejection,
   submissionClosedReason,
   submissionDisplayStatus,
   tallySubmissionCounts,
@@ -13,7 +16,7 @@ describe('submissionClosedReason', () => {
   it('names why a closed status closed, and only for those', () => {
     expect(submissionClosedReason('stale')).toBe('stale');
     expect(submissionClosedReason('archived')).toBe('archived');
-    expect(submissionClosedReason('rejected')).toBe('rejected');
+    expect(submissionClosedReason('not_used')).toBe('not_used');
     expect(submissionClosedReason('corroborated')).toBeUndefined();
     expect(submissionClosedReason('pending')).toBeUndefined();
   });
@@ -25,7 +28,7 @@ describe('submissionClosedReason', () => {
       'disputed',
       'stale',
       'archived',
-      'rejected',
+      'not_used',
       'something-new',
     ]) {
       expect(submissionDisplayStatus(stored) === 'closed').toBe(
@@ -36,28 +39,102 @@ describe('submissionClosedReason', () => {
 });
 
 describe('fanStoredStatus', () => {
-  it('reads each archive reason as what the fan should see', () => {
-    // Replaced by an admin's Edit price: as before, confirmed.
-    expect(fanStoredStatus('archived', REPLACED_BY_ADMIN_REASON)).toBe(
-      'corroborated',
-    );
-    // Rejected by an admin: its own closed line, never "replaced".
+  it.each([false, true])(
+    'reads an admin-replaced price as confirmed (unusedCheck %s)',
+    (unusedCheck) => {
+      expect(
+        fanStoredStatus('archived', REPLACED_BY_ADMIN_REASON, unusedCheck),
+      ).toBe('corroborated');
+    },
+  );
+
+  it.each([false, true])(
+    'reads every rejection as not used, never replaced (unusedCheck %s)',
+    (unusedCheck) => {
+      for (const reason of REJECTION_REASONS) {
+        expect(
+          fanStoredStatus(
+            'archived',
+            encodeRejection(reason, undefined),
+            unusedCheck,
+          ),
+        ).toBe('not_used');
+        expect(
+          fanStoredStatus(
+            'archived',
+            encodeRejection(reason, 'a note'),
+            unusedCheck,
+          ),
+        ).toBe('not_used');
+      }
+      expect(
+        submissionClosedReason(
+          fanStoredStatus('archived', encodeRejection('resale', undefined)),
+        ),
+      ).toBe('not_used');
+    },
+  );
+
+  it('reads an unknown rejection code as the admin side does: no rejection', () => {
+    const unknown = `${REJECTION_REASON_PREFIX}because`;
     expect(
-      fanStoredStatus('archived', `${REJECTION_REASON_PREFIX}wrong-show`),
-    ).toBe('rejected');
+      parseRejection({ status: 'archived', archivedReason: unknown }),
+    ).toBe(null);
+    expect(fanStoredStatus('archived', unknown)).toBe('archived');
+    // Unless it was an unused Price check, which is not used either way.
+    expect(fanStoredStatus('archived', unknown, true)).toBe('not_used');
+  });
+
+  it('reads an unused Price check as not used, and any other archive as replaced', () => {
+    for (const reason of [null, 'Listed price stood', 'Newer AXS price']) {
+      expect(fanStoredStatus('archived', reason, true)).toBe('not_used');
+      expect(fanStoredStatus('archived', reason, false)).toBe('archived');
+      expect(fanStoredStatus('archived', reason)).toBe('archived');
+    }
+  });
+
+  it.each([false, true])(
+    'reads only archived rows by their reason (unusedCheck %s)',
+    (unusedCheck) => {
+      for (const status of ['stale', 'pending', 'corroborated', 'disputed']) {
+        expect(
+          fanStoredStatus(
+            status,
+            encodeRejection('other', undefined),
+            unusedCheck,
+          ),
+        ).toBe(status);
+        expect(
+          fanStoredStatus(status, REPLACED_BY_ADMIN_REASON, unusedCheck),
+        ).toBe(status);
+      }
+    },
+  );
+});
+
+describe('parseRejection', () => {
+  it('round-trips encodeRejection, note included', () => {
     expect(
-      fanStoredStatus('archived', `${REJECTION_REASON_PREFIX}other|a note`),
-    ).toBe('rejected');
+      parseRejection({
+        status: 'archived',
+        archivedReason: encodeRejection('fees-included', 'a|b'),
+      }),
+    ).toEqual({ reason: 'fees-included', note: 'a|b' });
     expect(
-      submissionClosedReason(fanStoredStatus('archived', 'rejected:resale')),
-    ).toBe('rejected');
-    // Any other archive (a newer price, a lost Price check): replaced.
-    expect(fanStoredStatus('archived', null)).toBe('archived');
-    expect(fanStoredStatus('archived', 'Newer AXS price')).toBe('archived');
-    // Reasons only matter on archived rows.
-    expect(fanStoredStatus('stale', `${REJECTION_REASON_PREFIX}other`)).toBe(
-      'stale',
-    );
+      parseRejection({
+        status: 'archived',
+        archivedReason: encodeRejection('wrong-show', undefined),
+      }),
+    ).toEqual({ reason: 'wrong-show', note: null });
+  });
+
+  it('reads no rejection off a row that is no longer archived', () => {
+    expect(
+      parseRejection({
+        status: 'corroborated',
+        archivedReason: encodeRejection('resale', undefined),
+      }),
+    ).toBe(null);
   });
 });
 

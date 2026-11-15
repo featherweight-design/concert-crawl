@@ -1511,18 +1511,24 @@ export type SubmissionDisplayStatus =
   | 'confirmed'
   | 'pending'
   | 'disputed'
-  // Stale and archived. Listed under All only, never under a status filter.
+  // Stale, archived and not used. Listed under All only, never under a
+  // status filter.
   | 'closed';
 
-/** The two stored statuses that read as `closed`, so the page can say why. */
-export type SubmissionClosedReason = 'stale' | 'archived' | 'rejected';
+/**
+ * Why a submission reads as `closed`, so the page can say why: `stale` and
+ * `archived` are stored statuses, and `not_used` is the one `fanStoredStatus`
+ * derives for a rejected price or a Price check that was never used.
+ */
+export type SubmissionClosedReason = 'stale' | 'archived' | 'not_used';
 
 /**
  * The one definition of how a stored submission status reads to the user
  * (addendum-3 Submitted prices ruling). Live (`confirmed`) is the corroborated
  * status, the only one a price is published under; there is no separate
- * publish flag on a submission. Price checks is `disputed`; stale and archived
- * are `closed`. Anything else is still pending.
+ * publish flag on a submission. Price checks is `disputed`; stale, archived
+ * and not_used are `closed`. Anything else is still pending. A fan's own rows
+ * pass `fanStoredStatus`'s result, not the raw stored status.
  */
 export const submissionDisplayStatus = (
   dbStatus: string,
@@ -1537,21 +1543,76 @@ export const submissionDisplayStatus = (
  * Why a stored status reads as `closed`, or undefined when it does not. The
  * one place that decides which statuses close, so `submissionDisplayStatus`
  * and the API's `closedReason` can never disagree: a new closing status is
- * added here and gets both.
+ * added here and gets both. The closing statuses are stale, archived and
+ * not_used; callers pass `fanStoredStatus`'s result.
  */
 export const submissionClosedReason = (
   dbStatus: string,
 ): SubmissionClosedReason | undefined =>
-  dbStatus === 'stale' || dbStatus === 'archived' || dbStatus === 'rejected'
+  dbStatus === 'stale' || dbStatus === 'archived' || dbStatus === 'not_used'
     ? dbStatus
     : undefined;
 
 /**
  * How an admin's Reject price marks the row it archives: `archived_reason`
- * starts with this, then the reason code (and `|note`). Written by the admin
- * reject route; read by `fanStoredStatus`.
+ * starts with this, then the reason code (and `|note`). Written only by
+ * `encodeRejection` and read only by `parseRejection`.
  */
 export const REJECTION_REASON_PREFIX = 'rejected:';
+
+/** The reasons an admin can give for rejecting a waiting price. */
+export const REJECTION_REASONS = [
+  'wrong-show',
+  'wrong-amount',
+  'resale',
+  'fees-included',
+  'other',
+] as const;
+
+export type RejectionReason = (typeof REJECTION_REASONS)[number];
+
+export type Rejection = { reason: RejectionReason; note: string | null };
+
+/**
+ * A rejection is `status = 'archived'` with the reason encoded in
+ * `archived_reason` as `rejected:<code>` or `rejected:<code>|<note>`. A
+ * rejection is not a Price check (status `disputed` is that), and the fan's
+ * "We didn't use this price" line is derived from it, so no column is added.
+ */
+export const encodeRejection = (
+  reason: RejectionReason,
+  note: string | undefined,
+): string =>
+  note
+    ? `${REJECTION_REASON_PREFIX}${reason}|${note}`
+    : `${REJECTION_REASON_PREFIX}${reason}`;
+
+/**
+ * The rejection a row carries, or null. The one reader of the encoding, so the
+ * admin's view and the fan's (`fanStoredStatus`) always agree. Only an
+ * `archived` row can be rejected: a rejected price later re-approved through
+ * the status route keeps its old `archived_reason`, and must not read as
+ * rejected. An unknown code reads as no rejection.
+ */
+export const parseRejection = (row: {
+  status: string;
+  archivedReason: string | null;
+}): Rejection | null => {
+  const { archivedReason } = row;
+  if (
+    row.status !== 'archived' ||
+    archivedReason === null ||
+    !archivedReason.startsWith(REJECTION_REASON_PREFIX)
+  ) {
+    return null;
+  }
+  const body = archivedReason.slice(REJECTION_REASON_PREFIX.length);
+  const split = body.indexOf('|');
+  const code = split === -1 ? body : body.slice(0, split);
+  const reason = REJECTION_REASONS.find((known) => known === code);
+  if (reason === undefined) return null;
+  return { reason, note: split === -1 ? null : body.slice(split + 1) };
+};
 
 /**
  * The archive reason an admin's Edit price writes on the corroborated fan
@@ -1561,19 +1622,28 @@ export const REJECTION_REASON_PREFIX = 'rejected:';
 export const REPLACED_BY_ADMIN_REASON = 'replaced by admin';
 
 /**
- * The stored status a fan's own list reads a submission as. A price an admin
- * replaced reads as it did before, corroborated (it was, when they sent it),
- * so the replacement tells them nothing. A price an admin rejected reads as
- * `rejected`, which closes with its own line: "A newer price replaced it"
- * would be false when nothing replaced it. Every other row reads as stored.
+ * The stored status a fan's own list reads a submission as. An archived row
+ * reads by what really happened to it:
+ * - replaced by an admin's Edit price: as before, corroborated (it was, when
+ *   they sent it), so the replacement tells them nothing;
+ * - rejected by an admin, or a Price check that was never used (`unusedCheck`:
+ *   a counter archived without ever being checked itself, so it lost, or
+ *   another update or the resolution settled its check): `not_used`, which
+ *   closes with its own line, since "A newer price replaced it" would be false;
+ * - anything else (a listed price a newer one replaced): as stored.
+ * `unusedCheck` is derived from the row's own links, so old rows read right too.
  */
 export const fanStoredStatus = (
   dbStatus: string,
   archivedReason: string | null,
+  unusedCheck = false,
 ): string => {
-  if (dbStatus !== 'archived' || archivedReason === null) return dbStatus;
+  if (dbStatus !== 'archived') return dbStatus;
   if (archivedReason === REPLACED_BY_ADMIN_REASON) return 'corroborated';
-  if (archivedReason.startsWith(REJECTION_REASON_PREFIX)) return 'rejected';
+  if (parseRejection({ status: dbStatus, archivedReason }) !== null) {
+    return 'not_used';
+  }
+  if (unusedCheck) return 'not_used';
   return dbStatus;
 };
 
@@ -1590,7 +1660,7 @@ export interface SubmissionCounts {
   pending: number;
   /** Disputed. */
   priceChecks: number;
-  /** Stale and archived: in `total` and under All, in no filter. */
+  /** Stale, archived and not used: in `total` and under All, in no filter. */
   closed: number;
 }
 

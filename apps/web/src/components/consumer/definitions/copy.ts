@@ -1575,9 +1575,10 @@ export const CONSUMER_COPY = {
     submissionClosedReason: {
       stale: 'No second fan in time',
       archived: 'A newer price replaced it',
-      // An admin set it aside. Neutral on purpose: no reason, no note, and no
-      // claim that anything replaced it.
-      rejected: "We didn't use this price",
+      // An admin set it aside, or a Price check where the listed price stood.
+      // Neutral on purpose: no reason, no note, no claim that anything
+      // replaced it.
+      not_used: "We didn't use this price",
     },
     // The sort note at the right end of the filter row (desktop only).
     submissionsNewestFirst: 'Newest first',

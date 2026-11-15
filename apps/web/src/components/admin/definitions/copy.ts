@@ -4077,10 +4077,10 @@ export const ADMIN_COPY = {
       thisShow: 'this show',
       title: (price: string, show: string) => `Reject ${price} for ${show}?`,
       // What the fan's Submitted prices actually shows a rejected price as: a
-      // closed row reading "A newer price replaced it" (consumer
-      // submissionClosedReason.archived). No reason or note reaches them.
+      // closed row reading "We didn't use this price" (consumer
+      // submissionClosedReason.not_used). No reason or note reaches them.
       body: (handle: string | null) =>
-        `The price comes off the show. ${handle === null ? 'The fan' : `@${handle}`} sees it as closed in Submitted prices, replaced by a newer price.`,
+        `The price comes off the show. ${handle === null ? 'The fan' : `@${handle}`} sees it as closed in Submitted prices: “We didn't use this price.”`,
       reasonLabel: 'Reason',
       reasons: {
         'wrong-show': 'Wrong show',

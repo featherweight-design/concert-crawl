@@ -1,57 +1,16 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db, priceSubmissions } from '@concert-crawl/db';
-import { REJECTION_REASON_PREFIX } from '@concert-crawl/types';
+import { encodeRejection, type RejectionReason } from '@concert-crawl/types';
 
-export const REJECTION_REASONS = [
-  'wrong-show',
-  'wrong-amount',
-  'resale',
-  'fees-included',
-  'other',
-] as const;
-
-export type RejectionReason = (typeof REJECTION_REASONS)[number];
-
-// Shared with `fanStoredStatus`, which reads a rejection off the same prefix.
-const PREFIX = REJECTION_REASON_PREFIX;
-
-/**
- * A rejection is `status = 'archived'` with the reason encoded in
- * `archived_reason` as `rejected:<code>` or `rejected:<code>|<note>`. A
- * rejection is not a Price check (status `disputed` is that), and the fan's
- * "Not used" label is derived from this prefix, so no column is added.
- */
-export const encodeRejection = (
-  reason: RejectionReason,
-  note: string | undefined,
-): string => (note ? `${PREFIX}${reason}|${note}` : `${PREFIX}${reason}`);
-
-export type Rejection = { reason: RejectionReason; note: string | null };
-
-/**
- * The rejection a row carries, or null. Only an `archived` row can be
- * rejected: a rejected price that was later re-approved through the status
- * route keeps its old `archived_reason`, and must not read as rejected.
- */
-export const parseRejection = (row: {
-  status: string;
-  archivedReason: string | null;
-}): Rejection | null => {
-  const { archivedReason } = row;
-  if (
-    row.status !== 'archived' ||
-    archivedReason === null ||
-    !archivedReason.startsWith(PREFIX)
-  ) {
-    return null;
-  }
-  const body = archivedReason.slice(PREFIX.length);
-  const split = body.indexOf('|');
-  const code = split === -1 ? body : body.slice(0, split);
-  const reason = REJECTION_REASONS.find((known) => known === code);
-  if (reason === undefined) return null;
-  return { reason, note: split === -1 ? null : body.slice(split + 1) };
-};
+// The encoding lives in @concert-crawl/types, next to `fanStoredStatus`, so
+// the admin's view and the fan's read a rejection the same way.
+export {
+  encodeRejection,
+  parseRejection,
+  REJECTION_REASONS,
+  type Rejection,
+  type RejectionReason,
+} from '@concert-crawl/types';
 
 export type RejectSubmissionResult =
   | { ok: true; updated: typeof priceSubmissions.$inferSelect }

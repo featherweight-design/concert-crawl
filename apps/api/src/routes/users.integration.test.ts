@@ -102,6 +102,7 @@ import {
 } from '@concert-crawl/db';
 import {
   REPLACED_BY_ADMIN_REASON,
+  encodeRejection,
   tallySubmissionCounts,
 } from '@concert-crawl/types';
 import type {
@@ -796,9 +797,31 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
         archivedReason,
         priceMin,
       });
-    await seed('rejected:wrong-show|admin-only note', '10');
+    await seed(encodeRejection('wrong-show', 'admin-only note'), '10');
     await seed(REPLACED_BY_ADMIN_REASON, '20');
     await seed(null, '30');
+    // A Price check the fan filed against another fan's price.
+    const parent = await seedPriceSubmission(event.id, 'user_other', {
+      status: 'corroborated',
+    });
+    // It lost (the listed price stood): never used.
+    await seedPriceSubmission(event.id, 'user_test123', {
+      status: 'archived',
+      archivedReason: 'Listed price stood',
+      disputedSubmissionId: parent.id,
+      priceMin: '40',
+    });
+    // It won, was itself checked later, and that check replaced it.
+    const won = await seedPriceSubmission(event.id, 'user_test123', {
+      status: 'archived',
+      archivedReason: 'Superseded by contest resolution',
+      disputedSubmissionId: parent.id,
+      priceMin: '50',
+    });
+    await seedPriceSubmission(event.id, 'user_other', {
+      status: 'corroborated',
+      disputedSubmissionId: won.id,
+    });
 
     const res = await app.request('/v1/users/me/submissions', {
       headers: { Authorization: 'Bearer test' },
@@ -817,7 +840,7 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
     // Rejected: closed, with its own reason, and nothing of the admin's note.
     expect(byPrice.get(10)).toMatchObject({
       status: 'closed',
-      closedReason: 'rejected',
+      closedReason: 'not_used',
     });
     expect(JSON.stringify(body)).not.toContain('admin-only note');
     // Replaced by an admin's Edit price: still reads as confirmed.
@@ -827,6 +850,32 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
     expect(byPrice.get(30)).toMatchObject({
       status: 'closed',
       closedReason: 'archived',
+    });
+    // A lost Price check: not used, never "replaced".
+    expect(byPrice.get(40)).toMatchObject({
+      status: 'closed',
+      closedReason: 'not_used',
+    });
+    // A check that won and was later checked in turn really was replaced.
+    expect(byPrice.get(50)).toMatchObject({
+      status: 'closed',
+      closedReason: 'archived',
+    });
+    expect(body.data).toHaveLength(5);
+
+    // The counts on /me read the same rows the same way.
+    const meRes = await app.request('/v1/users/me', {
+      headers: { Authorization: 'Bearer test' },
+    });
+    const me = (await meRes.json()) as {
+      data: { submissionCounts: SubmissionCounts };
+    };
+    expect(me.data.submissionCounts).toEqual({
+      total: 5,
+      live: 1,
+      pending: 0,
+      priceChecks: 0,
+      closed: 4,
     });
   });
 });

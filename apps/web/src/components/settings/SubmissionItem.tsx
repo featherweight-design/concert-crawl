@@ -18,7 +18,7 @@ export function SubmissionItem({
 }: SubmissionItemProps) {
   const ago = formatAgo(submission.submittedAt);
   const confirms = submission.corroborationCount;
-  // A closed row (stale or archived) is no longer a price that stands: its
+  // A closed row (stale, archived or not used) is no longer a price that stands: its
   // price goes muted and the line beside the pill says why (addendum-4 §6).
   const closed = submission.status === 'closed';
 

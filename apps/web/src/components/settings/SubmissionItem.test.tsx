@@ -43,6 +43,7 @@ describe('SubmissionItem closed rows', () => {
   it.each([
     ['stale', reasons.stale],
     ['archived', reasons.archived],
+    ['not_used', reasons.not_used],
   ] as const)(
     'a %s row says why, mutes the price and drops the fan count',
     (closedReason, text) => {
@@ -64,6 +65,18 @@ describe('SubmissionItem closed rows', () => {
     expect(screen.getByText('closed')).toBeTruthy();
     expect(screen.getByText('$22').className).toContain('text-fg-muted');
     expect(screen.queryByText(reasons.stale)).toBeNull();
+    expect(screen.queryByText(reasons.archived)).toBeNull();
+    expect(screen.queryByText(reasons.not_used)).toBeNull();
+  });
+
+  it('a price we did not use says so, never that a newer one replaced it', () => {
+    render(
+      <SubmissionItem
+        submission={row({ status: 'closed', closedReason: 'not_used' })}
+      />,
+    );
+
+    expect(screen.getByText("We didn't use this price")).toBeTruthy();
     expect(screen.queryByText(reasons.archived)).toBeNull();
   });
 
