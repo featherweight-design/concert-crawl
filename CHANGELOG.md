@@ -1,3 +1,24 @@
+# [1.510.0](https://github.com/featherweight-design/concert-crawl/compare/v1.509.0...v1.510.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** address the Add a show pickers review ([46f19ac](https://github.com/featherweight-design/concert-crawl/commit/46f19accf2ba999c96213ad0aa3d8531bf93ea2c))
+* **web:** address the Google review ([137480d](https://github.com/featherweight-design/concert-crawl/commit/137480d0a65d2eaf551d992541516380b632daf7))
+* **web:** address the invite code review ([d8bfbda](https://github.com/featherweight-design/concert-crawl/commit/d8bfbdae57327729ab3dac32880d40386fa22fd1))
+* **web:** drop paid-plan claims from fan copy now the app is free ([839084d](https://github.com/featherweight-design/concert-crawl/commit/839084d7c691824aeb6ed17f5bb224eb03c6303b))
+* **web:** ladder rungs are pressed buttons, keep focus mid-save, link the locked caption ([0391252](https://github.com/featherweight-design/concert-crawl/commit/039125270f3efa21f467c8afca5ccbd03a95c53e))
+* **web:** spend change=1 once it has released the invite ([27310f6](https://github.com/featherweight-design/concert-crawl/commit/27310f6a57731dc56fe2077577f726691e0968cc))
+
+
+### Features
+
+* **web:** add Google to the custom sign-in and sign-up and the sso callback ([1c9682a](https://github.com/featherweight-design/concert-crawl/commit/1c9682a93ec452f10e161f559cad464258a119e5))
+* **web:** add the Add a show venue picker and lineup field ([ccfaef6](https://github.com/featherweight-design/concert-crawl/commit/ccfaef6bbdea9e64adb02960b392593c6197cbd2))
+* **web:** add the invite code sheet inventory ([4886723](https://github.com/featherweight-design/concert-crawl/commit/48867238446f6d670ef717e764afc2ba867b4a58))
+* **web:** restyle the invite code screen on the custom auth primitives ([4adfb51](https://github.com/featherweight-design/concert-crawl/commit/4adfb51bf9f15ac0590b4ab3bb6e3996648231dc))
+* **web:** the feature flags page becomes the ladder ([8e3f5ea](https://github.com/featherweight-design/concert-crawl/commit/8e3f5eac689d269ba64b217ef1772bde101dec4d))
+
 # [1.509.0](https://github.com/featherweight-design/concert-crawl/compare/v1.508.0...v1.509.0) (2026-11-15)
 
 
