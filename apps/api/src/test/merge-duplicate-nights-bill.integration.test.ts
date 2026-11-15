@@ -28,7 +28,10 @@ describe('mergeDuplicateNights keeps the donor-only names on the bill', () => {
 
   // A timed venue listing and an untimed ticketing listing of one night: the
   // timed row is kept, the untimed one folded into it.
-  const seedNight = async (keeper: Partial<typeof events.$inferInsert>) => {
+  const seedNight = async (
+    keeper: Partial<typeof events.$inferInsert>,
+    donorOverrides: Partial<typeof events.$inferInsert> = {},
+  ) => {
     const venue = await seedVenue({ slug: `fold-${crypto.randomUUID()}` });
     const kept = await seedEvent(venue.id, {
       title: 'Beck',
@@ -50,6 +53,7 @@ describe('mergeDuplicateNights keeps the donor-only names on the bill', () => {
       canonicalHeadliners: ['beck', 'co star'],
       supportingArtists: ['Late Add', 'beck'],
       canonicalSupporting: ['beck', 'late add'],
+      ...donorOverrides,
     });
     return { venueId: venue.id, kept, donor };
   };
@@ -106,5 +110,120 @@ describe('mergeDuplicateNights keeps the donor-only names on the bill', () => {
       supportingArtists: [],
       canonicalSupporting: [],
     });
+  });
+
+  const billOf = async (venueId: string) => {
+    const rows = await testDb
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venueId));
+    expect(rows).toHaveLength(1);
+    return rows[0];
+  };
+
+  it('does not union a donor that names a different artist', async () => {
+    // "Beck." is grouped with "Beck" (edge punctuation), but its key differs,
+    // so the night goes to the admin artists review and the bill is not
+    // unioned: the kept bill is not NULL, so nothing is filled either.
+    const { venueId, kept } = await seedNight(
+      {},
+      {
+        artist: 'Beck.',
+        canonicalArtist: 'beck.',
+        headliners: ['Holiday Party'],
+        canonicalHeadliners: ['holiday party'],
+        supportingArtists: ['Staff DJ'],
+        canonicalSupporting: ['staff dj'],
+      },
+    );
+
+    const result = await mergeDuplicateNights({ dryRun: false });
+
+    expect(result.merged).toBe(1);
+    expect(result.artistReviews).toHaveLength(1);
+    expect(result.groups[0]?.fills).not.toContain('headliners');
+    expect(result.groups[0]?.fills).not.toContain('supportingArtists');
+    expect(await billOf(venueId)).toMatchObject({
+      id: kept.id,
+      headliners: ['Beck'],
+      supportingArtists: ['Opener'],
+    });
+  });
+
+  it('fills a NULL bill from a donor that names a different artist, as before', async () => {
+    const { venueId, kept } = await seedNight(
+      {
+        headliners: null,
+        canonicalHeadliners: null,
+        supportingArtists: null,
+        canonicalSupporting: null,
+      },
+      {
+        artist: 'Beck.',
+        canonicalArtist: 'beck.',
+        headliners: ['Beck'],
+        canonicalHeadliners: ['beck'],
+        supportingArtists: ['Late Add'],
+        canonicalSupporting: ['late add'],
+      },
+    );
+
+    const result = await mergeDuplicateNights({ dryRun: false });
+
+    expect(result.groups[0]?.fills).toContain('headliners');
+    expect(await billOf(venueId)).toMatchObject({
+      id: kept.id,
+      headliners: ['Beck'],
+      canonicalHeadliners: ['beck'],
+      supportingArtists: ['Late Add'],
+      canonicalSupporting: ['late add'],
+    });
+  });
+
+  it('leaves a closed "nobody billed" bill (empty headliners) alone', async () => {
+    const { venueId, kept } = await seedNight({
+      headliners: [],
+      canonicalHeadliners: [],
+      supportingArtists: [],
+      canonicalSupporting: [],
+    });
+
+    const result = await mergeDuplicateNights({ dryRun: false });
+
+    expect(result.merged).toBe(1);
+    expect(await billOf(venueId)).toMatchObject({
+      id: kept.id,
+      headliners: [],
+      supportingArtists: [],
+    });
+  });
+
+  it('takes no names from a donor hidden from consumers', async () => {
+    const { venueId, kept } = await seedNight({}, { hiddenFromConsumer: true });
+
+    const result = await mergeDuplicateNights({ dryRun: false });
+
+    expect(result.merged).toBe(1);
+    expect(await billOf(venueId)).toMatchObject({
+      id: kept.id,
+      headliners: ['Beck'],
+      supportingArtists: ['Opener'],
+    });
+  });
+
+  it('reports only the supports in a dry run when only supports are added', async () => {
+    await seedNight(
+      {},
+      {
+        headliners: ['Beck'],
+        canonicalHeadliners: ['beck'],
+        supportingArtists: ['Late Add'],
+        canonicalSupporting: ['late add'],
+      },
+    );
+
+    const result = await mergeDuplicateNights({ dryRun: true });
+
+    expect(result.groups[0]?.fills).toEqual(['supportingArtists']);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canonicalizeSupporting } from '@concert-crawl/types';
-import { type Bill, unionBill } from './union-bill.js';
+import { type Bill, changedBillFields, unionBill } from './union-bill.js';
 
 const bill = (
   headliners: string[] | null,
@@ -59,11 +59,62 @@ describe('unionBill: folding duplicate nights keeps every donor-only name', () =
     expect(unionBill(bill(null, null), [bill(null, null)])).toBeNull();
   });
 
+  it('leaves a closed "nobody billed" bill (empty headliners) alone, supports included', () => {
+    expect(
+      unionBill(bill([], null), [bill(['Tribute Band'], ['Opener'])]),
+    ).toBeNull();
+    expect(
+      unionBill(bill([], []), [bill(['Tribute Band'], ['Opener'])]),
+    ).toBeNull();
+  });
+
+  it('still unions into a NULL-headliner keeper that holds supports', () => {
+    expect(unionBill(bill(null, ['Opener']), [bill(['Rossi'], null)])).toEqual(
+      bill(['Rossi'], ['Opener']),
+    );
+  });
+
+  it('takes no names from a donor hidden from consumers', () => {
+    expect(
+      unionBill(bill(['Rossi'], ['Opener']), [
+        { ...bill(['Holiday Party'], ['Staff DJ']), hiddenFromConsumer: true },
+      ]),
+    ).toBeNull();
+    expect(
+      unionBill(bill(['Rossi'], []), [
+        { ...bill(['Hidden Act'], []), hiddenFromConsumer: true },
+        { ...bill(['Co Star'], []), hiddenFromConsumer: false },
+      ]),
+    ).toEqual(bill(['Rossi', 'Co Star'], []));
+  });
+
   it('writes the canonical arrays the way the crawl does', () => {
     const result = unionBill(bill(['Zeta'], []), [bill(['Álpha'], ['Opener'])]);
     expect(result?.canonicalHeadliners).toEqual(
       canonicalizeSupporting(['Zeta', 'Álpha']),
     );
     expect(result?.canonicalSupporting).toEqual(['opener']);
+  });
+});
+
+describe('changedBillFields: the fill reports the arrays the union changed', () => {
+  it('reports supports alone when only supports were added', () => {
+    const keeper = bill(['Rossi'], ['Opener']);
+    const next = unionBill(keeper, [bill(['Rossi'], ['Late Add'])]);
+    expect(next).not.toBeNull();
+    expect(next && changedBillFields(keeper, next)).toEqual([
+      'supportingArtists',
+    ]);
+  });
+
+  it('reports headliners alone, or both, as changed', () => {
+    const keeper = bill(['Rossi'], ['Opener']);
+    expect(
+      changedBillFields(keeper, bill(['Rossi', 'Co Star'], ['Opener'])),
+    ).toEqual(['headliners']);
+    expect(
+      changedBillFields(keeper, bill(['Rossi', 'Co Star'], ['Opener', 'X'])),
+    ).toEqual(['headliners', 'supportingArtists']);
+    expect(changedBillFields(keeper, keeper)).toEqual([]);
   });
 });
