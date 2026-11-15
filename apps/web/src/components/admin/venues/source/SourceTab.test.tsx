@@ -203,19 +203,20 @@ describe('SourceTab — How we read it', () => {
     expect([...sentFormData().keys()]).toEqual(['websiteUrl']);
   });
 
-  it('saving a manual venue sends the strategy once the reader changes', async () => {
+  it('a manual venue shows its reader read-only, with no picks', () => {
     render(<SourceTab venue={{ ...venue, extractionStrategy: 'manual' }} />);
     fireEvent.click(
       screen.getByRole('button', { name: new RegExp(COPY.advanced.label) }),
     );
-    fireEvent.click(
-      screen.getByRole('radio', { name: COPY.advanced.reader.llm }),
+    expect(screen.getByTestId('source-reader-locked').textContent).toBe(
+      'Manual entry',
     );
-    clickSave();
-    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
-    expect(Object.fromEntries(sentFormData().entries())).toEqual({
-      extractionStrategy: 'llm',
-    });
+    expect(
+      screen.getByText(COPY.advanced.reader.lockedHints.manual),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('radiogroup', { name: COPY.advanced.reader.label }),
+    ).toBeNull();
   });
 
   it('holds Test it now and Ask the venue out of the tab', () => {
@@ -321,7 +322,7 @@ describe('SourceTab — the platform probe, under the feed ID', () => {
 
 describe('SourceTab — Advanced', () => {
   it('starts collapsed, with its line', () => {
-    render(<SourceTab venue={venue} />);
+    render(<SourceTab venue={{ ...venue, crawlMode: null }} />);
     const toggle = screen.getByRole('button', {
       name: new RegExp(COPY.advanced.label),
     });
@@ -330,14 +331,18 @@ describe('SourceTab — Advanced', () => {
     expect(screen.queryByTestId('source-advanced')).toBeNull();
   });
 
-  it('the collapsed line never promises the held debug HTML toggle', () => {
-    render(<SourceTab venue={venue} />);
+  it('the collapsed line says all automatic, and never promises debug HTML', () => {
+    render(<SourceTab venue={{ ...venue, crawlMode: null }} />);
     expect(
       screen.getByText(
-        'Page loading, wait-for selector, reader. Rarely needed.',
+        'All automatic. Page loading, wait-for selector, reader.',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/debug html/i)).toBeNull();
+    expect(screen.queryByTestId('source-advanced-forced')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: COPY.advanced.backToAutomatic }),
+    ).toBeNull();
   });
 
   it('opens to page loading, wait until, wait for and the reader', () => {
@@ -380,7 +385,6 @@ describe('SourceTab — Advanced', () => {
     );
   const option = (name: string) => screen.getByRole('radio', { name });
 
-  // ⏸ removal waits on Design item 18: the reader selector stays for now.
   it('a detail-page venue reads as Detail pages, among the other readers', () => {
     render(<SourceTab venue={{ ...venue, platform: 'detail-page' }} />);
     openAdvanced();
@@ -388,7 +392,9 @@ describe('SourceTab — Advanced', () => {
       'checked',
       true,
     );
-    expect(screen.getByText(COPY.advanced.detailPage)).toBeTruthy();
+    expect(
+      screen.getByText(COPY.advanced.reader.hints['detail-page']),
+    ).toBeTruthy();
     expect(option(COPY.advanced.reader.llm)).toHaveProperty('checked', false);
   });
 
@@ -416,7 +422,6 @@ describe('SourceTab — Advanced', () => {
     });
   });
 
-  // ⏸ pending Design item 18: Automatic is a third segment in the drawn control.
   it('page loading offers Automatic, selected for a venue with no stored mode', async () => {
     render(<SourceTab venue={{ ...venue, crawlMode: null }} />);
     openAdvanced();
@@ -452,6 +457,263 @@ describe('SourceTab — Advanced', () => {
     expect(Object.fromEntries(sentFormData().entries())).toEqual({
       crawlMode: '',
     });
+  });
+});
+
+describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
+  const toggle = () =>
+    screen.getByRole('button', { name: new RegExp(COPY.advanced.label) });
+  const backButton = () =>
+    screen.queryByRole('button', { name: COPY.advanced.backToAutomatic });
+  const chips = () =>
+    Array.from(
+      screen.getByTestId('source-advanced-forced').children,
+      (chip) => chip.textContent,
+    );
+  const forced: SourceVenue = {
+    ...venue,
+    crawlMode: 'browser',
+    extractionStrategy: 'llm',
+    crawlWaitUntil: 'load',
+    crawlWaitForSelector: '.event-list',
+  };
+
+  it('closed, chips each setting set by hand, with Back to Automatic (18/source-forced-d)', () => {
+    render(<SourceTab venue={forced} />);
+    expect(within(toggle()).getByText(COPY.advanced.setByHand)).toBeTruthy();
+    expect(screen.queryByText(COPY.advanced.collapsedLine)).toBeNull();
+    expect(chips()).toEqual([
+      'Page loading: Full browser',
+      'Reader: Haiku only',
+    ]);
+    expect(backButton()).toBeTruthy();
+  });
+
+  it('Back to Automatic is an unsaved change, then Save sends both clears (18/source-advanced-states)', async () => {
+    render(<SourceTab venue={forced} />);
+    const backToAutomatic = backButton();
+    if (backToAutomatic === null) throw new Error('Expected Back to Automatic');
+    fireEvent.click(backToAutomatic);
+    expect(screen.getByText(COPY.advanced.collapsedLine)).toBeTruthy();
+    expect(screen.queryByTestId('source-advanced-forced')).toBeNull();
+    expect(backButton()).toBeNull();
+    expect(screen.getByText('2 unsaved changes')).toBeTruthy();
+    expect(document.activeElement).toBe(toggle());
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
+    clickSave();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    // Wait until and Wait for are left as they are.
+    expect(Object.fromEntries(sentFormData().entries())).toEqual({
+      crawlMode: '',
+      extractionStrategy: '',
+    });
+  });
+
+  it('after Back to Automatic on JSON-LD only, one unsaved change', () => {
+    render(
+      <SourceTab
+        venue={{
+          ...venue,
+          crawlMode: null,
+          extractionStrategy: 'structured_data',
+        }}
+      />,
+    );
+    expect(chips()).toEqual(['Reader: JSON-LD only']);
+    fireEvent.click(screen.getByText(COPY.advanced.backToAutomatic));
+    expect(screen.getByText('1 unsaved change')).toBeTruthy();
+  });
+
+  it('Back to Automatic on Detail pages clears the platform', async () => {
+    render(
+      <SourceTab
+        venue={{ ...venue, crawlMode: null, platform: 'detail-page' }}
+      />,
+    );
+    expect(chips()).toEqual(['Reader: Detail pages']);
+    fireEvent.click(screen.getByText(COPY.advanced.backToAutomatic));
+    clickSave();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    expect(Object.fromEntries(sentFormData().entries())).toEqual({
+      platform: '',
+      platformVenueId: '',
+    });
+  });
+
+  it.each([
+    [{ platform: 'aeg', platformVenueId: '89' }, 'AEG'],
+    [{ platform: 'livenation', platformVenueId: 'K1' }, 'Live Nation'],
+  ] as const)(
+    'a %j feed shows its reader as a read-only chip, and Back to Automatic leaves it',
+    async (patch, seller) => {
+      render(
+        <SourceTab venue={{ ...venue, ...patch, crawlMode: 'browser' }} />,
+      );
+      expect(chips()).toEqual([
+        'Page loading: Full browser',
+        `Reader: ${seller}`,
+      ]);
+      fireEvent.click(screen.getByText(COPY.advanced.backToAutomatic));
+      // The feed's chip stays; nothing else is left to clear.
+      expect(chips()).toEqual([`Reader: ${seller}`]);
+      expect(backButton()).toBeNull();
+      fireEvent.click(toggle());
+      expect(screen.getByTestId('source-reader-locked').textContent).toBe(
+        seller,
+      );
+      expect(
+        screen.getByText(COPY.advanced.reader.lockedHints.feed(seller)),
+      ).toBeTruthy();
+      expect(
+        screen.queryByRole('radiogroup', { name: COPY.advanced.reader.label }),
+      ).toBeNull();
+      clickSave();
+      await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+      expect(Object.fromEntries(sentFormData().entries())).toEqual({
+        crawlMode: '',
+      });
+    },
+  );
+
+  it('a feed alone offers no Back to Automatic', () => {
+    render(
+      <SourceTab
+        venue={{
+          ...venue,
+          crawlMode: null,
+          platform: 'aeg',
+          platformVenueId: '89',
+        }}
+      />,
+    );
+    expect(chips()).toEqual(['Reader: AEG']);
+    expect(backButton()).toBeNull();
+  });
+
+  it('a manual venue chips its reader as Manual entry', () => {
+    render(
+      <SourceTab
+        venue={{ ...venue, crawlMode: null, extractionStrategy: 'manual' }}
+      />,
+    );
+    expect(chips()).toEqual(['Reader: Manual entry']);
+    expect(backButton()).toBeNull();
+  });
+
+  it('VenuePilot has no reader row', () => {
+    render(
+      <SourceTab
+        venue={{ ...venue, apiProvider: 'venuepilot', apiAccountId: '1105' }}
+      />,
+    );
+    fireEvent.click(toggle());
+    expect(
+      within(screen.getByTestId('source-advanced')).queryByText(
+        COPY.advanced.reader.label,
+      ),
+    ).toBeNull();
+  });
+
+  it('desktop opens Advanced as its own card, two by two, with Back to Automatic and Hide (18/source-advanced-d)', () => {
+    render(<SourceTab venue={forced} />);
+    fireEvent.click(toggle());
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    expect(within(toggle()).getByText(COPY.advanced.openBelow)).toBeTruthy();
+    const card = screen.getByTestId('source-advanced-card');
+    // Under the two columns, not inside How we read it.
+    expect(
+      within(screen.getByTestId('source-read')).queryByTestId(
+        'source-advanced',
+      ),
+    ).toBeNull();
+    expect(toggle().getAttribute('aria-controls')).toBe(card.id);
+    expect(
+      within(card).getByRole('heading', { name: COPY.advanced.label }),
+    ).toBeTruthy();
+    const controls = within(card).getByTestId('source-advanced');
+    expect(controls.style.display).toBe('grid');
+    expect(controls.style.gap).toBe('20px 28px');
+    expect(
+      Array.from(
+        controls.children,
+        (cell) => cell.firstElementChild?.textContent,
+      ),
+    ).toEqual([
+      COPY.advanced.pageLoading.label,
+      COPY.advanced.reader.label,
+      COPY.advanced.waitUntil.label,
+      COPY.advanced.waitFor.label,
+    ]);
+    expect(
+      within(card).getByText(COPY.advanced.pageLoading.hints.browser),
+    ).toBeTruthy();
+    expect(within(card).getByText(COPY.advanced.reader.hints.llm)).toBeTruthy();
+    // Desktop's reader is the segmented control.
+    expect(
+      within(card)
+        .getAllByRole('radio')
+        .filter((input) => input.getAttribute('name')?.endsWith('-reader'))
+        .map((input) => input.getAttribute('value')),
+    ).toEqual(['auto', 'structured_data', 'llm', 'detail-page']);
+
+    fireEvent.click(
+      within(card).getByRole('button', {
+        name: COPY.advanced.backToAutomatic,
+      }),
+    );
+    expect(
+      within(card).getByText(COPY.advanced.pageLoading.hints.auto),
+    ).toBeTruthy();
+    expect(
+      within(card).getByText(COPY.advanced.reader.hints.auto),
+    ).toBeTruthy();
+    expect(
+      within(card).queryByRole('button', {
+        name: COPY.advanced.backToAutomatic,
+      }),
+    ).toBeNull();
+
+    fireEvent.click(
+      within(card).getByRole('button', { name: COPY.advanced.hide }),
+    );
+    expect(screen.queryByTestId('source-advanced-card')).toBeNull();
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle());
+  });
+
+  it('the phone stacks the controls in How we read it, and wraps Reader as chips (18/source-advanced-m)', () => {
+    phone = true;
+    render(
+      <SourceTab
+        venue={{ ...venue, crawlMode: null, platform: 'detail-page' }}
+      />,
+    );
+    fireEvent.click(toggle());
+    expect(screen.queryByTestId('source-advanced-card')).toBeNull();
+    const controls = within(screen.getByTestId('source-read')).getByTestId(
+      'source-advanced',
+    );
+    expect(controls.style.display).toBe('flex');
+    expect(
+      Array.from(
+        controls.children,
+        (cell) => cell.firstElementChild?.textContent,
+      ),
+    ).toEqual([
+      COPY.advanced.pageLoading.label,
+      COPY.advanced.reader.label,
+      COPY.advanced.waitUntil.label,
+      COPY.advanced.waitFor.label,
+    ]);
+    // Chips are pills (radius 999), not segments.
+    const detail = readerRadio(COPY.advanced.reader['detail-page']);
+    expect(detail).toHaveProperty('checked', true);
+    expect(detail.closest('label')?.style.borderRadius).toBe('999px');
+    expect(screen.getByText(COPY.advanced.pageLoading.hints.auto)).toBeTruthy();
+    expect(
+      screen.getByText(COPY.advanced.reader.hints['detail-page']),
+    ).toBeTruthy();
+    expect(screen.queryByText(COPY.advanced.openBelow)).toBeNull();
   });
 });
 

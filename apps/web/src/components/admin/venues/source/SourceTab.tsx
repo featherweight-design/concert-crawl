@@ -24,11 +24,12 @@ import {
   hintStyle,
   inputStyle,
 } from './source-parts';
-import { SourceAdvanced } from './SourceAdvanced';
+import { SourceAdvanced, SourceAdvancedCard } from './SourceAdvanced';
 import { SourceRulesCards } from './SourceRulesCards';
 import {
   FEED_SELLERS,
   READ_MODES,
+  backToAutomatic,
   columnsOf,
   dirtyColumns,
   draftOf,
@@ -185,6 +186,18 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
   const edit = (patch: Partial<SourceDraft>) => {
     setDraft((prev) => ({ ...prev, ...patch }));
     setErrors({});
+  };
+
+  // Advanced's toggle stays mounted, so focus lands on it whenever the link
+  // that was pressed (Hide, Back to Automatic) goes away.
+  const advancedToggleRef = useRef<HTMLButtonElement>(null);
+  const hideAdvanced = () => {
+    setAdvancedOpen(false);
+    advancedToggleRef.current?.focus();
+  };
+  const goBackToAutomatic = () => {
+    edit(backToAutomatic(draft));
+    advancedToggleRef.current?.focus();
   };
 
   const discard = () => {
@@ -456,11 +469,15 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
       <SourceAdvanced
         ids={ids}
         draft={draft}
+        saved={baseline}
+        savedDraft={savedDraft}
         errors={errors}
         saving={saving}
         phone={phone}
         open={advancedOpen}
         onToggle={() => setAdvancedOpen((open) => !open)}
+        onBackToAutomatic={goBackToAutomatic}
+        toggleRef={advancedToggleRef}
         edit={edit}
       />
     </Card>
@@ -502,6 +519,21 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
           <SourceRulesCards venue={venue} phone={phone} />
         </div>
       </div>
+
+      {/* Desktop opens Advanced as its own full-width card under the columns
+          (`18/source-advanced-d`); the phone keeps it in How we read it. */}
+      {!phone && advancedOpen && (
+        <SourceAdvancedCard
+          ids={ids}
+          draft={draft}
+          saved={baseline}
+          errors={errors}
+          saving={saving}
+          onBackToAutomatic={goBackToAutomatic}
+          onHide={hideAdvanced}
+          edit={edit}
+        />
+      )}
 
       {/* Desktop draws Discard and Save as an inline row under the cards
           (`04/venue-source`); the phone pins the two-row bar

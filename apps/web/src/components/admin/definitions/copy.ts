@@ -787,17 +787,35 @@ export const ADMIN_COPY = {
     },
     advanced: {
       label: 'Advanced',
-      // Names only the controls that are built. ⏸ add 'save debug HTML' when
-      // the held toggle ships (board 04/venue-source). The reader stays named
-      // while its selector does (⏸ removal waits on Design item 18).
-      collapsedLine: 'Page loading, wait-for selector, reader. Rarely needed.',
+      // Closed with nothing set by hand (`18/source-advanced-states`). Names
+      // only the controls that are built. ⏸ add 'save debug HTML' when the
+      // held toggle ships (board 04/venue-source).
+      collapsedLine: 'All automatic. Page loading, wait-for selector, reader.',
+      // Closed with something forced: the line, then a chip per setting.
+      setByHand: 'Set by hand',
+      forced: {
+        pageLoading: (value: string) => `Page loading: ${value}`,
+        reader: (value: string) => `Reader: ${value}`,
+      },
+      backToAutomatic: 'Back to Automatic',
+      // Under the closed row once Advanced holds an unsaved edit.
+      unsaved: (count: number) =>
+        count === 1 ? '1 unsaved change' : `${count} unsaved changes`,
+      // Desktop opens Advanced as its own card under the columns.
+      openBelow: 'Open below',
+      hide: 'Hide',
       pageLoading: {
         label: 'Page loading',
-        // ⏸ pending Design item 18: undrawn, kept because main offers it.
         auto: 'Automatic',
         http: 'Plain fetch',
         browser: 'Full browser',
-        hint: 'Full browser runs the page’s scripts. Slower; only for calendars that draw themselves.',
+        // What the pick does; a forced pick says so first.
+        hints: {
+          auto: 'Automatic lets the crawl pick: a plain fetch, or the full browser for a calendar that draws itself.',
+          http: 'Set by hand. Plain fetch reads the page’s HTML without running its scripts.',
+          browser:
+            'Set by hand. Full browser runs the page’s scripts; slower, only for calendars that draw themselves.',
+        },
       },
       waitUntil: {
         label: 'Wait until',
@@ -810,17 +828,30 @@ export const ADMIN_COPY = {
         hint: 'Optional. We read the page once this appears.',
         placeholder: '.event-list',
       },
-      // ⏸ removal waits on Design item 18: the board draws no reader.
       reader: {
         label: 'Reader',
         auto: 'Automatic',
         structured_data: 'JSON-LD only',
         llm: 'Haiku only',
         'detail-page': 'Detail pages',
-        hint: 'Automatic tries JSON-LD, then Haiku.',
+        // A stored `manual`, shown read-only.
+        manual: 'Manual entry',
+        // What the pick does; a forced pick says so first.
+        hints: {
+          auto: 'Automatic tries JSON-LD, then Haiku.',
+          structured_data:
+            'Set by hand: reads only the page’s JSON-LD, never Haiku.',
+          llm: 'Set by hand: skips JSON-LD and always uses Haiku.',
+          'detail-page':
+            'Reads each show’s own page, from the calendar’s links.',
+        },
+        // Under a read-only reader: an AEG or Live Nation feed, or manual.
+        lockedHints: {
+          feed: (seller: string) =>
+            `Set by the ${seller} feed. Back to Automatic leaves it as it is.`,
+          manual: 'Set to manual entry. Back to Automatic leaves it as it is.',
+        },
       },
-      // The hint under the reader while Detail pages is picked.
-      detailPage: 'Reads each show’s own page, from the calendar’s links.',
     },
     robots: {
       title: 'robots.txt',
