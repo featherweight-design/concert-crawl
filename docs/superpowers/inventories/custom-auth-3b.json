@@ -1,0 +1,42 @@
+{
+  "feature": "Custom sign-in PR 3b · email code (/sign-in/new)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/01-sign-in (email-code-m, email-code-wrong-m, email-code-expired-m, email-code-resent-m). Signed out. Only the first screen of the email code can be photographed here: it asks Clerk for a code, whose answer the screen swallows, so it draws the same whether or not the address has an account. Walked by hand on staging (a sheet cannot set up the state): a wrong and an expired code, the resend countdown running out, the new-device code (Client Trust is off on the development instance), the 429 locked field and countdown, and the offline strip.",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "email-code",
+      "label": "/sign-in/new: the emailed code screen",
+      "steps": [
+        {
+          "goto": "/sign-in/new",
+          "wait": "h1:has-text('Sign in')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan@example.com" },
+        { "clickRole": "button", "name": "^Continue$" },
+        { "wait": "h1:has-text('Enter your password')", "settle": 600 },
+        { "clickRole": "button", "name": "^Email me a code instead$" },
+        { "wait": "h1:has-text('Check your email')", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "password-code-link",
+      "label": "/sign-in/new: the password screen with Email me a code instead",
+      "steps": [
+        {
+          "goto": "/sign-in/new",
+          "wait": "h1:has-text('Sign in')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan@example.com" },
+        { "clickRole": "button", "name": "^Continue$" },
+        { "wait": "h1:has-text('Enter your password')", "settle": 800 }
+      ]
+    }
+  ]
+}
