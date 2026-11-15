@@ -31,6 +31,7 @@ import {
   seedEventReport,
   seedPriceSubmission,
   seedUserEvent,
+  seedUserProfile,
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { deleteManualEvents } from './lib/event-delete.js';
@@ -171,6 +172,50 @@ describe('GET /v1/admin/events/:id/merge-candidates', () => {
     });
   });
 
+  it('names the admin who added a listing, and nobody for a crawled row or an admin with no handle', async () => {
+    const venue = await venueNamed('cand-added-by');
+    const date = futureDate(22);
+    const self = await seedEvent(venue.id, { artist: 'Rossi', date });
+    await seedUserProfile('admin_dlo', { handle: 'dlo' });
+    await seedUserProfile('admin_nohandle', { handle: null });
+    const byDlo = await seedEvent(venue.id, {
+      artist: 'Rossi',
+      date,
+      showTime: '20:00:00',
+      manual: true,
+      createdBy: 'admin_dlo',
+    });
+    const noHandle = await seedEvent(venue.id, {
+      artist: 'Other Band',
+      date,
+      manual: true,
+      createdBy: 'admin_nohandle',
+    });
+    const noProfile = await seedEvent(venue.id, {
+      artist: 'Third Band',
+      date,
+      manual: true,
+      createdBy: 'admin_unknown',
+    });
+    const crawled = await seedEvent(venue.id, { artist: 'Fourth Band', date });
+
+    const res = await get(`${self.id}/merge-candidates`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { candidates: { id: string; addedBy: unknown }[] };
+    };
+    const addedBy = Object.fromEntries(
+      body.data.candidates.map((row) => [row.id, row.addedBy]),
+    );
+    expect(addedBy).toEqual({
+      [byDlo.id]: { handle: 'dlo' },
+      [noHandle.id]: null,
+      [noProfile.id]: null,
+      [crawled.id]: null,
+    });
+  });
+
   it('404s an unknown event and 400s a bad id', async () => {
     expect(
       (await get('00000000-0000-4000-8000-0000000000ee/merge-candidates'))
@@ -270,6 +315,32 @@ describe('GET /v1/admin/events/:id/merge-preview', () => {
     expect(data.fills).not.toContain('description');
     expect(data.skipped).toEqual([]);
     expect(data).toMatchObject({ keptId: kept.id, sourceId: other.id });
+  });
+
+  it('names the admin who added each listing (addedBy), null for a crawled row', async () => {
+    const venue = await venueNamed('preview-added-by');
+    const date = futureDate(31);
+    await seedUserProfile('admin_dlo', { handle: 'dlo' });
+    const kept = await seedEvent(venue.id, { artist: 'Rossi', date });
+    const other = await seedEvent(venue.id, {
+      artist: 'Rossi',
+      date,
+      showTime: '20:00:00',
+      manual: true,
+      createdBy: 'admin_dlo',
+    });
+
+    const res = await get(`${kept.id}/merge-preview?source=${other.id}`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: {
+        kept: { addedBy: unknown };
+        other: { addedBy: unknown };
+      };
+    };
+    expect(body.data.kept.addedBy).toBeNull();
+    expect(body.data.other.addedBy).toEqual({ handle: 'dlo' });
   });
 
   it("reports a merge across venues, without the other venue's links (A3)", async () => {
