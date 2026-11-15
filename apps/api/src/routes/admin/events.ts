@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { validationHook } from '../../lib/validator.js';
+import { validationHook, zodIssuesResponse } from '../../lib/validator.js';
 import {
   activeSoldOutWhere,
   ADMIN_AUTHORED_SOLD_OUT_NOTE,
@@ -74,6 +74,16 @@ import { loadSoldOutRecord } from './lib/sold-out-record.js';
 import { todayInDenver } from '../../lib/time.js';
 import { currentPriceCondition } from '../../lib/price-check.js';
 import { isUniqueViolationOn } from '../../lib/pg-errors.js';
+import {
+  createEventSchema,
+  createManualEvent,
+  duplicateQuerySchema,
+  findDuplicates,
+  findKeyHolder,
+  lineupBodySchema,
+  readLineup,
+  saveLineup,
+} from './lib/event-create.js';
 
 const eventIdSchema = z.object({ id: idSchema });
 
@@ -681,6 +691,102 @@ eventsAdminRouter.patch(
   },
 );
 
+// GET /v1/admin/events/duplicate?venueId&date&title — Add a show's amber
+// warning (B+ addendum 5): the shows already at that venue that night, the
+// likeliest first. A warning only; POST never refuses a show for it.
+// Registered before `/:id` so `duplicate` is never read as an id.
+eventsAdminRouter.get(
+  '/duplicate',
+  zValidator('query', duplicateQuerySchema, validationHook),
+  async (ctx) => {
+    const duplicates = await findDuplicates(ctx.req.valid('query'));
+    return ctx.json({ success: true, data: { duplicates } } as const);
+  },
+);
+
+// POST /v1/admin/events — Add a show by hand (admin 4a-3b). A show the
+// crawler can't see: `manual`, `created_by` the admin, verified, its lineup
+// written to the four arrays through the crawl's canonicaliser and linked in
+// `event_artists`, all in one transaction. Field errors are 400s whose issue
+// messages are ADD_SHOW_ERROR_CODES. A show already that night is NOT refused
+// (the GET above warns); only a row already holding this show's exact crawl
+// key (venue, date, headliner, show time) is a 409 `duplicate_show` with its
+// `existingId`, because the unique index the crawl upserts on cannot hold two.
+eventsAdminRouter.post(
+  '/',
+  zValidator('json', createEventSchema, validationHook),
+  async (ctx) => {
+    const body = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
+
+    let result: Awaited<ReturnType<typeof createManualEvent>>;
+    try {
+      result = await createManualEvent(body, actor.userId);
+    } catch (err) {
+      if (isUniqueViolationOn(err, EVENT_NIGHT_UNIQUE_INDEX)) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'duplicate_show',
+            existingId: await findKeyHolder(body),
+          } as const,
+          409,
+        );
+      }
+      throw err;
+    }
+    if (result.kind === 'invalid') {
+      return zodIssuesResponse(ctx, result.issues);
+    }
+
+    const detail = await loadEventDetail(result.id, actor.userId);
+    ctx.set('auditAction', 'event.create');
+    ctx.set('auditTargetId', result.id);
+    ctx.set('auditActorId', actor.userId);
+    ctx.set('auditMeta', {
+      title: body.title,
+      venueId: body.venueId,
+      date: body.date,
+      lineup: body.lineup.map(({ name, role }) => ({ name, role })),
+    });
+    return ctx.json({ success: true, data: detail } as const, 201);
+  },
+);
+
+// PUT /v1/admin/events/:id/lineup — save a show's lineup (admin 4a-3b), on a
+// crawled or manual show, upcoming or past. Rewrites the four arrays, sets
+// `lineup_edited_at` so the crawl keeps the admin's bill, and relinks
+// `event_artists`, in one transaction under the row lock. Unmatched names
+// keep their text and link once an artist by that name exists.
+eventsAdminRouter.put(
+  '/:id/lineup',
+  zValidator('param', eventIdSchema, validationHook),
+  zValidator('json', lineupBodySchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const { lineup } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
+
+    const result = await saveLineup(id, lineup);
+    if (result.kind === 'not_found') {
+      return ctx.json({ success: false, error: 'Not found' } as const, 404);
+    }
+    if (result.kind === 'invalid') {
+      return zodIssuesResponse(ctx, result.issues);
+    }
+
+    const detail = await loadEventDetail(id, actor.userId);
+    ctx.set('auditAction', 'event.lineup.update');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
+    ctx.set('auditMeta', {
+      headliners: result.lineup.headliners,
+      supportingArtists: result.lineup.supportingArtists,
+    });
+    return ctx.json({ success: true, data: detail } as const);
+  },
+);
+
 // GET /v1/admin/events/:id — single event for the admin editor surface.
 // The list endpoint's projection plus the editor-only fields (the admin's
 // own price, `mySubmissionId` and `mySubmission`), so the editor hydrates
@@ -690,108 +796,130 @@ eventsAdminRouter.get(
   zValidator('param', eventIdSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
-    const today = todayInDenver();
-
-    const [row] = await db
-      .select({
-        id: events.id,
-        title: events.title,
-        artist: events.artist,
-        date: events.date,
-        doorsTime: events.doorsTime,
-        showTime: events.showTime,
-        ticketPriceMin: events.ticketPriceMin,
-        ticketPriceMax: events.ticketPriceMax,
-        confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
-        verified: events.verified,
-        hiddenFromConsumer: events.hiddenFromConsumer,
-        isConcertReviewNeeded: events.isConcertReviewNeeded,
-        status: events.status,
-        extractionStrategy: events.extractionStrategy,
-        sourceUrl: events.sourceUrl,
-        // The show's own page, which "On the venue's site" prefers.
-        eventUrl: events.eventUrl,
-        genre: events.genre,
-        createdAt: events.createdAt,
-        updatedAt: events.updatedAt,
-        lastSeenAt: events.lastSeenAt,
-        firstMissingAt: events.firstMissingAt,
-        venueId: events.venueId,
-        venueName: venues.name,
-        // Admin-editable (#992): the tour kicker is only ever auto-populated
-        // by the LLM extractor, so JSON-LD venues need a manual entry path.
-        tourName: events.tourName,
-        isSoldOut: isSoldOutSql(),
-        // Admin 4b-2 (Event edit). Additive: the old editor ignores them.
-        venueSlug: venues.slug,
-        ticketUrl: events.ticketUrl,
-        delistedAt: events.delistedAt,
-        listStatus: eventListStatusSql(today),
-        hiddenReason: hiddenReasonSql(),
-        watchingCount: watchingCountOf(),
-        wentCount: wentCountOf(),
-        submittedPriceCount: sql<number>`(${db
-          .select({ total: count() })
-          .from(priceSubmissions)
-          .where(
-            and(eq(priceSubmissions.eventId, events.id), submittedPriceWhere()),
-          )})`.mapWith(Number),
-        priceRetrievedAt: sql<Date | null>`(${db
-          .select({ at: max(priceRetrievalLog.attemptedAt) })
-          .from(priceRetrievalLog)
-          .where(eq(priceRetrievalLog.eventId, events.id))})`.mapWith(
-          (value: string | Date | null) =>
-            value === null ? null : new Date(value),
-        ),
-      })
-      .from(events)
-      .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(eq(events.id, id))
-      .limit(1);
-
-    if (!row) {
+    const detail = await loadEventDetail(id, getAuthUser(ctx).userId);
+    if (!detail) {
       return ctx.json({ success: false, error: 'Not found' } as const, 404);
     }
-
-    // The admin's own live price on this show, which Edit price opens.
-    const actor = getAuthUser(ctx);
-    // With it, B+ addendum 7 §6's evidence behind a Sold out (null unless
-    // it is); the two reads are independent.
-    const [[mine], soldOutRecord] = await Promise.all([
-      db
-        .select({
-          id: priceSubmissions.id,
-          priceMin: priceSubmissions.priceMin,
-          priceMax: priceSubmissions.priceMax,
-          // Pending, corroborated or disputed: says which route can edit it.
-          status: priceSubmissions.status,
-        })
-        .from(priceSubmissions)
-        .where(
-          and(
-            eq(priceSubmissions.eventId, id),
-            eq(priceSubmissions.userId, actor.userId),
-            submittedPriceWhere(),
-          ),
-        )
-        .orderBy(desc(priceSubmissions.createdAt))
-        .limit(1),
-      row.isSoldOut ? loadSoldOutRecord(id) : Promise.resolve(null),
-    ]);
-
-    return ctx.json({
-      success: true,
-      // `mySubmission` carries the prices Edit price opens with.
-      // `mySubmissionId` is the field #418 shipped, kept as the contract.
-      data: {
-        ...row,
-        mySubmissionId: mine?.id ?? null,
-        mySubmission: mine ?? null,
-        soldOutRecord,
-      },
-    } as const);
+    return ctx.json({ success: true, data: detail } as const);
   },
 );
+
+/**
+ * The admin detail payload GET /:id returns, which Add a show and the lineup
+ * save answer with too. Null when the event does not exist. `actorId` picks
+ * the admin's own price.
+ */
+async function loadEventDetail(id: string, actorId: string) {
+  const today = todayInDenver();
+
+  const [row] = await db
+    .select({
+      id: events.id,
+      title: events.title,
+      artist: events.artist,
+      date: events.date,
+      doorsTime: events.doorsTime,
+      showTime: events.showTime,
+      ticketPriceMin: events.ticketPriceMin,
+      ticketPriceMax: events.ticketPriceMax,
+      confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
+      verified: events.verified,
+      hiddenFromConsumer: events.hiddenFromConsumer,
+      isConcertReviewNeeded: events.isConcertReviewNeeded,
+      status: events.status,
+      extractionStrategy: events.extractionStrategy,
+      sourceUrl: events.sourceUrl,
+      // The show's own page, which "On the venue's site" prefers.
+      eventUrl: events.eventUrl,
+      genre: events.genre,
+      createdAt: events.createdAt,
+      updatedAt: events.updatedAt,
+      lastSeenAt: events.lastSeenAt,
+      firstMissingAt: events.firstMissingAt,
+      venueId: events.venueId,
+      venueName: venues.name,
+      // Admin-editable (#992): the tour kicker is only ever auto-populated
+      // by the LLM extractor, so JSON-LD venues need a manual entry path.
+      tourName: events.tourName,
+      isSoldOut: isSoldOutSql(),
+      // Admin 4b-2 (Event edit). Additive: the old editor ignores them.
+      venueSlug: venues.slug,
+      ticketUrl: events.ticketUrl,
+      delistedAt: events.delistedAt,
+      listStatus: eventListStatusSql(today),
+      hiddenReason: hiddenReasonSql(),
+      watchingCount: watchingCountOf(),
+      wentCount: wentCountOf(),
+      // Admin 4a-3b: added by hand (and by whom), and whether an admin
+      // saved the lineup (the crawl then keeps it).
+      manual: events.manual,
+      createdBy: events.createdBy,
+      lineupEditedAt: events.lineupEditedAt,
+      // Read for `lineup` below, not returned as is.
+      bill: {
+        headliners: events.headliners,
+        supportingArtists: events.supportingArtists,
+        canonicalHeadliners: events.canonicalHeadliners,
+        canonicalSupporting: events.canonicalSupporting,
+      },
+      submittedPriceCount: sql<number>`(${db
+        .select({ total: count() })
+        .from(priceSubmissions)
+        .where(
+          and(eq(priceSubmissions.eventId, events.id), submittedPriceWhere()),
+        )})`.mapWith(Number),
+      priceRetrievedAt: sql<Date | null>`(${db
+        .select({ at: max(priceRetrievalLog.attemptedAt) })
+        .from(priceRetrievalLog)
+        .where(eq(priceRetrievalLog.eventId, events.id))})`.mapWith(
+        (value: string | Date | null) =>
+          value === null ? null : new Date(value),
+      ),
+    })
+    .from(events)
+    .leftJoin(venues, eq(events.venueId, venues.id))
+    .where(eq(events.id, id))
+    .limit(1);
+
+  if (!row) return null;
+  const { bill, ...fields } = row;
+
+  // The admin's own live price on this show, which Edit price opens.
+  // With it, B+ addendum 7 §6's evidence behind a Sold out (null unless
+  // it is), and the lineup; the reads are independent.
+  const [[mine], soldOutRecord, lineup] = await Promise.all([
+    db
+      .select({
+        id: priceSubmissions.id,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        // Pending, corroborated or disputed: says which route can edit it.
+        status: priceSubmissions.status,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, id),
+          eq(priceSubmissions.userId, actorId),
+          submittedPriceWhere(),
+        ),
+      )
+      .orderBy(desc(priceSubmissions.createdAt))
+      .limit(1),
+    row.isSoldOut ? loadSoldOutRecord(id) : Promise.resolve(null),
+    readLineup(db, bill),
+  ]);
+
+  // `mySubmission` carries the prices Edit price opens with.
+  // `mySubmissionId` is the field #418 shipped, kept as the contract.
+  return {
+    ...fields,
+    lineup,
+    mySubmissionId: mine?.id ?? null,
+    mySubmission: mine ?? null,
+    soldOutRecord,
+  };
+}
 
 // PATCH /v1/admin/events/:id — partial update (verified, status, content fields)
 eventsAdminRouter.patch(
