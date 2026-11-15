@@ -12,7 +12,7 @@
 // they learn the feature exists. `absent` is only ever the signed-in-with-
 // nothing-to-filter case.
 //
-// Like TasteFilterChip, this renders NOTHING until the session resolves, so a
+// This renders NOTHING until the session resolves, so a
 // signed-in fan never sees the locked treatment flash. `locked` carries no
 // aria-disabled: the control is fully operable, it just goes to sign-in
 // instead of filtering (#794's identical-pixels rule means the gate is told in

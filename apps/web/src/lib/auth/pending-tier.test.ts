@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { TIER_ORDER } from '../definitions/constants';
-import { decodePendingTier } from './pending-tier';
+import { PENDING_TIER_KEYS, decodePendingTier } from './pending-tier';
 
 describe('decodePendingTier (#1284)', () => {
-  it.each(TIER_ORDER)('accepts the real tier key %s', (key) => {
+  it.each(PENDING_TIER_KEYS)('accepts the real tier key %s', (key) => {
     expect(decodePendingTier(key)).toBe(key);
   });
 
