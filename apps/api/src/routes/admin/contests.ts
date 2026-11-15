@@ -328,14 +328,34 @@ const resolvedListQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
+// The price a side held when the check was decided. `priceMax` and `reason`
+// are absent on the oldest entries, so both read as null there.
+const auditPriceSchema = z.object({
+  priceMin: z.string().nullable(),
+  priceMax: z.string().nullable().optional(),
+});
+
 const resolvedAuditMetaSchema = z.object({
   resolution: z.enum(['parent_wins', 'challenger_wins']),
   parentId: z.string().optional(),
   challengerId: z.string().optional(),
   eventId: z.string().optional(),
-  parentAfter: z.object({ priceMin: z.string().nullable() }).optional(),
-  challengerAfter: z.object({ priceMin: z.string().nullable() }).optional(),
+  reason: z.string().optional(),
+  parentAfter: auditPriceSchema.optional(),
+  challengerAfter: auditPriceSchema.optional(),
 });
+
+/** Which submitters a resolve told (`lib/contest-notifications.ts`). */
+const toldSides = (
+  parentUserId: string | null,
+  challengerUserId: string | null,
+): ('parent' | 'challenger')[] => {
+  const told: ('parent' | 'challenger')[] = [];
+  if (parentUserId !== null) told.push('parent');
+  if (challengerUserId !== null && challengerUserId !== parentUserId)
+    told.push('challenger');
+  return told;
+};
 
 contestsAdminRouter.get(
   '/prices/resolved',
@@ -376,9 +396,45 @@ contestsAdminRouter.get(
         ),
       ),
     ];
-    const actorIds = [...new Set(rows.map((row) => row.actorId))];
+    // Both sides' rows, for who filed each, its confirms and its note. The ids
+    // are optional on the oldest entries; a side with no row reads as null.
+    const submissionIds = [
+      ...new Set(
+        parsed.flatMap(({ meta }) =>
+          meta.success
+            ? [meta.data.parentId, meta.data.challengerId].filter(
+                // A malformed id would fail the uuid comparison.
+                (id): id is string =>
+                  id !== undefined && idSchema.safeParse(id).success,
+              )
+            : [],
+        ),
+      ),
+    ];
+    const submissionRows =
+      submissionIds.length === 0
+        ? []
+        : await db
+            .select({
+              id: priceSubmissions.id,
+              userId: priceSubmissions.userId,
+              corroborationCount: priceSubmissions.corroborationCount,
+              note: priceSubmissions.note,
+            })
+            .from(priceSubmissions)
+            .where(inArray(priceSubmissions.id, submissionIds));
+    const submissionById = new Map(submissionRows.map((sub) => [sub.id, sub]));
 
-    const [eventRows, handleRows] = await Promise.all([
+    const profileIds = [
+      ...new Set([
+        ...rows.map((row) => row.actorId),
+        ...submissionRows.flatMap((sub) =>
+          sub.userId === null ? [] : [sub.userId],
+        ),
+      ]),
+    ];
+
+    const [eventRows, profileRows] = await Promise.all([
       eventIds.length === 0
         ? []
         : db
@@ -386,29 +442,68 @@ contestsAdminRouter.get(
               id: events.id,
               title: events.title,
               date: events.date,
+              ticketUrl: events.ticketUrl,
               venueName: venues.name,
             })
             .from(events)
             .innerJoin(venues, eq(venues.id, events.venueId))
             .where(inArray(events.id, eventIds)),
       db
-        .select({ userId: userProfiles.userId, handle: userProfiles.handle })
+        .select({
+          userId: userProfiles.userId,
+          handle: userProfiles.handle,
+          avatarColor: userProfiles.avatarColor,
+          avatarSecondColor: userProfiles.avatarSecondColor,
+        })
         .from(userProfiles)
-        .where(inArray(userProfiles.userId, actorIds)),
+        .where(inArray(userProfiles.userId, profileIds)),
     ]);
     const eventById = new Map(eventRows.map((event) => [event.id, event]));
-    const handleByUser = new Map(
-      handleRows.map((profile) => [profile.userId, profile.handle]),
+    const profileByUser = new Map(
+      profileRows.map((profile) => [profile.userId, profile]),
     );
+
+    /** One side as decided: its price then, and who filed it now. */
+    const sideOf = (
+      id: string | undefined,
+      after: z.infer<typeof auditPriceSchema> | undefined,
+    ) => {
+      const sub = id === undefined ? undefined : submissionById.get(id);
+      if (!after?.priceMin && !sub) return null;
+      return {
+        id: id ?? null,
+        priceMin: after?.priceMin ?? null,
+        priceMax: after?.priceMax ?? null,
+        submittedBy:
+          sub?.userId == null
+            ? null
+            : (profileByUser.get(sub.userId)?.handle ?? null),
+        corroborationCount: sub?.corroborationCount ?? null,
+        note: sub?.note ?? null,
+      };
+    };
 
     const resolved = parsed.flatMap(({ row, meta }) => {
       if (!meta.success) return [];
-      const { resolution, eventId, parentAfter, challengerAfter } = meta.data;
+      const {
+        resolution,
+        eventId,
+        parentId,
+        challengerId,
+        reason,
+        parentAfter,
+        challengerAfter,
+      } = meta.data;
       const event = eventId ? eventById.get(eventId) : undefined;
       // "Used" = the fan's update won and is now the price; "Kept" = the
       // price stood. The winning row's own price is the one named.
       const used = resolution === 'challenger_wins';
       const price = (used ? challengerAfter : parentAfter)?.priceMin ?? null;
+      const parentSub = parentId ? submissionById.get(parentId) : undefined;
+      const challengerSub = challengerId
+        ? submissionById.get(challengerId)
+        : undefined;
+      const decider = profileByUser.get(row.actorId);
       return [
         {
           id: row.id,
@@ -420,8 +515,25 @@ contestsAdminRouter.get(
           resolution,
           answer: used ? ('used' as const) : ('kept' as const),
           price,
-          decidedBy: handleByUser.get(row.actorId) ?? null,
+          decidedBy: decider?.handle ?? null,
+          decidedByAvatar: decider
+            ? {
+                color: decider.avatarColor,
+                secondColor: decider.avatarSecondColor,
+              }
+            : null,
           decidedAt: row.decidedAt,
+          ticketUrl: event?.ticketUrl ?? null,
+          // The admin's reason for the answer, as the resolve recorded it.
+          note: reason ?? null,
+          parent: sideOf(parentId, parentAfter),
+          challenger: sideOf(challengerId, challengerAfter),
+          // Who the resolve told; null when either side's row is gone, since
+          // the submitters can't be known then.
+          told:
+            parentSub && challengerSub
+              ? toldSides(parentSub.userId, challengerSub.userId)
+              : null,
         },
       ];
     });

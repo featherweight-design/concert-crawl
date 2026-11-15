@@ -762,6 +762,154 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
     });
   });
 
+  it('returns both prices, each side, the ticket URL, Note, Told and the decider avatar (23a)', async () => {
+    setAdminAuth();
+    const venue = await seedVenue({ name: 'Detail Hall', slug: 'detail-hall' });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-03',
+      title: 'Detail Show',
+      artist: 'Detail Artist',
+      ticketUrl: 'https://tickets.test/detail',
+    });
+    await seedUserProfile('admin_contest_test', {
+      handle: 'hugh',
+      avatarColor: 'signal',
+      avatarSecondColor: 'accent',
+    });
+    await seedUserProfile('user_listed', { handle: 'kmusic' });
+    await seedUserProfile('user_check', { handle: 'theo.wav' });
+    const listed = await seedPriceSubmission(event.id, 'user_listed', {
+      priceMin: '65.00',
+      priceMax: '495.00',
+      status: 'archived',
+      corroborationCount: 2,
+    });
+    const check = await seedPriceSubmission(event.id, 'user_check', {
+      priceMin: '45.00',
+      status: 'corroborated',
+      note: 'fees in',
+    });
+    await testDb.insert(auditLog).values({
+      actorId: 'admin_contest_test',
+      action: 'contest.resolve',
+      targetId: listed.id,
+      createdAt: new Date('2026-11-11T16:40:00Z'),
+      metadata: {
+        resolution: 'challenger_wins',
+        parentId: listed.id,
+        challengerId: check.id,
+        eventId: event.id,
+        reason: 'Ticketmaster page shows $45 GA with fees.',
+        parentAfter: {
+          status: 'archived',
+          priceMin: '65.00',
+          priceMax: '495.00',
+        },
+        challengerAfter: {
+          status: 'corroborated',
+          priceMin: '45.00',
+          priceMax: null,
+        },
+      },
+    });
+
+    const res = await app.request('/v1/admin/contests/prices/resolved', {
+      headers: ADMIN_HEADERS,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { items: unknown[] } };
+    expect(body.data.items[0]).toMatchObject({
+      answer: 'used',
+      price: '45.00',
+      ticketUrl: 'https://tickets.test/detail',
+      note: 'Ticketmaster page shows $45 GA with fees.',
+      decidedBy: 'hugh',
+      decidedByAvatar: { color: 'signal', secondColor: 'accent' },
+      parent: {
+        id: listed.id,
+        priceMin: '65.00',
+        priceMax: '495.00',
+        submittedBy: 'kmusic',
+        corroborationCount: 2,
+        note: null,
+      },
+      challenger: {
+        id: check.id,
+        priceMin: '45.00',
+        priceMax: null,
+        submittedBy: 'theo.wav',
+        corroborationCount: 1,
+        note: 'fees in',
+      },
+      told: ['parent', 'challenger'],
+    });
+  });
+
+  it('tells one submitter once, and reads an old entry with no ids as unknown', async () => {
+    setAdminAuth();
+    const venue = await seedVenue({ name: 'Same Hall', slug: 'same-hall' });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-04',
+      title: 'Same Fan Show',
+      artist: 'Same Artist',
+    });
+    const listed = await seedPriceSubmission(event.id, 'user_same', {
+      status: 'corroborated',
+    });
+    const check = await seedPriceSubmission(event.id, 'user_same', {
+      priceMin: '50.00',
+      status: 'archived',
+    });
+    await testDb.insert(auditLog).values({
+      actorId: 'admin_contest_test',
+      action: 'contest.resolve',
+      targetId: listed.id,
+      createdAt: new Date('2026-11-12T12:00:00Z'),
+      metadata: {
+        resolution: 'parent_wins',
+        parentId: listed.id,
+        challengerId: check.id,
+        eventId: event.id,
+        parentAfter: { status: 'corroborated', priceMin: '35.00' },
+        challengerAfter: { status: 'archived', priceMin: '50.00' },
+      },
+    });
+    // The oldest shape: no ids, no reason, no priceMax.
+    await seedResolveAudit(
+      event.id,
+      'admin_contest_test',
+      'parent_wins',
+      new Date('2026-11-01T12:00:00Z'),
+    );
+
+    const res = await app.request('/v1/admin/contests/prices/resolved', {
+      headers: ADMIN_HEADERS,
+    });
+    const body = (await res.json()) as {
+      data: { items: Array<Record<string, unknown>> };
+    };
+    expect(body.data.items[0]).toMatchObject({
+      told: ['parent'],
+      note: null,
+      ticketUrl: null,
+      parent: { submittedBy: null, priceMax: null },
+    });
+    expect(body.data.items[1]).toMatchObject({
+      told: null,
+      note: null,
+      decidedByAvatar: null,
+      parent: {
+        id: null,
+        priceMin: '40.00',
+        priceMax: null,
+        submittedBy: null,
+        corroborationCount: null,
+        note: null,
+      },
+      challenger: { id: null, priceMin: '55.00' },
+    });
+  });
+
   it('pages with limit and offset and reports the full total', async () => {
     setAdminAuth();
     const venue = await seedVenue({ name: 'Page Hall', slug: 'page-hall' });
