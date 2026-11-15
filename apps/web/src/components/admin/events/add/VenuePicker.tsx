@@ -2,8 +2,14 @@
 
 /** Consumed by the Add a show form (E3 PR C3). */
 
-import { useState, type CSSProperties } from 'react';
-import { Check, Search } from 'lucide-react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
+import { Check, ChevronDown, Search } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminSheet } from '@/components/admin/primitives';
 import { inputStyle } from '@/components/admin/venues/source/source-parts';
@@ -12,6 +18,40 @@ import { POPOVER, usePopover } from '../edit/pickers';
 import type { PickVenue } from './add-show-api';
 
 const COPY = ADMIN_COPY.addShow.venuePicker;
+
+export type PickVenues = PickVenue[] | 'failed' | null;
+
+/**
+ * The picker's venues, loaded once on mount: null while loading, 'failed'
+ * after a failed load, else the list. `reload` is the picker's `onRetry`.
+ * The latest `load` is kept in a ref, so a caller passing a fresh function
+ * each render never loads again.
+ */
+export const usePickVenues = (
+  load: () => Promise<PickVenue[]>,
+  logTag: string,
+): { venues: PickVenues; reload: () => void } => {
+  const [venues, setVenues] = useState<PickVenues>(null);
+  const loadRef = useRef(load);
+  useEffect(() => {
+    loadRef.current = load;
+  });
+  const reload = useCallback(() => {
+    setVenues(null);
+    loadRef.current().then(setVenues, (err: unknown) => {
+      console.error(`[${logTag}] venues failed`, err);
+      setVenues('failed');
+    });
+  }, [logTag]);
+  useEffect(reload, [reload]);
+  return { venues, reload };
+};
+
+/**
+ * Event edit's trigger (`06/event-edit`, addendum 5 `04/venue-picker-d`):
+ * 10px side padding, a 22px tile and a trailing chevron.
+ */
+const EDIT_TRIGGER: CSSProperties = { padding: '0 10px' };
 
 /** Hidden venues last, muted (addendum 5 item 4); otherwise by name. */
 const ordered = (venues: readonly PickVenue[], query: string): PickVenue[] => {
@@ -211,12 +251,13 @@ const VenueList = ({
 /**
  * Add a show's Venue field (`06/add-a-show-by-hand`: a 20px tile, no chevron)
  * over the shared venue list (`04/venue-picker-d`, a sheet on the phone,
- * `04/venue-picker-m`).
+ * `04/venue-picker-m`). `variant="edit"` is Event edit's trigger
+ * (`06/event-edit`: a 22px tile and a chevron); the list is the same.
  *
  * `venues` is null while loading and 'failed' after a failed load; the list
  * opens only once it is an array, so a press while loading opens nothing.
  * Retry contract: on `onRetry` the parent sets `venues` back to null, then
- * loads again and sets the array or 'failed'.
+ * loads again and sets the array or 'failed' (`usePickVenues` does both).
  */
 export const VenuePicker = ({
   id,
@@ -227,23 +268,32 @@ export const VenuePicker = ({
   phone,
   invalid,
   describedBy,
+  variant = 'add',
+  known,
 }: {
   id: string;
   /** null while loading. */
-  venues: PickVenue[] | 'failed' | null;
+  venues: PickVenues;
   value: string;
   onChange: (id: string) => void;
   onRetry: () => void;
   phone: boolean;
   invalid: boolean;
   describedBy?: string | undefined;
+  variant?: 'add' | 'edit';
+  /**
+   * The venue `value` names, drawn while the list loads or when it lacks
+   * it (Event edit's saved venue, which may since have been taken down).
+   */
+  known?: { name: string; slug: string } | undefined;
 }) => {
   const { open, setOpen, close, ref, trigger } = usePopover();
+  const edit = variant === 'edit';
   const list = Array.isArray(venues) ? venues : null;
   // Never an empty shell: the list shows only once the venues are in.
   const shown = open && list !== null;
   const listId = `${id}-venues`;
-  const picked = list?.find((venue) => venue.id === value);
+  const picked = list?.find((venue) => venue.id === value) ?? known;
   const pick = (venueId: string) => {
     onChange(venueId);
     close();
@@ -291,6 +341,7 @@ export const VenuePicker = ({
         }}
         style={{
           ...inputStyle(invalid),
+          ...(edit && EDIT_TRIGGER),
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -300,7 +351,18 @@ export const VenuePicker = ({
       >
         {picked ? (
           <>
-            <VenueTile slug={picked.slug} name={picked.name} size={20} />
+            {edit ? (
+              // The board's 22px tile: 6px corners, a 1px edge.
+              <VenueTile
+                slug={picked.slug}
+                name={picked.name}
+                size={22}
+                cornerRadius={6}
+                edgeWeight={1}
+              />
+            ) : (
+              <VenueTile slug={picked.slug} name={picked.name} size={20} />
+            )}
             <span
               style={{
                 minWidth: 0,
@@ -316,6 +378,21 @@ export const VenuePicker = ({
           <span style={{ color: 'var(--fg-subtle)' }}>
             {ADMIN_COPY.addShow.venuePlaceholder}
           </span>
+        )}
+        {edit && (
+          <>
+            <span style={{ flex: 1 }} />
+            {/* The board's 13px chevron, stroke 1.8 in a 16 box: 2.7 in
+                lucide's 24 box renders the same weight. */}
+            <ChevronDown
+              data-testid="venue-picker-chevron"
+              size={13}
+              strokeWidth={2.7}
+              color="var(--fg-muted)"
+              aria-hidden
+              style={{ flex: 'none', display: 'block' }}
+            />
+          </>
         )}
       </button>
       {failed}

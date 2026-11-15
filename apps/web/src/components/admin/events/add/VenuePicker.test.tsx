@@ -261,3 +261,43 @@ describe('VenuePicker', () => {
     expect(screen.queryByTestId('admin-sheet')).toBeNull();
   });
 });
+
+describe('VenuePicker variants', () => {
+  const tile = () => trigger().querySelector('svg[data-venue-tile]');
+
+  it('keeps Add a show’s trigger: a 20px tile, 12px padding, no chevron', () => {
+    renderIt({ value: MISSION });
+    expect(tile()).toHaveAttribute('width', '20');
+    expect(trigger().style.padding).toBe('0px 12px');
+    expect(screen.queryByTestId('venue-picker-chevron')).toBeNull();
+  });
+
+  it('draws Event edit’s trigger: a 22px tile, the name, then a chevron', () => {
+    renderIt({ value: MISSION, variant: 'edit' });
+    expect(tile()).toHaveAttribute('width', '22');
+    expect(trigger().style.padding).toBe('0px 10px');
+    expect(trigger().style.height).toBe('38px');
+    expect(trigger()).toHaveTextContent('Mission Ballroom');
+    const chevron = screen.getByTestId('venue-picker-chevron');
+    expect(chevron).toHaveAttribute('width', '13');
+    // Trailing: the last thing in the field.
+    expect(trigger().lastElementChild).toBe(chevron);
+  });
+
+  it('draws the chevron on the placeholder too, and on the phone', () => {
+    renderIt({ variant: 'edit', phone: true });
+    expect(trigger()).toHaveTextContent(ADMIN_COPY.addShow.venuePlaceholder);
+    expect(screen.getByTestId('venue-picker-chevron')).toBeInTheDocument();
+  });
+
+  it('draws the known venue while the list loads', () => {
+    renderIt({
+      variant: 'edit',
+      venues: null,
+      value: 'v-larimer',
+      known: { name: 'Larimer Lounge', slug: 'larimer-lounge' },
+    });
+    expect(trigger()).toHaveTextContent('Larimer Lounge');
+    expect(trigger()).toHaveAttribute('aria-busy', 'true');
+  });
+});

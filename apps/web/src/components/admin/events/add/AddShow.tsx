@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -24,7 +23,7 @@ import { inputStyle } from '@/components/admin/venues/source/source-parts';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { fieldDate } from '../edit/event-detail';
 import { DateField, TimeField } from '../edit/pickers';
-import { addShowApi, type DuplicateShow, type PickVenue } from './add-show-api';
+import { addShowApi, type DuplicateShow } from './add-show-api';
 import {
   ADD_SHOW_FIELDS,
   EMPTY_DRAFT,
@@ -37,7 +36,7 @@ import {
   type FieldErrors,
 } from './add-show-rules';
 import { LineupField } from './LineupField';
-import { VenuePicker } from './VenuePicker';
+import { usePickVenues, VenuePicker } from './VenuePicker';
 
 const COPY = ADMIN_COPY.addShow;
 const DUPLICATE_DEBOUNCE_MS = 400;
@@ -131,7 +130,6 @@ export const AddShow = ({
   const [failure, setFailure] = useState<'failed' | 'maybe' | 'refused' | null>(
     null,
   );
-  const [venues, setVenues] = useState<PickVenue[] | 'failed' | null>(null);
   const [duplicates, setDuplicates] = useState<DuplicateShow[]>([]);
   const [exactId, setExactId] = useState<string | null>(null);
 
@@ -153,14 +151,10 @@ export const AddShow = ({
     focusAfterSave.current = null;
   }, [saving]);
 
-  const loadVenues = useCallback(() => {
-    setVenues(null);
-    api.venues().then(setVenues, (err: unknown) => {
-      console.error('[admin add show] venues failed', err);
-      setVenues('failed');
-    });
-  }, [api]);
-  useEffect(loadVenues, [loadVenues]);
+  const { venues, reload: loadVenues } = usePickVenues(
+    api.venues,
+    'admin add show',
+  );
 
   // The warning follows venue, date and title as they're typed. A new venue
   // or date is another night, so its warning clears at once; a title edit
