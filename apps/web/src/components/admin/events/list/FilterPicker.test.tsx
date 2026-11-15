@@ -40,7 +40,9 @@ const picker = (props: Partial<Parameters<typeof FilterPicker>[0]> = {}) => (
   />
 );
 
-beforeEach(() => setPhone(false));
+beforeEach(() => {
+  setPhone(false);
+});
 afterEach(cleanup);
 
 describe('FilterPicker', () => {

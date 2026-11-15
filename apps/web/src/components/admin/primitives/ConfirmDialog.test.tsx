@@ -13,7 +13,9 @@ const setPhone = (matches: boolean) => {
   }));
 };
 
-beforeEach(() => setPhone(false));
+beforeEach(() => {
+  setPhone(false);
+});
 afterEach(cleanup);
 
 const renderDialog = (

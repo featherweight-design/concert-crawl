@@ -94,7 +94,9 @@ afterEach(() => {
 });
 
 describe('Posters on a phone (07/posters-mobile)', () => {
-  beforeEach(() => setPhone(true));
+  beforeEach(() => {
+    setPhone(true);
+  });
 
   it('heads the page with the People segment, Posters current', async () => {
     renderTab();
@@ -287,7 +289,9 @@ describe('Posters on a phone (07/posters-mobile)', () => {
 });
 
 describe('Posters on desktop keeps its approved design', () => {
-  beforeEach(() => setPhone(false));
+  beforeEach(() => {
+    setPhone(false);
+  });
 
   it('carries no data-phone or data-pending attribute once resolved', () => {
     renderTab();

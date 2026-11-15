@@ -24,7 +24,9 @@ import { localDateString } from '@/lib/time';
 const mockLocalDate = localDateString as ReturnType<typeof vi.fn>;
 
 describe('filterWhenToDateRange', () => {
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe('tonight', () => {
     it('returns today to today', () => {

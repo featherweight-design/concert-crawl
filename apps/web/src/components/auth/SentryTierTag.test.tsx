@@ -11,7 +11,9 @@ vi.mock('@clerk/nextjs', () => ({ useAuth: () => useAuth() }));
 const { SentryTierTag } = await import('./SentryTierTag');
 
 describe('SentryTierTag', () => {
-  beforeEach(() => setTag.mockClear());
+  beforeEach(() => {
+    setTag.mockClear();
+  });
 
   it('tags the plan from the session claim', () => {
     useAuth.mockReturnValue({

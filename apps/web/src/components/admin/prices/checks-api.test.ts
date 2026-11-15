@@ -48,7 +48,9 @@ const api = checksApi(async () => 'token');
 const answer = (items: unknown[]) =>
   call.mockResolvedValueOnce({ items, total: items.length });
 
-afterEach(() => call.mockReset());
+afterEach(() => {
+  call.mockReset();
+});
 
 describe('checksApi.resolved', () => {
   it('reads both sides, Told, the note and the decider’s colours', async () => {

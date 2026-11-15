@@ -117,7 +117,9 @@ const stubPhone = (phone: boolean) => {
 };
 
 describe('FilterSheet on a phone', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   it('is dragged down by its handle to dismiss', () => {
     stubPhone(true);
@@ -152,7 +154,9 @@ describe('FilterSheet on a phone', () => {
 });
 
 describe('FilterSheet kept mounted but hidden at desktop width', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   it('does not close on Escape or take focus', () => {
     stubPhone(false);

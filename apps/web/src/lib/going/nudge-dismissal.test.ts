@@ -9,7 +9,9 @@ beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
 });
-afterEach(() => localStorage.clear());
+afterEach(() => {
+  localStorage.clear();
+});
 
 describe('nudge-dismissal', () => {
   it('reports nothing dismissed on a fresh device', () => {

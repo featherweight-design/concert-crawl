@@ -79,7 +79,9 @@ const baseShow: WatchingShow = {
 };
 
 describe('WatchingRow remove control', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('reports the watch row id, not the event id', () => {
     const onRemove = vi.fn();
@@ -94,7 +96,9 @@ describe('WatchingRow remove control', () => {
 });
 
 describe('WatchingRow thumbnail', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('renders EventImage in the thumbnail slot', () => {
     const { getByTestId } = render(

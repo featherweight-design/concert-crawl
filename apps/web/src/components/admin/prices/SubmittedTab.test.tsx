@@ -150,7 +150,9 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('SubmittedTab on a phone', () => {
-  beforeEach(() => setPhone(true));
+  beforeEach(() => {
+    setPhone(true);
+  });
 
   it('puts the search on top and the filters in a segment (4d#21)', async () => {
     render(<SubmittedTab />);
@@ -303,7 +305,9 @@ describe('SubmittedTab on a phone', () => {
 });
 
 describe('SubmittedTab on a desktop', () => {
-  beforeEach(() => setPhone(false));
+  beforeEach(() => {
+    setPhone(false);
+  });
 
   const openMenu = async (index: number) => {
     const triggers = await screen.findAllByRole('button', {

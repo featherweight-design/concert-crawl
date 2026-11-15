@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 global.fetch = vi.fn();
 
 describe('apiClient', () => {
-  beforeEach(() => vi.mocked(fetch).mockReset());
+  beforeEach(() => {
+    vi.mocked(fetch).mockReset();
+  });
 
   it('GET request returns parsed JSON on success', async () => {
     vi.mocked(fetch).mockResolvedValue(

@@ -781,7 +781,9 @@ describe('VenueMenu — Try a re-crawl', () => {
     fireEvent.click(trigger());
   };
 
-  beforeEach(() => onNotice.mockReset());
+  beforeEach(() => {
+    onNotice.mockReset();
+  });
 
   it('queues a trial, refreshes and confirms with a notice', async () => {
     mockTrial.mockResolvedValue({ ok: true });

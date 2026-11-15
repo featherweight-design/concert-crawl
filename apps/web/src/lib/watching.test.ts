@@ -28,7 +28,9 @@ const mockShow: WatchingShow = {
 };
 
 describe('fetchWatching', () => {
-  beforeEach(() => vi.mocked(fetch).mockReset());
+  beforeEach(() => {
+    vi.mocked(fetch).mockReset();
+  });
 
   it('fetches /v1/watching with the provided Bearer token', async () => {
     vi.mocked(fetch).mockResolvedValue(
