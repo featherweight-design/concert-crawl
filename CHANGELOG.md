@@ -1,3 +1,25 @@
+# [1.493.0](https://github.com/featherweight-design/concert-crawl/compare/v1.492.0...v1.493.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** keep a feedback report with no screenshot key valid ([0eb3003](https://github.com/featherweight-design/concert-crawl/commit/0eb30036de441e2bf46a07d97971f91935bd1d32))
+* **api:** store a feedback screenshot only as our own inline image ([1e81508](https://github.com/featherweight-design/concert-crawl/commit/1e81508e105fd8583f1c1976206e4ee6cc8ecee7))
+* **api:** widen screenshot types, cap the feedback body, sanitise the admin read ([879d9a3](https://github.com/featherweight-design/concert-crawl/commit/879d9a3bbbcd7b44600e63e7ad28b27e115293fd))
+* **crawler:** save a trial's prices and settle its edges ([05771c1](https://github.com/featherweight-design/concert-crawl/commit/05771c1891660be6ceed2d7a12824f7951395071))
+* **web:** a long handle gives way on the Coming up row and TONIGHT keeps its tile height ([ac66e67](https://github.com/featherweight-design/concert-crawl/commit/ac66e679ae5bed3f67ca7046249fc2991a1bb491))
+* **web:** address the Coming up row review ([da2a80b](https://github.com/featherweight-design/concert-crawl/commit/da2a80b732a4bab88a62bd9d51c327ab90c68da8))
+* **web:** draw the admin menu and toast shadows, and settle the tab borders ([de2a129](https://github.com/featherweight-design/concert-crawl/commit/de2a1293d5f0017dadf3daa691bf3423e80fdcea))
+* **web:** refuse a screenshot the API would drop, and tell the fan ([12e861b](https://github.com/featherweight-design/concert-crawl/commit/12e861bfd4617e7c4336a4b567d23ee967a68e61))
+* **web:** render a feedback screenshot only in our own format, with no referrer ([bfb5ceb](https://github.com/featherweight-design/concert-crawl/commit/bfb5cebaebf1226c791c98d44b8ac21f6f2ac413))
+* **web:** say what to do when a screenshot's file type won't work ([e2e312e](https://github.com/featherweight-design/concert-crawl/commit/e2e312e076abbbd6dab7e6e33541216b025ae69a))
+
+
+### Features
+
+* **crawler:** run a test re-crawl of a paused venue without moving its pause ([5036144](https://github.com/featherweight-design/concert-crawl/commit/50361448fa2d96ad746cf3a7043d5f838b900a1f))
+* **web:** the crew page's Coming up list draws the board's rows ([3b31a88](https://github.com/featherweight-design/concert-crawl/commit/3b31a88e5e054482733cfc2ec6dbe4e0a0abfe23))
+
 # [1.492.0](https://github.com/featherweight-design/concert-crawl/compare/v1.491.0...v1.492.0) (2026-11-15)
 
 
