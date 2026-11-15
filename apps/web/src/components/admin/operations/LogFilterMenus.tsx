@@ -110,11 +110,13 @@ export const SearchField = ({
   value,
   onChange,
   label,
+  maxLength,
   style,
 }: {
   value: string;
   onChange: (value: string) => void;
   label: string;
+  maxLength?: number;
   style?: CSSProperties;
 }) => (
   <label
@@ -137,6 +139,7 @@ export const SearchField = ({
       value={value}
       placeholder={label}
       aria-label={label}
+      {...(maxLength !== undefined && { maxLength })}
       onChange={(evt) => onChange(evt.target.value)}
       style={{
         flex: 1,
