@@ -37,9 +37,26 @@ export interface AdminSheetProps {
    */
   eyebrow?: ReactNode;
   /**
-   * Full screen only: the phone form page (`gap-1-merge-duplicates/merge-*`):
-   * the app's page background, a 22px title, and the footer as a pinned bar
-   * on `--bg-elevated` with a rule above it.
+   * Full screen only: the app's ambient page background, with the panel
+   * transparent over it (`artist-search-mobile`, `merge-*`).
+   */
+  pageBackground?: boolean;
+  /**
+   * Full screen only: the footer as a pinned bar on `--bg-elevated` with a
+   * rule above it, carrying the bottom safe-area inset.
+   */
+  pinnedFooter?: boolean;
+  /** The title's size, where a board draws other than 18px. */
+  titleSize?: number;
+  /**
+   * Full screen with `backLabel` only: the back link's 14px chevron drawn
+   * at 1.8 on a 16 box (`artist-search-mobile`, `merge-compare`).
+   */
+  compactBack?: boolean;
+  /**
+   * Full screen only: the phone form page (`gap-1-merge-duplicates/merge-*`).
+   * Composes `pageBackground`, `pinnedFooter` and `compactBack`, with a tight
+   * 22px title and the eyebrow on its own row.
    */
   formPage?: boolean;
 }
@@ -62,18 +79,30 @@ export const AdminSheet = ({
   backLabel,
   menu,
   eyebrow,
+  pageBackground: pageBackgroundProp = false,
+  pinnedFooter: pinnedFooterProp = false,
+  titleSize: titleSizeProp,
+  compactBack: compactBackProp = false,
   formPage: formPageProp = false,
 }: AdminSheetProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useDialogKeyboard(panelRef, onClose, { dismissible });
   const formPage = fullScreen && formPageProp;
+  const pageBackground = formPage || (fullScreen && pageBackgroundProp);
+  const pinnedFooter = formPage || (fullScreen && pinnedFooterProp);
+  const compactBack = formPage || (fullScreen && compactBackProp);
+  const titleSize = titleSizeProp ?? (formPage ? 22 : 18);
+  // The pinned bar carries the bottom inset, so the panel drops its own.
+  const panelBottom =
+    pinnedFooter && footer ? '0' : 'calc(22px + env(safe-area-inset-bottom))';
+  const panelTop = pageBackground ? 12 : fullScreen ? 16 : 8;
 
   return (
     <div
       data-testid="admin-sheet-scrim"
       // The app's ambient page background (globals.css), as the board draws.
-      className={formPage ? 'page-ambient' : undefined}
+      className={pageBackground ? 'page-ambient' : undefined}
       onClick={(evt) => {
         if (dismissible && evt.target === evt.currentTarget) onClose();
       }}
@@ -81,7 +110,7 @@ export const AdminSheet = ({
         position: 'fixed',
         inset: 0,
         zIndex: 95,
-        ...(!formPage && {
+        ...(!pageBackground && {
           background: fullScreen ? 'var(--bg)' : 'rgba(0,0,0,0.55)',
         }),
       }}
@@ -103,11 +132,8 @@ export const AdminSheet = ({
           flexDirection: 'column',
           gap: 12,
           // Clear the home indicator in a standalone PWA.
-          // A form page's pinned footer bar carries the bottom inset itself.
-          padding: formPage
-            ? '12px 16px 0'
-            : `${fullScreen ? 16 : 8}px 16px calc(22px + env(safe-area-inset-bottom))`,
-          background: formPage ? 'transparent' : 'var(--bg-elevated)',
+          padding: `${panelTop}px 16px ${panelBottom}`,
+          background: pageBackground ? 'transparent' : 'var(--bg-elevated)',
           borderTop: fullScreen ? 'none' : '1px solid var(--border-strong)',
           borderRadius: fullScreen ? 0 : '18px 18px 0 0',
         }}
@@ -130,10 +156,10 @@ export const AdminSheet = ({
               cursor: 'pointer',
             }}
           >
-            {/* A form page's back link draws 14px at 1.8 on a 16 box: 2.7 on
+            {/* A compact back link draws 14px at 1.8 on a 16 box: 2.7 on
                 lucide's 24 (`artist-search-mobile`, `merge-compare`). Other
                 full screens keep their 16px chevron. */}
-            {formPage ? (
+            {compactBack ? (
               <ChevronLeft size={14} strokeWidth={2.7} aria-hidden />
             ) : (
               <ChevronLeft size={16} aria-hidden />
@@ -209,12 +235,11 @@ export const AdminSheet = ({
             id={titleId}
             style={{
               margin: 0,
-              fontSize: 18,
+              fontSize: titleSize,
               fontWeight: 800,
               color: 'var(--fg)',
               overflowWrap: 'anywhere',
               ...(formPage && {
-                fontSize: 22,
                 letterSpacing: '-0.02em',
                 lineHeight: 1.2,
               }),
@@ -246,7 +271,7 @@ export const AdminSheet = ({
               display: 'flex',
               flexDirection: footerReversed ? 'column-reverse' : 'column',
               gap: 12,
-              ...(formPage && {
+              ...(pinnedFooter && {
                 flex: 'none',
                 // Edge to edge across the panel's 16px gutter.
                 margin: '0 -16px',

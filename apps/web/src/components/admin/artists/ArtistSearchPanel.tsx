@@ -305,6 +305,12 @@ export const ArtistSearchPanel = ({
     return (
       <AdminSheet
         fullScreen
+        // `06/artist-search-mobile`: the page gradient, a pinned footer bar,
+        // a 21px title and the 14px back chevron. Not Add a show's form page.
+        pageBackground
+        pinnedFooter
+        titleSize={21}
+        compactBack
         backLabel={COPY.title}
         title={PANEL.title(row.name)}
         // The phone board draws the context bare; the desktop one adds "For".
