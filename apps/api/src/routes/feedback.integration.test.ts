@@ -19,7 +19,10 @@ import { createApp } from '../app.js';
 import { clearTables } from '../test/helpers/seed.js';
 import { testDb } from '../test/helpers/db.js';
 import { feedback } from '@concert-crawl/db';
+import { MAX_FEEDBACK_SCREENSHOT_CHARS } from '@concert-crawl/types';
 import { eq } from 'drizzle-orm';
+import { apiLogger } from '../lib/logger.js';
+import { MAX_FEEDBACK_BODY_BYTES } from './feedback.js';
 
 const app = createApp();
 
@@ -217,11 +220,13 @@ describe('POST /v1/feedback', () => {
       return { status: res.status, metadata: row?.metadata };
     };
 
-    it('keeps an inline png, jpeg or webp image the fan form sends', async () => {
+    it('keeps an inline png, jpeg, webp, gif or avif image the fan form sends', async () => {
       for (const [index, shot] of [
         'data:image/png;base64,AAAA',
         'data:image/jpeg;base64,/9j/4AAQ',
         'data:image/webp;base64,UklGRg==',
+        'data:image/gif;base64,R0lGODlh',
+        'data:image/avif;base64,AAAAIGZ0eXBhdmlm',
       ].entries()) {
         const { status, metadata } = await postWithScreenshot(
           `screenshot-kept-${index}`,
@@ -244,6 +249,53 @@ describe('POST /v1/feedback', () => {
       expect(status).toBe(201);
       expect(metadata).toMatchObject({ device: 'Mac' });
       expect(metadata).not.toHaveProperty('screenshot');
+    });
+
+    it('logs why a screenshot was dropped, never the value', async () => {
+      const warn = vi.spyOn(apiLogger, 'warn');
+      try {
+        await postWithScreenshot('screenshot-log-type', 'https://x.test/a.png');
+        await postWithScreenshot('screenshot-log-string', 42);
+        await postWithScreenshot(
+          'screenshot-log-size',
+          `data:image/png;base64,${'A'.repeat(MAX_FEEDBACK_SCREENSHOT_CHARS)}`,
+        );
+        await postWithScreenshot('screenshot-log-none', null);
+        const drops = warn.mock.calls.filter(
+          ([, message]) => message === 'feedback screenshot dropped',
+        );
+        expect(drops.map(([fields]) => fields)).toEqual([
+          { reason: 'type' },
+          { reason: 'not_string' },
+          { reason: 'size' },
+        ]);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('answers 413 with JSON for a body over the limit, and stores nothing', async () => {
+      setAuth('feedback-too-large');
+      const res = await app.request('/v1/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'bug',
+          message: 'x',
+          pageUrl: '/events',
+          metadata: { device: 'A'.repeat(MAX_FEEDBACK_BODY_BYTES) },
+        }),
+      });
+      expect(res.status).toBe(413);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'Feedback is too large',
+      });
+      const rows = await testDb
+        .select()
+        .from(feedback)
+        .where(eq(feedback.userId, 'feedback-too-large'));
+      expect(rows).toHaveLength(0);
     });
 
     it('does not store a legacy screenshotDataUrl key', async () => {

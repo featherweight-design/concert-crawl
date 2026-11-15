@@ -31,7 +31,11 @@ import {
   type SpotifyCandidateSnapshot,
 } from '@concert-crawl/db';
 import { AUTO_APPROVE_THRESHOLD } from '@concert-crawl/crawler-core';
-import { canonicalizeArtist, isFeedbackScreenshot } from '@concert-crawl/types';
+import {
+  MAX_QUEUE_SCREENSHOT_CHARS,
+  canonicalizeArtist,
+  feedbackScreenshotOf,
+} from '@concert-crawl/types';
 import type {
   NeedsYouAnswerOption,
   NeedsYouArtistCandidate,
@@ -1012,19 +1016,15 @@ const priceBatchItems: Adapter = async ({ now }) => {
 // Bugs
 // ---------------------------------------------------------------------------
 
-// Tighter than the write cap: every unread bug rides in every list and count
-// response.
-const MAX_QUEUE_SCREENSHOT_CHARS = 200_000;
-
-/** The screenshot a reporter attached (`metadata.screenshot`), if it is usable. */
-const screenshotOf = (metadata: unknown): string | null => {
-  if (typeof metadata !== 'object' || metadata === null) return null;
-  const shot: unknown = Reflect.get(metadata, 'screenshot');
-  // Reporter-controlled, and rows stored before the write check may hold
-  // anything: only our own inline image format goes into the queue, never a
-  // URL the admin's browser would be sent to fetch.
-  return isFeedbackScreenshot(shot, MAX_QUEUE_SCREENSHOT_CHARS) ? shot : null;
-};
+/**
+ * The screenshot a reporter attached, if it is usable. Reporter-controlled,
+ * and rows stored before the write check may hold anything: only our own
+ * inline image format, under the queue's tighter cap, goes into the queue,
+ * never a URL the admin's browser would be sent to fetch. Reads the legacy
+ * `screenshotDataUrl` too, so the queue agrees with the Feedback list.
+ */
+const screenshotOf = (metadata: unknown): string | null =>
+  feedbackScreenshotOf(metadata, MAX_QUEUE_SCREENSHOT_CHARS);
 
 /** The device line a reporter's widget sent (`metadata.device`), cut to a safe length. */
 const deviceOf = (metadata: unknown): string | null => {
