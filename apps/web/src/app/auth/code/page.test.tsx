@@ -154,6 +154,55 @@ describe('invite-code screen (custom auth restyle)', () => {
     ).toBeEnabled();
   });
 
+  it('shows the plain page for a link whose code is nothing usable', () => {
+    window.history.replaceState(null, '', '/auth/code?code=!!!');
+    render(<InviteCodePage />);
+    expect(
+      screen.getByRole('heading', { name: copy.heading }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+
+  it('drops "You\'re invited" once the link\'s own code is refused', async () => {
+    validateAndSetInviteCode.mockResolvedValue({
+      ok: false,
+      error: 'notfound',
+    });
+    window.history.replaceState(null, '', '/auth/code?code=beta-7kq2-m9xd');
+    render(<InviteCodePage />);
+    press();
+    expect(await screen.findByText(copy.errors.notfound)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: copy.heading }),
+    ).toBeInTheDocument();
+  });
+
+  it('clears the spent "too many attempts" line and refocuses the field when the lock ends', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    validateAndSetInviteCode.mockResolvedValue({
+      ok: false,
+      error: 'ratelimit',
+    });
+    render(<InviteCodePage />);
+    type('REDROCKS');
+    press();
+    await act(async () => {});
+    await act(async () => {
+      vi.advanceTimersByTime(181_000);
+    });
+    expect(screen.queryByText(copy.errors.ratelimit)).toBeNull();
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveFocus());
+  });
+
+  it('says so when the release of the old code fails', async () => {
+    window.history.replaceState(null, '', '/auth/code?change=1');
+    releaseInviteCode.mockRejectedValue(new Error('boom'));
+    render(<InviteCodePage />);
+    expect(
+      await screen.findByText(copy.errors.server_error),
+    ).toBeInTheDocument();
+  });
+
   it('releases the code they redeemed when they came to use a different one, once', () => {
     window.history.replaceState(null, '', '/auth/code?change=1');
     releaseInviteCode.mockResolvedValue(undefined);
