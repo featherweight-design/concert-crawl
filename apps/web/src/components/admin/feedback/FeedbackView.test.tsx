@@ -173,7 +173,7 @@ describe('FeedbackView (07/feedback)', () => {
           item({
             id: 'a',
             status: 'unread',
-            metadata: { screenshot: 'https://img.test/a.png' },
+            metadata: { screenshot: 'data:image/png;base64,AAAA' },
           }),
           item({
             id: 'b',
@@ -199,6 +199,46 @@ describe('FeedbackView (07/feedback)', () => {
     // Ideas never reach Needs you; a read bug has left it.
     expect(hints(rows[2]!)).toBeNull();
     expect(hints(rows[3]!)).toBeNull();
+  });
+
+  it('draws only an inline screenshot, with no referrer, and never a foreign URL', async () => {
+    list = () =>
+      json({
+        success: true,
+        data: [
+          item({
+            id: 'ok',
+            status: 'unread',
+            metadata: { screenshot: 'data:image/png;base64,AAAA' },
+          }),
+          item({
+            id: 'foreign',
+            status: 'unread',
+            metadata: {
+              screenshot: 'https://tracker.example.com/pixel.png',
+              screenshotDataUrl: 'javascript:alert(1)',
+            },
+          }),
+        ],
+      });
+    render(<FeedbackView />);
+    const rows = await screen.findAllByTestId('feedback-row');
+    const hints = (row: HTMLElement) =>
+      within(row).queryByTestId('feedback-hints')?.textContent ?? '';
+    expect(hints(rows[0]!)).toContain(COPY.row.screenshot);
+    expect(hints(rows[1]!)).not.toContain(COPY.row.screenshot);
+
+    fireEvent.click(rows[0]!);
+    const shot = await screen.findByTestId('feedback-screenshot');
+    expect(shot).toHaveAttribute('src', 'data:image/png;base64,AAAA');
+    expect(shot).toHaveAttribute('referrerpolicy', 'no-referrer');
+
+    fireEvent.click(rows[1]!);
+    await screen.findByText(COPY.expanded.screenshotPlaceholder);
+    expect(screen.queryByTestId('feedback-screenshot')).toBeNull();
+    expect(
+      document.querySelector('img[src*="tracker.example.com"]'),
+    ).toBeNull();
   });
 
   it("never names Sentry for a user's report whose handle is gone", async () => {

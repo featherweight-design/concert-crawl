@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   ADMIN_FEEDBACK_STATUSES,
   FEEDBACK_CATEGORIES,
+  feedbackScreenshotOf,
   type AdminFeedbackCounts,
   type AdminFeedbackItem,
   type AdminFeedbackKind,
@@ -101,12 +102,10 @@ export const kindOf = (item: AdminFeedbackItem): Kind =>
     ? 'errorReport'
     : FEEDBACK_KIND[item.category];
 
-const hasScreenshot = (item: AdminFeedbackItem): boolean => {
-  const meta = item.metadata ?? {};
-  return [meta['screenshot'], meta['screenshotDataUrl']].some(
-    (value) => typeof value === 'string' && value.length > 0,
-  );
-};
+// The same check the expanded row draws by, so the mark never promises a
+// screenshot that will not render.
+const hasScreenshot = (item: AdminFeedbackItem): boolean =>
+  feedbackScreenshotOf(item.metadata) !== null;
 
 /**
  * The row's marks (addendum 7 `04/feedback-hints`): Screenshot when one came
