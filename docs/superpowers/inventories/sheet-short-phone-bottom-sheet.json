@@ -1,0 +1,131 @@
+{
+  "feature": "Addendum 6 item 15c · the sheet rule on pwa/BottomSheet: Share, Remove, Add a show and Share Concert Crawl at 320 x 568 (24px top stop, scrolling body)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/screens/15-sheet-overflow/sheet-short-phone. Every sheet built on pwa/BottomSheet that a fan opens: the event Share sheet (story shape), the Remove confirm on Concerts, the Add a show sheet on Concerts, and the Share Concert Crawl sheet from the user menu. Signed in. Needs CC_EVENT_ID and a past show on /history for Remove.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": {
+        "cc-theme": "light"
+      },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    {
+      "label": "short",
+      "width": 320,
+      "height": 568,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "share",
+      "label": "Share this show",
+      "steps": [
+        {
+          "goto": "/events/${CC_EVENT_ID}",
+          "settle": 4000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "clickRole": "button",
+          "name": "^Share this show$"
+        },
+        {
+          "waitDialog": "^Share this show$"
+        },
+        {
+          "wait": "[data-testid=\"share-shape-story\"][aria-pressed=\"true\"]",
+          "settle": 4000
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "label": "Remove confirm (Didn't make it?)",
+      "steps": [
+        {
+          "goto": "/history?cell=remove",
+          "wait": "[data-testid=\"history-rail\"]"
+        },
+        {
+          "settle": 2000
+        },
+        {
+          "click": "[data-testid=\"row-menu\"][data-tense=\"past\"] >> nth=0",
+          "wait": "[role=\"menu\"]"
+        },
+        {
+          "clickRole": "menuitem",
+          "name": "^Didn.t make it\\? Remove$"
+        },
+        {
+          "waitDialog": "^Didn.t make it\\?$",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "add-show",
+      "label": "Add a show you went to",
+      "steps": [
+        {
+          "goto": "/history",
+          "wait": "[data-testid=\"history-rail\"]"
+        },
+        {
+          "settle": 2000
+        },
+        {
+          "click": "[data-testid=\"add-show-row\"] >> nth=0"
+        },
+        {
+          "waitDialog": "^Add a show you went to$",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "share-app",
+      "label": "Share Concert Crawl (user menu)",
+      "steps": [
+        {
+          "goto": "/events",
+          "settle": 4000
+        },
+        {
+          "click": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "click": "text=/^Share Concert Crawl$/ >> nth=0"
+        },
+        {
+          "settle": 2500
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,10 @@ import { createPortal } from 'react-dom';
 import { OVERLAY_COPY } from '@/components/ui/cc-overlay/definitions/copy';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
+import {
+  ScrollFade,
+  useScrollEdges,
+} from '@/components/consumer/modal-shell/sheet-rule';
 
 interface BottomSheetProps {
   open: boolean;
@@ -41,12 +45,6 @@ interface BottomSheetProps {
    */
   raised?: boolean;
   /**
-   * Lets the phone sheet grow to 40px under the top of the viewport instead of
-   * 85vh, so a board drawn to fit a short screen does. From `lg` up the cap is
-   * still 85vh.
-   */
-  tall?: boolean;
-  /**
    * The phone sheet is a fixed 92% of the screen and does not scroll as a
    * whole: the children lay out their own pinned header and a scrolling body
    * (the Add sheet, `04/add-*`). From `lg` up it is the same capped dialog.
@@ -73,6 +71,14 @@ interface BottomSheetProps {
    * 8px corners and a border-strong line. Needs `edgeFromSm` for the rim.
    */
   shareFrame?: boolean;
+  /**
+   * The sheet's main action, pinned under a scrolling body (addendum 6 item 15,
+   * `15/sheet-short-phone`): --surface-2 with a hairline on top, 12px above and
+   * 20px plus the safe area below, and a 22px fade over the body while there is
+   * more. The close row stays fixed above the body. Not for `pinned` sheets,
+   * which lay out their own header, body and footer.
+   */
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -94,6 +100,15 @@ const SCRIM_PLAIN = 'fixed inset-0 bg-black/50';
 // 1.5px is CCOverlay's scrim blur: the board's dots stay distinct.
 const SCRIM_SHARE = 'fixed inset-0 bg-[var(--scrim)] backdrop-blur-[1.5px]';
 
+// A pinned footer is edge to edge: it cancels the sheet's own padding with a
+// negative margin and puts the same padding back inside, so its content lines
+// up with the body's. One entry per `inset`; `pinned` sheets lay out their own.
+const FOOTER_BLEED = {
+  default: '-mx-6 -mb-6 px-6',
+  tight: '-mx-4 -mb-6 px-4 min-[360px]:-mx-5 min-[360px]:px-5',
+  'phone-tight': '-mx-[18px] -mb-6 px-[18px] lg:-mx-6 lg:px-6',
+} as const;
+
 // :not(:disabled) excludes native controls that can't actually receive focus
 // (disabled button/input/select/textarea) — otherwise the focus trap sees them
 // as focusables and refuses to wrap when they're at either end of the list.
@@ -110,18 +125,23 @@ export const BottomSheet = ({
   closeVariant = 'boxed',
   inset = 'default',
   raised = false,
-  tall = false,
   pinned = false,
   handle = false,
   eyebrow,
   eyebrowTone = 'signal',
   shareFrame = false,
+  footer,
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<Element | null>(null);
   const titleId = useId();
   const drag = useSheetDrag(onClose, open);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const { edges, measure } = useScrollEdges(
+    bodyRef,
+    open && footer !== undefined,
+  );
   useBodyScrollLock(open);
 
   // The sheet is portalled out of wherever it is mounted. Inline, `fixed` and
@@ -231,11 +251,14 @@ export const BottomSheet = ({
         className={`fixed inset-x-0 bottom-0 ${
           pinned
             ? 'flex h-[92dvh] max-h-[92dvh] flex-col overflow-hidden lg:max-h-[85vh]'
-            : `${
-                tall
-                  ? 'max-h-[calc(100dvh-40px)] lg:max-h-[85vh]'
-                  : 'max-h-[85vh]'
-              } overflow-y-auto`
+            : // The sheet stops 24px below the top of the screen and taller
+              // content scrolls inside it (addendum 6 item 15); from `lg` up
+              // it is the 85vh dialog.
+              `max-h-[calc(100dvh-24px)] lg:max-h-[85vh] ${
+                footer === undefined
+                  ? 'overflow-y-auto'
+                  : 'flex flex-col overflow-hidden'
+              }`
         } rounded-t-2xl ${
           pinned
             ? 'px-[18px] pb-0 pt-0 lg:px-6'
@@ -333,7 +356,32 @@ export const BottomSheet = ({
             )}
           </button>
         </div>
-        {children}
+        {footer === undefined ? (
+          children
+        ) : (
+          <>
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <div
+                ref={bodyRef}
+                onScroll={measure}
+                data-testid="sheet-body"
+                className="min-h-0 flex-1 overflow-y-auto"
+              >
+                {children}
+              </div>
+              <ScrollFade
+                show={edges.more}
+                panel="var(--sheet-bg, var(--surface-1))"
+              />
+            </div>
+            <div
+              data-testid="sheet-footer"
+              className={`shrink-0 border-t border-border bg-surface-2 pb-[calc(20px+env(safe-area-inset-bottom))] pt-3 ${FOOTER_BLEED[inset]}`}
+            >
+              {footer}
+            </div>
+          </>
+        )}
       </div>
     </div>,
     host,

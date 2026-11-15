@@ -224,7 +224,6 @@ export const ShareAppSheet = ({
         closeVariant="bare"
         inset="tight"
         raised
-        tall
       >
         {/* Grabber: decorative, phone only. The sheet closes by its X, Escape,
           the backdrop or a drag, all of which BottomSheet owns. */}
