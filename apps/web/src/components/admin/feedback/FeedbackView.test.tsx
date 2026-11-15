@@ -407,3 +407,82 @@ describe('FeedbackView (07/feedback)', () => {
     await waitFor(() => expect(onCounts).toHaveBeenCalledWith({ unread: 3 }));
   });
 });
+
+describe('an ?item= outside the loaded list', () => {
+  const oneCalls = (id: string) =>
+    fetchMock.mock.calls
+      .map(([input, init]) => ({
+        url: new URL(String(input)),
+        method: init?.method ?? 'GET',
+      }))
+      .filter(
+        (call) =>
+          call.method === 'GET' &&
+          call.url.pathname === `/v1/admin/feedback/${id}`,
+      );
+  let one: () => Promise<Response>;
+  beforeEach(() => {
+    one = async () =>
+      json({
+        success: true,
+        data: item({
+          id: 'f9',
+          status: 'resolved',
+          message: 'A done one',
+          resolvedAt: '2026-11-09T18:00:00Z',
+        }),
+      });
+    fetchMock.mockImplementation(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        if (url.pathname === '/v1/admin/feedback/f9' && !init?.method)
+          return one();
+        if (init?.method === 'PATCH') return json({ success: true });
+        if (url.pathname === '/v1/admin/feedback/counts')
+          return json({ success: true, data: COUNTS });
+        return list(url);
+      },
+    );
+  });
+
+  it('reads the one item, opens it, and reads it only once', async () => {
+    nav.set('?tab=feedback&item=f9');
+    render(<FeedbackView />);
+    expect(await screen.findByTestId('feedback-item')).toBeInTheDocument();
+    expect(screen.getByTestId('feedback-item-quote')).toHaveTextContent(
+      'A done one',
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(oneCalls('f9')).toHaveLength(1);
+  });
+
+  it('opens nothing and clears the param on a 404', async () => {
+    one = async () =>
+      json({ success: false, error: 'Feedback not found' }, 404);
+    nav.set('?tab=feedback&item=f9');
+    render(<FeedbackView />);
+    await waitFor(() => expect(nav.get()).not.toContain('item='));
+    expect(screen.queryByTestId('feedback-item')).toBeNull();
+    expect(oneCalls('f9')).toHaveLength(1);
+  });
+
+  it('drops a late answer after the item was closed', async () => {
+    let answer: (res: Response) => void = () => undefined;
+    one = () =>
+      new Promise<Response>((resolve) => {
+        answer = resolve;
+      });
+    nav.set('?tab=feedback&item=f9');
+    render(<FeedbackView />);
+    await waitFor(() => expect(oneCalls('f9')).toHaveLength(1));
+    act(() => nav.set('?tab=feedback'));
+    await act(async () => {
+      answer(json({ success: true, data: item({ id: 'f9' }) }));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.queryByTestId('feedback-item')).toBeNull();
+    expect(nav.get()).toBe('?tab=feedback');
+  });
+});
