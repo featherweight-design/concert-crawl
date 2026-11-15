@@ -12,7 +12,7 @@ import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import type { ResolvedCheck, ResolvedSide } from './checks-api';
 import { decidedDay, decidedStamp, shortDay } from './checks-rules';
 import { kindTag, ticketStyle } from './checks-styles';
-import { dollars, priceRange } from './submitted-rules';
+import { adminDollars, adminSubmittedRange } from '@/lib/admin/price-format';
 
 const COPY = ADMIN_COPY.pricesChecks;
 const SHEET = COPY.resolved.sheet;
@@ -65,8 +65,9 @@ const chosenSide = (row: ResolvedCheck): ResolvedSide | null =>
 /** The answer's price as a range ("$68–$75"), else the recorded bottom. */
 const answerPrice = (row: ResolvedCheck): string => {
   const side = chosenSide(row);
-  if (side?.priceMin) return priceRange(side.priceMin, side.priceMax);
-  return row.price === null ? '' : dollars(row.price);
+  if (side?.priceMin)
+    return adminSubmittedRange(side.priceMin, side.priceMax) ?? '';
+  return adminDollars(row.price) ?? '';
 };
 
 /** The show's title; "Price check" when the event is gone (row and sheet). */
@@ -165,7 +166,7 @@ const SideCard = ({
           textDecoration: chosen ? 'none' : 'line-through',
         }}
       >
-        {side.priceMin === null ? '' : priceRange(side.priceMin, side.priceMax)}
+        {adminSubmittedRange(side.priceMin, side.priceMax)}
       </div>
       <div
         style={{

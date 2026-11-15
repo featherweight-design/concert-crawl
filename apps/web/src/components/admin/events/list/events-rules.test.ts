@@ -10,7 +10,6 @@ import {
   eventsListHref,
   filtersFromParams,
   filtersToParams,
-  formatPrice,
   hasFilters,
   showCount,
   type EventFilters,
@@ -19,22 +18,6 @@ import {
 const params = (query: string) => new URLSearchParams(query);
 const V1 = '0b9c4f3e-1d2a-4c5b-8e7f-a1b2c3d4e5f6';
 const V2 = '7f6e5d4c-3b2a-4190-8f7e-6d5c4b3a2910';
-
-describe('formatPrice', () => {
-  it('writes a range, a single price and a wide range as the board does', () => {
-    expect(formatPrice('65.00', '495.00')).toBe('$65–$495');
-    expect(formatPrice('15.00', null)).toBe('$15');
-    expect(formatPrice('15.00', '15.00')).toBe('$15');
-    expect(formatPrice('89.50', '1250.00')).toBe('$89.50–$1,250');
-  });
-
-  it('is null with no price, so each surface words it', () => {
-    expect(formatPrice(null, null)).toBeNull();
-    expect(formatPrice(null, '20.00')).toBeNull();
-    expect(formatPrice('', null)).toBeNull();
-    expect(formatPrice('n/a', null)).toBeNull();
-  });
-});
 
 describe('STATUS_CHIP', () => {
   it('draws No longer listed as the fan chip and Played muted', () => {

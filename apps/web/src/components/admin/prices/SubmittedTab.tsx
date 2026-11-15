@@ -39,10 +39,10 @@ import {
   type StateCounts,
   type SubmittedRow,
 } from './submitted-api';
+import { adminSubmittedRange } from '@/lib/admin/price-format';
 import {
   STATE_FILTERS,
   backedPill,
-  priceRange,
   stateWords,
   ticketHost,
   type BackedTone,
@@ -425,7 +425,7 @@ export const SubmittedTab = ({
     setNotice({
       key,
       kind: 'approved',
-      price: priceRange(row.priceMin, row.priceMax),
+      price: adminSubmittedRange(row.priceMin, row.priceMax) ?? '',
       show: showName(row),
     });
   };
@@ -498,7 +498,7 @@ export const SubmittedTab = ({
    * price and Reject…. The phone's sheet words two hints shorter.
    */
   const menuItems = (row: SubmittedRow, phone = false): RowMenuItem[] => {
-    const price = priceRange(row.priceMin, row.priceMax);
+    const price = adminSubmittedRange(row.priceMin, row.priceMax) ?? '';
     const waiting = row.state === 'waiting';
     const items: RowMenuItem[] = [];
     if (waiting) {
@@ -1065,7 +1065,7 @@ export const SubmittedTab = ({
                             fontVariantNumeric: 'tabular-nums',
                           }}
                         >
-                          {priceRange(row.priceMin, row.priceMax)}
+                          {adminSubmittedRange(row.priceMin, row.priceMax)}
                         </span>
                         <Pill tone={PHONE_TONE[row.state]}>
                           {approvedByYou(row)
@@ -1122,7 +1122,7 @@ export const SubmittedTab = ({
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      {priceRange(row.priceMin, row.priceMax)}
+                      {adminSubmittedRange(row.priceMin, row.priceMax)}
                     </span>
                     <span
                       style={{
@@ -1238,13 +1238,13 @@ export const SubmittedTab = ({
             <span style={{ fontSize: 17 }}>
               {COPY.menu.sheetTitle(
                 showName(sheetRow),
-                priceRange(sheetRow.priceMin, sheetRow.priceMax),
+                adminSubmittedRange(sheetRow.priceMin, sheetRow.priceMax) ?? '',
               )}
             </span>
           }
           label={COPY.menu.sheetTitle(
             showName(sheetRow),
-            priceRange(sheetRow.priceMin, sheetRow.priceMax),
+            adminSubmittedRange(sheetRow.priceMin, sheetRow.priceMax) ?? '',
           )}
           onClose={() => setSheetRow(null)}
         >

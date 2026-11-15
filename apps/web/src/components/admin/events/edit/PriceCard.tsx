@@ -18,7 +18,7 @@ import { submittedApi } from '@/components/admin/prices/submitted-api';
 import { refusedStatus } from '@/components/admin/invite-codes/codes-api';
 import { shortDate } from '@/components/admin/venues/overview/overview-rules';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
-import { formatPrice } from '../list/events-rules';
+import { adminPriceRange } from '@/lib/admin/price-format';
 import type { EventDetail } from './event-detail';
 
 const COPY = ADMIN_COPY.eventEdit.price;
@@ -79,7 +79,7 @@ export const PriceCard = ({
     <AdminCard title={COPY.title} phone={phone} testId="event-edit-price">
       <div>
         <AdminCardRow label={COPY.listed}>
-          <b>{formatPrice(detail.priceMin, detail.priceMax) ?? NONE}</b>
+          <b>{adminPriceRange(detail.priceMin, detail.priceMax) ?? NONE}</b>
         </AdminCardRow>
         <AdminCardRow label={COPY.from}>
           {COPY.fromValue(detail.submittedPriceCount)}

@@ -1,5 +1,6 @@
 import type { AuditArea, AuditLogItem } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { adminPriceRange } from '@/lib/admin/price-format';
 import { DENVER_TIME_ZONE } from '@/lib/time';
 
 const COPY = ADMIN_COPY.operations.log;
@@ -27,10 +28,9 @@ export interface Sentence {
 const text = (value: unknown): string | null =>
   typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 
-const money = (value: unknown): string | null =>
-  typeof value === 'number' && Number.isFinite(value)
-    ? `$${value.toLocaleString('en-US')}`
-    : null;
+/** An audited price: a number or numeric string, else nothing. */
+const amount = (value: unknown): string | number | null =>
+  typeof value === 'number' || typeof value === 'string' ? value : null;
 
 /** `2026-04-01` (or an instant) as "Apr 1", read in Mountain Time. */
 const shortDay = (value: unknown): string | null => {
@@ -50,10 +50,10 @@ const shortDay = (value: unknown): string | null => {
 const priceRange = (meta: Record<string, unknown> | null): string | null => {
   const after = meta?.['after'];
   if (typeof after !== 'object' || after === null) return null;
-  const low = money(Reflect.get(after, 'priceMin'));
-  const high = money(Reflect.get(after, 'priceMax'));
-  if (low === null) return null;
-  return high === null || high === low ? low : `${low}–${high}`;
+  return adminPriceRange(
+    amount(Reflect.get(after, 'priceMin')),
+    amount(Reflect.get(after, 'priceMax')),
+  );
 };
 
 const flagOf = (meta: Record<string, unknown> | null): boolean | null => {

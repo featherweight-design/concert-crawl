@@ -4,11 +4,8 @@ import { useId, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, AdminDialog } from '@/components/admin/primitives';
-import {
-  REJECTION_REASONS,
-  priceRange,
-  type RejectionReason,
-} from './submitted-rules';
+import { adminSubmittedRange } from '@/lib/admin/price-format';
+import { REJECTION_REASONS, type RejectionReason } from './submitted-rules';
 import type { SubmittedRow } from './submitted-api';
 
 const COPY = ADMIN_COPY.pricesSubmitted.reject;
@@ -53,7 +50,7 @@ export const RejectPriceDialog = ({
   const [error, setError] = useState<string | null>(null);
 
   const title = COPY.title(
-    priceRange(row.priceMin, row.priceMax),
+    adminSubmittedRange(row.priceMin, row.priceMax) ?? '',
     row.title === '' ? COPY.thisShow : row.title,
   );
 

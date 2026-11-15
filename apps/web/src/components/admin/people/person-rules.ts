@@ -5,6 +5,7 @@
  */
 import type { PersonDetail, PersonRecent, Role } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { adminSubmittedRange } from '@/lib/admin/price-format';
 import { shortDate } from '../invite-codes/code-rules';
 import { lastActiveLabel } from './people-rules';
 import type { SettableRole } from './person-api';
@@ -97,20 +98,11 @@ export const inviteCodeLabel = (
   return COPY.inviteCodeCount(source.code, person.codeRedeemerCount);
 };
 
-/** "$35", "$35.50": whole dollars drop the cents. */
-const dollars = (amount: string): string => {
-  const value = Number(amount);
-  return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
-};
-
 /** One Recent line: "Submitted $35–$65 for Ninth Key at Gothic Theatre". */
 export const recentLine = (item: PersonRecent): string => {
   switch (item.kind) {
     case 'price': {
-      const range =
-        item.priceMax && item.priceMax !== item.priceMin
-          ? `${dollars(item.priceMin)}–${dollars(item.priceMax)}`
-          : dollars(item.priceMin);
+      const range = adminSubmittedRange(item.priceMin, item.priceMax) ?? '';
       return COPY.recent.price(range, item.artist, item.venueName);
     }
     case 'feedback':

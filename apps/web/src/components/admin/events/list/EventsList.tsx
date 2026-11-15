@@ -34,7 +34,8 @@ import { HideEventDialog } from '../edit/StatusCard';
 import { EventDeleteConfirm } from '../EventDeleteConfirm';
 import { MergePanel } from '../merge/MergePanel';
 import type { EventListRow } from './events-api';
-import { STATUS_CHIP, formatPrice, type When } from './events-rules';
+import { adminPriceRange } from '@/lib/admin/price-format';
+import { STATUS_CHIP, type When } from './events-rules';
 
 const COPY = ADMIN_COPY.eventsList;
 const HIDE_COPY = ADMIN_COPY.eventEdit.hide;
@@ -545,7 +546,7 @@ const DesktopTable = ({
       </thead>
       <tbody>
         {rows.map((row) => {
-          const price = formatPrice(row.priceMin, row.priceMax);
+          const price = adminPriceRange(row.priceMin, row.priceMax);
           const titleStyle: CSSProperties = {
             ...ellipsis,
             fontSize: 13.5,
@@ -663,7 +664,7 @@ const DesktopTable = ({
 };
 
 const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
-  const price = formatPrice(row.priceMin, row.priceMax);
+  const price = adminPriceRange(row.priceMin, row.priceMax);
   const past = when === 'past';
   // A hidden card has no Watching line (`06/events-mobile`).
   const countLine = past

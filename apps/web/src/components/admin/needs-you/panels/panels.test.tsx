@@ -492,9 +492,11 @@ const eventRow = (over: Partial<EventFacts> = {}) =>
 
 describe('EventPanel', () => {
   it('draws the listed price under WHAT WE’D LIST, only when there is one', () => {
+    // An event price with no top is a single crawled price, never "and up".
     open(eventRow({ priceMin: '25.00', priceMax: null }));
     expect(screen.getByText('Price')).toBeInTheDocument();
-    expect(screen.getByText('$25+')).toBeInTheDocument();
+    expect(screen.getByText('$25')).toBeInTheDocument();
+    expect(screen.queryByText('$25+')).toBeNull();
     cleanup();
     open(eventRow({ priceMin: '25.00', priceMax: '40.00' }));
     expect(screen.getByText('$25–$40')).toBeInTheDocument();

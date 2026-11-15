@@ -230,28 +230,3 @@ export const dateSpan = (oldest: string, newest: string): string | null => {
     ? `${from.month} ${from.day}–${to.day}`
     : `${from.month} ${from.day}–${to.month} ${to.day}`;
 };
-
-const dollars = (value: string | null): string | null => {
-  if (value === null || value.trim() === '') return null;
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return null;
-  const whole = Number.isInteger(amount);
-  return `$${amount.toLocaleString('en-US', {
-    minimumFractionDigits: whole ? 0 : 2,
-    maximumFractionDigits: 2,
-  })}`;
-};
-
-/**
- * A show's price as the board writes it: "$65–$495", "$15", "$89.50–$1,250".
- * Null when there is no price, which each surface words its own way.
- */
-export const formatPrice = (
-  min: string | null,
-  max: string | null,
-): string | null => {
-  const low = dollars(min);
-  if (low === null) return null;
-  const high = dollars(max);
-  return high === null || high === low ? low : `${low}–${high}`;
-};
