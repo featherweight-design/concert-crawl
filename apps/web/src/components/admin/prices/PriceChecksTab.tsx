@@ -34,6 +34,8 @@ const COPY = ADMIN_COPY.pricesChecks;
 // The phone's full-width row (`06/price-checks-mobile`): Add a price's words.
 const OPEN_TICKET_PAGE = ADMIN_COPY.pricesPage.add.openTicketPage;
 const PAGE = 50;
+/** The resolved read's largest page (`/prices/resolved`, max 100). */
+const RESOLVED_MAX = 100;
 /** Open checks are few; one call takes up to the API's most. */
 const OPEN_PAGE = 100;
 
@@ -181,12 +183,23 @@ export const PriceChecksTab = () => {
   const resolvedPageSize = isPhone ? PHONE_PAGE : PAGE;
   const latest = useRef(0);
   const everLoaded = useRef(false);
+  // How many resolved rows are on screen, for a refresh to fetch them all
+  // again rather than drop the pages Load more added.
+  const resolvedShown = useRef(0);
+  const moreLatest = useRef(0);
+  useEffect(() => {
+    resolvedShown.current = resolved.length;
+  }, [resolved]);
   const load = useCallback(async () => {
     const mine = ++latest.current;
+    const limit = Math.min(
+      RESOLVED_MAX,
+      Math.max(resolvedPageSize, resolvedShown.current),
+    );
     try {
       const [openPage, resolvedPage] = await Promise.all([
         api.open(0, OPEN_PAGE),
-        api.resolved(0, resolvedPageSize),
+        api.resolved(0, limit),
       ]);
       if (mine !== latest.current) return;
       setOpen(openPage.items);
@@ -238,24 +251,27 @@ export const PriceChecksTab = () => {
   };
 
   const loadMoreResolved = async () => {
-    // A reload while this runs makes its answer stale.
-    const mine = latest.current;
+    // A load() that starts while this runs bumps `latest` and wins: this
+    // answer is then stale and dropped. Each Load more takes its own
+    // generation too, so a later one supersedes an earlier one.
+    const generation = latest.current;
+    const mine = ++moreLatest.current;
     setMore('loading');
     try {
-      const page = await api.resolved(resolved.length, resolvedPageSize);
-      if (mine !== latest.current) {
-        setMore('idle');
+      const page = await api.resolved(resolvedShown.current, resolvedPageSize);
+      if (generation !== latest.current || mine !== moreLatest.current) {
+        if (mine === moreLatest.current) setMore('idle');
         return;
       }
-      const seen = new Set(resolved.map((row) => row.id));
-      setResolved([
-        ...resolved,
-        ...page.items.filter((row) => !seen.has(row.id)),
-      ]);
+      setResolved((current) => {
+        const seen = new Set(current.map((row) => row.id));
+        return [...current, ...page.items.filter((row) => !seen.has(row.id))];
+      });
       setResolvedTotal(page.total);
       setMore('idle');
     } catch {
-      setMore(mine === latest.current ? 'failed' : 'idle');
+      if (mine !== moreLatest.current) return;
+      setMore(generation === latest.current ? 'failed' : 'idle');
     }
   };
 
@@ -267,7 +283,14 @@ export const PriceChecksTab = () => {
   const showing = view;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        // `23/checks-resolved-m`: 6px from the pills to the resolved list.
+        gap: isPhone && view === 'resolved' ? 6 : 14,
+      }}
+    >
       {/* Open / Resolved pills on both widths (`23/checks-resolved-m` draws
           the desktop's on the phone, the chosen count a step brighter). */}
       <div

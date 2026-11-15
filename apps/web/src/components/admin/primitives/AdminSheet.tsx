@@ -175,7 +175,8 @@ export const AdminSheet = ({
                 cursor: 'pointer',
               }}
             >
-              <X size={16} strokeWidth={1.5} aria-hidden />
+              {/* The board's 1.5 on a 16 box, on lucide's 24. */}
+              <X size={16} strokeWidth={2.25} aria-hidden />
             </button>
           </div>
         )}
