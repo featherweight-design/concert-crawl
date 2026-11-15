@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Inbox, Search } from 'lucide-react';
 import type {
   AdminFeedbackCounts,
+  AdminFeedbackItem,
   AdminFeedbackStatus,
 } from '@concert-crawl/types';
 import {
@@ -82,6 +83,8 @@ export const FeedbackView = ({
   const openId = useSearchParams().get('item');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<ItemFailure | null>(null);
+  // A reopened item, kept open after it leaves the Done list.
+  const [held, setHeld] = useState<AdminFeedbackItem | null>(null);
   const latestLoad = useRef(0);
 
   const authed = useCallback(
@@ -161,9 +164,23 @@ export const FeedbackView = ({
     if (unread !== undefined) onCounts?.({ unread });
   }, [unread, onCounts]);
 
+  // A write that settles after the view unmounted (another tab) does nothing.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const openIdRef = useRef(openId);
+  useEffect(() => {
+    openIdRef.current = openId;
+  }, [openId]);
+
   // Opening or closing an item replaces the URL, as Needs you's `?item=` does.
   const select = (id: string | null) => {
     setFailure(null);
+    setHeld(null);
     router.replace(id ? itemHref(id) : LIST_HREF, { scroll: false });
   };
 
@@ -172,49 +189,101 @@ export const FeedbackView = ({
     setChip(next);
   };
 
-  const patch = async (id: string, body: Record<string, string>) => {
-    const res = await authed(`/v1/admin/feedback/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error(`status ${res.status}`);
-  };
+  const patch = useCallback(
+    async (id: string, body: Record<string, string>) => {
+      const res = await authed(`/v1/admin/feedback/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+    },
+    [authed],
+  );
+
+  // An `?item=` no longer in this view (done elsewhere, another chip) opens
+  // nothing: there is no read of one item. A reopened item is held open
+  // after it leaves Done.
+  const openItem =
+    (held && held.id === openId ? held : null) ??
+    loaded?.items.find((item) => item.id === openId) ??
+    null;
+
+  // Opening an unread item marks it read, once per opening: a Reopen that
+  // makes it unread again while it stays open is left unread.
+  const readFor = useRef<string | null>(null);
+  const openKey = openItem?.id ?? null;
+  const openUnread = openItem?.status === 'unread';
+  useEffect(() => {
+    if (openKey === null) {
+      readFor.current = null;
+      return;
+    }
+    if (readFor.current === openKey) return;
+    readFor.current = openKey;
+    if (!openUnread) return;
+    void patch(openKey, { status: 'read' })
+      .catch(() => undefined)
+      .finally(() => {
+        if (mounted.current) void loadRef.current(true);
+      });
+  }, [openKey, openUnread, patch]);
 
   // A status move can take the item out of this view and changes the counts,
   // so the list re-reads either way, keeping what it shows until then. Done
-  // closes the item, as an answer closes a Needs you panel; a refusal keeps
-  // it open with Try again.
-  const onStatusChange = (id: string, status: AdminFeedbackStatus) => {
+  // closes the item, as an answer closes a Needs you panel; Reopen keeps it
+  // open in its To read form. A refusal keeps it open with Try again. Only
+  // the item the write was for, still open, is closed or changed.
+  const onStatusChange = (
+    item: AdminFeedbackItem,
+    status: AdminFeedbackStatus,
+  ) => {
     setBusy(true);
     setFailure(null);
     const toDone = status === 'resolved';
-    void patch(id, { status })
-      .then(() => select(null))
-      .catch(() =>
+    void patch(item.id, { status })
+      .then(() => {
+        if (!mounted.current || openIdRef.current !== item.id) return;
+        if (toDone) select(null);
+        else setHeld({ ...item, status, resolvedBy: null, resolvedAt: null });
+      })
+      .catch(() => {
+        if (!mounted.current) return;
         setFailure({
+          id: item.id,
+          what: 'status',
           title: toDone ? FAILED.markDone : FAILED.reopen,
           saved: toDone ? FAILED.stillToRead : FAILED.stillDone,
-          retry: () => onStatusChange(id, status),
-        }),
-      )
+          retry: () => onStatusChange(item, status),
+        });
+      })
       .finally(() => {
+        if (!mounted.current) return;
         setBusy(false);
         void loadRef.current(true);
         router.refresh();
       });
   };
   // The note shows at once; a refused save says so and re-reads, so the item
-  // shows what stuck.
+  // shows what stuck. Try again sends the newest note for that item.
+  const latestNotes = useRef(new Map<string, string>());
   const onNotesChange = (id: string, adminNotes: string) => {
+    latestNotes.current.set(id, adminNotes);
     void patch(id, { adminNotes })
-      .then(() =>
-        setFailure((prev) => (prev?.title === FAILED.note ? null : prev)),
-      )
+      .then(() => {
+        if (!mounted.current) return;
+        setFailure((prev) =>
+          prev?.id === id && prev.what === 'note' ? null : prev,
+        );
+      })
       .catch(() => {
+        if (!mounted.current) return;
         setFailure({
+          id,
+          what: 'note',
           title: FAILED.note,
           saved: FAILED.noteKept,
-          retry: () => onNotesChange(id, adminNotes),
+          retry: () =>
+            onNotesChange(id, latestNotes.current.get(id) ?? adminNotes),
         });
         void loadRef.current(true);
       });
@@ -227,6 +296,7 @@ export const FeedbackView = ({
           ),
         },
     );
+    setHeld((prev) => (prev?.id === id ? { ...prev, adminNotes } : prev));
   };
 
   if (failed) {
@@ -235,8 +305,6 @@ export const FeedbackView = ({
   if (!loaded) return <FeedbackSkeleton />;
 
   const { items, counts } = loaded;
-  // An `?item=` no longer in this view (done elsewhere, another chip) opens nothing.
-  const openItem = items.find((item) => item.id === openId) ?? null;
   const isDone = chip === 'done';
   const chips: FeedbackChip[] = isDone
     ? ['to_read', 'done']
@@ -371,9 +439,9 @@ export const FeedbackView = ({
           failure={failure}
           onDismissFailure={() => setFailure(null)}
           onClose={() => select(null)}
-          onMarkDone={() => onStatusChange(openItem.id, 'resolved')}
-          // Back to To read: `read`, since it has been read.
-          onReopen={() => onStatusChange(openItem.id, 'read')}
+          onMarkDone={() => onStatusChange(openItem, 'resolved')}
+          // Back to To read as unread, so a reopened bug is in Needs you again.
+          onReopen={() => onStatusChange(openItem, 'unread')}
           onNotes={(notes) => onNotesChange(openItem.id, notes)}
         />
       )}

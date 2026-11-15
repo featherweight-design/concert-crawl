@@ -103,17 +103,18 @@ export const EvidenceSlot = ({
       <PhoneItemPage
         eyebrow={<KindLabel kind={kindLabelOf(row.kind)} />}
         title={title}
-        menuTitle={answeredName(row.title)}
-        venue={
-          row.venueId && row.venueName
-            ? { id: row.venueId, name: row.venueName }
-            : null
-        }
+        menu={{
+          title: answeredName(row.title),
+          venue:
+            row.venueId && row.venueName
+              ? { id: row.venueId, name: row.venueName }
+              : null,
+          onSnooze,
+          onNotUseful: row.venueId ? onNotUseful : undefined,
+          ...(snoozeAbout ? { about: snoozeAbout } : {}),
+        }}
         busy={busy}
         onClose={onClose}
-        onSnooze={onSnooze}
-        onNotUseful={row.venueId ? onNotUseful : undefined}
-        about={snoozeAbout}
       >
         {subtitle && (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}>

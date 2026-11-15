@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ExternalLink, RefreshCw, Reply } from 'lucide-react';
+import { Check, ExternalLink, Reply, RotateCw } from 'lucide-react';
 import type { AdminFeedbackItem } from '@concert-crawl/types';
 import {
   AdminButton,
@@ -28,8 +28,9 @@ import {
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import { personHref } from '@/components/admin/people/people-rules';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { doneLine, kindOf } from './feedback-list-rules';
+import { kindOf } from './feedback-list-rules';
 import {
+  doneByOf,
   fieldsOf,
   headOf,
   isDoneItem,
@@ -45,8 +46,11 @@ const MONO = "'JetBrains Mono', monospace";
 /** The note saves this long after the last keystroke ("Saved as you type"). */
 const NOTE_DEBOUNCE_MS = 800;
 
-/** A refused write, shown in the item with Try again (`07/save-failed`). */
+/** A refused write, shown in its own item with Try again (`07/save-failed`). */
 export interface ItemFailure {
+  /** The item it belongs to: shown only while that item is open. */
+  id: string;
+  what: 'status' | 'note';
   title: string;
   saved: string;
   retry: () => void;
@@ -70,13 +74,31 @@ const shortId = (value: string): string =>
   value.length > 12 ? `${value.slice(0, 4)}…${value.slice(-4)}` : value;
 
 const CopyValue = ({ field }: { field: Field }) => {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle');
   useEffect(() => {
-    if (!copied) return undefined;
-    const timer = setTimeout(() => setCopied(false), 1500);
+    if (copied === 'idle') return undefined;
+    const timer = setTimeout(() => setCopied('idle'), 1500);
     return () => clearTimeout(timer);
   }, [copied]);
   const label = COPY.fields[field.key];
+  const said =
+    copied === 'copied'
+      ? COPY.copied
+      : copied === 'failed'
+        ? COPY.copyFailed
+        : '';
+  const copy = () => {
+    // Undefined outside a secure context (plain http), whatever the types say.
+    const clipboard: Clipboard | undefined = navigator.clipboard;
+    if (!clipboard) {
+      setCopied('failed');
+      return;
+    }
+    clipboard
+      .writeText(field.value)
+      .then(() => setCopied('copied'))
+      .catch(() => setCopied('failed'));
+  };
   return (
     <span
       style={{ display: 'inline-flex', alignItems: 'baseline', minWidth: 0 }}
@@ -91,12 +113,7 @@ const CopyValue = ({ field }: { field: Field }) => {
         type="button"
         aria-label={COPY.copyLabel(label)}
         data-testid={`copy-${field.key}`}
-        onClick={() => {
-          navigator.clipboard
-            .writeText(field.value)
-            .then(() => setCopied(true))
-            .catch(() => undefined);
-        }}
+        onClick={copy}
         style={{
           marginLeft: 8,
           padding: 0,
@@ -109,8 +126,12 @@ const CopyValue = ({ field }: { field: Field }) => {
           cursor: 'pointer',
         }}
       >
-        {copied ? COPY.copied : COPY.copy}
+        {said || COPY.copy}
       </button>
+      {/* The button's name stays "Copy …", so the outcome is read out here. */}
+      <span role="status" aria-live="polite" className="sr-only">
+        {said}
+      </span>
     </span>
   );
 };
@@ -291,6 +312,10 @@ export const FeedbackItemView = ({
   const screenshot =
     kind === 'bug' || kind === 'idea' ? screenshotOf(item) : undefined;
   const reply = showsReply(item);
+  const venue = kind === 'venueSuggestion';
+  const doneBy = doneByOf(item);
+  // `03/suggestion-m` puts the date under a 22px title, its blocks 14 apart.
+  const phoneVenue = isPhone && venue;
   const footnote = done
     ? COPY.reopenFootnote
     : kind === 'errorReport'
@@ -334,7 +359,7 @@ export const FeedbackItemView = ({
           onClick={onReopen}
           style={{ ...size, flex: 1 }}
         >
-          <RefreshCw size={iconSize} strokeWidth={1.8} aria-hidden />
+          <RotateCw size={iconSize} strokeWidth={1.8} aria-hidden />
           {COPY.reopen}
         </AdminButton>
       ) : (
@@ -360,7 +385,8 @@ export const FeedbackItemView = ({
           {isPhone ? COPY.replyPhone : COPY.reply}
         </AdminButton>
       )}
-      {github}
+      {/* Neither suggestion board draws GitHub. */}
+      {!venue && github}
     </div>
   );
 
@@ -378,7 +404,8 @@ export const FeedbackItemView = ({
     </p>
   );
 
-  const toast = failure && (
+  // Another item's refusal (a note saved on close) never shows here.
+  const toast = failure?.id === item.id && (
     <SaveFailedToast
       title={failure.title}
       saved={failure.saved}
@@ -388,12 +415,13 @@ export const FeedbackItemView = ({
     />
   );
 
+  const when = whenLine(item.createdAt);
   const eyebrow = (
     <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <KindLabel kind={kind} />
-      <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-        {whenLine(item.createdAt)}
-      </span>
+      {!phoneVenue && (
+        <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>{when}</span>
+      )}
     </span>
   );
 
@@ -403,20 +431,35 @@ export const FeedbackItemView = ({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: isPhone ? 12 : 14,
+        gap: isPhone && !phoneVenue ? 12 : 14,
       }}
     >
+      {phoneVenue && (
+        // 4px under the title: the page's 14px gap, pulled up.
+        <p
+          data-testid="feedback-item-when"
+          style={{
+            margin: '-10px 0 0',
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {when}
+        </p>
+      )}
       {done && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <StatusBadge kind="success" dot size="tile">
             {ADMIN_COPY.feedback.row.done}
           </StatusBadge>
-          <span
-            data-testid="feedback-item-done-line"
-            style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}
-          >
-            {doneLine(item)}
-          </span>
+          {doneBy && (
+            <span
+              data-testid="feedback-item-done-line"
+              style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}
+            >
+              {doneBy}
+            </span>
+          )}
         </div>
       )}
       {quote && (
@@ -456,8 +499,9 @@ export const FeedbackItemView = ({
         eyebrow={eyebrow}
         title={title}
         back={ADMIN_COPY.feedback.title}
-        titleSize={20}
-        gap={12}
+        titleSize={phoneVenue ? 22 : 20}
+        gap={phoneVenue ? 14 : 12}
+        menu={null}
         busy={busy}
         onClose={onClose}
       >

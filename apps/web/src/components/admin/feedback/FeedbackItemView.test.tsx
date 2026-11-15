@@ -15,6 +15,7 @@ import type {
 } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { FeedbackView } from './FeedbackView';
+import { ISSUE_TYPE } from './github-issue';
 
 // P47-19 PR 4b: the Feedback item (`07/a-feedback-item-in-flow`,
 // `07/feedback-item-mobile`, addendum 7 `02-error-reports`, `03-…`).
@@ -86,7 +87,8 @@ const item = (over: Partial<AdminFeedbackItem> = {}): AdminFeedbackItem => ({
   message:
     'Map button does nothing on iPhone\nTapped Directions and nothing happened.',
   metadata: { device: 'iPhone · Safari 18', build: '0.42.1' },
-  status: 'unread',
+  // Read, so opening it sends nothing; the mark-read tests use unread.
+  status: 'read',
   adminNotes: null,
   issueUrl: null,
   // 9:14 PM on Nov 8 in Mountain Time.
@@ -317,8 +319,11 @@ describe('each kind', () => {
       }),
     ];
     await openFirst();
-    // No user behind it: From says Sentry, unlinked.
-    expect(fieldKeys()).toEqual(['page', 'errorId', 'from']);
+    // No user behind it: From says Sentry, unlinked. No device named: Unknown.
+    expect(fieldKeys()).toEqual(['page', 'device', 'errorId', 'from']);
+    expect(screen.getByTestId('feedback-field-device')).toHaveTextContent(
+      COPY.unknownDevice,
+    );
     expect(screen.getByTestId('feedback-field-from')).toHaveTextContent(
       ROW.sentry,
     );
@@ -346,6 +351,131 @@ describe('each kind', () => {
     expect(fieldKeys()).toEqual(['from', 'sentFrom']);
     expect(screen.queryByRole('button', { name: COPY.reply })).toBeNull();
     expect(button(COPY.markDone)).toBeInTheDocument();
+    // Neither suggestion board draws GitHub.
+    expect(screen.queryByRole('link', { name: COPY.github })).toBeNull();
+  });
+
+  it('puts a phone suggestion’s date under its 22px title', async () => {
+    phone(true);
+    rows = [
+      item({
+        category: 'venue_suggestion',
+        message: 'Dazzle on Curtis',
+        metadata: null,
+      }),
+    ];
+    await openFirst();
+    expect(screen.getByRole('heading', { name: COPY.venueTitle })).toHaveStyle({
+      fontSize: '22px',
+    });
+    expect(screen.getByTestId('feedback-item-when')).toHaveTextContent(
+      'Nov 8 · 9:14 PM',
+    );
+  });
+
+  it('names an unreadable user agent Unknown device, and reads a known one', async () => {
+    rows = [
+      item({ id: 'u1', metadata: { userAgent: 'curl/8.0' } }),
+      item({
+        id: 'u2',
+        metadata: {
+          userAgent:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+        },
+      }),
+    ];
+    await openFirst();
+    expect(screen.getByTestId('feedback-field-device')).toHaveTextContent(
+      COPY.unknownDevice,
+    );
+    fireEvent.click(screen.getAllByTestId('feedback-row')[1]!);
+    await waitFor(() =>
+      expect(screen.getByTestId('feedback-field-device')).not.toHaveTextContent(
+        COPY.unknownDevice,
+      ),
+    );
+  });
+});
+
+describe('Copy', () => {
+  it("says Couldn't copy when the clipboard refuses, or there is none", async () => {
+    rows = [ERROR_REPORT];
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+      configurable: true,
+    });
+    await openFirst();
+    fireEvent.click(button(COPY.copyLabel(COPY.fields.errorId)));
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole('status')
+          .some((el) => el.textContent === COPY.copyFailed),
+      ).toBe(true),
+    );
+    cleanup();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true,
+    });
+    await openFirst();
+    fireEvent.click(button(COPY.copyLabel(COPY.fields.errorId)));
+    expect(
+      screen
+        .getAllByRole('status')
+        .some((el) => el.textContent === COPY.copyFailed),
+    ).toBe(true);
+  });
+});
+
+describe('the GitHub issue', () => {
+  const issue = (href: string) => {
+    const url = new URL(href);
+    return {
+      body: url.searchParams.get('body') ?? '',
+      labels: url.searchParams.get('labels')?.split(',') ?? [],
+    };
+  };
+
+  it('names the reporter by handle, never by Clerk id', async () => {
+    await openFirst();
+    const { body } = issue(
+      screen.getByRole('link', { name: COPY.github }).getAttribute('href')!,
+    );
+    expect(body).toContain('- From: @mira.k');
+    expect(body).not.toContain('user_1');
+    cleanup();
+    rows = [item({ submittedBy: null })];
+    await openFirst();
+    const bare = issue(
+      screen.getByRole('link', { name: COPY.github }).getAttribute('href')!,
+    );
+    expect(bare.body).not.toContain('From:');
+    expect(bare.body).not.toContain('user_1');
+  });
+
+  it.each([
+    ['bug', 'type: bug'],
+    ['error_report', 'type: bug'],
+    ['idea', 'type: feature'],
+    ['praise', 'type: polish'],
+    ['other', 'type: polish'],
+  ] as const)('labels a %s %s', async (category, type) => {
+    rows = [item({ category })];
+    await openFirst();
+    const { labels } = issue(
+      screen.getByRole('link', { name: COPY.github }).getAttribute('href')!,
+    );
+    expect(labels).toEqual([
+      type,
+      'source: beta-feedback',
+      'phase: beta',
+      'priority: normal',
+    ]);
+  });
+
+  it('labels a venue suggestion a feature (there is no venue label)', () => {
+    expect(ISSUE_TYPE.venue_suggestion).toBe('type: feature');
   });
 });
 
@@ -476,36 +606,170 @@ describe('a Done item', () => {
     expect(
       within(screen.getByTestId('feedback-item')).getByText(ROW.done),
     ).toBeVisible();
+    // The pill says Done, so the line beside it starts at "by".
     expect(screen.getByTestId('feedback-item-done-line')).toHaveTextContent(
-      'Done by @hugh · Nov 3',
+      /^by @hugh, Nov 3$/,
     );
+    // `12/feedback-reopen-d`: From, then Page and Device.
+    expect(fieldKeys().slice(0, 3)).toEqual(['from', 'page', 'device']);
     expect(screen.queryByRole('button', { name: COPY.markDone })).toBeNull();
     expect(screen.queryByRole('button', { name: COPY.reply })).toBeNull();
     expect(screen.getByRole('link', { name: COPY.github })).toBeInTheDocument();
     expect(screen.getByText(COPY.reopenFootnote)).toBeInTheDocument();
   });
 
-  it.each([
-    [{ resolvedBy: null }, 'Done · Nov 3'],
-    [{ resolvedBy: null, resolvedAt: null }, 'Done'],
-  ])('says %o as %s', async (over, line) => {
-    rows = [doneRow(over)];
+  it('says "by @hugh" with no date, and nothing with no resolver', async () => {
+    rows = [doneRow({ resolvedAt: null })];
     await openFirst();
     expect(screen.getByTestId('feedback-item-done-line')).toHaveTextContent(
-      new RegExp(`^${line}$`),
+      /^by @hugh$/,
     );
+    cleanup();
+    nav.set('');
+    rows = [doneRow({ resolvedBy: null })];
+    await openFirst();
+    expect(screen.queryByTestId('feedback-item-done-line')).toBeNull();
   });
 
-  it('Reopen PATCHes it back to To read and re-reads the list', async () => {
+  it('Reopen PATCHes it back to unread, stays open as To read, and is not marked read again', async () => {
     rows = [doneRow()];
     await openFirst();
     const before = listCalls().length;
+    // The Done list no longer holds it once it is reopened.
+    rows = [];
     fireEvent.click(button(COPY.reopen));
+    await waitFor(() =>
+      expect(patches()).toEqual([
+        { path: '/v1/admin/feedback/f1', body: { status: 'unread' } },
+      ]),
+    );
+    await waitFor(() => expect(listCalls().length).toBeGreaterThan(before));
+    expect(
+      await screen.findByRole('button', { name: COPY.markDone }),
+    ).toBeVisible();
+    expect(screen.getByTestId('side-panel')).toBeInTheDocument();
+    expect(screen.queryByTestId('feedback-item-done-line')).toBeNull();
+    expect(patches()).toHaveLength(1);
+  });
+});
+
+describe('marking read on open', () => {
+  it('PATCHes an unread item read once, and re-reads the counts', async () => {
+    rows = [item({ status: 'unread' })];
+    await openFirst();
     await waitFor(() =>
       expect(patches()).toEqual([
         { path: '/v1/admin/feedback/f1', body: { status: 'read' } },
       ]),
     );
+    const counts = () =>
+      fetchMock.mock.calls.filter(
+        ([input]) =>
+          new URL(String(input)).pathname === '/v1/admin/feedback/counts',
+      ).length;
+    await waitFor(() => expect(counts()).toBeGreaterThan(1));
+    // The re-read re-rendered the item: still the one PATCH.
+    expect(screen.getByTestId('feedback-item')).toBeInTheDocument();
+    expect(patches()).toHaveLength(1);
+  });
+
+  it('marks an item a link opens', async () => {
+    rows = [item({ status: 'unread' })];
+    nav.set('?tab=feedback&item=f1');
+    render(<FeedbackView />);
+    await waitFor(() =>
+      expect(patches()).toEqual([
+        { path: '/v1/admin/feedback/f1', body: { status: 'read' } },
+      ]),
+    );
+  });
+
+  it.each([['read'], ['resolved'], ['flagged']] as const)(
+    'sends nothing for a %s item',
+    async (status) => {
+      rows = [item({ status })];
+      await openFirst();
+      await screen.findByTestId('feedback-item');
+      expect(patches()).toHaveLength(0);
+    },
+  );
+});
+
+describe('the open item and the URL', () => {
+  it('opens nothing for an ?item= not in the list', async () => {
+    nav.set('?tab=feedback&item=gone');
+    render(<FeedbackView />);
+    expect(await screen.findByTestId('feedback-row')).toBeInTheDocument();
+    expect(screen.queryByTestId('side-panel')).toBeNull();
+    expect(patches()).toHaveLength(0);
+  });
+
+  it('closes on Escape and gives focus back to the row', async () => {
+    render(<FeedbackView />);
+    const row = await screen.findByTestId('feedback-row');
+    row.focus();
+    fireEvent.click(row);
+    const panel = await screen.findByTestId('side-panel');
+    fireEvent.keyDown(panel, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('side-panel')).toBeNull());
+    await waitFor(() =>
+      expect(screen.getByTestId('feedback-row')).toHaveFocus(),
+    );
+  });
+
+  it("never shows a note's late refusal on another item", async () => {
+    rows = [item(), item({ id: 'f2', message: 'Second one' })];
+    let refuse: (res: Response) => void = () => undefined;
+    fetchMock.mockImplementation(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        if (init?.method === 'PATCH')
+          return new Promise<Response>((resolve) => {
+            refuse = resolve;
+          });
+        if (url.pathname === '/v1/admin/feedback/counts')
+          return json({ success: true, data: COUNTS });
+        return json({ success: true, data: rows });
+      },
+    );
+    await openFirst();
+    const note = screen.getByLabelText(COPY.note);
+    fireEvent.change(note, { target: { value: 'first' } });
+    fireEvent.blur(note);
+    // Open the second item while the first one's note is still saving.
+    fireEvent.click(screen.getAllByTestId('feedback-row')[1]!);
+    await screen.findByRole('heading', { name: 'Second one' });
+    const before = listCalls().length;
+    refuse(json({ success: false }, 500));
+    // The refusal re-reads the list, so its handling has run.
     await waitFor(() => expect(listCalls().length).toBeGreaterThan(before));
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+  });
+
+  it('a Mark done that lands after another item opened leaves that item open', async () => {
+    rows = [item(), item({ id: 'f2', message: 'Second one' })];
+    let settle: (res: Response) => void = () => undefined;
+    fetchMock.mockImplementation(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        if (init?.method === 'PATCH')
+          return new Promise<Response>((resolve) => {
+            settle = resolve;
+          });
+        if (url.pathname === '/v1/admin/feedback/counts')
+          return json({ success: true, data: COUNTS });
+        return json({ success: true, data: rows });
+      },
+    );
+    await openFirst();
+    fireEvent.click(button(COPY.markDone));
+    // The panel holds still mid-request, so the row is reached by URL.
+    nav.set('?tab=feedback&item=f2');
+    await screen.findByRole('heading', { name: 'Second one' });
+    settle(json({ success: true }));
+    await waitFor(() => expect(listCalls().length).toBeGreaterThan(1));
+    expect(
+      screen.getByRole('heading', { name: 'Second one' }),
+    ).toBeInTheDocument();
   });
 });

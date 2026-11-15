@@ -65,13 +65,29 @@ export const fromOf = (item: AdminFeedbackItem): string | null =>
       ? ROW.sentry
       : null;
 
-/** The device the reporter's widget named, or one read from its user agent. */
-const deviceOf = (item: AdminFeedbackItem): string | undefined => {
+/** What `deviceSummary` says of a user agent it can't read. */
+const UNREAD_AGENT = deviceSummary('');
+
+/**
+ * The device the reporter's widget named, or one read from its user agent;
+ * "Unknown device" when neither says (5d#14).
+ */
+export const deviceOf = (item: AdminFeedbackItem): string => {
   const named = metaString(item, 'device');
   if (named) return named;
   const agent = metaString(item, 'userAgent');
-  return agent ? deviceSummary(agent) : undefined;
+  const summary = agent ? deviceSummary(agent) : UNREAD_AGENT;
+  return summary === UNREAD_AGENT ? COPY.unknownDevice : summary;
 };
+
+/** Beside the Done pill: "by @hugh, Nov 3", or nothing with no resolver. */
+export const doneByOf = (item: AdminFeedbackItem): string | null =>
+  item.resolvedBy
+    ? COPY.doneBy(
+        item.resolvedBy,
+        item.resolvedAt ? shortDay(item.resolvedAt) : null,
+      )
+    : null;
 
 export type FieldKey = keyof typeof COPY.fields;
 
@@ -115,21 +131,34 @@ export const fieldsOf = (
     mono = false,
   ): Field[] => (value ? [{ key, value, ...(mono ? { mono } : {}) }] : []);
 
+  const device: Field = { key: 'device', value: deviceOf(item) };
+
   if (kind === 'venueSuggestion')
     return [...fromField, { ...page, key: 'sentFrom' }];
+  // `12/feedback-reopen-d`: a Done item leads with From, then Page and Device.
+  if (isDoneItem(item))
+    return [
+      ...fromField,
+      page,
+      device,
+      ...optional('doing', metaString(item, 'doing')),
+      ...optional('build', metaString(item, 'build')),
+      ...optional('errorId', metaString(item, 'digest'), true),
+      ...optional('sentryEvent', metaString(item, 'sentryEventId'), true),
+    ];
   if (kind === 'errorReport')
     return [
       page,
       ...optional('doing', metaString(item, 'doing')),
       ...optional('build', metaString(item, 'build')),
-      ...optional('device', deviceOf(item)),
+      device,
       ...optional('errorId', metaString(item, 'digest'), true),
       ...optional('sentryEvent', metaString(item, 'sentryEventId'), true),
       ...fromField,
     ];
   return [
     page,
-    ...optional('device', deviceOf(item)),
+    device,
     ...optional('build', metaString(item, 'build')),
     ...fromField,
   ];
