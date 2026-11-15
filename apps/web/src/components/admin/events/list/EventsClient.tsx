@@ -747,6 +747,8 @@ export const EventsClient = () => {
           await api.remove(row.id);
           await load();
         }}
+        // A merge deleted one of the two rows: reload so it is gone.
+        onMerged={load}
       />
       {footer(page)}
     </div>

@@ -13,7 +13,9 @@ export type Kind =
   | 'guide'
   | 'idea'
   | 'errorReport'
-  | 'venueSuggestion';
+  | 'venueSuggestion'
+  // `06/merge-duplicates`: the panel's kind label, cyan.
+  | 'merge';
 
 /** Accent per kind, from the Needs you boards. */
 const TONE: Record<Kind, string> = {
@@ -34,6 +36,7 @@ const TONE: Record<Kind, string> = {
   idea: 'var(--signal)',
   errorReport: 'var(--danger)',
   venueSuggestion: 'var(--accent)',
+  merge: 'var(--signal)',
 };
 
 /**

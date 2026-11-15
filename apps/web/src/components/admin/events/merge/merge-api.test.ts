@@ -90,3 +90,28 @@ describe('mergeApi.preview', () => {
     await expect(api.preview('a', 'b')).rejects.toThrow();
   });
 });
+
+describe('mergeApi.merge', () => {
+  it('posts the source in the path and the kept row as the silent target', async () => {
+    adminFetch.mockResolvedValue(reply(200, { success: true, data: {} }));
+    await expect(api.merge('e-source', 'e-kept')).resolves.toBe('merged');
+    const [url, init] = adminFetch.mock.calls[0] ?? [];
+    expect(url).toMatch(/\/v1\/admin\/events\/e-source\/merge$/);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({
+      targetId: 'e-kept',
+      notifyWatchers: false,
+    });
+  });
+
+  it('reads a refusal as refused', async () => {
+    adminFetch.mockResolvedValue(
+      reply(409, {
+        success: false,
+        error: 'not_mergeable',
+        reason: 'time_taken',
+      }),
+    );
+    await expect(api.merge('a', 'b')).resolves.toBe('refused');
+  });
+});

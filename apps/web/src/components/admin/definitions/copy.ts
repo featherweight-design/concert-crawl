@@ -4432,6 +4432,7 @@ export const ADMIN_COPY = {
     idea: 'IDEA',
     errorReport: 'ERROR REPORT',
     venueSuggestion: 'SUGGEST A VENUE',
+    merge: 'MERGE',
   },
   // The venue page's Hide, Take down and Delete confirms (`A3/03/hide-other-d`,
   // `A3/03/take-down-d`, `04/delete-venue`) and the delete-refused line
@@ -4618,7 +4619,6 @@ export const ADMIN_COPY = {
     // Admin 4b E4: the merge panel's pick list and compare cards.
     // `06/merge-duplicates` (desktop) and `gap-1-merge-duplicates/*` (phone).
     merge: {
-      kind: 'Merge',
       title: 'Merge duplicates',
       sub: 'Two listings for one show. Pick the one to keep; Watchers, prices and reports move to it.',
       phoneTitle: 'Merge with another listing',
@@ -4674,6 +4674,16 @@ export const ADMIN_COPY = {
       },
       confirm: (which: string) => `Merge into the ${which}`,
       cancel: 'Cancel',
+      merging: 'Merging…',
+      // `merge-failed`: snap-back; the merge is one transaction, so nothing moved.
+      failedTitle: 'Couldn’t merge',
+      failedBody:
+        'Both listings are as they were. Nothing moved, and nobody was told.',
+      // The compare step's own read failed or the pair can't be merged.
+      compareFailed: 'Couldn’t load the comparison.',
+      pastMismatch:
+        'One of these has already played and the other hasn’t, so they can’t be merged.',
+      searchFailed: 'Couldn’t search.',
     },
     show: {
       title: 'Show',

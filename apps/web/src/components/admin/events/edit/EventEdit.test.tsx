@@ -49,8 +49,10 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 const { ApiError } = await import('@/lib/api');
-vi.mock('../editor/MergeEventDialog', () => ({
-  MergeEventDialog: () => <div data-testid="merge-dialog" />,
+vi.mock('../merge/MergePanel', () => ({
+  MergePanel: ({ current }: { current: { id: string } }) => (
+    <div data-testid="merge-panel" data-current={current.id} />
+  ),
 }));
 
 import { EventEdit } from './EventEdit';
@@ -212,11 +214,14 @@ describe('EventEdit', () => {
     ).toBeNull();
   });
 
-  it('opens the merge dialog from the ⋯', () => {
+  it('opens the merge panel on this listing from the ⋯', () => {
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
     fireEvent.click(screen.getByTestId('event-edit-menu'));
     fireEvent.click(screen.getByTestId('event-edit-menu-merge'));
-    expect(screen.getByTestId('merge-dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('merge-panel')).toHaveAttribute(
+      'data-current',
+      DETAIL.id,
+    );
   });
 
   describe('Delete… (E5-b)', () => {
