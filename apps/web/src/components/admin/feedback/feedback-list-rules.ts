@@ -71,6 +71,14 @@ export const parseFeedbackList = (raw: unknown): AdminFeedbackItem[] | null => {
   return parsed.success ? parsed.data.data : null;
 };
 
+const oneSchema = z.object({ success: z.literal(true), data: itemSchema });
+
+/** `GET /v1/admin/feedback/:id`'s item, or null when the body isn't that shape. */
+export const parseFeedbackItem = (raw: unknown): AdminFeedbackItem | null => {
+  const parsed = oneSchema.safeParse(raw);
+  return parsed.success ? parsed.data.data : null;
+};
+
 /** `GET /v1/admin/feedback/counts`, or null when the body isn't that shape. */
 export const parseFeedbackCounts = (
   raw: unknown,

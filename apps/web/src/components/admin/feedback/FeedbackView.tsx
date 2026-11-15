@@ -27,6 +27,7 @@ import {
   PHONE_KIND_CHIPS,
   listPath,
   parseFeedbackCounts,
+  parseFeedbackItem,
   parseFeedbackList,
   type FeedbackChip,
 } from './feedback-list-rules';
@@ -200,9 +201,31 @@ export const FeedbackView = ({
     [authed],
   );
 
-  // An `?item=` no longer in this view (done elsewhere, another chip) opens
-  // nothing: there is no read of one item. A reopened item is held open
-  // after it leaves Done.
+  // An `?item=` not in this view (a Done item on To read, another chip) is
+  // read on its own, once per id, and held open. A 404 or a bad body opens
+  // nothing and clears the param; a result for an item no longer asked for
+  // is dropped.
+  const fetchedIds = useRef(new Set<string>());
+  const listHasOpen = loaded?.items.some((item) => item.id === openId) ?? false;
+  const heldId = held?.id ?? null;
+  useEffect(() => {
+    if (!openId || !loaded || pending || listHasOpen || heldId === openId) {
+      return;
+    }
+    if (fetchedIds.current.has(openId)) return;
+    fetchedIds.current.add(openId);
+    const id = openId;
+    void readJson(`/v1/admin/feedback/${encodeURIComponent(id)}`)
+      .then(parseFeedbackItem)
+      .catch(() => null)
+      .then((found) => {
+        if (!mounted.current || openIdRef.current !== id) return;
+        if (found) setHeld(found);
+        else router.replace(LIST_HREF, { scroll: false });
+      });
+  }, [openId, loaded, pending, listHasOpen, heldId, readJson, router]);
+
+  // A reopened item is held open after it leaves Done.
   const openItem =
     (held && held.id === openId ? held : null) ??
     loaded?.items.find((item) => item.id === openId) ??
@@ -221,7 +244,16 @@ export const FeedbackView = ({
     if (readFor.current === openKey) return;
     readFor.current = openKey;
     if (!openUnread) return;
-    void patch(openKey, { status: 'read' })
+    const key = openKey;
+    void patch(key, { status: 'read' })
+      .then(() => {
+        if (!mounted.current) return;
+        setHeld((prev) =>
+          prev?.id === key && prev.status === 'unread'
+            ? { ...prev, status: 'read' }
+            : prev,
+        );
+      })
       .catch(() => undefined)
       .finally(() => {
         if (mounted.current) void loadRef.current(true);
