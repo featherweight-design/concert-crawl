@@ -631,7 +631,8 @@ export const SubmittedTab = ({
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
+      // `43/approve-m` draws 6 between glyph and word.
+      gap: 6,
       fontFamily: 'inherit',
       fontWeight: 600,
       cursor: approving ? 'not-allowed' : 'pointer',
@@ -1103,6 +1104,8 @@ export const SubmittedTab = ({
                         label={COPY.menu.label}
                         items={menuItems(row)}
                         width={300}
+                        // `43/approve-menu-d` draws the ⋯ at stroke 1.5.
+                        iconStrokeWidth={1.5}
                         // Mid-request the row can't be acted on.
                         disabled={rowStatus[row.id] === 'approving'}
                         onOpenChange={(open) =>
@@ -1174,7 +1177,17 @@ export const SubmittedTab = ({
           from the scrim (no Cancel drawn). */}
       {sheetRow && (
         <AdminSheet
-          title={COPY.menu.sheetTitle(
+          // `43/approve-sheet-m` draws the title at 17, a size under the
+          // sheet's own 18.
+          title={
+            <span style={{ fontSize: 17 }}>
+              {COPY.menu.sheetTitle(
+                showName(sheetRow),
+                priceRange(sheetRow.priceMin, sheetRow.priceMax),
+              )}
+            </span>
+          }
+          label={COPY.menu.sheetTitle(
             showName(sheetRow),
             priceRange(sheetRow.priceMin, sheetRow.priceMax),
           )}

@@ -1,0 +1,291 @@
+{
+  "feature": "Admin 43-B · Approve one waiting submitted price",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/43-approve-one/approve-menu-d, approve-sheet-m, approve-m, approve-done-d, approve-failed-d. CONTACT_SHEET_ROLE=admin. The list, counts and approve calls are answered by route fixtures (the board's shows), so no price is published on the shared scratch branch. approve-busy-d (the spinner mid-request) is covered by SubmittedTab.test.tsx: a fixture answers at once. The menu, done and failed rows press the desktop menu, and the sheet row is phone-only, so each times out at the other widths by design (the phone's done and failed toasts are the same ToastDock, pinned by tests). By hand on staging: a real approve, and a 409 refusal.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "approve-list",
+      "label": "Submitted prices: a waiting row (Waiting for you), a Pending row, a published row; the phone's Approve button",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 3, "waiting": 1, "published": 1, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 3,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 2,
+                  "state": "waiting",
+                  "forYou": true
+                },
+                {
+                  "id": "fx-2",
+                  "eventId": "fx-e2",
+                  "eventTitle": "Marian Hill",
+                  "eventDate": "2027-02-10",
+                  "venueName": "Bluebird Theater",
+                  "ticketUrl": null,
+                  "priceMin": "44.00",
+                  "priceMax": null,
+                  "handle": "annab",
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": false
+                },
+                {
+                  "id": "fx-3",
+                  "eventId": "fx-e3",
+                  "eventTitle": "Japanese Breakfast",
+                  "eventDate": "2026-12-12",
+                  "venueName": "Ogden Theatre",
+                  "ticketUrl": "https://www.axs.com/events/3",
+                  "priceMin": "39.50",
+                  "priceMax": "55.00",
+                  "handle": null,
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 3,
+                  "state": "published",
+                  "forYou": false
+                }
+              ]
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "approve-menu",
+      "label": "Row menu open on a waiting row, Approve first (desktop only)",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 1, "waiting": 1, "published": 0, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 1,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]",
+          "settle": 1000
+        },
+        { "click": "[aria-label=\"Price actions\"]:visible >> nth=0" },
+        { "wait": "[role=\"menu\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "approve-sheet",
+      "label": "Phone ⋯ sheet: show · price title, Approve first (phone only)",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 1, "waiting": 1, "published": 0, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 1,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[data-testid=\"approve-button\"]",
+          "settle": 1000
+        },
+        { "click": "[aria-label=\"Price actions\"]:visible >> nth=0" },
+        { "wait": "[role=\"dialog\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "approve-done",
+      "label": "Approved: the row reads Published by you, the toast says what went live (desktop menu; the phone's Approve button)",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 1, "waiting": 1, "published": 0, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 1,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions/*/approve",
+          "body": { "success": true, "data": { "id": "fx-1" } }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]",
+          "settle": 1000
+        },
+        {
+          "click": "[aria-label=\"Price actions\"]:visible >> nth=0",
+          "settle": 400
+        },
+        { "clickRole": "menuitem", "name": "^Approve", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "approve-failed",
+      "label": "Approve failed (500): the failed toast with Try again, the row still waiting",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 1, "waiting": 1, "published": 0, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 1,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions/*/approve",
+          "status": 500,
+          "body": { "success": false, "error": "boom" }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]",
+          "settle": 1000
+        },
+        {
+          "click": "[aria-label=\"Price actions\"]:visible >> nth=0",
+          "settle": 400
+        },
+        { "clickRole": "menuitem", "name": "^Approve", "settle": 1500 }
+      ]
+    }
+  ]
+}
