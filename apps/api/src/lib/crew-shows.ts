@@ -66,6 +66,8 @@ const selectAttendanceRows = async (
       eventId: events.id,
       iso: events.date,
       showTime: events.showTime,
+      doorsTime: events.doorsTime,
+      eventStatus: events.status,
       title: events.title,
       artist: displayHeadliner(),
       imageUrl: events.imageUrl,
@@ -142,6 +144,9 @@ export const loadCrewShows = async (
       eventId: row.eventId,
       iso: row.iso,
       showTime: row.showTime ?? null,
+      doorsTime: row.doorsTime ?? null,
+      // The query drops cancelled shows, so only these two reach here.
+      status: row.eventStatus === 'postponed' ? 'postponed' : 'upcoming',
       title: row.title,
       artist: row.artist,
       imageUrl: row.imageUrl,

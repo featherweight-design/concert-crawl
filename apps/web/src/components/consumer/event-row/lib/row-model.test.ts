@@ -333,6 +333,8 @@ describe('fromCrewShow', () => {
     eventId: 'evt-1',
     iso: '2026-08-15',
     showTime: '20:00:00',
+    doorsTime: null,
+    status: 'upcoming',
     title: 'Test Artist at Test Ballroom',
     artist: 'Test Artist',
     imageUrl: null,
