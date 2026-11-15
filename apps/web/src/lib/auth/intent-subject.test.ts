@@ -19,8 +19,8 @@ beforeEach(() => {
 });
 
 describe('showEyebrow', () => {
-  it('reads "Fri, Nov 14 · Marquis" from a calendar day, in no time zone', () => {
-    expect(showEyebrow('2026-11-14', 'Marquis')).toBe('Fri, Nov 14 · Marquis');
+  it('reads "Sat, Nov 14 · Marquis" from a calendar day, in no time zone', () => {
+    expect(showEyebrow('2026-11-14', 'Marquis')).toBe('Sat, Nov 14 · Marquis');
   });
 
   it('falls back to the venue for a date it cannot read', () => {
@@ -34,7 +34,7 @@ describe('loadIntentSubject', () => {
     expect(await loadIntentSubject(watch())).toEqual({
       kind: 'show',
       title: 'Static Dress',
-      eyebrow: 'Fri, Nov 14 · Marquis',
+      eyebrow: 'Sat, Nov 14 · Marquis',
     });
     expect(mocks.get).toHaveBeenCalledWith(
       `/v1/events/${ID}`,
