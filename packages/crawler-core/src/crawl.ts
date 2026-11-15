@@ -1160,7 +1160,9 @@ export async function crawlVenue(
             consecutiveFailures: 0,
             robotsTxtAllowed: true,
             robotsTxtCheckedAt: new Date(),
-            ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
+            ...(venue.crawlMode === null
+              ? { crawlMode: resolvedMode, crawlModeSource: 'auto' as const }
+              : {}),
             updatedAt: new Date(),
           })
           .where(eq(venues.id, venueId));
@@ -2393,7 +2395,7 @@ export async function crawlVenue(
         // 'browser' — losing the auto-detect behavior if the operator
         // later clears venue.platform to revert to the LLM cascade.
         ...(!platformFetcher && venue.crawlMode === null
-          ? { crawlMode: resolvedMode }
+          ? { crawlMode: resolvedMode, crawlModeSource: 'auto' as const }
           : {}),
         updatedAt: new Date(),
       })

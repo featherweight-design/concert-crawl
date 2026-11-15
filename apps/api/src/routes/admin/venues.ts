@@ -16,6 +16,7 @@ import {
   auditLog,
   notifications,
   venueFaultAcknowledgements,
+  type NewVenue,
 } from '@concert-crawl/db';
 import {
   recordLlmCost,
@@ -1163,6 +1164,16 @@ venuesAdminRouter.patch(
         ? { contact: { before: contactBefore, after: contactAfter } }
         : {};
 
+    // Who set the crawl mode. A mode sent by an admin is forced ('admin');
+    // clearing it hands the pick back to the crawler, so the source is unknown
+    // until the crawler records 'auto'. A PATCH without crawlMode leaves it.
+    const crawlModeSourceFields: Pick<
+      Partial<NewVenue>,
+      'crawlModeSource'
+    > = body.crawlMode === undefined
+      ? {}
+      : { crawlModeSource: body.crawlMode === null ? null : 'admin' };
+
     // One transaction, the guarded venue write first: nothing else is written
     // unless it lands, so a refusal never leaves the flagship cleared.
     const updated = await db.transaction(async (tx) => {
@@ -1176,6 +1187,7 @@ venuesAdminRouter.patch(
           // removed_at is never cleared here: a removed venue is refused above,
           // and nothing in an ordinary edit undoes a removal.
           ...hiddenFields,
+          ...crawlModeSourceFields,
           updatedAt: new Date(),
         })
         .where(

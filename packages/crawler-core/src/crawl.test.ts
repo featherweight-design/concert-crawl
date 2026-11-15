@@ -2377,6 +2377,42 @@ describe('crawlVenue — crawlMode orchestration', () => {
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
     expect(savedVenue?.crawlMode).toBe('http');
+    // The crawler's own pick is recorded as 'auto', never as an admin force.
+    expect(savedVenue?.crawlModeSource).toBe('auto');
+  });
+
+  it('auto-detect: records crawlModeSource=auto on the page-unchanged skip path', async () => {
+    const venue = seedVenue({ crawlMode: 'browser' });
+    mockFetchPage.mockResolvedValue(FETCH_RESULT);
+    await crawlVenue(venue.id, mockBrowser); // stores the page hash
+
+    // The mode is cleared (an admin handed the pick back to the crawler) and
+    // the page has not changed, so the skip path makes the first auto pick.
+    const stored = stores.venues.find((vv) => vv.id === venue.id);
+    if (!stored) throw new Error('seeded venue missing');
+    Object.assign(stored, { crawlMode: null, crawlModeSource: null });
+    mockFetchPageHttp.mockRejectedValueOnce(new Error('network error'));
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.reason).toBe('page_unchanged');
+    expect(stored.crawlMode).toBe('browser');
+    expect(stored.crawlModeSource).toBe('auto');
+  });
+
+  it('leaves an admin-set crawl mode and its source alone', async () => {
+    const venue = seedVenue({ crawlMode: 'http', crawlModeSource: 'admin' });
+    mockFetchPageHttp.mockResolvedValueOnce({
+      html: HTML_WITH_JSON_LD,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+
+    await crawlVenue(venue.id, mockBrowser);
+
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
+    expect(savedVenue?.crawlMode).toBe('http');
+    expect(savedVenue?.crawlModeSource).toBe('admin');
   });
 
   it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP has no JSON-LD', async () => {
@@ -2402,6 +2438,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
     expect(savedVenue?.crawlMode).toBe('browser');
+    expect(savedVenue?.crawlModeSource).toBe('auto');
   });
 
   it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP fetch throws', async () => {
