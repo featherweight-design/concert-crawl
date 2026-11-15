@@ -830,6 +830,7 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
       note: 'Ticketmaster page shows $45 GA with fees.',
       decidedBy: 'hugh',
       decidedByAvatar: { color: 'signal', secondColor: 'accent' },
+      snapshot: true,
       parent: {
         id: listed.id,
         priceMin: '65.00',
@@ -850,7 +851,66 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
     });
   });
 
-  it('reads older entries as unknown, never from live rows, and skips malformed ids', async () => {
+  it("derives Told from today's rows for an entry from before the snapshot, telling one fan once", async () => {
+    setAdminAuth();
+    const venue = await seedVenue({ name: 'Live Hall', slug: 'live-hall' });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-05',
+      title: 'Live Show',
+      artist: 'Live Artist',
+    });
+    await seedUserProfile('user_a', { handle: 'fan.a' });
+    const listedA = await seedPriceSubmission(event.id, 'user_a', {
+      status: 'corroborated',
+      corroborationCount: 3,
+    });
+    const checkB = await seedPriceSubmission(event.id, 'user_b', {
+      priceMin: '50.00',
+      status: 'archived',
+      note: 'b note',
+    });
+    const sameFan = await seedPriceSubmission(event.id, 'user_a', {
+      priceMin: '60.00',
+      status: 'archived',
+    });
+    const oldEntry = (challengerId: string, createdAt: string) =>
+      testDb.insert(auditLog).values({
+        actorId: 'admin_contest_test',
+        action: 'contest.resolve',
+        targetId: listedA.id,
+        createdAt: new Date(createdAt),
+        metadata: {
+          resolution: 'parent_wins',
+          parentId: listedA.id,
+          challengerId,
+          eventId: event.id,
+          parentAfter: { status: 'corroborated', priceMin: '35.00' },
+          challengerAfter: { status: 'archived', priceMin: '50.00' },
+        },
+      });
+    await oldEntry(checkB.id, '2026-11-10T12:00:00Z');
+    await oldEntry(sameFan.id, '2026-11-09T12:00:00Z');
+
+    const res = await app.request('/v1/admin/contests/prices/resolved', {
+      headers: ADMIN_HEADERS,
+    });
+    const body = (await res.json()) as {
+      data: { items: Array<Record<string, unknown>> };
+    };
+    expect(body.data.items[0]).toMatchObject({
+      snapshot: false,
+      told: ['parent', 'challenger'],
+      parent: { submittedBy: 'fan.a', corroborationCount: 3 },
+      challenger: { note: 'b note' },
+    });
+    // The same fan on both sides is told once.
+    expect(body.data.items[1]).toMatchObject({
+      snapshot: false,
+      told: ['parent'],
+    });
+  });
+
+  it('reads older entries from live rows, flagged, and skips malformed ids', async () => {
     setAdminAuth();
     const venue = await seedVenue({ name: 'Old Hall', slug: 'old-hall' });
     const event = await seedEvent(venue.id, {
@@ -895,7 +955,10 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
     const body = (await res.json()) as {
       data: { items: Array<Record<string, unknown>> };
     };
+    // Before the snapshot: confirms and note from today's row, flagged, and
+    // Told unknown because the challenger's row can't be found.
     expect(body.data.items[0]).toMatchObject({
+      snapshot: false,
       told: null,
       note: null,
       eventTitle: null,
@@ -905,8 +968,8 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
         id: listed.id,
         priceMin: '35.00',
         priceMax: null,
-        corroborationCount: null,
-        note: null,
+        corroborationCount: 4,
+        note: 'live note',
       },
       challenger: { id: 'legacy-not-a-uuid', submittedBy: null },
     });
@@ -1543,6 +1606,7 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       note: 'AXS shows the new price after the openers.',
       decidedBy: 'hugh',
       decidedByAvatar: { color: 'signal', secondColor: null },
+      snapshot: true,
       told: ['parent', 'challenger'],
       parent: {
         id: parent.id,

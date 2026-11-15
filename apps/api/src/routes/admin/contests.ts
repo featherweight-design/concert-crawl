@@ -24,7 +24,10 @@ import {
   venues,
 } from '@concert-crawl/db';
 import { getAuthUser } from '../../middleware/auth.js';
-import { writeContestNotifications } from '../../lib/contest-notifications.js';
+import {
+  writeContestNotifications,
+  type ContestRole,
+} from '../../lib/contest-notifications.js';
 import { narrowLastAdminAction } from '../../lib/last-admin-action.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
@@ -329,8 +332,8 @@ const resolvedListQuerySchema = z.object({
 });
 
 // A side as the resolve recorded it. Entries written before a field joined
-// the audit lack it (`priceMax`, then `corroborationCount`, `note` and `told`),
-// and it reads as null there rather than from today's rows.
+// the audit lack it (`priceMax`, then `corroborationCount`, `note` and `told`);
+// the list reads those from today's rows and says so (`snapshot: false`).
 const auditSideSchema = z.object({
   priceMin: z.string().nullable(),
   priceMax: z.string().nullable().optional(),
@@ -421,13 +424,13 @@ contestsAdminRouter.get(
             .select({
               id: priceSubmissions.id,
               userId: priceSubmissions.userId,
+              corroborationCount: priceSubmissions.corroborationCount,
+              note: priceSubmissions.note,
             })
             .from(priceSubmissions)
             .where(inArray(priceSubmissions.id, submissionIds)),
     ]);
-    const submitterBySubmission = new Map(
-      submissionRows.map((sub) => [sub.id, sub.userId]),
-    );
+    const submissionById = new Map(submissionRows.map((sub) => [sub.id, sub]));
 
     const profileIds = [
       ...new Set([
@@ -451,23 +454,54 @@ contestsAdminRouter.get(
       profileRows.map((profile) => [profile.userId, profile]),
     );
 
-    /** One side as the resolve recorded it, plus who filed it. */
+    /**
+     * One side as the resolve recorded it, plus who filed it. An entry from
+     * before the snapshot (`snapshot` false) takes confirms and note from
+     * today's row, best-effort, so the older history isn't blanked.
+     */
     const sideOf = (
       id: string | undefined,
       after: z.infer<typeof auditSideSchema> | undefined,
+      snapshot: boolean,
     ) => {
       if (id === undefined && after === undefined) return null;
-      const userId = id === undefined ? null : submitterBySubmission.get(id);
+      const sub = id === undefined ? undefined : submissionById.get(id);
       return {
         id: id ?? null,
         priceMin: after?.priceMin ?? null,
         priceMax: after?.priceMax ?? null,
-        submittedBy: userId
-          ? (profileByUser.get(userId)?.handle ?? null)
+        submittedBy: sub?.userId
+          ? (profileByUser.get(sub.userId)?.handle ?? null)
           : null,
-        corroborationCount: after?.corroborationCount ?? null,
-        note: after?.note ?? null,
+        corroborationCount: snapshot
+          ? (after?.corroborationCount ?? null)
+          : (sub?.corroborationCount ?? null),
+        note: snapshot ? (after?.note ?? null) : (sub?.note ?? null),
       };
+    };
+
+    /**
+     * Told for an entry from before the snapshot: the fan-out's own rule
+     * (`writeContestNotifications`: each submitter once) over today's rows.
+     * Unknown when either side's row is gone.
+     */
+    const liveTold = (
+      parentId: string | undefined,
+      challengerId: string | undefined,
+    ): ContestRole[] | null => {
+      const parentSub = parentId ? submissionById.get(parentId) : undefined;
+      const challengerSub = challengerId
+        ? submissionById.get(challengerId)
+        : undefined;
+      if (!parentSub || !challengerSub) return null;
+      const told: ContestRole[] = [];
+      if (parentSub.userId !== null) told.push('parent');
+      if (
+        challengerSub.userId !== null &&
+        challengerSub.userId !== parentSub.userId
+      )
+        told.push('challenger');
+      return told;
     };
 
     const resolved = parsed.flatMap(({ row, meta }) => {
@@ -488,6 +522,9 @@ contestsAdminRouter.get(
       const used = resolution === 'challenger_wins';
       const price = (used ? challengerAfter : parentAfter)?.priceMin ?? null;
       const decider = profileByUser.get(row.actorId);
+      // `told` joined the audit with the confirms and note, so it marks an
+      // entry that recorded all three.
+      const snapshot = told !== undefined;
       return [
         {
           id: row.id,
@@ -511,11 +548,13 @@ contestsAdminRouter.get(
           ticketUrl: event?.ticketUrl ?? null,
           // The admin's reason for the answer, as the resolve recorded it.
           note: reason ?? null,
-          parent: sideOf(parentId, parentAfter),
-          challenger: sideOf(challengerId, challengerAfter),
-          // Whose notifications the resolve wrote; null on entries from
-          // before it was recorded.
-          told: told ?? null,
+          parent: sideOf(parentId, parentAfter, snapshot),
+          challenger: sideOf(challengerId, challengerAfter, snapshot),
+          // Whose notifications the resolve wrote, or on an older entry who
+          // the fan-out rule would have told, read from today's rows.
+          told: told ?? liveTold(parentId, challengerId),
+          // False when confirms, notes and Told are today's best guess.
+          snapshot,
         },
       ];
     });
