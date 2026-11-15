@@ -376,8 +376,9 @@ export const CREWS_COPY = {
     // The patch itself is decorative; the row's accessible name is the crew.
     memberNoHandle: 'Crew member without a handle',
     // Appended to the button's own label, so it must not restate it:
-    // the accessible name reads "Start a crew, paid feature".
-    gatedCreate: 'paid feature',
+    // the accessible name reads "Start a crew, locked". It names the state,
+    // never a price: nothing here is paid.
+    gatedCreate: 'locked',
     // Names the landing's main region: the page has no app chrome, so nothing
     // else places a screen-reader user on it.
     inviteLanding: 'Crew invite',
