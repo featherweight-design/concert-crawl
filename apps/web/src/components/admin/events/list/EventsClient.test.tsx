@@ -525,4 +525,59 @@ describe('EventsClient on the phone (36/past-m)', () => {
     );
     expect(lastHref()).toBe('/admin/events');
   });
+
+  it('opens Add a show from the chip row (4b#23), full screen', async () => {
+    render(<EventsClient />);
+    await screen.findByTestId('venue-filter-chip');
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.addShow.open }),
+    );
+    expect(screen.getByTestId('add-show-mock')).toHaveAttribute(
+      'data-phone',
+      'true',
+    );
+  });
+
+  it('still opens Add a show when the first load fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    list.mockRejectedValue(new Error('down'));
+    try {
+      render(<EventsClient />);
+      fireEvent.click(
+        await screen.findByRole('button', { name: ADMIN_COPY.addShow.open }),
+      );
+      expect(screen.getByTestId('add-show-mock')).toHaveAttribute(
+        'data-phone',
+        'true',
+      );
+    } finally {
+      list.mockImplementation(async () => page);
+      vi.mocked(console.error).mockRestore();
+    }
+  });
 });
+
+describe('EventsClient Add a show (06/events)', () => {
+  it('opens the panel from the header button and closes it again', async () => {
+    render(<EventsClient />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: ADMIN_COPY.addShow.open }),
+    );
+    expect(screen.getByTestId('add-show-mock')).toHaveAttribute(
+      'data-phone',
+      'false',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'close add show' }));
+    expect(screen.queryByTestId('add-show-mock')).toBeNull();
+  });
+});
+
+vi.mock('../add/AddShow', () => ({
+  AddShow: ({ phone, onClose }: { phone: boolean; onClose: () => void }) => (
+    <div data-testid="add-show-mock" data-phone={String(phone)}>
+      <button type="button" onClick={onClose}>
+        close add show
+      </button>
+    </div>
+  ),
+}));

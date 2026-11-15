@@ -15,6 +15,7 @@ import {
 import { StatusChip } from '@/components/consumer/StatusChip';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { LoadMoreFooter, type LoadMoreState } from '../../crawl-runs/RunsList';
+import { AddShow } from '../add/AddShow';
 import {
   eventsListApi,
   type EventListCounts,
@@ -47,6 +48,7 @@ import {
 } from './FilterPicker';
 
 const COPY = ADMIN_COPY.eventsList;
+const ADD_COPY = ADMIN_COPY.addShow;
 const RUNS_COPY = ADMIN_COPY.venueRuns;
 
 /** `A3/09/load-more`: "Showing 25 of N", Load 25 more. */
@@ -67,7 +69,7 @@ interface Loaded {
  * filters of `06/venue-filter` and `06/status-filter`; Past's filters and
  * footer from addendum 6 `36/past-d`, `36/past-status-menu-d`, `36/past-m`). Every filter lives in
  * the URL, so a filtered list can be linked and reloaded; the rows load in
- * the browser with the admin's token. Add a show lands in 4b-3.
+ * the browser with the admin's token. Add a show (4b-3) opens over it.
  */
 export const EventsClient = () => {
   const { getToken } = useAuth();
@@ -93,6 +95,7 @@ export const EventsClient = () => {
   const [failed, setFailed] = useState(false);
   const [loadState, setLoadState] = useState<LoadMoreState>('idle');
   const [text, setText] = useState(filters.query);
+  const [adding, setAdding] = useState(false);
   // The search this page last put in the URL. Only a URL search that differs
   // from it (Back, a link) rewrites the box, so typing during a pending
   // navigation is never dropped.
@@ -219,40 +222,83 @@ export const EventsClient = () => {
   // so a picker's Show N waits for the new ones.
   const countsStale = pending && loaded !== null && loaded.key !== filtersKey;
 
+  // `06/events`: Add a show, a secondary button at the title row's end.
+  const addShowButton = !isPhone && (
+    <AdminButton
+      type="button"
+      variant="outline"
+      onClick={() => setAdding(true)}
+      style={{ height: 36, flex: 'none' }}
+    >
+      {ADD_COPY.open}
+    </AdminButton>
+  );
+
   const header = (
-    <header style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {!isPhone && (
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 28,
-            fontWeight: 800,
-            letterSpacing: '-0.02em',
-            color: 'var(--fg)',
-          }}
-        >
-          {COPY.title}
-        </h1>
-      )}
-      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--fg-muted)' }}>
-        {past
-          ? isPhone
-            ? COPY.pastPhoneSubtitle
-            : COPY.pastSubtitle
-          : counts === undefined
-            ? null
-            : isPhone
-              ? COPY.phoneSubtitle(counts.all)
-              : COPY.subtitle(counts.all)}
-      </p>
-    </header>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+      <header
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        {!isPhone && (
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 28,
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
+              color: 'var(--fg)',
+            }}
+          >
+            {COPY.title}
+          </h1>
+        )}
+        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--fg-muted)' }}>
+          {past
+            ? isPhone
+              ? COPY.pastPhoneSubtitle
+              : COPY.pastSubtitle
+            : counts === undefined
+              ? null
+              : isPhone
+                ? COPY.phoneSubtitle(counts.all)
+                : COPY.subtitle(counts.all)}
+        </p>
+      </header>
+      {addShowButton}
+    </div>
+  );
+
+  // Rendered only while open, so closing drops the draft.
+  const addShow = adding && (
+    <AddShow phone={isPhone} onClose={() => setAdding(false)} />
+  );
+
+  // 4b#23: the phone's Add a show joins the chip row.
+  const addShowChip = isPhone && (
+    <button
+      type="button"
+      style={chipStyle(false)}
+      onClick={() => setAdding(true)}
+    >
+      {ADD_COPY.open}
+    </button>
   );
 
   if (failed && loaded === null) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {header}
+        {/* The phone has no header button, so the chip stands alone here:
+            adding a show doesn't need the list. */}
+        {addShowChip && <div style={{ display: 'flex' }}>{addShowChip}</div>}
         <CouldntLoad page={COPY.title} onRetry={() => void load()} />
+        {addShow}
       </div>
     );
   }
@@ -526,6 +572,7 @@ export const EventsClient = () => {
                 filterChips.venue,
                 filterChips.status,
               ])}
+        {addShowChip}
       </div>
     </div>
   ) : (
@@ -711,6 +758,7 @@ export const EventsClient = () => {
       ) : (
         content
       )}
+      {addShow}
     </div>
   );
 };
