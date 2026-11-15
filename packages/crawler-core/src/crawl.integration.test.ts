@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { and, eq, sql } from 'drizzle-orm';
 import type { Browser } from 'playwright';
-import { db, events, venues, crawlRunPages, auditLog } from '@concert-crawl/db';
+import {
+  db,
+  events,
+  venues,
+  crawlRuns,
+  crawlRunPages,
+  auditLog,
+} from '@concert-crawl/db';
 import { crawlVenue } from './crawl.js';
 
 // Mock just the IO layer — fetcher, robots, LLM. Real Postgres handles the
@@ -1920,6 +1927,85 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       const notes = await crawlFailedNotices();
       expect(notes.length).toBe(1);
       expect(notes[0]?.title).toBe(`Crawl blocked: ${venue.name}`);
+      // It replaces the three-strikes notice, so it carries the count.
+      expect(notes[0]?.body).toBe(
+        `${venue.name} answered with HTTP 403; crawling is blocked after 3 failures in a row`,
+      );
+    });
+
+    it('still sends the three-strikes notice when an already-blocked venue fails a 3rd time', async () => {
+      // Pins `!newlyBlocked`, not `!isBlocked`: only the run that first
+      // blocks stands in for crawl.failed; a venue still blocked re-alerts.
+      const venue = await seedVenueWithCount(2);
+      await db
+        .update(venues)
+        .set({ blockedAt: new Date() })
+        .where(eq(venues.id, venue.id));
+      const { CrawlFetchError } = await import('./lib/fetcher.js');
+      mockFetchPage.mockRejectedValue(new CrawlFetchError(403, 'Forbidden'));
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      const notes = await crawlFailedNotices();
+      expect(notes.length).toBe(1);
+      expect(notes[0]?.title).toBe(`Crawl failing: ${venue.name}`);
+    });
+
+    it('names VenuePilot, not the venue, when the VenuePilot API answers 429', async () => {
+      const venue = await seedVenueWithCount(0);
+      const { VenuePilotFetchError } =
+        await import('./lib/fetchers/venuepilot.js');
+      mockFetchPage.mockRejectedValue(
+        new VenuePilotFetchError(
+          429,
+          'https://www.venuepilot.co/graphql',
+          'HTTP 429',
+        ),
+      );
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      const [row] = await db
+        .select({ blockedAt: venues.blockedAt })
+        .from(venues)
+        .where(eq(venues.id, venue.id));
+      expect(row?.blockedAt).toBeInstanceOf(Date);
+      const notes = await crawlFailedNotices();
+      expect(notes.length).toBe(1);
+      expect(notes[0]?.body).toBe(
+        `VenuePilot answered with HTTP 429 for ${venue.name}; crawling is blocked`,
+      );
+    });
+
+    it('keeps the run row and the audit when the block notice fails to insert', async () => {
+      const venue = await seedVenueWithCount(0);
+      const { CrawlFetchError } = await import('./lib/fetcher.js');
+      mockFetchPage.mockRejectedValue(new CrawlFetchError(403, 'Forbidden'));
+      const { notifications } = await import('@concert-crawl/db');
+      const realInsert = db.insert.bind(db);
+      const insertSpy = vi.spyOn(db, 'insert').mockImplementation((table) => {
+        if (table === notifications) throw new Error('notice insert failed');
+        return realInsert(table);
+      });
+
+      try {
+        const result = await crawlVenue(venue.id, mockBrowser);
+        expect(result.status).toBe('failed');
+      } finally {
+        insertSpy.mockRestore();
+      }
+
+      const runs = await db
+        .select({ status: crawlRuns.status, reason: crawlRuns.reason })
+        .from(crawlRuns)
+        .where(eq(crawlRuns.venueId, venue.id));
+      expect(runs).toEqual([{ status: 'failed', reason: 'blocked_http' }]);
+      const audits = await db
+        .select({ action: auditLog.action })
+        .from(auditLog)
+        .where(eq(auditLog.targetId, venue.id));
+      expect(audits).toEqual([{ action: 'venue.crawl_blocked' }]);
+      expect(await crawlFailedNotices()).toEqual([]);
     });
 
     it('sends no notice for a plain 500 at the 1st failure', async () => {
