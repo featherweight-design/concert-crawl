@@ -3,9 +3,11 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   headerLine,
   recrawlOff,
+  recrawlProgress,
   runningSince,
   viewOnSiteHref,
   type HeaderVenue,
+  type RecrawlProgress,
 } from './venue-header-rules';
 
 const COPY = ADMIN_COPY.venueHeader;
@@ -111,17 +113,60 @@ describe('recrawlOff — taken down', () => {
 describe('a running re-crawl', () => {
   // 3:41 PM in Denver on Nov 12.
   const STARTED = '2026-11-12T22:41:00.000Z';
+  // A later progress write, which moves `updatedAt` on.
+  const PROGRESSED = '2026-11-12T22:44:00.000Z';
 
-  it('reads when it started, in Mountain Time, on desktop', () => {
-    expect(headerLine(venue(), false, STARTED)).toBe('Started 3:41 PM');
+  const running = (over: Partial<RecrawlProgress> = {}) => ({
+    state: 'running' as const,
+    progress: {
+      startedAt: STARTED,
+      pagesDone: 2,
+      pagesTotal: 4,
+      runningAhead: false,
+      waitMs: null,
+      ...over,
+    },
+  });
+
+  it('reads the page and when it started, as the board draws it', () => {
+    expect(headerLine(venue(), false, running())).toBe(
+      'Page 2 of 4 · started 3:41 PM',
+    );
+  });
+
+  it('reads the start alone until the page count is known', () => {
+    expect(headerLine(venue(), false, running({ pagesTotal: null }))).toBe(
+      'Started 3:41 PM',
+    );
+    expect(
+      headerLine(venue(), false, running({ pagesDone: null, pagesTotal: 0 })),
+    ).toBe('Started 3:41 PM');
+  });
+
+  it('never reads a page past the total', () => {
+    expect(headerLine(venue(), false, running({ pagesDone: 5 }))).toBe(
+      'Page 4 of 4 · started 3:41 PM',
+    );
+    expect(headerLine(venue(), false, running({ pagesDone: null }))).toBe(
+      'Page 0 of 4 · started 3:41 PM',
+    );
+  });
+
+  it('keeps the venue’s line until a start time is read', () => {
+    expect(headerLine(venue(), false, running({ startedAt: null }))).toBe(
+      `RiNo · ${COPY.upcoming(1)}`,
+    );
+    expect(
+      headerLine(venue(), false, { state: 'running', progress: null }),
+    ).toBe(`RiNo · ${COPY.upcoming(1)}`);
   });
 
   it('adds nothing to the phone line, where it isn’t drawn', () => {
-    expect(headerLine(venue(), true, STARTED)).toBe('');
+    expect(headerLine(venue(), true, running())).toBe('');
   });
 
   it('still says why Re-crawl is off first', () => {
-    expect(headerLine(venue({ verified: false }), false, STARTED)).toBe(
+    expect(headerLine(venue({ verified: false }), false, running())).toBe(
       COPY.recrawlOff.unverified,
     );
   });
@@ -134,6 +179,133 @@ describe('a running re-crawl', () => {
     expect(
       runningSince({ status: 'processing', updatedAt: 'soon' }),
     ).toBeNull();
+  });
+
+  it('prefers the claim’s `startedAt` over a later `updatedAt`', () => {
+    expect(
+      runningSince({
+        status: 'processing',
+        startedAt: STARTED,
+        updatedAt: PROGRESSED,
+      }),
+    ).toBe(STARTED);
+    // A row from before migration 0121 has no `startedAt`.
+    expect(
+      runningSince({
+        status: 'processing',
+        startedAt: null,
+        updatedAt: PROGRESSED,
+      }),
+    ).toBe(PROGRESSED);
+  });
+});
+
+describe('a queued re-crawl', () => {
+  const queued = (over: Partial<RecrawlProgress> = {}) => ({
+    state: 'queued' as const,
+    progress: {
+      startedAt: null,
+      pagesDone: null,
+      pagesTotal: null,
+      runningAhead: true,
+      waitMs: 2 * 60_000,
+      ...over,
+    },
+  });
+
+  it('reads the run ahead and about how long, as the board draws it', () => {
+    expect(headerLine(venue(), false, queued())).toBe(
+      'Starts after the run in progress · about 2 min',
+    );
+  });
+
+  it('rounds the wait to whole minutes, never under one', () => {
+    expect(headerLine(venue(), false, queued({ waitMs: 150_000 }))).toBe(
+      'Starts after the run in progress · about 3 min',
+    );
+    expect(headerLine(venue(), false, queued({ waitMs: 5_000 }))).toBe(
+      'Starts after the run in progress · about 1 min',
+    );
+  });
+
+  it('leaves the wait off when it is unknown', () => {
+    expect(headerLine(venue(), false, queued({ waitMs: null }))).toBe(
+      'Starts after the run in progress',
+    );
+  });
+
+  it('keeps the venue’s line when nothing is running ahead', () => {
+    expect(headerLine(venue(), false, queued({ runningAhead: false }))).toBe(
+      `RiNo · ${COPY.upcoming(1)}`,
+    );
+    expect(
+      headerLine(venue(), false, { state: 'queued', progress: null }),
+    ).toBe(`RiNo · ${COPY.upcoming(1)}`);
+  });
+
+  it('adds nothing to the phone line', () => {
+    expect(headerLine(venue(), true, queued())).toBe('');
+  });
+});
+
+describe('recrawlProgress', () => {
+  const trigger = {
+    status: 'pending' as const,
+    updatedAt: '2026-11-12T22:40:00.000Z',
+  };
+
+  it('reads the run ahead and the wait off a pending trigger', () => {
+    expect(
+      recrawlProgress({
+        ...trigger,
+        progress: {
+          queuePosition: 0,
+          runningAhead: true,
+          estimateMs: null,
+          waitMs: 90_000,
+        },
+      }),
+    ).toEqual({
+      startedAt: null,
+      pagesDone: null,
+      pagesTotal: null,
+      runningAhead: true,
+      waitMs: 90_000,
+    });
+  });
+
+  it('reads the pages and start off a processing trigger', () => {
+    expect(
+      recrawlProgress({
+        status: 'processing',
+        startedAt: '2026-11-12T22:41:00.000Z',
+        updatedAt: '2026-11-12T22:44:00.000Z',
+        pagesDone: 2,
+        pagesTotal: 4,
+      }),
+    ).toEqual({
+      startedAt: '2026-11-12T22:41:00.000Z',
+      pagesDone: 2,
+      pagesTotal: 4,
+      runningAhead: false,
+      waitMs: null,
+    });
+  });
+
+  it('drops counts and waits that aren’t numbers it can read', () => {
+    expect(
+      recrawlProgress({
+        ...trigger,
+        pagesDone: -1,
+        pagesTotal: 2.5,
+        progress: {
+          queuePosition: 0,
+          runningAhead: false,
+          estimateMs: null,
+          waitMs: -5,
+        },
+      }),
+    ).toMatchObject({ pagesDone: null, pagesTotal: null, waitMs: null });
   });
 });
 

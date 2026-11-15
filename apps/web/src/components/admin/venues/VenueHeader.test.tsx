@@ -414,6 +414,53 @@ describe('VenueHeader — Re-crawl states', () => {
     expect(mockFetchTrigger).toHaveBeenCalledWith('trigger-1', 'test-token');
   });
 
+  it('reads the run ahead and the wait beside the chips while queued', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(
+      makeTrigger({
+        status: 'pending',
+        progress: {
+          queuePosition: 0,
+          runningAhead: true,
+          estimateMs: null,
+          waitMs: 2 * 60_000,
+        },
+      }),
+    );
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    await tick(POLL_INTERVAL_MS);
+    expect(screen.getByTestId('venue-header-line').textContent).toBe(
+      'Starts after the run in progress · about 2 min',
+    );
+  });
+
+  it('reads the page and the start beside the chips while crawling', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(
+      makeTrigger({
+        status: 'processing',
+        // 3:41 PM in Denver; the later progress write moved `updatedAt` on.
+        startedAt: '2026-11-12T22:41:00.000Z',
+        updatedAt: '2026-11-12T22:44:00.000Z',
+        pagesDone: 2,
+        pagesTotal: 4,
+        progress: {
+          queuePosition: 0,
+          runningAhead: false,
+          estimateMs: null,
+          waitMs: null,
+        },
+      }),
+    );
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    await tick(POLL_INTERVAL_MS);
+    expect(screen.getByTestId('venue-header-line').textContent).toBe(
+      'Page 2 of 4 · started 3:41 PM',
+    );
+  });
+
   it('goes back to idle and refreshes once the trigger settles', async () => {
     mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
     mockFetchTrigger

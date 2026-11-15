@@ -1,4 +1,4 @@
-import type { VenueWithCrawlHealth } from '@concert-crawl/types';
+import type { CrawlTrigger, VenueWithCrawlHealth } from '@concert-crawl/types';
 import { z } from 'zod';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { shortTime } from './overview/overview-rules';
@@ -54,36 +54,126 @@ export const viewOnSiteHref = (venue: HeaderVenue): string | null =>
 const startedAtSchema = z.iso.datetime({ offset: true });
 
 /**
- * When a running re-crawl started: the trigger's `updatedAt` once it reads
- * `processing`, which the crawler stamps as it claims the trigger. Null for
- * any other status or a time that won't parse.
+ * When a running re-crawl started, once the trigger reads `processing`: its
+ * `startedAt`, stamped as the crawler claims it (migration 0121). A row that
+ * predates it falls back to `updatedAt`, which the claim also stamps (later
+ * progress writes move it on). Null for any other status or a time that
+ * won't parse.
  */
-export const runningSince = (trigger: {
-  status: string;
-  updatedAt: unknown;
-}): string | null => {
+export const runningSince = (
+  trigger: Pick<CrawlTrigger, 'status' | 'startedAt' | 'updatedAt'>,
+): string | null => {
   if (trigger.status !== 'processing') return null;
-  const parsed = startedAtSchema.safeParse(trigger.updatedAt);
+  const parsed = startedAtSchema.safeParse(
+    trigger.startedAt ?? trigger.updatedAt,
+  );
   return parsed.success ? parsed.data : null;
+};
+
+/** A count the crawler wrote, or null when it is missing or isn't one. */
+const pageCount = (value: number | null | undefined): number | null =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0
+    ? value
+    : null;
+
+/**
+ * Where a re-crawl in flight stands, from the latest polled trigger
+ * (`GET /v1/admin/crawl/triggers/:id`): what the header line reads while it
+ * is Queued or Crawling now (`A3/03/re-crawl-states`).
+ */
+export interface RecrawlProgress {
+  /** When the crawler claimed it (ISO); null until it is `processing`. */
+  startedAt: string | null;
+  /** Pages crawled so far; null before the first. */
+  pagesDone: number | null;
+  /** Pages this crawl will read; null until the crawler knows. */
+  pagesTotal: number | null;
+  /** Pending only: another trigger is being crawled right now. */
+  runningAhead: boolean;
+  /** Pending only: about how long until it starts; null when unknown. */
+  waitMs: number | null;
+}
+
+export const recrawlProgress = (
+  trigger: Pick<
+    CrawlTrigger,
+    | 'status'
+    | 'startedAt'
+    | 'updatedAt'
+    | 'pagesDone'
+    | 'pagesTotal'
+    | 'progress'
+  >,
+): RecrawlProgress => {
+  const waitMs = trigger.progress?.waitMs;
+  return {
+    startedAt: runningSince(trigger),
+    pagesDone: pageCount(trigger.pagesDone),
+    pagesTotal: pageCount(trigger.pagesTotal),
+    runningAhead: trigger.progress?.runningAhead === true,
+    waitMs:
+      typeof waitMs === 'number' && Number.isFinite(waitMs) && waitMs >= 0
+        ? waitMs
+        : null,
+  };
+};
+
+/** A re-crawl in flight, as the header line reads it. */
+export interface RecrawlLine {
+  state: 'queued' | 'running';
+  progress: RecrawlProgress | null;
+}
+
+/** Whole minutes, never under one: "about 2 min" (`A3/03/re-crawl-states`). */
+const waitMinutes = (waitMs: number): number =>
+  Math.max(1, Math.round(waitMs / 60_000));
+
+/**
+ * The desktop line while a re-crawl is in flight, or null for the venue's
+ * own line. Queued behind another crawl: "Starts after the run in progress
+ * · about 2 min", the wait left off when unknown. Crawling now: "Page 2 of
+ * 4 · started 3:41 PM", or "Started 3:41 PM" until the page count is known.
+ * Queued with nothing running ahead isn't drawn, so it keeps the venue's
+ * line.
+ */
+const recrawlLine = (recrawl: RecrawlLine): string | null => {
+  const { progress } = recrawl;
+  if (progress === null) return null;
+  if (recrawl.state === 'queued') {
+    if (!progress.runningAhead) return null;
+    return progress.waitMs === null
+      ? COPY.startsAfterRun
+      : [
+          COPY.startsAfterRun,
+          COPY.aboutMinutes(waitMinutes(progress.waitMs)),
+        ].join(' · ');
+  }
+  if (progress.startedAt === null) return null;
+  const time = shortTime(progress.startedAt);
+  const total = progress.pagesTotal;
+  if (total === null || total === 0) return COPY.startedAt(time);
+  const done = Math.min(progress.pagesDone ?? 0, total);
+  return COPY.pageProgress(done, total, time);
 };
 
 /**
  * The line beside the chips: "Central Platte Valley · 235 upcoming", or why
  * Re-crawl is off. The phone keeps the neighbourhood under the name instead
  * (`A3/03/venue-overview-m`), so its line is only the reason. While a
- * re-crawl runs, the desktop line reads when it started, "Started 3:41 PM"
- * in Mountain Time (`A3/03/re-crawl-states`). The running state is drawn
- * for desktop only, so the phone line doesn't add it.
+ * re-crawl is queued or running, the desktop line reads where it stands
+ * (`recrawlLine`, `A3/03/re-crawl-states`). Those states are drawn for
+ * desktop only, so the phone line doesn't add them.
  */
 export const headerLine = (
   venue: HeaderVenue,
   isPhone: boolean,
-  startedAt: string | null = null,
+  recrawl: RecrawlLine | null = null,
 ): string => {
   const off = recrawlOff(venue);
   if (off !== null) return COPY.recrawlOff[off];
   if (isPhone) return '';
-  if (startedAt !== null) return COPY.startedAt(shortTime(startedAt));
+  const inFlight = recrawl === null ? null : recrawlLine(recrawl);
+  if (inFlight !== null) return inFlight;
   const shows = venue.deleteBlockers?.upcomingShows ?? null;
   return [venue.neighborhood, shows === null ? null : COPY.upcoming(shows)]
     .filter((part): part is string => part !== null && part !== '')
