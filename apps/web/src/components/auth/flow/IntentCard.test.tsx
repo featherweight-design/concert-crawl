@@ -25,6 +25,22 @@ describe('intentText', () => {
     });
   });
 
+  it('counts an artist’s dates, and says "date" for one', () => {
+    expect(
+      intentText({ kind: 'artist', name: 'TOKiMONSTA', dates: 2 }),
+    ).toEqual({
+      eyebrow: 'Artist · 2 Denver dates',
+      title: 'Sign in to follow TOKiMONSTA',
+      sub: COPY.followSub,
+    });
+    expect(intentText({ kind: 'artist', name: 'X', dates: 1 })?.eyebrow).toBe(
+      'Artist · 1 Denver date',
+    );
+    expect(intentText({ kind: 'artist', name: 'X', dates: 0 })?.eyebrow).toBe(
+      COPY.artistEyebrowNone,
+    );
+  });
+
   it('names a page, and has nothing for the generic subject', () => {
     expect(intentText({ kind: 'page', page: 'My shows' })).toEqual({
       eyebrow: 'My shows',

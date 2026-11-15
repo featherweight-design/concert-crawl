@@ -1,4 +1,7 @@
-import type { EventDetailResponse } from '@concert-crawl/types';
+import type {
+  ArtistDetailResponse,
+  EventDetailResponse,
+} from '@concert-crawl/types';
 import { anonymousRequest } from '@/lib/api';
 import { decodeIntent } from '@/lib/auth/intent';
 
@@ -8,12 +11,14 @@ import { decodeIntent } from '@/lib/auth/intent';
  * Names only, and only from public data, read with no identity at all. A card
  * only promises what will happen: the show card needs the pending Watch the
  * return path carries (`intent=watch:<id>`), because it says "we'll add it to
- * Watching". Anything else, a crew invite included, is `generic` (a crew's name
+ * Watching", and the artist card the pending Follow (`intent=follow:<slug>`).
+ * Anything else, a crew invite included, is `generic` (a crew's name
  * and host are not public to a stranger holding a token: that is a separate
  * ruling).
  */
 export type IntentSubject =
   | { kind: 'show'; title: string; eyebrow: string }
+  | { kind: 'artist'; name: string; dates: number }
   | { kind: 'page'; page: PageName }
   | { kind: 'generic' };
 
@@ -29,6 +34,7 @@ const PAGES: Readonly<Record<string, PageName>> = {
 
 const GENERIC: IntentSubject = { kind: 'generic' };
 const EVENT_PATH = /^\/events\/([A-Za-z0-9_-]{1,64})$/;
+const ARTIST_PATH = /^\/artists\/([a-z0-9][a-z0-9-]{0,127})$/;
 
 /**
  * The data is public and changes slowly, so a card is not worth a fetch per
@@ -69,30 +75,44 @@ export async function loadIntentSubject(
   const page = PAGES[pathname.split('#')[0] ?? ''];
   if (page) return { kind: 'page', page };
 
-  const event = EVENT_PATH.exec(pathname.split('#')[0] ?? '')?.[1];
+  const path = pathname.split('#')[0] ?? '';
   const intent = decodeIntent(query.get('intent'));
-  // The card names the page's show, so the pending Watch must be for it.
-  if (
-    !event ||
-    intent?.action !== 'watch' ||
-    intent.eventId.toLowerCase() !== event.toLowerCase()
-  ) {
-    return GENERIC;
-  }
+  if (!intent) return GENERIC;
 
   try {
-    const detail = await anonymousRequest<EventDetailResponse>(
-      `/v1/events/${event}`,
-      lookupOptions(),
-    );
-    const title = detail.title.trim();
-    if (!title) return GENERIC;
-    return {
-      kind: 'show',
-      title,
-      eyebrow: showEyebrow(detail.date, detail.venue.name),
-    };
+    // The card names the page's show, so the pending Watch must be for it.
+    const event = EVENT_PATH.exec(path)?.[1];
+    if (
+      event &&
+      intent.action === 'watch' &&
+      intent.eventId.toLowerCase() === event.toLowerCase()
+    ) {
+      const detail = await anonymousRequest<EventDetailResponse>(
+        `/v1/events/${event}`,
+        lookupOptions(),
+      );
+      const title = detail.title.trim();
+      if (!title) return GENERIC;
+      return {
+        kind: 'show',
+        title,
+        eyebrow: showEyebrow(detail.date, detail.venue.name),
+      };
+    }
+
+    // The same for an artist: the pending Follow must be for the page's artist.
+    const slug = ARTIST_PATH.exec(path)?.[1];
+    if (slug && intent.action === 'follow' && intent.artistSlug === slug) {
+      const detail = await anonymousRequest<ArtistDetailResponse>(
+        `/v1/artists/${slug}`,
+        lookupOptions(),
+      );
+      const name = detail.artist.name.trim();
+      if (!name) return GENERIC;
+      return { kind: 'artist', name, dates: detail.shows.length };
+    }
   } catch {
     return GENERIC;
   }
+  return GENERIC;
 }

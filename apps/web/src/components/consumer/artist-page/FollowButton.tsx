@@ -9,8 +9,13 @@ import { ARTIST_COPY } from './definitions/copy';
 import { NF_FOLLOW_SIZES, NF_TAP_MIN } from './definitions/constants';
 
 export interface FollowButtonProps {
-  /** Artist name — used only to build the accessible name. */
+  /** Artist name — the accessible name, and the follow's confirmation. */
   name: string;
+  /**
+   * The artist's slug. When given, a signed-out tap carries a pending follow
+   * through sign-in, and it is done for them when they arrive.
+   */
+  slug?: string;
   following: boolean;
   signedOut: boolean;
   /**
@@ -85,6 +90,7 @@ export interface FollowButtonProps {
  */
 export const FollowButton = ({
   name,
+  slug,
   following,
   signedOut,
   locked = false,
@@ -118,7 +124,11 @@ export const FollowButton = ({
 
   const onClick = () => {
     if (signedOut) {
-      goToSignIn();
+      goToSignIn(
+        slug
+          ? { intent: { action: 'follow', artistSlug: slug }, label: name }
+          : undefined,
+      );
       return;
     }
     if (locked) {

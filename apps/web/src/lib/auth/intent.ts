@@ -8,34 +8,38 @@
  * guard rather than a schema.
  */
 
-const INTENT_ACTIONS = ['watch'] as const;
+/** Watching a show, or following an artist: both are free and need an account. */
+export type Intent =
+  | { action: 'watch'; eventId: string }
+  | { action: 'follow'; artistSlug: string };
 
-export type IntentAction = (typeof INTENT_ACTIONS)[number];
-
-export interface Intent {
-  action: IntentAction;
-  eventId: string;
-}
+export type IntentAction = Intent['action'];
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const isIntentAction = (value: string): value is IntentAction =>
-  INTENT_ACTIONS.some((action) => action === value);
+/** The shape of an `artists.slug`: lowercase words joined by dashes. */
+const ARTIST_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 
 export const encodeIntent = (intent: Intent): string =>
-  `${intent.action}:${intent.eventId}`;
+  intent.action === 'watch'
+    ? `watch:${intent.eventId}`
+    : `follow:${intent.artistSlug}`;
 
 export const decodeIntent = (raw: string | null | undefined): Intent | null => {
   if (!raw) return null;
   // Exactly one separator: `watch:a:b` is malformed, not a nested payload.
   const parts = raw.split(':');
   if (parts.length !== 2) return null;
-  const [action, eventId] = parts;
-  if (!action || !eventId) return null;
-  if (!isIntentAction(action)) return null;
-  if (!UUID_PATTERN.test(eventId)) return null;
-  return { action, eventId };
+  const [action, subject] = parts;
+  if (!action || !subject) return null;
+  if (action === 'watch' && UUID_PATTERN.test(subject)) {
+    return { action, eventId: subject };
+  }
+  if (action === 'follow' && ARTIST_SLUG_PATTERN.test(subject)) {
+    return { action, artistSlug: subject };
+  }
+  return null;
 };
 
 /**

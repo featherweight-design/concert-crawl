@@ -21,6 +21,15 @@ export function intentText(subject: IntentSubject): IntentText | null {
         title: COPY.watch(subject.title),
         sub: COPY.watchSub,
       };
+    case 'artist':
+      return {
+        eyebrow:
+          subject.dates > 0
+            ? COPY.artistEyebrow(subject.dates)
+            : COPY.artistEyebrowNone,
+        title: COPY.follow(subject.name),
+        sub: COPY.followSub,
+      };
     case 'page':
       return {
         eyebrow: subject.page,

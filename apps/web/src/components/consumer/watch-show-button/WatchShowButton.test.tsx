@@ -577,8 +577,10 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
     expect(routerPush).not.toHaveBeenCalled();
     await tap();
     expect(routerPush).toHaveBeenCalledTimes(1);
+    // The return path carries what was pressed, so the sign-in names it and
+    // the destination does it once they are in.
     expect(routerPush).toHaveBeenCalledWith(
-      `/sign-in?redirect_url=${encodeURIComponent('/events/e1')}`,
+      `/sign-in?redirect_url=${encodeURIComponent('/events/e1?intent=watch%3Aevt_1&label=Geese')}`,
     );
     // No watch mutation may be attempted without a session.
     expect(toggleMutate).not.toHaveBeenCalled();
@@ -590,7 +592,7 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
     renderWith('Geese');
     await tap();
     expect(routerPush).toHaveBeenCalledWith(
-      `/sign-in?redirect_url=${encodeURIComponent('/events/e1?tab=prices')}`,
+      `/sign-in?redirect_url=${encodeURIComponent('/events/e1?tab=prices&intent=watch%3Aevt_1&label=Geese')}`,
     );
   });
 
@@ -755,8 +757,9 @@ describe('WatchShowButton strip variant', () => {
       await Promise.resolve();
     });
     expect(routerPush).toHaveBeenCalledTimes(1);
+    // No headliner is known on the strip, so the intent travels unnamed.
     expect(routerPush).toHaveBeenCalledWith(
-      `/sign-in?redirect_url=${encodeURIComponent('/events/e1')}`,
+      `/sign-in?redirect_url=${encodeURIComponent('/events/e1?intent=watch%3Aevt_1')}`,
     );
     expect(toggleMutate).not.toHaveBeenCalled();
   });
