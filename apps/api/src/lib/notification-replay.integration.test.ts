@@ -145,8 +145,12 @@ describe('contest notification replay protection', () => {
       writeContestNotifications(input),
     ]);
 
-    expect(first).toEqual({ written: 2 });
-    expect(retries).toEqual([{ written: 0 }, { written: 0 }]);
+    expect(first).toEqual({ written: 2, told: ['parent', 'challenger'] });
+    // A replay writes nothing, so it tells no one.
+    expect(retries).toEqual([
+      { written: 0, told: [] },
+      { written: 0, told: [] },
+    ]);
     const rows = await rowsFor('contest.resolved');
     expect(rows.map((row) => row.userId).sort()).toEqual([
       CHALLENGER_USER,

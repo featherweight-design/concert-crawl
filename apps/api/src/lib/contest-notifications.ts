@@ -49,10 +49,23 @@ export type ContestNotificationInput =
       deferredAt: Date;
     });
 
+/** A side of the check: the listed price's fan or the checking fan. */
+export type ContestRole = 'parent' | 'challenger';
+
 interface Recipient {
   userId: string;
   submissionId: string;
-  role: 'parent' | 'challenger';
+  role: ContestRole;
+}
+
+/**
+ * `written` counts the rows inserted; `told` names whose they were, so a
+ * resolve can record who it actually told (a failed or replayed write tells
+ * no one).
+ */
+export interface ContestNotificationResult {
+  written: number;
+  told: ContestRole[];
 }
 
 /**
@@ -84,7 +97,7 @@ interface Recipient {
  */
 export async function writeContestNotifications(
   input: ContestNotificationInput,
-): Promise<{ written: number }> {
+): Promise<ContestNotificationResult> {
   const recipients: Recipient[] = [];
   if (input.parentUserId !== null) {
     recipients.push({
@@ -104,7 +117,7 @@ export async function writeContestNotifications(
     });
   }
 
-  if (recipients.length === 0) return { written: 0 };
+  if (recipients.length === 0) return { written: 0, told: [] };
 
   const category =
     input.action === 'resolve' ? 'contest.resolved' : 'contest.needs_info';
@@ -168,13 +181,19 @@ export async function writeContestNotifications(
       .insert(notifications)
       .values(rows)
       .onConflictDoNothing({ target: notifications.dedupeKey })
-      .returning({ id: notifications.id });
-    return { written: inserted.length };
+      .returning({ dedupeKey: notifications.dedupeKey });
+    const insertedKeys = new Set(inserted.map((row) => row.dedupeKey));
+    return {
+      written: inserted.length,
+      told: recipients
+        .filter((recipient) => insertedKeys.has(dedupeKey(recipient)))
+        .map((recipient) => recipient.role),
+    };
   } catch (notifyErr) {
     apiLogger.warn(
       { contestId: input.contestId, action: input.action, err: notifyErr },
       'Failed to write contest notifications; admin action itself already committed.',
     );
-    return { written: 0 };
+    return { written: 0, told: [] };
   }
 }

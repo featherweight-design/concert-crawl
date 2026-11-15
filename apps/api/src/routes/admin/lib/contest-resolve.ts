@@ -2,7 +2,10 @@ import { and, eq, ne, sql } from 'drizzle-orm';
 import { db, events, priceSubmissions } from '@concert-crawl/db';
 import { awardPriceCred } from '../../../lib/award-price-cred.js';
 import { leadingCounterOrderBy } from '../../../lib/price-check.js';
-import { writeContestNotifications } from '../../../lib/contest-notifications.js';
+import {
+  writeContestNotifications,
+  type ContestRole,
+} from '../../../lib/contest-notifications.js';
 import {
   detectPriceDrop,
   fanoutPriceDrop,
@@ -35,6 +38,13 @@ export type ResolveContestOutcome =
   | { ok: 'not_found' }
   | { ok: 'precondition_failed'; reason: string };
 
+type Committed = Extract<ResolveContestOutcome, { ok: 'committed' }>;
+
+/** The outcome, with who the committed resolve's notifications reached. */
+export type ResolveContestResult =
+  | Exclude<ResolveContestOutcome, Committed>
+  | (Committed & { told: ContestRole[] });
+
 /**
  * Resolve a price contest atomically (POST /v1/admin/contests/prices/:id/resolve):
  * the parent and counter flip together, the winner's cred and the event's
@@ -46,7 +56,7 @@ export const resolveContest = async (
   resolution: ContestResolution,
   reason: string,
   challengerId?: string,
-): Promise<ResolveContestOutcome> => {
+): Promise<ResolveContestResult> => {
   const outcome: ResolveContestOutcome = await db.transaction(async (tx) => {
     // Lock the parent row first.
     const [parent] = await tx
@@ -327,7 +337,7 @@ export const resolveContest = async (
   // (extracted in Task 10). The helper handles dedupe, JSON-encoding the
   // metadata text column, and swallowing insert failures so a notification
   // error can't appear to roll back the already-committed resolution.
-  await writeContestNotifications({
+  const { told } = await writeContestNotifications({
     contestId,
     parentSubmissionId: outcome.parent.id,
     challengerSubmissionId: outcome.challenger.id,
@@ -352,5 +362,5 @@ export const resolveContest = async (
     );
   }
 
-  return outcome;
+  return { ...outcome, told };
 };
