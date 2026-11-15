@@ -4,6 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const isFeatureEnabled = vi.fn();
 vi.mock('../lib/feature-flags.js', () => ({ isFeatureEnabled }));
 
+// The viewer the gate resolves when the flag is not on for everyone.
+const auth = vi.hoisted(() => ({
+  current: null as {
+    userId: string;
+    sessionClaims: { metadata: { role: string } };
+  } | null,
+}));
+vi.mock('@hono/clerk-auth', () => ({
+  clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
+    next(),
+  getAuth: () => auth.current,
+}));
+
 const { requireFlag } = await import('./feature-flag.js');
 
 const buildApp = () => {
@@ -40,6 +53,32 @@ describe('requireFlag', () => {
     expect(gated.headers.get('content-type')).toBe(
       unrouted.headers.get('content-type'),
     );
+  });
+
+  // The gate runs before the router's clerkMiddleware, so it has to find out who
+  // is asking itself when the flag is at Me or Beta rather than Everyone.
+  it('asks again with the viewer when the flag is not on for everyone', async () => {
+    auth.current = {
+      userId: 'beta-user',
+      sessionClaims: { metadata: { role: 'beta' } },
+    };
+    isFeatureEnabled.mockImplementation(
+      async (_key: string, viewer?: { userId: string; role: string | null }) =>
+        viewer?.role === 'beta',
+    );
+    const res = await buildApp().request('/thing');
+    expect(res.status).toBe(200);
+    expect(isFeatureEnabled).toHaveBeenLastCalledWith('crews', {
+      userId: 'beta-user',
+      role: 'beta',
+    });
+    auth.current = null;
+  });
+
+  it('does not look the viewer up for a flag that is on for everyone', async () => {
+    isFeatureEnabled.mockResolvedValue(true);
+    await buildApp().request('/thing');
+    expect(isFeatureEnabled).toHaveBeenCalledTimes(1);
   });
 
   it('answers 404 when the flag lookup throws', async () => {

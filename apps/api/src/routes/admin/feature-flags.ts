@@ -106,10 +106,14 @@ const ensureRow = async (
       updatedBy: actorId,
     })
     .onConflictDoNothing();
+  // Locked for the rest of the transaction: the production lock reads this
+  // row's verified mark and stage and then writes, so a concurrent verify,
+  // undo or stage change must wait rather than slip between the two.
   const [row] = await tx
     .select()
     .from(featureFlags)
-    .where(eq(featureFlags.key, key));
+    .where(eq(featureFlags.key, key))
+    .for('update');
   if (!row) throw new Error('feature flag row missing after insert');
   return row;
 };
@@ -208,7 +212,10 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
         stage: toStage,
         // "Me" is the admin who set that rung; it is kept as the flag climbs
         // so they keep seeing it.
-        stageOwnerUserId: toStage === 'me' ? actorId : before.stageOwnerUserId,
+        // Choosing Me again on a flag already at Me does not move it from the
+        // admin who owns it to whoever clicked.
+        stageOwnerUserId:
+          toStage === 'me' && from !== 'me' ? actorId : before.stageOwnerUserId,
         ...(clearsMark
           ? { verifiedAt: null, verifiedBy: null, verifiedNote: null }
           : {}),
