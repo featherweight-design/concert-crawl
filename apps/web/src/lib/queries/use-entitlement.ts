@@ -30,6 +30,14 @@ const LOGGED_OUT_STATE: PlanStateLike = {
   roleComped: false,
 };
 
+// What a signed-in account is entitled to when its own plan state could not
+// be read. Every account is on the free plan now, and the free plan passes
+// every gate except the retired spotify-sync (flagged off by default).
+const SIGNED_IN_FALLBACK_STATE: PlanStateLike = {
+  plan: 'free',
+  roleComped: false,
+};
+
 // Single client-side gate for premium features. Resolves the current plan
 // (from /v1/users/me) and answers both "is this feature active?" and "what
 // does a locked tap open?". Server-side enforcement lives in the API's
@@ -71,12 +79,14 @@ export function useEntitlement(feature: PremiumFeature): EntitlementResult {
       return { isLoading: true, active: false, surface: null };
     }
     // Signed in but the fetch settled without a PlanState (token race or
-    // fetch error). Fail closed with the logged-out surface so callers always
-    // have routable UX once loading ends — never a null surface at rest.
+    // fetch error). The app is free, so a signed-in account is answered as
+    // the free plan, which passes every live gate. Never fall back to the
+    // logged-out surface here: that put paywalls and sign-in prompts in front
+    // of signed-in fans whenever /v1/users/me failed. The API still enforces.
     return {
       isLoading: false,
-      active: false,
-      surface: lockedSurface(LOGGED_OUT_STATE, feature),
+      active: canUseFeature(SIGNED_IN_FALLBACK_STATE, feature),
+      surface: lockedSurface(SIGNED_IN_FALLBACK_STATE, feature),
     };
   }
 
