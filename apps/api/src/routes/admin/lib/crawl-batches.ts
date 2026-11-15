@@ -56,6 +56,8 @@ export interface BatchTriggerInput {
   triggeredBy: string | null;
   status: 'pending' | 'processing' | 'done' | 'failed';
   crawlRunId: string | null;
+  /** Queued as a test re-crawl of a paused venue (crawl_triggers.trial). */
+  trial: boolean;
   createdAt: Date;
 }
 
@@ -472,10 +474,11 @@ export const groupCrawlBatches = ({
         costUsd: costOf(burstRuns),
         linkKey: `run:${epochOf(first.createdAt)}:${actorTag(actor)}`,
         crawlAll: isCrawlAll(burst),
-        // A test re-crawl is one trigger and its one run; a burst reads as
-        // one only once every run it made is a trial, so a still-queued
-        // trial reads as a plain re-crawl until its run lands.
-        trial: burstRuns.length > 0 && burstRuns.every((run) => run.trial),
+        // A test re-crawl is one trigger and its one run. Its trigger says
+        // so before the run lands; its runs say so once they have.
+        trial:
+          burst.every((trigger) => trigger.trial) ||
+          (burstRuns.length > 0 && burstRuns.every((run) => run.trial)),
         venueName:
           venueIds.size === 1
             ? (first.venueName ?? burstRuns[0]?.venueName ?? null)

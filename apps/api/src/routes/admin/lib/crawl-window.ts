@@ -56,6 +56,7 @@ export const readWindow = async (
         triggeredBy: crawlTriggers.triggeredBy,
         status: crawlTriggers.status,
         crawlRunId: crawlTriggers.crawlRunId,
+        trial: crawlTriggers.trial,
         createdAt: crawlTriggers.createdAt,
       })
       .from(crawlTriggers)

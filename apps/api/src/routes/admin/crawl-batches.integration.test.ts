@@ -435,11 +435,13 @@ describe('admin crawl batches', () => {
       });
     });
 
-    it('marks a test re-crawl’s batch trial, and a plain re-crawl and a nightly not', async () => {
+    it('marks a test re-crawl’s batch trial, queued or run, and a plain re-crawl and a nightly not', async () => {
       setAuth('admin');
       const ball = await seedVenue({ name: 'Ball Arena', slug: 'ball-arena' });
       const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
       await seedRun(levitt.id, nightAt(1));
+      const gothic = await seedVenue({ name: 'Gothic', slug: 'gothic' });
+      const queuedAt = new Date(Date.now() - 30 * 60 * 1000);
       const trialAt = new Date(Date.now() - 3 * 60 * 60 * 1000);
       const plainAt = new Date(Date.now() - 60 * 60 * 1000);
       const trialRun = await seedRun(
@@ -467,6 +469,14 @@ describe('admin crawl batches', () => {
           crawlRunId: plainRun,
           createdAt: plainAt,
         },
+        // Queued, no run yet: the trigger alone says it is a test re-crawl.
+        {
+          venueId: gothic.id,
+          triggeredBy: 'user_queued',
+          status: 'pending',
+          trial: true,
+          createdAt: queuedAt,
+        },
       ]);
 
       const body: CrawlBatchPage = await (await get('')).json();
@@ -474,6 +484,7 @@ describe('admin crawl batches', () => {
       expect(
         started.map(({ kind, actor, trial }) => ({ kind, actor, trial })),
       ).toEqual([
+        { kind: 'by_hand', actor: 'user_queued', trial: true },
         { kind: 'by_hand', actor: 'user_plain', trial: false },
         { kind: 'by_hand', actor: 'user_trial', trial: true },
         { kind: 'nightly', actor: null, trial: false },

@@ -41,6 +41,7 @@ const trigger = (
   triggeredBy: 'user_a',
   status: 'done',
   crawlRunId: null,
+  trial: false,
   createdAt: new Date(at),
   ...over,
 });
