@@ -92,9 +92,19 @@ const withSerwist = withSerwistInit({
   ],
 });
 
+// The environment a release's deploy is recorded under: the one runtime events
+// already report (SENTRY_ENVIRONMENT on the server and edge, the NEXT_PUBLIC_
+// twin on the client), so a staging build is never tagged "production". Unset
+// records no deploy, rather than a guessed one.
+const sentryDeployEnv = (
+  process.env['SENTRY_ENVIRONMENT'] ??
+  process.env['NEXT_PUBLIC_SENTRY_ENVIRONMENT']
+)?.trim();
+
 export default withSentryConfig(withSerwist(config), {
   org: 'fw-design',
   project: 'concert-crawl-web',
+  ...(sentryDeployEnv ? { release: { deploy: { env: sentryDeployEnv } } } : {}),
   // Suppress output locally; print in CI for source map upload confirmation
   silent: !process.env['CI'],
   widenClientFileUpload: true,
