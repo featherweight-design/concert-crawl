@@ -394,7 +394,8 @@ export const CONSUMER_COPY = {
         categoryRequired: 'Pick a feedback category.',
         messageRequired: "Don't leave us hanging, what's up?",
         screenshotTooBig: 'That image is too big. Try a smaller screenshot.',
-        screenshotWrongType: 'Use a PNG, JPEG, WebP or GIF.',
+        // Names the two everyone has; WebP, GIF and AVIF also pass.
+        screenshotWrongType: "That file type won't work. Try a PNG or JPEG.",
       },
       footer: {
         cancel: 'Cancel',
