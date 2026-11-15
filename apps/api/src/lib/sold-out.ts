@@ -69,6 +69,15 @@ export function activePromotedReportWhere(
   );
 }
 
+/**
+ * The `admin_note` an admin's own sold-out mark is written with
+ * (POST /v1/admin/events/:id/sold-out). One constant for that writer and for
+ * the admin event read, which tells an admin's mark from a promoted fan
+ * report by it.
+ */
+export const ADMIN_AUTHORED_SOLD_OUT_NOTE =
+  'admin-authored — auto-promoted on creation';
+
 /** The sold-out rule as a WHERE on `event_reports` itself, for one event. */
 export function activeSoldOutWhere(eventId: string): SQL | undefined {
   return activePromotedReportWhere(eventId, 'sold-out');

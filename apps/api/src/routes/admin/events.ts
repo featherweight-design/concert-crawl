@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
-import { activeSoldOutWhere, isSoldOutSql } from '../../lib/sold-out.js';
+import {
+  activeSoldOutWhere,
+  ADMIN_AUTHORED_SOLD_OUT_NOTE,
+  isSoldOutSql,
+} from '../../lib/sold-out.js';
 import { clearSoldOut } from '../../lib/clear-sold-out.js';
 import type { DbExecutor } from '../../lib/db-executor.js';
 import { apiLogger } from '../../lib/logger.js';
@@ -751,27 +755,29 @@ eventsAdminRouter.get(
 
     // The admin's own live price on this show, which Edit price opens.
     const actor = getAuthUser(ctx);
-    const [mine] = await db
-      .select({
-        id: priceSubmissions.id,
-        priceMin: priceSubmissions.priceMin,
-        priceMax: priceSubmissions.priceMax,
-        // Pending, corroborated or disputed: says which route can edit it.
-        status: priceSubmissions.status,
-      })
-      .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.eventId, id),
-          eq(priceSubmissions.userId, actor.userId),
-          submittedPriceWhere(),
-        ),
-      )
-      .orderBy(desc(priceSubmissions.createdAt))
-      .limit(1);
-
-    // B+ addendum 7 §6: the evidence behind a Sold out, null unless it is.
-    const soldOutRecord = row.isSoldOut ? await loadSoldOutRecord(id) : null;
+    // With it, B+ addendum 7 §6's evidence behind a Sold out (null unless
+    // it is); the two reads are independent.
+    const [[mine], soldOutRecord] = await Promise.all([
+      db
+        .select({
+          id: priceSubmissions.id,
+          priceMin: priceSubmissions.priceMin,
+          priceMax: priceSubmissions.priceMax,
+          // Pending, corroborated or disputed: says which route can edit it.
+          status: priceSubmissions.status,
+        })
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.eventId, id),
+            eq(priceSubmissions.userId, actor.userId),
+            submittedPriceWhere(),
+          ),
+        )
+        .orderBy(desc(priceSubmissions.createdAt))
+        .limit(1),
+      row.isSoldOut ? loadSoldOutRecord(id) : Promise.resolve(null),
+    ]);
 
     return ctx.json({
       success: true,
@@ -869,15 +875,16 @@ eventsAdminRouter.delete(
 // POST /v1/admin/events/:id/sold-out — admin-authored sold-out event_report,
 // auto-promoted on creation. Idempotent: if an active promoted sold-out report
 // already exists, returns 200 with that row instead of creating a duplicate.
-// The method is required (B+ addendum 7 §6): the form starts with nothing
-// picked, so a missing one is refused rather than stored as `other`.
+// Expand/contract (B+ addendum 7 §6): Event edit's form now requires a method
+// before Save, so the board's "Save waits for a pick" holds on the client. The
+// default stays for this deploy, so a web build still sending `{}` keeps
+// working; dropping `.default('other')` is the follow-up once this web build
+// is live.
 const markSoldOutSchema = z.object({
-  evidenceMethod: z.enum([
-    'venue_site',
-    'saw_listing',
-    'bought_myself',
-    'other',
-  ]),
+  evidenceMethod: z
+    .enum(['venue_site', 'saw_listing', 'bought_myself', 'other'])
+    .optional()
+    .default('other'),
   evidenceUrl: httpUrl(500).optional(),
   note: z.string().max(280).optional(),
 });
@@ -954,7 +961,7 @@ eventsAdminRouter.post(
                   note: note ?? null,
                   resolvedAt: new Date(),
                   resolution: 'promoted',
-                  adminNote: 'admin-authored — auto-promoted on creation',
+                  adminNote: ADMIN_AUTHORED_SOLD_OUT_NOTE,
                 })
                 .returning(),
             );

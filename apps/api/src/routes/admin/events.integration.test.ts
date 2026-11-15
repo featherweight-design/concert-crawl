@@ -50,9 +50,10 @@ import {
   seedPriceSubmission,
   seedUserEvent,
   seedUserProfile,
-  seedUserRole,
   seedVenue,
 } from '../../test/helpers/seed.js';
+import { ADMIN_AUTHORED_SOLD_OUT_NOTE } from '../../lib/sold-out.js';
+import { soldOutRecordSchema } from './lib/sold-out-record.js';
 import { testDb } from '../../test/helpers/db.js';
 import { todayInDenver } from '../../lib/time.js';
 
@@ -142,25 +143,23 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     expect(rows).toHaveLength(1);
   });
 
-  // B+ addendum 7 §6: the method is required; nothing is stored as `other`.
-  // The route's own hook answers every invalid body 422 (as the bad
-  // evidenceUrl case below).
-  it('refuses a mark with no evidenceMethod, writing nothing', async () => {
+  // Expand/contract: the default stays until the web build that always sends
+  // a method is live (B+ addendum 7 §6).
+  it('defaults evidenceMethod to "other" when body is empty', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, { date: futureDate(31) });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-      body: JSON.stringify({ note: 'no method' }),
+      body: JSON.stringify({}),
     });
-    expect(res.status).toBe(422);
-
-    const rows = await testDb
-      .select()
-      .from(eventReports)
-      .where(eq(eventReports.eventId, event.id));
-    expect(rows).toHaveLength(0);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      success: boolean;
+      data: { evidenceMethod: string };
+    };
+    expect(body.data.evidenceMethod).toBe('other');
   });
 
   it('is idempotent — second call returns 200 with the existing report', async () => {
@@ -3371,10 +3370,10 @@ describe('GET /v1/admin/events/:id — single-event editor payload', () => {
         avatarColor: 'signal',
         avatarSecondColor: 'accent',
       });
-      // A plain member row is not an admin role.
-      await seedUserRole('fan_mira', { role: 'user' });
       const reportedAt = new Date('2026-11-10T02:15:00Z');
       const madeLiveAt = new Date('2026-11-10T04:02:00Z');
+      // A fan report an admin promoted: its admin note is the reviewer's,
+      // not the admin mark's, so it reads Fan.
       const report = await seedEventReport(event.id, 'fan_mira', {
         evidenceMethod: 'bought_myself',
         evidenceUrl: 'https://axs.com/events/52114',
@@ -3382,8 +3381,7 @@ describe('GET /v1/admin/events/:id — single-event editor payload', () => {
         createdAt: reportedAt,
         resolvedAt: madeLiveAt,
         resolution: 'promoted',
-        // The admin note is never read for Fan or Admin.
-        adminNote: 'admin-authored — auto-promoted on creation',
+        adminNote: 'Checked AXS, promoted.',
       });
       await seedEventReportConfirm(report.id, 'fan_one');
       await seedEventReportConfirm(report.id, 'fan_two');
@@ -3406,10 +3404,11 @@ describe('GET /v1/admin/events/:id — single-event editor payload', () => {
       });
     });
 
-    it('reads an admin mark as Admin, from user_roles, with none recorded where nothing was sent', async () => {
+    // No user_roles row: nothing writes one outside seeds (Clerk metadata is
+    // the source of truth), so Admin comes from the mark itself.
+    it('reads an admin mark as Admin by its marker, with none recorded where nothing was sent', async () => {
       const venue = await seedVenue();
       const event = await seedEvent(venue.id, { date: futureDate(42) });
-      await seedUserRole(ADMIN_USER_ID, { role: 'admin' });
       await seedUserProfile(ADMIN_USER_ID, { handle: 'hugh' });
 
       const mark = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
@@ -3431,6 +3430,50 @@ describe('GET /v1/admin/events/:id — single-event editor payload', () => {
         evidenceUrl: null,
         note: null,
         confirmsCount: 0,
+      });
+      const [stored] = await testDb
+        .select({ adminNote: eventReports.adminNote })
+        .from(eventReports)
+        .where(eq(eventReports.eventId, event.id));
+      expect(stored?.adminNote).toBe(ADMIN_AUTHORED_SOLD_OUT_NOTE);
+    });
+
+    // The table's CHECK and enum columns keep a real row from drifting, so
+    // the check itself is made to fail once: the page still loads, with no
+    // record.
+    it('sends no record, and still answers 200, when the row does not fit the schema', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: futureDate(45) });
+      await seedEventReport(event.id, 'fan_drift', {
+        resolvedAt: new Date('2026-11-02T00:00:00Z'),
+        resolution: 'promoted',
+      });
+      const spy = vi
+        .spyOn(soldOutRecordSchema, 'safeParse')
+        .mockImplementationOnce(() => soldOutRecordSchema.safeParse(null));
+      try {
+        const data = await getRecord(event.id);
+        expect(data.isSoldOut).toBe(true);
+        expect(data.soldOutRecord).toBeNull();
+        expect(spy).toHaveBeenCalled();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('reads a seeded report carrying the marker as Admin', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: futureDate(44) });
+      await seedEventReport(event.id, 'admin_other', {
+        evidenceMethod: 'other',
+        resolvedAt: new Date('2026-11-02T00:00:00Z'),
+        resolution: 'promoted',
+        adminNote: ADMIN_AUTHORED_SOLD_OUT_NOTE,
+      });
+
+      const data = await getRecord(event.id);
+      expect(data.soldOutRecord).toMatchObject({
+        reporter: { handle: null, kind: 'admin' },
       });
     });
 
