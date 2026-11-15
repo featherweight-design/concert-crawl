@@ -1,4 +1,4 @@
-import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier';
+import { decodePendingTier } from './pending-tier';
 import { isSafeReturnPath, PENDING_TIER_PARAM } from '@/lib/auth/intent';
 
 /**

@@ -1,6 +1,5 @@
 import { perfRoute } from '@/lib/perf/timing';
 import { Suspense } from 'react';
-import { headers } from 'next/headers';
 import {
   parseListParam,
   type ArtistSuggestion,
@@ -14,7 +13,6 @@ import {
 } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
 import { publicCatalogGet } from '@/lib/catalog-cache';
-import { isScaRegion } from '@/lib/sca-region';
 import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection';
 import { buildEventsApiParams } from '@/lib/events-api-params';
 import { auth } from '@/lib/auth';
@@ -329,7 +327,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     initialTastePicks,
     crews,
     follows,
-    requestHeaders,
     initialAvailability,
     anonymousSuggestions,
   ] = await Promise.all([
@@ -340,16 +337,12 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     tastePicksPromise,
     crewsPromise,
     followsPromise,
-    headers(),
     availabilityPromise,
     anonymousSuggestionsPromise,
   ]);
   const eventsResult = eventsFetch.response;
   const tasteApplied = eventsFetch.tasteApplied;
   const followingApplied = eventsFetch.followingApplied;
-  // Monetization spec §1.7: SCA notice gating for the tier picker the locked
-  // taste chip can open. Unknown (local dev, header absent) fails safe to true.
-  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'));
 
   const watchedIds = new Set(watchedShows.map((show) => show.eventId));
 
@@ -553,7 +546,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
           <FilterBar
             venues={venues}
             genres={genres}
-            scaRegion={scaRegion}
             crews={crews}
             lensCount={lensFailed ? null : lensShows.length}
             followCount={followCount}

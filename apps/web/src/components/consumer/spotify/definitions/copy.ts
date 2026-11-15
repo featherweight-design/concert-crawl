@@ -230,17 +230,9 @@ export const SPOTIFY_COPY = {
   // Taste filter chip + upsell (#763 PR 7, from the taste-filter.jsx mock).
   // The chip is the one locked-visible surface in the entitlements matrix —
   // free/supporter viewers see it locked and tapping opens the upsell.
+  // The taste filter's chip and its paid upsell are retired (W7). A stored
+  // ?filterTaste=1 link still lands on these banner and empty states.
   tasteFilter: {
-    // Names the SOURCE, not the verb. It used to read "Following", which since
-    // native following shipped sat directly beside a "My artists" chip meaning
-    // the same words about a different list. The logo alone did not carry the
-    // distinction: it is decorative, so a screen reader heard two near-identical
-    // chips and a first-time viewer had to tap one to learn which was which.
-    chip: 'Spotify',
-    // A11y: the locked chip stays operable (it opens the upsell), so the
-    // paid state is conveyed by this label alone — no aria-disabled.
-    chipLockedAria: 'Filter to artists you follow on Spotify, paid feature',
-    chipAria: 'Filter to artists you follow on Spotify',
     banner: (count: number) =>
       `${count} Denver shows by artists you follow on Spotify`,
     bannerSingular: '1 Denver show by artists you follow on Spotify',
@@ -253,33 +245,6 @@ export const SPOTIFY_COPY = {
       body: "The Following filter runs on your Spotify follows, and nothing's linked right now. Connect and this view fills itself in.",
       primaryCta: 'Connect Spotify',
       secondaryCta: 'Browse everything instead',
-    },
-    upsell: {
-      eyebrow: 'TASTE FILTER · PREMIUM',
-      title: 'Slice the whole calendar by your taste.',
-      // Body renders with the middle segment bolded (mock: <b>Following</b>).
-      bodyBeforeBold:
-        'Filtering Denver down to just the artists you follow is a paid perk. Connecting Spotify and spotting the odd ',
-      bodyBold: 'Following',
-      bodyAfterBold: ' tag stays free. This is the power tool.',
-      bullets: [
-        {
-          head: 'Following',
-          sub: 'Filter any view to your artists in one tap',
-        },
-        {
-          head: 'Taste picks',
-          sub: "A 'based on your taste' shelf on browse",
-        },
-        {
-          head: 'New-show alerts',
-          sub: 'Push + a weekly Denver digest',
-        },
-      ],
-      cta: 'See plans',
-      footer: 'PREMIUM $5/MO · FOUNDER $3 LOCKED',
-      ariaLabel: 'Taste filter is a paid feature',
-      dismissAria: 'Dismiss',
     },
   },
   // "Based on your taste" shelf pinned atop Browse (#763 PR 8, from the

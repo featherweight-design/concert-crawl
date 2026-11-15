@@ -6,7 +6,7 @@ import {
   PENDING_TIER_PARAM,
   sanitizeDestinationLabel,
 } from '@/lib/auth/intent';
-import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier';
+import { decodePendingTier } from '@/lib/auth/pending-tier';
 
 export const metadata = { title: 'Concert Crawl — Welcome' };
 

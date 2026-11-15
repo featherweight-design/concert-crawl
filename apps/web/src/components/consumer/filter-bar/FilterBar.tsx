@@ -42,7 +42,6 @@ import {
   toggleValue,
 } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { TasteFilterChip } from './TasteFilterChip';
 import {
   COUNT_LINE_STYLE,
   COUNT_ROW_CLASS,
@@ -106,8 +105,6 @@ const SEGMENT_TILE_SIZE = 18;
 const PHONE_MARK_SIZE = 16;
 /** The phone chip's fill (`PhoneFilterRow`), which rings its venue tiles. */
 const PHONE_CHIP_FILL = 'var(--surface-2)';
-/** The phone row's pills (`PHONE_PILL_CLASS`), which the taste chip matches. */
-const PHONE_PILL_HEIGHT = 38;
 
 // Addendum-3 rule 1 (header-640, header-900): the segmented bar needs 1024 to
 // fit; under it the phone chips row stands in.
@@ -142,10 +139,6 @@ interface FilterBarProps {
   venues: VenuePublic[];
   genres?: string[];
   className?: string;
-  // Server-resolved SCA-region boolean for the taste chip's tier-picker
-  // handoff (#763 PR 7). Defaults true (fail-safe): isScaRegion treats an
-  // unknown country as SCA, so unresolved mounts must show the notice too.
-  scaRegion?: boolean;
   /**
    * The viewer's crews, for the Browse lens (#1226). Empty or absent leaves
    * Who out of the phone sheet and the desktop bar: a control that can only
@@ -220,7 +213,6 @@ export function FilterBar({
   venues,
   genres = [],
   className,
-  scaRegion = true,
   crews: crewsProp = [],
   lensCount = null,
   followCount = null,
@@ -450,23 +442,6 @@ export function FilterBar({
   const toggleFollow = useCallback(
     (next: boolean) => updateParams({ filterFollowing: next ? '1' : '' }),
     [updateParams],
-  );
-
-  // Mounted in one place at a time (the phone chip row, or the desktop count
-  // line, picked by `isDesktop`), so only one copy of its lapsed-entitlement
-  // effect is live. It can still move once after hydration, because the
-  // server snapshot reads as phone; it draws nothing until its entitlement
-  // resolves on the client, so that move shifts nothing the first paint drew.
-  // The My artists chip is different: both of its instances stay mounted and
-  // CSS shows one, so it takes an `ownsEffects` flag instead.
-  // The phone row draws it at the row pills' 38px; the count line keeps 36.
-  const tasteChip = (height?: number) => (
-    <TasteFilterChip
-      active={tasteActive}
-      onToggle={(next) => updateParams({ filterTaste: next ? '1' : '' })}
-      scaRegion={scaRegion}
-      {...(height !== undefined && { height })}
-    />
   );
 
   // `bp-f-filt_active_d` stacks a mark per pick: the venue tiles for Where,
@@ -733,7 +708,6 @@ export function FilterBar({
             onToggle={toggleFollow}
             followCount={followCount}
           />
-          {!isDesktop && tasteChip(PHONE_PILL_HEIGHT)}
         </div>
         {phoneChips.length > 0 && <PhoneFilterChips chips={phoneChips} />}
       </div>
@@ -830,11 +804,6 @@ export function FilterBar({
             >
               {copy.clearAll}
             </button>
-          )}
-          {isDesktop && (
-            <span className="ml-auto inline-flex items-center">
-              {tasteChip()}
-            </span>
           )}
         </div>
       </div>

@@ -12,7 +12,7 @@ import {
   PENDING_TIER_PARAM,
   sanitizeReturnPath,
 } from '@/lib/auth/intent';
-import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier';
+import { decodePendingTier } from '@/lib/auth/pending-tier';
 
 /**
  * Whether a sanitized destination already points at the tour. Compared as a
