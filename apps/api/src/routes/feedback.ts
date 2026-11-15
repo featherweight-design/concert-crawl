@@ -24,7 +24,10 @@ const feedbackSchema = z.object({
       device: z.string().optional(),
       // Checked in the handler (storedMetadata), which drops anything that is
       // not our own inline image format rather than failing the request.
-      screenshot: z.unknown(),
+      // .optional() is load-bearing: in Zod 4 a key whose schema is not
+      // optional is required, even z.unknown(), so without it every report
+      // with no screenshot key failed with a 422.
+      screenshot: z.unknown().optional(),
       // A problem report filed from an error page. The ids tie it to what the
       // team already holds (the server digest, or the browser's Sentry event)
       // and are shape-checked so the column only ever carries an id. The
