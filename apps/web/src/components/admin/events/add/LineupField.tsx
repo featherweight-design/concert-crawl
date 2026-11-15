@@ -216,6 +216,7 @@ export const LineupField = ({
             }
             aria-invalid={invalid || undefined}
             aria-describedby={[hintId, describedBy].filter(Boolean).join(' ')}
+            className="admin-add-show-input"
             placeholder={COPY.add}
             value={text}
             onChange={(evt) => setText(evt.target.value)}

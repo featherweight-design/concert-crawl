@@ -4759,7 +4759,7 @@ export const ADMIN_COPY = {
       lineup_name_required: 'Every act needs a name.',
       lineup_name_too_long: 'Keep each name under 200 characters.',
       lineup_name_invalid: 'One name has no letters to match on.',
-      lineup_role_invalid: 'Add the headliner first.',
+      lineup_role_invalid: 'Couldn’t read the lineup. Try again.',
       lineup_too_long: 'A bill holds 50 acts at most.',
       artist_not_found:
         'One artist is no longer on Artists. Remove it and type the name again.',

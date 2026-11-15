@@ -284,10 +284,24 @@ export const EventsClient = () => {
     />
   );
 
+  // 4b#23: the phone's Add a show joins the chip row.
+  const addShowChip = isPhone && (
+    <button
+      type="button"
+      style={chipStyle(false)}
+      onClick={() => setAdding(true)}
+    >
+      {ADD_COPY.open}
+    </button>
+  );
+
   if (failed && loaded === null) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {header}
+        {/* The phone has no header button, so the chip stands alone here:
+            adding a show doesn't need the list. */}
+        {addShowChip && <div style={{ display: 'flex' }}>{addShowChip}</div>}
         <CouldntLoad page={COPY.title} onRetry={() => void load()} />
         {addShow}
       </div>
@@ -563,14 +577,7 @@ export const EventsClient = () => {
                 filterChips.venue,
                 filterChips.status,
               ])}
-        {/* 4b#23: the phone's Add a show joins the chip row. */}
-        <button
-          type="button"
-          style={chipStyle(false)}
-          onClick={() => setAdding(true)}
-        >
-          {ADD_COPY.open}
-        </button>
+        {addShowChip}
       </div>
     </div>
   ) : (

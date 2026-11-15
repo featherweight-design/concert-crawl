@@ -537,6 +537,24 @@ describe('EventsClient on the phone (36/past-m)', () => {
       'true',
     );
   });
+
+  it('still opens Add a show when the first load fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    list.mockRejectedValue(new Error('down'));
+    try {
+      render(<EventsClient />);
+      fireEvent.click(
+        await screen.findByRole('button', { name: ADMIN_COPY.addShow.open }),
+      );
+      expect(screen.getByTestId('add-show-mock')).toHaveAttribute(
+        'data-phone',
+        'true',
+      );
+    } finally {
+      list.mockImplementation(async () => page);
+      vi.mocked(console.error).mockRestore();
+    }
+  });
 });
 
 describe('EventsClient Add a show (06/events)', () => {

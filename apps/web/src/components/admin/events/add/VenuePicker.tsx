@@ -65,6 +65,7 @@ const VenueList = ({
           // The list's one job is finding a venue: focus lands here.
           autoFocus
           data-testid="venue-search"
+          className="admin-add-show-input"
           aria-label={COPY.search(venues.length)}
           placeholder={COPY.search(venues.length)}
           value={query}
@@ -95,7 +96,14 @@ const VenueList = ({
         <div
           role="listbox"
           aria-label={COPY.title}
-          style={{ maxHeight: phone ? undefined : 220, overflowY: 'auto' }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            // `04/venue-picker-d` spaces the desktop rows 4px apart.
+            gap: phone ? 0 : 4,
+            maxHeight: phone ? undefined : 220,
+            overflowY: 'auto',
+          }}
         >
           {rows.map((venue) => {
             const chosen = venue.id === value;

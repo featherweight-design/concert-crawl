@@ -169,6 +169,23 @@ export const AddShow = ({
   });
   const blocked = Object.keys(shown).length > 0 || exactId !== null;
 
+  // The text inputs' drawn focus: a 1px signal border, unless invalid. Kept
+  // here, not in the shared `inputStyle`, which other screens draw unfocused.
+  const [focused, setFocused] = useState<AddShowField | null>(null);
+  const textInput = (field: 'title' | 'ticketUrl') => {
+    const { invalid } = look(field);
+    return {
+      className: 'admin-add-show-input',
+      onFocus: () => setFocused(field),
+      style: {
+        ...inputStyle(invalid),
+        ...(focused === field &&
+          !invalid && { border: '1px solid var(--signal)', outline: 'none' }),
+        ...(phone && { fontSize: 16 }),
+      },
+    };
+  };
+
   const set = <K extends AddShowField>(field: K, value: AddShowDraft[K]) => {
     setDraft((was) => ({ ...was, [field]: value }));
     // The API's refusal for a field clears once that field changes.
@@ -268,7 +285,7 @@ export const AddShow = ({
               fieldDate(date, false),
               !likeliest.manual,
             )}
-            <b>{likeliest.title}</b>
+            <b>{likeliest.title.replace(/\.+$/, '')}</b>
             {COPY.duplicate.afterTitle}
             {openIt(likeliest.id)}
             {COPY.duplicate.tail}
@@ -324,11 +341,6 @@ export const AddShow = ({
       data-testid="add-show"
       style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
     >
-      {phone && (
-        <div>
-          <KindLabel kind="show" />
-        </div>
-      )}
       <Field field="title" label={COPY.titleField} error={errorOf('title')}>
         <input
           id={fieldId('title')}
@@ -337,10 +349,10 @@ export const AddShow = ({
           aria-invalid={look('title').invalid || undefined}
           aria-describedby={look('title').describedBy}
           onChange={(evt) => set('title', evt.target.value)}
-          onBlur={() => touch('title')}
-          style={{
-            ...inputStyle(look('title').invalid),
-            ...(phone && { fontSize: 16 }),
+          {...textInput('title')}
+          onBlur={() => {
+            setFocused(null);
+            touch('title');
           }}
         />
       </Field>
@@ -391,10 +403,10 @@ export const AddShow = ({
           aria-invalid={look('ticketUrl').invalid || undefined}
           aria-describedby={look('ticketUrl').describedBy}
           onChange={(evt) => set('ticketUrl', evt.target.value)}
-          onBlur={() => touch('ticketUrl')}
-          style={{
-            ...inputStyle(look('ticketUrl').invalid),
-            ...(phone && { fontSize: 16 }),
+          {...textInput('ticketUrl')}
+          onBlur={() => {
+            setFocused(null);
+            touch('ticketUrl');
           }}
         />
       </Field>
@@ -419,18 +431,34 @@ export const AddShow = ({
   const footer = (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
       {failed && (
-        <SaveFailedToast
-          title={COPY.saveFailed.title}
-          body={COPY.saveFailed.body}
-          onRetry={() => void save()}
-          retrying={saving}
-          {...(phone && {
-            padding: '12px',
-            gap: 10,
-            crossStroke: 2.2,
-            shadow: '0 14px 30px rgba(0,0,0,.45)',
-          })}
-        />
+        <div
+          // The phone floats it 12px in, 96px up, over the pinned bar (S13
+          // `merge-failed`); the AdminSheet panel is its containing block.
+          style={
+            phone
+              ? {
+                  position: 'absolute',
+                  left: 12,
+                  right: 12,
+                  bottom: 'calc(96px + env(safe-area-inset-bottom))',
+                  zIndex: 1,
+                }
+              : undefined
+          }
+        >
+          <SaveFailedToast
+            title={COPY.saveFailed.title}
+            body={COPY.saveFailed.body}
+            onRetry={() => void save()}
+            retrying={saving}
+            {...(phone && {
+              padding: '12px',
+              gap: 10,
+              crossStroke: 2.2,
+              shadow: '0 14px 30px rgba(0,0,0,.45)',
+            })}
+          />
+        </div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>
         <button
@@ -488,6 +516,8 @@ export const AddShow = ({
   return phone ? (
     <AdminSheet
       fullScreen
+      formPage
+      eyebrow={<KindLabel kind="show" />}
       title={COPY.title}
       subtitle={COPY.lede}
       backLabel={COPY.back}
