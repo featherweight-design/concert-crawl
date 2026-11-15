@@ -36,6 +36,17 @@ describe('loadIntentSubject', () => {
     );
   });
 
+  it('gives a slow lookup a deadline, so the page never waits on it', async () => {
+    mocks.get.mockResolvedValue({
+      artist: { name: 'X', slug: 'x' },
+      shows: [],
+    });
+    await loadIntentSubject('/artists/x');
+    const options = mocks.get.mock.calls[0]?.[1] as RequestInit;
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+    expect(options.signal?.aborted).toBe(false);
+  });
+
   it('names an artist and counts the upcoming dates', async () => {
     mocks.get.mockResolvedValue({
       artist: { name: 'TOKiMONSTA', slug: 'tokimonsta' },

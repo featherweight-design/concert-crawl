@@ -32,8 +32,17 @@ const GENERIC: IntentSubject = { kind: 'generic' };
 const EVENT_PATH = /^\/events\/([A-Za-z0-9_-]{1,64})$/;
 const ARTIST_PATH = /^\/artists\/([a-z0-9][a-z0-9-]{0,127})$/;
 
-/** The data is public and changes slowly; a card is not worth a fetch per view. */
-const REVALIDATE = { next: { revalidate: 300 } } satisfies RequestInit;
+/**
+ * The data is public and changes slowly, so a card is not worth a fetch per
+ * view. A slow API must never hold the sign-in page: the card is a nicety, so a
+ * lookup that takes longer than this gives up and the page reads as generic.
+ * Built per call, because a signal's clock starts when it is made.
+ */
+const LOOKUP_TIMEOUT_MS = 1500;
+const lookupOptions = (): RequestInit => ({
+  next: { revalidate: 300 },
+  signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS),
+});
 
 /** "FRI, NOV 14 · MARQUIS": the date is a plain calendar day, so no zone. */
 export function showEyebrow(eventDate: string, venueName: string): string {
@@ -66,7 +75,7 @@ export async function loadIntentSubject(
     if (event) {
       const detail = await publicApiClient.get<EventDetailResponse>(
         `/v1/events/${event}`,
-        REVALIDATE,
+        lookupOptions(),
       );
       const title = detail.title.trim();
       if (!title) return GENERIC;
@@ -81,7 +90,7 @@ export async function loadIntentSubject(
     if (slug) {
       const detail = await publicApiClient.get<ArtistDetailResponse>(
         `/v1/artists/${slug}`,
-        REVALIDATE,
+        lookupOptions(),
       );
       const name = detail.artist.name.trim();
       if (!name) return GENERIC;
