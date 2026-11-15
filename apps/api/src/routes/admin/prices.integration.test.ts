@@ -2163,8 +2163,10 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     });
     await seedUserProfile('user_al', { handle: 'al' });
     await seedUserProfile('user_alice', { handle: 'alice' });
+    // Held for the admin, so it counts under Waiting for you.
     const alWaiting = await seedPriceSubmission(first.id, 'user_al', {
       status: 'pending',
+      heldForAdminAt: new Date(),
     });
     const alPublished = await seedPriceSubmission(second.id, 'user_al', {
       status: 'corroborated',
