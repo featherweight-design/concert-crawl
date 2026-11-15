@@ -40,7 +40,7 @@ Every user is a fresh `spike-<n>+clerk_test@example.com` created on the developm
 | E11 | Google with `legalAccepted` (15, Google half)                                                                             | Google needs a live Google round trip, so it is **not automatable**: check the `signUp.sso` type accepts `legalAccepted`, and walk it by hand on staging | the type, and Hugh's staging walk                                                                                                                          |
 | E12 | The OAuth transfer refusal                                                                                                | by hand on staging, with a Google account that has no CC account                                                                                         | that the visitor lands on `/sign-in?google=refused` and no account is made                                                                                 |
 
-E11 and E12 cannot run unattended, so they go on Hugh's staging walk list; the gate for the cutover (PR 9) is "Legal accepted on the Clerk user for both a password and a Google sign-up".
+E7's device code, E11 and E12 cannot run unattended and locally, so they go on Hugh's staging walk list; the gate for the cutover (PR 9) is "Legal accepted on the Clerk user for both a password and a Google sign-up".
 
 ## Cleanup
 
