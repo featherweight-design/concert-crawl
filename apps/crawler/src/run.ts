@@ -299,7 +299,7 @@ interface ClaimedTrigger {
 async function claimPendingTriggers(): Promise<ClaimedTrigger[]> {
   return db
     .update(crawlTriggers)
-    .set({ status: 'processing', updatedAt: new Date() })
+    .set({ status: 'processing', startedAt: new Date(), updatedAt: new Date() })
     .where(
       sql`${crawlTriggers.id} in (
         select ${crawlTriggers.id} from ${crawlTriggers}
