@@ -38,6 +38,23 @@ export const REFUSED_PASSWORD_CODES: ReadonlySet<string> = new Set([
   'form_password_untrusted__sign_in',
 ]);
 
+export type NewPasswordOutcome =
+  'breached' | 'weak' | 'tooShort' | 'rateLimited' | 'failed';
+
+/**
+ * What a refused new password (reset, and later sign-up) means to the visitor.
+ * Breached is read first: Clerk can send it beside a weak code. A 429 and a
+ * `captcha_*` code are never a password refusal.
+ */
+export function classifyNewPasswordError(error: unknown): NewPasswordOutcome {
+  if (isRateLimited(error)) return 'rateLimited';
+  const codes = codesOf(error);
+  if (codes.some((code) => REFUSED_PASSWORD_CODES.has(code))) return 'breached';
+  if (codes.includes('form_password_not_strong_enough')) return 'weak';
+  if (codes.includes('form_password_length_too_short')) return 'tooShort';
+  return 'failed';
+}
+
 export type PasswordOutcome = 'wrong' | 'breached' | 'rateLimited' | 'failed';
 
 /**

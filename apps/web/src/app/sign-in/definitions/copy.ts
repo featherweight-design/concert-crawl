@@ -68,6 +68,30 @@ export const SIGN_IN_COPY = {
     message: 'Too many tries. Wait a minute, then try again.',
     countdown: (clock: string) => `Try again in ${clock}`,
   },
+  // The reset flow (COPY.md "Forgot password"). DRAFT until copy-review.
+  forgot: {
+    title: 'Reset your password',
+    body: 'Enter your email and we’ll send a 6-digit code.',
+    send: 'Send code',
+    back: 'Back to sign in',
+    codeTitle: 'Choose a new password',
+    // Worded to read the same whether or not the address has an account.
+    codeBody: (email: string) =>
+      `If ${email} has an account, we sent it a 6-digit code. Enter it, then choose a new password.`,
+    newLabel: 'New password',
+    rule: 'At least 8 characters.',
+    save: 'Save and sign in',
+    busy: 'Saving…',
+    doneTitle: 'Password changed',
+    doneBody: 'You’re signed in. Taking you back now.',
+    doneLink: 'Continue',
+    codeWrong: 'That code isn’t right. Check the latest email and try again.',
+    codeExpired: 'That code has run out. Send a new one.',
+    tooShort: 'Use at least 8 characters.',
+    weak: 'That password is too easy to guess. Try a longer one, or a few words together.',
+    breached:
+      'That password has appeared in a data breach, so it can’t be used. Choose a different one.',
+  },
   // Not "on our side": a blocker or a bad connection reads the same.
   failed: 'Something went wrong. Try again.',
 } as const;

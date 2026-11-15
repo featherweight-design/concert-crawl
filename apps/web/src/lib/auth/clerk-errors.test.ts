@@ -6,6 +6,7 @@ vi.mock('@clerk/nextjs/errors', () => ({
 }));
 
 import {
+  classifyNewPasswordError,
   classifyPasswordError,
   codesOf,
   REFUSED_PASSWORD_CODES,
@@ -82,5 +83,41 @@ describe('classifyPasswordError', () => {
       'failed',
     );
     expect(classifyPasswordError(new Error('boom'))).toBe('failed');
+  });
+});
+
+describe('classifyNewPasswordError', () => {
+  it('reads breached before weak, then weak, then too short', () => {
+    expect(
+      classifyNewPasswordError(
+        clerkError(
+          422,
+          'form_password_not_strong_enough',
+          'form_password_pwned',
+        ),
+      ),
+    ).toBe('breached');
+    expect(
+      classifyNewPasswordError(
+        clerkError(422, 'form_password_not_strong_enough'),
+      ),
+    ).toBe('weak');
+    expect(
+      classifyNewPasswordError(
+        clerkError(422, 'form_password_length_too_short'),
+      ),
+    ).toBe('tooShort');
+  });
+
+  it('never reads a 429, a captcha code or a non-Clerk error as a password refusal', () => {
+    expect(
+      classifyNewPasswordError(
+        clerkError(429, 'form_password_not_strong_enough'),
+      ),
+    ).toBe('rateLimited');
+    expect(classifyNewPasswordError(clerkError(400, 'captcha_invalid'))).toBe(
+      'failed',
+    );
+    expect(classifyNewPasswordError(new Error('boom'))).toBe('failed');
   });
 });
