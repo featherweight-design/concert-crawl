@@ -117,6 +117,53 @@ describe('useArtistFollow', () => {
     warn.mockRestore();
   });
 
+  it('adopts a changed initialFollowing, as after the sign-in replay refresh', () => {
+    // The replay follows on arrival and refreshes the route; the hook is
+    // already mounted, so only a prop change can carry the server's answer.
+    const { result, rerender } = renderHook(
+      ({ initial }: { initial: boolean }) =>
+        useArtistFollow('wax-harbour', initial),
+      { initialProps: { initial: false } },
+    );
+    expect(result.current.following).toBe(false);
+
+    rerender({ initial: true });
+    expect(result.current.following).toBe(true);
+  });
+
+  it('does not let a prop change clobber an in-flight toggle', async () => {
+    let settle: (value: unknown) => void = () => {};
+    post.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          settle = resolve;
+        }),
+    );
+    const { result, rerender } = renderHook(
+      ({ initial }: { initial: boolean }) =>
+        useArtistFollow('wax-harbour', initial),
+      { initialProps: { initial: false } },
+    );
+
+    act(() => {
+      result.current.toggle();
+    });
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+
+    // A stale refresh lands mid-request: the optimistic flip holds.
+    rerender({ initial: false });
+    expect(result.current.following).toBe(true);
+    rerender({ initial: true });
+    rerender({ initial: false });
+    expect(result.current.following).toBe(true);
+
+    await act(async () => {
+      settle({ following: true });
+    });
+    expect(result.current.following).toBe(true);
+    expect(result.current.pending).toBe(false);
+  });
+
   it('ignores a second click while one is in flight', async () => {
     post.mockResolvedValue({ following: true });
     const { result } = renderHook(() => useArtistFollow('wax-harbour', false));

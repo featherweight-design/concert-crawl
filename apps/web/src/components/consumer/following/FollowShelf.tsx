@@ -179,9 +179,10 @@ export const FollowShelf = ({
         <ShelfHead
           eyebrow={FOLLOWING_COPY.yoursEyebrow(followCount)}
           title={FOLLOWING_COPY.yoursTitle}
-          // Only where the follow filter is honoured. A downgraded viewer keeps
-          // the shelf so they can unfollow, but the filter chip drops the
-          // scope for them at once, so See all would do nothing.
+          // Only where the follow filter is honoured (`visible-active`). Any
+          // other surface (signed out, still resolving, or flagged off) has
+          // a filter chip that drops the scope at once, so See all would
+          // do nothing there.
           action={
             surface === 'visible-active' &&
             followCount > SHELF_SEE_ALL_AFTER && (
