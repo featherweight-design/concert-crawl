@@ -3172,3 +3172,102 @@ describe('crawlVenue — failure reasons', () => {
     expect(run.reason ?? null).toBeNull();
   });
 });
+
+describe('crawlVenue — page progress (re-crawl progress)', () => {
+  it('reports the single listing page of the HTML cascade as 1 of 1', async () => {
+    const venue = seedVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+    const onPageProgress = vi.fn();
+
+    await crawlVenue(
+      venue.id,
+      mockBrowser,
+      undefined,
+      [],
+      false,
+      null,
+      false,
+      onPageProgress,
+    );
+
+    expect(onPageProgress.mock.calls).toEqual([[1, 1]]);
+  });
+
+  it('passes each page a platform adapter reports through, in order', async () => {
+    const venue = seedVenue();
+    mockDispatch.mockReturnValue({
+      source: 'venuepilot',
+      maxRequests: 4,
+      canHandle: () => true,
+      fetch: async (
+        _venue: unknown,
+        opts: {
+          onPageProgress?: (done: number, total: number | null) => unknown;
+        },
+      ) => {
+        for (let page = 1; page <= 4; page++) {
+          await opts.onPageProgress?.(page, 4);
+        }
+        return {
+          events: [],
+          sourceUrl: 'https://platform.example.com/graphql',
+        };
+      },
+    });
+    const onPageProgress = vi.fn();
+
+    await crawlVenue(
+      venue.id,
+      mockBrowser,
+      undefined,
+      [],
+      false,
+      null,
+      false,
+      onPageProgress,
+    );
+
+    expect(onPageProgress.mock.calls).toEqual([
+      [1, 4],
+      [2, 4],
+      [3, 4],
+      [4, 4],
+    ]);
+  });
+
+  it('never fails the crawl when the progress callback throws', async () => {
+    const venue = seedVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+    const onPageProgress = vi.fn().mockRejectedValue(new Error('db down'));
+
+    const run = await crawlVenue(
+      venue.id,
+      mockBrowser,
+      undefined,
+      [],
+      false,
+      null,
+      false,
+      onPageProgress,
+    );
+
+    expect(onPageProgress).toHaveBeenCalledTimes(1);
+    expect(run.status).toBe('success');
+  });
+});

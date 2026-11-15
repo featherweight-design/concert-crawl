@@ -394,6 +394,8 @@ async function aegFetch(
   const raw = await deadline.run('events-blob', (timeoutMs) =>
     fetchAegBlob(url, timeoutMs, opts.fetchLog),
   );
+  // One blob is the whole listing: a single page.
+  await opts.onPageProgress?.(1, 1);
   const parseResult = AegResponseSchema.safeParse(raw);
   if (!parseResult.success) {
     throw new AegSchemaError(

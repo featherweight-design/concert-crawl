@@ -80,7 +80,11 @@ import { VenuePilotFetchError } from './lib/fetchers/venuepilot.js';
 import { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js';
 import { FetchLog } from './lib/fetch-log.js';
 import { insertCrawlRun, type CrawlRunValues } from './lib/record-run.js';
-import type { PlatformFetcher, PlatformSource } from './lib/fetchers/index.js';
+import type {
+  PageProgressCallback,
+  PlatformFetcher,
+  PlatformSource,
+} from './lib/fetchers/index.js';
 import {
   detectCrossVenuePresale,
   type CrossVenueCandidate,
@@ -692,6 +696,30 @@ async function notifyBlocked(params: {
   });
 }
 
+// Wrap a caller's progress callback so it can never reject or throw into the
+// crawl: a failed progress report is a warning, not a crawl failure.
+export function safePageProgress(
+  venueId: string,
+  onPageProgress: PageProgressCallback | undefined,
+): (done: number, total: number | null) => Promise<void> {
+  return async (done, total) => {
+    if (!onPageProgress) return;
+    try {
+      await onPageProgress(done, total);
+    } catch (err) {
+      console.warn(
+        JSON.stringify({
+          event: 'crawl.page_progress_failed',
+          venueId,
+          done,
+          total,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
+  };
+}
+
 export async function crawlVenue(
   venueId: string,
   browser: BrowserSource,
@@ -716,8 +744,13 @@ export async function crawlVenue(
   // against the venue when the crawl starts: a venue resumed since the trial
   // was queued gets an ordinary crawl, and a blocked one is not crawled.
   trialRequested = false,
+  // Told after each listing page this crawl fetches, so a triggered re-crawl
+  // can show the admin its progress. The daily crawl passes none. A callback
+  // that throws or rejects is logged and ignored: progress never fails a crawl.
+  onPageProgress?: PageProgressCallback,
 ): Promise<CrawlVenueResult> {
   const getBrowser = memoizeBrowser(browser);
+  const reportPageProgress = safePageProgress(venueId, onPageProgress);
   // Budget spent with "If it runs out" on: no Haiku call in this crawl at all,
   // so artist adjudication falls back to its no-adjudicator path too.
   const llmStopped = llmBudgetVerdict(llmBudget) === 'over_stop';
@@ -968,6 +1001,7 @@ export async function crawlVenue(
         }),
         budgetFollowsCrawlDelay: true,
         fetchLog,
+        onPageProgress: reportPageProgress,
       });
       extraction = {
         normalizedEvents: platformResult.events,
@@ -1056,6 +1090,10 @@ export async function crawlVenue(
           resolvedMode = 'browser';
         }
       }
+
+      // The cascade reads one listing page. An auto-detect browser re-read
+      // below is the same page again, so it is not a second one.
+      await reportPageProgress(1, 1);
 
       const { html, finalUrl } = fetchResult;
       httpStatus = fetchResult.httpStatus;

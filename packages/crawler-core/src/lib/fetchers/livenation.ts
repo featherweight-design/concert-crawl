@@ -510,6 +510,7 @@ async function liveNationFetch(
     ? [pickProbeMonth(calendarUrls, new Date())]
     : calendarUrls;
 
+  let monthsFetched = 0;
   for (const calendarUrl of monthsToFetch) {
     // Every month page is a request to the venue's own domain, so the
     // venue's configured per-domain delay applies to each of them.
@@ -526,6 +527,10 @@ async function liveNationFetch(
           opts.fetchLog,
         ),
     );
+    // The month pages are the listing; the sitemap before them only names
+    // them, so it is not counted as a page.
+    monthsFetched++;
+    await opts.onPageProgress?.(monthsFetched, monthsToFetch.length);
     const records = extractEventRecords(reassembleFlightPayload(html));
     rawRecordCount += records.length;
 

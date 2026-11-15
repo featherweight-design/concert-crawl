@@ -39,6 +39,7 @@ export {
   type CrawlVenueResult,
   type BrowserSource,
 } from './crawl.js';
+export type { PageProgressCallback } from './lib/fetchers/index.js';
 export { tagEventsWithGenres } from './lib/genre-tagger.js';
 export type { GenreTagInput } from './lib/genre-tagger.js';
 export {

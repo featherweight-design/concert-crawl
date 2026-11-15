@@ -446,6 +446,9 @@ async function venuePilotFetch(
       const normalized = normalize(event, venue.websiteUrl);
       if (normalized) events.push(normalized);
     }
+    // Page 1 names the page count, so the total is known from the first
+    // report on; it is the pages this run will actually read, cap included.
+    await opts.onPageProgress?.(pagesFetched, Math.min(totalPages, pageCap));
   }
 
   // totalPages > MAX_PAGES means we stopped short of the full set — surface it

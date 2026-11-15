@@ -716,12 +716,19 @@ describe('venuePilotFetcher.fetch', () => {
           },
         ),
       );
+    const onPageProgress = vi.fn();
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
+      onPageProgress,
     });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(result.events.length).toBe(2);
     expect(result.meta?.pagesFetched).toBe(2);
+    // Page 1 already names the page count, so every report carries it.
+    expect(onPageProgress.mock.calls).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
   });
 
   it('requests page 1 only when firstPageOnly is set', async () => {
@@ -746,10 +753,14 @@ describe('venuePilotFetcher.fetch', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
     );
+    const onPageProgress = vi.fn();
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
       firstPageOnly: true,
+      onPageProgress,
     });
+    // The total is the pages this run reads, not the account's page count.
+    expect(onPageProgress.mock.calls).toEqual([[1, 1]]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     // The profile the admin probe sizes its budget from matches that run.
     expect(fetchSpy).toHaveBeenCalledTimes(VENUEPILOT_PROBE_REQUESTS.paced);

@@ -789,6 +789,8 @@ describe('runTriggeredCrawls', () => {
       false,
       NO_LLM_BUDGET,
       false,
+      // The trigger's page-progress writer.
+      expect.any(Function),
     );
     expect(mockCrawlVenue).toHaveBeenCalledWith(
       'venue-b',
@@ -798,6 +800,7 @@ describe('runTriggeredCrawls', () => {
       false,
       NO_LLM_BUDGET,
       false,
+      expect.any(Function),
     );
     // One budget read for the whole drain, not one per trigger.
     expect(mockReadLlmBudgetStatus).toHaveBeenCalledTimes(1);
@@ -1424,5 +1427,119 @@ describe('runTriggeredCrawls', () => {
         error: 'Error: network timeout',
       }),
     );
+  });
+
+  describe('page progress (re-crawl progress)', () => {
+    type Progress = (done: number, total: number | null) => Promise<void>;
+    let clock = 1_000_000;
+    let nowSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      clock = 1_000_000;
+      nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => clock);
+    });
+    afterEach(() => {
+      nowSpy.mockRestore();
+    });
+
+    // Run the drain with the first trigger's crawl driving its progress
+    // callback through `drive`; returns every progress write's values.
+    async function runWithProgress(
+      drive: (report: Progress) => Promise<void>,
+    ): Promise<Record<string, unknown>[]> {
+      mockCrawlVenue.mockImplementationOnce(async (...args: unknown[]) => {
+        const report = args[7];
+        if (typeof report !== 'function') {
+          throw new Error('crawlVenue got no progress callback');
+        }
+        await drive(async (done, total) => {
+          await report(done, total);
+        });
+        return SUCCESSFUL_CRAWL_RUN;
+      });
+      const { runTriggeredCrawls } = await import('./run.js');
+      await runTriggeredCrawls();
+      return mockDbUpdate.set.mock.calls
+        .map((call) => call[0])
+        .filter(
+          (values): values is Record<string, unknown> =>
+            typeof values === 'object' &&
+            values !== null &&
+            'pagesDone' in values,
+        );
+    }
+
+    it('writes pages done and total, progress_at and updated_at onto the processing trigger', async () => {
+      const { eq } = await import('drizzle-orm');
+      const writes = await runWithProgress(async (report) => {
+        await report(1, 4);
+      });
+
+      expect(writes).toEqual([
+        {
+          pagesDone: 1,
+          pagesTotal: 4,
+          progressAt: new Date(1_000_000),
+          // The stale-processing reaper reads updated_at: a crawl still
+          // reporting must look alive to it.
+          updatedAt: new Date(1_000_000),
+        },
+      ]);
+      expect(vi.mocked(eq)).toHaveBeenCalledWith('id', 'trigger-1');
+      expect(vi.mocked(eq)).toHaveBeenCalledWith('status', 'processing');
+    });
+
+    it('skips a write under 2 s after the last, but always writes the final page', async () => {
+      const writes = await runWithProgress(async (report) => {
+        await report(1, 4);
+        clock += 500;
+        await report(2, 4); // throttled
+        clock += 2000;
+        await report(3, 4); // written
+        clock += 100;
+        await report(3, 4); // same page again: never a second write
+        clock += 100;
+        await report(4, 4); // final page: written despite the throttle
+      });
+
+      expect(writes.map((values) => values.pagesDone)).toEqual([1, 3, 4]);
+    });
+
+    it('clamps pages done to the total and keeps an unknown total null', async () => {
+      const writes = await runWithProgress(async (report) => {
+        await report(1, null);
+        clock += 2000;
+        await report(5, 3);
+      });
+
+      expect(
+        writes.map(({ pagesDone, pagesTotal }) => [pagesDone, pagesTotal]),
+      ).toEqual([
+        [1, null],
+        [3, 3],
+      ]);
+    });
+
+    it('swallows a failed write and lets the crawl finish', async () => {
+      let reported = false;
+      const writes = await runWithProgress(async (report) => {
+        mockDbUpdate.where.mockImplementationOnce(() =>
+          Promise.reject(new Error('db down')),
+        );
+        await report(1, 2);
+        reported = true;
+      });
+
+      expect(writes).toHaveLength(1);
+      expect(reported).toBe(true);
+      const statuses = mockDbUpdate.set.mock.calls.map(
+        (call) => call[0]?.status,
+      );
+      expect(statuses).toContain('done');
+      expect(mockSentryLoggerError).not.toHaveBeenCalledWith(
+        'crawl.error',
+        expect.anything(),
+      );
+    });
   });
 });
