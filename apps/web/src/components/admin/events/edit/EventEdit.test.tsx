@@ -1822,6 +1822,121 @@ describe('EventEdit venue (E2-D)', () => {
     expect(screen.queryByTestId('status-moved')).toBeNull();
   });
 
+  it('confirms a cancelled show put back on sale in the same Save, as the move then tells', async () => {
+    patch.mockResolvedValue({});
+    post.mockResolvedValue(MOVED);
+    render(
+      <EventEdit
+        detail={{ ...MANUAL, status: 'cancelled', watchingCount: 4 }}
+        today="2026-11-13"
+      />,
+    );
+    await pickVenue('Globe Hall');
+    fireEvent.click(screen.getByTestId('status-pill-available'));
+    save();
+    expect(screen.getByText(VENUE.confirmBody(4))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: VENUE.confirm }));
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith(VENUE_PATH, 'token', {
+        venueId: GLOBE,
+      });
+    });
+    // The PATCH put it back on before the move ran.
+    expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+      status: 'upcoming',
+    });
+  });
+
+  it('asks nothing for a show dated into the past in the same Save', async () => {
+    patch.mockResolvedValue({});
+    post.mockResolvedValue(MOVED);
+    render(
+      <EventEdit detail={{ ...MANUAL, watchingCount: 4 }} today="2026-11-13" />,
+    );
+    await pickVenue('Globe Hall');
+    fireEvent.click(screen.getByLabelText(COPY.show.date));
+    fireEvent.click(screen.getByRole('button', { name: 'Mon, Nov 2, 2026' }));
+    save();
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith(VENUE_PATH, 'token', {
+        venueId: GLOBE,
+      });
+    });
+    expect(screen.queryByRole('button', { name: VENUE.confirm })).toBeNull();
+  });
+
+  it('keeps a move that landed, and names it, when the sale write after it fails', async () => {
+    patch.mockResolvedValue({});
+    post.mockImplementation(async (path: string) => {
+      if (path === VENUE_PATH) return MOVED;
+      throw new Error('500');
+    });
+    render(
+      <EventEdit
+        detail={{ ...MANUAL, status: 'soldout', isSoldOut: true }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.change(titleInput(), { target: { value: 'New title' } });
+    await pickVenue('Globe Hall');
+    fireEvent.click(screen.getByTestId('status-pill-available'));
+    save();
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(
+      `${COPY.saveFailed.savedFields(
+        `${COPY.saveFailed.fieldNames.title} and ${COPY.saveFailed.fieldNames.venue}`,
+      )} ${COPY.statusSaved(ADMIN_COPY.eventsList.status.soldout)}`,
+    );
+    // The title and the move stay; only the sale snaps back.
+    await waitFor(() => {
+      expect(screen.getByTestId('status-pill-soldout')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    });
+    expect(titleInput()).toHaveValue('New title');
+    expect(venueField()).toHaveTextContent('Globe Hall');
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('loads the venues once the show becomes movable', async () => {
+    const { rerender } = render(
+      <EventEdit detail={DETAIL} today="2026-11-13" />,
+    );
+    expect(venueField()).toHaveAttribute('readonly');
+    expect(venues).not.toHaveBeenCalled();
+    // A day after it played, the crawled show takes a correction.
+    rerender(<EventEdit detail={DETAIL} today="2026-11-20" />);
+    await waitFor(() => {
+      expect(venues).toHaveBeenCalledTimes(1);
+    });
+    await pickVenue('Globe Hall');
+    expect(venueField()).toHaveTextContent('Globe Hall');
+  });
+
+  it('gives a show added by hand with no venue one, from the placeholder', async () => {
+    post.mockResolvedValue(MOVED);
+    render(
+      <EventEdit
+        detail={{
+          ...MANUAL,
+          venueId: null,
+          venueName: null,
+          venueSlug: null,
+        }}
+        today="2026-11-13"
+      />,
+    );
+    expect(venueField()).toHaveTextContent(ADMIN_COPY.addShow.venuePlaceholder);
+    await pickVenue('Globe Hall');
+    save();
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith(VENUE_PATH, 'token', {
+        venueId: GLOBE,
+      });
+    });
+  });
+
   it('asks nothing for a cancelled show, whose move tells nobody', async () => {
     post.mockResolvedValue(MOVED);
     render(

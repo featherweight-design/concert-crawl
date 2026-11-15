@@ -22,14 +22,17 @@ const COPY = ADMIN_COPY.addShow.venuePicker;
 export type PickVenues = PickVenue[] | 'failed' | null;
 
 /**
- * The picker's venues, loaded once on mount: null while loading, 'failed'
- * after a failed load, else the list. `reload` is the picker's `onRetry`.
- * The latest `load` is kept in a ref, so a caller passing a fresh function
- * each render never loads again.
+ * The picker's venues: null while loading, 'failed' after a failed load,
+ * else the list. `reload` is the picker's `onRetry`. Loads once `enabled`
+ * (on mount by default), and again each time it turns back on, so a page
+ * whose picker appears later still gets its list. The latest `load` is kept
+ * in a ref, so a caller passing a fresh function each render never loads
+ * again.
  */
 export const usePickVenues = (
   load: () => Promise<PickVenue[]>,
   logTag: string,
+  enabled = true,
 ): { venues: PickVenues; reload: () => void } => {
   const [venues, setVenues] = useState<PickVenues>(null);
   const loadRef = useRef(load);
@@ -43,7 +46,9 @@ export const usePickVenues = (
       setVenues('failed');
     });
   }, [logTag]);
-  useEffect(reload, [reload]);
+  useEffect(() => {
+    if (enabled) reload();
+  }, [enabled, reload]);
   return { venues, reload };
 };
 
