@@ -122,6 +122,7 @@ export const VenueHeader = ({
   const busy = recrawl.state === 'queued' || recrawl.state === 'running';
   const busyLabel = recrawl.state === 'running' ? COPY.running : COPY.queued;
   const notice = NOTICE[recrawl.state];
+  const menuShown = notice === undefined ? menuNotice : null;
   const siteHref = viewOnSiteHref(venue);
   const lineId = `venue-header-line-${venue.id}`;
   const grow = isPhone ? 1 : 'none';
@@ -224,7 +225,11 @@ export const VenueHeader = ({
             aria-disabled={busy || undefined}
             aria-describedby={off !== null && line !== '' ? lineId : undefined}
             // A no-op while busy or off: the hook guards both.
-            onClick={() => recrawl.start()}
+            onClick={() => {
+              // A new crawl makes a queued trial's notice old news.
+              if (!busy && off === null) setMenuNotice(null);
+              recrawl.start();
+            }}
             style={{
               ...BUTTON,
               gap: busy ? 8 : 6,
@@ -244,9 +249,10 @@ export const VenueHeader = ({
             )}
             {busy ? busyLabel : COPY.recrawl}
           </AdminButton>
-          {/* Always mounted, so a screen reader hears each state change. */}
+          {/* Always mounted, so a screen reader hears each state change: a
+              queued test re-crawl from the ⋯ menu too. */}
           <span role="status" aria-live="polite" className="sr-only">
-            {busy ? busyLabel : (notice ?? '')}
+            {busy ? busyLabel : (notice ?? menuShown ?? '')}
           </span>
           {siteHref !== null && (
             <a
@@ -303,11 +309,9 @@ export const VenueHeader = ({
       {notice !== undefined && (
         <RecrawlNotice text={notice} onDismiss={recrawl.dismiss} />
       )}
-      {menuNotice !== null && (
-        <RecrawlNotice
-          text={menuNotice}
-          onDismiss={() => setMenuNotice(null)}
-        />
+      {/* Re-crawl's own notice wins, so the two never stack. */}
+      {menuShown !== null && (
+        <RecrawlNotice text={menuShown} onDismiss={() => setMenuNotice(null)} />
       )}
     </div>
   );

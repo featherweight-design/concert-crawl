@@ -274,10 +274,29 @@ describe('venueMenuItems: Try a re-crawl', () => {
     ).toBe('Auto-paused after 3 failures.');
   });
 
+  it('is never offered where the API would refuse it: unverified or robots-disallowed', () => {
+    const auto = { crawlPausedAt: PAUSED_AT, consecutiveFailures: 3 };
+    expect(keysOf({ ...auto, verified: false })).not.toContain('trial');
+    expect(keysOf({ ...auto, robotsTxtAllowed: false })).not.toContain('trial');
+    // So the auto-paused line never points at a row that isn't there.
+    expect(
+      venueMenuItems(
+        venue({ active: true, ...auto, robotsTxtAllowed: false }),
+        ACT,
+      )[0]!.hint,
+    ).toBe('Auto-paused after 3 failures.');
+  });
+
   it('is never offered on a hidden or taken-down venue', () => {
     expect(keysOf({ active: false, crawlPausedAt: PAUSED_AT })).not.toContain(
       'trial',
     );
+    // A hidden auto-paused venue's Resume line stops at the failures.
+    const hiddenResume = venueMenuItems(
+      venue({ crawlPausedAt: PAUSED_AT, consecutiveFailures: 3 }),
+      ACT,
+    ).find((item) => item.key === 'resume');
+    expect(hiddenResume?.hint).toBe('Auto-paused after 3 failures.');
     expect(
       keysOf({ active: false, crawlPausedAt: PAUSED_AT, removedAt: PAUSED_AT }),
     ).not.toContain('trial');

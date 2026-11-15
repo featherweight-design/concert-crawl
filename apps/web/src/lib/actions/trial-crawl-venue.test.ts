@@ -45,22 +45,34 @@ describe('trialCrawlVenue', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/admin/venues/venue-1');
   });
 
-  it.each(['trial_pending', 'blocked', 'not_paused'] as const)(
-    'returns a 409 %s as its code',
-    async (code) => {
-      apiPost.mockRejectedValue(new ApiError(409, 'refused', code));
-      await expect(trialCrawlVenue('venue-1')).resolves.toEqual({
-        ok: false,
-        code,
-      });
-      expect(revalidatePath).not.toHaveBeenCalled();
-    },
-  );
+  it.each([
+    'trial_pending',
+    'blocked',
+    'not_paused',
+    'robots_disallowed',
+  ] as const)('returns a 409 %s as its code', async (code) => {
+    apiPost.mockRejectedValue(new ApiError(409, 'refused', code));
+    await expect(trialCrawlVenue('venue-1')).resolves.toEqual({
+      ok: false,
+      code,
+    });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('returns the 400 (hidden or unverified, no code) as not_crawlable', async () => {
+    apiPost.mockRejectedValue(
+      new ApiError(400, 'Venue must be active and verified to crawl'),
+    );
+    await expect(trialCrawlVenue('venue-1')).resolves.toEqual({
+      ok: false,
+      code: 'not_crawlable',
+    });
+  });
 
   it('rethrows a 409 it doesn’t know, and any other failure', async () => {
-    const robots = new ApiError(409, 'robots', 'robots_disallowed');
-    apiPost.mockRejectedValueOnce(robots);
-    await expect(trialCrawlVenue('venue-1')).rejects.toBe(robots);
+    const removed = new ApiError(409, 'removed', 'venue_removed');
+    apiPost.mockRejectedValueOnce(removed);
+    await expect(trialCrawlVenue('venue-1')).rejects.toBe(removed);
     const down = new ApiError(500, 'down');
     apiPost.mockRejectedValueOnce(down);
     await expect(trialCrawlVenue('venue-1')).rejects.toBe(down);

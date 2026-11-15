@@ -184,8 +184,9 @@ const LatestRunCard = ({
 // ── Last 14 runs ─────────────────────────────────────────────
 
 /**
- * A test re-crawl's bar keeps its kind and draws faded (undrawn: the legend
- * board has no trial), so the venue's own crawls read first.
+ * 🔸 Undrawn: `A3/03/last-14-runs-legend` draws no test re-crawl. A trial's
+ * bar keeps its kind and draws faded, so the venue's own crawls read first,
+ * and we add a "Test re-crawl" legend entry the board doesn't have.
  */
 const TRIAL_OPACITY = 0.45;
 

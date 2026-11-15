@@ -780,8 +780,13 @@ describe('VenueMenu — Try a re-crawl', () => {
       'It’s blocked, so a test re-crawl can’t run. Clear the block first.',
     ],
     ['not_paused', 'Its crawl isn’t paused any more. Use Re-crawl.'],
+    [
+      'robots_disallowed',
+      'robots.txt disallows the page we crawl. We never override it.',
+    ],
+    ['not_crawlable', 'Only a verified venue on the site can be crawled.'],
   ] as const)(
-    'a 409 %s says why in the toast, with no Try again',
+    'a refused %s says why in the toast, with no Try again',
     async (code, saved) => {
       mockTrial.mockResolvedValue({ ok: false, code });
       openPaused();
@@ -818,5 +823,51 @@ describe('VenueMenu — Try a re-crawl', () => {
     await waitFor(() =>
       expect(onNotice).toHaveBeenLastCalledWith(COPY.notice.trialQueued),
     );
+  });
+
+  it('any later change that goes through clears the queued notice', async () => {
+    mockTrial.mockResolvedValue({ ok: true });
+    mockResume.mockResolvedValue({ ok: true });
+    mockFeatured.mockResolvedValue(undefined);
+    openPaused();
+    fireEvent.click(row('trial'));
+    await waitFor(() =>
+      expect(onNotice).toHaveBeenLastCalledWith(COPY.notice.trialQueued),
+    );
+    fireEvent.click(trigger());
+    await waitFor(() =>
+      expect(row('resume').getAttribute('aria-disabled')).toBeNull(),
+    );
+    fireEvent.click(row('resume'));
+    await waitFor(() => expect(onNotice).toHaveBeenLastCalledWith(null));
+
+    onNotice.mockReset();
+    fireEvent.click(trigger());
+    await waitFor(() =>
+      expect(row('flagship').getAttribute('aria-disabled')).toBeNull(),
+    );
+    fireEvent.click(row('flagship'));
+    await waitFor(() => expect(onNotice).toHaveBeenLastCalledWith(null));
+  });
+
+  it('a failed change leaves the notice alone', async () => {
+    mockTrial.mockResolvedValue({ ok: true });
+    mockFeatured.mockRejectedValue(new Error('boom'));
+    openPaused();
+    fireEvent.click(row('trial'));
+    await waitFor(() =>
+      expect(onNotice).toHaveBeenLastCalledWith(COPY.notice.trialQueued),
+    );
+    fireEvent.click(trigger());
+    await waitFor(() =>
+      expect(row('flagship').getAttribute('aria-disabled')).toBeNull(),
+    );
+    fireEvent.click(row('flagship'));
+    await waitFor(() =>
+      expect(onFailure).toHaveBeenLastCalledWith(
+        expect.objectContaining({ what: COPY.failed.flagship }),
+      ),
+    );
+    expect(onNotice).toHaveBeenLastCalledWith(COPY.notice.trialQueued);
   });
 });
