@@ -441,7 +441,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const visible = rows.filter((row) => inFilter(row, filter));
   const selectedRow = rows.find((row) => row.key === selected) ?? null;
   const batchRow = rows.find((row) => row.key === batchKey) ?? null;
-  const allClear = rows.length === 0 && count.decisions === 0;
+  // An answer just given still owns the list: answering the last card must
+  // leave its Undo line up, not flip straight to All clear.
+  const allClear = rows.length === 0 && count.decisions === 0 && !answered;
   // A batch opens its own panel on desktop; the phone has the sheet.
   const batchPanel = selectedRow?.kind === 'price-batch' && !isPhone;
   // A failed answer on the open item shows its block in the docked panel; the
