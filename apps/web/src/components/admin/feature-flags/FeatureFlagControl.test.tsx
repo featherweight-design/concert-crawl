@@ -14,6 +14,8 @@ import type { AdminFeatureFlag } from '@concert-crawl/entitlements';
 // ───── Mocks ─────────────────────────────────────────────────────────────────
 
 const patch = vi.fn();
+const post = vi.fn();
+const del = vi.fn();
 // ApiError is declared inside the factory so vi.mock hoisting can't trip on a
 // top-level reference; it carries status/message so `instanceof ApiError`
 // narrows correctly inside the control's catch.
@@ -31,6 +33,8 @@ vi.mock('@/lib/api', () => {
   return {
     apiClient: {
       patch: (...args: unknown[]) => patch(...args),
+      post: (...args: unknown[]) => post(...args),
+      delete: (...args: unknown[]) => del(...args),
     },
     ApiError,
   };
@@ -65,6 +69,8 @@ const step = (stage: string) => screen.getByTestId(`flag-step-crews-${stage}`);
 
 beforeEach(() => {
   patch.mockReset();
+  post.mockReset();
+  del.mockReset();
 });
 
 afterEach(cleanup);
@@ -260,6 +266,123 @@ describe('FeatureFlagControl in production', () => {
     fireEvent.click(step('beta'));
     await waitFor(() =>
       expect(screen.getByText(/not verified here yet/)).toBeVisible(),
+    );
+  });
+});
+
+describe('FeatureFlagControl Mark verified (staging)', () => {
+  const markButton = () => screen.queryByTestId('flag-mark-verified-crews');
+
+  it('offers Mark verified once the flag is on for anyone, not while Off', () => {
+    const { unmount } = render(<FeatureFlagControl initial={[flag()]} />);
+    expect(markButton()).toBeNull();
+    unmount();
+    render(<FeatureFlagControl initial={[flag({ stage: 'me' })]} />);
+    expect(markButton()).toBeVisible();
+    expect(screen.getByText('Unlocks production')).toBeVisible();
+  });
+
+  it('draws no Mark verified control in production', () => {
+    render(
+      <FeatureFlagControl
+        initial={[
+          flag({ stage: 'me', environment: 'production', locked: true }),
+        ]}
+      />,
+    );
+    expect(markButton()).toBeNull();
+  });
+
+  it('needs all three ticks, then sends the checks and the note', async () => {
+    post.mockResolvedValue(
+      flag({ stage: 'me', verifiedAt: '2026-09-07T00:00:00.000Z' }),
+    );
+    render(<FeatureFlagControl initial={[flag({ stage: 'me' })]} />);
+    fireEvent.click(screen.getByTestId('flag-mark-verified-crews'));
+    expect(screen.getByText('Mark Crews verified?')).toBeVisible();
+    const accept = screen.getByRole('button', { name: 'Mark verified' });
+    expect(accept).toBeDisabled();
+    for (const key of ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff']) {
+      fireEvent.click(screen.getByTestId(`verify-check-${key}`));
+    }
+    fireEvent.change(screen.getByTestId('verify-note'), {
+      target: { value: ' Works on iPhone ' },
+    });
+    expect(accept).toBeEnabled();
+    fireEvent.click(accept);
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post).toHaveBeenCalledWith(
+      '/v1/admin/feature-flags/crews/verify',
+      'tok',
+      {
+        note: 'Works on iPhone',
+        checks: {
+          triedAsMe: true,
+          checkedOnPhone: true,
+          checkedFlagOff: true,
+        },
+      },
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('flag-verified-crews')).toBeVisible(),
+    );
+  });
+
+  it('omits the note when it is empty', async () => {
+    post.mockResolvedValue(
+      flag({ stage: 'me', verifiedAt: '2026-09-07T00:00:00.000Z' }),
+    );
+    render(<FeatureFlagControl initial={[flag({ stage: 'me' })]} />);
+    fireEvent.click(screen.getByTestId('flag-mark-verified-crews'));
+    for (const key of ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff']) {
+      fireEvent.click(screen.getByTestId(`verify-check-${key}`));
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Mark verified' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post.mock.calls[0]?.[2]).not.toHaveProperty('note');
+  });
+
+  it('saves nothing when the ask is cancelled', () => {
+    render(<FeatureFlagControl initial={[flag({ stage: 'me' })]} />);
+    fireEvent.click(screen.getByTestId('flag-mark-verified-crews'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(post).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('says so and closes the ask when the mark fails', async () => {
+    post.mockRejectedValue(new Error('boom'));
+    render(<FeatureFlagControl initial={[flag({ stage: 'me' })]} />);
+    fireEvent.click(screen.getByTestId('flag-mark-verified-crews'));
+    for (const key of ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff']) {
+      fireEvent.click(screen.getByTestId(`verify-check-${key}`));
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Mark verified' }));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Could not update the verified mark/),
+      ).toBeVisible(),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('undoes the mark with the Undo link', async () => {
+    del.mockResolvedValue(flag({ stage: 'me' }));
+    render(
+      <FeatureFlagControl
+        initial={[
+          flag({ stage: 'me', verifiedAt: '2026-09-07T00:00:00.000Z' }),
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('flag-undo-verified-crews'));
+    await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+    expect(del).toHaveBeenCalledWith(
+      '/v1/admin/feature-flags/crews/verify',
+      'tok',
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('flag-mark-verified-crews')).toBeVisible(),
     );
   });
 });

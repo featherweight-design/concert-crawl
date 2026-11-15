@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import type {
   AdminFeatureFlag,
@@ -42,37 +42,33 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
   const [flags, setFlags] = useState<AdminFeatureFlag[]>(initial);
   const [pending, setPending] = useState<FeatureFlagKey | null>(null);
   const [asking, setAsking] = useState<PendingEveryone | null>(null);
+  const [verifying, setVerifying] = useState<AdminFeatureFlag | null>(null);
   const [error, setError] = useState<{
     key: FeatureFlagKey;
     message: string;
   } | null>(null);
 
-  const moveFlag = async (
+  // One save: gets a token, runs the call, swaps the flag's row for the answer
+  // and closes any dialog. Every failure closes the dialog too: the error
+  // renders in the row underneath the overlay, so leaving it open hides the
+  // only explanation the admin gets.
+  const mutate = async (
     flag: AdminFeatureFlag,
-    stage: Stage,
-    confirm?: boolean,
+    failure: string,
+    run: (token: string) => Promise<AdminFeatureFlag>,
   ) => {
     setPending(flag.key);
     setError(null);
     try {
       const token = await getToken();
       if (!token) {
-        // The dialog has to close on this branch too: the error renders in the
-        // row underneath the overlay, so leaving it open hides the only
-        // explanation the admin gets.
-        setError({ key: flag.key, message: COPY.saveError });
-        setAsking(null);
+        setError({ key: flag.key, message: failure });
         return;
       }
-      const updated = await apiClient.patch<AdminFeatureFlag>(
-        `/v1/admin/feature-flags/${flag.key}`,
-        token,
-        confirm === true ? { stage, confirm } : { stage },
-      );
+      const updated = await run(token);
       setFlags((prev) =>
         prev.map((row) => (row.key === updated.key ? updated : row)),
       );
-      setAsking(null);
     } catch (err) {
       console.error('[admin] feature flag save failed', flag.key, err);
       // A 409 is the production lock: the flag is not verified here yet.
@@ -80,14 +76,45 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
         err instanceof ApiError && err.status === 409
           ? COPY.lockedError
           : err instanceof ApiError
-            ? `${COPY.saveError} ${err.message}`
-            : COPY.saveError;
+            ? `${failure} ${err.message}`
+            : failure;
       setError({ key: flag.key, message });
-      setAsking(null);
     } finally {
       setPending(null);
+      setAsking(null);
+      setVerifying(null);
     }
   };
+
+  const moveFlag = (flag: AdminFeatureFlag, stage: Stage, confirm?: boolean) =>
+    mutate(flag, COPY.saveError, (token) =>
+      apiClient.patch<AdminFeatureFlag>(
+        `/v1/admin/feature-flags/${flag.key}`,
+        token,
+        confirm === true ? { stage, confirm } : { stage },
+      ),
+    );
+
+  const markVerified = (
+    flag: AdminFeatureFlag,
+    note: string,
+    checks: Record<string, boolean>,
+  ) =>
+    mutate(flag, COPY.markVerified.error, (token) =>
+      apiClient.post<AdminFeatureFlag>(
+        `/v1/admin/feature-flags/${flag.key}/verify`,
+        token,
+        note === '' ? { checks } : { note, checks },
+      ),
+    );
+
+  const undoVerified = (flag: AdminFeatureFlag) =>
+    mutate(flag, COPY.markVerified.error, (token) =>
+      apiClient.delete<AdminFeatureFlag>(
+        `/v1/admin/feature-flags/${flag.key}/verify`,
+        token,
+      ),
+    );
 
   const pick = (flag: AdminFeatureFlag, stage: Stage) => {
     const from = stageOf(flag);
@@ -133,9 +160,26 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
             flag={flag}
             error={error?.key === flag.key ? error.message : null}
             onPick={(stage) => pick(flag, stage)}
+            onMarkVerified={() => setVerifying(flag)}
+            onUndoVerified={() => void undoVerified(flag)}
+            saving={pending === flag.key}
           />
         ))}
       </ul>
+
+      {verifying && (
+        <MarkVerifiedAsk
+          flag={verifying}
+          pending={pending === verifying.key}
+          onCancel={() => {
+            if (pending !== null) return;
+            setVerifying(null);
+          }}
+          onConfirm={(note, checks) =>
+            void markVerified(verifying, note, checks)
+          }
+        />
+      )}
 
       {asking && (
         <EveryoneInProductionAsk
@@ -153,6 +197,17 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
   );
 };
 
+const LINK_BUTTON: CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  fontSize: 12,
+  fontWeight: 600,
+  color: 'var(--signal)',
+  cursor: 'pointer',
+  textDecoration: 'underline',
+};
+
 const COLUMN_HEAD = {
   fontSize: 10,
   letterSpacing: '0.14em',
@@ -165,10 +220,22 @@ interface FlagRowProps {
   flag: AdminFeatureFlag;
   error: string | null;
   onPick: (stage: Stage) => void;
+  onMarkVerified: () => void;
+  onUndoVerified: () => void;
+  saving: boolean;
 }
 
-const FlagRow = ({ flag, error, onPick }: FlagRowProps) => {
+const FlagRow = ({
+  flag,
+  error,
+  onPick,
+  onMarkVerified,
+  onUndoVerified,
+  saving,
+}: FlagRowProps) => {
   const stage = stageOf(flag);
+  // The verified mark is set on staging; the production control is not drawn.
+  const onStaging = flag.environment !== 'production';
   const people = flag.people?.length ?? 0;
   // Production keeps a flag locked until it is verified there: a step UP is
   // closed, stepping down never is.
@@ -328,6 +395,33 @@ const FlagRow = ({ flag, error, onPick }: FlagRowProps) => {
               {`${COPY.verifiedOn} `}
               <RelTime iso={flag.verifiedAt} />
             </span>
+            {onStaging && (
+              <button
+                type="button"
+                onClick={onUndoVerified}
+                disabled={saving}
+                aria-label={COPY.markVerified.undoAriaLabel(flag.label)}
+                data-testid={`flag-undo-verified-${flag.key}`}
+                style={LINK_BUTTON}
+              >
+                {COPY.markVerified.undo}
+              </button>
+            )}
+          </>
+        ) : onStaging && stage !== 'off' ? (
+          <>
+            <AdminButton
+              variant="outline"
+              size="sm"
+              onClick={onMarkVerified}
+              disabled={saving}
+              data-testid={`flag-mark-verified-${flag.key}`}
+            >
+              {COPY.markVerified.button}
+            </AdminButton>
+            <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+              {COPY.markVerified.hint}
+            </span>
           </>
         ) : (
           <>
@@ -360,27 +454,25 @@ const FlagRow = ({ flag, error, onPick }: FlagRowProps) => {
   );
 };
 
-interface EveryoneInProductionAskProps {
-  flag: AdminFeatureFlag;
-  from: Stage;
+interface AskDialogProps {
+  heading: string;
   pending: boolean;
   onCancel: () => void;
-  onConfirm: () => void;
+  children: ReactNode;
+  footer: ReactNode;
 }
 
-// "Everyone in production asks first" (`07-people-flags-operations`). The board
-// also reads staging's step into this dialog; production never reads staging
-// (Hugh's ruling), so only this environment's own step is shown.
-const EveryoneInProductionAsk = ({
-  flag,
-  from,
+// The shell both asks share: backdrop, keyboard handling, heading, a body
+// slot and a footer slot.
+const AskDialog = ({
+  heading,
   pending,
   onCancel,
-  onConfirm,
-}: EveryoneInProductionAskProps) => {
+  children,
+  footer,
+}: AskDialogProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   useDialogKeyboard(panelRef, onCancel, { dismissible: !pending });
-  const heading = COPY.everyoneAsk.title(flag.label);
 
   return (
     <div
@@ -426,27 +518,7 @@ const EveryoneInProductionAsk = ({
           >
             {heading}
           </h3>
-          <div
-            style={{
-              marginTop: 12,
-              fontSize: 13,
-              color: 'var(--fg-muted)',
-              lineHeight: 1.6,
-            }}
-          >
-            {COPY.everyoneAsk.body(flag.label)}
-          </div>
-          <div
-            data-testid="everyone-ask-step"
-            style={{
-              marginTop: 14,
-              fontSize: 12.5,
-              color: 'var(--fg)',
-              fontWeight: 600,
-            }}
-          >
-            {COPY.everyoneAsk.step(COPY.stage[from], COPY.stage.everyone)}
-          </div>
+          {children}
         </div>
         <div
           style={{
@@ -459,14 +531,184 @@ const EveryoneInProductionAsk = ({
             background: 'var(--surface-1)',
           }}
         >
-          <AdminButton variant="ghost" onClick={onCancel} disabled={pending}>
-            {COPY.confirmCancel}
-          </AdminButton>
-          <AdminButton variant="primary" onClick={onConfirm} disabled={pending}>
-            {COPY.everyoneAsk.accept}
-          </AdminButton>
+          {footer}
         </div>
       </div>
     </div>
+  );
+};
+
+const ASK_BODY: CSSProperties = {
+  marginTop: 12,
+  fontSize: 13,
+  color: 'var(--fg-muted)',
+  lineHeight: 1.6,
+};
+
+interface EveryoneInProductionAskProps {
+  flag: AdminFeatureFlag;
+  from: Stage;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+// "Everyone in production asks first" (`07-people-flags-operations`). The board
+// also reads staging's step into this dialog; production never reads staging
+// (Hugh's ruling), so only this environment's own step is shown.
+const EveryoneInProductionAsk = ({
+  flag,
+  from,
+  pending,
+  onCancel,
+  onConfirm,
+}: EveryoneInProductionAskProps) => (
+  <AskDialog
+    heading={COPY.everyoneAsk.title(flag.label)}
+    pending={pending}
+    onCancel={onCancel}
+    footer={
+      <>
+        <AdminButton variant="ghost" onClick={onCancel} disabled={pending}>
+          {COPY.confirmCancel}
+        </AdminButton>
+        <AdminButton variant="primary" onClick={onConfirm} disabled={pending}>
+          {COPY.everyoneAsk.accept}
+        </AdminButton>
+      </>
+    }
+  >
+    <div style={ASK_BODY}>{COPY.everyoneAsk.body(flag.label)}</div>
+    <div
+      data-testid="everyone-ask-step"
+      style={{
+        marginTop: 14,
+        fontSize: 12.5,
+        color: 'var(--fg)',
+        fontWeight: 600,
+      }}
+    >
+      {COPY.everyoneAsk.step(COPY.stage[from], COPY.stage.everyone)}
+    </div>
+  </AskDialog>
+);
+
+const CHECK_KEYS = ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff'] as const;
+
+type CheckKey = (typeof CHECK_KEYS)[number];
+
+interface MarkVerifiedAskProps {
+  flag: AdminFeatureFlag;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: (note: string, checks: Record<CheckKey, boolean>) => void;
+}
+
+// "Mark verified asks first" (`07-people-flags-operations`): three ticks the
+// admin must make, an optional note. The ticks are stored as booleans beside
+// the note.
+const MarkVerifiedAsk = ({
+  flag,
+  pending,
+  onCancel,
+  onConfirm,
+}: MarkVerifiedAskProps) => {
+  const ask = COPY.markVerified;
+  const [ticks, setTicks] = useState<Record<CheckKey, boolean>>({
+    triedAsMe: false,
+    checkedOnPhone: false,
+    checkedFlagOff: false,
+  });
+  const [note, setNote] = useState('');
+  const complete = CHECK_KEYS.every((key) => ticks[key]);
+
+  return (
+    <AskDialog
+      heading={ask.title(flag.label)}
+      pending={pending}
+      onCancel={onCancel}
+      footer={
+        <>
+          <AdminButton variant="ghost" onClick={onCancel} disabled={pending}>
+            {COPY.confirmCancel}
+          </AdminButton>
+          <AdminButton
+            variant="primary"
+            onClick={() => onConfirm(note.trim(), ticks)}
+            disabled={pending || !complete}
+          >
+            {ask.accept}
+          </AdminButton>
+        </>
+      }
+    >
+      <div style={ASK_BODY}>{ask.body}</div>
+      <div
+        style={{
+          marginTop: 14,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+        }}
+      >
+        {CHECK_KEYS.map((key) => (
+          <label
+            key={key}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              fontSize: 13,
+              color: 'var(--fg)',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={ticks[key]}
+              disabled={pending}
+              data-testid={`verify-check-${key}`}
+              onChange={(evt) =>
+                setTicks((prev) => ({ ...prev, [key]: evt.target.checked }))
+              }
+            />
+            {ask.checks[key]}
+          </label>
+        ))}
+      </div>
+      <label
+        style={{
+          display: 'block',
+          marginTop: 16,
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--fg-muted)',
+        }}
+      >
+        {ask.noteLabel}
+        <input
+          type="text"
+          value={note}
+          maxLength={500}
+          disabled={pending}
+          placeholder={ask.notePlaceholder}
+          data-testid="verify-note"
+          onChange={(evt) => setNote(evt.target.value)}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginTop: 6,
+            padding: '8px 10px',
+            fontSize: 13,
+            color: 'var(--fg)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+          }}
+        />
+      </label>
+      <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        {ask.noteHelp}
+      </div>
+    </AskDialog>
   );
 };
