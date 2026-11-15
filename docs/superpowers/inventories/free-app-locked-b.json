@@ -1,0 +1,38 @@
+{
+  "feature": "Free-app close-out PR 4 part B1 · Going, onboarding and the follow chip without the tier picker",
+  "note": "Sweep: ~/Downloads/fwd-handoff/plans/cc-free-app-closeout-sweep-2026-11-15.md (W3, W4, W6, W10). Signed in as the audit fan. The event page's Going half is the plain working button (no lock glyph, no 'Couldn't load your account'); the My artists chip on /events is the working switch; onboarding's artists step reads like the unlocked one. Read-only: the sheet never marks Going, toggles the chip or commits onboarding picks.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "event-going",
+      "label": "Event page: the Watch / Going block, working for a signed-in fan",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "main a[href^=\"/events/\"]",
+          "settle": 1500
+        },
+        { "click": "main a[href^=\"/events/\"]", "settle": 3000 }
+      ]
+    },
+    {
+      "id": "events-follow-chip",
+      "label": "/events: the My artists chip, working",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "main a[href^=\"/events/\"]",
+          "settle": 2000
+        }
+      ]
+    },
+    {
+      "id": "onboarding-artists",
+      "label": "Onboarding opens for a signed-in fan (the URL step param isn't honoured, so this is the welcome step; the artists-step commit copy is pinned by OnboardingShell tests)",
+      "steps": [{ "goto": "/onboarding?step=artists", "settle": 3000 }]
+    }
+  ]
+}
