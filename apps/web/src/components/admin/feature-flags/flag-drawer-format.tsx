@@ -33,21 +33,3 @@ export const mention = (handle: string | null): string => {
   if (handle === FORMER_ADMIN_NAME) return handle;
   return `@${handle}`;
 };
-
-/**
- * The Clerk role as the drawer names it; an unknown role is shown as it is.
- * Null (Clerk could not be read) says nothing rather than guessing Member.
- */
-export const roleLabel = (role: string | null): string | null => {
-  if (role === null) return null;
-  switch (role) {
-    case 'user':
-    case 'beta':
-    case 'admin':
-    case 'sub_admin':
-    case 'promoter':
-      return COPY.roles[role];
-    default:
-      return role;
-  }
-};
