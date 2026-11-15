@@ -1602,6 +1602,12 @@ export async function crawlVenue(
       // timed listing now dates gets its time first, and existingMap follows,
       // so the insert/update counts and the verified-change check see the row
       // under its new key.
+      //
+      // A listing with no same-night row lands on the date's one show added
+      // by hand when the times agree (`manualLandingTarget`): the upsert then
+      // updates that row under the protections a manual row already has
+      // (`listingOwned`, `billOwned`), `manual` stays true, and its lineup is
+      // rebuilt like any upserted row's.
       const { aligned, promotions } = alignToNights(enriched, existingRows);
       for (const promotion of promotions) {
         // Admin 4a: this also applies to a manual row. It only joins a

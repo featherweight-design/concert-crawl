@@ -22,6 +22,8 @@ export interface UrlNightRow extends NightRow {
 
 export interface ExistingNight extends UrlNightRow {
   id: string;
+  /** A show an admin added by hand (`events.manual`). */
+  manual?: boolean | undefined;
 }
 
 export interface NightPromotion {
@@ -32,11 +34,47 @@ export interface NightPromotion {
 
 interface Slot extends UrlNightRow {
   id: string | null;
+  manual?: boolean | undefined;
   /** The index of the listing of this crawl that created the slot, if any. */
   owner?: number;
 }
 
 const isTimed = (row: NightRow): boolean => showTimeKey(row.showTime) !== '';
+
+/**
+ * The show added by hand that a listing with no same-night row lands on, or
+ * null to insert it as usual.
+ *
+ * A manual row keys on its first headliner, while a listing keys on the
+ * ladder's display string, which can be a title ("Jazz Series presents" over
+ * ["Kokoroko"]). So the artist test of `sameNight` misses it and the crawl
+ * would list the show twice. Instead: EXACTLY ONE manual row on the listing's
+ * date, and a show time that does not disagree when both sides have one, so an
+ * early and a late show never fold together. Zero or several manual rows, or
+ * an untimed manual row while this crawl lists the date at more than one time
+ * (which of them it is cannot be told), insert as before and leave the
+ * duplicate-night cleanup to judge.
+ */
+export function manualLandingTarget<
+  S extends NightRow & { manual?: boolean | undefined },
+>(
+  daySlots: readonly S[],
+  listing: NightRow,
+  listingTimesOnDate: ReadonlySet<string>,
+): S | null {
+  const manual = daySlots.filter(
+    (slot) => slot.manual === true && slot.date === listing.date,
+  );
+  const [only] = manual;
+  if (manual.length !== 1 || only === undefined) return null;
+  const slotTime = showTimeKey(only.showTime);
+  const listingTime = showTimeKey(listing.showTime);
+  if (slotTime !== '' && listingTime !== '') {
+    return slotTime === listingTime ? only : null;
+  }
+  if (slotTime === '' && listingTimesOnDate.size > 1) return null;
+  return only;
+}
 
 /**
  * A listing whose time is the morning-or-evening misread of a stored row's
@@ -85,6 +123,15 @@ export function alignToNights<T extends UrlNightRow>(
   for (const row of [...existing].sort((a, b) => a.id.localeCompare(b.id))) {
     slotsOn(row.date).push({ ...row });
   }
+  // The times this crawl lists each date at, so an untimed manual row is not
+  // guessed onto one of an early and a late show.
+  const listingTimesByDate = new Map<string, Set<string>>();
+  for (const row of incoming) {
+    if (!isTimed(row)) continue;
+    const times = listingTimesByDate.get(row.date) ?? new Set<string>();
+    times.add(showTimeKey(row.showTime));
+    listingTimesByDate.set(row.date, times);
+  }
   const promotions = new Map<string, NightPromotion>();
   const aligned = incoming.slice();
 
@@ -106,6 +153,15 @@ export function alignToNights<T extends UrlNightRow>(
     const timedTimes = new Set(
       matches.filter(isTimed).map((slot) => showTimeKey(slot.showTime)),
     );
+    const landing =
+      matches.length === 0
+        ? manualLandingTarget(
+            daySlots,
+            listing,
+            listingTimesByDate.get(listing.date) ?? new Set(),
+          )
+        : null;
+    if (landing) matches.push(landing);
     if (matches.length === 0 || (!isTimed(listing) && timedTimes.size > 1)) {
       daySlots.push({
         id: null,

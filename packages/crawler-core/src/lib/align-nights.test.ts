@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignToNights } from './align-nights.js';
+import { alignToNights, manualLandingTarget } from './align-nights.js';
 
 const listing = (canonicalArtist: string, showTime: string | null) => ({
   canonicalArtist,
@@ -158,5 +158,140 @@ describe('alignToNights', () => {
     );
     expect(aligned[0]?.canonicalArtist).toBe('nas');
     expect(aligned[1]).toEqual(other);
+  });
+});
+
+describe('alignToNights: landing on a show added by hand', () => {
+  const manual = (
+    id: string,
+    canonicalArtist: string,
+    showTime: string | null,
+  ) => ({ ...stored(id, canonicalArtist, showTime), manual: true });
+
+  it('lands a title-shaped listing on the one manual row with its real headliner', () => {
+    const { aligned, promotions } = alignToNights(
+      [listing('jazz series presents', '19:00:00')],
+      [manual('m', 'kokoroko', '19:00:00')],
+    );
+    expect(aligned[0]).toEqual(listing('kokoroko', '19:00:00'));
+    expect(promotions).toEqual([]);
+  });
+
+  it('lands the matching time of an early and a late show and leaves the other to insert', () => {
+    const { aligned, promotions } = alignToNights(
+      [
+        listing('jazz series presents', '22:00:00'),
+        listing('jazz series presents', '19:00:00'),
+      ],
+      [manual('m', 'kokoroko', '19:00:00')],
+    );
+    expect(aligned).toEqual([
+      listing('jazz series presents', '22:00:00'),
+      listing('kokoroko', '19:00:00'),
+    ]);
+    expect(promotions).toEqual([]);
+  });
+
+  it('inserts when two manual rows share the date', () => {
+    const { aligned } = alignToNights(
+      [listing('jazz series presents', '19:00:00')],
+      [manual('m1', 'kokoroko', '19:00:00'), manual('m2', 'nubya', null)],
+    );
+    expect(aligned[0]).toEqual(listing('jazz series presents', '19:00:00'));
+  });
+
+  it('inserts when the date has no manual row', () => {
+    const { aligned } = alignToNights(
+      [listing('jazz series presents', '19:00:00')],
+      [stored('c', 'kokoroko', '19:00:00')],
+    );
+    expect(aligned[0]).toEqual(listing('jazz series presents', '19:00:00'));
+  });
+
+  it('inserts when both sides have a time and the times differ', () => {
+    const { aligned, promotions } = alignToNights(
+      [listing('jazz series presents', '21:00:00')],
+      [manual('m', 'kokoroko', '19:00:00')],
+    );
+    expect(aligned[0]).toEqual(listing('jazz series presents', '21:00:00'));
+    expect(promotions).toEqual([]);
+  });
+
+  it('lands an untimed listing on a timed manual row, under the row time', () => {
+    const { aligned, promotions } = alignToNights(
+      [listing('jazz series presents', null)],
+      [manual('m', 'kokoroko', '19:00:00')],
+    );
+    expect(aligned[0]).toEqual(listing('kokoroko', '19:00:00'));
+    expect(promotions).toEqual([]);
+  });
+
+  it('lands a timed listing on an untimed manual row and dates the row', () => {
+    const { aligned, promotions } = alignToNights(
+      [listing('jazz series presents', '19:30')],
+      [manual('m', 'kokoroko', null)],
+    );
+    expect(aligned[0]).toEqual(listing('kokoroko', '19:30:00'));
+    expect(promotions).toEqual([{ id: 'm', showTime: '19:30:00' }]);
+  });
+
+  it('does not guess an untimed manual row onto one of an early and a late listing', () => {
+    const { aligned, promotions } = alignToNights(
+      [
+        listing('jazz series presents', '19:00:00'),
+        listing('jazz series presents', '22:00:00'),
+      ],
+      [manual('m', 'kokoroko', null)],
+    );
+    expect(aligned.map((row) => row.canonicalArtist)).toEqual([
+      'jazz series presents',
+      'jazz series presents',
+    ]);
+    expect(promotions).toEqual([]);
+  });
+
+  it('never lands on a manual row of another date', () => {
+    const { aligned } = alignToNights(
+      [{ ...listing('jazz series presents', null), date: '2026-12-13' }],
+      [manual('m', 'kokoroko', null)],
+    );
+    expect(aligned[0]?.canonicalArtist).toBe('jazz series presents');
+  });
+
+  it('prefers a same-night row over the manual one', () => {
+    const { aligned } = alignToNights(
+      [listing('jazz series presents', '19:00:00')],
+      [
+        stored('c', 'jazz series presents', '19:00:00'),
+        manual('m', 'kokoroko', '19:00:00'),
+      ],
+    );
+    expect(aligned[0]).toEqual(listing('jazz series presents', '19:00:00'));
+  });
+});
+
+describe('manualLandingTarget', () => {
+  const slot = (showTime: string | null, isManual = true) => ({
+    ...listing('kokoroko', showTime),
+    manual: isManual,
+  });
+  const none = new Set<string>();
+
+  it('returns the one manual row when the times agree or one side is untimed', () => {
+    const row = slot('19:00:00');
+    expect(manualLandingTarget([row], listing('x', '19:00'), none)).toBe(row);
+    expect(manualLandingTarget([row], listing('x', null), none)).toBe(row);
+  });
+
+  it('returns null for zero or several manual rows, or differing times', () => {
+    expect(
+      manualLandingTarget([slot(null, false)], listing('x', null), none),
+    ).toBeNull();
+    expect(
+      manualLandingTarget([slot(null), slot(null)], listing('x', null), none),
+    ).toBeNull();
+    expect(
+      manualLandingTarget([slot('19:00:00')], listing('x', '21:00'), none),
+    ).toBeNull();
   });
 });
