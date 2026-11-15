@@ -80,7 +80,7 @@ export function PrimaryButton({
     <button
       type="submit"
       {...rest}
-      disabled={disabled}
+      disabled={busy ? undefined : disabled}
       // Busy holds the press without `disabled`, so focus stays on the button
       // while the form is working (a disabled control drops focus to the body).
       aria-disabled={busy || undefined}

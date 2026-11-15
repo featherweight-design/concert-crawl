@@ -7,6 +7,7 @@ export const AUTH_FLOW_COPY = {
   back: 'Back',
   logoLabel: 'Concert Crawl',
   foot: {
+    navLabel: 'Legal',
     terms: 'Terms',
     privacy: 'Privacy',
     // The count comes from the landing's venue source, so the "21" is a

@@ -73,9 +73,13 @@ export function LegalLink({
     <a
       {...rest}
       onClick={(evt) => {
+        // Without a handler, or with a modifier key (open in a new tab), the
+        // link is just a link.
+        const plain =
+          evt.button === 0 && !evt.metaKey && !evt.ctrlKey && !evt.shiftKey;
+        if (!onClick || !plain) return;
         evt.preventDefault();
-        evt.stopPropagation();
-        onClick?.(evt);
+        onClick(evt);
       }}
       className="inline p-0 text-sm font-bold text-fg underline decoration-[color-mix(in_srgb,var(--fg)_40%,transparent)] underline-offset-[3px]"
     />
