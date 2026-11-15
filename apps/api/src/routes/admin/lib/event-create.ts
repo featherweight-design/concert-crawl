@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   artists,
@@ -400,7 +400,8 @@ export const createManualEvent = async (
         ticketVendor: venues.ticketVendor,
       })
       .from(venues)
-      .where(eq(venues.id, body.venueId))
+      // A removed venue is gone to the admin too: no new show goes under it.
+      .where(and(eq(venues.id, body.venueId), isNull(venues.removedAt)))
       .for('share');
     if (!venue) {
       return {
