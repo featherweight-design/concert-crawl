@@ -30,6 +30,16 @@ export const isSubmissionState = (value: unknown): value is SubmissionState =>
   value === 'not-used' ||
   value === 'stale';
 
+/**
+ * The words a row's state reads in: a waiting price nobody has held for you
+ * yet (below the confirms it needs) is waiting for another fan, not for you.
+ */
+export const stateWords = <Words extends Record<SubmissionState, string>>(
+  row: { state: SubmissionState; held: boolean },
+  words: Words & { waitingForFan: string },
+): string =>
+  row.state === 'waiting' && !row.held ? words.waitingForFan : words[row.state];
+
 /** "44" for 44.00, "44.50" for 44.5: dollars the way the board draws them. */
 export const dollars = (value: string): string => {
   const amount = Number(value);

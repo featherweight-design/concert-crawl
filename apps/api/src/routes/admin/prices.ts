@@ -10,6 +10,7 @@ import {
   gt,
   gte,
   ilike,
+  isNotNull,
   isNull,
   lt,
   max,
@@ -453,9 +454,14 @@ const stateClause = (
   switch (state) {
     case 'price-check':
       return hasOpenPriceCheck();
+    // Waiting for you: held for the admin (`held_for_admin_at`, stamped once
+    // enough fans back it and Approve every price myself is on). A pending
+    // price below that is waiting for another fan, not for you: it shows
+    // under All.
     case 'waiting':
       return and(
         eq(priceSubmissions.status, 'pending'),
+        isNotNull(priceSubmissions.heldForAdminAt),
         sql`NOT ${hasOpenPriceCheck()}`,
       );
     case 'published':
@@ -542,6 +548,9 @@ pricesAdminRouter.get(
         // Fans behind this price: the submitter plus everyone who confirmed
         // it (corroboration_count already includes the submitter).
         backedBy: priceSubmissions.corroborationCount,
+        // Held for the admin: a waiting price that is waiting for you, not
+        // for another fan (the Waiting for you chip's own test).
+        held: sql<boolean>`${priceSubmissions.heldForAdminAt} IS NOT NULL`,
         priceCheck: hasOpenPriceCheck(),
         priceMin: priceSubmissions.priceMin,
         priceMax: priceSubmissions.priceMax,

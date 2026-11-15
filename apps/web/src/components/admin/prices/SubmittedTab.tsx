@@ -30,6 +30,7 @@ import {
   STATE_FILTERS,
   backedPill,
   priceRange,
+  stateWords,
   type BackedTone,
   type RejectionReason,
   type StateFilter,
@@ -686,7 +687,7 @@ export const SubmittedTab = ({
                         {priceRange(row.priceMin, row.priceMax)}
                       </span>
                       <Pill tone={PHONE_TONE[row.state]}>
-                        {COPY.phoneStates[row.state]}
+                        {stateWords(row, COPY.phoneStates)}
                       </Pill>
                     </div>
                   </li>
@@ -762,7 +763,7 @@ export const SubmittedTab = ({
                         color: 'var(--fg-muted)',
                       }}
                     >
-                      {COPY.states[row.state]}
+                      {stateWords(row, COPY.states)}
                     </span>
                     <span style={{ width: 20, flex: 'none' }}>
                       <RowMenu

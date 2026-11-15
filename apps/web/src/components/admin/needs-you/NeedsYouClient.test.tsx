@@ -445,6 +445,7 @@ describe('NeedsYouClient', () => {
       avatarSecondColor: null,
       backedBy: 2,
       state: 'waiting',
+      held: true,
       ticketUrl: null,
     });
     mockList.mockResolvedValue({
