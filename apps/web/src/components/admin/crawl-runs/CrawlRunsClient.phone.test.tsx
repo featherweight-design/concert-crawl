@@ -58,6 +58,7 @@ const recrawl: BatchRow = {
   costUsd: 0.15,
   linkKey: 'run:1762809240:abcd1234',
   crawlAll: false,
+  trial: false,
   venueName: 'Ball Arena',
   actorHandle: null,
   retry: null,

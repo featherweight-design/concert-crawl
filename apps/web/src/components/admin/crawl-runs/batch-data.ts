@@ -35,6 +35,8 @@ const batchSchema = z.object({
   costUsd: z.number(),
   linkKey: z.string(),
   crawlAll: z.boolean(),
+  // A test re-crawl of a paused venue. An older API sends none: not a trial.
+  trial: z.boolean().default(false),
   venueName: z.string().nullable(),
   actorHandle: z.string().nullable(),
   // A retried night's later waves: when, and what they ran.

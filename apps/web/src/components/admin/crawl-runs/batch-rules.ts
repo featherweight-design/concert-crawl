@@ -85,16 +85,20 @@ export const appendBatches = (
 
 /**
  * WHAT: "Nightly"; by hand, "Crawl all", "Re-crawl · Ball Arena" or
- * "Re-crawl · 3 venues", then "by @hugh" (ruling 23) when the actor has a
- * handle.
+ * "Re-crawl · 3 venues" ("Test re-crawl · Ball Arena" for a test re-crawl of
+ * a paused venue), then "by @hugh" (ruling 23) when the actor has a handle.
  */
 export const batchLabel = (batch: BatchRow): string => {
   if (batch.kind === 'nightly') return COPY.nightly;
   const what = batch.crawlAll
     ? COPY.crawlAll
-    : batch.venueName !== null
-      ? COPY.recrawlVenue(batch.venueName)
-      : COPY.recrawlVenues(batch.venueCount);
+    : batch.trial
+      ? batch.venueName !== null
+        ? COPY.trialVenue(batch.venueName)
+        : COPY.trialVenues(batch.venueCount)
+      : batch.venueName !== null
+        ? COPY.recrawlVenue(batch.venueName)
+        : COPY.recrawlVenues(batch.venueCount);
   return batch.actorHandle === null
     ? what
     : COPY.parts([what, COPY.by(batch.actorHandle)]);

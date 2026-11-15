@@ -48,6 +48,7 @@ const nightly = (over: Partial<BatchRow> = {}): BatchRow => ({
   costUsd: 0.71,
   linkKey: 'nightly:2026-11-11',
   crawlAll: false,
+  trial: false,
   venueName: null,
   actorHandle: null,
   retry: null,
@@ -120,6 +121,15 @@ describe('batchLabel (WHAT)', () => {
     expect(
       batchLabel(byHand({ crawlAll: true, venueName: null, venueCount: 19 })),
     ).toBe('Crawl all · by @hugh');
+  });
+
+  it('names a test re-crawl, by the one venue or the count', () => {
+    expect(batchLabel(byHand({ trial: true }))).toBe(
+      'Test re-crawl · Ball Arena · by @hugh',
+    );
+    expect(
+      batchLabel(byHand({ trial: true, venueName: null, venueCount: 2 })),
+    ).toBe('Test re-crawl · 2 venues · by @hugh');
   });
 
   it('drops "by" when the actor has no handle', () => {
@@ -402,6 +412,18 @@ describe('paging', () => {
     expect(page?.rows).toHaveLength(1);
     expect(page?.hasMore).toBe(true);
     expect(page?.nextBefore).toBe('2026-11-01T10:00:00.000Z');
+  });
+
+  it('keeps the trial flag, and reads an older API’s missing one as false', () => {
+    const older: Record<string, unknown> = { ...byHand() };
+    delete older.trial;
+    const page = parseBatchPage({
+      success: true,
+      data: [byHand({ trial: true }), older],
+      hasMore: false,
+      nextBefore: null,
+    });
+    expect(page?.rows.map((row) => row.trial)).toEqual([true, false]);
   });
 
   it('stops paging without a cursor, and refuses a body that is not a page', () => {

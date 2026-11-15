@@ -666,6 +666,11 @@ export interface CrawlBatch {
    * a Crawl all that queued a single venue, and for every nightly.
    */
   crawlAll: boolean;
+  /**
+   * The by-hand batch was a test re-crawl of a paused venue: every run it
+   * made is a trial run (crawl_runs.trial). False for every nightly.
+   */
+  trial: boolean;
   /** The venue of a one-venue by-hand batch ("Re-crawl · Ball Arena"), else null. */
   venueName: string | null;
   /**

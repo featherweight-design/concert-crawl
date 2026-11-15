@@ -25,6 +25,7 @@ const run = (
   durationMs: 30_000,
   llmCostUsd: null,
   errorMessage: null,
+  trial: false,
   createdAt: new Date(at),
   ...over,
 });
