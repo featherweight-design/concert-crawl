@@ -276,3 +276,63 @@ describe('DateField on the phone', () => {
     expect(onChange).toHaveBeenCalledWith('2026-11-20');
   });
 });
+
+describe('a host form’s field look (Add a show)', () => {
+  it('draws the height, the danger border and the error line’s id', () => {
+    render(
+      <>
+        <DateField
+          id="d"
+          value=""
+          onChange={vi.fn()}
+          today="2026-11-12"
+          phone={false}
+          withYear={false}
+          height={38}
+          invalid
+          describedBy="d-error"
+        />
+        <TimeField
+          id="t"
+          value={null}
+          onChange={vi.fn()}
+          phone
+          placeholder="—"
+          label="Doors"
+          height={38}
+          invalid
+          describedBy="t-error"
+        />
+      </>,
+    );
+    const date = document.getElementById('d');
+    const time = document.getElementById('t');
+    if (date === null || time === null) throw new Error('fields');
+    expect(date).toHaveStyle({ height: '38px' });
+    expect(date.getAttribute('style')).toContain('var(--danger)');
+    expect(date).toHaveAttribute('aria-describedby', 'd-error');
+    // A button takes no aria-invalid; the OS input does.
+    expect(date).not.toHaveAttribute('aria-invalid');
+    expect(time).toHaveStyle({ height: '38px' });
+    expect(time).toHaveAttribute('aria-invalid', 'true');
+    expect(time).toHaveAttribute('aria-describedby', 't-error');
+  });
+
+  it('keeps Event edit’s 40px field with no error state by default', () => {
+    render(
+      <DateField
+        id="d"
+        value=""
+        onChange={vi.fn()}
+        today="2026-11-12"
+        phone
+        withYear={false}
+      />,
+    );
+    const date = document.getElementById('d');
+    if (date === null) throw new Error('field');
+    expect(date).toHaveStyle({ height: '40px' });
+    expect(date).not.toHaveAttribute('aria-invalid');
+    expect(date).not.toHaveAttribute('aria-describedby');
+  });
+});

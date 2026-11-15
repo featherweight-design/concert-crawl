@@ -33,7 +33,24 @@ const FIELD: CSSProperties = {
   cursor: 'pointer',
 };
 
-const POPOVER: CSSProperties = {
+/**
+ * How a host form draws the field: Add a show's 38px inputs, with the danger
+ * border and its message (`04/add-show-errors-d`). Event edit keeps 40.
+ */
+interface FieldLook {
+  height?: number;
+  invalid?: boolean;
+  /** The id of the error line under the field. */
+  describedBy?: string | undefined;
+}
+
+const fieldLook = (height: number, invalid: boolean): CSSProperties => ({
+  ...FIELD,
+  height,
+  ...(invalid && { borderColor: 'var(--danger)' }),
+});
+
+export const POPOVER: CSSProperties = {
   position: 'absolute',
   top: 'calc(100% + 6px)',
   left: 0,
@@ -49,7 +66,7 @@ const POPOVER: CSSProperties = {
 };
 
 /** Closes a popover on an outside press or Escape. */
-const usePopover = () => {
+export const usePopover = () => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -125,6 +142,9 @@ export const DateField = ({
   placeholder,
   highlight = false,
   withYear,
+  height = 40,
+  invalid = false,
+  describedBy,
 }: {
   id: string;
   /** YYYY-MM-DD, or '' for none yet (the `placeholder` shows). */
@@ -139,7 +159,7 @@ export const DateField = ({
   /** The amber border `36/postponed-passed-d` draws on New date. */
   highlight?: boolean;
   withYear: boolean;
-}) => {
+} & FieldLook) => {
   const { open, setOpen, close, ref, trigger } = usePopover();
   // With no date yet, the month opens on today's.
   const anchor = value === '' ? today : value;
@@ -147,8 +167,12 @@ export const DateField = ({
   const isBarred = (iso: string) =>
     (min !== undefined && iso < min) || (max !== undefined && iso > max);
   const field: CSSProperties = {
-    ...FIELD,
-    ...(highlight && { borderColor: 'var(--warning)' }),
+    ...fieldLook(height, invalid),
+    ...(highlight && !invalid && { borderColor: 'var(--warning)' }),
+  };
+  const a11y = {
+    'aria-invalid': invalid || undefined,
+    'aria-describedby': describedBy,
   };
   const chosenRef = useRef<HTMLButtonElement>(null);
   // Focus lands on the chosen day when the month opens.
@@ -164,6 +188,7 @@ export const DateField = ({
         value={value}
         min={min}
         max={max}
+        {...a11y}
         onChange={(evt) => {
           const next = evt.target.value;
           // The OS picker honours `min` and `max`, but a typed date may not.
@@ -190,6 +215,8 @@ export const DateField = ({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
+        // A button takes no aria-invalid; the error line names it.
+        aria-describedby={describedBy}
         onClick={() => setOpen(!open)}
         style={field}
       >
@@ -419,6 +446,9 @@ export const TimeField = ({
   phone,
   placeholder,
   label,
+  height = 40,
+  invalid = false,
+  describedBy,
 }: {
   id: string;
   /** `HH:MM` (or `HH:MM:SS`), or null for none. */
@@ -428,13 +458,18 @@ export const TimeField = ({
   placeholder: ReactNode;
   /** The field's name (Doors, Show), for the popover and its text field. */
   label: string;
-}) => {
+} & FieldLook) => {
   const { open, setOpen, close, ref, trigger } = usePopover();
   const [text, setText] = useState('');
   const hintId = useId();
   const current = value?.slice(0, 5) ?? null;
   // Typed text that isn't a time says so, rather than doing nothing.
-  const invalid = text.trim() !== '' && parseTime(text) === null;
+  const typedBad = text.trim() !== '' && parseTime(text) === null;
+  const field = fieldLook(height, invalid);
+  const a11y = {
+    'aria-invalid': invalid || undefined,
+    'aria-describedby': describedBy,
+  };
   const listRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLButtonElement>(null);
   // The half hour the list opens on: the chosen one, or the nearest to an
@@ -464,8 +499,9 @@ export const TimeField = ({
         id={id}
         type="time"
         value={current ?? ''}
+        {...a11y}
         onChange={(evt) => onChange(evt.target.value || null)}
-        style={{ ...FIELD, fontSize: 16 }}
+        style={{ ...field, fontSize: 16 }}
       />
     );
   }
@@ -483,11 +519,12 @@ export const TimeField = ({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-describedby={describedBy}
         onClick={() => {
           setText(fieldTime(current) ?? '');
           setOpen(!open);
         }}
-        style={FIELD}
+        style={field}
       >
         {fieldTime(current) ?? placeholder}
       </button>
@@ -502,7 +539,7 @@ export const TimeField = ({
             autoFocus
             aria-label={label}
             aria-describedby={hintId}
-            aria-invalid={invalid || undefined}
+            aria-invalid={typedBad || undefined}
             value={text}
             onChange={(evt) => setText(evt.target.value)}
             onKeyDown={(evt) => {
@@ -516,8 +553,8 @@ export const TimeField = ({
               if (parsed !== null) commit(parsed);
             }}
             style={{
-              ...inputStyle(invalid),
-              ...(!invalid && { border: '1px solid var(--signal)' }),
+              ...inputStyle(typedBad),
+              ...(!typedBad && { border: '1px solid var(--signal)' }),
             }}
           />
           <div
