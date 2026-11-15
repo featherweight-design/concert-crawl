@@ -330,6 +330,48 @@ describe('SignInFlow, email code', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the same screen when Clerk returns an error instead of throwing', async () => {
+    mocks.signIn.create.mockResolvedValue({
+      error: clerkError(422, 'form_identifier_not_found'),
+    });
+    await toEmailCode();
+    expect(
+      screen.getByRole('heading', { name: COPY.emailCode.title }),
+    ).toBeInTheDocument();
+  });
+
+  it('does not say "sent" when a resend is throttled, and locks the boxes with the wait shown', async () => {
+    await toEmailCode();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    mocks.signIn.emailCode.sendCode.mockResolvedValue({
+      error: clerkError(429, 'too_many_requests'),
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.emailCode.resend }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FLOOR_MS);
+    });
+    expect(screen.queryByText(COPY.emailCode.sent)).toBeNull();
+    expect(screen.getByText(COPY.rateLimited.message)).toBeInTheDocument();
+    expect(screen.getByLabelText('6-digit code')).toBeDisabled();
+  });
+
+  it('a 429 on a code locks only the code screen, not the password', async () => {
+    await toEmailCode();
+    mocks.signIn.emailCode.verifyCode.mockResolvedValue({
+      error: clerkError(429, 'too_many_requests'),
+    });
+    await enterCode();
+    expect(screen.getByText(COPY.rateLimited.message)).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.emailCode.usePassword }),
+    );
+    expect(screen.getByLabelText(COPY.password.label)).not.toBeDisabled();
+  });
+
   it('signs in with a right code', async () => {
     await toEmailCode();
     mocks.signIn.status = 'complete';
@@ -454,6 +496,80 @@ describe('SignInFlow, throttle and offline', () => {
     expect(screen.getByLabelText(COPY.password.label)).toHaveValue(
       'Quartz-Ember-42!',
     );
+  });
+});
+
+describe('SignInFlow, code edge cases', () => {
+  it('reads only a code refusal as a wrong code; anything else is the generic line', async () => {
+    await toEmailCode();
+    mocks.signIn.emailCode.verifyCode.mockResolvedValue({
+      error: clerkError(400, 'captcha_invalid'),
+    });
+    await enterCode();
+    expect(screen.getByText(COPY.failed)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.emailCode.wrong)).toBeNull();
+  });
+
+  it('carries on to the return path when a session already exists', async () => {
+    await toEmailCode();
+    mocks.signIn.emailCode.verifyCode.mockResolvedValue({
+      error: clerkError(400, 'session_exists'),
+    });
+    await enterCode();
+    expect(mocks.replace).toHaveBeenCalledWith('/events');
+  });
+
+  it('says a failed device-code resend failed, never "sent"', async () => {
+    toPassword();
+    mocks.signIn.status = 'needs_client_trust';
+    await press();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    mocks.signIn.mfa.sendEmailCode.mockResolvedValue({
+      error: clerkError(500, 'internal_error'),
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.emailCode.resend }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FLOOR_MS);
+    });
+    expect(screen.getByText(COPY.failed)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.emailCode.sent)).toBeNull();
+  });
+
+  it('does not promise a code when the first send is throttled', async () => {
+    toPassword();
+    mocks.signIn.emailCode.sendCode.mockResolvedValue({
+      error: clerkError(429, 'too_many_requests'),
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.password.codeInstead }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    expect(
+      screen.queryByRole('heading', { name: COPY.emailCode.title }),
+    ).toBeNull();
+    expect(screen.getByText(COPY.rateLimited.message)).toBeInTheDocument();
+  });
+
+  it('disables the code screen submit and shows the strip while offline', async () => {
+    await toEmailCode();
+    vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+    await act(async () => {
+      window.dispatchEvent(new Event('offline'));
+    });
+    expect(screen.getByRole('status')).toHaveTextContent(/offline/i);
+    fireEvent.change(screen.getByLabelText('6-digit code'), {
+      target: { value: '123456' },
+    });
+    expect(
+      screen.getByRole('button', { name: COPY.emailCode.submit }),
+    ).toBeDisabled();
+    expect(mocks.signIn.emailCode.verifyCode).not.toHaveBeenCalled();
   });
 });
 
