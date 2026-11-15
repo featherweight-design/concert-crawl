@@ -501,3 +501,114 @@ describe('POST /v1/admin/events/:id/venue — refusals', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// GET-one's `moved` is non-null exactly when its `listStatus` reads Moved.
+describe('GET /v1/admin/events/:id — moved', () => {
+  const detailSchema = z.object({
+    success: z.literal(true),
+    data: z.object({
+      listStatus: z.string(),
+      moved: z.object({ toVenueName: z.string(), at: z.string() }).nullable(),
+    }),
+  });
+
+  const getDetail = async (id: string) => {
+    const res = await app.request(`/v1/admin/events/${id}`, {
+      headers: HEADERS,
+    });
+    expect(res.status).toBe(200);
+    return detailSchema.parse(await res.json()).data;
+  };
+
+  /** The latest 'moved' redirect onto the show, as the ISO `at` names it. */
+  const latestMovedAt = async (id: string) => {
+    const rows = await testDb
+      .select({ createdAt: eventRedirects.createdAt })
+      .from(eventRedirects)
+      .where(eq(eventRedirects.targetId, id));
+    const times = rows.map((row) => row.createdAt.getTime());
+    return new Date(Math.max(...times)).toISOString();
+  };
+
+  it('a moved upcoming show names its new venue and when it moved', async () => {
+    const { from, to } = await seedRooms();
+    const show = await seedManual(from.id, { date: dayOffset(12) });
+
+    expect((await moveVenue(show.id, to.id)).status).toBe(200);
+
+    const detail = await getDetail(show.id);
+    expect(detail.listStatus).toBe('moved');
+    expect(detail.moved).toEqual({
+      toVenueName: 'Globe Hall',
+      at: await latestMovedAt(show.id),
+    });
+  });
+
+  it('a show that never moved is null', async () => {
+    const { from } = await seedRooms();
+    const show = await seedManual(from.id, { date: dayOffset(12) });
+
+    const detail = await getDetail(show.id);
+    expect(detail.listStatus).toBe('available');
+    expect(detail.moved).toBeNull();
+  });
+
+  it('a played show corrected to another venue is null', async () => {
+    const { from, to } = await seedRooms();
+    const show = await seedEvent(from.id, { date: dayOffset(-5) });
+
+    const res = await moveVenue(show.id, to.id);
+    expect(okBodySchema.parse(await res.json()).data.outcome).toBe('corrected');
+
+    const detail = await getDetail(show.id);
+    expect(detail.listStatus).toBe('played');
+    expect(detail.moved).toBeNull();
+  });
+
+  it('a show with only a merge redirect is null', async () => {
+    const { from } = await seedRooms();
+    const show = await seedManual(from.id, { date: dayOffset(12) });
+    await testDb.insert(eventRedirects).values({
+      sourceId: randomUUID(),
+      targetId: show.id,
+      reason: null,
+      sourceVenueId: from.id,
+      sourceDate: show.date,
+      sourceCanonicalArtist: show.canonicalArtist,
+      sourceShowTime: null,
+    });
+
+    const detail = await getDetail(show.id);
+    expect(detail.listStatus).toBe('available');
+    expect(detail.moved).toBeNull();
+  });
+
+  it('a moved show since cancelled is null, as its status reads Cancelled', async () => {
+    const { from, to } = await seedRooms();
+    const show = await seedManual(from.id, { date: dayOffset(12) });
+    expect((await moveVenue(show.id, to.id)).status).toBe(200);
+    await testDb
+      .update(events)
+      .set({ status: 'cancelled' })
+      .where(eq(events.id, show.id));
+
+    const detail = await getDetail(show.id);
+    expect(detail.listStatus).toBe('cancelled');
+    expect(detail.moved).toBeNull();
+  });
+
+  it('a show moved and moved back reads Moved, to its first venue, as of the move back', async () => {
+    const { from, to } = await seedRooms();
+    const show = await seedManual(from.id, { date: dayOffset(12) });
+
+    expect((await moveVenue(show.id, to.id)).status).toBe(200);
+    expect((await moveVenue(show.id, from.id)).status).toBe(200);
+
+    const detail = await getDetail(show.id);
+    expect(detail.listStatus).toBe('moved');
+    expect(detail.moved).toEqual({
+      toVenueName: 'Larimer Lounge',
+      at: await latestMovedAt(show.id),
+    });
+  });
+});
