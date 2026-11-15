@@ -1,3 +1,19 @@
+# [1.512.0](https://github.com/featherweight-design/concert-crawl/compare/v1.511.0...v1.512.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** give the intent card's lookup a deadline ([fdb9308](https://github.com/featherweight-design/concert-crawl/commit/fdb9308d1466f85b466997a9065a9d8993a97257))
+* **web:** one save at a time, keep the verify ask open on a failure ([19be6fa](https://github.com/featherweight-design/concert-crawl/commit/19be6fa0db4fde72583c7f15d3934716778f1c0d))
+* **web:** only promise what the watch will do, and read the event with no identity ([adf7c48](https://github.com/featherweight-design/concert-crawl/commit/adf7c488bf56725b87c4a5dace86603ba87add8b))
+* **web:** the verify note wraps at 320 instead of clipping its placeholder ([10ed276](https://github.com/featherweight-design/concert-crawl/commit/10ed2763c2d301e8214d8c27ae1c7fb4996802d0))
+
+
+### Features
+
+* **web:** a verified mark and undo on the staging flags page ([cde9b63](https://github.com/featherweight-design/concert-crawl/commit/cde9b63891fab299edffcc57a8f8e047500bcaf1))
+* **web:** show what a visitor was about to do on the custom sign-in and sign-up ([d0d6884](https://github.com/featherweight-design/concert-crawl/commit/d0d688494b3e2d1d33a8c0e7640962110cbdaa1e))
+
 # [1.511.0](https://github.com/featherweight-design/concert-crawl/compare/v1.510.1...v1.511.0) (2026-11-15)
 
 
