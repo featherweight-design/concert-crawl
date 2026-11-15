@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     status: 'missing_requirements',
     missingFields: [] as string[],
     password: vi.fn(),
+    sso: vi.fn(),
     verifications: { sendEmailCode: vi.fn(), verifyEmailCode: vi.fn() },
     finalize: vi.fn(),
   },
@@ -100,6 +101,7 @@ beforeEach(() => {
   mocks.signUp.status = 'missing_requirements';
   mocks.signUp.missingFields = [];
   mocks.signUp.password.mockReset().mockResolvedValue({ error: null });
+  mocks.signUp.sso.mockReset().mockResolvedValue({ error: null });
   mocks.signUp.verifications.sendEmailCode
     .mockReset()
     .mockResolvedValue({ error: null });
@@ -565,6 +567,43 @@ describe('SignUpFlow, verify', () => {
     expect(
       screen.getByRole('link', { name: COPY.verify.haveAccountLink }),
     ).toHaveAttribute('href', '/sign-in/new');
+  });
+});
+
+describe('SignUpFlow, Google', () => {
+  const google = () => screen.getByRole('button', { name: FLOW.google.label });
+
+  it('sends nothing when pressed unticked: the box goes red and takes focus', () => {
+    renderFlow();
+    fireEvent.click(google());
+    expect(mocks.signUp.sso).not.toHaveBeenCalled();
+    const box = screen.getByRole('checkbox');
+    expect(box).toHaveAttribute('aria-invalid', 'true');
+    expect(box).toHaveFocus();
+  });
+
+  it('starts Google ticked, with legalAccepted and a callback that returns to the target', async () => {
+    renderFlow();
+    tick();
+    fireEvent.click(google());
+    await act(async () => {});
+    expect(mocks.signUp.sso).toHaveBeenCalledWith({
+      strategy: 'oauth_google',
+      redirectUrl: '/auth/complete?return=%2Fe%2Fabc',
+      redirectCallbackUrl:
+        '/sign-in/sso-callback?redirect_url=%2Fauth%2Fcomplete%3Freturn%3D%252Fe%252Fabc',
+      legalAccepted: true,
+    });
+  });
+
+  it('says so, and frees the button, when Clerk will not start Google', async () => {
+    mocks.signUp.sso.mockResolvedValue({ error: clerkError(400, 'x') });
+    renderFlow();
+    tick();
+    fireEvent.click(google());
+    await act(async () => {});
+    expect(screen.getByText(SIGN_IN_COPY.failed)).toBeInTheDocument();
+    expect(google()).not.toHaveAttribute('aria-busy');
   });
 });
 

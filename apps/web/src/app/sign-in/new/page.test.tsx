@@ -43,6 +43,18 @@ describe('/sign-in/new', () => {
     }
   });
 
+  it('passes how a Google attempt ended, and nothing it does not know', async () => {
+    const read = async (google: string) =>
+      (
+        (await SignInNewPage({
+          searchParams: Promise.resolve({ google }),
+        })) as { props: { google: string | null } }
+      ).props.google;
+    expect(await read('refused')).toBe('refused');
+    expect(await read('cancelled')).toBe('cancelled');
+    expect(await read('<script>')).toBeNull();
+  });
+
   it('takes the first of a repeated parameter', async () => {
     const tree = (await visit(['/artists/a', '/events'])) as {
       props: { returnTo: string };
