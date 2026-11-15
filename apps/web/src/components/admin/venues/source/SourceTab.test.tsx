@@ -50,6 +50,8 @@ const venue: SourceVenue = {
   apiProvider: null,
   apiAccountId: null,
   crawlMode: 'http',
+  // Plain fetch, set by hand.
+  crawlModeSource: 'admin',
   crawlWaitUntil: 'networkidle',
   crawlWaitForSelector: null,
   crawlDelayMs: 3000,
@@ -472,19 +474,60 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
   const forced: SourceVenue = {
     ...venue,
     crawlMode: 'browser',
+    crawlModeSource: 'admin',
     extractionStrategy: 'llm',
     crawlWaitUntil: 'load',
     crawlWaitForSelector: '.event-list',
   };
 
-  it('closed, chips a forced Reader, with Back to Automatic (18/source-forced-d)', () => {
+  it('closed, chips each setting set by hand, with Back to Automatic (18/source-forced-d)', () => {
     render(<SourceTab venue={forced} />);
     expect(within(toggle()).getByText(COPY.advanced.setByHand)).toBeTruthy();
     expect(screen.queryByText(COPY.advanced.collapsedLine)).toBeNull();
-    // Page loading is never a chip: the crawler stores crawl_mode itself.
-    // Wait for is a hand pick, so it is one.
-    expect(chips()).toEqual(['Reader: Haiku only', 'Wait for: .event-list']);
+    // Page loading first, then Reader; Wait for is a hand pick, so it is one.
+    expect(chips()).toEqual([
+      'Page loading: Full browser',
+      'Reader: Haiku only',
+      'Wait for: .event-list',
+    ]);
+    expect(
+      screen.getByText('Page loading: Full browser').getAttribute('data-kind'),
+    ).toBe('forced');
     expect(backButton()).toBeTruthy();
+  });
+
+  it('a Page loading set by hand alone is set by hand, and Back to Automatic sends a null crawl mode', async () => {
+    render(
+      <SourceTab
+        venue={{ ...venue, crawlMode: 'browser', crawlModeSource: 'admin' }}
+      />,
+    );
+    expect(within(toggle()).getByText(COPY.advanced.setByHand)).toBeTruthy();
+    expect(chips()).toEqual(['Page loading: Full browser']);
+    const backToAutomatic = backButton();
+    if (backToAutomatic === null) throw new Error('Expected Back to Automatic');
+    fireEvent.click(backToAutomatic);
+    expect(screen.getByText(COPY.advanced.collapsedLine)).toBeTruthy();
+    expect(screen.getByText('1 unsaved change')).toBeTruthy();
+    clickSave();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    expect(Object.fromEntries(sentFormData().entries())).toEqual({
+      crawlMode: '',
+    });
+  });
+
+  it('the hint of a Page loading set by hand says so (18/source-advanced-d)', () => {
+    render(
+      <SourceTab
+        venue={{ ...venue, crawlMode: 'browser', crawlModeSource: 'admin' }}
+      />,
+    );
+    fireEvent.click(toggle());
+    expect(
+      screen.getByText(
+        'Set by hand. Full browser runs the page’s scripts; slower, only for calendars that draw themselves.',
+      ),
+    ).toBeTruthy();
   });
 
   it('closed chips are a group named by Advanced', () => {
@@ -505,19 +548,71 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
     expect(backButton()).toBeNull();
   });
 
-  it.each(['browser', 'http'] as const)(
-    'a stored crawlMode %s alone reads as all automatic, with nothing to clear',
-    (crawlMode) => {
-      render(<SourceTab venue={{ ...venue, crawlMode }} />);
+  it.each([
+    ['browser', 'auto'],
+    ['http', 'auto'],
+    ['browser', null],
+    ['http', null],
+  ] as const)(
+    'a crawlMode %s stored by %s reads as all automatic, with nothing to clear',
+    (crawlMode, crawlModeSource) => {
+      render(<SourceTab venue={{ ...venue, crawlMode, crawlModeSource }} />);
       expect(screen.getByText(COPY.advanced.collapsedLine)).toBeTruthy();
       expect(screen.queryByText(COPY.advanced.setByHand)).toBeNull();
       expect(screen.queryByTestId('source-advanced-forced')).toBeNull();
       expect(backButton()).toBeNull();
       expect(screen.queryByText(/unsaved change/)).toBeNull();
+      // Open, Page loading reads Automatic, with its own hint.
+      fireEvent.click(toggle());
+      expect(loadingRadio(COPY.advanced.pageLoading.auto)).toHaveProperty(
+        'checked',
+        true,
+      );
+      expect(
+        screen.getByText(COPY.advanced.pageLoading.hints.auto),
+      ).toBeTruthy();
+      expect(saveButton()).toBeNull();
     },
   );
 
-  it('Back to Automatic is an unsaved change, then Save clears only the reader (18/source-advanced-states)', async () => {
+  it.each(['auto', null] as const)(
+    'picking Plain fetch over a crawl mode stored by %s is an edit that saves it',
+    async (crawlModeSource) => {
+      render(
+        <SourceTab venue={{ ...venue, crawlMode: 'http', crawlModeSource }} />,
+      );
+      fireEvent.click(toggle());
+      fireEvent.click(loadingRadio(COPY.advanced.pageLoading.http));
+      expect(
+        screen.getByText(
+          'Set by hand. Plain fetch reads the page’s HTML without running its scripts.',
+        ),
+      ).toBeTruthy();
+      // Closed, it is one unsaved change, chipped as set by hand.
+      fireEvent.click(toggle());
+      expect(screen.getByText('1 unsaved change')).toBeTruthy();
+      expect(chips()).toEqual(['Page loading: Plain fetch']);
+      clickSave();
+      await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+      expect(Object.fromEntries(sentFormData().entries())).toEqual({
+        crawlMode: 'http',
+      });
+    },
+  );
+
+  it('picking Automatic over the crawler’s own pick is no change', () => {
+    render(
+      <SourceTab
+        venue={{ ...venue, crawlMode: 'browser', crawlModeSource: 'auto' }}
+      />,
+    );
+    fireEvent.click(toggle());
+    fireEvent.click(loadingRadio(COPY.advanced.pageLoading.browser));
+    fireEvent.click(loadingRadio(COPY.advanced.pageLoading.auto));
+    expect(saveButton()).toBeNull();
+  });
+
+  it('Back to Automatic is an unsaved change, then Save sends both clears (18/source-advanced-states)', async () => {
     render(<SourceTab venue={forced} />);
     const backToAutomatic = backButton();
     if (backToAutomatic === null) throw new Error('Expected Back to Automatic');
@@ -527,15 +622,29 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
     expect(within(toggle()).getByText(COPY.advanced.setByHand)).toBeTruthy();
     expect(chips()).toEqual(['Wait for: .event-list']);
     expect(backButton()).toBeNull();
-    expect(screen.getByText('1 unsaved change')).toBeTruthy();
+    expect(screen.getByText('2 unsaved changes')).toBeTruthy();
     expect(document.activeElement).toBe(toggle());
     expect(mockUpdateVenue).not.toHaveBeenCalled();
     clickSave();
     await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
-    // Page loading, Wait until and Wait for are left as they are.
-    const sent = Object.fromEntries(sentFormData().entries());
-    expect(sent).toEqual({ extractionStrategy: '' });
-    expect(sent).not.toHaveProperty('crawlMode');
+    // Wait until and Wait for are left as they are.
+    expect(Object.fromEntries(sentFormData().entries())).toEqual({
+      crawlMode: '',
+      extractionStrategy: '',
+    });
+  });
+
+  it('Back to Automatic leaves the crawler’s own Page loading, clearing only the reader', async () => {
+    render(<SourceTab venue={{ ...forced, crawlModeSource: 'auto' }} />);
+    expect(chips()).toEqual(['Reader: Haiku only', 'Wait for: .event-list']);
+    fireEvent.click(screen.getByText(COPY.advanced.backToAutomatic));
+    expect(screen.getByText('1 unsaved change')).toBeTruthy();
+    clickSave();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    // Regression: never crawlMode, which the crawler stored itself.
+    expect(Object.fromEntries(sentFormData().entries())).toEqual({
+      extractionStrategy: '',
+    });
   });
 
   it('after Back to Automatic on JSON-LD only, one unsaved change', () => {
@@ -596,8 +705,16 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
   ] as const)(
     'a %j feed shows its reader as a read-only chip, with no Back to Automatic',
     (patch, seller) => {
+      // The crawler's own Full browser: not set by hand, so no chip.
       render(
-        <SourceTab venue={{ ...venue, ...patch, crawlMode: 'browser' }} />,
+        <SourceTab
+          venue={{
+            ...venue,
+            ...patch,
+            crawlMode: 'browser',
+            crawlModeSource: 'auto',
+          }}
+        />,
       );
       expect(chips()).toEqual([`Reader: ${seller}`]);
       expect(backButton()).toBeNull();
@@ -732,9 +849,9 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
         name: COPY.advanced.backToAutomatic,
       }),
     );
-    // Page loading keeps its stored value; only the reader goes back.
+    // Page loading and Reader both go back to Automatic.
     expect(
-      within(card).getByText(COPY.advanced.pageLoading.hints.browser),
+      within(card).getByText(COPY.advanced.pageLoading.hints.auto),
     ).toBeTruthy();
     expect(
       within(card).getByText(COPY.advanced.reader.hints.auto),

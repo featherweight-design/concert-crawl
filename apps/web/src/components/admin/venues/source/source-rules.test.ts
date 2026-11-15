@@ -45,6 +45,7 @@ const base: SourceColumns = {
   apiProvider: null,
   apiAccountId: null,
   crawlMode: 'http',
+  crawlModeSource: 'admin',
   crawlWaitUntil: 'networkidle',
   crawlWaitForSelector: null,
 };
@@ -107,8 +108,24 @@ const CONFIGS: Array<{
     reader: 'detail-page',
   },
   {
+    name: 'page loading the crawler picked',
+    columns: { ...base, crawlMode: 'browser', crawlModeSource: 'auto' },
+    mode: 'page',
+    seller: null,
+    feedId: '',
+    reader: 'auto',
+  },
+  {
+    name: 'page loading of unknown source',
+    columns: { ...base, crawlMode: 'http', crawlModeSource: null },
+    mode: 'page',
+    seller: null,
+    feedId: '',
+    reader: 'auto',
+  },
+  {
     name: 'page loading not pinned',
-    columns: { ...base, crawlMode: null },
+    columns: { ...base, crawlMode: null, crawlModeSource: null },
     mode: 'page',
     seller: null,
     feedId: '',
@@ -497,7 +514,16 @@ describe('what a Source save sends', () => {
 });
 
 describe('Advanced: Automatic and set by hand (item 18)', () => {
-  const auto: SourceColumns = { ...base, crawlMode: null };
+  const auto: SourceColumns = {
+    ...base,
+    crawlMode: null,
+    crawlModeSource: null,
+  };
+  /** A crawl mode stored by `source`: 'admin' is set by hand. */
+  const mode = (
+    crawlMode: 'http' | 'browser',
+    crawlModeSource: SourceColumns['crawlModeSource'],
+  ) => ({ crawlMode, crawlModeSource });
   const aeg: SourceColumns = {
     ...auto,
     platform: 'aeg',
@@ -551,9 +577,21 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
 
   it.each([
     ['all automatic', auto, []],
-    // The crawler stores crawl_mode itself, so it is never a chip (until 0123).
-    ['Plain fetch', base, []],
-    ['Full browser', { ...auto, crawlMode: 'browser' }, []],
+    // Set by hand ('admin'): a chip, first.
+    ['Plain fetch', base, [forced('Page loading: Plain fetch')]],
+    [
+      'Full browser by hand',
+      { ...auto, ...mode('browser', 'admin') },
+      [forced('Page loading: Full browser')],
+    ],
+    // The crawler's own pick, or an unknown one, reads as Automatic.
+    [
+      'Full browser by the crawler',
+      { ...auto, ...mode('browser', 'auto') },
+      [],
+    ],
+    ['Full browser, unknown', { ...auto, ...mode('browser', null) }, []],
+    ['Plain fetch, unknown', { ...auto, ...mode('http', null) }, []],
     // Wait until has no Automatic, so it is never a chip.
     ['Wait until load', { ...auto, crawlWaitUntil: 'load' }, []],
     [
@@ -563,8 +601,31 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     ],
     [
       'Full browser and Haiku only',
-      { ...auto, crawlMode: 'browser', extractionStrategy: 'llm' },
+      { ...auto, ...mode('browser', 'admin'), extractionStrategy: 'llm' },
+      [forced('Page loading: Full browser'), forced('Reader: Haiku only')],
+    ],
+    [
+      'the crawler’s Full browser and Haiku only',
+      { ...auto, ...mode('browser', 'auto'), extractionStrategy: 'llm' },
       [forced('Reader: Haiku only')],
+    ],
+    [
+      'Plain fetch, Haiku only and a Wait for selector',
+      {
+        ...base,
+        extractionStrategy: 'llm',
+        crawlWaitForSelector: '.ev',
+      },
+      [
+        forced('Page loading: Plain fetch'),
+        forced('Reader: Haiku only'),
+        forced('Wait for: .ev'),
+      ],
+    ],
+    [
+      'AEG with Full browser by hand',
+      { ...aeg, ...mode('browser', 'admin') },
+      [forced('Page loading: Full browser'), locked('Reader: AEG')],
     ],
     [
       'Detail pages',
@@ -607,14 +668,20 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     expect(canGoBackToAutomatic(draftOf(aeg))).toBe(false);
     expect(canGoBackToAutomatic(draftOf(liveNation))).toBe(false);
     expect(canGoBackToAutomatic(draftOf(manual))).toBe(false);
-    // A stored crawl_mode alone is not known to be forced.
-    expect(canGoBackToAutomatic(draftOf(base))).toBe(false);
+    // A Page loading set by hand, on a page or a feed.
+    expect(canGoBackToAutomatic(draftOf(base))).toBe(true);
     expect(
-      canGoBackToAutomatic(draftOf({ ...auto, crawlMode: 'browser' })),
-    ).toBe(false);
-    expect(
-      canGoBackToAutomatic(draftOf({ ...aeg, crawlMode: 'browser' })),
-    ).toBe(false);
+      canGoBackToAutomatic(draftOf({ ...aeg, ...mode('browser', 'admin') })),
+    ).toBe(true);
+    // The crawler's own pick, or an unknown one, is not set by hand.
+    for (const source of ['auto', null] as const) {
+      expect(
+        canGoBackToAutomatic(draftOf({ ...auto, ...mode('browser', source) })),
+      ).toBe(false);
+      expect(
+        canGoBackToAutomatic(draftOf({ ...aeg, ...mode('browser', source) })),
+      ).toBe(false);
+    }
     for (const strategy of ['structured_data', 'llm'] as const) {
       expect(
         canGoBackToAutomatic(
@@ -627,23 +694,78 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     ).toBe(true);
   });
 
-  it('sets Reader to Automatic, and leaves Page loading and the waits', () => {
+  it('sets Page loading and Reader to Automatic, and leaves the waits', () => {
     const saved: SourceColumns = {
       ...auto,
-      crawlMode: 'browser',
+      ...mode('browser', 'admin'),
       extractionStrategy: 'llm',
       crawlWaitUntil: 'load',
       crawlWaitForSelector: '.event-list',
     };
-    // A patch of the reader alone, never the whole draft.
-    expect(backToAutomatic(draftOf(saved))).toEqual({ reader: 'auto' });
+    // A patch of the forced settings, never the whole draft.
+    expect(backToAutomatic(draftOf(saved))).toEqual({
+      crawlMode: null,
+      reader: 'auto',
+    });
     const next = afterBack(draftOf(saved));
     // Wait for is left alone, so it stays a chip.
     expect(closedChipsOf(next, saved)).toEqual([
       forced('Wait for: .event-list'),
     ]);
-    // Regression: never crawlMode, which the crawler may have stored itself.
-    expect(backToAutomaticBody(saved)).toEqual({ extractionStrategy: null });
+    expect(advancedUnsavedCount(next, draftOf(saved))).toBe(2);
+    expect(backToAutomaticBody(saved)).toEqual({
+      crawlMode: null,
+      extractionStrategy: null,
+    });
+  });
+
+  it('sets the Reader to Automatic, and leaves the crawler’s own Page loading', () => {
+    for (const source of ['auto', null] as const) {
+      const saved: SourceColumns = {
+        ...auto,
+        ...mode('browser', source),
+        extractionStrategy: 'llm',
+      };
+      expect(backToAutomatic(draftOf(saved))).toEqual({ reader: 'auto' });
+      // Regression: never crawlMode, which the crawler stored itself.
+      expect(backToAutomaticBody(saved)).toEqual({ extractionStrategy: null });
+    }
+  });
+
+  it.each([
+    ['the crawler’s', 'auto'],
+    ['an unknown', null],
+  ] as const)(
+    'Page loading over %s pick: Automatic is no change, a pick by hand is',
+    (_name, source) => {
+      const saved: SourceColumns = { ...auto, ...mode('browser', source) };
+      const savedDraft = draftOf(saved);
+      expect(savedDraft.crawlMode).toBe(null);
+      expect(dirtyColumns(savedDraft, saved)).toEqual([]);
+      // Picking the crawler's own mode adopts it as the admin's.
+      for (const crawlMode of ['http', 'browser'] as const) {
+        const next = { ...savedDraft, crawlMode };
+        expect(advancedUnsavedCount(next, savedDraft)).toBe(1);
+        expect(dirtyColumns(next, saved)).toEqual(['crawlMode']);
+        expect(
+          buildUpdateVenueBody(
+            sourceFormData(columnsOf(next, saved), dirtyColumns(next, saved)),
+          ).crawlMode,
+        ).toBe(crawlMode);
+        expect(columnsOf(next, saved).crawlModeSource).toBe('admin');
+      }
+    },
+  );
+
+  it('Automatic over a Page loading set by hand sends a null crawl mode', () => {
+    const saved: SourceColumns = { ...auto, ...mode('http', 'admin') };
+    const next = { ...draftOf(saved), crawlMode: null };
+    expect(draftOf(saved).crawlMode).toBe('http');
+    expect(dirtyColumns(next, saved)).toEqual(['crawlMode']);
+    expect(columnsOf(next, saved)).toMatchObject({
+      crawlMode: null,
+      crawlModeSource: null,
+    });
   });
 
   it.each([
@@ -667,8 +789,14 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
       { ...auto, platform: 'detail-page', extractionStrategy: 'llm' },
       { extractionStrategy: null, platform: null, platformVenueId: null },
     ],
-    ['Plain fetch', base, {}],
-    ['Full browser', { ...auto, crawlMode: 'browser' }, {}],
+    ['Plain fetch by hand', base, { crawlMode: null }],
+    [
+      'Full browser by hand',
+      { ...auto, ...mode('browser', 'admin') },
+      { crawlMode: null },
+    ],
+    ['the crawler’s Full browser', { ...auto, ...mode('browser', 'auto') }, {}],
+    ['an unknown Full browser', { ...auto, ...mode('browser', null) }, {}],
   ] as const)('Back to Automatic on %s sends %j', (_name, saved, body) => {
     expect(backToAutomaticBody(saved)).toEqual(body);
   });
@@ -684,6 +812,10 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     expect(next.platformVenueId).toBe(saved.platformVenueId);
     expect(backToAutomaticBody(saved)).toEqual({});
     expect(backToAutomaticBody(feed)).toEqual({});
+    // A Page loading set by hand on a feed goes back; the feed stays.
+    expect(
+      backToAutomaticBody({ ...feed, ...mode('browser', 'admin') }),
+    ).toEqual({ crawlMode: null });
   });
 
   it('Back to Automatic leaves a stored manual alone', () => {

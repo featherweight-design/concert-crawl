@@ -1,6 +1,6 @@
 {
   "feature": "Admin item 18 · Source Advanced: Reader chips, Back to Automatic, the Advanced card",
-  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/18-source-reader (source-advanced-d, -m, -states, source-forced-d). CONTACT_SHEET_ROLE=admin. Read-only on scratch: the sheet opens Advanced but never saves. The Page loading forced chip is ⏸ until crawl_mode_source (0123). Venues are whatever scratch holds: an automatic venue (Larimer Lounge), a ticketing-feed venue (Ball Arena) and a fixture venue (CF Fixture New Room).",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/18-source-reader (source-advanced-d, -m, -states, source-forced-d). CONTACT_SHEET_ROLE=admin. Read-only on scratch: the sheet opens Advanced but never saves. The Page loading forced chip shows only for a crawl mode set by hand (crawl_mode_source = 'admin'); the crawler's own pick reads as Automatic. Venues are whatever scratch holds: an automatic venue (Larimer Lounge), a ticketing-feed venue (Ball Arena) and a fixture venue (CF Fixture New Room).",
   "widths": [
     { "label": "phone", "width": 390, "height": 844, "touch": true },
     { "label": "desktop", "width": 1300, "height": 900 }

@@ -794,6 +794,7 @@ export const ADMIN_COPY = {
       // Closed with something forced: the line, then a chip per setting.
       setByHand: 'Set by hand',
       forced: {
+        pageLoading: (value: string) => `Page loading: ${value}`,
         reader: (value: string) => `Reader: ${value}`,
         // 🔸 undrawn: a Wait for selector is a hand pick too.
         waitFor: (selector: string) => `Wait for: ${selector}`,
@@ -810,14 +811,14 @@ export const ADMIN_COPY = {
         auto: 'Automatic',
         http: 'Plain fetch',
         browser: 'Full browser',
-        // What the pick does. Not "Set by hand": the crawler stores its own
-        // pick here too. ⏸ item 18 follow-up: say so once crawl_mode_source
-        // (0123) can tell an admin's pick apart.
+        // What the pick does; a forced pick says so first. Plain fetch and
+        // Full browser show only when set by hand: the crawler's own pick
+        // reads as Automatic.
         hints: {
           auto: 'Automatic lets the crawl pick: a plain fetch, or the full browser for a calendar that draws itself.',
-          http: 'Plain fetch reads the page’s HTML without running its scripts.',
+          http: 'Set by hand. Plain fetch reads the page’s HTML without running its scripts.',
           browser:
-            'Full browser runs the page’s scripts; slower, only for calendars that draw themselves.',
+            'Set by hand. Full browser runs the page’s scripts; slower, only for calendars that draw themselves.',
         },
       },
       waitUntil: {
