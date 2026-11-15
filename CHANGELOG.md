@@ -1,3 +1,11 @@
+## [1.522.2](https://github.com/featherweight-design/concert-crawl/compare/v1.522.1...v1.522.2) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** one admin price formatter, event and submitted ranges ([eef7930](https://github.com/featherweight-design/concert-crawl/commit/eef7930397d40610b7890e2d632d29cf9d85464c))
+* **web:** read an unreadable submitted top as a single price ([11cfab7](https://github.com/featherweight-design/concert-crawl/commit/11cfab72f6f9f6ba9bfbc947169061dfa38ccedb))
+
 ## [1.522.1](https://github.com/featherweight-design/concert-crawl/compare/v1.522.0...v1.522.1) (2026-11-15)
 
 
