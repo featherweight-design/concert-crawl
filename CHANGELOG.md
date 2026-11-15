@@ -1,3 +1,17 @@
+# [1.509.0](https://github.com/featherweight-design/concert-crawl/compare/v1.508.0...v1.509.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** refuse a removed venue on Add a show as venue_not_found ([00caf35](https://github.com/featherweight-design/concert-crawl/commit/00caf3536a816ba159c348ab92a095aff6136550))
+* **web:** find only the new show after a timed-out Add a show save ([6d7e107](https://github.com/featherweight-design/concert-crawl/commit/6d7e10751712d4ed9b02b0f76fdb2680716e73b8))
+* **web:** harden the Add a show data layer against the API's rules ([f91af66](https://github.com/featherweight-design/concert-crawl/commit/f91af6688e21b50f07acd42abb35dd03df03c4cc))
+
+
+### Features
+
+* **web:** add the Add a show data layer: the API client and the form rules ([a1a68c8](https://github.com/featherweight-design/concert-crawl/commit/a1a68c8fbf4c37c66a5b3fb9aeaf901fc4490dec))
+
 # [1.508.0](https://github.com/featherweight-design/concert-crawl/compare/v1.507.0...v1.508.0) (2026-11-15)
 
 
