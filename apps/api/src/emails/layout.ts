@@ -7,6 +7,7 @@
 // through to the inline single-column layout). Atoms live in atoms.ts;
 // templates supply subject, preheader, and the composed body rows.
 
+import type { UnsubscribeFamily } from '../lib/email-unsubscribe.js';
 import { EMAIL_FONT, EMAIL_MONO, ME } from './palette.js';
 
 // Environment-specific web origin, same convention as app.ts CORS and the
@@ -73,9 +74,10 @@ ${bodyRows}
 // 'digest' (#763 spec §8.2) carries a signed one-click unsubscribe URL in
 // place of the Settings link, supplied by the template via `unsubscribeUrl`.
 // Since going free (2026-11-10) only the digest sends; 'product' stays for the
-// unsubscribe links in emails already delivered. The billing family is gone:
-// its templates were retired and `UNSUBSCRIBE_FAMILIES` never accepted it.
-export type EmailFamily = 'product' | 'digest';
+// unsubscribe links in emails already delivered. The families are the ones the
+// unsubscribe route accepts, so the two lists cannot drift apart; the billing
+// family is gone (its templates were retired).
+export type EmailFamily = UnsubscribeFamily;
 
 export const familyUnsubscribeLabel = (family: EmailFamily): string =>
   family === 'digest'
