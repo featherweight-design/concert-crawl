@@ -135,6 +135,70 @@ describe('TimeField on desktop', () => {
     fireEvent.keyDown(field, { key: 'Enter' });
     expect(onChange).toHaveBeenCalledWith(null);
   });
+
+  describe('where the list opens', () => {
+    // jsdom lays nothing out, so every offset reads 0. Stand in the drawn
+    // geometry: 34px options 4px apart in a 240px window. Before the fix
+    // nothing ever set the list's scrollTop, so it stayed 0 (10:00 AM at the
+    // top) whatever the value, and the first assertion fails.
+    const ROW = 34;
+    const STEP = ROW + 4;
+    const WINDOW = 240;
+    afterEach(() => vi.restoreAllMocks());
+    const layOut = () => {
+      vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(
+        function offsetTop(this: HTMLElement) {
+          const parent = this.parentElement;
+          if (this.getAttribute('role') !== 'option' || parent === null) {
+            return 0;
+          }
+          return Array.from(parent.children).indexOf(this) * STEP;
+        },
+      );
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(
+        ROW,
+      );
+      vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(
+        function clientHeight(this: Element) {
+          return this.getAttribute('role') === 'listbox' ? WINDOW : 0;
+        },
+      );
+    };
+
+    it('centres the chosen half hour', () => {
+      layOut();
+      render(
+        <TimeField
+          id="t"
+          value="19:30:00"
+          onChange={vi.fn()}
+          phone={false}
+          placeholder="—"
+          label="Show"
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: '7:30 PM' }));
+      // 7:30 PM is the 20th half hour from 10:00 AM (index 19).
+      const expected = 19 * STEP - (WINDOW - ROW) / 2;
+      expect(screen.getByRole('listbox').scrollTop).toBe(expected);
+    });
+
+    it('stays at the top with no time chosen', () => {
+      layOut();
+      render(
+        <TimeField
+          id="t"
+          value={null}
+          onChange={vi.fn()}
+          phone={false}
+          placeholder="Add a time"
+          label="Show"
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Add a time' }));
+      expect(screen.getByRole('listbox').scrollTop).toBe(0);
+    });
+  });
 });
 
 describe('DateField on the phone', () => {

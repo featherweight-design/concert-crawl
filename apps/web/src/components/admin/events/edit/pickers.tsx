@@ -40,8 +40,11 @@ const POPOVER: CSSProperties = {
   borderRadius: 14,
   border: '1px solid var(--border-strong)',
   background: 'var(--bg-elevated)',
-  boxShadow: '0 16px 40px rgba(0, 0, 0, 0.35)',
-  padding: 12,
+  boxShadow: '0 18px 40px rgba(0, 0, 0, 0.45)',
+  padding: 8,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
 };
 
 /** Closes a popover on an outside press or Escape. */
@@ -78,17 +81,31 @@ const usePopover = () => {
   return { open, setOpen, close, ref, trigger };
 };
 
+/**
+ * A month arrow. The board draws bare 14px chevrons 28px apart, 6px in from
+ * the edge; 26px-wide buttons 2px apart put each icon's centre exactly there
+ * while keeping a press target, and the negative block margin keeps the
+ * header row the height of its 14px label.
+ */
 const ARROW: CSSProperties = {
   display: 'grid',
   placeItems: 'center',
-  width: 28,
-  height: 28,
-  borderRadius: 8,
+  width: 26,
+  height: 24,
+  marginBlock: -5,
+  padding: 0,
+  borderRadius: 6,
   border: 'none',
   background: 'transparent',
   color: 'var(--fg-muted)',
   cursor: 'pointer',
 };
+
+/**
+ * The board's chevron is stroke 1.8 in a 16-unit box drawn at 14px; lucide's
+ * box is 24 units, so 2.7 renders the same 1.575px line.
+ */
+const CHEVRON_STROKE = 2.7;
 
 /**
  * A date field (`04/date-picker-d`): a one-month popover on desktop, the OS
@@ -187,8 +204,15 @@ export const DateField = ({
           aria-label={monthLabel(view.year, view.month)}
           style={{ ...POPOVER, width: 300 }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ flex: 1, fontSize: 15, fontWeight: 700 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              padding: '4px 0 8px 6px',
+            }}
+          >
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>
               {monthLabel(view.year, view.month)}
             </span>
             <button
@@ -197,7 +221,7 @@ export const DateField = ({
               onClick={() => shift(-1)}
               style={ARROW}
             >
-              <ChevronLeft size={16} aria-hidden />
+              <ChevronLeft size={14} strokeWidth={CHEVRON_STROKE} aria-hidden />
             </button>
             <button
               type="button"
@@ -205,15 +229,19 @@ export const DateField = ({
               onClick={() => shift(1)}
               style={ARROW}
             >
-              <ChevronRight size={16} aria-hidden />
+              <ChevronRight
+                size={14}
+                strokeWidth={CHEVRON_STROKE}
+                aria-hidden
+              />
             </button>
           </div>
           <div
+            aria-hidden
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(7, 1fr)',
-              gap: 4,
-              marginTop: 10,
+              gap: 2,
               textAlign: 'center',
             }}
           >
@@ -221,12 +249,27 @@ export const DateField = ({
               <span
                 // The initials repeat (two Ts, two Ss), so the slot keys them.
                 key={`${day}${i}`}
-                aria-hidden
-                style={{ fontSize: 10.5, color: 'var(--fg-subtle)' }}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: '0.1em',
+                  color: 'var(--fg-subtle)',
+                }}
               >
                 {day}
               </span>
             ))}
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: 2,
+              marginTop: 4,
+              textAlign: 'center',
+            }}
+          >
             {monthCells(view.year, view.month).map((day, i) => {
               if (day === null) return <span key={`blank${i}`} />;
               const iso = isoOf(view.year, view.month, day);
@@ -246,7 +289,7 @@ export const DateField = ({
                     height: 34,
                     borderRadius: 9,
                     fontSize: 13,
-                    fontWeight: chosen ? 700 : 500,
+                    fontWeight: chosen ? 800 : 400,
                     cursor: barred ? 'default' : 'pointer',
                     // Days before today draw muted (`04/date-picker-d`),
                     // still pickable unless barred by `min` or `max`.
@@ -260,7 +303,7 @@ export const DateField = ({
                         ? '1px solid var(--signal)'
                         : '1px solid transparent',
                     background: chosen
-                      ? 'linear-gradient(135deg, var(--signal), var(--accent))'
+                      ? 'linear-gradient(135deg, var(--signal), var(--cta-end))'
                       : 'transparent',
                   }}
                 >
@@ -274,8 +317,8 @@ export const DateField = ({
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              marginTop: 10,
-              paddingTop: 10,
+              marginTop: 6,
+              padding: '8px 4px 2px',
               borderTop: '1px solid var(--border)',
             }}
           >
@@ -286,11 +329,11 @@ export const DateField = ({
               style={{
                 height: 30,
                 padding: '0 12px',
-                borderRadius: 8,
+                borderRadius: 9,
                 border: '1px solid var(--border-strong)',
                 background: 'var(--surface-2)',
                 color: 'var(--fg)',
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -376,6 +419,24 @@ export const TimeField = ({
   const current = value?.slice(0, 5) ?? null;
   // Typed text that isn't a time says so, rather than doing nothing.
   const invalid = text.trim() !== '' && parseTime(text) === null;
+  const listRef = useRef<HTMLDivElement>(null);
+  const chosenRef = useRef<HTMLButtonElement>(null);
+  // The list opens on the chosen half hour, centred where it can be
+  // (`04/time-picker-d` draws 6:00 PM between 5:30 and 8:30), instead of
+  // always at 10:00 AM. Only the list scrolls, never the page or the dialog
+  // around it (which `scrollIntoView` would), and it jumps rather than
+  // animates. With no time chosen it stays at the top.
+  useEffect(() => {
+    if (!open) return undefined;
+    const list = listRef.current;
+    const option = chosenRef.current;
+    if (list === null || option === null) return undefined;
+    list.scrollTop = Math.max(
+      0,
+      option.offsetTop - (list.clientHeight - option.offsetHeight) / 2,
+    );
+    return undefined;
+  }, [open]);
 
   if (phone) {
     return (
@@ -414,7 +475,7 @@ export const TimeField = ({
         <div
           role="dialog"
           aria-label={label}
-          style={{ ...POPOVER, width: 240 }}
+          style={{ ...POPOVER, width: 200 }}
         >
           <input
             // The popover's one job: focus lands here to type.
@@ -436,7 +497,6 @@ export const TimeField = ({
             }}
             style={{
               ...inputStyle(invalid),
-              height: 40,
               ...(!invalid && { border: '1px solid var(--signal)' }),
             }}
           />
@@ -445,21 +505,31 @@ export const TimeField = ({
             style={{
               fontSize: 12,
               color: 'var(--fg-subtle)',
-              margin: '8px 4px',
+              padding: '6px 2px 2px',
             }}
           >
             {COPY.timeHint}
           </div>
           <div
+            ref={listRef}
             role="listbox"
             aria-label={COPY.timeList}
-            style={{ maxHeight: 240, overflowY: 'auto' }}
+            style={{
+              // Positioned so each option's offsetTop measures from the list.
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              maxHeight: 240,
+              overflowY: 'auto',
+            }}
           >
             {HALF_HOURS.map((slot) => {
               const chosen = slot === current;
               return (
                 <button
                   key={slot}
+                  ref={chosen ? chosenRef : undefined}
                   type="button"
                   role="option"
                   aria-selected={chosen}
@@ -468,12 +538,13 @@ export const TimeField = ({
                     display: 'flex',
                     alignItems: 'center',
                     width: '100%',
-                    height: 36,
+                    flex: 'none',
+                    height: 34,
                     padding: '0 10px',
                     borderRadius: 8,
                     border: 'none',
                     fontSize: 13.5,
-                    fontWeight: chosen ? 700 : 500,
+                    fontWeight: chosen ? 600 : 400,
                     color: 'var(--fg)',
                     background: chosen ? 'var(--surface-2)' : 'transparent',
                     cursor: 'pointer',
