@@ -1,3 +1,17 @@
+# [1.505.0](https://github.com/featherweight-design/concert-crawl/compare/v1.504.1...v1.505.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** the tier mark test reads the trust tokens ([d50ff7b](https://github.com/featherweight-design/concert-crawl/commit/d50ff7b5c87abd47e856193fb232ba9edc76336e))
+* **web:** the trust token tests read the new tokens and the css comments stay with their rules ([91a2664](https://github.com/featherweight-design/concert-crawl/commit/91a26646243ba3d3ee0c937a34e19eae8135dace))
+* **web:** the where it's sold resale test reads the trust token ([ff6fa31](https://github.com/featherweight-design/concert-crawl/commit/ff6fa3111d1461e233188b256c8aba734d41cea3))
+
+
+### Features
+
+* **web:** trust tones get their own theme tokens so every pill reads at AA ([e22a1c1](https://github.com/featherweight-design/concert-crawl/commit/e22a1c1900b32b0297c8e21f20098fdd741c924b))
+
 ## [1.504.1](https://github.com/featherweight-design/concert-crawl/compare/v1.504.0...v1.504.1) (2026-11-15)
 
 
