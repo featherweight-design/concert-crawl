@@ -1,0 +1,49 @@
+{
+  "feature": "Custom sign-up PR 5a · the states Clerk answers (/sign-up/new)",
+  "note": "The same form as custom-auth-5a.json, photographed against the real development instance with Smart CAPTCHA switched off for the run (by the orchestrator, restored afterwards). Only +clerk_test addresses are used and no user is ever created: a sign-up that is never verified leaves no user. Boards: signup-weak-m, verify-m (the verify screen here is the 5a placeholder; the real one is 5b).",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "signup-weak",
+      "label": "/sign-up/new: a password Clerk calls too easy",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        { "fill": "input[autocomplete='new-password']", "text": "password123" },
+        { "click": "label:has(input[type='checkbox'])" },
+        { "clickRole": "button", "name": "^Make my account$" },
+        { "wait": "text=too easy to guess", "settle": 800 }
+      ]
+    },
+    {
+      "id": "signup-verify",
+      "label": "/sign-up/new: after Clerk accepted the account (the 5a placeholder)",
+      "widths": ["phone", "desktop"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "h1:has-text('Make your account')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        {
+          "fill": "input[autocomplete='new-password']",
+          "text": "Quartz-Ember-Sheet-42!"
+        },
+        { "click": "label:has(input[type='checkbox'])" },
+        { "clickRole": "button", "name": "^Make my account$" },
+        { "wait": "h1:has-text('Check your email')", "settle": 1200 }
+      ]
+    }
+  ]
+}

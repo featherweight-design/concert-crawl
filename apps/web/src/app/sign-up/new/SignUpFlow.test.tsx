@@ -56,7 +56,6 @@ function renderFlow(
 ) {
   return render(
     <SignUpFlow
-      target="/auth/complete"
       beta
       inviteCode="BETA-AB12-CD34"
       changeHref="/auth/code"
@@ -224,6 +223,31 @@ describe('SignUpFlow, the press', () => {
     expect(document.body.textContent).toBe(fresh);
     expect(mocks.signUp.verifications.sendEmailCode).toHaveBeenCalledTimes(1);
     expect(document.body.textContent).not.toMatch(/already|exists|taken/i);
+  });
+
+  it('retries only the code when the account was made but the send failed', async () => {
+    mocks.signUp.verifications.sendEmailCode.mockResolvedValueOnce({
+      error: clerkError(500, 'something_else'),
+    });
+    renderFlow();
+    fill();
+    tick();
+    await press();
+    expect(mocks.signUp.password).toHaveBeenCalledTimes(1);
+    await press();
+    expect(mocks.signUp.password).toHaveBeenCalledTimes(1);
+    expect(mocks.signUp.verifications.sendEmailCode).toHaveBeenCalledTimes(2);
+  });
+
+  it('moves focus to the password once the lock lifts after a weak answer', async () => {
+    mocks.signUp.password.mockResolvedValue({
+      error: clerkError(422, 'form_password_not_strong_enough'),
+    });
+    renderFlow();
+    fill();
+    tick();
+    await press();
+    expect(screen.getByLabelText(COPY.form.passwordLabel)).toHaveFocus();
   });
 
   it('goes back from the next screen with the fields and the tick kept', async () => {

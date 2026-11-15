@@ -27,6 +27,7 @@ describe('classifySignUpError', () => {
     [422, ['form_param_format_invalid'], 'email'],
     [422, ['form_param_nil'], 'email'],
     [422, ['legal_accepted_required'], 'legal'],
+    [422, ['form_param_nil', 'legal_accepted_required'], 'legal'],
     [400, ['captcha_invalid'], 'captcha'],
     [400, ['captcha_unavailable'], 'captcha'],
     [500, ['something_else'], 'failed'],
