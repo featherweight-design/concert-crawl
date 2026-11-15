@@ -128,7 +128,7 @@ describe('GET /passport/[ratio]', () => {
     expect(fetchMeMock).not.toHaveBeenCalled();
   });
 
-  // Concert History is a Supporter feature, so the card drawn from it is too.
+  // No card is drawn from a history the viewer can't read.
   it('403s a locked history rather than rendering an empty passport', async () => {
     fetchHistoryMock.mockResolvedValue({ data: null, locked: true });
 

@@ -146,8 +146,10 @@ export const ONBOARDING_COPY = {
     // moves shows into your Watching.
     lede: "They all have a Denver date coming up. Follow one and we'll tell you the day they book the next.",
     // Real pluralisation, never a literal "(s)".
+    // Locked only when the account didn't load. The commit still tries the
+    // follow, so the button says the same thing as the unlocked one.
     commitLocked: (count: number) =>
-      `Follow ${count} ${count === 1 ? 'artist' : 'artists'} with Premium`,
+      `Follow ${count} ${count === 1 ? 'artist' : 'artists'} →`,
     commit: (count: number) =>
       `Follow ${count} ${count === 1 ? 'artist' : 'artists'} →`,
     // Zero selected. The step is skippable, so the button says what it does
@@ -155,7 +157,7 @@ export const ONBOARDING_COPY = {
     skip: 'Continue without following →',
     // Under the button. The locked line answers the fear the locked button
     // just created; the unlocked ones answer "what am I signing up for".
-    subLocked: 'Your picks are held while you upgrade. Nothing gets lost.',
+    subLocked: 'Unfollow any of them any time.',
     subSelected: 'Unfollow any of them any time.',
     subNone: 'You can follow anyone from search later.',
   },

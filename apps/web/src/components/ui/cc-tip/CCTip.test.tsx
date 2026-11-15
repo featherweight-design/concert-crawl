@@ -33,7 +33,7 @@ const DEFS_TIP: TipContent = {
   rows: [
     {
       tone: 'good',
-      title: 'Watching: free',
+      title: 'Watching: the price',
       body: 'Keeps an eye on the price.',
     },
     {
@@ -151,7 +151,7 @@ describe('CCTip on desktop', () => {
     renderTip(DEFS_TIP);
     fireEvent.click(triggerFor('Going vs. Watching'));
     expect(screen.getByText('Two different promises.')).toBeInTheDocument();
-    expect(screen.getByText('Watching: free')).toBeInTheDocument();
+    expect(screen.getByText('Watching: the price')).toBeInTheDocument();
     expect(screen.getByText('Going')).toBeInTheDocument();
   });
 

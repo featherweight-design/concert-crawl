@@ -1027,7 +1027,7 @@ export const CONSUMER_COPY = {
         {
           key: '03',
           title: 'Free, and it stays free.',
-          body: 'Watching is on the Free tier. No card, no trial.',
+          body: 'No card, ever.',
         },
       ],
       signUp: 'Sign up free',

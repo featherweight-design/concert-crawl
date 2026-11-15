@@ -54,12 +54,11 @@ export const GOING_COPY = {
     // Same label as `default` on purpose: the locked control is an invitation,
     // so it has to read as the thing you would get, not as a different thing.
     //
-    // Neither line names the feature. "Part of Concerts" reads as a tab rather
-    // than a promise, and the destination paywall (HISTORY_COPY.locked) already
-    // sells this without naming a product. The tip beside the line does the
-    // teaching; these two only say what it costs.
-    aria: "I'm going! Requires a paid plan.",
-    line: 'Needs a paid plan.',
+    // Everything is free, so the only way to land here is a signed-in fan
+    // whose account didn't load. The line says that honestly; the tip beside
+    // it does the teaching.
+    aria: "I'm going! Couldn't load your account.",
+    line: "Couldn't load your account. Try again.",
   },
   // Taking a past night back out (edit-concerts handoff, COPY.md "Remove
   // confirm").

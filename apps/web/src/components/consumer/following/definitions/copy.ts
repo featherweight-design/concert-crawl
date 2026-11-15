@@ -27,8 +27,7 @@ export const FOLLOWING_COPY = {
   // Referenced by aria-describedby, never rendered visibly. Because the locked
   // label says nothing about the gate, this sentence is the only place it is
   // told at all.
-  chipGate:
-    'Filtering to your artists is a Premium feature. Opens upgrade options.',
+  chipGate: 'Filtering to your artists needs your account.',
 
   // ── Scope banner (role="status") ──────────────────────────────────────
   // The count is SHOWS, not artists, matching the taste chip's banner beside
@@ -78,7 +77,7 @@ export const FOLLOWING_COPY = {
   cardPriceTba: 'tba',
   followAria: (name: string) => `Follow ${name}`,
   followingAria: (name: string) => `Following ${name}`,
-  followGate: 'Following artists is a Premium feature. Opens upgrade options.',
+  followGate: 'Following artists needs your account.',
 
   // ── Search results, explainer rail (desktop) / footnote (mobile) ──────
   // The eyebrow labels the desktop column, so only desktop renders it. Mobile

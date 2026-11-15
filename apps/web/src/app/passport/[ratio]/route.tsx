@@ -91,10 +91,10 @@ export const GET = async (
     return problem(502, 'passport data unavailable');
   }
 
-  // A 403 from /v1/history is the entitlement gate, not a failure — Concert
-  // History is a Supporter feature, and so is the card drawn from it.
+  // A 403 from /v1/history is the entitlement gate, not a failure: no card is
+  // drawn from a history the viewer can't read.
   if (history.locked) {
-    return problem(403, 'concert history is a Supporter feature');
+    return problem(403, 'concert history unavailable');
   }
 
   const { tokens } = resolvePassportTheme({

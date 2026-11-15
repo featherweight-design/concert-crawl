@@ -6,9 +6,9 @@
 import type { TipContent } from './types';
 
 export const TIP_CONTENT = {
-  // Event Detail: the CTA pair. Going is gated behind Concerts and Watching is
-  // free, and this is the last thing a Free user reads before tapping Going,
-  // so it says so plainly, once, without becoming a paywall.
+  // Event Detail: the CTA pair. Everything is free, so the two rows contrast
+  // what each one keeps track of, never a price. Each title names the thing it
+  // watches; the bodies say what that means.
   'going-vs-watch': {
     label: 'Going vs. Watching',
     variant: 'defs',
@@ -16,24 +16,22 @@ export const TIP_CONTENT = {
     rows: [
       {
         tone: 'good',
-        title: 'Watching: free',
+        title: 'Watching: the price',
         body: 'Keeps an eye on the price. We ping you on drops and sold-outs. Nothing else.',
       },
       {
-        // Takes its shape from the row above: the two titles are the whole
-        // contrast, so the body no longer restates that this one is paid.
         tone: 'neutral',
-        title: 'Going: paid',
+        title: 'Going: the night',
         body: 'Adds the night to your Concerts after the show. You can watch this show either way.',
       },
     ],
   },
-  // Event Detail: what Concerts is (the locked-Going pitch).
+  // Event Detail: what Concerts is, beside the locked Going line.
   'concert-history': {
     label: 'Concerts',
     variant: 'titled',
     title: 'Your gig log, kept for you.',
-    body: "Mark the shows you're going to and they stack up: what you saw, where, who opened, what you paid. Part of the paid tier. Watching a price is free and always will be.",
+    body: "Mark the shows you're going to and they stack up: what you saw, where, who opened, what you paid.",
   },
   // Event Detail: price provenance.
   'who-set-this-price': {

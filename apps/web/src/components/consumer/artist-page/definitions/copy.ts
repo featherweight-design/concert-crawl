@@ -54,7 +54,7 @@ export const ARTIST_COPY = {
   // handoff draws the same button. That name alone promises a follow that will
   // not happen, so this sentence is where the gate is told. It is referenced by
   // aria-describedby, never rendered visibly.
-  followGate: 'Following artists is a Premium feature. Opens upgrade options.',
+  followGate: 'Following artists needs your account.',
 
   // History line — prose. `since` is DATA (crawl start), never hardcoded here,
   // so a licensed backfill changes the number without touching this string.
