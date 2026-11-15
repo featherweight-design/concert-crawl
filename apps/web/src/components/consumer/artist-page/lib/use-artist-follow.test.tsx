@@ -98,10 +98,10 @@ describe('useArtistFollow', () => {
     expect(del).toHaveBeenCalledWith('/v1/artists/wax-harbour/follow', 'token');
   });
 
-  it('warns and rolls back a branded 403 like any other failure', async () => {
-    // Following is free, so there is no upgrade path to hand a 403 to.
-    // Returning early would swallow the failure without a trace; it has to
-    // take the ordinary failure path.
+  it('never returns silently on a branded 403: it warns and rolls back', async () => {
+    // Following is free, so there is no upgrade path to hand a 403 to. A
+    // branch that returned early on the entitlement code would swallow the
+    // failure without a trace; it has to take the ordinary failure path.
     post.mockRejectedValue(
       new ApiError(403, 'premium', ENTITLEMENT_REQUIRED_CODE),
     );

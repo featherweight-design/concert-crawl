@@ -76,8 +76,16 @@ vi.mock('@/theme', () => ({
   useThemeName: () => 'electric',
 }));
 
+// `isSignedIn` is `undefined` while Clerk resolves, and `getToken` has no
+// token to give in that window.
+const auth = vi.hoisted((): { isSignedIn: boolean | undefined } => ({
+  isSignedIn: true,
+}));
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: async () => 'token', isSignedIn: true }),
+  useAuth: () => ({
+    getToken: async () => (auth.isSignedIn ? 'token' : null),
+    isSignedIn: auth.isSignedIn,
+  }),
 }));
 
 const base: ArtistDetailResponse = {
@@ -168,6 +176,7 @@ beforeEach(() => {
   window.scrollY = 0;
   plan.current = undefined;
   regate.plans.clear();
+  auth.isSignedIn = true;
 });
 
 afterEach(cleanup);
@@ -516,6 +525,18 @@ describe('ArtistPageContent', () => {
         expect(button.getAttribute('aria-pressed')).toBe('false');
       },
     );
+
+    // The server's `following` can say signed in before Clerk does. A tap in
+    // that window would flip optimistically, find no token and roll back.
+    it('a follow tap does nothing until Clerk answers', () => {
+      auth.isSignedIn = undefined;
+      const { getByRole } = render(<ArtistPageContent data={signedIn} />);
+      const button = getByRole('button', {
+        name: ARTIST_COPY.followAria('Neal Francis'),
+      });
+      fireEvent.click(button);
+      expect(button.getAttribute('aria-pressed')).toBe('false');
+    });
 
     it('a signed-out follow tap still goes to sign-in', () => {
       pushMock.mockClear();

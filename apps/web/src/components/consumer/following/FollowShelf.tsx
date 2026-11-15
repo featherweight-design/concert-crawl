@@ -136,14 +136,14 @@ export const FollowShelf = ({
   if (visible.length === 0) return null;
 
   const signedOut = isSignedIn === false;
-  // Clerk resolves after mount. Until it does the starter shelf fails CLOSED: a
-  // tap that reached `toggle` before Clerk answered would find no token and die
-  // on "Not authenticated". The starter shelf has no followed rows by
-  // definition and the gated badge draws the same at-rest skin as idle, so
-  // failing closed costs nothing visible. Following is free on every
-  // signed-in plan, so once Clerk has answered there is nothing else to wait
-  // on; only the starter shelf draws a badge at all.
-  const resolving = mode === 'zero' && isSignedIn === undefined;
+  // Clerk resolves after mount. Until it does the shelf fails CLOSED, in both
+  // modes: a tap that reached `toggle` before Clerk answered would find no
+  // token and die on "Not authenticated". Only the starter shelf draws a badge
+  // today, and it has no followed rows by definition, so failing closed costs
+  // nothing visible; `some` is gated too so a badge added there later cannot
+  // reopen the window. Following is free on every signed-in plan, so once
+  // Clerk has answered there is nothing else to wait on.
+  const resolving = isSignedIn === undefined;
 
   // A signed-out tap goes to sign-in; an unresolved one does nothing.
   const onGatedTap = () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import type { ArtistDetailResponse } from '@concert-crawl/types';
+import { useAuth } from '@clerk/nextjs';
 import React, { useRef } from 'react';
 
 import { useTheme } from '@/theme';
@@ -91,6 +92,12 @@ export const ArtistPageContent = ({
   const scrolled = useScrolledPast(bandHeight - AP_STICKY_BAR_H);
   const { theme } = useTheme();
 
+  // Clerk resolves after mount, and the server's `following` can say signed in
+  // before it does. A toggle in that window would flip optimistically, find no
+  // token and roll back, so until Clerk answers the tap does nothing.
+  const { isSignedIn } = useAuth();
+  const resolving = isSignedIn === undefined;
+
   // Following is free on every signed-in plan, so there is no gate to pass
   // down: signed out goes to sign-in, signed in toggles.
   const followProps = {
@@ -98,7 +105,7 @@ export const ArtistPageContent = ({
     slug: artist.slug,
     following,
     signedOut,
-    onToggle: toggle,
+    onToggle: resolving ? () => undefined : toggle,
   };
 
   // Follow stays under the hero on mobile and scrolls away with it

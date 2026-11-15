@@ -60,18 +60,16 @@ export const ArtistResultRow = ({
 }: ArtistResultRowProps) => {
   const follow = useArtistFollow(artist.slug, artist.following);
 
-  // A row cannot paint before Clerk has answered anyway: `useSearch` awaits
-  // `getToken()` before it fetches. The window that would otherwise leave (a
-  // tap with no token throws a plain `Error('Not authenticated')`) is closed
-  // by treating an unresolved session as signed out below. `signedOut` renders
-  // idle's exact pixels (#794 §3.10) and hands a tap to sign-in instead of a
-  // dead request.
-  //
-  // `artist.following` is proof of a session on its own: the search route
-  // reports `false` for every anonymous request, so a `true` here can only have
-  // come from an authenticated one. That is what keeps an already-followed row
-  // live through the same window instead of flashing back to "Follow".
-  const signedOut = isSignedIn !== true && !artist.following;
+  // Until Clerk answers, a tap does nothing, as on the follow shelf: a toggle
+  // with no token yet dies on `Error('Not authenticated')`, and sending a
+  // viewer who may well be signed in to sign-in is worse. The row keeps its
+  // drawn state through the window, so an already-followed row does not flash
+  // back to "Follow" (`artist.following` can only be true for an
+  // authenticated request: the search route reports `false` to anonymous
+  // ones). `signedOut` renders idle's exact pixels (#794 §3.10) and hands a
+  // tap to sign-in.
+  const resolving = isSignedIn === undefined;
+  const signedOut = isSignedIn === false && !artist.following;
 
   const meta =
     artist.upcomingShowCount > 0
@@ -167,7 +165,7 @@ export const ArtistResultRow = ({
         signedOut={signedOut}
         size={size}
         iconOnly={iconOnly}
-        onToggle={follow.toggle}
+        onToggle={resolving ? () => undefined : follow.toggle}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import {
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EntitlementResult } from '@/lib/queries/use-entitlement';
 import type { ShelfArtist } from './definitions/types';
+import type * as ShelfCardModule from './ShelfCard';
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -55,6 +56,20 @@ vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
     toggle,
   }),
 }));
+
+// The real card, wrapped so a test can read the gate the shelf hands it. On
+// "Your artists" the card draws no badge, so the prop is the only place the
+// shelf's fail-closed answer is visible there.
+const cardProps = vi.hoisted(() => ({ resolving: [] as boolean[] }));
+vi.mock('./ShelfCard', async (importOriginal) => {
+  const actual = await importOriginal<typeof ShelfCardModule>();
+  return {
+    ShelfCard: (props: React.ComponentProps<typeof actual.ShelfCard>) => {
+      cardProps.resolving.push(props.resolving);
+      return <actual.ShelfCard {...props} />;
+    },
+  };
+});
 
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
 import { FollowShelf } from './FollowShelf';
@@ -363,6 +378,20 @@ describe('FollowShelf', () => {
     );
     expect(toggle).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  // The same window on "Your artists": the shelf gates its cards there too,
+  // so a follow control on that shelf could not write before Clerk answers.
+  it('your own artists fail closed while auth resolves too', () => {
+    authState.isSignedIn = undefined;
+    cardProps.resolving.length = 0;
+    renderShelf({
+      mode: 'some',
+      followCount: 1,
+      artists: [artist({ following: true })],
+    });
+    expect(cardProps.resolving.length).toBeGreaterThan(0);
+    expect(cardProps.resolving.every(Boolean)).toBe(true);
   });
 
   it('entitled viewers toggle the follow directly', () => {
