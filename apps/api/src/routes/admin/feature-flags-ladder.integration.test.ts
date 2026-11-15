@@ -8,7 +8,11 @@ interface TestAuth {
 const { authState, clerkUsers } = vi.hoisted(() => {
   const state: { current: TestAuth | null } = { current: null };
   // The Clerk users the flags page can read: id and role.
-  const users: { current: { id: string; role: string }[] } = { current: [] };
+  const users: {
+    current: { id: string; role: string }[];
+    failing: boolean;
+    calls: number;
+  } = { current: [], failing: false, calls: 0 };
   return { authState: state, clerkUsers: users };
 });
 
@@ -20,6 +24,8 @@ vi.mock('@clerk/backend', () => ({
         limit?: number;
         offset?: number;
       }) => {
+        clerkUsers.calls += 1;
+        if (clerkUsers.failing) throw new Error('clerk down');
         const wanted = params.userId;
         const all = clerkUsers.current.filter(
           (user) => wanted === undefined || wanted.includes(user.id),
@@ -350,7 +356,43 @@ describe('what the flags page draws about people', () => {
     clearFeatureFlagCache();
     clearBetaRoleCache();
     clerkUsers.current = [];
+    clerkUsers.failing = false;
+    clerkUsers.calls = 0;
     asAdmin();
+  });
+
+  it('still answers when Clerk cannot be read: role and Beta count are null', async () => {
+    await seedUserProfile('named-a', { handle: 'ana.b' });
+    await post('/people', { userId: 'named-a' });
+    clerkUsers.failing = true;
+    const flag = await crews();
+    expect(flag.betaCount).toBeNull();
+    expect(flag.people[0]).toMatchObject({ handle: 'ana.b', role: null });
+  });
+
+  it('does not rescan Clerk for the Beta role inside a minute', async () => {
+    clerkUsers.current = [{ id: 'beta-1', role: 'beta' }];
+    await crews();
+    const afterFirst = clerkUsers.calls;
+    await crews();
+    expect(clerkUsers.calls).toBe(afterFirst);
+  });
+
+  it('asks Clerk for roles in chunks of 100', async () => {
+    const ids = Array.from({ length: 150 }, (_, index) => `named-${index}`);
+    clerkUsers.current = ids.map((id) => ({ id, role: 'user' }));
+    // The first add creates the flag's row, which the rest hang on.
+    await post('/people', { userId: 'seed-row' });
+    for (const id of ids) {
+      await testDb
+        .insert(featureFlagUsers)
+        .values({ flagKey: 'crews', userId: id, addedBy: ADMIN })
+        .onConflictDoNothing();
+    }
+    const flag = await crews();
+    expect(flag.people.filter((person) => person.role === 'user')).toHaveLength(
+      150,
+    );
   });
 
   it('gives each named person a handle, role, test mark and added date', async () => {

@@ -27,7 +27,13 @@ import {
   type FlagStage,
 } from '../../lib/flag-ladder.js';
 import { FORMER_ADMIN } from './lib/admin-names.js';
-import { betaRoleIds, identitiesOf, rolesOf } from './lib/flag-audience.js';
+import {
+  betaRoleIds,
+  byUserId,
+  identitiesOf,
+  rolesOf,
+  testAccountIds,
+} from './lib/flag-audience.js';
 import type { AdminVariables } from './index.js';
 
 export const featureFlagsAdminRouter = new Hono<AdminVariables>();
@@ -69,7 +75,7 @@ const loadPeople = async (key: FeatureFlagKey): Promise<NamedPerson[]> => {
     })
     .from(featureFlagUsers)
     .where(eq(featureFlagUsers.flagKey, key));
-  return rows.sort((left, right) => left.userId.localeCompare(right.userId));
+  return rows.sort(byUserId);
 };
 
 interface FlagEntry {
@@ -92,9 +98,10 @@ const describeFlags = async (
     ...(entry.row?.verifiedBy ? [entry.row.verifiedBy] : []),
     ...(entry.row?.stageOwnerUserId ? [entry.row.stageOwnerUserId] : []),
   ]);
-  const [identities, roles] = await Promise.all([
-    identitiesOf([...named, ...referenced, ...(betaIds ?? [])]),
+  const [identities, roles, testIds] = await Promise.all([
+    identitiesOf([...named, ...referenced]),
     rolesOf(named),
+    testAccountIds(),
   ]);
 
   return entries.map(({ key, row, people }) => {
@@ -104,14 +111,13 @@ const describeFlags = async (
     const betaCount =
       betaIds === null
         ? null
-        : [...audience].filter((id) => identities.get(id)?.isTest !== true)
-            .length;
+        : [...audience].filter((id) => !testIds.has(id)).length;
     return toAdminFlag(key, row, {
       people: people.map((person) => ({
         userId: person.userId,
         handle: identities.get(person.userId)?.handle ?? null,
         role: roles.get(person.userId) ?? null,
-        isTest: identities.get(person.userId)?.isTest === true,
+        isTest: testIds.has(person.userId),
         addedAt: person.addedAt.toISOString(),
       })),
       verifiedByHandle: row?.verifiedBy
@@ -227,7 +233,7 @@ featureFlagsAdminRouter.get('/', async (ctx) => {
       people: people
         .filter((person) => person.flagKey === key)
         .map((person) => ({ userId: person.userId, addedAt: person.addedAt }))
-        .sort((left, right) => left.userId.localeCompare(right.userId)),
+        .sort(byUserId),
     })),
   );
 
@@ -519,8 +525,12 @@ featureFlagsAdminRouter.get('/:key/history', async (ctx) => {
       ...(row.subjectUserId ? [row.subjectUserId] : []),
     ]),
   );
-  const handleOf = (userId: string | null): string | null =>
-    userId === null ? null : (identities.get(userId)?.handle ?? FORMER_ADMIN);
+  // Whoever acted was an admin: no handle reads as a former admin. A person
+  // added or removed is an ordinary account, so no handle stays null.
+  const actorHandle = (userId: string): string =>
+    identities.get(userId)?.handle ?? FORMER_ADMIN;
+  const subjectHandle = (userId: string | null): string | null =>
+    userId === null ? null : (identities.get(userId)?.handle ?? null);
   return ctx.json({
     success: true,
     data: rows.map((row) => ({
@@ -529,9 +539,9 @@ featureFlagsAdminRouter.get('/:key/history', async (ctx) => {
       fromStage: row.fromStage,
       toStage: row.toStage,
       subjectUserId: row.subjectUserId,
-      subjectHandle: handleOf(row.subjectUserId),
+      subjectHandle: subjectHandle(row.subjectUserId),
       actorUserId: row.actorUserId,
-      actorHandle: handleOf(row.actorUserId),
+      actorHandle: actorHandle(row.actorUserId),
       note: row.note,
       checks: row.checks,
       createdAt: row.createdAt.toISOString(),
