@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { decidedWhen, filedWhen, shortDay } from './checks-rules';
+import {
+  decidedDay,
+  decidedStamp,
+  decidedWhen,
+  filedWhen,
+  shortDay,
+} from './checks-rules';
 
 const words = { today: 'Today', yesterday: 'Yesterday' };
 // Noon on Nov 12 in Denver (UTC-7).
@@ -42,5 +48,15 @@ describe('decidedWhen', () => {
   it('adds the time for a recent decision and drops it for an older one', () => {
     expect(decidedWhen('2026-11-11T16:40:00Z', now)).toBe('Nov 11, 9:40 AM');
     expect(decidedWhen('2026-11-09T16:40:00Z', now)).toBe('Nov 9');
+  });
+});
+
+describe('decidedStamp and decidedDay', () => {
+  it('always gives the time on the sheet, and the Mountain day on the row', () => {
+    expect(decidedStamp('2026-11-09T16:40:00Z')).toBe('Nov 9, 9:40 AM');
+    // 03:00 UTC Nov 12 is 8 PM Nov 11 in Denver.
+    expect(decidedDay('2026-11-12T03:00:00Z')).toBe('Nov 11');
+    expect(decidedStamp('nope')).toBe('');
+    expect(decidedDay('nope')).toBe('');
   });
 });

@@ -2384,6 +2384,24 @@ export const ADMIN_COPY = {
         title: 'Nothing resolved yet',
         body: 'Decided Price checks appear here.',
       },
+      // The phone's read-only sheet (`23/checks-resolved-detail-m`).
+      sheet: {
+        wasListed: 'Was listed',
+        used: 'Used',
+        kept: 'Kept',
+        confirmed: (count: number) => `${count} confirmed`,
+        quoted: (note: string) => `“${note}”`,
+        decided: 'Decided',
+        told: 'Told',
+        note: 'Note',
+        toldBoth: 'Both submitters',
+        // Undrawn: one side told, or neither.
+        toldOne: (who: string) => `${who} only`,
+        toldNone: 'Neither submitter',
+        openShow: 'Open show',
+        readOnly:
+          'Read only. A resolved check can’t be reopened here; a new Price check from a fan opens a new one.',
+      },
     },
   },
   needsYou: {

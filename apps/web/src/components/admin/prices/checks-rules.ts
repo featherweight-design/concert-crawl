@@ -41,6 +41,25 @@ export const filedWhen = (
   return shortDay(day);
 };
 
+/** "Nov 11, 9:40 AM", Mountain Time, whenever it was (the phone sheet's Decided). */
+export const decidedStamp = (iso: string): string => {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return '';
+  const time = at.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Denver',
+  });
+  return `${shortDay(mountainDay(at))}, ${time}`;
+};
+
+/** "Nov 11", the Mountain Time day of a decision (the phone's resolved row). */
+export const decidedDay = (iso: string): string => {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return '';
+  return shortDay(mountainDay(at));
+};
+
 /** "Nov 11, 9:40 AM" for a decision made today or yesterday, else "Nov 9". */
 export const decidedWhen = (iso: string, now: Date = new Date()): string => {
   const at = new Date(iso);
@@ -48,12 +67,5 @@ export const decidedWhen = (iso: string, now: Date = new Date()): string => {
   const day = mountainDay(at);
   const recent =
     day === mountainDay(now) || day === dayBefore(mountainDay(now));
-  const date = shortDay(day);
-  if (!recent) return date;
-  const time = at.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: 'America/Denver',
-  });
-  return `${date}, ${time}`;
+  return recent ? decidedStamp(iso) : shortDay(day);
 };

@@ -4,7 +4,9 @@
  * Same contract as the Prices page's other calls (Clerk token through `call`,
  * payloads narrowed with guards so a shape drift fails into Couldn't load).
  */
+import type { AvatarColor } from '@concert-crawl/types';
 import {
+  avatarColorOrNull,
   call,
   isCount,
   isRecord,
@@ -38,16 +40,46 @@ export interface OpenCheck {
   check: CheckSide;
 }
 
+/** One side of a resolved check, as the resolve recorded it. */
+export interface ResolvedSide {
+  priceMin: string | null;
+  priceMax: string | null;
+  /** Who filed it (their handle as it is now). */
+  handle: string | null;
+  /** Fans behind it, the filer included. */
+  confirmed: number | null;
+  note: string | null;
+}
+
+export type ToldRole = 'parent' | 'challenger';
+
 export interface ResolvedCheck {
   id: string;
+  /** Null when the audit entry named no event. */
+  eventId: string | null;
   title: string | null;
   venueName: string | null;
   date: string | null;
+  ticketUrl: string | null;
   answer: 'used' | 'kept';
   price: string | null;
   decidedBy: string | null;
+  decidedByAvatar: {
+    color: AvatarColor | null;
+    secondColor: AvatarColor | null;
+  } | null;
   /** ISO. */
   decidedAt: string;
+  /** The admin's reason for the answer. */
+  note: string | null;
+  /** The listed price the check was against. */
+  parent: ResolvedSide | null;
+  /** The fan's Price check. */
+  challenger: ResolvedSide | null;
+  /** Whose notifications the resolve wrote; null when unknown. */
+  told: ToldRole[] | null;
+  /** False: confirms, notes and Told are a best-effort read of today's rows. */
+  snapshot: boolean;
 }
 
 const sideFrom = (value: unknown): CheckSide | null => {
@@ -100,10 +132,61 @@ const openFrom = (value: unknown): OpenCheck | null => {
   };
 };
 
+const isCountOrNull = (value: unknown): value is number | null =>
+  value === null || isCount(value);
+
+const isToldRole = (value: unknown): value is ToldRole =>
+  value === 'parent' || value === 'challenger';
+
+/** A side, null when absent; undefined when present but malformed (drift). */
+const resolvedSideFrom = (value: unknown): ResolvedSide | null | undefined => {
+  if (value === null) return null;
+  if (
+    !isRecord(value) ||
+    !isTextOrNull(value['priceMin']) ||
+    !isTextOrNull(value['priceMax']) ||
+    !isTextOrNull(value['submittedBy']) ||
+    !isCountOrNull(value['corroborationCount']) ||
+    !isTextOrNull(value['note'])
+  ) {
+    return undefined;
+  }
+  return {
+    priceMin: value['priceMin'],
+    priceMax: value['priceMax'],
+    handle: value['submittedBy'],
+    confirmed: value['corroborationCount'],
+    note: value['note'],
+  };
+};
+
+const toldFrom = (value: unknown): ToldRole[] | null | undefined => {
+  if (value === null) return null;
+  if (!Array.isArray(value)) return undefined;
+  const roles = value.filter(isToldRole);
+  return roles.length === value.length ? roles : undefined;
+};
+
+const avatarFrom = (
+  value: unknown,
+): ResolvedCheck['decidedByAvatar'] | undefined => {
+  if (value === null) return null;
+  if (!isRecord(value)) return undefined;
+  // A colour this build doesn't know draws the house pair, not a failed row.
+  return {
+    color: avatarColorOrNull(value['color']),
+    secondColor: avatarColorOrNull(value['secondColor']),
+  };
+};
+
 const resolvedFrom = (value: unknown): ResolvedCheck | null => {
   if (
     !isRecord(value) ||
     !isText(value['id']) ||
+    !isTextOrNull(value['eventId']) ||
+    !isTextOrNull(value['ticketUrl']) ||
+    !isTextOrNull(value['note']) ||
+    typeof value['snapshot'] !== 'boolean' ||
     !isTextOrNull(value['eventTitle']) ||
     !isTextOrNull(value['venueName']) ||
     !isTextOrNull(value['eventDate']) ||
@@ -114,15 +197,35 @@ const resolvedFrom = (value: unknown): ResolvedCheck | null => {
   ) {
     return null;
   }
+  const parent = resolvedSideFrom(value['parent']);
+  const challenger = resolvedSideFrom(value['challenger']);
+  const told = toldFrom(value['told']);
+  const decidedByAvatar = avatarFrom(value['decidedByAvatar']);
+  if (
+    parent === undefined ||
+    challenger === undefined ||
+    told === undefined ||
+    decidedByAvatar === undefined
+  ) {
+    return null;
+  }
   return {
     id: value['id'],
+    eventId: value['eventId'],
     title: value['eventTitle'],
     venueName: value['venueName'],
     date: value['eventDate'],
+    ticketUrl: value['ticketUrl'],
     answer: value['answer'],
     price: value['price'],
     decidedBy: value['decidedBy'],
+    decidedByAvatar,
     decidedAt: value['decidedAt'],
+    note: value['note'],
+    parent,
+    challenger,
+    told,
+    snapshot: value['snapshot'],
   };
 };
 
