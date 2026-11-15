@@ -253,8 +253,71 @@ export const GuideEditPanel = ({
     </div>
   );
 
+  const buttonBase: React.CSSProperties = {
+    height: 40,
+    borderRadius: 9,
+    fontSize: 14,
+  };
+  // Before the first publish the board's hierarchy holds (`16/guide-panel-d`):
+  // Save draft is the main button, Publish guide sits beside it. Once the
+  // guide is live there are no drafts (ruling), so Publish guide leads and
+  // Save draft stays drawn, but held.
+  const publishButton = (
+    <AdminButton
+      key="publish"
+      type="button"
+      variant={live ? 'gradient' : 'outline'}
+      disabled={blocked || busy !== null}
+      aria-describedby={blocked ? `${fieldId}-blocked` : undefined}
+      onClick={() => run('publish')}
+      data-testid="guide-publish"
+      data-rank={live ? 'primary' : 'secondary'}
+      style={{
+        ...buttonBase,
+        flex: 1,
+        ...(blocked && { opacity: 0.45, cursor: 'not-allowed' }),
+      }}
+    >
+      {busy === 'publish' ? COPY.publishing : COPY.publish}
+    </AdminButton>
+  );
+  const saveButton = (
+    <AdminButton
+      key="save"
+      type="button"
+      variant={live ? 'outline' : 'gradient'}
+      disabled={live || busy !== null}
+      onClick={() => run('save')}
+      data-testid="guide-save"
+      data-rank={live ? 'secondary' : 'primary'}
+      style={{
+        ...buttonBase,
+        ...(live ? { opacity: 0.45, cursor: 'not-allowed' } : { flex: 1 }),
+      }}
+    >
+      {busy === 'save' ? COPY.saving : COPY.saveDraft}
+    </AdminButton>
+  );
+
   const footer = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {!live && (
+        <p
+          data-testid="guide-publish-note"
+          style={{
+            margin: 0,
+            padding: '10px 12px',
+            borderRadius: 10,
+            background: 'var(--surface-2)',
+            fontSize: 12.5,
+            lineHeight: 1.45,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          <b style={{ color: 'var(--fg)' }}>{COPY.publishNote.lead}</b>{' '}
+          {COPY.publishNote.rest}
+        </p>
+      )}
       {blocked && (
         <p
           id={`${fieldId}-blocked`}
@@ -264,38 +327,7 @@ export const GuideEditPanel = ({
         </p>
       )}
       <div style={{ display: 'flex', gap: 8 }}>
-        <AdminButton
-          type="button"
-          variant="gradient"
-          disabled={blocked || busy !== null}
-          aria-describedby={blocked ? `${fieldId}-blocked` : undefined}
-          onClick={() => run('publish')}
-          style={{
-            flex: 1,
-            height: 40,
-            borderRadius: 9,
-            fontSize: 14,
-            ...(blocked && { opacity: 0.45, cursor: 'not-allowed' }),
-          }}
-        >
-          {busy === 'publish' ? COPY.publishing : COPY.publish}
-        </AdminButton>
-        {/* On a live guide only Publish saves (ruling): drawn, but held. */}
-        <AdminButton
-          type="button"
-          disabled={live || busy !== null}
-          onClick={() => run('save')}
-          style={{
-            height: 40,
-            borderRadius: 9,
-            fontSize: 14,
-            fontWeight: 600,
-            background: 'var(--surface-2)',
-            ...(live && { opacity: 0.45, cursor: 'not-allowed' }),
-          }}
-        >
-          {busy === 'save' ? COPY.saving : COPY.saveDraft}
-        </AdminButton>
+        {live ? [publishButton, saveButton] : [saveButton, publishButton]}
       </div>
     </div>
   );

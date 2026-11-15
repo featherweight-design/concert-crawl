@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye } from 'lucide-react';
 import type { VenueGuide } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { publishVenueGuide } from '@/lib/actions/venues';
 import {
+  AdminButton,
   AdminCard,
   CouldntLoad,
+  SaveFailedToast,
   useIsPhone,
 } from '@/components/admin/primitives';
 import { GUIDE_ANCHOR_ID } from '@/components/consumer/venue-guide/FirstTimerCallout';
@@ -15,9 +18,11 @@ import { viewOnSiteHref, type HeaderVenue } from '../venue-header-rules';
 import { GuideEditPanel } from './GuideEditPanel';
 import {
   GUIDE_SECTIONS,
+  publishBlocked,
   publishedCount,
   rowState,
   sectionDraft,
+  writtenCount,
   type GuideRowState,
   type GuideSection,
 } from './guide-rules';
@@ -71,6 +76,113 @@ const StateChip = ({ state }: { state: GuideRowState }) => {
 };
 
 const RULE = '1px solid var(--border)';
+
+/**
+ * The unpublished guide's bar (`16/guide-tab-d`, `16/guide-m`): how much is
+ * written, that fans don't see it yet, and Publish guide. The board's "N
+ * changes not published" assumes a draft model this guide doesn't have (it
+ * writes live once published), so the bar only shows before the first
+ * publish (ruling). Publish runs the panel's publish, without a save: the
+ * rows on screen are already saved.
+ */
+const UnpublishedBar = ({
+  venueId,
+  guide,
+  phone,
+  onPublished,
+}: {
+  venueId: string;
+  guide: VenueGuide;
+  phone: boolean;
+  onPublished: (next: VenueGuide) => void;
+}) => {
+  const [busy, setBusy] = useState(false);
+  // `gate`: the API's accessibility gate refused.
+  const [failed, setFailed] = useState<'gate' | 'publish' | null>(null);
+  const blocked = publishBlocked(guide);
+  const blockedId = `${useId()}-blocked`;
+
+  const publish = () => {
+    if (busy || blocked) return;
+    setBusy(true);
+    setFailed(null);
+    void (async () => {
+      const result = await publishVenueGuide(venueId);
+      setBusy(false);
+      if (!result.success)
+        return setFailed(result.field === 'accessibility' ? 'gate' : 'publish');
+      onPublished(
+        result.data ?? { ...guide, publishedAt: new Date().toISOString() },
+      );
+    })();
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div
+        data-testid="guide-unpublished-bar"
+        style={{
+          display: 'flex',
+          flexDirection: phone ? 'column' : 'row',
+          alignItems: phone ? 'stretch' : 'center',
+          gap: phone ? 10 : 12,
+          padding: '12px 14px',
+          borderRadius: 12,
+          background: 'color-mix(in srgb, var(--warning) 7%, transparent)',
+          border:
+            '1px solid color-mix(in srgb, var(--warning) 35%, transparent)',
+        }}
+      >
+        <p style={{ flex: 1, margin: 0, fontSize: 13, lineHeight: 1.45 }}>
+          <b>{COPY.unpublishedBar.lead(writtenCount(guide))}</b>{' '}
+          <span style={{ color: 'var(--fg-muted)' }}>
+            {COPY.unpublishedBar.body}
+          </span>
+        </p>
+        <AdminButton
+          type="button"
+          variant="gradient"
+          disabled={blocked || busy}
+          aria-describedby={blocked ? blockedId : undefined}
+          onClick={publish}
+          fullWidth={phone}
+          style={{
+            height: phone ? 40 : 34,
+            padding: phone ? '0 12px' : '0 16px',
+            fontSize: phone ? 14 : 13,
+            ...(blocked && { opacity: 0.45, cursor: 'not-allowed' }),
+          }}
+        >
+          {busy ? COPY.publishing : COPY.publish}
+        </AdminButton>
+      </div>
+      {blocked && (
+        <p
+          id={blockedId}
+          style={{ margin: 0, fontSize: 12, color: 'var(--fg-muted)' }}
+        >
+          {COPY.publishBlocked}
+        </p>
+      )}
+      {failed === 'gate' && (
+        <p
+          role="alert"
+          style={{ margin: 0, fontSize: 12, color: 'var(--danger)' }}
+        >
+          {COPY.publishGate}
+        </p>
+      )}
+      {failed === 'publish' && (
+        <SaveFailedToast
+          title={COPY.failed.publish}
+          saved={COPY.failed.publishSaved}
+          onRetry={publish}
+          retrying={busy}
+        />
+      )}
+    </div>
+  );
+};
 
 /**
  * The venue page's Guide tab (3b part 6, `04/venue-guide`): the insider tip
@@ -244,6 +356,14 @@ export const GuideTab = ({
         <CouldntLoad page={COPY.title} onRetry={() => router.refresh()} />
       ) : (
         <>
+          {guide.publishedAt === null && writtenCount(guide) > 0 && (
+            <UnpublishedBar
+              venueId={venue.id}
+              guide={guide}
+              phone={phone}
+              onPublished={onGuideChange}
+            />
+          )}
           <p
             data-testid="guide-count"
             style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}
