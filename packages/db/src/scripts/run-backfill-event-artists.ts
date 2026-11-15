@@ -18,7 +18,9 @@
  * Run it after `0115` is applied, and after the 4a-2 deploy so the crawl keeps
  * the rows current from then on.
  *
- * Undo: the table is a projection, so `TRUNCATE event_artists` is safe.
+ * Undo: while the table is only a projection of the lineup arrays (the expand
+ * phase), `TRUNCATE event_artists` is safe. Once a contract phase makes the
+ * table the source of truth, it is not: check before truncating.
  */
 
 import path from 'node:path';
