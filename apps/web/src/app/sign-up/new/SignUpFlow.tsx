@@ -2,7 +2,13 @@
 
 import { useClerk, useSignUp } from '@clerk/nextjs';
 import Link from 'next/link';
-import { useRef, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 import {
   AuthErrorLine,
   AuthField,
@@ -39,8 +45,6 @@ const isEmailShape = (value: string): boolean =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 interface SignUpFlowProps {
-  /** `/auth/complete?...`, computed on the server. */
-  target: string;
   /** Before launch: the invite chip, the Beta Agreement and three steps. */
   beta: boolean;
   /** The invite the visitor arrived with; null shows no chip. */
@@ -80,13 +84,33 @@ export function SignUpFlow({
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const consentRef = useRef<HTMLInputElement>(null);
+  // Clerk's answer arrives while the fields are still disabled, and a disabled
+  // field cannot take focus: so the move waits for the unlock.
+  const [focusOn, setFocusOn] = useState<
+    'email' | 'password' | 'consent' | null
+  >(null);
+  // The account exists at Clerk but its code never went out: a retry for the
+  // same address sends the code again rather than creating it a second time.
+  const createdFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!focusOn || busy || fetchStatus === 'fetching') return;
+    const target =
+      focusOn === 'email'
+        ? emailRef
+        : focusOn === 'password'
+          ? passwordRef
+          : consentRef;
+    target.current?.focus();
+    setFocusOn(null);
+  }, [focusOn, busy, fetchStatus]);
 
   if (!clerk.loaded) return <AuthLoadingState />;
 
   // Clerk's own check can hold a press open after ours would clear.
   const locked = busy || fetchStatus === 'fetching' || throttle.remaining > 0;
   const total = beta ? 3 : 2;
-  const formStep = beta ? 2 : 1;
+  const formStep: 1 | 2 = beta ? 2 : 1;
 
   // One rule for every press (and Google's, in a later PR): nothing is sent
   // until the box is ticked.
@@ -121,19 +145,22 @@ export function SignUpFlow({
     const since = Date.now();
     let error: unknown = null;
     try {
-      const created = await signUp.password({
-        emailAddress: address,
-        password,
-        legalAccepted: true,
-      });
-      error = created.error;
-      if (!error && signUp.missingFields?.includes('legal_accepted')) {
-        // Impossible while the gate holds; fail closed to the red box.
-        setConsentError(true);
-        consentRef.current?.focus();
-        await held(since);
-        setBusy(false);
-        return;
+      if (createdFor.current !== address) {
+        const created = await signUp.password({
+          emailAddress: address,
+          password,
+          legalAccepted: true,
+        });
+        error = created.error;
+        if (!error && signUp.missingFields?.includes('legal_accepted')) {
+          // Impossible while the gate holds; fail closed to the red box.
+          setConsentError(true);
+          setFocusOn('consent');
+          await held(since);
+          setBusy(false);
+          return;
+        }
+        if (!error) createdFor.current = address;
       }
       if (!error) error = (await signUp.verifications.sendEmailCode()).error;
     } catch (thrown) {
@@ -146,19 +173,19 @@ export function SignUpFlow({
       setScreen('verify');
     } else if (outcome === 'breached') {
       setPasswordLine('breached');
-      passwordRef.current?.focus();
+      setFocusOn('password');
     } else if (outcome === 'weak') {
       setPasswordLine('weak');
-      passwordRef.current?.focus();
+      setFocusOn('password');
     } else if (outcome === 'tooShort') {
       setPasswordLine('tooShort');
-      passwordRef.current?.focus();
+      setFocusOn('password');
     } else if (outcome === 'email') {
       setEmailInvalid(true);
-      emailRef.current?.focus();
+      setFocusOn('email');
     } else if (outcome === 'legal') {
       setConsentError(true);
-      consentRef.current?.focus();
+      setFocusOn('consent');
     } else if (outcome === 'rateLimited') {
       throttle.start(WAIT_SECONDS);
     } else {
@@ -203,7 +230,7 @@ export function SignUpFlow({
   return (
     <AuthPage>
       {online ? null : <AuthBanner>{FLOW.offline}</AuthBanner>}
-      <StepTrail step={formStep as 1 | 2} total={total} />
+      <StepTrail step={formStep} total={total} />
       <AuthHeading
         title={COPY.form.title}
         sub={beta ? COPY.form.body : COPY.form.bodyLaunch}

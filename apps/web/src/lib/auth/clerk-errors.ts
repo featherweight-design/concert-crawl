@@ -94,13 +94,13 @@ export function classifySignUpError(error: unknown): SignUpOutcome {
   if (codes.includes('form_password_not_strong_enough')) return 'weak';
   if (codes.includes('form_password_length_too_short')) return 'tooShort';
   if (codes.includes('form_identifier_exists')) return 'taken';
+  if (codes.some((code) => code.includes('legal_accepted'))) return 'legal';
   if (
     codes.includes('form_param_format_invalid') ||
     codes.includes('form_param_nil')
   ) {
     return 'email';
   }
-  if (codes.some((code) => code.includes('legal_accepted'))) return 'legal';
   if (codes.some((code) => code.startsWith('captcha_'))) return 'captcha';
   return 'failed';
 }
