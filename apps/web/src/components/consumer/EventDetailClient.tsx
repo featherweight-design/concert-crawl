@@ -60,7 +60,6 @@ import {
   MultiSourceMultiTierCard,
   MTAddTierSuccess,
   ProvenanceCTA,
-  type ProvenanceCTAKind,
 } from '@/components/consumer/price-region';
 import { decidePriceRegion } from '@/components/consumer/price-region/lib/decision-tree';
 import { buildWhereItsSoldRows } from '@/components/consumer/where-its-sold/rows';
@@ -1457,15 +1456,6 @@ export function EventDetailPriceBlock({
             : {}),
         };
       });
-      const outboundLink = event.ticketLinks?.[0] ?? null;
-      const outboundKind: ProvenanceCTAKind | null = outboundLink
-        ? outboundLink.kind === 'boxoffice'
-          ? 'boxoffice'
-          : outboundLink.kind === 'resale'
-            ? 'resale'
-            : 'primary'
-        : null;
-
       // A pending update is a price check, and it belongs to one tier
       // (`20/tier-price-check`). On the headline tier the whole card takes the
       // band, as the single-price card does, with the other tiers still live
@@ -1510,16 +1500,6 @@ export function EventDetailPriceBlock({
               onUpdateSuccess={() => router.refresh()}
               otherTiers={<OtherTiers alternates={alternateRows} />}
             />
-            {outboundLink !== null && outboundKind !== null && (
-              <div className="mt-3">
-                <ProvenanceCTA
-                  kind={outboundKind}
-                  vendor={outboundLink.vendor ?? event.venue.name}
-                  href={outboundLink.url}
-                  outline={outboundKind === 'resale'}
-                />
-              </div>
-            )}
             {renderPendingSurface(priceDecision.priceByTier)}
             {submitSuccessSurface}
             {submitAnotherPriceCta}
@@ -1568,16 +1548,6 @@ export function EventDetailPriceBlock({
                 : null
             }
           />
-          {outboundLink !== null && outboundKind !== null && (
-            <div className="mt-3">
-              <ProvenanceCTA
-                kind={outboundKind}
-                vendor={outboundLink.vendor ?? event.venue.name}
-                href={outboundLink.url}
-                outline={outboundKind === 'resale'}
-              />
-            </div>
-          )}
           {renderPendingSurface(priceDecision.priceByTier)}
           {submitSuccessSurface}
           {submitAnotherPriceCta}
