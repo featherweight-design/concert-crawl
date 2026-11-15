@@ -13,8 +13,13 @@ name: Repair event artists
 # Guards:
 # - Only main's copy of this workflow and its script may read the production
 #   secrets: a dispatch from any other branch is skipped.
-# - `environment: production` holds the job behind that environment's
-#   protection rules (required reviewers) before any secret is released.
+# - `environment: production` releases only that environment's secrets. It has
+#   a main-branch policy but NO required reviewers (checked 2026-11-14), so it
+#   does not hold the job for approval.
+# - Every run (it always targets production, dry or not) refuses unless
+#   dispatched with `confirm_prod` exactly "I have Hugh's OK to write prod",
+#   the same string the backfill-event-artists workflow requires. `--apply` is
+#   never passed without it.
 # - The Haiku spend is capped at $6 inside the script (a built-in ceiling a
 #   flag cannot raise); the cap is checked before each row, so a pass can end
 #   at most one adjudication over it, and it stops early and says so if it hits it.
@@ -41,6 +46,10 @@ on:
         description: 'Read only rows whose artist joins names with " & " or " + " (the rows the flattened-billing rule can change).'
         type: boolean
         default: true
+      confirm_prod:
+        description: "Required (this runs against production): type exactly  I have Hugh's OK to write prod"
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -78,9 +87,16 @@ jobs:
       # Checked by name, never printed. GitHub masks secret values in logs.
       - name: Verify configuration
         env:
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
           CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          # The production environment has no required reviewers, so this is
+          # the gate. Shared string with backfill-event-artists.yml.
+          if [ "$CONFIRM_PROD" != "I have Hugh's OK to write prod" ]; then
+            echo "Refusing: this runs against production. Dispatch with confirm_prod exactly: I have Hugh's OK to write prod"
+            exit 1
+          fi
           missing=()
           for name in CRAWLER_DATABASE_URL ANTHROPIC_API_KEY; do
             [ -n "${!name}" ] || missing+=("$name")
@@ -98,7 +114,12 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           APPLY: ${{ inputs.apply }}
           ONLY_FLATTENED: ${{ inputs.only_flattened }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
         run: |
+          # Re-checked here so --apply can never be passed without it.
+          if [ "$CONFIRM_PROD" != "I have Hugh's OK to write prod" ]; then
+            echo "Refusing: confirm_prod does not match"; exit 1
+          fi
           args=(--summary-file="$GITHUB_STEP_SUMMARY")
           [ "$APPLY" = "true" ] && args+=(--apply)
           [ "$ONLY_FLATTENED" = "true" ] && args+=(--only-flattened)
