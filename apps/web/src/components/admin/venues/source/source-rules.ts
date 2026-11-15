@@ -191,46 +191,46 @@ const readerLabelOf = (draft: SourceDraft, lock: ReaderLock | null): string => {
 };
 
 /**
- * Advanced, closed (`18/source-forced-d`): one amber chip per setting that
- * isn't Automatic, Page loading first. Wait until and Wait for are never
- * chips; they have no Automatic.
+ * Advanced, closed (`18/source-forced-d`): an amber chip for a Reader that
+ * isn't Automatic. Wait until and Wait for are never chips; they have no
+ * Automatic.
+ *
+ * Page loading is never a chip, and never counts as set by hand: the crawler
+ * writes `crawl_mode` itself on a venue's first Automatic crawl
+ * (crawler-core `crawl.ts`), so a stored value can't be told apart from an
+ * admin's pick.
+ * ⏸ item 18 follow-up: the Page loading forced chip waits for
+ * crawl_mode_source (0123).
  */
 export const forcedChipsOf = (
   draft: SourceDraft,
   saved: SourceColumns,
 ): string[] => {
-  const chips: string[] = [];
-  if (draft.crawlMode !== null) {
-    chips.push(
-      COPY.advanced.forced.pageLoading(
-        COPY.advanced.pageLoading[draft.crawlMode],
-      ),
-    );
-  }
   const lock = readerLockOf(draft, saved);
   const readerForced =
     lock !== null || (draft.mode === 'page' && draft.reader !== 'auto');
-  if (readerForced) {
-    chips.push(COPY.advanced.forced.reader(readerLabelOf(draft, lock)));
-  }
-  return chips;
+  return readerForced
+    ? [COPY.advanced.forced.reader(readerLabelOf(draft, lock))]
+    : [];
 };
 
-/** Whether Back to Automatic has anything to clear (a lock never counts). */
+/**
+ * Whether Back to Automatic has anything to clear: a forced Reader only (a
+ * lock never counts, and Page loading isn't known to be forced; see
+ * `forcedChipsOf`).
+ */
 export const canGoBackToAutomatic = (draft: SourceDraft): boolean =>
-  draft.crawlMode !== null ||
-  (draft.mode === 'page' && draft.reader !== 'auto');
+  draft.mode === 'page' && draft.reader !== 'auto';
 
 /**
- * Back to Automatic (`18/source-advanced-states`): Page loading and Reader to
- * Automatic, as an unsaved edit. On save that is `crawl_mode = null` and, for
- * a forced JSON-LD, Haiku or Detail pages reader, a null strategy and
- * platform. Wait until and Wait for stay; a feed's platform and a stored
- * `manual` are locks and stay too.
+ * Back to Automatic (`18/source-advanced-states`): Reader to Automatic, as an
+ * unsaved edit. On save, a forced JSON-LD, Haiku or Detail pages reader is a
+ * null strategy and platform. Page loading stays as stored, never sent (see
+ * `forcedChipsOf`), as do Wait until and Wait for; a feed's platform and a
+ * stored `manual` are locks and stay too.
  */
 export const backToAutomatic = (draft: SourceDraft): SourceDraft => ({
   ...draft,
-  crawlMode: null,
   reader: draft.mode === 'page' ? 'auto' : draft.reader,
 });
 

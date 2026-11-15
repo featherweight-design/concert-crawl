@@ -542,7 +542,9 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
 
   it.each([
     ['all automatic', auto, []],
-    ['Plain fetch', base, ['Page loading: Plain fetch']],
+    // The crawler stores crawl_mode itself, so it is never a chip (until 0123).
+    ['Plain fetch', base, []],
+    ['Full browser', { ...auto, crawlMode: 'browser' }, []],
     [
       'JSON-LD only',
       { ...auto, extractionStrategy: 'structured_data' },
@@ -551,7 +553,7 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     [
       'Full browser and Haiku only',
       { ...auto, crawlMode: 'browser', extractionStrategy: 'llm' },
-      ['Page loading: Full browser', 'Reader: Haiku only'],
+      ['Reader: Haiku only'],
     ],
     [
       'Detail pages',
@@ -571,10 +573,14 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     expect(canGoBackToAutomatic(draftOf(aeg))).toBe(false);
     expect(canGoBackToAutomatic(draftOf(liveNation))).toBe(false);
     expect(canGoBackToAutomatic(draftOf(manual))).toBe(false);
-    expect(canGoBackToAutomatic(draftOf(base))).toBe(true);
+    // A stored crawl_mode alone is not known to be forced.
+    expect(canGoBackToAutomatic(draftOf(base))).toBe(false);
+    expect(
+      canGoBackToAutomatic(draftOf({ ...auto, crawlMode: 'browser' })),
+    ).toBe(false);
     expect(
       canGoBackToAutomatic(draftOf({ ...aeg, crawlMode: 'browser' })),
-    ).toBe(true);
+    ).toBe(false);
     for (const strategy of ['structured_data', 'llm'] as const) {
       expect(
         canGoBackToAutomatic(
@@ -587,7 +593,7 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     ).toBe(true);
   });
 
-  it('sets Page loading and Reader to Automatic, and leaves the waits', () => {
+  it('sets Reader to Automatic, and leaves Page loading and the waits', () => {
     const saved: SourceColumns = {
       ...auto,
       crawlMode: 'browser',
@@ -596,16 +602,10 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
       crawlWaitForSelector: '.event-list',
     };
     const next = backToAutomatic(draftOf(saved));
-    expect(next).toEqual({
-      ...draftOf(saved),
-      crawlMode: null,
-      reader: 'auto',
-    });
+    expect(next).toEqual({ ...draftOf(saved), reader: 'auto' });
     expect(forcedChipsOf(next, saved)).toEqual([]);
-    expect(backToAutomaticBody(saved)).toEqual({
-      crawlMode: null,
-      extractionStrategy: null,
-    });
+    // Regression: never crawlMode, which the crawler may have stored itself.
+    expect(backToAutomaticBody(saved)).toEqual({ extractionStrategy: null });
   });
 
   it.each([
@@ -629,7 +629,8 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
       { ...auto, platform: 'detail-page', extractionStrategy: 'llm' },
       { extractionStrategy: null, platform: null, platformVenueId: null },
     ],
-    ['Plain fetch', base, { crawlMode: null }],
+    ['Plain fetch', base, {}],
+    ['Full browser', { ...auto, crawlMode: 'browser' }, {}],
   ] as const)('Back to Automatic on %s sends %j', (_name, saved, body) => {
     expect(backToAutomaticBody(saved)).toEqual(body);
   });
@@ -642,7 +643,7 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     const next = columnsOf(backToAutomatic(draftOf(saved)), saved);
     expect(next.platform).toBe(saved.platform);
     expect(next.platformVenueId).toBe(saved.platformVenueId);
-    expect(backToAutomaticBody(saved)).toEqual({ crawlMode: null });
+    expect(backToAutomaticBody(saved)).toEqual({});
     expect(backToAutomaticBody(feed)).toEqual({});
   });
 
@@ -651,7 +652,7 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     expect(
       columnsOf(backToAutomatic(draftOf(saved)), saved).extractionStrategy,
     ).toBe('manual');
-    expect(backToAutomaticBody(saved)).toEqual({ crawlMode: null });
+    expect(backToAutomaticBody(saved)).toEqual({});
   });
 
   it('counts the unsaved Advanced settings', () => {
