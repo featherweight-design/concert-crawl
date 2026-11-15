@@ -24,6 +24,8 @@ interface MergeCompareCardProps {
    * own Venue and Day instead of sharing a header.
    */
   showVenueDay: boolean;
+  /** The radio group's name, shared by both cards. */
+  name: string;
   disabled?: boolean;
 }
 
@@ -100,17 +102,12 @@ export function MergeCompareCard({
   kept,
   onKeep,
   showVenueDay,
+  name,
   disabled = false,
 }: MergeCompareCardProps) {
   const heading = which === 'first' ? COPY.first : COPY.second;
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={kept}
-      aria-label={COPY.cardLabel(heading, listing.title, kept)}
-      disabled={disabled}
-      onClick={onKeep}
+    <label
       data-testid={`merge-card-${which}`}
       style={{
         ...CARD,
@@ -130,7 +127,18 @@ export function MergeCompareCard({
           gap: 8,
         }}
       >
-        <span style={LABEL}>{heading}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* A real radio: arrow keys and one tab stop come with the group. */}
+          <input
+            type="radio"
+            name={name}
+            checked={kept}
+            disabled={disabled}
+            onChange={onKeep}
+            style={{ accentColor: 'var(--signal)', margin: 0 }}
+          />
+          <span style={LABEL}>{heading}</span>
+        </span>
         {kept && <span style={KEEP_MARK}>{COPY.keep}</span>}
       </span>
       <span style={{ fontSize: 15, fontWeight: 600 }}>{listing.title}</span>
@@ -162,6 +170,6 @@ export function MergeCompareCard({
         <Row label={COPY.rows.price}>{priceLabel(listing.price)}</Row>
         <Row label={COPY.rows.reports}>{reportsLabel(listing.reports)}</Row>
       </dl>
-    </button>
+    </label>
   );
 }

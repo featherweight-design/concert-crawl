@@ -20,7 +20,11 @@ interface MergePickListProps {
   venueName: string | null;
   /** The candidates load: `loading` shows a skeleton row, `error` a retry. */
   status: 'loading' | 'ready' | 'error';
-  /** Likeliest first; the same venue and day as `current`. */
+  /**
+   * Every other live listing at the same venue and day as `current`, in the
+   * API's order (its own `likely` flag sorts first). The heading's hint says
+   * "same venue and day", which is what holds for all of them.
+   */
   likely: readonly MergePickRow[];
   onPick: (id: string) => void;
   onRetry: () => void;
