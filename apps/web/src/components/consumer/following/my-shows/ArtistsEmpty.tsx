@@ -15,7 +15,7 @@ import { MY_SHOWS_CTA_GRADIENT } from '@/components/consumer/history/definitions
 import { MyShowsEmptyCard } from '@/components/consumer/history/MyShowsEmptyCard';
 import { PASSPORT_CTA_GLOW } from '@/components/consumer/passport/definitions/styles';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
-import { BROWSE_HREF, WATCHING_HREF } from './definitions/constants';
+import { WATCHING_HREF } from './definitions/constants';
 
 const COPY = MY_SHOWS_ARTISTS_COPY.empty;
 
@@ -84,16 +84,11 @@ const Badge = () => (
 );
 
 interface ArtistsEmptyProps {
-  /** Signed in, plan cannot follow. Swaps the primary move for one that works. */
-  locked: boolean;
   /** The desktop layout, which sits a little further down the page. */
   desktop?: boolean;
 }
 
-export const ArtistsEmpty = ({
-  locked,
-  desktop = false,
-}: ArtistsEmptyProps) => (
+export const ArtistsEmpty = ({ desktop = false }: ArtistsEmptyProps) => (
   <MyShowsEmptyCard
     testId="artists-empty-card"
     style={{ marginTop: desktop ? 8 : 4 }}
@@ -105,17 +100,9 @@ export const ArtistsEmpty = ({
     bodyMaxWidth={380}
     actions={
       <>
-        {/* Locked sends them to browse, which is a page. Unlocked is a search,
-          which is a palette. */}
-        {locked ? (
-          <Link href={BROWSE_HREF} className={FOCUS} style={primaryStyle}>
-            {COPY.primaryLocked}
-          </Link>
-        ) : (
-          <SearchLink className={FOCUS} style={primaryStyle}>
-            {COPY.primary}
-          </SearchLink>
-        )}
+        <SearchLink className={FOCUS} style={primaryStyle}>
+          {COPY.primary}
+        </SearchLink>
         <Link
           href={WATCHING_HREF}
           className={`inline-flex min-h-[44px] items-center ${FOCUS}`}

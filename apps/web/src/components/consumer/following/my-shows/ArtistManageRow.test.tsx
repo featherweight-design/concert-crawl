@@ -52,11 +52,9 @@ const artist = (over: Partial<FollowedArtist> = {}): FollowedArtist => ({
   ...over,
 });
 
-const noop = () => {};
-
 describe('ArtistManageRow', () => {
   it('links the name at its artist page', () => {
-    render(<ArtistManageRow artist={artist()} onEntitlementRequired={noop} />);
+    render(<ArtistManageRow artist={artist()} />);
 
     expect(screen.getByRole('link', { name: 'Wax Harbour' })).toHaveAttribute(
       'href',
@@ -65,18 +63,13 @@ describe('ArtistManageRow', () => {
   });
 
   it('renders the venue and date line', () => {
-    render(<ArtistManageRow artist={artist()} onEntitlementRequired={noop} />);
+    render(<ArtistManageRow artist={artist()} />);
 
     expect(screen.getByText(/Bluebird Theater/)).toBeInTheDocument();
   });
 
   it('says so when nothing is announced', () => {
-    render(
-      <ArtistManageRow
-        artist={artist({ nextShow: null })}
-        onEntitlementRequired={noop}
-      />,
-    );
+    render(<ArtistManageRow artist={artist({ nextShow: null })} />);
 
     expect(
       screen.getByText(MY_SHOWS_ARTISTS_COPY.groups.noDates),
@@ -86,12 +79,7 @@ describe('ArtistManageRow', () => {
   // A Spotify-synced act never billed in Denver has no projection row, so no
   // page to route to and no slug to key the follow endpoint by.
   it('renders a slug-less follow unlinked and with no control', () => {
-    render(
-      <ArtistManageRow
-        artist={artist({ slug: null })}
-        onEntitlementRequired={noop}
-      />,
-    );
+    render(<ArtistManageRow artist={artist({ slug: null })} />);
 
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
@@ -99,18 +87,13 @@ describe('ArtistManageRow', () => {
   });
 
   it('marks a Spotify-sourced row and leaves a manual one unmarked', () => {
-    render(
-      <ArtistManageRow
-        artist={artist({ source: 'spotify_followed' })}
-        onEntitlementRequired={noop}
-      />,
-    );
+    render(<ArtistManageRow artist={artist({ source: 'spotify_followed' })} />);
     expect(
       screen.getByText(MY_SHOWS_ARTISTS_COPY.source.spotify),
     ).toBeInTheDocument();
 
     cleanup();
-    render(<ArtistManageRow artist={artist()} onEntitlementRequired={noop} />);
+    render(<ArtistManageRow artist={artist()} />);
     expect(screen.queryByText(MY_SHOWS_ARTISTS_COPY.source.spotify)).toBeNull();
   });
 
@@ -119,12 +102,7 @@ describe('ArtistManageRow', () => {
   it('leaves a Spotify-sourced row unmarked while the flag is off', () => {
     flags.spotify = false;
 
-    render(
-      <ArtistManageRow
-        artist={artist({ source: 'spotify_followed' })}
-        onEntitlementRequired={noop}
-      />,
-    );
+    render(<ArtistManageRow artist={artist({ source: 'spotify_followed' })} />);
 
     expect(screen.queryByText(MY_SHOWS_ARTISTS_COPY.source.spotify)).toBeNull();
     expect(
@@ -133,7 +111,7 @@ describe('ArtistManageRow', () => {
   });
 
   it('carries the shipped follow control, already following', () => {
-    render(<ArtistManageRow artist={artist()} onEntitlementRequired={noop} />);
+    render(<ArtistManageRow artist={artist()} />);
 
     const button = screen.getByRole('button', {
       name: ARTIST_COPY.followingAria('Wax Harbour'),
@@ -145,13 +123,7 @@ describe('ArtistManageRow', () => {
   });
 
   it('keeps the control label in the desktop card variant', () => {
-    render(
-      <ArtistManageRow
-        artist={artist()}
-        variant="card"
-        onEntitlementRequired={noop}
-      />,
-    );
+    render(<ArtistManageRow artist={artist()} variant="card" />);
 
     expect(
       screen.getByRole('button', {
@@ -161,9 +133,7 @@ describe('ArtistManageRow', () => {
   });
 
   it('drops the control label only at 320px', () => {
-    render(
-      <ArtistManageRow artist={artist()} narrow onEntitlementRequired={noop} />,
-    );
+    render(<ArtistManageRow artist={artist()} narrow />);
 
     expect(
       screen.getByRole('button', {
@@ -173,9 +143,7 @@ describe('ArtistManageRow', () => {
   });
 
   it('hides the artwork from the accessibility tree', () => {
-    const { container } = render(
-      <ArtistManageRow artist={artist()} onEntitlementRequired={noop} />,
-    );
+    const { container } = render(<ArtistManageRow artist={artist()} />);
 
     expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
   });
@@ -196,7 +164,6 @@ describe('ArtistManageRow', () => {
             genres: ['jazz'],
           },
         })}
-        onEntitlementRequired={noop}
       />,
     );
 
@@ -210,11 +177,7 @@ describe('ArtistManageRow', () => {
 
   it('takes the neutral edge when the artist has no date', () => {
     render(
-      <ArtistManageRow
-        artist={artist({ nextShow: null })}
-        variant="card"
-        onEntitlementRequired={noop}
-      />,
+      <ArtistManageRow artist={artist({ nextShow: null })} variant="card" />,
     );
 
     expect(screen.getByTestId('artist-manage-row').style.borderLeftColor).toBe(

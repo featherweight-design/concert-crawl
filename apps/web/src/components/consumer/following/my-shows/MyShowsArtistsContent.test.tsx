@@ -32,18 +32,6 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// Entitlement and plan both come from React Query; the surface under test is
-// what the list renders, not how the plan resolves.
-vi.mock('@/lib/queries/use-entitlement', () => ({
-  useEntitlement: () => ({
-    isLoading: false,
-    active: true,
-    surface: 'visible-active',
-  }),
-}));
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: null }),
-}));
 vi.mock('@/lib/queries/use-notification-preferences', () => ({
   useNotificationPreferences: () => ({
     data: {
@@ -55,9 +43,6 @@ vi.mock('@/lib/queries/use-notification-preferences', () => ({
       weeklyDigestEnabled: true,
     },
   }),
-}));
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: () => null,
 }));
 
 const flags = vi.hoisted(() => ({ spotify: true }));

@@ -33,17 +33,6 @@ vi.mock('@/lib/queries/use-attending-toggle', () => ({
   useAttendingToggle: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: () => null,
-}));
-
-// A signed-in viewer on a locked plan still gets the picker; only an open one
-// draws, carrying its entry so a test can tell which hand-off opened it.
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
-    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
-}));
-
 const { plan } = vi.hoisted(
   (): { plan: { current: PlanState | undefined } } => ({
     plan: { current: undefined },
@@ -54,9 +43,9 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: plan.current }),
 }));
 
-// Going free (2026-10-29) left no signed-in plan the matrix denies following,
-// so the locked skin is driven by re-gating chosen tiers in nfLocked. It is
-// kept for a future re-gate; roleComped still wins, as it does in the matrix.
+// The page no longer reads either of these. They stay mocked, with chosen
+// tiers re-gated in nfLocked, so a test can prove a plan the matrix would lock
+// still gets a live Follow: reintroducing a plan gate would fail it.
 const regate = vi.hoisted(() => ({ plans: new Set<string>() }));
 vi.mock('@concert-crawl/entitlements', async (importOriginal) => {
   const actual = await importOriginal<typeof EntitlementsModule>();
@@ -503,67 +492,47 @@ describe('ArtistPageContent', () => {
     });
   });
 
-  // The gate is asked once, here, and passed down — six surfaces each asking
-  // for themselves is how one of them ships ungated (design R2 did exactly
-  // that by testing `tier === 'free'` inline).
-  describe('the follow gate', () => {
+  // Following is free on every signed-in plan, so the page asks no plan
+  // question at all. The plan mock re-gates a tier the matrix would deny, so
+  // reintroducing a plan gate here would draw the lock and fail.
+  describe('no follow gate', () => {
     const signedIn: ArtistDetailResponse = { ...withShows, following: false };
     const lockGlyph = (container: HTMLElement) =>
       container.querySelector('[data-glyph="lock"]');
 
-    it('locks a plan that cannot follow', () => {
-      regate.plans.add('supporter');
-      plan.current = planOn('supporter');
-      const { container } = render(<ArtistPageContent data={signedIn} />);
-      expect(lockGlyph(container)).not.toBeNull();
-    });
-
-    it.each(['free', 'supporter'] as const)(
-      'leaves a %s plan live (going free, 2026-10-29)',
+    it.each(['free', 'supporter', 'premium'] as const)(
+      'a signed-in %s viewer gets a live Follow, even on a plan the matrix would lock',
       (tier) => {
+        regate.plans.add(tier);
         plan.current = planOn(tier);
-        const { container } = render(<ArtistPageContent data={signedIn} />);
+        const { container, getByRole } = render(
+          <ArtistPageContent data={signedIn} />,
+        );
         expect(lockGlyph(container)).toBeNull();
+        const button = getByRole('button', {
+          name: ARTIST_COPY.followAria('Neal Francis'),
+        });
+        expect(button.getAttribute('aria-haspopup')).toBeNull();
+        expect(button.getAttribute('aria-pressed')).toBe('false');
       },
     );
 
-    it('leaves a premium plan live', () => {
-      plan.current = planOn('premium');
-      const { container } = render(<ArtistPageContent data={signedIn} />);
-      expect(lockGlyph(container)).toBeNull();
-    });
-
-    it('leaves a comped free account live', () => {
-      // roleComped is an override the matrix does not encode, which is why the
-      // page asks nfLocked(planState) and never `plan === 'free'`.
-      regate.plans.add('free');
-      plan.current = planOn('free', true);
-      const { container } = render(<ArtistPageContent data={signedIn} />);
-      expect(lockGlyph(container)).toBeNull();
-    });
-
-    it('never flashes a lock while the plan is still resolving', () => {
-      plan.current = undefined;
-      const { container } = render(<ArtistPageContent data={signedIn} />);
-      expect(lockGlyph(container)).toBeNull();
-    });
-
-    it('leaves an existing follow unlocked after a downgrade, so it can be undone', () => {
-      // Eng spec §3.2: downgrading never deletes follows, and DELETE is
-      // unentitled by design. A locked skin here would strand the follow on
-      // the one surface a user would go to to remove it.
-      regate.plans.add('free');
-      plan.current = planOn('free');
-      const { container } = render(
-        <ArtistPageContent data={{ ...withShows, following: true }} />,
+    it('a signed-out follow tap still goes to sign-in', () => {
+      pushMock.mockClear();
+      regate.plans.add('logged-out');
+      plan.current = planOn('logged-out');
+      const { container, getByRole } = render(
+        <ArtistPageContent data={withShows} />,
       );
       expect(lockGlyph(container)).toBeNull();
-    });
-
-    it('does not lock a signed-out visitor, who gets the sign-in hand-off', () => {
-      plan.current = planOn('logged-out');
-      const { container } = render(<ArtistPageContent data={withShows} />);
-      expect(lockGlyph(container)).toBeNull();
+      fireEvent.click(
+        getByRole('button', {
+          name: ARTIST_COPY.followSignedOutAria('Neal Francis'),
+        }),
+      );
+      expect(pushMock).toHaveBeenCalledWith(
+        `/sign-in?redirect_url=${encodeURIComponent('/artists/neal-francis')}`,
+      );
     });
   });
 
@@ -813,11 +782,9 @@ describe('ArtistPageContent', () => {
       expect(document.body.textContent).toContain(copy.sheet.title);
     });
 
-    it('sends a signed-out tap to sign-in instead of opening a picker', () => {
+    it('sends a signed-out tap to sign-in', () => {
       pushMock.mockClear();
-      const { getByTestId, queryByTestId } = render(
-        <ArtistPageContent data={withShows} />,
-      );
+      const { getByTestId } = render(<ArtistPageContent data={withShows} />);
       expect(pushMock).not.toHaveBeenCalled();
 
       fireEvent.click(getByTestId('artist-report-card'));
@@ -826,7 +793,6 @@ describe('ArtistPageContent', () => {
       expect(pushMock).toHaveBeenCalledWith(
         `/sign-in?redirect_url=${encodeURIComponent('/artists/neal-francis')}`,
       );
-      expect(queryByTestId('tier-picker')).toBeNull();
       // No report form opens either.
       expect(document.body.textContent).not.toContain(copy.sheet.title);
     });

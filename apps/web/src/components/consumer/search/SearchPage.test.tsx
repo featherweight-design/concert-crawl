@@ -56,7 +56,8 @@ vi.mock('../../../lib/search/useSearch', () => ({
 
 // ── Native following, PR 5 ────────────────────────────────────────────────
 // The artist-page rows now carry a live Follow button, so the section reads
-// Clerk, the entitlement and the plan. Everything below is the surrounding
+// Clerk. The entitlement stays mocked so a test can prove a stale
+// `paywall-on-tap` answer gates nothing. Everything below is the surrounding
 // wiring; the follow behaviour itself is asserted, not mocked away.
 
 const authState: { isSignedIn: boolean | undefined } = { isSignedIn: true };
@@ -69,15 +70,6 @@ const entitlementState: { current: EntitlementResult } = {
 };
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlementState.current,
-}));
-
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: undefined }),
-}));
-
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
-    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }));
 
 // A stand-in for the real optimistic hook: it flips in place, which is exactly
@@ -616,40 +608,24 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
     expect(names()).toBe(before);
   });
 
-  // Locked is never `disabled` — a locked tap is how the upgrade gets offered.
-  it('locked: results still render and a tap opens the paywall picker', () => {
+  // Following is free on every signed-in plan: an entitlement answer that still
+  // reads `paywall-on-tap` is no gate, and the tap writes the follow.
+  it('signed in on paywall-on-tap: a tap follows directly', () => {
     entitlementState.current = {
       isLoading: false,
       active: false,
       surface: 'paywall-on-tap',
     };
     renderRows();
-    expect(screen.getByText('Radiohead')).toBeTruthy();
     const button = screen.getByLabelText(ARTIST_COPY.followAria('Radiohead'));
-    expect(button.hasAttribute('disabled')).toBe(false);
-    expect(button.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(button.hasAttribute('aria-haspopup')).toBe(false);
+    expect(button.getAttribute('aria-pressed')).toBe('false');
     fireEvent.click(button);
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'paywall',
-    );
-    // A signed-in locked viewer gets the paywall, never a sign-in redirect.
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(mockToggle).not.toHaveBeenCalled();
-  });
-
-  // A downgraded user must always be able to let go of a follow they hold.
-  it('locked: an already-followed row stays live so it can be undone', () => {
-    entitlementState.current = {
-      isLoading: false,
-      active: false,
-      surface: 'paywall-on-tap',
-    };
-    renderRows([artistPage({ following: true })]);
-    fireEvent.click(
-      screen.getByLabelText(ARTIST_COPY.followingAria('Radiohead')),
-    );
     expect(mockToggle).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(
+      screen.getByLabelText(ARTIST_COPY.followingAria('Radiohead')),
+    ).toBeTruthy();
   });
 
   it('signed out: the row renders and a tap never fires a tokenless write', () => {
@@ -671,7 +647,6 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
     expect(mockPush).toHaveBeenCalledWith(
       `/sign-in?redirect_url=${encodeURIComponent('/search')}`,
     );
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   // The window where Clerk has not answered yet. Treated as signed out so the

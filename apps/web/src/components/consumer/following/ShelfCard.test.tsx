@@ -33,10 +33,9 @@ const renderCard = (overrides: Partial<ShelfArtist> = {}, starter = false) =>
     <ShelfCard
       artist={artist(overrides)}
       starter={starter}
-      locked={false}
+      resolving={false}
       signedOut={false}
       onGatedTap={vi.fn()}
-      onEntitlementRequired={vi.fn()}
     />,
   );
 

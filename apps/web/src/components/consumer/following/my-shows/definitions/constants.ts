@@ -1,8 +1,5 @@
 // Routes and geometry for My shows ▸ Artists.
 
-/** The always-works fallback when the plan cannot follow. */
-export const BROWSE_HREF = '/events';
-
 /** The ghost CTA on the empty state: follow from a show you already track. */
 export const WATCHING_HREF = '/watching';
 
