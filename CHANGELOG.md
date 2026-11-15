@@ -1,3 +1,26 @@
+# [1.487.0](https://github.com/featherweight-design/concert-crawl/compare/v1.486.0...v1.487.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** fall back to today's rows for checks resolved before the snapshot ([131627d](https://github.com/featherweight-design/concert-crawl/commit/131627dd96c6cc765b4fca22e10857d3e90228ce))
+* **api:** lock out a replace only on an open Price check, and serialize replaces per show ([be64901](https://github.com/featherweight-design/concert-crawl/commit/be64901affc20fd4274f4e0dd0e2be5e2f90e12c))
+* **api:** read resolved checks from what the resolve recorded ([1a924ec](https://github.com/featherweight-design/concert-crawl/commit/1a924ecfb5a11869959fcf190e479bd322bdf42e))
+* **api:** replace the listed price across every tier, locking before the lockout read ([ce2d816](https://github.com/featherweight-design/concert-crawl/commit/ce2d816aaae4b1e8183cc8d4a003993df9c4a42b))
+* **types:** accept the replace-listed action in the activity log search ([d205372](https://github.com/featherweight-design/concert-crawl/commit/d2053721d850c62a67c9b7fa172352c6c11e43d5))
+* **web:** close a busy row menu and report it on unmount ([7079b6d](https://github.com/featherweight-design/concert-crawl/commit/7079b6de63e927aef462030d6e1ba6fe4d5ba263))
+* **web:** make Edit price always replace on a priced show; name an open Price check ([d842a56](https://github.com/featherweight-design/concert-crawl/commit/d842a56558ce691b9ca81f22d1685327c63be270))
+* **web:** stop holding Edit price on a disputed row; the server's 409 names a Price check ([e12d269](https://github.com/featherweight-design/concert-crawl/commit/e12d26924e0309ac6b3a6ade0f3681e468375efa))
+* **web:** the launch animation plays for 2000ms, not 3000ms ([d0306fe](https://github.com/featherweight-design/concert-crawl/commit/d0306fe8d58398f7d51811b57dda094e259e3f33))
+
+
+### Features
+
+* **admin:** name the show on a listed-price replacement in Activity ([bd123b1](https://github.com/featherweight-design/concert-crawl/commit/bd123b1cb18509af7700e94deb83e99565fefe9b))
+* **api:** admin Edit price replaces a show's listed fan price ([e8d8a54](https://github.com/featherweight-design/concert-crawl/commit/e8d8a54dd5d3fc39e80df4f7488d8aa24edcd2da))
+* **api:** give resolved Price checks both prices, each side, Note and Told ([a170dcd](https://github.com/featherweight-design/concert-crawl/commit/a170dcd7c9bc6634786794f349abe1b884036cc5))
+* **web:** replace a fan's listed price from the event editor's Edit price ([7c2142f](https://github.com/featherweight-design/concert-crawl/commit/7c2142f08cec718d2342433fae810d810946af3b))
+
 # [1.486.0](https://github.com/featherweight-design/concert-crawl/compare/v1.485.0...v1.486.0) (2026-11-15)
 
 
