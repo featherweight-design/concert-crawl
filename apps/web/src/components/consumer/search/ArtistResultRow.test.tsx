@@ -104,11 +104,11 @@ describe('<ArtistResultRow /> follow while auth resolves', () => {
     expect(toggle).toHaveBeenCalledTimes(1);
   });
 
-  it('hands a signed-out tap to sign-in', () => {
+  it('hands a signed-out tap to sign-in, carrying the artist to replay', () => {
     renderRow(ARTIST, false);
-    expect(
-      screen.getByTestId('follow-stub').getAttribute('data-signed-out'),
-    ).toBe('true');
+    const button = screen.getByTestId('follow-stub');
+    expect(button.getAttribute('data-signed-out')).toBe('true');
+    expect(button.getAttribute('data-slug')).toBe('turnstile');
   });
 });
 

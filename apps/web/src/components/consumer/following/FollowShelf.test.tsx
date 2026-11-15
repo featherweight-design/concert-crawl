@@ -340,7 +340,7 @@ describe('FollowShelf', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('signed-out viewers are sent to sign-in', () => {
+  it('signed-out viewers are sent to sign-in, carrying the follow', () => {
     authState.isSignedIn = false;
     entitlementState.current = {
       isLoading: false,
@@ -357,7 +357,7 @@ describe('FollowShelf', () => {
     expect(toggle).not.toHaveBeenCalled();
     expect(push).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith(
-      `/sign-in?redirect_url=${encodeURIComponent('/events')}`,
+      `/sign-in?redirect_url=${encodeURIComponent('/events?intent=follow%3Aratbag&label=Ratbag')}`,
     );
   });
 
