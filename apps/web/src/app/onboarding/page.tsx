@@ -1,7 +1,5 @@
-import { headers } from 'next/headers';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
 import { publicCatalogGet } from '@/lib/catalog-cache';
-import { isScaRegion } from '@/lib/sca-region';
 import {
   decodeIntent,
   encodeIntent,
@@ -39,11 +37,6 @@ export default async function OnboardingPage({
   searchParams,
 }: OnboardingPageProps) {
   const params = await searchParams;
-  const requestHeaders = await headers();
-  // The tour can open TierPickerSheet on the artists step, so this has to be
-  // threaded here too — a missing value is invisible until a European card
-  // reaches 3D Secure.
-  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'));
   const genres = await fetchGenreBuckets();
   // Round-tripped rather than forwarded: a malformed intent must not reach the
   // destination URL, where it would only be rejected after the redirect.
@@ -57,7 +50,6 @@ export default async function OnboardingPage({
       entry={firstValue(params.entry) === 'menu' ? 'menu' : 'default'}
       pendingTier={decodePendingTier(firstValue(params[PENDING_TIER_PARAM]))}
       genres={genres}
-      scaRegion={scaRegion}
     />
   );
 }

@@ -6,7 +6,6 @@
 // `isPublicOnceLaunched`, i.e. it is invite-gated until the public launch and
 // open after — the same terms as /events and /artists.
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import type {
@@ -16,7 +15,6 @@ import type {
 } from '@concert-crawl/types';
 
 import { publicCatalogGet } from '@/lib/catalog-cache';
-import { isScaRegion } from '@/lib/sca-region';
 import { PublicEventDetail } from '@/components/consumer/event-detail';
 import {
   BillFollowBlock,
@@ -137,10 +135,9 @@ const PublicEventPage = async ({
 
   // Same parallel shape as the protected page (#833), minus the reports fetch —
   // reports are auth-only and the mirror does not render them.
-  const [event, related, requestHeaders] = await Promise.all([
+  const [event, related] = await Promise.all([
     fetchEvent(id),
     fetchRelated(id),
-    headers(),
   ]);
   if (!event) notFound();
 
@@ -153,13 +150,7 @@ const PublicEventPage = async ({
       event={event}
       related={related}
       billBlock={
-        bill.length > 0 ? (
-          <BillFollowBlock
-            artists={bill}
-            signedOut
-            scaRegion={isScaRegion(requestHeaders.get('x-vercel-ip-country'))}
-          />
-        ) : null
+        bill.length > 0 ? <BillFollowBlock artists={bill} signedOut /> : null
       }
     />
   );

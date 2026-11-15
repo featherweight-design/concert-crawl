@@ -50,9 +50,6 @@ export interface FollowNudgeCardProps {
   target: FollowNudgeTarget;
   /** Where it stands. `inline` replaces the Watch strip; `floating` is fixed. */
   variant: 'inline' | 'floating';
-  /** Unread since the tier picker left this card; the scaRegion removal
-   *  takes it off the nudge host's call site. */
-  scaRegion?: boolean;
   /**
    * Close it, however it was answered. Dismissing and closing after a follow
    * are the same outcome to the caller: the introduction has been made.

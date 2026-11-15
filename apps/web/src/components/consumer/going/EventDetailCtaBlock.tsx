@@ -66,9 +66,6 @@ export const EventDetailCtaBlock = ({
   children,
 }: {
   event: GoingCtaEvent;
-  /** Unread since the tier picker left this block; the scaRegion removal
-   *  takes it off the event page's call site. */
-  scaRegion?: boolean;
   /** The Watch strip. Rendered inside the card, and on its own whenever the
    *  commitment half is suppressed — watching a show never depends on Going. */
   children?: ReactNode;
