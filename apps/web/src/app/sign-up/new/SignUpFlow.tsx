@@ -23,6 +23,8 @@ import {
   OrDivider,
   PrimaryButton,
 } from '@/components/auth/flow/AuthButtons';
+import { IntentCard } from '@/components/auth/flow/IntentCard';
+import type { IntentSubject } from '@/lib/auth/intent-subject';
 import { ssoCallbackUrl } from '@/lib/auth/sso';
 import { CodeBoxes } from '@/components/auth/flow/CodeBoxes';
 import { ConsentCheck, LegalLink } from '@/components/auth/flow/ConsentCheck';
@@ -59,6 +61,8 @@ type CodeLine = 'wrong' | 'expired' | 'sent' | 'failed' | null;
 interface SignUpFlowProps {
   /** `/auth/complete?...`, computed on the server: where a finished sign-up goes. */
   target: string;
+  /** What they were about to do, for the card over the form's title. */
+  intent?: IntentSubject;
   /** Before launch: the invite chip, the Beta Agreement and three steps. */
   beta: boolean;
   /** The invite the visitor arrived with; null shows no chip. */
@@ -76,6 +80,7 @@ interface SignUpFlowProps {
  */
 export function SignUpFlow({
   target,
+  intent = { kind: 'generic' },
   beta,
   inviteCode,
   changeHref,
@@ -476,6 +481,7 @@ export function SignUpFlow({
         total={total}
         done={finished}
       />
+      <IntentCard subject={intent} level={2} />
       <AuthHeading
         title={COPY.form.title}
         sub={beta ? COPY.form.body : COPY.form.bodyLaunch}

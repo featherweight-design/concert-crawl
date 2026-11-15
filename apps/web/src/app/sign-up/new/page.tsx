@@ -5,6 +5,7 @@ import { BetaBody } from '@/app/legal/BetaBody';
 import { PrivacyBody } from '@/app/legal/PrivacyBody';
 import { TermsBody } from '@/app/legal/TermsBody';
 import { completeTarget } from '@/lib/auth/complete-target';
+import { loadIntentSubject } from '@/lib/auth/intent-subject';
 import { isSafeReturnPath } from '@/lib/auth/intent';
 import { INVITE_COOKIE_NAME, verifyInviteCookie } from '@/lib/invite-cookie';
 import { isPublicBrowseEnabled } from '@/lib/launch-mode';
@@ -49,10 +50,12 @@ export default async function SignUpNewPage({ searchParams }: SignUpNewProps) {
   if (requested && isSafeReturnPath(requested))
     change['redirect_url'] = requested;
   const changeHref = `/auth/code?${new URLSearchParams(change).toString()}`;
+  const intent = await loadIntentSubject(change['redirect_url'] ?? '');
 
   return (
     <SignUpFlow
       target={target}
+      intent={intent}
       beta={beta}
       inviteCode={inviteCode}
       changeHref={changeHref}
