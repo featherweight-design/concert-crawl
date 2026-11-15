@@ -14,6 +14,7 @@ import {
   StatusBadge,
   MonoLabel,
 } from '@/components/admin/primitives';
+import { FLOATING_BAR_SHADOW } from '@/components/admin/primitives/shadows';
 import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import type { AdminEvent } from '@/components/admin/events/types';
@@ -1340,7 +1341,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            boxShadow: 'var(--shadow-strong)',
+            boxShadow: FLOATING_BAR_SHADOW,
             zIndex: 50,
           }}
         >

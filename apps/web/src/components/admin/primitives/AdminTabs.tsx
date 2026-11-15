@@ -70,7 +70,15 @@ const tabStyle = (
   fontFamily: 'inherit',
   cursor: 'pointer',
   color: on ? 'var(--fg)' : 'var(--fg-muted)',
-  border: 'none',
+  // Sides, never the `border` shorthand: mixing it with `borderBottom`
+  // across rerenders makes React drop the bottom rule (and warn).
+  borderTop: 'none',
+  borderRight: 'none',
+  borderLeft: 'none',
+  borderBottom:
+    variant === 'segments'
+      ? 'none'
+      : `2px solid ${on ? 'var(--signal)' : 'transparent'}`,
   ...(variant === 'segments'
     ? {
         flex: 1,
@@ -92,7 +100,6 @@ const tabStyle = (
         fontSize: phone ? 13.5 : 14,
         fontWeight: 600,
         background: 'transparent',
-        borderBottom: `2px solid ${on ? 'var(--signal)' : 'transparent'}`,
       }),
 });
 
