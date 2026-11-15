@@ -2226,9 +2226,11 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
       { headers: ADMIN_HEADERS },
     );
     expect(res.status).toBe(200);
-    expect(
-      ((await res.json()) as { data: Record<string, number> }).data,
-    ).toEqual({ all: 2, waiting: 1, published: 0, priceCheck: 0 });
+    // The whole body, so no cast is needed to reach `data`.
+    expect(await res.json()).toEqual({
+      success: true,
+      data: { all: 2, waiting: 1, published: 0, priceCheck: 0 },
+    });
   });
 
   it('refuses an eventId that is not an id', async () => {
