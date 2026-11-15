@@ -246,6 +246,21 @@ feedbackAdminRouter.get('/counts', async (ctx) => {
   return ctx.json({ success: true, data });
 });
 
+// GET /v1/admin/feedback/:id: one item, the same shape as a list row (both
+// handles included). Registered after /counts so it never shadows it.
+feedbackAdminRouter.get(
+  '/:id',
+  zValidator('param', feedbackIdSchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const [item] = await selectItems(eq(feedback.id, id), 1);
+    if (!item) {
+      return ctx.json({ success: false, error: 'Feedback not found' }, 404);
+    }
+    return ctx.json({ success: true, data: item });
+  },
+);
+
 // PATCH /v1/admin/feedback/:id: update status, adminNotes, issueUrl. A status
 // move into Done records the acting admin in resolved_by/resolved_at; a move
 // back to To read clears them.

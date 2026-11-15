@@ -514,4 +514,55 @@ describe('admin feedback (integration)', () => {
       expect((await list()).status).toBe(403);
     });
   });
+
+  describe('GET /:id', () => {
+    const getOne = (id: string) => app.request(`/v1/admin/feedback/${id}`);
+    const UNKNOWN_ID = '00000000-0000-0000-0000-000000000000';
+
+    it('refuses a signed-out caller with 401', async () => {
+      expect((await getOne(UNKNOWN_ID)).status).toBe(401);
+    });
+
+    it('refuses a non-admin with 403', async () => {
+      setAuth('user', 'user_plain');
+      expect((await getOne(UNKNOWN_ID)).status).toBe(403);
+    });
+
+    it('rejects a malformed id with 400', async () => {
+      setAuth('admin');
+      expect((await getOne('not-a-uuid')).status).toBe(400);
+    });
+
+    it('returns 404 for an unknown id', async () => {
+      setAuth('admin');
+      const res = await getOne(UNKNOWN_ID);
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'Feedback not found',
+      });
+    });
+
+    it('does not shadow /counts', async () => {
+      setAuth('admin');
+      const res = await getOne('counts');
+      expect(res.status).toBe(200);
+      expect(countsBody.safeParse(await res.json()).success).toBe(true);
+    });
+
+    it('returns the item exactly as the list row, both handles included', async () => {
+      setAuth('admin');
+      await seedUserProfile(ADMIN_ID, { handle: 'huey' });
+      await seedUserProfile('user_reporter', { handle: 'reporter' });
+      const id = await seedFeedback('flagged');
+      await patch(id, { status: 'resolved', adminNotes: 'done' });
+
+      const res = await getOne(id);
+      expect(res.status).toBe(200);
+      const row = (await list()).data.find((each) => each.id === id);
+      expect(row?.submittedBy).toBe('reporter');
+      expect(row?.resolvedBy).toBe('huey');
+      expect(await res.json()).toEqual({ success: true, data: row });
+    });
+  });
 });
