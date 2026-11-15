@@ -321,6 +321,20 @@ describe('EventEditorClient', () => {
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
+  it('counts the route’s own 404 as deleted and leaves, not "Event not found"', async () => {
+    mockApiDelete.mockRejectedValueOnce(new ApiError(404, 'Event not found'));
+    render(<EventEditorClient event={SAMPLE} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete event…' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Delete event' }),
+    );
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith('/admin/events');
+    });
+    expect(screen.queryByText('Event not found')).toBeNull();
+  });
+
   it('names the counts on has_dependents', async () => {
     const counts = {
       watchers: 3,

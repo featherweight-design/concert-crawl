@@ -5,10 +5,9 @@ import { Trash2 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { ConfirmDialog, useIsPhone } from '@/components/admin/primitives';
 import { foldName } from '@/components/admin/fold-name';
-import { deleteRefusalMessage, isEventAlreadyGone } from './event-delete';
+import { deleteRefusalMessage } from './event-delete';
 
 const COPY = ADMIN_COPY.eventDelete;
-const FAILED = ADMIN_COPY.states.saveFailed;
 
 const SMALL: CSSProperties = { fontSize: 12.5, color: 'var(--fg-muted)' };
 const ALERT: CSSProperties = { ...SMALL, color: 'var(--danger)' };
@@ -54,7 +53,6 @@ export const EventDeleteConfirm = ({
     } catch (err: unknown) {
       const refused = deleteRefusalMessage(err);
       if (refused !== null) setRefusal(refused);
-      else if (isEventAlreadyGone(err)) succeeded = true;
       else {
         console.warn('EventDeleteConfirm: delete failed', { title, err });
         setError(true);
@@ -123,7 +121,7 @@ export const EventDeleteConfirm = ({
           )}
           {error && (
             <div role="alert" style={ALERT}>
-              {`${FAILED.title(COPY.failed.what(title))}. ${FAILED.body(COPY.failed.saved)}`}
+              {COPY.failed(title)}
             </div>
           )}
         </div>
