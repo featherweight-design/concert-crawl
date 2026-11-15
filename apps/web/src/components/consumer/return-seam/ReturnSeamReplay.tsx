@@ -38,11 +38,11 @@ export const ReturnSeamReplay = () => {
   const router = useRouter();
   const { data: watchedShows } = useWatching();
   const { mutate } = useWatchToggle();
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
 
   const rawIntent = params.get('intent');
   // Arrives from an editable URL, so it is capped and de-controlled before it
-  // reaches a one-line strip.
+  // reaches a toast.
   const rawLabel = sanitizeDestinationLabel(params.get('label'));
 
   const [replayed, setReplayed] = useState(false);
@@ -97,8 +97,21 @@ export const ReturnSeamReplay = () => {
     // The endpoint is a toggle and a cold cache reads as "not watching", so
     // firing before the list loads would un-watch a show the visitor already
     // had. Wait for it — the effect re-runs when the cache resolves.
-    // (A follow has no such hazard: its endpoint only ever follows.)
     if (intent.action === 'watch' && watchedShows === undefined) return;
+
+    if (intent.action === 'follow') {
+      // A follow needs the session: coming back from sign-in the layout can
+      // mount this before Clerk has one, and the params are about to be
+      // stripped, so there would be no second chance. Wait for it.
+      if (!isLoaded || !isSignedIn) return;
+      // It follows the artist whose page this is, and nothing else: a link
+      // that names another artist (or sits on another page) is only a URL.
+      if (pathname !== `/artists/${intent.artistSlug}`) {
+        handled.current = rawIntent;
+        router.replace(stripIntentParams(pathname, params, hash));
+        return;
+      }
+    }
 
     const stripped = stripIntentParams(pathname, params, hash);
     handled.current = rawIntent;
@@ -141,6 +154,8 @@ export const ReturnSeamReplay = () => {
     mutate,
     watchedShows,
     followArtist,
+    isLoaded,
+    isSignedIn,
   ]);
 
   // The confirmation is the house toast, not a strip: the filled eye or the

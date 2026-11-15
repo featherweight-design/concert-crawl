@@ -6,13 +6,15 @@ import { render, cleanup } from '@testing-library/react';
 const EVENT_ID = '3f1a9c62-8d4b-4e17-9f2a-1b6c7d8e9f01';
 
 let searchParams = new URLSearchParams();
+let pathname = '/events/e1';
+let session = { isLoaded: true, isSignedIn: true };
 const replace = vi.fn();
 const push = vi.fn();
 const refresh = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParams,
-  usePathname: () => '/events/e1',
+  usePathname: () => pathname,
   useRouter: () => ({ replace, push, refresh }),
 }));
 
@@ -20,7 +22,9 @@ const toast = vi.hoisted(() => vi.fn());
 vi.mock('sonner', () => ({ toast }));
 
 const getToken = vi.fn<() => Promise<string | null>>();
-vi.mock('@clerk/nextjs', () => ({ useAuth: () => ({ getToken }) }));
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken, ...session }),
+}));
 
 const post = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/api', () => ({ apiClient: { post } }));
@@ -39,6 +43,8 @@ import { ReturnSeamReplay } from './ReturnSeamReplay';
 
 beforeEach(() => {
   searchParams = new URLSearchParams();
+  pathname = '/events/e1';
+  session = { isLoaded: true, isSignedIn: true };
   replace.mockClear();
   push.mockClear();
   refresh.mockClear();
@@ -200,6 +206,42 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
 });
 
 describe('ReturnSeamReplay: replaying a follow', () => {
+  beforeEach(() => {
+    // A Follow lives on the artist's page: that is where sign-in sends them back.
+    pathname = '/artists/tokimonsta';
+  });
+
+  it('follows only the artist whose page this is, never one a link names', async () => {
+    pathname = '/events/e1';
+    withIntent('follow:tokimonsta', 'TOKiMONSTA');
+    render(<ReturnSeamReplay />);
+    await flush();
+    expect(post).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+    // The params go all the same, so the link does not linger in the URL.
+    expect(replace).toHaveBeenCalledWith('/events/e1');
+    cleanup();
+    pathname = '/artists/another-band';
+    withIntent('follow:tokimonsta', 'TOKiMONSTA');
+    render(<ReturnSeamReplay />);
+    await flush();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('waits for Clerk to have a session, since the params are stripped once it acts', async () => {
+    withIntent('follow:tokimonsta', 'TOKiMONSTA');
+    session = { isLoaded: false, isSignedIn: false };
+    const { rerender } = render(<ReturnSeamReplay />);
+    await flush();
+    expect(post).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+    session = { isLoaded: true, isSignedIn: true };
+    rerender(<ReturnSeamReplay />);
+    await flush();
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
   it('follows the artist, refreshes the page it just rendered, and says so', async () => {
     withIntent('follow:tokimonsta', 'TOKiMONSTA');
     render(<ReturnSeamReplay />);
@@ -231,7 +273,7 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     const { rerender } = render(<ReturnSeamReplay />);
     rerender(<ReturnSeamReplay />);
     await flush();
-    expect(replace).toHaveBeenCalledWith('/events/e1');
+    expect(replace).toHaveBeenCalledWith('/artists/tokimonsta');
     expect(post).toHaveBeenCalledTimes(1);
     expect(toast).toHaveBeenCalledTimes(1);
   });
@@ -260,6 +302,6 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     withIntent('follow:../../admin', 'x');
     render(<ReturnSeamReplay />);
     expect(post).not.toHaveBeenCalled();
-    expect(replace).toHaveBeenCalledWith('/events/e1');
+    expect(replace).toHaveBeenCalledWith('/artists/tokimonsta');
   });
 });
