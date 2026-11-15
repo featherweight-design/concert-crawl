@@ -3492,6 +3492,7 @@ export const ADMIN_COPY = {
         'crawl.daily_cron': ['Started the daily crawl', ''],
         'crawl.trigger': ['Queued a crawl of ', ''],
         'crawl.trigger_all': ['Queued a crawl of all venues', ''],
+        'crawl.trigger_trial': ['Queued a test re-crawl of ', ''],
         'event.auto_cancel.stale': [
           'Marked ',
           ' cancelled after the venue stopped listing it',

@@ -48,6 +48,7 @@ const LOOKUP_BY_ACTION: Readonly<Record<string, Lookup | null>> = {
   'event.drift_duplicates_merged': 'venue',
   'event.report.resolve': 'event-report',
   'crawl.trigger': 'venue',
+  'crawl.trigger_trial': 'venue',
   // Adding a price, replacing the listed one and running the pipeline are
   // keyed by the show.
   'price.submission.admin_add': 'price-event',

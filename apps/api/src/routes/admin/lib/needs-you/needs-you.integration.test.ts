@@ -308,6 +308,52 @@ describe('Needs you sources and ranking', () => {
     expect(item.lastRuns[0]?.errorMessage).toBe('boom 2');
   });
 
+  it('reads no test re-crawl: the fault, its runs and its OK streak are the venue’s own', async () => {
+    const venue = await seedVenue({ name: 'Lost Lake', slug: 'lost-lake' });
+    const hoursAgo = (hours: number): Date =>
+      new Date(now().getTime() - hours * HOUR_MS);
+    for (const hours of [10, 9]) {
+      await seedCrawlRun(venue.id, {
+        status: 'success',
+        createdAt: hoursAgo(hours),
+      });
+    }
+    for (const hours of [5, 4, 3]) {
+      await seedCrawlRun(venue.id, {
+        status: 'failed',
+        reason: 'error',
+        eventsFound: 0,
+        httpStatusCode: 500,
+        errorMessage: 'boom',
+        createdAt: hoursAgo(hours),
+      });
+    }
+    // Newest of all: a trial that failed, then one that succeeded. Neither is
+    // a reading of the venue, so neither clears nor adds to the fault.
+    await seedCrawlRun(venue.id, {
+      status: 'failed',
+      reason: 'error',
+      trial: true,
+      errorMessage: 'trial boom',
+      createdAt: hoursAgo(2),
+    });
+    await seedCrawlRun(venue.id, {
+      status: 'success',
+      trial: true,
+      createdAt: hoursAgo(1),
+    });
+
+    const [item] = await listNeedsYou({ kind: 'venue-failing', now: now() });
+    if (item?.kind !== 'venue-failing')
+      throw new Error('expected venue-failing');
+    expect(item.okStreakBefore).toBe(2);
+    expect(item.lastRuns).toHaveLength(5);
+    expect(item.lastRuns[0]).toMatchObject({
+      status: 'failed',
+      errorMessage: 'boom',
+    });
+  });
+
   it('carries the latest run page count and robots result on a blocked venue', async () => {
     const venue = await seedVenue({
       name: 'Blocked Pages Hall',

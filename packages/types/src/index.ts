@@ -741,6 +741,10 @@ export interface CrawlRun {
   llmCostUsd?: number | null;
   venueName?: string | null;
   startedAt?: string | null;
+  // A test re-crawl of a crawl-paused venue (migration 0119): a real crawl
+  // whose run never moves the venue's pause or failure streak. Sent on the
+  // GET /v1/admin/crawl/runs list rows.
+  trial?: boolean;
   // Surfaces an unread admin_alert notification of category
   // 'crawl.event_count_dropped' (covers both went-dark and sharp-drop)
   // or 'crawl.failed' (any run that brings a venue's consecutive failure
@@ -2212,6 +2216,7 @@ export const AUDIT_ACTION_KEYS = [
   'crawl.daily_cron',
   'crawl.trigger',
   'crawl.trigger_all',
+  'crawl.trigger_trial',
   'event.auto_cancel.stale',
   'event.bulk_auto_approve',
   'event.bulk_delete',

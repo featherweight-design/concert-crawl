@@ -52,6 +52,8 @@ export const ACTION_AREA_OVERRIDES: Readonly<Record<string, AuditArea>> = {
   // Re-crawl (useRecrawl), the Venues bulk re-crawl and the add-venue flow
   // (lib/actions/venues.ts). `crawl.trigger_all` stays a Crawl runs action.
   'crawl.trigger': 'venues',
+  // A test re-crawl is queued from the paused venue's page.
+  'crawl.trigger_trial': 'venues',
 };
 
 // A Map, so an action key like `toString` never reads the prototype.
