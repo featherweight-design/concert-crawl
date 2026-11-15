@@ -144,15 +144,18 @@ export const Eyebrow = ({
 // cards (addendum 4 item 5, price-states-age-trust). B+ styling: 19px tall,
 // 0 7px 0 8px, radius 6, the kind's colour as a 1px edge at 50% over an 8%
 // fill, mono 9.5px bold caps at 0.08em. Community is the theme's signal,
-// Resale its danger and Box office its warning gold, as the board draws them;
-// the text runs through the AA-safe --price-text-* tokens (globals.css).
+// Resale its danger and Box office its warning gold, as the board draws them.
+// Since addendum 6 item 38 each kind reads its own theme token
+// (--trust-community, --trust-boxoffice, --trust-resale), which defaults to
+// --signal, --warning and --danger and is darkened or recoloured where a theme
+// misses AA at 9.5px (Light, and Community in Forge, Cedar and Gloss).
 // TRUST_TOKENS is the one map from a trust kind to its B+ colours: `tone` for
 // fills, edges and dots, `text` for anything set as type. TierMark and
 // PriceDisplay read it too, so no trust colour is spelled out anywhere else.
 export const TRUST_TOKENS = {
-  community: { tone: 'var(--signal)', text: 'var(--price-text-signal)' },
-  resale: { tone: 'var(--danger)', text: 'var(--price-text-danger)' },
-  boxoffice: { tone: 'var(--warning)', text: 'var(--price-text-warning)' },
+  community: { tone: 'var(--trust-community)', text: 'var(--trust-community)' },
+  resale: { tone: 'var(--trust-resale)', text: 'var(--trust-resale)' },
+  boxoffice: { tone: 'var(--trust-boxoffice)', text: 'var(--trust-boxoffice)' },
 } as const;
 
 export type TrustKind = keyof typeof TRUST_TOKENS;

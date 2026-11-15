@@ -103,6 +103,15 @@
      their size on --surface-1, so they lean toward --fg until they pass:
      subtle 2.79 -> 4.71, warning 3.65 -> 5.29, signal 4.18 -> 5.44 (4.92 on the
      8% pill and the 7% strip). Danger already passes (5.14). */
+  /* Trust tones (addendum 6 item 38): the trust pills' colours. The theme
+     layer sets them per theme (themes.ts); these defaults cover the first
+     paint before it runs and any theme that does not name one. */
+  :root {
+    --trust-community: var(--signal);
+    --trust-boxoffice: var(--warning);
+    --trust-resale: var(--danger);
+  }
+
   :root {
     --price-text-subtle: var(--fg-subtle);
     --price-text-warning: var(--warning);

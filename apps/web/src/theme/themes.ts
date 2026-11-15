@@ -111,6 +111,12 @@ const light: Record<string, string> = {
   warning: '#B86E00',
   danger: '#C42940',
   focus: '#0080A0',
+  // Trust tones (addendum 6 item 38): all three were under 4.5:1 at 9.5px on
+  // Light's ground, so each is darkened, same hue. `--signal`, `--warning` and
+  // `--danger` keep their values everywhere else.
+  'trust-community': '#006A85',
+  'trust-boxoffice': '#8F5500',
+  'trust-resale': '#B3243A',
   'overlay-hover': 'rgba(7,10,26,0.04)',
   'overlay-press': 'rgba(7,10,26,0.08)',
   scrim: 'rgba(7,10,26,0.40)',
@@ -171,6 +177,8 @@ const forge: Record<string, string> = {
   warning: '#FFD27A',
   danger: '#FF7A8A',
   focus: '#C8211A',
+  // Community was a red beside Resale, and 3.1:1 (item 38).
+  'trust-community': '#8FB3D9',
   'overlay-hover': 'rgba(200,33,26,0.08)',
   'overlay-press': 'rgba(200,33,26,0.16)',
   scrim: 'rgba(6,4,3,0.72)',
@@ -261,6 +269,8 @@ const cedar: Record<string, string> = {
   warning: '#FFD27A',
   danger: '#FF7A8A',
   focus: '#D89A8A',
+  // Community was a dusty red beside Resale (item 38).
+  'trust-community': '#8CC7E8',
   'overlay-hover': 'rgba(216,154,138,0.08)',
   'overlay-press': 'rgba(216,154,138,0.16)',
   scrim: 'rgba(16,32,26,0.72)',
@@ -291,6 +301,8 @@ const gloss: Record<string, string> = {
   warning: '#FFD27A',
   danger: '#FF7A8A',
   focus: '#FF5BA1',
+  // Community was a pink beside Resale (item 38).
+  'trust-community': '#A9B4FF',
   'overlay-hover': 'rgba(255,91,161,0.08)',
   'overlay-press': 'rgba(255,91,161,0.16)',
   scrim: 'rgba(15,8,16,0.72)',
@@ -306,11 +318,18 @@ const gloss: Record<string, string> = {
  * board 04/removed-d draws it in `--signal`). It keeps `--signal` wherever
  * that reaches AA on `--surface-3` and falls back to `--fg` where it does not
  * (Light's #0080A0 and Forge's #C8211A both fall short).
+ *
+ * `trust-community`, `trust-boxoffice`, `trust-resale` (item 38): the trust
+ * pill tones. A palette that does not name one gets `--signal`, `--warning`
+ * and `--danger`, so five themes do not change.
  */
 const withDerived = (
   palette: Record<string, string>,
 ): Record<string, string> => ({
   ...palette,
+  'trust-community': palette['trust-community'] ?? palette.signal ?? '',
+  'trust-boxoffice': palette['trust-boxoffice'] ?? palette.warning ?? '',
+  'trust-resale': palette['trust-resale'] ?? palette.danger ?? '',
   'toast-action': firstReadableInk(palette['surface-3'] ?? '', [
     palette.signal ?? '',
     palette.fg ?? '',
