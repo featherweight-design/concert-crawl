@@ -46,11 +46,12 @@ const BOARD_MS = {
 } as const;
 
 /**
- * How long the launch plays. Hugh's ruling (2026-11-14): as long as the-99's
- * app loader (3000ms), with the board's 1040ms stretched evenly so every beat
- * keeps its place in the choreography.
+ * How long the launch plays. Hugh's ruling (2026-11-14) was as long as the-99's
+ * app loader (3000ms); he then found that too long and cut it to 2000ms. The
+ * board's 1040ms is stretched evenly either way, so every beat keeps its place
+ * in the choreography.
  */
-export const LAUNCH_TOTAL_MS = 3000;
+export const LAUNCH_TOTAL_MS = 2000;
 
 const stretch = (ms: number): number => (ms * LAUNCH_TOTAL_MS) / BOARD_MS.total;
 

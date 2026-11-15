@@ -20,7 +20,7 @@
  *   the end hides the overlay if the preference flips mid-load.
  *
  * The durations are not written here: the head script sets `--ll-total` and
- * `--ll-dot` from `LAUNCH_MS` (3000ms, the board's 1040ms stretched evenly), so
+ * `--ll-dot` from `LAUNCH_MS` (2000ms, the board's 1040ms stretched evenly), so
  * one number changes the length. Every offset below is a `LAUNCH_MS` beat as a
  * share of the total, which a uniform stretch leaves alone, and
  * `launch.test.ts` fails if they drift apart. The position maths is the board's

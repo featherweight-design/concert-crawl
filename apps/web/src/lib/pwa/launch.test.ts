@@ -169,7 +169,7 @@ describe('markLaunchPlayed and endLaunch', () => {
 });
 
 describe('timeline', () => {
-  it('runs its beats in order and ends at 3000ms', () => {
+  it('runs its beats in order and ends at 2000ms', () => {
     const order = [
       LAUNCH_MS.tileFadeEnd,
       LAUNCH_MS.growEnd,
@@ -181,7 +181,7 @@ describe('timeline', () => {
     ];
     expect([...order].sort((left, right) => left - right)).toEqual(order);
     expect(LAUNCH_MS.total).toBe(LAUNCH_TOTAL_MS);
-    expect(LAUNCH_TOTAL_MS).toBe(3000);
+    expect(LAUNCH_TOTAL_MS).toBe(2000);
   });
 
   // Hugh's ruling: the board's 1040ms stretched evenly, so the choreography
