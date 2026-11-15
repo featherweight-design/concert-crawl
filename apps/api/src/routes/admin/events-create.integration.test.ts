@@ -491,6 +491,15 @@ describe('POST /v1/admin/events', () => {
       expect(await auditRows('event.create')).toEqual([]);
     });
 
+    it('refuses a removed venue as venue_not_found, adding nothing', async () => {
+      const venue = await seedVenue({ removedAt: new Date(), active: false });
+      const res = await post(validBody(venue.id));
+      expect(res.status).toBe(400);
+      expect(await issueCodes(res)).toEqual(['venueId:venue_not_found']);
+      expect(await testDb.select({ id: events.id }).from(events)).toEqual([]);
+      expect(await auditRows('event.create')).toEqual([]);
+    });
+
     it.each(['', '12/04/2030', '2030-13-01'])(
       'reports only date_required for the date %j',
       async (date) => {
