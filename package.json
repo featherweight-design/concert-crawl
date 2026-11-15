@@ -41,11 +41,11 @@
     "husky": "9.1.7",
     "lint-staged": "17.6.0",
     "postgres": "^3.4.9",
-    "prettier": "3.10.0",
+    "prettier": "3.10.1",
     "semantic-release": "25.0.9",
     "stripe": "^22.4.0",
     "tsx": "^4.23.15",
-    "turbo": "2.11.10",
+    "turbo": "2.11.11",
     "vitest": "^5.1.0"
   },
   "lint-staged": {
