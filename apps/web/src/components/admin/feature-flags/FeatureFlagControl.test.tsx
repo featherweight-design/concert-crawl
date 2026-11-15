@@ -40,32 +40,28 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => 'tok' }),
 }));
 
+import { ApiError } from '@/lib/api';
 import { FeatureFlagControl } from './FeatureFlagControl';
 
-const flags: AdminFeatureFlag[] = [
-  {
-    key: 'crews',
-    label: 'Crews',
-    description: 'The Crews tab and crew pages.',
-    enabled: false,
-    updatedAt: null,
-    updatedBy: null,
-  },
-];
+const flag = (overrides: Partial<AdminFeatureFlag> = {}): AdminFeatureFlag => ({
+  key: 'crews',
+  label: 'Crews',
+  description: 'The Crews tab and crew pages.',
+  enabled: false,
+  updatedAt: null,
+  updatedBy: null,
+  stage: 'off',
+  stageOwnerUserId: null,
+  verifiedAt: null,
+  verifiedBy: null,
+  verifiedNote: null,
+  people: [],
+  environment: 'staging',
+  locked: false,
+  ...overrides,
+});
 
-const changedFlags: AdminFeatureFlag[] = [
-  {
-    key: 'crews',
-    label: 'Crews',
-    description: 'The Crews tab and crew pages.',
-    enabled: false,
-    updatedAt: '2026-09-07T00:00:00.000Z',
-    updatedBy: 'admin',
-  },
-];
-
-const clickButton = (name: string) =>
-  fireEvent.click(screen.getByRole('button', { name }));
+const step = (stage: string) => screen.getByTestId(`flag-step-crews-${stage}`);
 
 beforeEach(() => {
   patch.mockReset();
@@ -73,61 +69,189 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('FeatureFlagControl', () => {
-  it('renders a row per flag with its current state', () => {
-    render(<FeatureFlagControl initial={flags} />);
+describe('FeatureFlagControl (the ladder)', () => {
+  it('draws a row per flag with the four rungs and the current one selected', () => {
+    render(<FeatureFlagControl initial={[flag({ stage: 'beta' })]} />);
     expect(screen.getByText('Crews')).toBeVisible();
-    expect(screen.getByText('Off')).toBeVisible();
     expect(screen.getByText('Never changed')).toBeVisible();
+    for (const rung of ['off', 'me', 'beta', 'everyone']) {
+      expect(step(rung)).toHaveAttribute(
+        'aria-checked',
+        rung === 'beta' ? 'true' : 'false',
+      );
+    }
+  });
+
+  it('reads the old boolean when a payload has no stage', () => {
+    render(
+      <FeatureFlagControl
+        initial={[flag({ stage: undefined, enabled: true })]}
+      />,
+    );
+    expect(step('everyone')).toHaveAttribute('aria-checked', 'true');
   });
 
   it('labels the timestamp on a flag that has been changed', () => {
-    render(<FeatureFlagControl initial={changedFlags} />);
-    // The relative time renders as its own node, so the label is asserted on
-    // the containing element rather than as a standalone string.
+    render(
+      <FeatureFlagControl
+        initial={[
+          flag({ updatedAt: '2026-09-07T00:00:00.000Z', updatedBy: 'admin' }),
+        ]}
+      />,
+    );
     expect(screen.getByText(/^Changed/)).toBeVisible();
     expect(screen.queryByText('Never changed')).toBeNull();
   });
 
-  it('asks for confirmation before saving', () => {
-    render(<FeatureFlagControl initial={flags} />);
-    clickButton('Turn on');
-    expect(screen.getByText('Turn this on?')).toBeVisible();
-    expect(patch).not.toHaveBeenCalled();
+  it('says how many named people a flag has', () => {
+    render(<FeatureFlagControl initial={[flag({ people: ['a', 'b'] })]} />);
+    expect(screen.getByTestId('flag-people-crews')).toHaveTextContent(
+      '+ 2 people',
+    );
   });
 
-  it('saves and reflects the new state on confirm', async () => {
-    patch.mockResolvedValue({
-      ...flags[0],
-      enabled: true,
-      updatedAt: '2026-09-07T00:00:00.000Z',
-      updatedBy: 'admin',
-    });
-    render(<FeatureFlagControl initial={flags} />);
-    clickButton('Turn on');
-    clickButton('Save');
-    await waitFor(() => expect(screen.getByText('On')).toBeVisible());
+  it('moves a flag a rung on a click and reflects the answer', async () => {
+    patch.mockResolvedValue(flag({ stage: 'me' }));
+    render(<FeatureFlagControl initial={[flag()]} />);
+    fireEvent.click(step('me'));
+    await waitFor(() =>
+      expect(step('me')).toHaveAttribute('aria-checked', 'true'),
+    );
     expect(patch).toHaveBeenCalledWith('/v1/admin/feature-flags/crews', 'tok', {
-      enabled: true,
+      stage: 'me',
     });
   });
 
-  it('saves nothing on cancel', () => {
-    render(<FeatureFlagControl initial={flags} />);
-    clickButton('Turn on');
-    clickButton('Cancel');
+  it('does nothing when the current rung is clicked', () => {
+    render(<FeatureFlagControl initial={[flag({ stage: 'beta' })]} />);
+    fireEvent.click(step('beta'));
     expect(patch).not.toHaveBeenCalled();
-    expect(screen.getByText('Off')).toBeVisible();
   });
 
-  it('surfaces an error and leaves the state unchanged when the save fails', async () => {
+  it('surfaces an error and leaves the rung unchanged when the save fails', async () => {
     patch.mockRejectedValue(new Error('boom'));
-    render(<FeatureFlagControl initial={flags} />);
-    clickButton('Turn on');
-    clickButton('Save');
+    render(<FeatureFlagControl initial={[flag()]} />);
+    fireEvent.click(step('beta'));
     await waitFor(() =>
       expect(screen.getByText(/Could not save the flag/)).toBeVisible(),
     );
-    expect(screen.getByText('Off')).toBeVisible();
+    expect(step('off')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('shows the verified chip, or says it is not verified', () => {
+    const { rerender } = render(
+      <FeatureFlagControl
+        initial={[flag({ verifiedAt: '2026-09-07T00:00:00.000Z' })]}
+      />,
+    );
+    expect(screen.getByTestId('flag-verified-crews')).toHaveTextContent(
+      /^Verified/,
+    );
+    rerender(<FeatureFlagControl initial={[flag()]} />);
+    expect(screen.getByTestId('flag-unverified-crews')).toHaveTextContent(
+      'Not verified',
+    );
+  });
+});
+
+describe('FeatureFlagControl in production', () => {
+  const production = (overrides: Partial<AdminFeatureFlag> = {}) =>
+    flag({ environment: 'production', locked: true, ...overrides });
+
+  it('closes the steps above the current one while the flag is locked', () => {
+    render(<FeatureFlagControl initial={[production({ stage: 'me' })]} />);
+    expect(step('beta')).toBeDisabled();
+    expect(step('everyone')).toBeDisabled();
+    // Stepping down is never blocked.
+    expect(step('off')).toBeEnabled();
+    expect(screen.getByTestId('flag-unverified-crews')).toHaveTextContent(
+      'Locked',
+    );
+    expect(screen.getByText('Verify it here to go wider.')).toBeVisible();
+  });
+
+  it('opens the steps once the flag is verified in production', () => {
+    render(
+      <FeatureFlagControl
+        initial={[
+          production({
+            locked: false,
+            verifiedAt: '2026-09-07T00:00:00.000Z',
+          }),
+        ]}
+      />,
+    );
+    expect(step('beta')).toBeEnabled();
+    expect(step('everyone')).toBeEnabled();
+  });
+
+  it('asks first before Everyone, and sends confirm only after the ask', async () => {
+    patch.mockResolvedValue(
+      production({ stage: 'everyone', locked: false, verifiedAt: 'x' }),
+    );
+    render(
+      <FeatureFlagControl
+        initial={[
+          production({
+            stage: 'beta',
+            locked: false,
+            verifiedAt: '2026-09-07T00:00:00.000Z',
+          }),
+        ]}
+      />,
+    );
+    fireEvent.click(step('everyone'));
+    expect(screen.getByText('Turn Crews on for everyone?')).toBeVisible();
+    expect(screen.getByTestId('everyone-ask-step')).toHaveTextContent(
+      'Production Beta → Everyone',
+    );
+    expect(patch).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Turn on for everyone' }),
+    );
+    await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
+    expect(patch).toHaveBeenCalledWith('/v1/admin/feature-flags/crews', 'tok', {
+      stage: 'everyone',
+      confirm: true,
+    });
+  });
+
+  it('saves nothing when the Everyone ask is cancelled', () => {
+    render(
+      <FeatureFlagControl
+        initial={[
+          production({
+            stage: 'beta',
+            locked: false,
+            verifiedAt: '2026-09-07T00:00:00.000Z',
+          }),
+        ]}
+      />,
+    );
+    fireEvent.click(step('everyone'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(patch).not.toHaveBeenCalled();
+    expect(step('beta')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('does not ask on staging', async () => {
+    patch.mockResolvedValue(flag({ stage: 'everyone' }));
+    render(<FeatureFlagControl initial={[flag({ stage: 'beta' })]} />);
+    fireEvent.click(step('everyone'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
+  });
+
+  it('explains a 409: the flag is not verified here yet', async () => {
+    patch.mockRejectedValue(new ApiError(409, 'flag_not_verified'));
+    render(
+      <FeatureFlagControl
+        initial={[production({ stage: 'off', locked: false, verifiedAt: 'x' })]}
+      />,
+    );
+    fireEvent.click(step('beta'));
+    await waitFor(() =>
+      expect(screen.getByText(/not verified here yet/)).toBeVisible(),
+    );
   });
 });

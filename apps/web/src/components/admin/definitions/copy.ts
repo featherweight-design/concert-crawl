@@ -3728,20 +3728,38 @@ export const ADMIN_COPY = {
     sectionTitle: 'Feature flags',
     sectionSubtitle:
       'Turn a feature off and it disappears from every surface, and its API routes answer 404. A flag can only hide a feature, never grant one past its plan.',
-    stateOn: 'On',
-    stateOff: 'Off',
     changedPrefix: 'Changed',
     neverToggled: 'Never changed',
-    toggleOn: 'Turn on',
-    toggleOff: 'Turn off',
-    confirmTitleOn: 'Turn this on?',
-    confirmTitleOff: 'Turn this off?',
-    confirmBodyOn:
-      'Customers will see this feature everywhere it appears, subject to their plan.',
-    confirmBodyOff:
-      'Customers will stop seeing this feature everywhere, and its API routes will answer 404. Existing data is left alone.',
+    // The ladder (`07-people-flags-operations`): who sees a flag here.
+    columnFlag: 'Flag',
+    columnWhoSees: 'Who sees it here',
+    columnVerified: 'Verified',
+    stage: {
+      off: 'Off',
+      me: 'Me',
+      beta: 'Beta',
+      everyone: 'Everyone',
+    },
+    ladderAriaLabel: (label: string) => `Who sees ${label}`,
+    peopleCount: (count: number) =>
+      count === 1 ? '+ 1 person' : `+ ${count} people`,
+    verifiedOn: 'Verified',
+    notVerified: 'Not verified',
+    // Production keeps a flag locked until it is verified in this admin. The
+    // board's "Staging: <step>" and "Verified on staging" lines are not used:
+    // production never reads staging (Hugh's ruling).
+    lockedChip: 'Locked',
+    lockedCaption: 'Verify it here to go wider.',
+    lockedError:
+      'This flag is not verified here yet, so it cannot go wider. Verify it first.',
+    everyoneAsk: {
+      title: (label: string) => `Turn ${label} on for everyone?`,
+      body: (label: string) =>
+        `Everyone sees ${label} on their next page load. You can step back to Beta at any time.`,
+      step: (from: string, to: string) => `Production ${from} → ${to}`,
+      accept: 'Turn on for everyone',
+    },
     confirmCancel: 'Cancel',
-    confirmAccept: 'Save',
     saveError: 'Could not save the flag. Try again.',
   },
 
