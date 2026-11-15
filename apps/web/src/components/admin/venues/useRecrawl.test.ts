@@ -170,6 +170,41 @@ describe('useRecrawl', () => {
     expect(result.current.line).toBeNull();
   });
 
+  it('keeps the last progress through failed polls, and clears it once unknown', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger
+      .mockResolvedValueOnce({
+        ...pending,
+        status: 'processing',
+        startedAt: '2026-11-12T22:41:00.000Z',
+        pagesDone: 2,
+        pagesTotal: 4,
+      })
+      .mockRejectedValue(new Error('network'));
+    const { result } = renderHook(() => useRecrawl('venue-1', false));
+    act(() => result.current.start());
+    await tick(0);
+    await tick(POLL_INTERVAL_MS);
+    const landed = result.current.line;
+    expect(landed?.state).toBe('running');
+    expect(landed?.progress?.pagesDone).toBe(2);
+    // The first failed poll: still running, the line unchanged.
+    await tick(POLL_INTERVAL_MS);
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(2);
+    expect(result.current.state).toBe('running');
+    expect(result.current.line).toEqual(landed);
+    // The rest of the retries, each at double the last delay.
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      await tick(POLL_INTERVAL_MS * 2 ** attempt);
+    }
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(5);
+    expect(result.current.state).toBe('unknown');
+    expect(result.current.progress).toBeNull();
+    expect(result.current.line).toBeNull();
+    warn.mockRestore();
+  });
+
   it('resets to idle and cancels the poll timer when the venue changes', async () => {
     mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
     mockFetchTrigger.mockResolvedValue(pending);

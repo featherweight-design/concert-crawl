@@ -157,7 +157,9 @@ export const useRecrawl = (venueId: string, off: boolean) => {
         failures: failures + 1,
         err,
       });
-      // The trigger is queued either way: never say it didn't start.
+      // The trigger is queued either way: never say it didn't start. The last
+      // progress stays up through the retries, so one failed poll doesn't
+      // flicker the line; `unknown` clears it (`settle`).
       if (failures >= POLL_RETRIES) settle(gen, 'unknown');
       else schedule(gen, triggerId, startedAt, failures + 1);
       return;

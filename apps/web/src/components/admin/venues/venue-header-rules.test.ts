@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { CrawlTrigger } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   headerLine,
@@ -7,10 +8,18 @@ import {
   runningSince,
   viewOnSiteHref,
   type HeaderVenue,
+  type RecrawlLine,
   type RecrawlProgress,
 } from './venue-header-rules';
 
 const COPY = ADMIN_COPY.venueHeader;
+
+/** A re-crawl line in `state`, its progress from `base` with `over` on top. */
+const lineOf = (
+  state: RecrawlLine['state'],
+  base: RecrawlProgress,
+  over: Partial<RecrawlProgress> = {},
+): RecrawlLine => ({ state, progress: { ...base, ...over } });
 
 const venue = (over: Partial<HeaderVenue> = {}): HeaderVenue => ({
   active: true,
@@ -116,17 +125,18 @@ describe('a running re-crawl', () => {
   // A later progress write, which moves `updatedAt` on.
   const PROGRESSED = '2026-11-12T22:44:00.000Z';
 
-  const running = (over: Partial<RecrawlProgress> = {}) => ({
-    state: 'running' as const,
-    progress: {
-      startedAt: STARTED,
-      pagesDone: 2,
-      pagesTotal: 4,
-      runningAhead: false,
-      waitMs: null,
-      ...over,
-    },
-  });
+  const running = (over: Partial<RecrawlProgress> = {}): RecrawlLine =>
+    lineOf(
+      'running',
+      {
+        startedAt: STARTED,
+        pagesDone: 2,
+        pagesTotal: 4,
+        runningAhead: false,
+        waitMs: null,
+      },
+      over,
+    );
 
   it('reads the page and when it started, as the board draws it', () => {
     expect(headerLine(venue(), false, running())).toBe(
@@ -189,29 +199,68 @@ describe('a running re-crawl', () => {
         updatedAt: PROGRESSED,
       }),
     ).toBe(STARTED);
-    // A row from before migration 0121 has no `startedAt`.
+  });
+
+  // A row from before migration 0121 has no `startedAt`.
+  it('falls back to `updatedAt` only before the first progress write', () => {
+    // No progress write yet, so `updatedAt` is still the claim time.
     expect(
       runningSince({
         status: 'processing',
         startedAt: null,
+        progressAt: null,
+        updatedAt: STARTED,
+      }),
+    ).toBe(STARTED);
+    expect(
+      runningSince({
+        status: 'processing',
+        startedAt: null,
+        updatedAt: STARTED,
+      }),
+    ).toBe(STARTED);
+    // A progress write moved `updatedAt` on: the start is unknown.
+    expect(
+      runningSince({
+        status: 'processing',
+        startedAt: null,
+        progressAt: PROGRESSED,
         updatedAt: PROGRESSED,
       }),
-    ).toBe(PROGRESSED);
+    ).toBeNull();
+    expect(
+      headerLine(
+        venue(),
+        false,
+        lineOf(
+          'running',
+          recrawlProgress({
+            status: 'processing',
+            startedAt: null,
+            progressAt: PROGRESSED,
+            updatedAt: PROGRESSED,
+            pagesDone: 2,
+            pagesTotal: 4,
+          }),
+        ),
+      ),
+    ).toBe(`RiNo · ${COPY.upcoming(1)}`);
   });
 });
 
 describe('a queued re-crawl', () => {
-  const queued = (over: Partial<RecrawlProgress> = {}) => ({
-    state: 'queued' as const,
-    progress: {
-      startedAt: null,
-      pagesDone: null,
-      pagesTotal: null,
-      runningAhead: true,
-      waitMs: 2 * 60_000,
-      ...over,
-    },
-  });
+  const queued = (over: Partial<RecrawlProgress> = {}): RecrawlLine =>
+    lineOf(
+      'queued',
+      {
+        startedAt: null,
+        pagesDone: null,
+        pagesTotal: null,
+        runningAhead: true,
+        waitMs: 2 * 60_000,
+      },
+      over,
+    );
 
   it('reads the run ahead and about how long, as the board draws it', () => {
     expect(headerLine(venue(), false, queued())).toBe(
@@ -249,8 +298,8 @@ describe('a queued re-crawl', () => {
 });
 
 describe('recrawlProgress', () => {
-  const trigger = {
-    status: 'pending' as const,
+  const trigger: Pick<CrawlTrigger, 'status' | 'updatedAt'> = {
+    status: 'pending',
     updatedAt: '2026-11-12T22:40:00.000Z',
   };
 

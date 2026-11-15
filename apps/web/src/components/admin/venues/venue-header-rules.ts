@@ -56,17 +56,24 @@ const startedAtSchema = z.iso.datetime({ offset: true });
 /**
  * When a running re-crawl started, once the trigger reads `processing`: its
  * `startedAt`, stamped as the crawler claims it (migration 0121). A row that
- * predates it falls back to `updatedAt`, which the claim also stamps (later
- * progress writes move it on). Null for any other status or a time that
- * won't parse.
+ * predates it falls back to `updatedAt`, which the claim also stamps, but
+ * only before the first progress write (`progressAt` null): each progress
+ * write moves `updatedAt` on, so after one it no longer says when the crawl
+ * started and the start reads as unknown. Null for any other status or a
+ * time that won't parse.
  */
 export const runningSince = (
-  trigger: Pick<CrawlTrigger, 'status' | 'startedAt' | 'updatedAt'>,
+  trigger: Pick<
+    CrawlTrigger,
+    'status' | 'startedAt' | 'updatedAt' | 'progressAt'
+  >,
 ): string | null => {
   if (trigger.status !== 'processing') return null;
-  const parsed = startedAtSchema.safeParse(
-    trigger.startedAt ?? trigger.updatedAt,
-  );
+  const claimedAt =
+    trigger.startedAt ??
+    ((trigger.progressAt ?? null) === null ? trigger.updatedAt : null);
+  if (claimedAt === null) return null;
+  const parsed = startedAtSchema.safeParse(claimedAt);
   return parsed.success ? parsed.data : null;
 };
 
@@ -88,7 +95,10 @@ export interface RecrawlProgress {
   pagesDone: number | null;
   /** Pages this crawl will read; null until the crawler knows. */
   pagesTotal: number | null;
-  /** Pending only: another trigger is being crawled right now. */
+  /**
+   * Another trigger is being crawled right now. The API sets it whatever the
+   * trigger's status; the header reads it only while Queued.
+   */
   runningAhead: boolean;
   /** Pending only: about how long until it starts; null when unknown. */
   waitMs: number | null;
@@ -100,6 +110,7 @@ export const recrawlProgress = (
     | 'status'
     | 'startedAt'
     | 'updatedAt'
+    | 'progressAt'
     | 'pagesDone'
     | 'pagesTotal'
     | 'progress'
