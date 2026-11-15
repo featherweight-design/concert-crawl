@@ -258,8 +258,26 @@ export const moveActKeepingRoles = (
   if (to === 0 && from > 0 && from < lineup.length && front !== undefined) {
     next[0] = { ...front, role: 'headliner' };
   }
-  return next;
+  return withHeadliner(next);
 };
+
+/**
+ * A bill left with no headliner gets one: the act now at the front, by the
+ * drawn rule "the first is the headliner". Any other bill comes back as is.
+ */
+export const withHeadliner = (lineup: readonly Act[]): Act[] => {
+  const [front, ...rest] = lineup;
+  if (front === undefined || rolesOf(lineup).includes('headliner')) {
+    return [...lineup];
+  }
+  return [{ ...front, role: 'headliner' }, ...rest];
+};
+
+/** Event edit's remove: roles kept, unless it took the only headliner. */
+export const removeActKeepingHeadliner = (
+  lineup: readonly Act[],
+  index: number,
+): Act[] => withHeadliner(removeAct(lineup, index));
 
 /** Event edit's add: the act gets its role now, so later moves never shift it. */
 export const addActWithRole = (lineup: readonly Act[], act: Act): Act[] =>

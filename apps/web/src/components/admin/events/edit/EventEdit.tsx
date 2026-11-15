@@ -790,9 +790,10 @@ export const EventEdit = ({
   const [confirmingSoldOut, setConfirmingSoldOut] = useState(false);
   // The API refuses an empty title, so Save waits for one; a new Sold out
   // waits for its method (and a link, if any, that is http(s)).
-  // A changed bill needs a headliner (the API's `headliner_required`): roles
-  // stay as saved, so removing the only one waits for an act moved to the
-  // front. A crawled show saved with none can still save its other fields.
+  // A changed bill needs a headliner (the API's `headliner_required`). The
+  // field promotes the front act when an edit leaves none, so in practice
+  // this is an emptied bill. A crawled show saved with none can still save
+  // its other fields.
   const lineupInvalid =
     lineupChanged(draft, snap.value) &&
     !rolesOf(draft.lineup).includes('headliner');

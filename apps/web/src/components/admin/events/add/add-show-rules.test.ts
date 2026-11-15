@@ -7,10 +7,12 @@ import {
   moveAct,
   moveActKeepingRoles,
   removeAct,
+  removeActKeepingHeadliner,
   rolesOf,
   toBody,
   todayInDenver,
   validateDraft,
+  withHeadliner,
   type Act,
   type AddShowDraft,
 } from './add-show-rules';
@@ -260,5 +262,23 @@ describe('rolesOf and lineupEntries', () => {
       rolesOf(moveActKeepingRoles([{ name: 'X' }, { name: 'Y' }], 1, 0)),
     ).toEqual(['headliner', 'headliner']);
     expect(rolesOf(removeAct(crawled, 0))).toEqual(['headliner', 'support']);
+  });
+
+  it('heads the bill with the front act once the only headliner goes', () => {
+    const two: Act[] = [
+      { name: 'S', role: 'support' },
+      { name: 'H', role: 'headliner' },
+      { name: 'T', role: 'support' },
+    ];
+    expect(rolesOf(removeActKeepingHeadliner(two, 1))).toEqual([
+      'headliner',
+      'support',
+    ]);
+    // A bill that still has one is left alone.
+    expect(rolesOf(removeActKeepingHeadliner(crawled, 0))).toEqual([
+      'headliner',
+      'support',
+    ]);
+    expect(withHeadliner([])).toEqual([]);
   });
 });

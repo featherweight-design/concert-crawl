@@ -1143,6 +1143,38 @@ describe('EventEdit lineup', () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it('heads the bill with the act left when the only headliner is removed', async () => {
+    put.mockResolvedValue({});
+    render(
+      <EventEdit
+        detail={{
+          ...BILL,
+          lineup: [...BILL.lineup.slice(0, 1), ...BILL.lineup.slice(2, 3)],
+        }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.keyDown(chipFor('Six Foot Blonde'), { key: 'Delete' });
+    // Said through the chip's own name, and focus goes there to say it.
+    const left = chipFor('The Man is Dead');
+    expect(left).toHaveAttribute(
+      'aria-label',
+      COPY.show.lineupNewTab(
+        COPY.show.lineupChip('The Man is Dead', 'Headliner', 'unsure'),
+      ),
+    );
+    expect(left).toHaveFocus();
+    const save = screen.getByTestId('event-edit-save');
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(put).toHaveBeenCalledTimes(1));
+    expect(put.mock.calls[0]?.[2]).toEqual({
+      lineup: [
+        { name: 'The Man is Dead', role: 'headliner', artistId: 'art-3' },
+      ],
+    });
+  });
+
   it('keeps Save off for an emptied bill', () => {
     render(<EventEdit detail={BILL} today="2026-11-13" />);
     for (const name of ['Opener', 'The Man is Dead', 'Co Headliner']) {

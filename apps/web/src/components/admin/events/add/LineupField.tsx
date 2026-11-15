@@ -22,6 +22,7 @@ import {
   moveAct,
   moveActKeepingRoles,
   removeAct,
+  removeActKeepingHeadliner,
   rolesOf,
   type Act,
 } from './add-show-rules';
@@ -319,7 +320,9 @@ export const LineupField = ({
                     <button
                       type="button"
                       aria-label={COPY.remove(act.name)}
-                      onClick={() => onChange(removeAct(lineup, index))}
+                      onClick={() =>
+                        onChange(removeActKeepingHeadliner(lineup, index))
+                      }
                       style={BARE}
                     >
                       <Cross />
@@ -347,12 +350,18 @@ export const LineupField = ({
                   if (evt.key === 'Delete' || evt.key === 'Backspace') {
                     evt.preventDefault();
                     // Focus goes to the chip that takes its place, else the
-                    // one before, else Add an artist.
-                    focusAt.current =
-                      lineup.length > 1
+                    // one before, else Add an artist. Taking the only
+                    // headliner promotes the front act, so focus goes there
+                    // and its name says Headliner.
+                    const left = removeAct(lineup, index);
+                    const promoted =
+                      left.length > 0 && !rolesOf(left).includes('headliner');
+                    focusAt.current = promoted
+                      ? 0
+                      : lineup.length > 1
                         ? Math.min(index, lineup.length - 2)
                         : FOCUS_INPUT;
-                    onChange(removeAct(lineup, index));
+                    onChange(removeActKeepingHeadliner(lineup, index));
                     return;
                   }
                   if (!evt.altKey) return;
