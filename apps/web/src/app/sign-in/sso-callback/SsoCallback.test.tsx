@@ -17,13 +17,15 @@ const mocks = vi.hoisted(() => ({
   },
   signIn: {
     status: 'needs_first_factor' as string | null,
-    firstFactorVerification: { status: 'unverified' as string | null },
+    isTransferable: false,
+    create: vi.fn(),
     finalize: vi.fn(),
   },
   signUp: {
     status: null as string | null,
     missingFields: [] as string[],
     emailAddress: null as string | null,
+    isTransferable: false,
     update: vi.fn(),
     finalize: vi.fn(),
     create: vi.fn(),
@@ -82,11 +84,13 @@ beforeEach(() => {
     .fn()
     .mockResolvedValue(undefined);
   mocks.signIn.status = 'needs_first_factor';
-  mocks.signIn.firstFactorVerification.status = 'unverified';
+  mocks.signIn.isTransferable = false;
+  mocks.signIn.create.mockReset().mockResolvedValue({ error: null });
   mocks.signIn.finalize.mockReset().mockResolvedValue({ error: null });
   mocks.signUp.status = null;
   mocks.signUp.missingFields = [];
   mocks.signUp.emailAddress = null;
+  mocks.signUp.isTransferable = false;
   mocks.signUp.update.mockReset().mockResolvedValue({ error: null });
   mocks.signUp.finalize.mockReset().mockResolvedValue({ error: null });
   mocks.signUp.create.mockReset();
@@ -144,7 +148,7 @@ describe('SsoCallback', () => {
 
   it('refuses a Google account with no account here, and never makes one', async () => {
     mocks.signIn.status = 'needs_identifier';
-    mocks.signIn.firstFactorVerification.status = 'transferable';
+    mocks.signIn.isTransferable = true;
     renderCallback('/events');
     await settle();
     expect(mocks.replace).toHaveBeenCalledWith(
@@ -155,6 +159,40 @@ describe('SsoCallback', () => {
     expect(mocks.signUp.update).not.toHaveBeenCalled();
     expect(mocks.signUp.finalize).not.toHaveBeenCalled();
     expect(mocks.signIn.finalize).not.toHaveBeenCalled();
+  });
+
+  it('turns a sign-up for an account that already exists into the sign-in it should have been', async () => {
+    mocks.signUp.status = 'missing_requirements';
+    mocks.signUp.isTransferable = true;
+    mocks.signIn.create.mockImplementation(async () => {
+      mocks.signIn.status = 'complete';
+      return { error: null };
+    });
+    finalizeRuns(mocks.signIn);
+    renderCallback('/events');
+    await settle();
+    expect(mocks.signIn.create).toHaveBeenCalledWith({ transfer: true });
+    expect(mocks.signIn.finalize).toHaveBeenCalledOnce();
+    expect(mocks.replace).toHaveBeenCalledWith('/events');
+    expect(mocks.signUp.finalize).not.toHaveBeenCalled();
+  });
+
+  it('goes to the failed note when that transfer does not complete', async () => {
+    mocks.signUp.status = 'missing_requirements';
+    mocks.signUp.isTransferable = true;
+    renderCallback('/events');
+    await settle();
+    expect(mocks.signIn.finalize).not.toHaveBeenCalled();
+    expect(mocks.replace).toHaveBeenCalledWith(
+      '/sign-in/new?google=failed&redirect_url=%2Fevents',
+    );
+  });
+
+  it('never calls a transfer for an unknown Google account', async () => {
+    mocks.signIn.isTransferable = true;
+    renderCallback();
+    await settle();
+    expect(mocks.signIn.create).not.toHaveBeenCalled();
   });
 
   it('goes back to the start with a quiet note when Google was cancelled', async () => {

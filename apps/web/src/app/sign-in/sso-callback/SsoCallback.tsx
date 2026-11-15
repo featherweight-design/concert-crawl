@@ -20,12 +20,6 @@ import { SIGN_IN_COPY } from '@/app/sign-in/definitions/copy';
 import { SIGN_UP_COPY } from '@/app/sign-up/definitions/copy';
 import type { ReactNode } from 'react';
 
-// Clerk's own type for a verification status lists only "unverified" and
-// "verified", but an OAuth sign-in for an unknown account arrives as
-// "transferable".
-const isTransferable = (status: string | null): boolean =>
-  status === 'transferable';
-
 const COPY = SIGN_IN_COPY.googleConsent;
 const FLOW = AUTH_FLOW_COPY;
 
@@ -118,11 +112,30 @@ export function SsoCallback({ returnTo, legal }: SsoCallbackProps) {
 
       const outcome = decideCallback({
         signInStatus: signIn.status,
-        transferable: isTransferable(signIn.firstFactorVerification.status),
+        transferable: signIn.isTransferable,
         signUpStatus: signUp.status,
         signUpMissing: signUp.missingFields,
+        signUpTransferable: signUp.isTransferable,
       });
 
+      if (outcome === 'signInTransfer') {
+        // Started from the sign-up page by someone who already has an account:
+        // it becomes the sign-in it should have been. Never the other way.
+        try {
+          const { error } = await signIn.create({ transfer: true });
+          if (
+            !error &&
+            signIn.status === 'complete' &&
+            (await finalize('signIn'))
+          ) {
+            return;
+          }
+        } catch {
+          // Falls to the failed note below.
+        }
+        router.replace(startHref('failed'));
+        return;
+      }
       if (outcome === 'signedIn' || outcome === 'signedUp') {
         if (!(await finalize(outcome === 'signedIn' ? 'signIn' : 'signUp'))) {
           router.replace(startHref('failed'));

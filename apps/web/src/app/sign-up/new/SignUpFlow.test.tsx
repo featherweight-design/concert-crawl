@@ -596,6 +596,20 @@ describe('SignUpFlow, Google', () => {
     });
   });
 
+  it('frees the button when the browser restores the page after Back from Google', async () => {
+    renderFlow();
+    tick();
+    fireEvent.click(google());
+    await act(async () => {});
+    expect(google()).toHaveAttribute('aria-busy', 'true');
+    await act(async () => {
+      window.dispatchEvent(
+        Object.assign(new Event('pageshow'), { persisted: true }),
+      );
+    });
+    expect(google()).not.toHaveAttribute('aria-busy');
+  });
+
   it('says so, and frees the button, when Clerk will not start Google', async () => {
     mocks.signUp.sso.mockResolvedValue({ error: clerkError(400, 'x') });
     renderFlow();

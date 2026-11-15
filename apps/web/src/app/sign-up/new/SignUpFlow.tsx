@@ -120,6 +120,16 @@ export function SignUpFlow({
   // same address sends the code again rather than creating it a second time.
   const createdFor = useRef<string | null>(null);
 
+  // Coming back with the browser's Back from Google restores this page with
+  // the press still dimmed: clear it.
+  useEffect(() => {
+    const onShow = (evt: PageTransitionEvent) => {
+      if (evt.persisted) setGoogleBusy(false);
+    };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
+
   useEffect(() => {
     if (!focusOn || busy || fetchStatus === 'fetching') return;
     const target =
