@@ -4718,32 +4718,29 @@ export const ADMIN_COPY = {
       lineupNewTab: (label: string) => `${label}, opens in a new tab`,
     },
     // E2-D: the Venue field's picker (`06/event-edit`, addendum 5
-    // `04/venue-picker-d`). Undrawn except the Moved line, which is
-    // `06/event-edit`'s; drafts for copy-review.
+    // `04/venue-picker-d`). Undrawn; copy-reviewed.
     venue: {
       // A crawled show still to come: the API refuses the move.
-      crawledLocked:
-        'Set by the crawl. If the show moves, the crawl updates it when the venue changes its listing.',
+      crawledLocked: 'Set by the crawl. It follows the venue’s listing.',
       // POST /venue's 409 `duplicate_show`, then a link to the other show.
       duplicate: 'That venue already lists this show on the same night.',
       openIt: 'Open it',
-      // POST /venue's 409 `crawled_show`, a race with the crawl.
+      // POST /venue's 409 `crawled_show`, a race with the crawl. E5-b's
+      // "Can’t delete: the crawl found this show…" pattern.
       crawled:
-        'A crawled show’s venue can’t change here. The crawl updates it from the venue’s listing.',
+        'Can’t move: the crawl found this show. It follows the venue’s listing.',
       // POST /venue's 400 `venue_not_found`.
       notFound: 'That venue isn’t available any more. Pick another.',
-      // The confirm before a move that tells the Watching.
+      // The confirm before a move that tells its Watchers. The venue is in
+      // the title, so the body leaves it out.
       confirmTitle: (show: string, venue: string) =>
         `Move ${show} to ${venue}?`,
-      confirmBody: (watching: number, venue: string) =>
-        `The ${watching.toLocaleString('en-US')} Watching are told it moved to ${venue}.`,
+      confirmBody: (watchers: number) =>
+        watchers === 1
+          ? 'Its 1 Watcher is told it moved.'
+          : `Its ${watchers.toLocaleString('en-US')} Watchers are told it moved.`,
       confirmFoot: 'The old venue’s next crawl won’t add it back.',
       confirm: 'Move show',
-      // `06/event-edit`: "Moved to <b>Globe Hall</b> · Watchers were told on
-      // Nov 11." Split around the bold venue.
-      movedLead: 'Moved to ',
-      movedTold: (date: string) => ` · Watchers were told on ${date}.`,
-      movedQuiet: '.',
     },
     crawl: {
       title: 'From the crawl',
@@ -4770,13 +4767,18 @@ export const ADMIN_COPY = {
       timeHint: 'Type any time, or pick one. Half hours listed.',
       timeList: 'Half hours',
     },
-    // `06/event-edit` Status card; Moved waits for Hugh (4b#1).
+    // `06/event-edit` Status card (Moved: Hugh, 11-14).
     status: {
       title: 'Status',
       available: 'Tickets available',
       soldout: 'Sold out',
       postponed: 'Postponed',
       cancelled: 'Cancelled',
+      moved: 'Moved',
+      // `06/event-edit` under the pills: "Moved to <b>Globe Hall</b> ·
+      // Watchers were told on Nov 11." Split around the bold venue.
+      movedLead: 'Moved to ',
+      movedTold: (date: string) => ` · Watchers were told on ${date}.`,
       delisted: 'No longer listed',
       // addendum-5 `04/listed-again`.
       delistedSince: (date: string) => `Since ${date}`,

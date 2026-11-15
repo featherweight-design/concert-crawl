@@ -94,6 +94,7 @@ const DETAIL: EventDetail = {
   soldOutRecord: null,
   lineup: [],
   manual: false,
+  moved: null,
 };
 
 beforeEach(() => {

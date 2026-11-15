@@ -42,13 +42,14 @@ const FIELD_LABEL: CSSProperties = {
 };
 
 /** The pill drawn as chosen for a status, or none (delisted, played). */
-type Pill = Sale | 'postponed' | 'cancelled';
+type Pill = Sale | 'postponed' | 'cancelled' | 'moved';
 
 export const pillOf = (status: EventDetail['status']): Pill | null =>
   status === 'available' ||
   status === 'soldout' ||
   status === 'postponed' ||
-  status === 'cancelled'
+  status === 'cancelled' ||
+  status === 'moved'
     ? status
     : null;
 
@@ -93,6 +94,9 @@ const Pills = ({
     // Mark cancelled waits for its Refund info field (Hugh 4b#7): drawn, and
     // chosen only when the show already is.
     { key: 'cancelled', label: COPY.status.cancelled, disabled: true },
+    // `06/event-edit`'s fifth pill (Hugh, 11-14): a show moves through the
+    // Venue field, so this only says it did.
+    { key: 'moved', label: COPY.status.moved, disabled: true },
   ];
   return (
     // Toggle buttons, one Tab stop each: Postponed opens a dialog rather than
@@ -439,13 +443,23 @@ export const StatusCard = ({
           )}
         </div>
       ) : (
-        <Pills
-          chosen={sale ?? current}
-          saleLocked={saleLocked}
-          current={current}
-          onSale={onSale}
-          onPostponed={() => setDialog('postponed')}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Pills
+            chosen={sale ?? current}
+            saleLocked={saleLocked}
+            current={current}
+            onSale={onSale}
+            onPostponed={() => setDialog('postponed')}
+          />
+          {detail.moved !== null && (
+            // `06/event-edit`: 12.5px muted under the pills, the venue bold.
+            <div data-testid="status-moved" style={SMALL}>
+              {COPY.status.movedLead}
+              <b style={{ color: 'var(--fg)' }}>{detail.moved.toVenueName}</b>
+              {COPY.status.movedTold(shortDate(detail.moved.at))}
+            </div>
+          )}
+        </div>
       )}
       {delisted && sale !== null && (
         // After Listed again: the earlier status, picked as an unsaved change.

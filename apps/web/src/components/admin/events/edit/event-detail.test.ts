@@ -118,7 +118,19 @@ describe('eventDetailFrom', () => {
       soldOutRecord: null,
       lineup: PAYLOAD.lineup,
       manual: false,
+      moved: null,
     });
+  });
+
+  it('reads the last move, an absent or null one as none, and refuses a malformed one', () => {
+    const moved = { toVenueName: 'Globe Hall', at: '2026-11-11T18:00:00.000Z' };
+    expect(eventDetailFrom({ ...PAYLOAD, moved })?.moved).toEqual(moved);
+    expect(eventDetailFrom({ ...PAYLOAD, moved: null })?.moved).toBeNull();
+    expect(eventDetailFrom(PAYLOAD)?.moved).toBeNull();
+    expect(
+      eventDetailFrom({ ...PAYLOAD, moved: { toVenueName: 'Globe Hall' } }),
+    ).toBeNull();
+    expect(eventDetailFrom({ ...PAYLOAD, moved: 'Globe Hall' })).toBeNull();
   });
 
   it('reads an absent venue id as none and refuses a malformed one', () => {
