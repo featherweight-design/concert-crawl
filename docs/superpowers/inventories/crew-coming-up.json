@@ -1,0 +1,45 @@
+{
+  "feature": "Addendum 6 item 41a · the crew page's Coming up list (board 41/crew-coming-up)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/boards/41-crew-coming-up/crew-coming-up.html (six cards at one row width: just you, you and others, others not you, tonight, postponed or cancelled, nothing yet). 41a builds every state the crew payload carries; postponed and cancelled follow in 41b (CrewShow has no status yet). The crew page loads on the server, so the cells open the real scratch crews: /crews, then each crew's Coming up tab, whatever shows its members are going to. Behind the crews flag. Signed in as the audit user. Electric and Light.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": { "cc-theme": "electric" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": { "cc-theme": "light" },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    { "label": "short", "width": 320, "height": 568, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "crew-first",
+      "label": "First crew, Coming up",
+      "steps": [
+        { "goto": "/crews", "settle": 1500 },
+        { "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"] >> nth=0" },
+        { "wait": "[data-testid=\"crew-name\"]", "settle": 2500 }
+      ]
+    },
+    {
+      "id": "crew-second",
+      "label": "Second crew, Coming up",
+      "steps": [
+        { "goto": "/crews", "settle": 1500 },
+        { "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"] >> nth=1" },
+        { "wait": "[data-testid=\"crew-name\"]", "settle": 2500 }
+      ]
+    }
+  ]
+}

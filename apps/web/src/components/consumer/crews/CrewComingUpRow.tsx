@@ -81,6 +81,9 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '6px 0',
+          // TONIGHT is one line, but its tile is as tall as a dated one's.
+          minHeight: 56,
+          alignSelf: 'stretch',
           borderRadius: 11,
           background: TILE_GRADIENT,
           color: '#0A0D1C',
@@ -176,6 +179,7 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
         <div
           style={{
             marginTop: 7,
+            minWidth: 0,
             display: 'flex',
             alignItems: 'center',
             gap: 8,
@@ -194,6 +198,11 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
           <span
             data-testid="crew-coming-up-going"
             style={{
+              // A long handle gives way with an ellipsis, not past the card.
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
               fontFamily: MONO,
               fontSize: 9.5,
               fontWeight: 700,
