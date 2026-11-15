@@ -94,7 +94,7 @@ export const GuideEditPanel = ({
   const next = withSection(guide, section, draft);
   const blocked = publishBlocked(next);
 
-  // Every action guards `busy` itself: ⌘↵ reaches publish without a button.
+  // Every action guards `busy` itself: ⌘↵ reaches an action without a button.
   const run = (action: Action) => {
     if (busy !== null) return;
     if (action === 'publish' && blocked) return;
@@ -140,10 +140,12 @@ export const GuideEditPanel = ({
     })();
   };
 
+  // ⌘↵ runs the drawn primary: Save draft before the first publish, so the
+  // shortcut never puts a whole guide live; Publish guide once it is live.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      run('publish');
+      run(live ? 'publish' : 'save');
     }
   };
 
