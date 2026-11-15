@@ -434,6 +434,51 @@ describe('admin crawl batches', () => {
         },
       });
     });
+
+    it('marks a test re-crawl’s batch trial, and a plain re-crawl and a nightly not', async () => {
+      setAuth('admin');
+      const ball = await seedVenue({ name: 'Ball Arena', slug: 'ball-arena' });
+      const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      await seedRun(levitt.id, nightAt(1));
+      const trialAt = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const plainAt = new Date(Date.now() - 60 * 60 * 1000);
+      const trialRun = await seedRun(
+        ball.id,
+        new Date(trialAt.getTime() + 5e3),
+        { trial: true },
+      );
+      const plainRun = await seedRun(
+        levitt.id,
+        new Date(plainAt.getTime() + 5e3),
+      );
+      await testDb.insert(crawlTriggers).values([
+        {
+          venueId: ball.id,
+          triggeredBy: 'user_trial',
+          status: 'done',
+          crawlRunId: trialRun,
+          trial: true,
+          createdAt: trialAt,
+        },
+        {
+          venueId: levitt.id,
+          triggeredBy: 'user_plain',
+          status: 'done',
+          crawlRunId: plainRun,
+          createdAt: plainAt,
+        },
+      ]);
+
+      const body: CrawlBatchPage = await (await get('')).json();
+      const started = body.data.filter((batch) => !batch.didntStart);
+      expect(
+        started.map(({ kind, actor, trial }) => ({ kind, actor, trial })),
+      ).toEqual([
+        { kind: 'by_hand', actor: 'user_plain', trial: false },
+        { kind: 'by_hand', actor: 'user_trial', trial: true },
+        { kind: 'nightly', actor: null, trial: false },
+      ]);
+    });
   });
 
   describe('paging', () => {

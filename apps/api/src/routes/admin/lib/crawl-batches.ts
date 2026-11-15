@@ -43,6 +43,8 @@ export interface BatchRunInput {
   /** Haiku spend for the run; summed into a batch's costUsd, not sent per run. */
   llmCostUsd: number | null;
   errorMessage: string | null;
+  /** A test re-crawl of a paused venue: one run that moves no pause or streak. */
+  trial: boolean;
   createdAt: Date;
 }
 
@@ -362,6 +364,7 @@ export const groupCrawlBatches = ({
         costUsd: costOf(sorted),
         linkKey: nightlyKey(night),
         crawlAll: false,
+        trial: false,
         venueName: null,
         actorHandle: null,
         retry: retryOf(sorted),
@@ -402,6 +405,7 @@ export const groupCrawlBatches = ({
           costUsd: 0,
           linkKey: nightlyKey(night),
           crawlAll: false,
+          trial: false,
           venueName: null,
           actorHandle: null,
           retry: null,
@@ -468,6 +472,10 @@ export const groupCrawlBatches = ({
         costUsd: costOf(burstRuns),
         linkKey: `run:${epochOf(first.createdAt)}:${actorTag(actor)}`,
         crawlAll: isCrawlAll(burst),
+        // A test re-crawl is one trigger and its one run; a burst reads as
+        // one only once every run it made is a trial, so a still-queued
+        // trial reads as a plain re-crawl until its run lands.
+        trial: burstRuns.length > 0 && burstRuns.every((run) => run.trial),
         venueName:
           venueIds.size === 1
             ? (first.venueName ?? burstRuns[0]?.venueName ?? null)

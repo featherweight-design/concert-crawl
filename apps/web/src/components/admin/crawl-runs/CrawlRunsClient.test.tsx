@@ -61,6 +61,7 @@ const batch = (key: string, venueName: string): BatchRow => ({
   costUsd: 0.1,
   linkKey: `run:${key}`,
   crawlAll: false,
+  trial: false,
   venueName,
   actorHandle: null,
   retry: null,

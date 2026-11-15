@@ -41,6 +41,7 @@ export const readWindow = async (
               string | null
             >`left(${crawlRuns.errorMessage}, ${MAX_ERROR_CHARS})`
           : sql<string | null>`null`,
+        trial: crawlRuns.trial,
         createdAt: crawlRuns.createdAt,
       })
       .from(crawlRuns)

@@ -1038,6 +1038,11 @@ export const ADMIN_COPY = {
     recrawlVenue: (venue: string) => `Re-crawl · ${venue}`,
     recrawlVenues: (count: number) =>
       `Re-crawl · ${count.toLocaleString('en-US')} venues`,
+    // A test re-crawl of a paused venue: "Test re-crawl · Ball Arena". The
+    // same "Test re-crawl" its run line leads with.
+    trialVenue: (venue: string) => `Test re-crawl · ${venue}`,
+    trialVenues: (count: number) =>
+      `Test re-crawl · ${count.toLocaleString('en-US')} venues`,
     by: (handle: string) => `by @${handle}`,
     status: {
       running: 'Running',
