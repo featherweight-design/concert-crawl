@@ -1,3 +1,16 @@
+# [1.489.0](https://github.com/featherweight-design/concert-crawl/compare/v1.488.1...v1.489.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** record a Sentry release's deploy under the runtime environment ([f741ade](https://github.com/featherweight-design/concert-crawl/commit/f741ade1870727d887af0bc25f72a6dc1b57814b))
+
+
+### Features
+
+* **db:** add a trial flag to crawl triggers and runs ([7553035](https://github.com/featherweight-design/concert-crawl/commit/7553035133c0bca4440c59b37e227f7ad6ddf2f3))
+* **db:** declare the trial columns and pin migration 0119 ([8d5b89e](https://github.com/featherweight-design/concert-crawl/commit/8d5b89edb8786d34a3d32b03a8940aea6f60cafb))
+
 ## [1.488.1](https://github.com/featherweight-design/concert-crawl/compare/v1.488.0...v1.488.1) (2026-11-15)
 
 
