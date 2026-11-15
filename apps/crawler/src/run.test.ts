@@ -1151,8 +1151,21 @@ describe('runTriggeredCrawls', () => {
     };
 
     // One trigger for venue-a, which is crawl-paused throughout: the price
-    // batch finds an unpriced event and every pause re-check says paused.
-    function claimPausedVenueTrigger(trial: boolean): void {
+    // batch finds unpriced events and every pause re-check says paused. The
+    // crawl's run row carries `ranAsTrial`; `removedAt` answers each
+    // active/removed re-check in turn (null once the list runs out).
+    function claimPausedVenueTrigger(
+      trial: boolean,
+      {
+        ranAsTrial = trial,
+        eventIds = ['evt-1'],
+        removedAt = [],
+      }: {
+        ranAsTrial?: boolean;
+        eventIds?: string[];
+        removedAt?: (Date | null)[];
+      } = {},
+    ): void {
       mockDbUpdate.returning.mockReset();
       mockDbUpdate.returning
         .mockResolvedValueOnce([])
@@ -1160,13 +1173,23 @@ describe('runTriggeredCrawls', () => {
           { id: 'trigger-1', venueId: 'venue-a', force: false, trial },
         ])
         .mockResolvedValue([]);
+      mockCrawlVenue.mockResolvedValue({
+        ...SUCCESSFUL_CRAWL_RUN,
+        trial: ranAsTrial,
+      });
+      const removals = [...removedAt];
       mockDbChain.where.mockImplementation(() => {
         const fields: unknown = mockDbChain.select.mock.lastCall?.[0];
         if (fields && typeof fields === 'object' && 'priceUrl' in fields) {
-          return Promise.resolve([{ id: 'evt-1', ...unpriced }]);
+          return Promise.resolve(eventIds.map((id) => ({ id, ...unpriced })));
         }
         if (fields && typeof fields === 'object' && 'crawlPausedAt' in fields) {
           return Promise.resolve([{ crawlPausedAt: new Date() }]);
+        }
+        if (fields && typeof fields === 'object' && 'removedAt' in fields) {
+          return Promise.resolve([
+            { active: true, removedAt: removals.shift() ?? null },
+          ]);
         }
         return Promise.resolve([]);
       });
@@ -1198,8 +1221,42 @@ describe('runTriggeredCrawls', () => {
 
       expect(vi.mocked(isNull)).not.toHaveBeenCalledWith('crawlPausedAt');
       expect(mockRunPricePipeline).toHaveBeenCalledWith(
-        expect.objectContaining({ eventId: 'evt-1', venueId: 'venue-a' }),
+        expect.objectContaining({
+          eventId: 'evt-1',
+          venueId: 'venue-a',
+          trial: true,
+        }),
       );
+    });
+
+    it('stops a trial price batch when the venue is removed part-way through', async () => {
+      claimPausedVenueTrigger(true, {
+        eventIds: ['evt-1', 'evt-2'],
+        // Present before evt-1; removed by the time evt-2 is reached.
+        removedAt: [null, new Date()],
+      });
+
+      const { runTriggeredCrawls } = await import('./run.js');
+      await runTriggeredCrawls();
+
+      const priced = mockRunPricePipeline.mock.calls.map(
+        ([input]) => input.eventId,
+      );
+      expect(priced).toEqual(['evt-1']);
+    });
+
+    it('prices as a normal run when the crawl ran as a normal crawl', async () => {
+      // The venue was resumed after the trial was queued, so crawlVenue ran
+      // it as an ordinary crawl; the price pass follows the run, not the
+      // trigger.
+      const { isNull } = await import('drizzle-orm');
+      claimPausedVenueTrigger(true, { ranAsTrial: false });
+      vi.mocked(isNull).mockClear();
+
+      const { runTriggeredCrawls } = await import('./run.js');
+      await runTriggeredCrawls();
+
+      expect(vi.mocked(isNull)).toHaveBeenCalledWith('crawlPausedAt');
     });
 
     it('still skips the price pass for a paused venue on a normal trigger', async () => {

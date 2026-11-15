@@ -17,6 +17,9 @@ export interface PipelineContext {
   date: string; // YYYY-MM-DD
   priceUrl?: string | null;
   ticketUrl?: string | null;
+  // A test re-crawl of a crawl-paused venue: its prices are saved despite the
+  // pause (the venue must still be active and not removed).
+  trial?: boolean;
 }
 
 /**

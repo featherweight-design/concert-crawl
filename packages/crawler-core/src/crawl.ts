@@ -682,16 +682,13 @@ export async function crawlVenue(
   // real (events kept, robots.txt and pacing honored) past the pause, but it
   // never moves the venue's failure streak or pause: no strike, no reset, no
   // auto-pause, no failure notice. A 403 or 429 still flags the venue blocked
-  // and tells the admin, as on any crawl. Its run row is marked `trial`.
-  trial = false,
+  // and tells the admin, as on any crawl. Its run row is marked `trial`, and
+  // it always re-extracts, like `force` on the unchanged-page skip. Settled
+  // against the venue when the crawl starts: a venue resumed since the trial
+  // was queued gets an ordinary crawl, and a blocked one is not crawled.
+  trialRequested = false,
 ): Promise<CrawlVenueResult> {
   const getBrowser = memoizeBrowser(browser);
-  // Every run row this crawl writes carries the trial flag.
-  const recordRun = (
-    values: CrawlRunValues,
-    log: FetchLog,
-  ): ReturnType<typeof insertCrawlRun> =>
-    insertCrawlRun({ ...values, trial }, log);
   // Budget spent with "If it runs out" on: no Haiku call in this crawl at all,
   // so artist adjudication falls back to its no-adjudicator path too.
   const llmStopped = llmBudgetVerdict(llmBudget) === 'over_stop';
@@ -724,6 +721,37 @@ export async function crawlVenue(
     throw new Error(
       `Venue ${venueId} not found, removed, or not active/verified`,
     );
+  }
+
+  // A trial exists to test a paused venue. One whose venue an admin resumed
+  // after queueing it is an ordinary crawl and counts like one.
+  const trial = trialRequested && venue.crawlPausedAt !== null;
+  // Every run row this crawl writes carries the trial flag.
+  const recordRun = (
+    values: CrawlRunValues,
+    log: FetchLog,
+  ): ReturnType<typeof insertCrawlRun> =>
+    insertCrawlRun({ ...values, trial }, log);
+
+  // A blocked venue is not test-crawled: the site has told us to stop, and
+  // only an admin clears that.
+  if (trial && venue.blockedAt !== null) {
+    console.log(JSON.stringify({ event: 'crawl.trial_blocked', venueId }));
+    const crawlRun = await recordRun(
+      {
+        id,
+        venueId,
+        status: 'skipped',
+        reason: 'blocked_http',
+        robotsTxtBlocked: 'unchecked',
+        eventsFound: 0,
+        eventsInserted: 0,
+        errorMessage: 'Venue is blocked; test re-crawl not run',
+        durationMs: Date.now() - startedAt,
+      },
+      fetchLog,
+    );
+    return { ...crawlRun, insertedEventIds: [] };
   }
 
   // A crawl pause (an admin's, or the crawler's own at the third consecutive
@@ -1028,8 +1056,11 @@ export async function crawlVenue(
         .orderBy(desc(crawlRuns.createdAt))
         .limit(1);
 
+      // A trial always re-extracts: an unchanged page is exactly what it is
+      // there to test.
       if (
         !force &&
+        !trial &&
         shouldSkipUnchangedPage({
           hashMatches:
             lastRun?.pageHash !== undefined &&
@@ -1065,8 +1096,7 @@ export async function crawlVenue(
           .update(venues)
           .set({
             lastCrawledAt: new Date(),
-            // A trial never moves the failure streak, either way.
-            ...(trial ? {} : { consecutiveFailures: 0 }),
+            consecutiveFailures: 0,
             robotsTxtAllowed: true,
             robotsTxtCheckedAt: new Date(),
             ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
@@ -2235,8 +2265,9 @@ export async function crawlVenue(
         // tracks hard failures, and auto-pausing a venue whose calendar is
         // genuinely empty would stop us crawling it back to life. The
         // went-dark alert below owns notification for this case.
-        // A trial leaves both alone: it never moves the failure streak, and
-        // trials are refused while a venue is blocked.
+        // A trial leaves both alone: it never moves the failure streak, and a
+        // blocked venue never reaches here on a trial (it is skipped at the
+        // start of the crawl).
         ...(foundNothing || trial ? {} : { consecutiveFailures: 0 }),
         ...(trial ? {} : { blockedAt: null }),
         robotsTxtAllowed: true,

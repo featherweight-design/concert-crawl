@@ -23,9 +23,13 @@ async function logAttempt(
   });
 }
 
+// The one owner of the pause rule for price writes. `trial` is a test re-crawl
+// of a crawl-paused venue: its prices are kept despite the pause, but only for
+// a venue still active and not removed.
 export async function updateEventPrice(
   eventId: string,
   result: PriceTierResult,
+  trial = false,
 ): Promise<void> {
   await db
     .update(events)
@@ -49,7 +53,7 @@ export async function updateEventPrice(
               and(
                 eq(venues.id, events.venueId),
                 eq(venues.active, true),
-                isNull(venues.crawlPausedAt),
+                trial ? isNull(venues.removedAt) : isNull(venues.crawlPausedAt),
               ),
             )
             // Waits out an uncommitted removal or pause, then re-reads the
@@ -87,13 +91,13 @@ async function runTier(
 export async function runPricePipeline(ctx: PipelineContext): Promise<void> {
   const t1 = await runTier(ctx, 'structured_data', tier1StructuredData);
   if (t1.result) {
-    await updateEventPrice(ctx.eventId, t1.result);
+    await updateEventPrice(ctx.eventId, t1.result, ctx.trial);
     return;
   }
 
   const t6 = await runTier(ctx, 'community', tier6Community);
   if (t6.result) {
-    await updateEventPrice(ctx.eventId, t6.result);
+    await updateEventPrice(ctx.eventId, t6.result, ctx.trial);
     return;
   }
 
