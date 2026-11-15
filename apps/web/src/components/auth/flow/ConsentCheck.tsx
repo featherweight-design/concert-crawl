@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, type ComponentProps, type ReactNode } from 'react';
+import { useId, type ComponentProps, type ReactNode, type Ref } from 'react';
 import { Check } from 'lucide-react';
 import { AuthErrorLine } from './AuthField';
 
@@ -8,7 +8,9 @@ interface ConsentCheckProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   /** Set once the form was pressed unticked: the card and box go red. */
-  error?: string;
+  error?: string | undefined;
+  /** For moving focus to the box after an unticked press. */
+  inputRef?: Ref<HTMLInputElement>;
   /** The sentence, with a `LegalLink` for each document it names. */
   children: ReactNode;
 }
@@ -22,6 +24,7 @@ export function ConsentCheck({
   checked,
   onChange,
   error,
+  inputRef,
   children,
 }: ConsentCheckProps) {
   const id = useId();
@@ -33,6 +36,7 @@ export function ConsentCheck({
         className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 text-sm leading-normal text-fg-muted ${invalid ? 'border-[1.5px] border-danger bg-[color-mix(in_srgb,var(--danger)_6%,transparent)]' : 'border-border bg-[color-mix(in_srgb,var(--surface-1)_60%,transparent)]'}`}
       >
         <input
+          ref={inputRef}
           id={id}
           type="checkbox"
           checked={checked}
