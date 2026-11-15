@@ -1,3 +1,10 @@
+## [1.522.1](https://github.com/featherweight-design/concert-crawl/compare/v1.522.0...v1.522.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** keep the Undo line when the last Needs you card is answered ([0949654](https://github.com/featherweight-design/concert-crawl/commit/0949654ce19b29f172c2ea932c6973557d0c6367))
+
 # [1.522.0](https://github.com/featherweight-design/concert-crawl/compare/v1.521.0...v1.522.0) (2026-11-15)
 
 
