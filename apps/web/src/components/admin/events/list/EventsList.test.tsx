@@ -49,7 +49,9 @@ const setPhone = (matches: boolean) => {
   }));
 };
 
-beforeEach(() => setPhone(false));
+beforeEach(() => {
+  setPhone(false);
+});
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();

@@ -149,7 +149,9 @@ describe('TimeField on desktop', () => {
     const SLOTS = 28;
     const SCROLL_HEIGHT = SLOTS * STEP - 4;
     const BOTTOM = SCROLL_HEIGHT - WINDOW;
-    afterEach(() => vi.restoreAllMocks());
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
     /** Renders with `value`, opens the list, and returns it. */
     const openAt = (value: string) => {
       render(

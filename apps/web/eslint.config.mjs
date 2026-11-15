@@ -54,6 +54,25 @@ export default [
     },
   },
 
+  // Vitest runs a function returned from a hook as that test's cleanup, so an
+  // expression-bodied `beforeEach(() => mock.mockReset())` hands back the mock
+  // and Vitest calls it after every test. A mock that throws or rejects then
+  // fails a test that passed. Block bodies return nothing.
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'CallExpression[callee.name=/^(before|after)(Each|All)$/] > ArrowFunctionExpression[expression=true]',
+          message:
+            'Give this hook a block body. Vitest treats a function returned from a hook as cleanup, so `() => mock.mockReset()` calls the mock after every test.',
+        },
+      ],
+    },
+  },
+
   // Customer-facing strings must live in a `definitions/copy.ts` (see
   // CLAUDE.md). This rule is the mechanical half of that convention: it
   // catches the string at authoring time instead of at the next copy audit.

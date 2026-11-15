@@ -20,7 +20,9 @@ vi.mock('@/lib/analytics', () => ({ track }));
 
 const URL_FOR = (slug: string) => `${window.location.origin}/artists/${slug}`;
 
-beforeEach(() => track.mockClear());
+beforeEach(() => {
+  track.mockClear();
+});
 afterEach(() => {
   cleanup();
   vi.useRealTimers();

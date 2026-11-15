@@ -11,7 +11,9 @@ vi.mock('server-only', () => ({}));
 const SECRET = 'test-secret-32-bytes-minimum-len';
 const CODE = 'BETA-AB12-CD34';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function buildToken(payload: object): string {
   const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url');

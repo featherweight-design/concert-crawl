@@ -20,7 +20,9 @@ const crew = (id: string, name: string): CrewSummary => ({
 
 const CREWS = [crew('c1', 'Thursdays'), crew('c2', 'Night Shift')];
 
-beforeEach(() => stubMatchMedia(true));
+beforeEach(() => {
+  stubMatchMedia(true);
+});
 afterEach(cleanup);
 
 // The picker body behind the desktop bar's Who segment. (The heading pill that

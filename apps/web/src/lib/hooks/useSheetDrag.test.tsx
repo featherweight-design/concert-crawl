@@ -77,7 +77,9 @@ const drag = (to: number, from = 0) => {
   return zone;
 };
 
-beforeEach(() => stubViewport(true));
+beforeEach(() => {
+  stubViewport(true);
+});
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

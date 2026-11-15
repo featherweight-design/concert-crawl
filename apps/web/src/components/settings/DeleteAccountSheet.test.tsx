@@ -138,7 +138,9 @@ describe.each([
     armedLabel: DANGER_COPY.deleteForeverButton,
   },
 ])('DeleteAccountSheet ($layout)', ({ desktop, idleLabel, armedLabel }) => {
-  beforeEach(() => stubViewport(desktop));
+  beforeEach(() => {
+    stubViewport(desktop);
+  });
 
   it('moves focus into the dialog when it opens, then to the confirm input', () => {
     vi.useFakeTimers();

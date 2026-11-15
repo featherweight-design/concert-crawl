@@ -4,7 +4,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { getDismissalState, dismissOnce } from '../install-dismissal';
 
 describe('install-dismissal', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+  });
 
   it('defaults to active with no record', () => {
     expect(getDismissalState()).toBe('active');

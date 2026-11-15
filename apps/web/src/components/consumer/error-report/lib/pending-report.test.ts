@@ -27,7 +27,9 @@ beforeEach(() => {
   localStorage.clear();
   sendErrorReport.mockReset();
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('the saved report', () => {
   it('round-trips, and keeps only the newest', () => {

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FLOOR_MS, held } from './timing-pad';
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('held', () => {
   it('holds a fast answer until the floor', async () => {

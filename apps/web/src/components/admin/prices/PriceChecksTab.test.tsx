@@ -98,7 +98,9 @@ const setPhone = (matches: boolean) => {
   }));
 };
 
-beforeEach(() => setPhone(false));
+beforeEach(() => {
+  setPhone(false);
+});
 afterEach(cleanup);
 
 describe('PriceChecksTab on desktop', () => {

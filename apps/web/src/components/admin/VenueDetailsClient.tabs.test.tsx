@@ -463,7 +463,9 @@ describe('VenueDetailsClient — the pure tab shell', () => {
 
 // The Guide tab's dot (logic ruling): unpublished, or Publish blocked.
 describe('VenueDetailsClient — the Guide tab dot', () => {
-  beforeEach(() => vi.stubGlobal('matchMedia', matchMediaStub));
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', matchMediaStub);
+  });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();

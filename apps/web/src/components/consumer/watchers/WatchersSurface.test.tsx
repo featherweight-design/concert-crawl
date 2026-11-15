@@ -17,7 +17,9 @@ const watcher = (handle: string): EventWatchersResponse['named'][number] => ({
 });
 
 // Desktop by default; the sheet test opts into the mobile viewport.
-beforeEach(() => stubMatchMedia(false));
+beforeEach(() => {
+  stubMatchMedia(false);
+});
 
 afterEach(cleanup);
 
