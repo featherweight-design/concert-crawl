@@ -54,6 +54,8 @@ import {
 } from '../../test/helpers/seed.js';
 import { ADMIN_AUTHORED_SOLD_OUT_NOTE } from '../../lib/sold-out.js';
 import { soldOutRecordSchema } from './lib/sold-out-record.js';
+import { deleteManualEvents } from './lib/event-delete.js';
+import type { DbExecutor, DbTransaction } from '../../lib/db-executor.js';
 import { testDb } from '../../test/helpers/db.js';
 import { todayInDenver } from '../../lib/time.js';
 
@@ -4375,11 +4377,154 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
     return clearTables();
   });
 
-  const deleteEvent = (id: string) =>
+  const GONE_ID = '00000000-0000-4000-8000-0000000000ee';
+
+  const deleteEvent = async (id: string): Promise<Response> =>
     app.request(`/v1/admin/events/${id}`, {
       method: 'DELETE',
       headers: ADMIN_HEADERS,
     });
+
+  /** A transaction held open after `work` until `release()` is called. */
+  const holdOpen = <T>(work: (tx: DbTransaction) => Promise<T>) => {
+    let signalHeld = (): void => {};
+    const held = new Promise<void>((resolve) => {
+      signalHeld = resolve;
+    });
+    let release = (): void => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const done = testDb.transaction(async (tx) => {
+      const result = await work(tx);
+      signalHeld();
+      await released;
+      return result;
+    });
+    return { held, release, done };
+  };
+
+  /** Settles to whether `promise` is still pending after 300ms. */
+  const stillPending = async (promise: Promise<unknown>) => {
+    let settled = false;
+    promise.then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+    // Long enough for an unlocked statement to have run.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return !settled;
+  };
+
+  const watchUpsert = (executor: DbExecutor, eventId: string) =>
+    executor
+      .insert(userEvents)
+      .values({ userId: 'fan_1', eventId, status: 'watching' })
+      .onConflictDoUpdate({
+        target: [userEvents.userId, userEvents.eventId],
+        set: { status: 'watching' },
+      });
+
+  // Row locks (review): the delete and a Watch serialise either way round.
+  it('makes a Watch upsert on a manual show wait for a delete, and fail once it commits', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      manual: true,
+    });
+    // Interested is not a dependent, so the delete goes ahead.
+    await seedUserEvent('fan_1', event.id, { status: 'interested' });
+
+    const deleting = holdOpen((tx) => deleteManualEvents(tx, [event.id]));
+    await deleting.held;
+
+    const watching = watchUpsert(testDb, event.id);
+    expect(await stillPending(watching)).toBe(true);
+
+    deleting.release();
+    const result = await deleting.done;
+    expect(result.deleted.map((row) => row.id)).toEqual([event.id]);
+    // The show is gone, so the Watch has nothing to attach to.
+    await expect(watching).rejects.toThrow();
+    expect(await stillThere(event.id)).toBe(false);
+  });
+
+  it('makes a delete wait for a Watch flip in flight, and count it', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      manual: true,
+    });
+    await seedUserEvent('fan_1', event.id, { status: 'interested' });
+
+    // Keeps event_id, so it takes no lock on the event, only on its row.
+    const flipping = holdOpen((tx) => watchUpsert(tx, event.id));
+    await flipping.held;
+
+    const deleting = deleteEvent(event.id);
+    expect(await stillPending(deleting)).toBe(true);
+
+    flipping.release();
+    await flipping.done;
+    const res = await deleting;
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      error: 'has_dependents',
+      counts: { watchers: 1 },
+    });
+    expect(await stillThere(event.id)).toBe(true);
+  });
+
+  it('makes a delete wait for a new Watch in flight, and count it', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      manual: true,
+    });
+
+    // A new row: its foreign key holds a KEY SHARE lock on the event.
+    const inserting = holdOpen((tx) => watchUpsert(tx, event.id));
+    await inserting.held;
+
+    const deleting = deleteEvent(event.id);
+    expect(await stillPending(deleting)).toBe(true);
+
+    inserting.release();
+    await inserting.done;
+    const res = await deleting;
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      error: 'has_dependents',
+      counts: { watchers: 1 },
+    });
+    expect(await stillThere(event.id)).toBe(true);
+  });
+
+  it('leaves a crawled row unlocked, so a crawler write on it does not wait', async () => {
+    const venue = await seedVenue();
+    const crawled = await seedEvent(venue.id, { date: futureDate(7) });
+    const manual = await seedEvent(venue.id, {
+      artist: 'Manual',
+      date: futureDate(8),
+      manual: true,
+    });
+
+    const deleting = holdOpen((tx) =>
+      deleteManualEvents(tx, [crawled.id, manual.id]),
+    );
+    await deleting.held;
+
+    const write = testDb
+      .update(events)
+      .set({ title: 'Renamed by the crawl' })
+      .where(eq(events.id, crawled.id));
+    expect(await stillPending(write)).toBe(false);
+
+    deleting.release();
+    const result = await deleting.done;
+    expect(result.skipped).toEqual([{ id: crawled.id, reason: 'not_manual' }]);
+    expect(result.deleted.map((row) => row.id)).toEqual([manual.id]);
+  });
 
   const stillThere = async (id: string) =>
     (
@@ -4612,7 +4757,7 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
     expect(await stillThere(event.id)).toBe(true);
   });
 
-  it('bulk: records one audit row even when every row is refused', async () => {
+  it('bulk: records one audit row, with the missing ids, even when every row is refused', async () => {
     const venue = await seedVenue();
     const crawled = await seedEvent(venue.id, {
       artist: 'Crawled',
@@ -4629,7 +4774,7 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({
-        ids: [crawled.id, watched.id],
+        ids: [crawled.id, watched.id, GONE_ID],
         confirmation: 'DELETE',
       }),
     });
@@ -4651,7 +4796,10 @@ describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
       deletedIds: [],
       deleted: [],
       skipped: expect.arrayContaining(skipped),
+      missing: [GONE_ID],
     });
+    const body = (await res.json()) as { data: { missing: string[] } };
+    expect(body.data.missing).toEqual([GONE_ID]);
     expect(await stillThere(crawled.id)).toBe(true);
     expect(await stillThere(watched.id)).toBe(true);
   });
