@@ -72,9 +72,10 @@ ${bodyRows}
 
 // 'digest' (#763 spec §8.2) carries a signed one-click unsubscribe URL in
 // place of the Settings link, supplied by the template via `unsubscribeUrl`.
-// Since going free (2026-11-10) only the digest sends; 'product' and
-// 'billing' remain for the unsubscribe links in emails already delivered.
-export type EmailFamily = 'billing' | 'product' | 'digest';
+// Since going free (2026-11-10) only the digest sends; 'product' stays for the
+// unsubscribe links in emails already delivered. The billing family is gone:
+// its templates were retired and `UNSUBSCRIBE_FAMILIES` never accepted it.
+export type EmailFamily = 'product' | 'digest';
 
 export const familyUnsubscribeLabel = (family: EmailFamily): string =>
   family === 'digest'
