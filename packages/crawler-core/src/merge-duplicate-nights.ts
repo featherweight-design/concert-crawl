@@ -12,9 +12,11 @@
  *
  * Dry by default. The survivor is the row people already point at (most user
  * references), then a timed one, then the lowest id. Whatever the survivor
- * lacks (a time, links, an image, a description, prices, a bill) is filled from
- * the rows folded into it, after they are gone, in coherent groups taken from
- * one row each (a price range and its source never come from two listings).
+ * lacks (a time, links, an image, a description, prices) is filled from the rows
+ * folded into it, after they are gone, in coherent groups taken from one row
+ * each (a price range and its source never come from two listings). The bill is
+ * a union instead: every act a folded row names that the survivor lacks joins
+ * it, unless an admin saved the survivor's lineup.
  *
  * Each folded row is its own transaction (the merge core's), and the fill is a
  * separate step after them, so a night can be partly applied: the plan is
@@ -45,6 +47,7 @@ import {
 } from '@concert-crawl/types';
 import { reportFailure } from '@concert-crawl/logger';
 import { alignToNights } from './lib/align-nights.js';
+import { unionBill } from './lib/union-bill.js';
 
 export const CLEANUP_ACTOR = 'system:duplicate-night-cleanup';
 
@@ -63,14 +66,13 @@ const FILL_GROUPS = [
   ['tourName'],
   ['genre'],
   ['ticketPriceMin', 'ticketPriceMax', 'priceSource'],
-  [
-    'headliners',
-    'canonicalHeadliners',
-    'supportingArtists',
-    'canonicalSupporting',
-  ],
 ] as const satisfies readonly (readonly (keyof typeof events.$inferSelect)[])[];
-type FillField = (typeof FILL_GROUPS)[number][number];
+/**
+ * The bill is not a fill: the donors' names are unioned into the survivor's
+ * (`unionBill`), since a name only a donor carries would otherwise be lost with
+ * it. Reported as `headliners`, the bill's first column.
+ */
+type FillField = (typeof FILL_GROUPS)[number][number] | 'headliners';
 
 export interface NightRow {
   id: string;
@@ -220,19 +222,28 @@ const countBy = async (
 
 type EventRow = typeof events.$inferSelect;
 
-/** The groups the survivor can still fill: every empty column, from one donor. */
+/**
+ * What the survivor takes from the rows folded into it: every empty column's
+ * group from one donor, and every donor-only name on the bill.
+ */
 const fillsFrom = (
   survivor: EventRow,
   donors: readonly EventRow[],
 ): { fields: FillField[]; values: Partial<EventRow> } => {
   const fields: FillField[] = [];
   const values: Partial<EventRow> = {};
+  // Admin 4a: a lineup an admin saved never takes a donor's names, even where
+  // it is empty (an admin may have cleared the supports).
+  if (survivor.lineupEditedAt === null) {
+    const bill = unionBill(survivor, donors);
+    if (bill !== null) {
+      fields.push('headliners');
+      Object.assign(values, bill);
+    }
+  }
   for (const group of FILL_GROUPS) {
     const anchor = group[0];
     if (survivor[anchor] !== null) continue;
-    // Admin 4a: a lineup an admin saved is never filled from a donor's bill,
-    // even where it is empty (an admin may have cleared the supports).
-    if (anchor === 'headliners' && survivor.lineupEditedAt !== null) continue;
     const donor = donors.find((row) => row[anchor] != null);
     if (!donor) continue;
     fields.push(anchor);
