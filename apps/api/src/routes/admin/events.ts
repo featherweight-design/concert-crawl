@@ -66,6 +66,7 @@ import {
   listAdminEvents,
 } from './lib/events-browse.js';
 import { watchingCountOf, wentCountOf } from './lib/event-counts.js';
+import { loadSoldOutRecord } from './lib/sold-out-record.js';
 import { todayInDenver } from '../../lib/time.js';
 import { currentPriceCondition } from '../../lib/price-check.js';
 import { isUniqueViolationOn } from '../../lib/pg-errors.js';
@@ -769,6 +770,9 @@ eventsAdminRouter.get(
       .orderBy(desc(priceSubmissions.createdAt))
       .limit(1);
 
+    // B+ addendum 7 §6: the evidence behind a Sold out, null unless it is.
+    const soldOutRecord = row.isSoldOut ? await loadSoldOutRecord(id) : null;
+
     return ctx.json({
       success: true,
       // `mySubmission` carries the prices Edit price opens with.
@@ -777,6 +781,7 @@ eventsAdminRouter.get(
         ...row,
         mySubmissionId: mine?.id ?? null,
         mySubmission: mine ?? null,
+        soldOutRecord,
       },
     } as const);
   },
@@ -864,11 +869,15 @@ eventsAdminRouter.delete(
 // POST /v1/admin/events/:id/sold-out — admin-authored sold-out event_report,
 // auto-promoted on creation. Idempotent: if an active promoted sold-out report
 // already exists, returns 200 with that row instead of creating a duplicate.
+// The method is required (B+ addendum 7 §6): the form starts with nothing
+// picked, so a missing one is refused rather than stored as `other`.
 const markSoldOutSchema = z.object({
-  evidenceMethod: z
-    .enum(['venue_site', 'saw_listing', 'bought_myself', 'other'])
-    .optional()
-    .default('other'),
+  evidenceMethod: z.enum([
+    'venue_site',
+    'saw_listing',
+    'bought_myself',
+    'other',
+  ]),
   evidenceUrl: httpUrl(500).optional(),
   note: z.string().max(280).optional(),
 });

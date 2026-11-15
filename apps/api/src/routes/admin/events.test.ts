@@ -542,7 +542,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ evidenceMethod: 'other' }),
       },
     );
 
