@@ -80,12 +80,3 @@ export const reviewRedirectsToNeedsYou = (
   if (isRetiredReviewTab(tab)) return true;
   return !(tab !== null && tab !== undefined && isReviewTabKey(tab));
 };
-
-/**
- * The page redirects everything but a live tab away before this runs, so the
- * single tab is also the fallback for an unknown value.
- */
-export const resolveReviewTab = (params: URLSearchParams): ReviewTabKey => {
-  const tab = params.get('tab');
-  return isReviewTabKey(tab) ? tab : 'all-events';
-};

@@ -6,7 +6,6 @@ import {
   REVIEW_TAB_KEYS,
   isRetiredReviewTab,
   isReviewTabKey,
-  resolveReviewTab,
   reviewPricesRedirect,
   reviewRedirectsToNeedsYou,
 } from './review-tabs';
@@ -35,23 +34,6 @@ describe('isReviewTabKey', () => {
     expect(isReviewTabKey('submissions')).toBe(false);
     expect(isReviewTabKey('')).toBe(false);
     expect(isReviewTabKey(null)).toBe(false);
-  });
-});
-
-describe('resolveReviewTab', () => {
-  const resolve = (query: string) =>
-    resolveReviewTab(new URLSearchParams(query));
-
-  it('reads an explicit ?tab= key', () => {
-    expect(resolve('tab=all-events')).toBe('all-events');
-  });
-
-  it('falls back to all-events for unknown, retired or absent values', () => {
-    expect(resolve('')).toBe('all-events');
-    expect(resolve('tab=nonsense')).toBe('all-events');
-    expect(resolve('tab=missing')).toBe('all-events');
-    expect(resolve('tab=prices')).toBe('all-events');
-    expect(resolve('section=submissions')).toBe('all-events');
   });
 });
 

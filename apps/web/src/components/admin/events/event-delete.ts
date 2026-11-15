@@ -1,12 +1,11 @@
 /**
  * The admin event Delete (E5-b): the DELETE call and the words for its
- * refusals, shared by the Events row ⋯, Event edit's ⋯, the Review page and
- * the legacy editor so all four say the same thing. The guard is the API's
+ * refusals, shared by the Events row ⋯, Event edit's ⋯ and the legacy editor
+ * so all three say the same thing. The guard is the API's
  * (`apps/api/src/routes/admin/lib/event-delete.ts`): a crawled show is 409
  * `not_manual`, a show something depends on is 409 `has_dependents` with
  * the counts.
  */
-import { z } from 'zod';
 import { ApiError, apiClient } from '@/lib/api';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
@@ -80,54 +79,4 @@ export const deleteEvent = async (
     }
     throw err;
   }
-};
-
-/**
- * POST /v1/admin/events/bulk/delete's `data`. A skip's `reason` stays any
- * string: one this build doesn't know is still a skipped row, and the summary
- * counts it under a generic line rather than dropping it.
- */
-const bulkDeleteSchema = z.object({
-  count: z.number().int().nonnegative(),
-  skipped: z.array(z.object({ id: z.string(), reason: z.string() })),
-  missing: z.array(z.string()),
-});
-
-export type BulkDeleteResult = z.infer<typeof bulkDeleteSchema>;
-
-/**
- * The bulk response, checked. A malformed one throws, so the caller shows its
- * generic failure rather than a summary the API never sent.
- */
-export const bulkDeleteResultOf = (value: unknown): BulkDeleteResult => {
-  const parsed = bulkDeleteSchema.safeParse(value);
-  if (!parsed.success) {
-    console.warn('bulkDeleteResultOf: malformed response', {
-      issues: parsed.error.issues,
-    });
-    throw new Error('bulk delete: malformed response');
-  }
-  return parsed.data;
-};
-
-/** "Deleted 3 shows. Skipped 2: 1 crawled, 1 with Watchers…" */
-export const bulkDeleteSummary = (result: BulkDeleteResult): string => {
-  const bulk = COPY.bulk;
-  const counted = (reason: string) =>
-    result.skipped.filter((entry) => entry.reason === reason).length;
-  const notManual = counted('not_manual');
-  const dependents = counted('has_dependents');
-  const other = result.skipped.length - notManual - dependents;
-  const reasons = [
-    ...(notManual > 0 ? [bulk.notManual(notManual)] : []),
-    ...(dependents > 0 ? [bulk.hasDependents(dependents)] : []),
-    ...(other > 0 ? [bulk.other(other)] : []),
-  ];
-  return [
-    bulk.deleted(result.count),
-    ...(reasons.length > 0
-      ? [bulk.skipped(result.skipped.length, reasons)]
-      : []),
-    ...(result.missing.length > 0 ? [bulk.missing(result.missing.length)] : []),
-  ].join(' ');
 };

@@ -20,13 +20,8 @@ vi.mock('@/lib/api', () => ({
 }));
 
 const { ApiError } = await import('@/lib/api');
-const {
-  bulkDeleteResultOf,
-  bulkDeleteSummary,
-  deleteEvent,
-  deleteRefusalMessage,
-  dependentCountsOf,
-} = await import('./event-delete');
+const { deleteEvent, deleteRefusalMessage, dependentCountsOf } =
+  await import('./event-delete');
 
 const COPY = ADMIN_COPY.eventDelete;
 
@@ -110,68 +105,5 @@ describe('deleteEvent', () => {
     await expect(deleteEvent(getToken, 'evt-1')).rejects.toThrow('Not Found');
     del.mockRejectedValue(refusal('not_manual'));
     await expect(deleteEvent(getToken, 'evt-1')).rejects.toThrow('not_manual');
-  });
-});
-
-describe('bulkDeleteResultOf', () => {
-  it('reads the response, dropping fields the summary doesn’t use', () => {
-    expect(
-      bulkDeleteResultOf({
-        count: 1,
-        deletedIds: ['evt-1'],
-        skipped: [
-          {
-            id: 'evt-2',
-            reason: 'has_dependents',
-            counts: { watchers: 1 },
-          },
-        ],
-        missing: [],
-      }),
-    ).toEqual({
-      count: 1,
-      skipped: [{ id: 'evt-2', reason: 'has_dependents' }],
-      missing: [],
-    });
-  });
-
-  it.each([
-    ['null', null],
-    ['no count', { skipped: [], missing: [] }],
-    ['a negative count', { count: -1, skipped: [], missing: [] }],
-    ['skipped not a list', { count: 0, skipped: {}, missing: [] }],
-    [
-      'a skip with no id',
-      { count: 0, skipped: [{ reason: 'x' }], missing: [] },
-    ],
-    ['missing ids not text', { count: 0, skipped: [], missing: [1] }],
-  ])('throws on a malformed response (%s)', (_label, value) => {
-    expect(() => bulkDeleteResultOf(value)).toThrow();
-  });
-});
-
-describe('bulkDeleteSummary', () => {
-  it('counts each reason, an unknown one under its own line', () => {
-    expect(
-      bulkDeleteSummary(
-        bulkDeleteResultOf({
-          count: 2,
-          skipped: [
-            { id: 'evt-3', reason: 'not_manual' },
-            { id: 'evt-4', reason: 'has_dependents' },
-            { id: 'evt-5', reason: 'locked_by_merge' },
-          ],
-          missing: ['evt-6'],
-        }),
-      ),
-    ).toBe(
-      'Deleted 2 shows. Skipped 3: 1 crawled, 1 with Watchers, Concerts, Submitted prices or merges, 1 for another reason. 1 show was already gone.',
-    );
-  });
-
-  it('says nothing was deleted when nothing was', () => {
-    expect(bulkDeleteSummary({ count: 0, skipped: [], missing: [] })).toBe(
-      'Nothing deleted.',
-    );
   });
 });
