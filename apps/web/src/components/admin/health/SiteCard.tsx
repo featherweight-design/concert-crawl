@@ -7,9 +7,8 @@ import { formatMtTime } from './health-model';
 const copy = ADMIN_COPY.health.site;
 
 /**
- * The Emails pill: Sending is drawn (success); failures (danger) and a quiet
- * window (neutral) are not, and reuse StatusBadge's drawn states. 🔸 Design
- * item 33 is to confirm them.
+ * The Emails pill (`33/emails-states`): Sending (success), N failed (danger),
+ * Quiet (neutral). Failures win over Quiet. N is failed sends in the window.
  */
 export const emailState = (
   delivery: AdminEmailDelivery,
@@ -19,6 +18,22 @@ export const emailState = (
     : delivery.sent > 0
       ? { label: copy.sending, kind: 'success' }
       : { label: copy.quiet, kind: 'neutral' };
+
+/**
+ * The line under Emails (`33/emails-states`). With failures it says how many
+ * of how many: failed sends out of every send tried (sent or failed) in the
+ * window. Bounces are recorded nowhere, so it never claims them.
+ */
+export const emailLine = (delivery: AdminEmailDelivery): string =>
+  delivery.failed > 0
+    ? copy.failedOf(
+        delivery.failed,
+        delivery.sent + delivery.failed,
+        delivery.hours,
+      )
+    : delivery.lastSentAt === null
+      ? copy.noneSent(delivery.hours)
+      : copy.lastSent(formatMtTime(delivery.lastSentAt));
 
 /**
  * The site (`03/health-desktop`, right column). The board also lists the
@@ -45,9 +60,7 @@ export const SiteCard = ({ delivery }: { delivery: AdminEmailDelivery }) => {
               {copy.emails}
             </div>
             <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-              {delivery.lastSentAt === null
-                ? copy.noneSent(delivery.hours)
-                : copy.lastSent(formatMtTime(delivery.lastSentAt))}
+              {emailLine(delivery)}
             </div>
           </div>
           <StatusBadge kind={state.kind} dot size="tile">

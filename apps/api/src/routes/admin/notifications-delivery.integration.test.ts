@@ -160,6 +160,30 @@ describe('GET /v1/admin/notifications/delivery', () => {
     expect(lastHours).toMatchObject({ sent: 1, failed: 1, suppressed: 0 });
   });
 
+  // Addendum 6 item 33: Health's "N failed" is failed sends only. Bounces are
+  // recorded nowhere, and no other status may leak into the failed count.
+  it('counts only failed sends inside the window as failed', async () => {
+    setAuth('admin');
+    await logSend('failed', 1);
+    await logSend('failed', 20);
+    await logSend('sent', 2);
+    await logSend('sent', 3);
+    await logSend('sent', 4);
+    await logSend('suppressed', 5);
+    await logSend('bounced', 6);
+    // Failed, but before the window.
+    await logSend('failed', 25);
+
+    const data = deliverySchema.parse(await (await get()).json()).data;
+    expect(data.failed).toBe(2);
+    expect(data.sent).toBe(3);
+
+    const narrow = deliverySchema.parse(
+      await (await get('?hours=12')).json(),
+    ).data;
+    expect(narrow.failed).toBe(1);
+  });
+
   it('reports the newest sent row as lastSentAt, even outside the window', async () => {
     setAuth('admin');
     await logSend('sent', 80);

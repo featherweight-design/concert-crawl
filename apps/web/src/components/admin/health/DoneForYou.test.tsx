@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { DoneForYou } from './DoneForYou';
-import { SiteCard, emailState } from './SiteCard';
+import { SiteCard, emailLine, emailState } from './SiteCard';
 
 afterEach(cleanup);
 
@@ -75,7 +75,42 @@ describe('<SiteCard />', () => {
       />,
     );
     expect(screen.getByText(copy.site.quiet)).toBeTruthy();
-    expect(screen.getByText('Resend · none sent in 24 h')).toBeTruthy();
+    expect(screen.getByText('Resend · nothing sent in 24 h')).toBeTruthy();
+  });
+
+  it('says how many sends failed of how many were tried, never bounced', () => {
+    // Suppressed and other rows were never handed to Resend, so they are
+    // not part of "of how many".
+    render(
+      <SiteCard
+        delivery={{ ...delivery, sent: 39, failed: 2, suppressed: 4, other: 1 }}
+      />,
+    );
+    expect(screen.getByText('Resend · 2 of 41 failed in 24 h')).toBeTruthy();
+    expect(screen.queryByText(/bounced/i)).toBeNull();
+    expect(screen.queryByText('Resend · last sent 8:02 AM')).toBeNull();
+  });
+});
+
+describe('emailLine', () => {
+  const base = {
+    lastSentAt: '2026-11-12T15:02:00.000Z',
+    sent: 0,
+    failed: 0,
+    suppressed: 0,
+    other: 0,
+    hours: 24,
+  };
+  it.each([
+    [{ ...base, sent: 3, failed: 1 }, 'Resend · 1 of 4 failed in 24 h'],
+    [
+      { ...base, lastSentAt: null, failed: 2, hours: 3 },
+      'Resend · 2 of 2 failed in 3 h',
+    ],
+    [{ ...base, sent: 3 }, 'Resend · last sent 8:02 AM'],
+    [{ ...base, lastSentAt: null }, 'Resend · nothing sent in 24 h'],
+  ] as const)('reads %o as %s', (delivery, line) => {
+    expect(emailLine(delivery)).toBe(line);
   });
 });
 
