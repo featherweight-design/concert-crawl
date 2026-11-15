@@ -1,7 +1,7 @@
 /**
  * Event edit's venue step: `POST /v1/admin/events/:id/venue` (E2-C). Its
- * refusals become sentences here, and its answer is checked with Zod, so a
- * caller never shows a raw code or trusts an unchecked shape.
+ * refusals become sentences here (`duplicate_show`'s body checked with Zod),
+ * so a caller never shows a raw code or trusts an unchecked shape.
  */
 import { z } from 'zod';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -60,16 +60,4 @@ export const venueRefusalOf = (err: unknown): VenueRefusal | null => {
     return { message: COPY.notFound, existingId: null };
   }
   return null;
-};
-
-const moveResultSchema = z.object({
-  outcome: z.enum(['moved', 'corrected', 'unchanged']),
-  watchersNotified: z.number(),
-});
-export type VenueMoveResult = z.infer<typeof moveResultSchema>;
-
-/** The POST's answer, or null when it isn't one (the move still landed). */
-export const venueMoveResultOf = (data: unknown): VenueMoveResult | null => {
-  const parsed = moveResultSchema.safeParse(data);
-  return parsed.success ? parsed.data : null;
 };

@@ -110,6 +110,7 @@ const DETAIL: EventDetail = {
   soldOutRecord: null,
   lineup: [],
   manual: false,
+  moved: null,
 };
 
 // `useIsPhone` reads matchMedia, which jsdom does not ship.
@@ -1631,12 +1632,10 @@ describe('EventEdit venue (E2-D)', () => {
       screen.queryByText(VENUE.confirmTitle(DETAIL.artist, 'Globe Hall')),
     ).toBeNull();
     expect(patch).not.toHaveBeenCalled();
+    // The refresh brings the Moved line back from the GET.
     await waitFor(() => {
       expect(refresh).toHaveBeenCalled();
     });
-    expect(await screen.findByTestId('event-edit-moved')).toHaveTextContent(
-      `${VENUE.movedLead}Globe Hall${VENUE.movedQuiet}`,
-    );
   });
 
   it('corrects a played show’s venue, crawled or not, with no confirm', async () => {
@@ -1650,8 +1649,6 @@ describe('EventEdit venue (E2-D)', () => {
       });
     });
     expect(screen.queryByRole('button', { name: VENUE.confirm })).toBeNull();
-    // A correction tells nobody, so no Moved line.
-    expect(screen.queryByTestId('event-edit-moved')).toBeNull();
   });
 
   it('reads a crawled show still to come only, and a postponed crawled one too', () => {
@@ -1747,6 +1744,22 @@ describe('EventEdit venue (E2-D)', () => {
     expect(post).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [1, 'Its 1 Watcher is told it moved.'],
+    [3, 'Its 3 Watchers are told it moved.'],
+  ])('words the confirm for %i Watchers', async (count, body) => {
+    expect(VENUE.confirmBody(count)).toBe(body);
+    render(
+      <EventEdit
+        detail={{ ...MANUAL, watchingCount: count }}
+        today="2026-11-13"
+      />,
+    );
+    await pickVenue('Globe Hall');
+    save();
+    expect(screen.getByText(body)).toBeInTheDocument();
+  });
+
   it('confirms a move that tells the Watching; Cancel saves nothing', async () => {
     post.mockResolvedValue({ ...MOVED, watchersNotified: 4 });
     render(
@@ -1757,9 +1770,7 @@ describe('EventEdit venue (E2-D)', () => {
     expect(
       screen.getByText(VENUE.confirmTitle(DETAIL.artist, 'Globe Hall')),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(VENUE.confirmBody(4, 'Globe Hall')),
-    ).toBeInTheDocument();
+    expect(screen.getByText(VENUE.confirmBody(4))).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole('button', { name: ADMIN_COPY.confirm.cancel }),
     );
@@ -1774,9 +1785,39 @@ describe('EventEdit venue (E2-D)', () => {
         venueId: GLOBE,
       });
     });
-    const note = await screen.findByTestId('event-edit-moved');
-    expect(note).toHaveTextContent(/Moved to Globe Hall/);
-    expect(note).toHaveTextContent(/Watchers were told on/);
+  });
+
+  it('chooses the Moved pill on a moved show, disabled, with the line from the GET', () => {
+    render(
+      <EventEdit
+        detail={{
+          ...MANUAL,
+          status: 'moved',
+          moved: { toVenueName: 'Globe Hall', at: '2026-11-11T18:00:00.000Z' },
+        }}
+        today="2026-11-13"
+      />,
+    );
+    const pill = screen.getByTestId('status-pill-moved');
+    expect(pill).toHaveTextContent(COPY.status.moved);
+    expect(pill).toHaveAttribute('aria-pressed', 'true');
+    expect(pill).toHaveAttribute('aria-disabled', 'true');
+    const line = screen.getByTestId('status-moved');
+    expect(line).toHaveTextContent(
+      `${COPY.status.movedLead}Globe Hall${COPY.status.movedTold('Nov 11')}`,
+    );
+    expect(line.querySelector('b')).toHaveTextContent('Globe Hall');
+  });
+
+  it('draws the Moved pill unchosen and no line on a show that never moved', () => {
+    render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+    const pill = screen.getByTestId('status-pill-moved');
+    expect(pill).toHaveAttribute('aria-pressed', 'false');
+    expect(pill).toHaveAttribute('aria-disabled', 'true');
+    // Pressing it does nothing: a show moves through the Venue field.
+    fireEvent.click(pill);
+    expect(screen.queryByText(COPY.saveBar.unsaved(1))).toBeNull();
+    expect(screen.queryByTestId('status-moved')).toBeNull();
   });
 
   it('asks nothing for a cancelled show, whose move tells nobody', async () => {

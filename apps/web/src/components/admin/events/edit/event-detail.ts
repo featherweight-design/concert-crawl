@@ -65,7 +65,13 @@ export interface EventDetail {
   lineup: LineupItem[];
   /** Added by hand, so the ⋯ offers Delete… (4b#10). */
   manual: boolean;
+  /** Its last venue move, drawn under the Moved pill; `null` if none. */
+  moved: MovedTo | null;
 }
+
+/** Where a show moved and when its Watchers were told (ISO `at`). */
+const movedSchema = z.object({ toVenueName: z.string(), at: z.string() });
+export type MovedTo = z.infer<typeof movedSchema>;
 
 /**
  * One act as `GET /v1/admin/events/:id` sends it (`readLineup`). `unsure` is
@@ -245,6 +251,9 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
   // none. Absent reads as none, which leaves the venue read only.
   const venueId = value['venueId'] ?? null;
   if (!isTextOrNull(venueId)) return null;
+  // Absent on an API older than this web build: no move. A drift fails.
+  const moved = movedSchema.nullable().safeParse(value['moved'] ?? null);
+  if (!moved.success) return null;
   const lineup = lineupSchema.safeParse(value['lineup']);
   if (!lineup.success) return null;
   const priceMin = priceText(value['ticketPriceMin']);
@@ -287,6 +296,7 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     lineup: lineup.data,
     // Absent on an API older than this web build: not deletable.
     manual: value['manual'] === true,
+    moved: moved.data,
   };
 };
 

@@ -67,12 +67,7 @@ import { addShowApi } from '../add/add-show-api';
 import { lineupEntries, rolesOf, type Act } from '../add/add-show-rules';
 import { LineupField } from '../add/LineupField';
 import { usePickVenues, VenuePicker } from '../add/VenuePicker';
-import {
-  moveTellsWatchers,
-  venueEditable,
-  venueMoveResultOf,
-  venueRefusalOf,
-} from './venue-move';
+import { moveTellsWatchers, venueEditable, venueRefusalOf } from './venue-move';
 
 const COPY = ADMIN_COPY.eventEdit;
 const PASSED = COPY.passed;
@@ -106,13 +101,6 @@ interface Fields {
  * POST, then the sale's POST.
  */
 type SaveStep = 'fields' | 'lineup' | 'venue' | 'sale';
-
-/** After a move this visit: `06/event-edit`'s "Moved to … · Watchers were told on …". */
-interface MovedNote {
-  venue: string;
-  /** "Nov 11"; null when nobody was told. */
-  toldOn: string | null;
-}
 
 /** The GET's lineup as the field's acts, roles and matches kept. */
 const actsOf = (items: readonly LineupItem[]): Act[] =>
@@ -630,8 +618,6 @@ export const EventEdit = ({
   const [refusalLink, setRefusalLink] = useState<string | null>(null);
   /** The write a failed save stopped at: the fields' PATCH or the sale's POST. */
   const [failedStep, setFailedStep] = useState<SaveStep | null>(null);
-  /** A move saved this visit (`06/event-edit`'s Moved line). */
-  const [moved, setMoved] = useState<MovedNote | null>(null);
   // Played shows and shows added by hand; a crawled one still to come is its
   // venue's calendar's, so it reads only.
   const canMoveVenue = venueEditable(detail, today);
@@ -781,22 +767,13 @@ export const EventEdit = ({
       // Its own route (E2-C): a show still to come moves, and its Watchers
       // hear the new room; a played one is a silent correction. After the
       // PATCH, so a date change is in place first; before the sale, so a
-      // Sold out notice names the new room.
+      // Sold out notice names the new room. The refresh brings the Moved
+      // line back from the GET.
       if (next.venueId !== savedVenueId && next.venueId !== '') {
-        const data: unknown = await apiClient.post(`${path}/venue`, token, {
+        await apiClient.post(`${path}/venue`, token, {
           venueId: next.venueId,
         });
         landed = true;
-        const result = venueMoveResultOf(data);
-        if (result?.outcome === 'moved') {
-          setMoved({
-            venue: venueName(next.venueId),
-            toldOn:
-              result.watchersNotified > 0
-                ? shortDate(new Date().toISOString())
-                : null,
-          });
-        }
       }
       step = 'sale';
       // Sold out is its own flag with its own Watcher notice (`watch.soldout`),
@@ -1070,21 +1047,6 @@ export const EventEdit = ({
                 : undefined
             }
           />
-          {moved !== null && draft.venueId === snap.value.venueId && (
-            // `06/event-edit`: under the Moved pill there; here, under the
-            // field that moved it, until the page is next opened.
-            <div
-              data-testid="event-edit-moved"
-              role="status"
-              style={{ ...HINT, fontSize: 12.5, color: 'var(--fg-muted)' }}
-            >
-              {COPY.venue.movedLead}
-              <b style={{ color: 'var(--fg)' }}>{moved.venue}</b>
-              {moved.toldOn === null
-                ? COPY.venue.movedQuiet
-                : COPY.venue.movedTold(moved.toldOn)}
-            </div>
-          )}
         </Field>
       ) : (
         <ReadOnlyField
@@ -1401,12 +1363,7 @@ export const EventEdit = ({
             setConfirmingMove(false);
           }}
         >
-          <div>
-            {COPY.venue.confirmBody(
-              detail.watchingCount,
-              venueName(draft.venueId),
-            )}
-          </div>
+          <div>{COPY.venue.confirmBody(detail.watchingCount)}</div>
           <div style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
             {COPY.venue.confirmFoot}
           </div>
