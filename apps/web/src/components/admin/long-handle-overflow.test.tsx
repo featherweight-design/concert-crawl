@@ -60,7 +60,7 @@ describe('a long handle stays inside its container', () => {
       avatarSecondColor: null,
       backedBy: 0,
       state: 'waiting',
-      held: true,
+      forYou: true,
       ticketUrl: null,
     };
     render(

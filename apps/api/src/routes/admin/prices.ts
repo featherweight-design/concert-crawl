@@ -10,7 +10,6 @@ import {
   gt,
   gte,
   ilike,
-  isNotNull,
   isNull,
   lt,
   max,
@@ -56,6 +55,8 @@ import {
 } from './lib/price-rejection.js';
 import { todayInDenver } from '../../lib/time.js';
 import { watchingCountOf } from './lib/event-counts.js';
+import { forAdminClause } from './lib/price-for-admin.js';
+import { denverDate } from './lib/needs-you/keys.js';
 
 const logger = createLogger('admin:prices');
 
@@ -451,18 +452,19 @@ const handleClauseOf = (handle: string | undefined): SQL | undefined =>
 /** The WHERE clause of one filter chip. */
 const stateClause = (
   state: 'all' | 'waiting' | 'published' | 'price-check',
+  today: string,
 ): SQL | undefined => {
   switch (state) {
     case 'price-check':
       return hasOpenPriceCheck();
-    // Waiting for you: held for the admin (`held_for_admin_at`, stamped once
-    // enough fans back it and Approve every price myself is on). A pending
-    // price below that is waiting for another fan, not for you: it shows
+    // Waiting for you: a pending price that is the admin's to decide, by the
+    // Needs you batch's own test (held, or backed enough inside the window).
+    // Any other pending price still waits on fans or the window: it shows
     // under All.
     case 'waiting':
       return and(
         eq(priceSubmissions.status, 'pending'),
-        isNotNull(priceSubmissions.heldForAdminAt),
+        forAdminClause(today),
         sql`NOT ${hasOpenPriceCheck()}`,
       );
     case 'published':
@@ -511,6 +513,7 @@ pricesAdminRouter.get(
       limit,
       offset,
     } = ctx.req.valid('query');
+    const today = denverDate(new Date());
 
     // Exclude contest counter rows (`disputed_submission_id IS NOT NULL`)
     // from the legacy submissions queue. Counters are adjudicated through
@@ -524,7 +527,7 @@ pricesAdminRouter.get(
         ? status === 'pending'
           ? eq(priceSubmissions.status, 'pending')
           : undefined
-        : stateClause(state);
+        : stateClause(state, today);
     const searchClause =
       search === undefined ? undefined : searchClauseOf(search);
     const whereClause = and(
@@ -549,9 +552,9 @@ pricesAdminRouter.get(
         // Fans behind this price: the submitter plus everyone who confirmed
         // it (corroboration_count already includes the submitter).
         backedBy: priceSubmissions.corroborationCount,
-        // Held for the admin: a waiting price that is waiting for you, not
-        // for another fan (the Waiting for you chip's own test).
-        held: sql<boolean>`${priceSubmissions.heldForAdminAt} IS NOT NULL`,
+        // The admin's to decide (the Waiting for you chip's own test): a
+        // waiting price without it still waits on fans or the window.
+        forYou: sql<boolean>`COALESCE(${forAdminClause(today)}, false)`,
         priceCheck: hasOpenPriceCheck(),
         priceMin: priceSubmissions.priceMin,
         priceMax: priceSubmissions.priceMax,
@@ -632,12 +635,13 @@ pricesAdminRouter.get(
   }),
   async (ctx) => {
     const { search, handle } = ctx.req.valid('query');
+    const today = denverDate(new Date());
     const countBase = db
       .select({
         all: sql<number>`count(*)::int`,
-        waiting: sql<number>`(count(*) FILTER (WHERE ${stateClause('waiting')}))::int`,
-        published: sql<number>`(count(*) FILTER (WHERE ${stateClause('published')}))::int`,
-        priceCheck: sql<number>`(count(*) FILTER (WHERE ${stateClause('price-check')}))::int`,
+        waiting: sql<number>`(count(*) FILTER (WHERE ${stateClause('waiting', today)}))::int`,
+        published: sql<number>`(count(*) FILTER (WHERE ${stateClause('published', today)}))::int`,
+        priceCheck: sql<number>`(count(*) FILTER (WHERE ${stateClause('price-check', today)}))::int`,
       })
       .from(priceSubmissions);
     const base = isNull(priceSubmissions.disputedSubmissionId);

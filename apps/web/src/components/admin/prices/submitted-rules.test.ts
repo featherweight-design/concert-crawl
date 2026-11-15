@@ -12,20 +12,20 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 // held it for the admin.
 describe('stateWords', () => {
   const STATES = ADMIN_COPY.pricesSubmitted.states;
-  it('reads Waiting for you only for a held price', () => {
-    expect(stateWords({ state: 'waiting', held: true }, STATES)).toBe(
+  it("reads Waiting for you only for a price that's yours to decide", () => {
+    expect(stateWords({ state: 'waiting', forYou: true }, STATES)).toBe(
       'Waiting for you',
     );
-    expect(stateWords({ state: 'waiting', held: false }, STATES)).toBe(
-      'Needs another fan',
+    expect(stateWords({ state: 'waiting', forYou: false }, STATES)).toBe(
+      'Pending',
     );
   });
 
-  it('leaves every other state as it was, held or not', () => {
-    expect(stateWords({ state: 'published', held: false }, STATES)).toBe(
+  it('leaves every other state as it was, yours or not', () => {
+    expect(stateWords({ state: 'published', forYou: false }, STATES)).toBe(
       'Published',
     );
-    expect(stateWords({ state: 'stale', held: true }, STATES)).toBe('Stale');
+    expect(stateWords({ state: 'stale', forYou: true }, STATES)).toBe('Stale');
   });
 });
 

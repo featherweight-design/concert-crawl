@@ -48,13 +48,14 @@ describe('submitted prices avatar pair', () => {
   });
 });
 
-describe('submitted prices held flag', () => {
-  it('reads held from the API, and an older API without it as held', async () => {
+describe('submitted prices forYou flag', () => {
+  it('reads forYou from the API, and an older API without it as yours', async () => {
     const { rows } = await listWith([
-      apiRow({ held: true }),
-      apiRow({ id: 's-2', held: false }),
+      apiRow({ forYou: true }),
+      apiRow({ id: 's-2', forYou: false }),
       apiRow({ id: 's-3' }),
+      apiRow({ id: 's-4', forYou: null }),
     ]);
-    expect(rows.map((row) => row.held)).toEqual([true, false, true]);
+    expect(rows.map((row) => row.forYou)).toEqual([true, false, true, true]);
   });
 });

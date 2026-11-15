@@ -2043,9 +2043,10 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     });
   });
 
-  // Hugh's prod report: a 1-fan price read "Waiting for you" though nothing
-  // held it for the admin; it is waiting for another fan.
-  it('counts only a held price as Waiting for you, and says which rows are held', async () => {
+  // Hugh's prod report: a 1-fan price read "Waiting for you" though it was
+  // not the admin's to decide. Waiting for you is the Needs you batch's own
+  // test: held, or backed by 2+ fans on a show 2 to 30 days out.
+  it("counts only a price that's the admin's to decide as Waiting for you, and marks each row", async () => {
     const { waiting } = await seedTab();
     const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' });
     const show = await seedEvent(venue.id, {
@@ -2056,6 +2057,17 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     const oneFan = await seedPriceSubmission(show.id, 'user_k', {
       status: 'pending',
     });
+    // Unheld, but two fans on a show 10 days out: in the Needs you batch, so
+    // under Waiting for you too.
+    const soon = await seedEvent(venue.id, {
+      title: 'Soccer Mommy',
+      artist: 'Soccer Mommy',
+      date: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10),
+    });
+    const inBatch = await seedPriceSubmission(soon.id, 'user_l', {
+      status: 'pending',
+      corroborationCount: 2,
+    });
     const res = await app.request(
       '/v1/admin/prices/submissions?count=true&state=waiting',
       { headers: ADMIN_HEADERS },
@@ -2063,7 +2075,7 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     const rows = (
       (await res.json()) as { data: { rows: { id: string }[] } }
     ).data.rows.map((row) => row.id);
-    expect(rows).toEqual([waiting.id]);
+    expect(rows.sort()).toEqual([waiting.id, inBatch.id].sort());
 
     const all = new Map(
       (
@@ -2075,13 +2087,23 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
             },
           )
         ).json()) as {
-          data: { rows: { id: string; state: string; held: boolean }[] };
+          data: { rows: { id: string; state: string; forYou: boolean }[] };
         }
       ).data.rows.map((row) => [row.id, row]),
     );
-    // Still a waiting price (the row's state), but not held.
-    expect(all.get(oneFan.id)).toMatchObject({ state: 'waiting', held: false });
-    expect(all.get(waiting.id)).toMatchObject({ state: 'waiting', held: true });
+    // Still a waiting price (the row's state), but not the admin's yet.
+    expect(all.get(oneFan.id)).toMatchObject({
+      state: 'waiting',
+      forYou: false,
+    });
+    expect(all.get(waiting.id)).toMatchObject({
+      state: 'waiting',
+      forYou: true,
+    });
+    expect(all.get(inBatch.id)).toMatchObject({
+      state: 'waiting',
+      forYou: true,
+    });
 
     const counts = (
       (await (
@@ -2090,7 +2112,7 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
         })
       ).json()) as { data: Record<string, number> }
     ).data;
-    expect(counts).toMatchObject({ all: 5, waiting: 1 });
+    expect(counts).toMatchObject({ all: 6, waiting: 2 });
   });
 
   it('searches the show, the venue and the handle (with or without "@"), and treats % literally', async () => {
