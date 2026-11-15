@@ -104,6 +104,52 @@ const openMenu = async (code: string) => {
   );
 };
 
+describe('InviteCodesClient unmounted mid-load', () => {
+  // A request that answers after the tab has gone must not set state. Under
+  // jsdom teardown that is a "window is not defined" throw inside load(), an
+  // unhandled rejection that failed whichever web shard it landed in. The test
+  // takes `window` away after the unmount to make any such update throw here.
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it.each([
+    ['the list answers', true],
+    ['the list fails', false],
+  ])('sets no state when %s after the unmount', async (_name, answers) => {
+    let settle: (value: Response | Error) => void = () => undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (url: string) =>
+          new Promise<Response>((resolve, reject) => {
+            if (url.includes('/v1/admin/people')) {
+              resolve(json({ success: true, data: { total: 2 } }));
+              return;
+            }
+            settle = (value) =>
+              value instanceof Error ? reject(value) : resolve(value);
+          }),
+      ),
+    );
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+
+    const { unmount } = render(
+      <InviteCodesClient origin="https://concertcrawl.app" />,
+    );
+    unmount();
+    vi.stubGlobal('window', undefined);
+    settle(
+      answers ? json({ success: true, data: ROWS }) : new Error('network down'),
+    );
+    await flush();
+    await flush();
+    vi.unstubAllGlobals();
+    process.off('unhandledRejection', unhandled);
+
+    expect(unhandled).not.toHaveBeenCalled();
+  });
+});
+
 describe('InviteCodesClient row menu', () => {
   it('offers a member row Copy, See who joined and Revoke, never Edit', async () => {
     render(<InviteCodesClient origin="https://concertcrawl.app" />);
