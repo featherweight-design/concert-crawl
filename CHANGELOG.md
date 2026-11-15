@@ -1,3 +1,15 @@
+# [1.520.0](https://github.com/featherweight-design/concert-crawl/compare/v1.519.0...v1.520.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** refuse moving a crawled show and harden the venue move ([391be2d](https://github.com/featherweight-design/concert-crawl/commit/391be2df283d5b29e64c9e08642032901d1d6452))
+
+
+### Features
+
+* **api:** let an admin change a show's venue as a Moved or a correction ([d427fe4](https://github.com/featherweight-design/concert-crawl/commit/d427fe431ffd7304f6ee3c62912c1ffb517ce8a8))
+
 # [1.519.0](https://github.com/featherweight-design/concert-crawl/compare/v1.518.0...v1.519.0) (2026-11-15)
 
 
