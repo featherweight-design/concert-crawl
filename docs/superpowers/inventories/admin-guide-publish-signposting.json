@@ -1,0 +1,29 @@
+{
+  "feature": "Admin item 16 · Guide tab: the unpublished-guide bar and the edit panel's Publish guide",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/16-* (guide-tab-d, guide-panel-d, guide-m). Signposting only, within Hugh's 11-14 no-draft-split ruling (orchestrator): the drawn change count and Edited pill need a draft model and are ⏸. CONTACT_SHEET_ROLE=admin. Read-only on scratch: the sheet opens the Guide tab and a section's panel, and never presses Publish guide or Save draft. Venues are whatever scratch holds: Ball Arena (an unpublished guide, Guide tab dot) and Larimer Lounge.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "guide-tab-ball-arena",
+      "label": "Guide tab (Ball Arena)",
+      "steps": [
+        { "goto": "/admin/venues", "wait": "text=Ball Arena", "settle": 1500 },
+        { "clickRole": "link", "name": "Ball Arena", "settle": 2500 },
+        { "clickRole": "tab", "name": "^Guide", "settle": 1500 }
+      ]
+    },
+    {
+      "id": "guide-panel-ball-arena",
+      "label": "Section panel open, before the first publish: note, Save draft first, no bar (Ball Arena · Parking)",
+      "steps": [
+        { "goto": "/admin/venues", "wait": "text=Ball Arena", "settle": 1500 },
+        { "clickRole": "link", "name": "Ball Arena", "settle": 2500 },
+        { "clickRole": "tab", "name": "^Guide", "settle": 1500 },
+        { "clickRole": "button", "name": "Parking", "settle": 1500 }
+      ]
+    }
+  ]
+}

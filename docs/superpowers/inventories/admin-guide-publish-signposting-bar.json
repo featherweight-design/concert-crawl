@@ -1,0 +1,23 @@
+{
+  "feature": "Admin item 16 · The unpublished-guide bar (run with 3 guide sections written on CF Fixture Old Room)",
+  "note": "Board: design_handoff_bplus_redesign/addendum-6/boards/16-* (guide-tab-d, guide-m). CONTACT_SHEET_ROLE=admin. Run under the orchestrator's scratch lock: a guarded script snapshots CF Fixture Old Room's guide rows, writes 3 sections (Parking, Bag check, Age policy), the sheet shoots the bar, then the script deletes only the rows it added and re-reads against the snapshot. The sheet never presses Publish guide.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "guide-bar",
+      "label": "Guide tab, unpublished, 3 sections written: the bar (CF Fixture Old Room)",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=CF Fixture Old Room",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "CF Fixture Old Room", "settle": 2500 },
+        { "clickRole": "tab", "name": "^Guide", "settle": 1500 }
+      ]
+    }
+  ]
+}
