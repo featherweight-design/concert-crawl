@@ -397,6 +397,7 @@ describe('runDailyCrawl', () => {
     // 4 venues × 1 event each = 4 pipeline calls
     expect(mockRunPricePipeline).toHaveBeenCalledTimes(4);
     expect(mockRunPricePipeline).toHaveBeenCalledWith({
+      trial: false,
       eventId: 'evt-1',
       venueId: 'venue-1',
       artist: 'Band A',
@@ -1056,6 +1057,7 @@ describe('runTriggeredCrawls', () => {
     // 2 triggers × 1 event each = 2 pipeline calls
     expect(mockRunPricePipeline).toHaveBeenCalledTimes(2);
     expect(mockRunPricePipeline).toHaveBeenCalledWith({
+      trial: false,
       eventId: 'evt-a',
       venueId: 'venue-a',
       artist: 'Artist X',
