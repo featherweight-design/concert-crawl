@@ -1213,6 +1213,8 @@ describe('runTriggeredCrawls', () => {
         false,
         NO_LLM_BUDGET,
         true,
+        // The trigger's page-progress reporter (V4b).
+        expect.any(Function),
       );
     });
 
