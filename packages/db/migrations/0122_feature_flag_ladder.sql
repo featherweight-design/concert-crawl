@@ -23,7 +23,11 @@
 -- Nothing is dropped or rewritten; the contract step (dropping `enabled`) is a
 -- later PR.
 --
+-- `feature_flags_me_has_owner` keeps a flag from sitting at 'me' with nobody
+-- as "me". The backfill never produces 'me', so it holds for every row now.
+--
 -- Down:
+--   ALTER TABLE feature_flags DROP CONSTRAINT IF EXISTS feature_flags_me_has_owner;
 --   DROP TABLE IF EXISTS feature_flag_history;
 --   DROP TABLE IF EXISTS feature_flag_users;
 --   ALTER TABLE feature_flags DROP COLUMN IF EXISTS verified_note;
@@ -49,6 +53,11 @@ ALTER TABLE "feature_flags" ADD COLUMN IF NOT EXISTS "verified_at" timestamp wit
 ALTER TABLE "feature_flags" ADD COLUMN IF NOT EXISTS "verified_by" text;--> statement-breakpoint
 ALTER TABLE "feature_flags" ADD COLUMN IF NOT EXISTS "verified_note" text;--> statement-breakpoint
 UPDATE "feature_flags" SET "stage" = (CASE WHEN "enabled" THEN 'everyone' ELSE 'off' END)::"flag_stage";--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "feature_flags" ADD CONSTRAINT "feature_flags_me_has_owner" CHECK ("stage" <> 'me' OR "stage_owner_user_id" IS NOT NULL);
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "feature_flag_users" (
 	"flag_key" text NOT NULL REFERENCES "feature_flags"("key") ON DELETE CASCADE,
 	"user_id" text NOT NULL,
