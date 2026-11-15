@@ -1,6 +1,9 @@
 // Single source of truth for all admin UI copy
 
-import { TRIAGE_NO_SWEEP as NO_SWEEP } from '@concert-crawl/types';
+import {
+  TRIAGE_NO_SWEEP as NO_SWEEP,
+  type AddShowErrorCode,
+} from '@concert-crawl/types';
 
 // The crawler's `classifyCrawlError` identifiers, written out for the triage
 // panel. Anything unrecognised falls back to the raw identifier rather than
@@ -4784,7 +4787,27 @@ export const ADMIN_COPY = {
   // boards don't draw are drafts for copy-review. The form's own strings
   // join this object with the form (E3 PR C3).
   addShow: {
+    open: 'Add a show',
+    title: 'Add a show by hand',
+    lede: 'For a show the crawler can’t see. The next crawl won’t remove it.',
+    // The phone's full screen returns to Events.
+    back: 'Events',
+    titleField: 'Title',
+    titlePlaceholder: 'The show’s name, as fans would search it',
+    venue: 'Venue',
     venuePlaceholder: 'Pick a venue',
+    date: 'Date',
+    datePlaceholder: 'Pick a date',
+    doors: 'Doors',
+    show: 'Show',
+    timeNone: '—',
+    ticket: 'Ticket link',
+    ticketPlaceholder: 'https://',
+    lineup: 'Lineup',
+    priceNote: 'Add a price after it’s saved, from the show.',
+    submit: 'Add show',
+    submitting: 'Adding…',
+    cancel: 'Cancel',
     venuePicker: {
       title: 'Venue',
       search: (count: number) =>
@@ -4807,6 +4830,47 @@ export const ADMIN_COPY = {
       suggestions: 'Matching artists',
       addTyped: (name: string) => `Add “${name}” as typed`,
     },
+    // `04/add-show-errors-d`: "Mission Ballroom already has a show on Fri,
+    // Dec 4, from the crawl: KALEO. Open it instead, or add this one anyway."
+    duplicate: {
+      lead: (venue: string, date: string, fromCrawl: boolean) =>
+        `${venue} already has a show on ${date}${fromCrawl ? ', from the crawl' : ''}: `,
+      afterTitle: '. ',
+      open: 'Open it',
+      tail: ' instead, or add this one anyway.',
+      // The API's 409: a show with this exact venue, date, headliner and
+      // show time is already listed, so this one can't be added.
+      exact:
+        'This show is already listed, with the same headliner and show time. ',
+      exactTail: ' instead.',
+    },
+    saveFailed: {
+      title: 'Couldn’t add the show',
+      body: 'Nothing was added. What you typed is still here.',
+      // Undrawn, a draft for copy-review: a 400 the form can't pin on a
+      // field, so the toast offers no Try again.
+      refused: 'Nothing was added. Check the form, then add it again.',
+    },
+    // One line per API field code (`ADD_SHOW_ERROR_CODES`).
+    errors: {
+      title_required: 'Add a title.',
+      title_too_long: 'Keep the title under 300 characters.',
+      venue_required: 'Pick a venue.',
+      venue_not_found: 'That venue is gone. Pick another.',
+      date_required: 'Pick a date.',
+      date_past: 'That date has passed.',
+      time_invalid: 'Enter a time, like 7:30 PM.',
+      show_before_doors: 'Before doors.',
+      ticket_url_invalid: 'Enter a full link, starting with https://',
+      headliner_required: 'Add the headliner.',
+      lineup_name_required: 'Every act needs a name.',
+      lineup_name_too_long: 'Keep each name under 200 characters.',
+      lineup_name_invalid: 'One name has no letters to match on.',
+      lineup_role_invalid: 'Couldn’t read the lineup. Try again.',
+      lineup_too_long: 'A bill holds 50 acts at most.',
+      artist_not_found:
+        'One artist is no longer on Artists. Remove it and type the name again.',
+    } satisfies Record<AddShowErrorCode, string>,
   },
   panel: { close: 'Close' },
   confirm: { cancel: 'Cancel' },
