@@ -1,7 +1,19 @@
 // apps/api/src/routes/users.ts
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
-import { eq, count, ne, and, desc } from 'drizzle-orm';
+import {
+  eq,
+  count,
+  ne,
+  and,
+  desc,
+  exists,
+  isNotNull,
+  not,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../lib/validator.js';
@@ -88,22 +100,51 @@ const RESERVED_HANDLES = new Set([
 
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
+/**
+ * `fanStoredStatus`'s `unusedCheck`: the row is a Price check (a counter, with
+ * `disputed_submission_id` set) and no row ever checked it in turn. Every
+ * writer that archives a counter (the losing side of a resolution, the
+ * orphans a resolution supersedes, a newer price check update) means the
+ * fan's price wasn't used; a counter that won and was later checked and
+ * replaced really was replaced, so it reads as archived. Derived from the
+ * links, so rows archived before this existed read right too.
+ */
+// A function, not a constant: the query is built per request, so importing
+// this router never touches the database layer.
+const unusedCheckOf = (): SQL<boolean> => {
+  const laterCheck = alias(priceSubmissions, 'later_check');
+  return sql<boolean>`(${isNotNull(priceSubmissions.disputedSubmissionId)} and ${not(
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(laterCheck)
+        .where(eq(laterCheck.disputedSubmissionId, priceSubmissions.id)),
+    ),
+  )})`;
+};
+
 // One read, one definition: every surface that shows a submitted-price count
 // takes it from here (see SubmissionCounts), so none can disagree.
 async function loadSubmissionCounts(userId: string): Promise<SubmissionCounts> {
+  const unusedCheck = unusedCheckOf();
   const rows = await db
     .select({
       status: priceSubmissions.status,
       archivedReason: priceSubmissions.archivedReason,
+      unusedCheck,
       value: count(),
     })
     .from(priceSubmissions)
     .where(eq(priceSubmissions.userId, userId))
-    .groupBy(priceSubmissions.status, priceSubmissions.archivedReason);
+    .groupBy(
+      priceSubmissions.status,
+      priceSubmissions.archivedReason,
+      unusedCheck,
+    );
   return tallySubmissionCounts(
     rows.map((row) => ({
       status: submissionDisplayStatus(
-        fanStoredStatus(row.status, row.archivedReason),
+        fanStoredStatus(row.status, row.archivedReason, row.unusedCheck),
       ),
       count: row.value,
     })),
@@ -354,8 +395,8 @@ usersRouter.get('/me/submissions/count', async (ctx) => {
   return ctx.json({ success: true, data: { count: counts.total } });
 });
 
-// GET /v1/users/me/submissions — every row, stale and archived included (they
-// read as `closed`, under All only).
+// GET /v1/users/me/submissions — every row, stale, archived and not used
+// included (they read as `closed`, under All only).
 usersRouter.get('/me/submissions', async (ctx) => {
   const auth = getAuth(ctx);
   if (!auth?.userId)
@@ -375,6 +416,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     submittedAt: Date;
     status: string | null;
     archivedReason: string | null;
+    unusedCheck: boolean;
   };
 
   const rows: SubmissionRow[] = await db
@@ -392,6 +434,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
       submittedAt: priceSubmissions.createdAt,
       status: priceSubmissions.status,
       archivedReason: priceSubmissions.archivedReason,
+      unusedCheck: unusedCheckOf(),
     })
     .from(priceSubmissions)
     .leftJoin(events, eq(priceSubmissions.eventId, events.id))
@@ -400,10 +443,17 @@ usersRouter.get('/me/submissions', async (ctx) => {
     .orderBy(desc(priceSubmissions.createdAt));
 
   const data: UserSubmissionItem[] = rows.map((row) => {
-    // A price an admin replaced reads as it did before (fanStoredStatus).
-    const stored = fanStoredStatus(row.status ?? 'pending', row.archivedReason);
-    // A closed row says why: stale (no second fan in time) or archived (a newer
-    // price replaced it). The same helper decides `closed` and its reason.
+    // An archived row reads by what happened to it (fanStoredStatus): one an
+    // admin replaced reads as before, a rejected one or an unused Price check
+    // as not used.
+    const stored = fanStoredStatus(
+      row.status ?? 'pending',
+      row.archivedReason,
+      row.unusedCheck,
+    );
+    // A closed row says why: stale (no second fan in time), archived (a newer
+    // price replaced it) or not_used (we didn't use it). The same helper
+    // decides `closed` and its reason.
     const closedReason = submissionClosedReason(stored);
     return {
       id: row.id,
