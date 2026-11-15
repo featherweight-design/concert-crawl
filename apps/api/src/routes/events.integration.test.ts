@@ -651,6 +651,69 @@ describe('GET /v1/events/:id — integration', () => {
       expect(body.data.title).toBe('Son Little: CityFolk Tour 2026');
     });
 
+    // The co-headline defect: "Clipse & J.I.D" is one display string in
+    // `artist`, and resolving it whole gave the page one slug ('clipse'), so
+    // the second act had no link at all. Each act in `headliners` resolves to
+    // its own row, in bill order, null where the projection has none.
+    it('gives each co-headliner its own slug', async () => {
+      const venue = await seedVenue({ slug: 'co-headline-venue' });
+      await seedArtist({ name: 'Clipse' });
+      await seedArtist({ name: 'J.I.D' });
+
+      const event = await seedEvent(venue.id, {
+        title: 'Clipse & J.I.D',
+        artist: 'Clipse & J.I.D',
+        canonicalArtist: 'clipse',
+        headliners: ['Clipse', 'J.I.D', 'Unprojected Act'],
+        canonicalHeadliners: ['clipse', 'j.i.d', 'unprojected act'],
+        supportingArtists: [],
+        date: '2027-07-06',
+      });
+
+      const res = await app.request(`/v1/events/${event.id}`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        data: {
+          artist: string;
+          headliners: Array<{ name: string; slug: string | null }> | null;
+          headlinerNames?: unknown;
+        };
+      };
+      // The display string is untouched; only the per-act links are added.
+      expect(body.data.artist).toBe('Clipse & J.I.D');
+      expect(body.data.headliners).toEqual([
+        { name: 'Clipse', slug: 'clipse' },
+        { name: 'J.I.D', slug: 'jid' },
+        { name: 'Unprojected Act', slug: null },
+      ]);
+      // The raw column is an internal select alias, never shipped.
+      expect(body.data.headlinerNames).toBeUndefined();
+    });
+
+    it('returns null headliners when the ladder never ran, [] when it found no act', async () => {
+      const venue = await seedVenue({ slug: 'headliner-null-venue' });
+      const legacy = await seedEvent(venue.id, {
+        artist: 'Legacy Row',
+        headliners: null,
+        date: '2027-07-07',
+      });
+      const noAct = await seedEvent(venue.id, {
+        artist: 'Bass Bingo',
+        headliners: [],
+        date: '2027-07-08',
+      });
+
+      type Body = { data: { headliners: unknown } };
+      const legacyBody = (await (
+        await app.request(`/v1/events/${legacy.id}`)
+      ).json()) as Body;
+      const noActBody = (await (
+        await app.request(`/v1/events/${noAct.id}`)
+      ).json()) as Body;
+      expect(legacyBody.data.headliners).toBeNull();
+      expect(noActBody.data.headliners).toEqual([]);
+    });
+
     it('returns a null headliner slug when the artists projection has no row', async () => {
       const venue = await seedVenue({ slug: 'unresolved-venue' });
       const event = await seedEvent(venue.id, {

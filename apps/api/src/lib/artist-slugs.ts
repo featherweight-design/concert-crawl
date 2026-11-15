@@ -23,21 +23,40 @@ export interface ResolvedArtistSlugs {
    * null (a legacy pre-recrawl event row).
    */
   supportingArtistSlugs: Array<string | null> | null;
+  /**
+   * Every act headlining the bill, each with its own slug (null where that
+   * name has no visible row), in `events.headliners` order. A co-headline
+   * night ("Clipse & J.I.D") has one display string in `artist` but two acts
+   * here, so each can link to its own page. Null when the `headliners`
+   * argument is null (the ladder never ran on the row); an empty array when
+   * the ladder found no act.
+   */
+  headliners: Array<{ name: string; slug: string | null }> | null;
 }
 
 export const resolveArtistSlugs = async (
   headliner: string,
   supportingArtists: string[] | null,
+  headliners: string[] | null = null,
 ): Promise<ResolvedArtistSlugs> => {
   const headlinerCanonical = canonicalizeArtist(headliner);
   const supportingCanonical = (supportingArtists ?? []).map((name) =>
+    canonicalizeArtist(name),
+  );
+  const headlinersCanonical = (headliners ?? []).map((name) =>
     canonicalizeArtist(name),
   );
 
   // One lookup for every distinct non-empty canonical name on the bill.
   // canonicalizeArtist can return '' (a name that is punctuation only), which
   // matches nothing and would only bloat the IN list.
-  const lookup = [...new Set([headlinerCanonical, ...supportingCanonical])]
+  const lookup = [
+    ...new Set([
+      headlinerCanonical,
+      ...supportingCanonical,
+      ...headlinersCanonical,
+    ]),
+  ]
     .filter((canonical) => canonical !== '')
     .sort();
 
@@ -72,5 +91,12 @@ export const resolveArtistSlugs = async (
         : supportingCanonical.map(
             (canonical) => slugByCanonical.get(canonical) ?? null,
           ),
+    headliners:
+      headliners === null
+        ? null
+        : headliners.map((name, index) => ({
+            name,
+            slug: slugByCanonical.get(headlinersCanonical[index] ?? '') ?? null,
+          })),
   };
 };
