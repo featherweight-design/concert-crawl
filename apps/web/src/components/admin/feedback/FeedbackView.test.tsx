@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -157,6 +158,111 @@ describe('FeedbackView (07/feedback)', () => {
     expect(within(rows[1]!).getByText('Sentry · Nov 8')).toBeInTheDocument();
     // To read rows carry no right-side line.
     expect(screen.queryByTestId('feedback-done-by')).toBeNull();
+    // The dot is decoration, so the row's name says unread.
+    expect(rows[0]).toHaveAccessibleName(
+      new RegExp(`${COPY.row.expandLabel}.*${COPY.row.unread}`),
+    );
+    expect(rows[1]).not.toHaveAccessibleName(new RegExp(COPY.row.unread));
+  });
+
+  it('marks Screenshot and Also in Needs you, and reads an error-page bug as ERROR REPORT (addendum 7)', async () => {
+    list = () =>
+      json({
+        success: true,
+        data: [
+          item({
+            id: 'a',
+            status: 'unread',
+            metadata: { screenshot: 'https://img.test/a.png' },
+          }),
+          item({
+            id: 'b',
+            status: 'unread',
+            message: 'Something went wrong on Watching',
+            metadata: { source: 'error', doing: 'Opening Watching' },
+          }),
+          item({ id: 'c', category: 'idea', status: 'unread' }),
+          item({ id: 'd', status: 'read' }),
+        ],
+      });
+    render(<FeedbackView />);
+    const rows = await screen.findAllByTestId('feedback-row');
+    const hints = (row: HTMLElement) =>
+      within(row).queryByTestId('feedback-hints')?.textContent ?? null;
+    expect(hints(rows[0]!)).toBe(
+      `${COPY.row.screenshot}${COPY.row.separator}${COPY.row.alsoInNeedsYou}`,
+    );
+    expect(hints(rows[1]!)).toBe(COPY.row.alsoInNeedsYou);
+    expect(
+      within(rows[1]!).getByText(ADMIN_COPY.kind.errorReport),
+    ).toBeInTheDocument();
+    // Ideas never reach Needs you; a read bug has left it.
+    expect(hints(rows[2]!)).toBeNull();
+    expect(hints(rows[3]!)).toBeNull();
+  });
+
+  it("never names Sentry for a user's report whose handle is gone", async () => {
+    list = () =>
+      json({
+        success: true,
+        data: [item({ category: 'error_report', submittedBy: null })],
+      });
+    render(<FeedbackView />);
+    const row = await screen.findByTestId('feedback-row');
+    expect(within(row).getByText('Nov 8')).toBeInTheDocument();
+    expect(within(row).queryByText(/Sentry/)).toBeNull();
+  });
+
+  it('falls back to To read when Venues is picked and the screen turns phone-width', async () => {
+    const query = { matches: false, listeners: [] as (() => void)[] };
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      get matches() {
+        return query.matches;
+      },
+      addEventListener: (_type: string, fn: () => void) =>
+        query.listeners.push(fn),
+      removeEventListener: vi.fn(),
+    }));
+    render(<FeedbackView />);
+    fireEvent.click(await chip('venues'));
+    await waitFor(() =>
+      expect(listCalls().at(-1)?.searchParams.get('kind')).toBe('venues'),
+    );
+    query.matches = true;
+    act(() => query.listeners.forEach((fn) => fn()));
+    expect(await chip('to_read')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByTestId('feedback-chip-venues')).toBeNull();
+  });
+
+  it('re-reads the chip on screen when a status write settles after a chip change', async () => {
+    let settle: (res: Response) => void = () => undefined;
+    fetchMock.mockImplementation(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        if (init?.method === 'PATCH')
+          return new Promise<Response>((resolve) => {
+            settle = resolve;
+          });
+        if (url.pathname === '/v1/admin/feedback/counts')
+          return json({ success: true, data: COUNTS });
+        return list(url);
+      },
+    );
+    render(<FeedbackView />);
+    fireEvent.click(await screen.findByTestId('feedback-row'));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: COPY.expanded.actions.resolve,
+      }),
+    );
+    fireEvent.click(await chip('ideas'));
+    await waitFor(() =>
+      expect(listCalls().at(-1)?.searchParams.get('kind')).toBe('ideas'),
+    );
+    const before = listCalls().length;
+    settle(json({ success: true }));
+    await waitFor(() => expect(listCalls().length).toBeGreaterThan(before));
+    expect(listCalls().at(-1)?.searchParams.get('kind')).toBe('ideas');
   });
 
   it('shows Done with search, who finished each, and the caption', async () => {

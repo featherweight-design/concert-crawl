@@ -1,14 +1,16 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { KindLabel } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { AdminFeedbackItem, FeedbackCategory } from '@concert-crawl/types';
 import {
-  FEEDBACK_KIND,
   doneLine,
   firstLine,
+  kindOf,
   metaLine,
+  rowHints,
 } from './feedback-list-rules';
 
 export type FeedbackItem = AdminFeedbackItem;
@@ -18,6 +20,14 @@ export const CATEGORY_LABEL: Record<FeedbackCategory, string> =
   ADMIN_COPY.feedback.row.categoryLabel;
 
 const COPY = ADMIN_COPY.feedback.row;
+
+/** The row's right-side text: Done's "Done by" and To read's marks. */
+const sideStyle: CSSProperties = {
+  flex: 'none',
+  fontSize: 12,
+  color: 'var(--fg-subtle)',
+  whiteSpace: 'nowrap',
+};
 
 interface FeedbackRowProps {
   item: FeedbackItem;
@@ -45,6 +55,7 @@ export function FeedbackRow({
 }: FeedbackRowProps) {
   const meta = metaLine(item);
   const title = firstLine(item.message);
+  const hints = rowHints(item);
   return (
     <button
       type="button"
@@ -52,10 +63,17 @@ export function FeedbackRow({
       onClick={() => onToggle(item.id)}
       aria-expanded={isExpanded}
       // The "Expand feedback" stem is what the ui-audit harness clicks.
+      // The label replaces the row's text, so it carries what the dot and the
+      // Done side say too.
       aria-label={[
         `${isExpanded ? COPY.collapseLabel : COPY.expandLabel} ${meta}`,
+        item.status === 'unread' ? COPY.unread : null,
         title,
-      ].join(COPY.separator)}
+        isDone ? doneLine(item) : null,
+        ...(isDone ? [] : hints),
+      ]
+        .filter((part): part is string => part !== null)
+        .join(COPY.separator)}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -73,7 +91,7 @@ export function FeedbackRow({
     >
       <span style={{ flex: 1, minWidth: 0, display: 'block' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <KindLabel kind={FEEDBACK_KIND[item.category]} />
+          <KindLabel kind={kindOf(item)} />
           {item.status === 'unread' && (
             <span
               data-testid="feedback-unread-dot"
@@ -116,24 +134,32 @@ export function FeedbackRow({
         >
           {meta}
         </span>
+        {/* No phone list board for the marks (addendum 7): they take a line
+            under the meta, since the phone row has no right side. */}
+        {isPhone && !isDone && hints.length > 0 && (
+          <span
+            data-testid="feedback-hints"
+            style={{ ...sideStyle, display: 'block', marginTop: 4 }}
+          >
+            {hints.join(COPY.separator)}
+          </span>
+        )}
       </span>
       {!isPhone && isDone && (
-        <span
-          data-testid="feedback-done-by"
-          style={{
-            flex: 'none',
-            fontSize: 12,
-            color: 'var(--fg-subtle)',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <span data-testid="feedback-done-by" style={sideStyle}>
           {doneLine(item)}
         </span>
       )}
-      {!isPhone && (
+      {!isPhone && !isDone && hints.length > 0 && (
+        <span data-testid="feedback-hints" style={sideStyle}>
+          {hints.join(COPY.separator)}
+        </span>
+      )}
+      {/* The Done board draws no chevron; 1.8 on its 16 grid is 2.7 on Lucide's 24. */}
+      {!isPhone && !isDone && (
         <ChevronRight
           size={14}
-          strokeWidth={1.8}
+          strokeWidth={2.7}
           aria-hidden="true"
           style={{ flex: 'none', display: 'block', color: 'var(--fg-subtle)' }}
         />

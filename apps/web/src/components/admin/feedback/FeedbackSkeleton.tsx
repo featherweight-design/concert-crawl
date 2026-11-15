@@ -1,7 +1,15 @@
 const bar = (width: number | string, height: number, radius = 6) => (
   <div
     className="admin-skeleton"
-    style={{ width, height, borderRadius: radius, flex: 'none' }}
+    // `07/loading-feedback` draws the bars in surface-2; the class's surface-1
+    // would vanish on the card.
+    style={{
+      width,
+      height,
+      borderRadius: radius,
+      flex: 'none',
+      background: 'var(--surface-2)',
+    }}
   />
 );
 

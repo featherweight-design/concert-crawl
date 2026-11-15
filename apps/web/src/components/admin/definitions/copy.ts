@@ -2191,7 +2191,10 @@ export const ADMIN_COPY = {
     },
     // Undrawn: an empty Done, and a search with no hits.
     doneEmpty: 'Nothing done yet',
-    noMatch: { title: 'No feedback matches', body: 'Nothing matches that.' },
+    noMatch: {
+      title: 'No feedback matches',
+      body: 'Check the spelling, or clear the search.',
+    },
     row: {
       handle: (handle: string) => `@${handle}`,
       // An error report with no reporter came in from Sentry.
@@ -2199,6 +2202,11 @@ export const ADMIN_COPY = {
       separator: ' · ',
       doneBy: (handle: string) => `Done by @${handle}`,
       done: 'Done',
+      // Read out for the pink dot, which is decoration.
+      unread: 'Unread',
+      // Addendum 7 `04/feedback-hints`: the row's marks.
+      screenshot: 'Screenshot',
+      alsoInNeedsYou: 'Also in Needs you',
       // Lower case to match the raw values the row showed before 0117.
       categoryLabel: {
         bug: 'bug',
