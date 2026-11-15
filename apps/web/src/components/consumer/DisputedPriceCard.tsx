@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import { CounterSubmitSheet } from './CounterSubmitSheet';
 import {
   ArrowGlyph,
@@ -16,7 +16,7 @@ const copy = CONSUMER_COPY.disputedPriceCard;
 
 // The strip draws the age bare ("3h", more-st-disputes_board); the line under
 // the headline keeps "ago".
-const formatAge = (isoDate: string): string => {
+export const formatAge = (isoDate: string): string => {
   const diffMs = Date.now() - new Date(isoDate).getTime();
   const diffMins = Math.floor(diffMs / 60000);
   if (diffMins < 60) return `${diffMins}m`;
@@ -27,7 +27,7 @@ const formatAge = (isoDate: string): string => {
 
 const formatTimeAgo = (isoDate: string): string => `${formatAge(isoDate)} ago`;
 
-const priceText = (floor: number, ceiling?: number | null): string =>
+export const priceText = (floor: number, ceiling?: number | null): string =>
   ceiling != null
     ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
     : `$${Math.round(floor)}`;
@@ -119,6 +119,13 @@ export interface DisputedPriceCardProps {
   onWithdraw?: () => void;
 
   onUpdateSuccess?: () => void;
+
+  /**
+   * The event's other tiers, drawn under the meta line when the headline tier
+   * is the one under check (`20/tier-price-check`): the card takes the band and
+   * the other tiers stay live inside it.
+   */
+  otherTiers?: ReactNode;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -144,6 +151,7 @@ export const DisputedPriceCard = ({
   viewerAction = 'submit_update',
   onWithdraw,
   onUpdateSuccess,
+  otherTiers,
 }: DisputedPriceCardProps) => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -359,6 +367,8 @@ export const DisputedPriceCard = ({
               {CONSUMER_COPY.priceRegion.adminDeferPillLabel}
             </span>
           )}
+
+          {otherTiers}
         </div>
 
         {/* Footer: three views, decided by the server (viewerAction) */}

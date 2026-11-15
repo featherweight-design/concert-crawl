@@ -32,6 +32,7 @@ import { PendingCardB } from '@/components/consumer/PendingCardB';
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet';
 import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard';
 import { MultiTierLiveCard } from '@/components/consumer/multi-tier/MultiTierLiveCard';
+import { OtherTiers } from '@/components/consumer/multi-tier/OtherTiers';
 import { PendingStack } from '@/components/consumer/multi-tier/PendingStack';
 import { PendingReportBanner } from '@/components/consumer/reporting/PendingReportBanner';
 import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldOutCard';
@@ -1420,6 +1421,7 @@ export function EventDetailPriceBlock({
               ? 'resale'
               : 'community'
           : null;
+        const counter = block.counterSubmission;
         return {
           tier: block.tier,
           vendor: altHeadline?.vendor ?? 'Community',
@@ -1428,6 +1430,33 @@ export function EventDetailPriceBlock({
             ? { ceiling: parseFloat(altCeilingStr) }
             : {}),
           kind: altKind,
+          // A check on another tier: only that tier's row takes the open
+          // check (`20/tier-price-check`).
+          ...(counter != null
+            ? {
+                check: {
+                  counterId: counter.id,
+                  parentSubmissionId: counter.parentSubmissionId,
+                  disputer: counter.submitter,
+                  floor: counter.floor,
+                  ...(counter.ceiling !== undefined
+                    ? { ceiling: counter.ceiling }
+                    : {}),
+                  submittedAt: counter.submittedAt,
+                  viewerAction: counter.viewerAction,
+                  eventId: event.id,
+                  tierValue: block.tier,
+                  signedOut: priceGateSignedOut,
+                  ...(counter.viewerCounterId !== null
+                    ? {
+                        onWithdraw: () =>
+                          handleWithdrawUpdate(counter.viewerCounterId!),
+                      }
+                    : {}),
+                  onUpdateSuccess: () => router.refresh(),
+                },
+              }
+            : {}),
         };
       });
       const outboundLink = event.ticketLinks?.[0] ?? null;
@@ -1439,13 +1468,12 @@ export function EventDetailPriceBlock({
             : 'primary'
         : null;
 
-      // A pending update is a price check. The board's card for it
-      // (more-st-disputes_board) is drawn for one price, so a single-tier
-      // event shows it in place of the live card. A multi-tier event keeps the
-      // live card plus the pending surface until Design draws how a check on
-      // one tier of several looks (held, Design item 20).
+      // A pending update is a price check, and it belongs to one tier
+      // (`20/tier-price-check`). On the headline tier the whole card takes the
+      // band, as the single-price card does, with the other tiers still live
+      // inside it; on another tier only that tier's row changes (above).
       const checkedCounter = headlineBlock.counterSubmission;
-      if (blocks.length === 1 && checkedCounter != null) {
+      if (checkedCounter != null) {
         return (
           <>
             <DisputedPriceCard
@@ -1482,6 +1510,7 @@ export function EventDetailPriceBlock({
                   }
                 : {})}
               onUpdateSuccess={() => router.refresh()}
+              otherTiers={<OtherTiers alternates={alternateRows} />}
             />
             {outboundLink !== null && outboundKind !== null && (
               <div className="mt-3">
@@ -1514,22 +1543,10 @@ export function EventDetailPriceBlock({
         );
       }
 
-      // The pending surface's "see the update" pointer (#counter-<id>) needs
-      // somewhere to land on a multi-tier event too: an empty anchor beside
-      // the live card, one per tier under a check.
-      const counterAnchorIds = blocks.flatMap((block) =>
-        block.counterSubmission != null ? [block.counterSubmission.id] : [],
-      );
+      // The pending surface's "see the update" pointer (#counter-<id>) lands on
+      // the check row of the tier under check (its id), or on the check card.
       return (
         <>
-          {counterAnchorIds.map((anchorId) => (
-            <span
-              key={anchorId}
-              id={`counter-${anchorId}`}
-              data-testid="counter-anchor"
-              aria-hidden="true"
-            />
-          ))}
           <MultiTierLiveCard
             headline={{
               floor: headlineFloor,

@@ -7,30 +7,13 @@ import {
   PendingTrustPill,
 } from '@/components/consumer/glyphs';
 import type { PriceCheckOutcome } from '@concert-crawl/types';
-import {
-  TierAlternateRow,
-  type TierAlternateRowProps,
-} from '@/components/consumer/multi-tier/TierAlternateRow';
+import { OtherTiers } from '@/components/consumer/multi-tier/OtherTiers';
+import type { TierAlternateRowProps } from '@/components/consumer/multi-tier/TierAlternateRow';
 import { StaleStamp } from '@/components/consumer/StaleStamp';
 import { StillAccurateAction } from '@/components/consumer/StillAccurateAction';
 import { displayVendor } from '@/components/consumer/vendor-display';
 
 const copy = CONSUMER_COPY.multiTier;
-
-// ── Types ────────────────────────────────────────────────────────
-interface AlternateTierBase {
-  tier: string;
-  vendor: string;
-  floor: number;
-  ceiling?: number;
-  kind: 'community' | 'boxoffice' | 'resale' | null;
-}
-
-type AlternateTier = AlternateTierBase &
-  (
-    | { pending: true; confirms: number; needed: number }
-    | { pending?: false; confirms?: never; needed?: never }
-  );
 
 // ── Props ────────────────────────────────────────────────────────
 export interface MultiTierLiveCardProps {
@@ -41,7 +24,7 @@ export interface MultiTierLiveCardProps {
     vendor: string;
     kind: 'community' | 'boxoffice' | 'resale';
   };
-  alternates: Array<AlternateTier>;
+  alternates: TierAlternateRowProps[];
   // §8 state #19 — within-tier consensus tell. When > 1, the meta line
   // appends `· N reports` after the "seen on <vendor>" caption. Sourced
   // from TierPriceBlock.reports on the corresponding priceByTier block.
@@ -193,31 +176,7 @@ export const MultiTierLiveCard = ({
       </div>
 
       {/* Other tiers section */}
-      {hasAlternates && (
-        <div style={{ marginTop: '12px' }}>
-          <Eyebrow>{copy.otherTiersEyebrow}</Eyebrow>
-          {alternates.map((alt, idx) => {
-            const base = {
-              tier: alt.tier,
-              vendor: alt.vendor,
-              floor: alt.floor,
-              kind: alt.kind,
-              ...(alt.ceiling !== undefined ? { ceiling: alt.ceiling } : {}),
-            };
-            const rowProps: TierAlternateRowProps = alt.pending
-              ? {
-                  ...base,
-                  pending: true,
-                  confirms: alt.confirms,
-                  needed: alt.needed,
-                }
-              : base;
-            return (
-              <TierAlternateRow key={`${alt.tier}-${idx}`} {...rowProps} />
-            );
-          })}
-        </div>
-      )}
+      {hasAlternates && <OtherTiers alternates={alternates} />}
 
       {/* How the last price check ended: a success-tinted notice row */}
       {checkOutcome !== null && outcomeText !== null && (
