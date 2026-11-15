@@ -867,7 +867,8 @@ describe('EventEdit Tour name', () => {
     expect(
       await screen.findByText(new RegExp(COPY.saveFailed.savedTour(''))),
     ).toBeInTheDocument();
-    expect(tourInput()).toHaveValue('');
+    // The snap-back lands in the render after the toast's.
+    await waitFor(() => expect(tourInput()).toHaveValue(''));
   });
 });
 
@@ -1042,8 +1043,11 @@ describe('EventEdit sold-out evidence', () => {
     const tryAgain = await screen.findByRole('button', {
       name: ADMIN_COPY.states.saveFailed.tryAgain,
     });
-    // Snapped back to what is saved: Tickets available, so no form.
-    expect(pill('available')).toHaveAttribute('aria-pressed', 'true');
+    // Snapped back to what is saved: Tickets available, so no form. The
+    // snap-back lands in the render after the toast's.
+    await waitFor(() =>
+      expect(pill('available')).toHaveAttribute('aria-pressed', 'true'),
+    );
     expect(screen.queryByTestId('sold-out-form')).toBeNull();
     // Picking Sold out again finds what the admin entered.
     fireEvent.click(pill('soldout'));
