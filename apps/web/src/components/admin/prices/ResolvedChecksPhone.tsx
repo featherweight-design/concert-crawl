@@ -69,6 +69,9 @@ const answerPrice = (row: ResolvedCheck): string => {
   return row.price === null ? '' : dollars(row.price);
 };
 
+/** The show's title; "Price check" when the event is gone (row and sheet). */
+const titleOf = (row: ResolvedCheck): string => row.title ?? COPY.priceCheck;
+
 const handleOf = (handle: string | null): string =>
   handle === null ? COPY.noHandle : `@${handle}`;
 
@@ -233,9 +236,12 @@ const ResolvedSheet = ({
 }) => {
   const used = row.answer === 'used';
   const tone = used ? 'var(--success)' : 'var(--fg-muted)';
-  const title = row.title ?? COPY.priceCheck;
+  const title = titleOf(row);
   const told = toldWords(row);
   const ticketUrl = isSafeHttpUrl(row.ticketUrl) ? row.ticketUrl : null;
+  // A deleted event keeps its id in the audit entry but has no title: there
+  // is no show to open.
+  const showId = row.title === null ? null : row.eventId;
   // The listing on the left, the fan's check on the right, whichever won.
   const sides = [
     row.parent && {
@@ -271,10 +277,10 @@ const ResolvedSheet = ({
         .join(' · ')}
       footer={
         <>
-          {(row.eventId !== null || ticketUrl !== null) && (
+          {(showId !== null || ticketUrl !== null) && (
             <div style={{ display: 'flex', gap: 8 }}>
-              {row.eventId !== null && (
-                <Link href={editEventHref(row.eventId)} style={sheetButton}>
+              {showId !== null && (
+                <Link href={editEventHref(showId)} style={sheetButton}>
                   <ExternalLink
                     size={14}
                     strokeWidth={1.8}
@@ -387,19 +393,17 @@ export const ResolvedChecksPhone = ({
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                {row.title !== null && (
-                  <div
-                    style={{
-                      fontSize: 14.5,
-                      fontWeight: 700,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {row.title}
-                  </div>
-                )}
+                <div
+                  style={{
+                    fontSize: 14.5,
+                    fontWeight: 700,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {titleOf(row)}
+                </div>
                 <div
                   style={{
                     fontSize: 12.5,
@@ -422,7 +426,8 @@ export const ResolvedChecksPhone = ({
               <AnswerPill answer={row.answer} price={answerPrice(row)} />
               <ChevronRight
                 size={14}
-                strokeWidth={1.8}
+                // The board's 1.8 on a 16 box, on lucide's 24.
+                strokeWidth={2.7}
                 aria-hidden="true"
                 style={{ flex: 'none', color: 'var(--fg-subtle)' }}
               />

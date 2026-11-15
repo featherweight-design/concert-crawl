@@ -16,6 +16,11 @@ export const ADMIN_PHONE_MAX_WIDTH = 720;
 export const useIsPhoneResolved = (): boolean | null => {
   const [isPhone, setIsPhone] = useState<boolean | null>(null);
   useEffect(() => {
+    // No `matchMedia` (an old browser, a test without one): desktop.
+    if (typeof window.matchMedia !== 'function') {
+      setIsPhone(false);
+      return;
+    }
     const query = window.matchMedia(`(max-width: ${ADMIN_PHONE_MAX_WIDTH}px)`);
     const update = () => setIsPhone(query.matches);
     update();

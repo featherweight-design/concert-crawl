@@ -7,6 +7,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -330,5 +331,58 @@ describe('PriceChecksTab › Resolved on the phone', () => {
       await screen.findByText(COPY.resolved.showing(6, 17)),
     ).toBeInTheDocument();
     expect(resolved).toHaveBeenLastCalledWith(5, 5);
+  });
+
+  it('keeps the pages Load more added when a decision refreshes the list', async () => {
+    const all = Array.from({ length: 17 }, (_, i) => ({
+      ...RESOLVED,
+      id: `r-${i}`,
+    }));
+    resolved.mockImplementation(async (offset: number, limit: number) => ({
+      items: all.slice(offset, offset + limit),
+      total: 17,
+    }));
+    await openResolved();
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.resolved.loadMore }),
+    );
+    expect(
+      await screen.findByText(COPY.resolved.showing(10, 17)),
+    ).toBeInTheDocument();
+    const chips = screen.getByTestId('price-checks-views');
+    fireEvent.click(
+      within(chips).getByRole('button', { name: `${COPY.views.open} 1` }),
+    );
+    const card = (await screen.findByText(/Vince Staples ·/)).closest('li');
+    fireEvent.click(
+      within(card as HTMLElement).getByRole('button', { name: /^Use/ }),
+    );
+    await waitFor(() => expect(resolved).toHaveBeenLastCalledWith(0, 10));
+    fireEvent.click(
+      within(chips).getByRole('button', {
+        name: new RegExp(`^${COPY.views.resolved}`),
+      }),
+    );
+    expect(
+      await screen.findByText(COPY.resolved.showing(10, 17)),
+    ).toBeInTheDocument();
+  });
+
+  it('hides Open show when the event is gone, though the entry kept its id', async () => {
+    resolved.mockImplementation(async () => ({
+      items: [{ ...RESOLVED, title: null }],
+      total: 1,
+    }));
+    const list = await openResolved();
+    // Row and sheet agree on the fallback title.
+    expect(within(list).getByText(COPY.priceCheck)).toBeInTheDocument();
+    fireEvent.click(within(list).getByRole('button'));
+    const scope = within(screen.getByRole('dialog', { name: COPY.priceCheck }));
+    expect(scope.queryByRole('link', { name: SHEET.openShow })).toBeNull();
+    expect(
+      scope.getByRole('link', {
+        name: ADMIN_COPY.pricesPage.add.openTicketPage,
+      }),
+    ).toBeInTheDocument();
   });
 });
