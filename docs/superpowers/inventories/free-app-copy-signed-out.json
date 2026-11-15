@@ -1,0 +1,18 @@
+{
+  "feature": "Free-app close-out PR 1 · fan copy, signed out: the Watching page (W11)",
+  "note": "Sweep: ~/Downloads/fwd-handoff/plans/cc-free-app-closeout-sweep-2026-11-15.md (W11). signedOut is per inventory, so this row lives apart from free-app-copy.json. Browse is launch-gated (NEXT_PUBLIC_PUBLIC_BROWSE unset), so signed out /watching redirects to /sign-in today and the row photographs the wall; W11's string is pinned by cc-tip/definitions/copy.test.ts. The row fails the day browse opens, the cue to make it the real public row.",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "watching-signed-out",
+      "label": "Signed-out Watching page: No card, ever. (W11)",
+      "steps": [
+        { "goto": "/watching", "expectRedirect": "/sign-in", "settle": 2500 }
+      ]
+    }
+  ]
+}
