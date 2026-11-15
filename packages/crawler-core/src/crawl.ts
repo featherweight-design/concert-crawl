@@ -713,6 +713,27 @@ function safePageProgress(
   };
 }
 
+/**
+ * The crawler's first pick of a venue's crawl mode, as a venue SET fragment.
+ *
+ * Only sent when the venue was read with crawl_mode NULL, but the read and
+ * this write are a whole crawl apart, so an admin can force a mode in
+ * between. The write is therefore conditional in SQL: Postgres evaluates
+ * every SET expression against the old row, so both CASE/COALESCE read the
+ * pre-update crawl_mode. A mode already set (by an admin mid-crawl) wins and
+ * keeps its source; only a still-NULL mode takes the pick, marked 'auto'.
+ */
+function firstPickModeSet(resolvedMode: 'http' | 'browser') {
+  return {
+    crawlMode: sql<
+      'http' | 'browser'
+    >`COALESCE(${venues.crawlMode}, ${resolvedMode})`,
+    crawlModeSource: sql<
+      'admin' | 'auto' | null
+    >`CASE WHEN ${venues.crawlMode} IS NULL THEN 'auto' ELSE ${venues.crawlModeSource} END`,
+  };
+}
+
 export async function crawlVenue(
   venueId: string,
   browser: BrowserSource,
@@ -1160,9 +1181,7 @@ export async function crawlVenue(
             consecutiveFailures: 0,
             robotsTxtAllowed: true,
             robotsTxtCheckedAt: new Date(),
-            ...(venue.crawlMode === null
-              ? { crawlMode: resolvedMode, crawlModeSource: 'auto' as const }
-              : {}),
+            ...(venue.crawlMode === null ? firstPickModeSet(resolvedMode) : {}),
             updatedAt: new Date(),
           })
           .where(eq(venues.id, venueId));
@@ -2395,7 +2414,7 @@ export async function crawlVenue(
         // 'browser' — losing the auto-detect behavior if the operator
         // later clears venue.platform to revert to the LLM cascade.
         ...(!platformFetcher && venue.crawlMode === null
-          ? { crawlMode: resolvedMode, crawlModeSource: 'auto' as const }
+          ? firstPickModeSet(resolvedMode)
           : {}),
         updatedAt: new Date(),
       })

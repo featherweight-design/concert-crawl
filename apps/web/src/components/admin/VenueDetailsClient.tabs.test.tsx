@@ -127,6 +127,7 @@ const venue: VenueWithCrawlHealth = {
   ticketVendor: null,
   debugCaptureHtml: false,
   crawlMode: null,
+  crawlModeSource: null,
   platform: null,
   platformVenueId: null,
   apiProvider: null,

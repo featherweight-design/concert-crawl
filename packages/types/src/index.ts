@@ -466,7 +466,7 @@ export interface Venue {
   crawlMode: 'http' | 'browser' | null;
   // Who set crawlMode: 'admin' by hand, 'auto' by the crawler; null = unknown
   // (read as Automatic).
-  crawlModeSource?: 'admin' | 'auto' | null;
+  crawlModeSource: 'admin' | 'auto' | null;
   platform: VenuePlatform | null;
   platformVenueId: string | null;
   address: string | null;
