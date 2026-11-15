@@ -8,6 +8,7 @@ import {
   inArray,
   isNull,
   lt,
+  max,
   or,
   sql,
   type SQL,
@@ -69,6 +70,25 @@ export const eventListQuerySchema = z.object({
 export type EventListQuery = z.infer<typeof eventListQuerySchema>;
 
 /**
+ * When the row in scope last absorbed a listing through a confirmed move: the
+ * latest `event_redirects` row targeting it with reason 'moved' (the venue
+ * move route's redirect, or a Moved merge's). Null when it never moved. The
+ * one rule for Moved: the list status and the admin detail's `moved` read it.
+ */
+export const movedAtSql = (): SQL<Date | null> =>
+  sql<Date | null>`(${db
+    .select({ at: max(eventRedirects.createdAt) })
+    .from(eventRedirects)
+    .where(
+      and(
+        eq(eventRedirects.targetId, events.id),
+        eq(eventRedirects.reason, 'moved'),
+      ),
+    )})`.mapWith((value: string | Date | null) =>
+    value === null ? null : new Date(value),
+  );
+
+/**
  * The fan-facing status of the row in scope, as SQL so the list can filter,
  * count and return the same value. Sold out is a promoted sold-out report
  * (`isSoldOutSql`), as on the fan side; No longer listed is a cancelled row
@@ -83,11 +103,7 @@ export const eventListStatusSql = (today: string): SQL<EventListStatus> =>
     WHEN ${events.status} = 'cancelled' THEN 'cancelled'
     WHEN ${events.status} = 'postponed' THEN 'postponed'
     WHEN ${events.date} < ${today} THEN 'played'
-    WHEN EXISTS (
-      SELECT 1 FROM ${eventRedirects}
-      WHERE ${eventRedirects.targetId} = ${events.id}
-        AND ${eventRedirects.reason} = 'moved'
-    ) THEN 'moved'
+    WHEN ${movedAtSql()} IS NOT NULL THEN 'moved'
     WHEN ${isSoldOutSql()} THEN 'soldout'
     ELSE 'available'
   END`;

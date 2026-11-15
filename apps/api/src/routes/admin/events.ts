@@ -72,6 +72,7 @@ import {
   eventListStatusSql,
   hiddenReasonSql,
   listAdminEvents,
+  movedAtSql,
 } from './lib/events-browse.js';
 import {
   submittedPriceWhere,
@@ -977,6 +978,8 @@ async function loadEventDetail(id: string, actorId: string) {
       ticketUrl: events.ticketUrl,
       delistedAt: events.delistedAt,
       listStatus: eventListStatusSql(today),
+      // Read for `moved` below, not returned as is.
+      movedAt: movedAtSql(),
       hiddenReason: hiddenReasonSql(),
       watchingCount: watchingCountOf(),
       wentCount: wentCountOf(),
@@ -1010,7 +1013,14 @@ async function loadEventDetail(id: string, actorId: string) {
     .limit(1);
 
   if (!row) return null;
-  const { bill, ...fields } = row;
+  const { bill, movedAt, ...fields } = row;
+  // Where the show moved to and when, exactly when its status reads Moved
+  // (an upcoming show with a 'moved' redirect; a cancelled, postponed or
+  // played one keeps its own status). Null with no venue row to name.
+  const moved =
+    fields.listStatus === 'moved' && movedAt !== null && fields.venueName
+      ? { toVenueName: fields.venueName, at: movedAt.toISOString() }
+      : null;
 
   // The admin's own live price on this show, which Edit price opens.
   // With it, B+ addendum 7 §6's evidence behind a Sold out (null unless
@@ -1042,6 +1052,7 @@ async function loadEventDetail(id: string, actorId: string) {
   // `mySubmissionId` is the field #418 shipped, kept as the contract.
   return {
     ...fields,
+    moved,
     lineup,
     mySubmissionId: mine?.id ?? null,
     mySubmission: mine ?? null,
