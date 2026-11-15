@@ -141,13 +141,25 @@ describe('useEvents pagination', () => {
   });
 
   it('drops a scope a signed-out viewer cannot hold', async () => {
-    const nextPage = await renderAndLoadMore('filterFollowing=1&filterTaste=1');
+    const nextPage = await renderAndLoadMore('filterFollowing=1');
 
     const params = new URL(nextPage, 'https://x').searchParams;
     expect(params.has('following')).toBe(false);
-    expect(params.has('taste')).toBe(false);
     // No token, so nothing personalized — the anonymous fetch stays cacheable
     // by the service worker.
+    expect(requests.credentialed).toHaveLength(0);
+  });
+
+  // The taste filter is retired: a stored ?filterTaste=1 link loads the plain
+  // list, even for a signed-in viewer.
+  it('ignores a stored filterTaste link', async () => {
+    authState.userId = 'user_1';
+    const nextPage = await renderAndLoadMore('filterTaste=1');
+
+    const params = new URL(nextPage, 'https://x').searchParams;
+    expect(params.has('taste')).toBe(false);
+    expect(params.has('filterTaste')).toBe(false);
+    // Not a scope, so nothing personalized: the fetch stays anonymous.
     expect(requests.credentialed).toHaveLength(0);
   });
 });
