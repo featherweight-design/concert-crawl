@@ -4613,6 +4613,69 @@ export const ADMIN_COPY = {
       merge: 'Merge with another listing…',
       mergeHint: 'For duplicates. Keeps Watchers and prices',
     },
+    // Admin 4b E4: the merge panel's pick list and compare cards.
+    // `06/merge-duplicates` (desktop) and `gap-1-merge-duplicates/*` (phone).
+    merge: {
+      kind: 'Merge',
+      title: 'Merge duplicates',
+      sub: 'Two listings for one show. Pick the one to keep; Watchers, prices and reports move to it.',
+      phoneTitle: 'Merge with another listing',
+      pickSub: 'Which listing is the same show?',
+      thisListing: 'This listing',
+      likelyHeading: 'Likely the same show',
+      likelyHint: 'same venue and day',
+      searchHeading: 'Or find it',
+      searchLabel: 'Search all shows',
+      searching: 'Searching…',
+      noResults: 'No shows match.',
+      // `merge-nothing-found`: a venue-less listing has no venue to name.
+      nothingFound: (venue: string | null, day: string) =>
+        `No other listing${venue === null ? '' : ` at ${venue}`} on ${day}. If the duplicate has another date or venue, search for it.`,
+      pickLoadFailed: 'Couldn’t load the other listings.',
+      retry: 'Try again',
+      first: 'First listing',
+      second: 'Second listing',
+      keep: 'Keep',
+      // The card's accessible name, so a screen reader hears which one is kept.
+      cardLabel: (which: string, title: string, kept: boolean) =>
+        `${which}: ${title}${kept ? ', kept' : ''}`,
+      rows: {
+        venue: 'Venue',
+        day: 'Day',
+        lineup: 'Lineup',
+        from: 'From',
+        watching: 'Watching',
+        price: 'Price',
+        reports: 'Reports',
+      },
+      sameVenueAndDay: 'Same venue and day on both',
+      fromCrawl: 'the crawl',
+      // A2: the board's "added by @handle" needs a handle the API does not
+      // send (`created_by` is the admin's id), so a hand-added row reads this.
+      fromHand: 'added by hand',
+      noLineup: 'none',
+      noPrice: 'no price',
+      noReports: 'none',
+      // 4b#16: open event reports by kind; artist reports never move.
+      reportCount: (count: number, kind: string) =>
+        `${count} ${kind} report${count === 1 ? '' : 's'}`,
+      hiddenTag: 'hidden',
+      watchingCount: (count: number) => `${count} Watching`,
+      // One sentence from the preview's numbers (see `buildMergeSummary`).
+      summary: {
+        lead: 'After merging:',
+        onePrice: 'one price',
+        keptPrice: (price: string) => `the ${price} price`,
+        oneReport: 'one report',
+        reports: (count: number) => `${count} reports`,
+        redirects: (which: string) => `The ${which} listing redirects here.`,
+        redirectsAndCrawl: (which: string) =>
+          `The ${which} listing redirects here, and the next crawl updates this one instead of adding it again.`,
+        silent: 'Nobody gets a notice.',
+      },
+      confirm: (which: string) => `Merge into the ${which}`,
+      cancel: 'Cancel',
+    },
     show: {
       title: 'Show',
       titleField: 'Title',
