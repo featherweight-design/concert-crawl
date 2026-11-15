@@ -50,21 +50,17 @@ export function useEvents({
     connection != null &&
     (connection.status === 'connected' || connection.status === 'error') &&
     connection.artistCount > 0;
-  // Taste filter (#763 PR 7): filterTaste=1 in the page URL maps to the API's
-  // taste=1 param, which requires a token + the spotify-sync entitlement.
-  // Logged-out viewers can't hold the entitlement (the chip is locked for
-  // them), so a filterTaste URL without a userId is a tampered/stale link —
-  // drop the flag and fetch the plain list.
+  // The retired taste filter's `filterTaste` page param is ignored: a stored
+  // ?filterTaste=1 link loads the plain list.
   const pageParams = new URLSearchParams(searchParamsString);
-  const tasteRequested =
-    pageParams.get('filterTaste') === '1' && userId != null;
-  // "My artists" (native following) is gated exactly like taste, and was the
-  // scope Load More lost: the page URL carries `filterFollowing`, the API
-  // takes `following`, and nothing translated between them on this path — so
-  // page 2 returned the unscoped list under a banner still claiming the scope.
+  // "My artists" (native following) needs a signed-in viewer, so a
+  // filterFollowing URL without a userId is a stale link: drop the flag. It
+  // was the scope Load More lost: the page URL carries `filterFollowing`, the
+  // API takes `following`, and nothing translated between them on this path,
+  // so page 2 returned the unscoped list under a banner still claiming it.
   const followingRequested =
     pageParams.get('filterFollowing') === '1' && userId != null;
-  const scopeRequested = tasteRequested || followingRequested;
+  const scopeRequested = followingRequested;
   const personalizedFor =
     (hasTaste || scopeRequested) && userId != null ? userId : null;
   return useInfiniteQuery({
@@ -83,15 +79,14 @@ export function useEvents({
       // presence flags. One shared builder does the translation for this fetch
       // and for the server component that rendered page 1, so Load More can
       // never widen the list it is appending to (lib/events-api-params).
-      const pathFor = (taste: boolean, following: boolean): string =>
+      const pathFor = (following: boolean): string =>
         `/v1/events?${buildEventsApiParams(pageParams, {
           limit,
           offset: pageParam,
-          taste,
           following,
         }).toString()}`;
 
-      const path = pathFor(tasteRequested, followingRequested);
+      const path = pathFor(followingRequested);
       if (personalizedFor != null) {
         const token = await getToken();
         // Throw instead of falling back to the anonymous fetch — with
@@ -108,8 +103,8 @@ export function useEvents({
           } catch (err) {
             // Entitlement lapsed (or lost) mid-session, or the flag went off:
             // fall back to the unfiltered list rather than erroring the whole
-            // browse view. One retry drops BOTH scopes, and a refused token is
-            // dropped with them — the same contract the SSR path uses, from
+            // browse view. One retry drops the scope, and a refused token is
+            // dropped with it — the same contract the SSR path uses, from
             // the same helpers.
             if (isScopeRejection(err)) {
               console.warn(
@@ -117,7 +112,7 @@ export function useEvents({
                 err,
               );
               const retryToken = scopeRetryToken(err, token);
-              const unscoped = pathFor(false, false);
+              const unscoped = pathFor(false);
               return retryToken
                 ? apiClient.get<EventsListResponse>(unscoped, retryToken)
                 : publicApiClient.get<EventsListResponse>(unscoped);

@@ -52,14 +52,13 @@ export const useDraftShowCount = (query: string | null): DraftShowCount => {
       // A total is the same at any offset, and `buildEventsApiParams` reads a
       // page URL's own `offset` when given none: a count never pages.
       params.delete('offset');
-      // The scopes ride a token, as they do for the list itself (use-events).
+      // The scope rides a token, as it does for the list itself (use-events).
+      // The retired taste filter's `filterTaste` param is ignored.
       const following = params.get('filterFollowing') === '1' && userId != null;
-      const taste = params.get('filterTaste') === '1' && userId != null;
       const pathFor = (scoped: boolean) =>
         `/v1/events?${buildEventsApiParams(params, {
           limit: 1,
           following: scoped && following,
-          taste: scoped && taste,
         }).toString()}`;
       const publicTotal = async () =>
         (
@@ -67,7 +66,7 @@ export const useDraftShowCount = (query: string | null): DraftShowCount => {
             signal,
           })
         ).total;
-      if (!following && !taste) return publicTotal();
+      if (!following) return publicTotal();
 
       const token = await getToken();
       // The list throws here too (use-events): an unscoped count under a
@@ -82,7 +81,7 @@ export const useDraftShowCount = (query: string | null): DraftShowCount => {
       } catch (err) {
         // Entitlement lapsed mid-session: the list falls back to the unscoped
         // list (use-events), so the count does too, by the same rule and
-        // helpers, a refused token dropped with the scopes.
+        // helpers, a refused token dropped with the scope.
         if (!isScopeRejection(err)) throw err;
         const retryToken = scopeRetryToken(err, token);
         if (retryToken === null) return publicTotal();

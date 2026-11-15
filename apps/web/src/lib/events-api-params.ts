@@ -2,8 +2,8 @@
 // params.
 //
 // The two readers disagreed before this existed: the server component mapped
-// `filterWhere` → `venueSlug`, `filterWhen` → `from`/`to` and `filterTaste` /
-// `filterFollowing` → `taste` / `following`, while the client's Load More
+// `filterWhere` → `venueSlug`, `filterWhen` → `from`/`to` and
+// `filterFollowing` → `following`, while the client's Load More
 // forwarded the page URL almost verbatim. `listEventsSchema` is a plain
 // (non-strict) Zod object, so the untranslated keys were stripped rather than
 // rejected — page 2 came back 200 with unfiltered rows appended to a filtered
@@ -12,18 +12,17 @@
 // EVENTS_QUERY_KEYS instead: the API builds its schema from it and logs any
 // other key, and this module's test asserts every key it emits is on the list.
 //
-// Scope flags are passed in rather than read off the URL: whether a viewer may
-// actually hold `taste` or `following` depends on a token and an entitlement,
-// which only the caller knows.
+// The scope flag is passed in rather than read off the URL: whether a viewer
+// may actually hold `following` depends on a token, which only the caller
+// knows. The retired taste filter's `filterTaste` page param is never sent.
 
 import { parseListParam, type EventsQueryKey } from '@concert-crawl/types';
 import { filterWhenToDateRange } from '@/components/consumer/definitions/lib';
 
-/** Pagination plus the scope flags, which only the caller can decide. */
+/** Pagination plus the scope flag, which only the caller can decide. */
 export interface EventsApiOptions {
   limit: number;
   offset?: number;
-  taste?: boolean;
   following?: boolean;
 }
 
@@ -75,7 +74,7 @@ const appendList = (
  */
 export const buildEventsApiParams = (
   params: BrowseParams,
-  { limit, offset, taste = false, following = false }: EventsApiOptions,
+  { limit, offset, following = false }: EventsApiOptions,
 ): URLSearchParams => {
   const qs = new URLSearchParams();
 
@@ -108,7 +107,6 @@ export const buildEventsApiParams = (
 
   appendList(qs, 'filterVibe', readList(params, 'filterVibe'));
 
-  if (taste) qs.set('taste', '1');
   if (following) qs.set('following', '1');
 
   // Offset comes from the caller on the client (React Query's page param) and

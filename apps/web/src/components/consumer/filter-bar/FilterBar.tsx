@@ -358,10 +358,7 @@ export function FilterBar({
 
   const isCalendarView = (searchParams.get('view') ?? 'list') === 'cal';
   const activeFilterCount = getActiveFilterCount(filterValues);
-  // Taste scope (#763 PR 7). Its chip is retired (W7), so only a stored
-  // ?filterTaste=1 link turns it on, and Clear all is the way back out.
-  const tasteActive = searchParams.get('filterTaste') === '1';
-  // Same treatment for the follow scope: a mode, not a dimension.
+  // The follow scope is a mode, not a dimension.
   const followActive = searchParams.get('filterFollowing') === '1';
 
   useEffect(() => {
@@ -409,9 +406,9 @@ export function FilterBar({
   const lensCrewId = searchParams.get('crew');
   const lensCrew = crews.find((crew) => crew.id === lensCrewId) ?? null;
 
-  // Narrowed by a dimension or a scope: My artists and taste cut the list as
-  // surely as a venue does, so the count line says "match" for them too.
-  const listFiltered = activeFilterCount > 0 || followActive || tasteActive;
+  // Narrowed by a dimension or a scope: My artists cuts the list as surely
+  // as a venue does, so the count line says "match" for it too.
+  const listFiltered = activeFilterCount > 0 || followActive;
 
   // Any filter or scope on draws the whole bar's edge in the signal
   // (`bp-f-filt_active_d`).
@@ -432,7 +429,6 @@ export function FilterBar({
       [FILTER_DEFS.vibe.queryKey]: '',
       from: '',
       to: '',
-      filterTaste: '',
     });
     setOpenFilterKey(null);
   }, [updateParams]);
@@ -791,7 +787,7 @@ export function FilterBar({
                 : copy.showCount(showCount)}
             </span>
           )}
-          {(activeFilterCount > 0 || tasteActive) && (
+          {activeFilterCount > 0 && (
             <button
               type="button"
               onClick={() => {

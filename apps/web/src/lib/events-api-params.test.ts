@@ -192,7 +192,7 @@ describe('buildEventsApiParams', () => {
         ['crew', 'crew-1'],
         ['someFutureKey', 'x'],
       ]),
-      { limit: 20, taste: true, following: true },
+      { limit: 20, following: true },
     );
 
     const known: readonly string[] = EVENTS_QUERY_KEYS;
@@ -206,12 +206,13 @@ describe('buildEventsApiParams', () => {
         'to',
         'filterPrice',
         'filterVibe',
-        'taste',
         'following',
         'offset',
         'limit',
       ]),
     );
+    // The retired taste filter's page param is ignored, never translated.
+    expect(qs.has('taste')).toBe(false);
   });
 
   it('sends a legacy single-value URL exactly as it always did', () => {
@@ -236,7 +237,7 @@ describe('buildEventsApiParams', () => {
     expect(qs.getAll('venueSlug')).toEqual(['ogden-theatre', 'bluebird']);
   });
 
-  it('emits the scope flags only when the caller says the viewer holds them', () => {
+  it('emits the scope flag only when the caller says the viewer holds it', () => {
     const params = new URLSearchParams({
       filterTaste: '1',
       filterFollowing: '1',
@@ -244,16 +245,15 @@ describe('buildEventsApiParams', () => {
 
     const granted = buildEventsApiParams(params, {
       limit: 20,
-      taste: true,
       following: true,
     });
-    expect(granted.get('taste')).toBe('1');
     expect(granted.get('following')).toBe('1');
+    // The retired taste filter's page param is ignored.
+    expect(granted.has('taste')).toBe(false);
 
-    // A bookmarked URL is not an entitlement — the flags come from the caller,
+    // A bookmarked URL is not an entitlement — the flag comes from the caller,
     // never from the URL alone.
     const denied = buildEventsApiParams(params, { limit: 20 });
-    expect(denied.has('taste')).toBe(false);
     expect(denied.has('following')).toBe(false);
     expect(denied.has('filterFollowing')).toBe(false);
   });

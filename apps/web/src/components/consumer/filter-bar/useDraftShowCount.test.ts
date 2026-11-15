@@ -123,7 +123,7 @@ describe('useDraftShowCount', () => {
     expect(pathOf(publicGet.mock.calls[1]).get('filterPrice')).toBe('50-plus');
   });
 
-  it('asks with a token when the draft keeps My artists or taste on', async () => {
+  it('asks with a token when the draft keeps My artists on', async () => {
     getToken.mockResolvedValue('tok_1');
     authedGet.mockResolvedValue({ total: 5 });
     const { result } = renderHook(
@@ -169,9 +169,12 @@ describe('useDraftShowCount', () => {
   it('a non-scope failure on a scoped count stays an error', async () => {
     getToken.mockResolvedValue('tok_1');
     authedGet.mockRejectedValue(new ApiError(500, 'boom'));
-    const { result } = renderHook(() => useDraftShowCount('filterTaste=1'), {
-      wrapper,
-    });
+    const { result } = renderHook(
+      () => useDraftShowCount('filterFollowing=1'),
+      {
+        wrapper,
+      },
+    );
     await flush();
     await flush();
     expect(publicGet).not.toHaveBeenCalled();
@@ -180,13 +183,31 @@ describe('useDraftShowCount', () => {
 
   it('a scoped count with no token is an error, never an unscoped number', async () => {
     getToken.mockResolvedValue(null);
+    const { result } = renderHook(
+      () => useDraftShowCount('filterFollowing=1'),
+      {
+        wrapper,
+      },
+    );
+    await flush(DRAFT_COUNT_DEBOUNCE_MS);
+    await flush();
+    expect(publicGet).not.toHaveBeenCalled();
+    expect(result.current).toEqual({ status: 'error' });
+  });
+
+  // The taste filter is retired: a stored ?filterTaste=1 is not a scope.
+  it('ignores filterTaste: a plain public count, no taste param', async () => {
+    getToken.mockResolvedValue('tok_1');
+    publicGet.mockResolvedValue({ total: 12 });
     const { result } = renderHook(() => useDraftShowCount('filterTaste=1'), {
       wrapper,
     });
     await flush(DRAFT_COUNT_DEBOUNCE_MS);
     await flush();
-    expect(publicGet).not.toHaveBeenCalled();
-    expect(result.current).toEqual({ status: 'error' });
+    expect(authedGet).not.toHaveBeenCalled();
+    expect(publicGet).toHaveBeenCalledTimes(1);
+    expect(pathOf(publicGet.mock.calls[0]).get('taste')).toBeNull();
+    expect(result.current).toEqual({ status: 'ready', count: 12 });
   });
 
   it('a failed ask reports an error', async () => {

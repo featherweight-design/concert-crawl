@@ -36,9 +36,7 @@ import { pickerWindow } from '@/components/consumer/jump-picker/date-math';
 import { fetchAvailability } from '@/lib/queries/availability';
 import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner';
 import { DiscoveryShelf } from '@/components/consumer/spotify/DiscoveryShelf';
-import { SpotifyLogo } from '@/components/brand/spotify-logo';
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
-import { fetchSpotifyConnection, fetchTastePicks } from '@/lib/spotify';
+import { fetchTastePicks } from '@/lib/spotify';
 import { crewLensFilterQuery, fetchCrews, fetchCrewShows } from '@/lib/crews';
 import { isFeatureEnabled } from '@/lib/feature-flags';
 import { CREWS_COPY, CrewLensList } from '@/components/consumer/crews';
@@ -92,12 +90,11 @@ async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
   token: string | null,
   limit = PAGE_LIMIT,
-  taste = false,
   following = false,
 ): Promise<EventsListResponse> {
   // Shared with Load More's client fetch so page 2 asks for the same filtered
   // set page 1 did (see lib/events-api-params).
-  const qs = buildEventsApiParams(params, { limit, taste, following });
+  const qs = buildEventsApiParams(params, { limit, following });
   const url = `/v1/events?${qs.toString()}`;
   return token
     ? apiClient.get<EventsListResponse>(url, token)
@@ -187,22 +184,16 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     ? fetchWatching(token).catch(() => [])
     : Promise.resolve([]);
 
-  // Taste filter (#763 PR 7): server-gated behind the spotify-sync
-  // entitlement, so only send taste=1 with a token. If the API rejects it
-  // (see isScopeRejection — signed out mid-session, entitlement lapsed, flag
-  // switched off, or a tampered URL), fall back to the unfiltered list
-  // instead of erroring the page;
-  // tasteApplied drives the scope banner so the UI never claims a filter
-  // the API didn't apply.
-  const tasteRequested = params['filterTaste'] === '1' && token != null;
-  // Follow scope (native following PR 4): identical server gating to taste,
-  // and the same rejection contract, so both scopes share one fallback path.
-  // `followingApplied` is read back off the RESPONSE rather than assumed from
-  // the request — the banner must never claim a scope the API declined.
+  // Follow scope (native following PR 4): server-gated, so only sent with a
+  // token. If the API rejects it (see isScopeRejection — signed out
+  // mid-session, or a tampered URL), fall back to the unfiltered list instead
+  // of erroring the page. `followingApplied` is read back off the RESPONSE
+  // rather than assumed from the request — the banner must never claim a
+  // scope the API declined. The retired taste filter's `filterTaste` param is
+  // ignored: a stored ?filterTaste=1 link loads the plain list.
   const followingRequested = params['filterFollowing'] === '1' && token != null;
   const eventsPromise: Promise<{
     response: EventsListResponse;
-    tasteApplied: boolean;
     followingApplied: boolean;
   }> = (async () => {
     // Calendar fetches a bounded week — use the API max (100) so all shows in
@@ -214,21 +205,17 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
         fetchParams,
         token,
         viewLimit,
-        tasteRequested,
         followingRequested,
       );
       return {
         response,
-        tasteApplied: tasteRequested,
         followingApplied:
           followingRequested && response.followingApplied === true,
       };
     } catch (err) {
-      const scopeRequested = tasteRequested || followingRequested;
-      if (scopeRequested && isScopeRejection(err)) {
-        // One retry drops BOTH scopes. Which one the API rejected isn't in the
-        // error, and a second probe to find out costs a round-trip to render a
-        // list the viewer can re-scope in one tap.
+      if (followingRequested && isScopeRejection(err)) {
+        // One retry drops the scope: rendering the list the viewer can
+        // re-scope in one tap beats erroring the page.
         console.warn('scope filter rejected — falling back to unfiltered', err);
         return {
           response: await fetchEvents(
@@ -236,9 +223,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
             scopeRetryToken(err, token),
             viewLimit,
             false,
-            false,
           ),
-          tasteApplied: false,
           followingApplied: false,
         };
       }
@@ -341,7 +326,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     anonymousSuggestionsPromise,
   ]);
   const eventsResult = eventsFetch.response;
-  const tasteApplied = eventsFetch.tasteApplied;
   const followingApplied = eventsFetch.followingApplied;
 
   const watchedIds = new Set(watchedShows.map((show) => show.eventId));
@@ -446,24 +430,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     });
   }
 
-  // Taste filter with zero hits and no Spotify linked (#763 staging
-  // feedback): entitled viewers without a connection get an empty 200 from
-  // taste=1 (no follow rows), so the generic "0 hits" state offers no way
-  // forward. Check the connection only in that narrow case and swap in a
-  // connect nudge. A failed check degrades to the generic empty state.
-  let tasteNudgeConnect = false;
-  if (tasteApplied && events.length === 0 && view === 'list' && token) {
-    try {
-      const connection = await fetchSpotifyConnection(token);
-      tasteNudgeConnect = connection.status === 'disconnected';
-    } catch (err) {
-      console.error(
-        'spotify connection check for taste empty state failed',
-        err,
-      );
-    }
-  }
-
   const firstEventIsToday =
     events.length > 0 && events[0] !== undefined && isToday(events[0].date);
   const heroEvent = firstEventIsToday ? events[0] : null;
@@ -477,7 +443,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     params['filterWhere'] ??
     params['filterPrice'] ??
     params['filterVibe'] ??
-    (tasteApplied ? '1' : undefined) ??
     (followingApplied ? '1' : undefined);
   const currentOffset = eventsResult.offset;
 
@@ -556,8 +521,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
 
       {/* Follow scope banner — role="status" so a screen reader hears the
           list narrow when the chip is toggled, and rendered only when the API
-          reported `followingApplied`. Same shell as the taste banner beside
-          it, minus the Spotify mark: these follows are ours. */}
+          reported `followingApplied`. */}
       {followingApplied && !lensActive && (
         <div
           role="status"
@@ -573,27 +537,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
             {total === 1
               ? FOLLOWING_COPY.bannerSingular
               : FOLLOWING_COPY.banner(total)}
-          </span>
-        </div>
-      )}
-
-      {/* Taste scope banner — only when the API actually applied taste=1
-          (taste-filter.jsx mock). */}
-      {tasteApplied && !tasteNudgeConnect && !lensActive && (
-        <div
-          className="mb-4 flex items-center gap-2 rounded-lg px-3 py-2"
-          style={{
-            background:
-              'color-mix(in oklch, var(--signal) 10%, var(--surface-1))',
-            border:
-              '1px solid color-mix(in oklch, var(--signal) 28%, var(--border))',
-          }}
-        >
-          <SpotifyLogo size={16} />
-          <span className="text-xs font-semibold text-fg">
-            {total === 1
-              ? SPOTIFY_COPY.tasteFilter.bannerSingular
-              : SPOTIFY_COPY.tasteFilter.banner(total)}
           </span>
         </div>
       )}
@@ -635,54 +578,32 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
           />
         )}
 
-      {tasteNudgeConnect && !lensActive && (
+      {events.length === 0 && view === 'list' && !lensActive && (
         <EmptyState
-          state="filtered"
-          eyebrow={SPOTIFY_COPY.tasteFilter.emptyNotConnected.eyebrow}
-          title={SPOTIFY_COPY.tasteFilter.emptyNotConnected.title}
-          body={SPOTIFY_COPY.tasteFilter.emptyNotConnected.body}
-          primaryCta={{
-            label: SPOTIFY_COPY.tasteFilter.emptyNotConnected.primaryCta,
-            href: '/me?section=connections',
-          }}
-          secondaryCta={{
-            label: SPOTIFY_COPY.tasteFilter.emptyNotConnected.secondaryCta,
-            href: '/events',
-          }}
+          layout="card"
+          glyph={isFiltered ? 'dots' : 'calendar'}
+          eyebrow={
+            isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
+          }
+          title={isFiltered ? copy.emptyFilteredTitle : copy.emptyTonightTitle}
+          body={isFiltered ? copy.emptyFilteredBody : copy.emptyTonightBody}
+          // B+ `empty_filtered_m`: clearing the filters is the way out,
+          // so it takes the primary (gradient) action.
+          {...(isFiltered
+            ? {
+                primaryCta: {
+                  label: copy.emptyFilteredCta,
+                  href: '/events',
+                },
+              }
+            : {
+                primaryCta: {
+                  label: copy.emptyTonightCta,
+                  href: '/events?filterWhen=this-week',
+                },
+              })}
         />
       )}
-
-      {events.length === 0 &&
-        view === 'list' &&
-        !tasteNudgeConnect &&
-        !lensActive && (
-          <EmptyState
-            layout="card"
-            glyph={isFiltered ? 'dots' : 'calendar'}
-            eyebrow={
-              isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
-            }
-            title={
-              isFiltered ? copy.emptyFilteredTitle : copy.emptyTonightTitle
-            }
-            body={isFiltered ? copy.emptyFilteredBody : copy.emptyTonightBody}
-            // B+ `empty_filtered_m`: clearing the filters is the way out,
-            // so it takes the primary (gradient) action.
-            {...(isFiltered
-              ? {
-                  primaryCta: {
-                    label: copy.emptyFilteredCta,
-                    href: '/events',
-                  },
-                }
-              : {
-                  primaryCta: {
-                    label: copy.emptyTonightCta,
-                    href: '/events?filterWhen=this-week',
-                  },
-                })}
-          />
-        )}
 
       {heroEvent && view === 'list' && !lensActive && (
         <div className="mb-6">
