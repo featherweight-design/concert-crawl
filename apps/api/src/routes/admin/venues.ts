@@ -1167,6 +1167,9 @@ venuesAdminRouter.patch(
     // Who set the crawl mode. A mode sent by an admin is forced ('admin');
     // clearing it hands the pick back to the crawler, so the source is unknown
     // until the crawler records 'auto'. A PATCH without crawlMode leaves it.
+    // Deliberate: a PATCH that sends crawlMode marks it 'admin' even when the
+    // value is unchanged, so saving the form with the crawler's pick showing
+    // adopts that pick as an admin force.
     const crawlModeSourceFields: Pick<
       Partial<NewVenue>,
       'crawlModeSource'

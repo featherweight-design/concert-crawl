@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, SQL, StringChunk } from 'drizzle-orm';
 import type { Browser } from 'playwright';
 
 // Mock the email module so we can control timing + assert await behavior
@@ -2163,6 +2163,35 @@ describe('crawlVenue — crawlMode orchestration', () => {
     finalUrl: 'https://test-venue.example.com',
   };
 
+  // The first-pick write is a guarded SQL expression (COALESCE / CASE against
+  // the old row, so a mode an admin forces mid-crawl wins). The in-memory
+  // update() stores set() values verbatim and cannot evaluate SQL, so these
+  // tests read the stored sql`` object back as text: string chunks inline,
+  // string params quoted, and anything else (the mocked table's columns,
+  // undefined here) as '?'.
+  function sqlText(value: unknown): string {
+    if (!(value instanceof SQL)) {
+      throw new Error(`expected a sql\`\` value, got ${String(value)}`);
+    }
+    return value.queryChunks
+      .map((chunk) => {
+        if (chunk instanceof StringChunk) return chunk.value.join('');
+        if (typeof chunk === 'string') return JSON.stringify(chunk);
+        return '?';
+      })
+      .join('');
+  }
+
+  function expectFirstPick(
+    saved: { crawlMode?: unknown; crawlModeSource?: unknown } | undefined,
+    mode: 'http' | 'browser',
+  ) {
+    expect(sqlText(saved?.crawlMode)).toBe(`COALESCE(?, "${mode}")`);
+    expect(sqlText(saved?.crawlModeSource)).toBe(
+      "CASE WHEN ? IS NULL THEN 'auto' ELSE ? END",
+    );
+  }
+
   beforeEach(() => {
     mockExtractWithLlm.mockResolvedValue({
       events: [METALLICA_EVENT],
@@ -2376,9 +2405,9 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockExtractWithLlm).not.toHaveBeenCalled();
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
-    expect(savedVenue?.crawlMode).toBe('http');
-    // The crawler's own pick is recorded as 'auto', never as an admin force.
-    expect(savedVenue?.crawlModeSource).toBe('auto');
+    // The crawler's own pick is recorded as 'auto', never as an admin force,
+    // and only lands if the mode is still unset when the write runs.
+    expectFirstPick(savedVenue, 'http');
   });
 
   it('auto-detect: records crawlModeSource=auto on the page-unchanged skip path', async () => {
@@ -2396,8 +2425,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
     const run = await crawlVenue(venue.id, mockBrowser);
 
     expect(run.reason).toBe('page_unchanged');
-    expect(stored.crawlMode).toBe('browser');
-    expect(stored.crawlModeSource).toBe('auto');
+    expectFirstPick(stored, 'browser');
   });
 
   it('leaves an admin-set crawl mode and its source alone', async () => {
@@ -2437,8 +2465,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockExtractWithLlm).toHaveBeenCalledTimes(1);
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
-    expect(savedVenue?.crawlMode).toBe('browser');
-    expect(savedVenue?.crawlModeSource).toBe('auto');
+    expectFirstPick(savedVenue, 'browser');
   });
 
   it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP fetch throws', async () => {
@@ -2451,7 +2478,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockFetchPage).toHaveBeenCalled();
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
-    expect(savedVenue?.crawlMode).toBe('browser');
+    expectFirstPick(savedVenue, 'browser');
   });
 
   it('forced http: does not fall back to browser when HTTP returns no events', async () => {

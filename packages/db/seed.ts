@@ -1172,7 +1172,14 @@ async function seed() {
   await db
     .insert(venues)
     // Seeded venues are live, never drafts (admin 3c: NULL went_live_at).
-    .values(SEED_VENUES.map((venue) => ({ ...venue, wentLiveAt: new Date() })))
+    // A seeded crawl mode is hand-tuned, so it is recorded as an admin force.
+    .values(
+      SEED_VENUES.map((venue) => ({
+        ...venue,
+        wentLiveAt: new Date(),
+        crawlModeSource: venue.crawlMode ? ('admin' as const) : null,
+      })),
+    )
     .onConflictDoUpdate({
       target: venues.slug,
       set: {
@@ -1188,6 +1195,7 @@ async function seed() {
         lng: sql`excluded.lng`,
         ticketVendor: sql`excluded.ticket_vendor`,
         crawlMode: sql`excluded.crawl_mode`,
+        crawlModeSource: sql`excluded.crawl_mode_source`,
         crawlWaitUntil: sql`excluded.crawl_wait_until`,
         crawlWaitForSelector: sql`excluded.crawl_wait_for_selector`,
         crawlDelayMs: sql`excluded.crawl_delay_ms`,

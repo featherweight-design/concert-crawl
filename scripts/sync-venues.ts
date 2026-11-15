@@ -87,6 +87,8 @@ const UPSERT_SET = {
   lng: sql`excluded.lng`,
   ticketVendor: sql`excluded.ticket_vendor`,
   crawlMode: sql`excluded.crawl_mode`,
+  // Travels with crawlMode: 'admin' for a seeded mode, NULL for none.
+  crawlModeSource: sql`excluded.crawl_mode_source`,
   crawlWaitUntil: sql`excluded.crawl_wait_until`,
   crawlWaitForSelector: sql`excluded.crawl_wait_for_selector`,
   crawlDelayMs: sql`excluded.crawl_delay_ms`,
@@ -193,7 +195,14 @@ export const runSync = async ({
   // which is the exact drift this script exists to prevent.
   //
   // Unscoped: DO NOTHING, so an existing row keeps its admin-owned values.
-  const insert = db.insert(venues).values(seedVenues);
+  // A crawl mode in the seed is hand-tuned, so it is recorded as an admin
+  // force; no mode leaves the pick (and its source) to the crawler.
+  const insert = db.insert(venues).values(
+    seedVenues.map((venue) => ({
+      ...venue,
+      crawlModeSource: venue.crawlMode ? ('admin' as const) : null,
+    })),
+  );
   await (scoped
     ? insert.onConflictDoUpdate({ target: venues.slug, set: UPSERT_SET })
     : insert.onConflictDoNothing({ target: venues.slug }));

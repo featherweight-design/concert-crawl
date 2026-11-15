@@ -79,6 +79,7 @@ export async function syncVenues(deps: {
             crawlWaitUntil: row.crawlWaitUntil,
             crawlWaitForSelector: row.crawlWaitForSelector,
             crawlMode: row.crawlMode,
+            crawlModeSource: row.crawlModeSource,
             address: row.address,
             capacity: row.capacity,
             venueType: row.venueType,
