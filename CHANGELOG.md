@@ -1,3 +1,15 @@
+# [1.516.0](https://github.com/featherweight-design/concert-crawl/compare/v1.515.0...v1.516.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** same-tick guard, stale search rows and a shared person row ([01829a0](https://github.com/featherweight-design/concert-crawl/commit/01829a074577b445d3085cdd008ee9c921da517c))
+
+
+### Features
+
+* **web:** named people in the flag drawer, with add by handle and remove ([25f362e](https://github.com/featherweight-design/concert-crawl/commit/25f362e2fe7747cbbd6cee8917f3d59b53a97fb4))
+
 # [1.515.0](https://github.com/featherweight-design/concert-crawl/compare/v1.514.0...v1.515.0) (2026-11-15)
 
 
