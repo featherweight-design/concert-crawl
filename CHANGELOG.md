@@ -1,3 +1,14 @@
+## [1.512.1](https://github.com/featherweight-design/concert-crawl/compare/v1.512.0...v1.512.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** count Concerts and audit each bulk delete once ([d3017ad](https://github.com/featherweight-design/concert-crawl/commit/d3017ada566db0ad2b30b67e090fecf4faeaeda2))
+* **api:** delete only manual events nobody depends on ([8f133d3](https://github.com/featherweight-design/concert-crawl/commit/8f133d39dbc162d1e2d079f42a8a51a5e131ae43))
+* **api:** lock only manual rows and their user_events in event delete ([5b4b734](https://github.com/featherweight-design/concert-crawl/commit/5b4b73412cc54b7b47383f3ef788e5cab89377e2))
+* **web:** drop the Concerts, Passport and crews paywalls ([3d5aabc](https://github.com/featherweight-design/concert-crawl/commit/3d5aabc35ed88bd7c4425bca7e91e80afb9ca72f))
+* **web:** route crew creation by session and tidy the paywall leftovers ([6145b74](https://github.com/featherweight-design/concert-crawl/commit/6145b74b21a9174a051efd8465f5e1f63a3476e0))
+
 # [1.512.0](https://github.com/featherweight-design/concert-crawl/compare/v1.511.0...v1.512.0) (2026-11-15)
 
 
