@@ -2026,9 +2026,10 @@ export const CONSUMER_COPY = {
     // Box office carries its tier too, so two box office tiers never read alike
     // (`40/where-its-sold` a).
     faceValue: '{tier} · face value · no fees',
-    // The resale line (`40/where-its-sold` b): "{tier} · resale · all-in", with
-    // the word set in the Resale trust colour, so it is three pieces.
-    resale: { lead: '{tier} · ', word: 'resale', tail: ' · all-in' },
+    // The resale line (`40/where-its-sold` b), with `resaleWord` set in the
+    // Resale trust colour: the card splits the line around that word.
+    resaleLine: '{tier} · resale · all-in',
+    resaleWord: 'resale',
     // The letter tile for `Other` (plan default): no seller, no initial.
     otherTile: '?',
   },

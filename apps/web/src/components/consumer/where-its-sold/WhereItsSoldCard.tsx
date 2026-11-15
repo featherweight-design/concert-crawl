@@ -53,16 +53,19 @@ export function SellerLine({ row }: { row: WhereItsSoldRow }) {
     return <>{copy.faceValue.replace('{tier}', row.tier)}</>;
   }
   if (kind === 'resale') {
+    const line = copy.resaleLine.replace('{tier}', row.tier);
+    const at = line.indexOf(copy.resaleWord);
+    if (at === -1) return <>{line}</>;
     return (
       <>
-        {copy.resale.lead.replace('{tier}', row.tier)}
+        {line.slice(0, at)}
         <span
           data-testid="where-its-sold-resale"
           style={{ color: TRUST_TOKENS.resale.text }}
         >
-          {copy.resale.word}
+          {copy.resaleWord}
         </span>
-        {copy.resale.tail}
+        {line.slice(at + copy.resaleWord.length)}
       </>
     );
   }
@@ -159,8 +162,10 @@ export function WhereItsSoldCard({ rows }: { rows: WhereItsSoldRow[] }) {
                   >
                     {name}
                   </span>
+                  {/* The line wraps rather than truncates: the tier it now
+                      carries is what tells two box office rows apart, and an
+                      ellipsis at 320px cut it off. */}
                   <span
-                    className="truncate"
                     data-testid="where-its-sold-line"
                     style={{
                       fontFamily: 'var(--font-ui)',
