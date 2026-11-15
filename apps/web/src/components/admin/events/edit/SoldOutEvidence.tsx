@@ -1,9 +1,13 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { AdminCardRow, PersonAvatar } from '@/components/admin/primitives';
+import {
+  AdminCardRow,
+  ConfirmDialog,
+  PersonAvatar,
+} from '@/components/admin/primitives';
 import { inputStyle } from '@/components/admin/venues/source/source-parts';
 import {
   shortDate,
@@ -16,7 +20,6 @@ import {
   type EvidenceMethod,
   type SoldOutRecord,
 } from './event-detail';
-import { EventConfirm } from './StatusCard';
 
 const COPY = ADMIN_COPY.eventEdit.soldOut;
 
@@ -269,39 +272,47 @@ export const SoldOutConfirm = ({
 }) => {
   const url = evidence.url.trim();
   const note = evidence.note.trim();
+  const [pending, setPending] = useState(false);
+  // The Event confirms' dialog and buttons (`EventConfirm`), without its own
+  // failure line: a failed mark closes this and shows the page's Couldn't
+  // change, with Try again.
   return (
-    <EventConfirm
+    <ConfirmDialog
       title={COPY.confirmTitle(artist)}
       confirmLabel={COPY.confirm}
-      danger={false}
-      failedWhat={ADMIN_COPY.eventEdit.saveFailed.what}
-      failedSaved={ADMIN_COPY.eventEdit.statusSaved(
-        ADMIN_COPY.eventEdit.status.available,
-      )}
+      confirmVariant="gradient"
+      buttonSize="large"
+      pending={pending}
+      onConfirm={() => {
+        setPending(true);
+        void onConfirm().finally(() => setPending(false));
+      }}
       onCancel={onCancel}
-      act={onConfirm}
-    >
-      <div>{COPY.confirmBody(watchingCount)}</div>
-      <div data-testid="sold-out-confirm-rows">
-        <AdminCardRow label={COPY.howYouKnew}>
-          {evidence.method === null ? (
-            <None>{COPY.noneValue}</None>
-          ) : (
-            COPY.methods[evidence.method]
-          )}
-        </AdminCardRow>
-        <AdminCardRow label={COPY.source}>
-          {url === '' ? (
-            <None>{COPY.noneValue}</None>
-          ) : (
-            <SourceLink url={url} />
-          )}
-        </AdminCardRow>
-        <AdminCardRow label={COPY.note}>
-          {note === '' ? <None>{COPY.noneValue}</None> : note}
-        </AdminCardRow>
-      </div>
-    </EventConfirm>
+      body={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>{COPY.confirmBody(watchingCount)}</div>
+          <div data-testid="sold-out-confirm-rows">
+            <AdminCardRow label={COPY.howYouKnew}>
+              {evidence.method === null ? (
+                <None>{COPY.noneValue}</None>
+              ) : (
+                COPY.methods[evidence.method]
+              )}
+            </AdminCardRow>
+            <AdminCardRow label={COPY.source}>
+              {url === '' ? (
+                <None>{COPY.noneValue}</None>
+              ) : (
+                <SourceLink url={url} />
+              )}
+            </AdminCardRow>
+            <AdminCardRow label={COPY.note}>
+              {note === '' ? <None>{COPY.noneValue}</None> : note}
+            </AdminCardRow>
+          </div>
+        </div>
+      }
+    />
   );
 };
 

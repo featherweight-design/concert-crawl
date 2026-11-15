@@ -995,6 +995,80 @@ describe('EventEdit sold-out evidence', () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it('names the sale, not the tour name, when the tour name saved and the mark failed', async () => {
+    patch.mockResolvedValue({});
+    post.mockRejectedValue(new Error('500'));
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.change(screen.getByLabelText(COPY.show.tourName), {
+      target: { value: 'Jubilee Tour' },
+    });
+    fireEvent.click(pill('soldout'));
+    markSoldOut();
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        tourName: 'Jubilee Tour',
+      }),
+    );
+    expect(
+      await screen.findByText(
+        new RegExp(
+          COPY.statusSaved(ADMIN_COPY.eventsList.status.available).replace(
+            '.',
+            '\\.',
+          ),
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(new RegExp(COPY.saveFailed.savedTour(''))),
+    ).toBeNull();
+    // What landed is re-read.
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('keeps the method, link and note after a failed mark, for Try again and for picking Sold out again', async () => {
+    post.mockRejectedValueOnce(new Error('500')).mockResolvedValue({});
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(pill('soldout'));
+    fireEvent.click(screen.getByLabelText(SOLD.methods.bought_myself));
+    fireEvent.change(screen.getByLabelText(SOLD.sourceLabel), {
+      target: { value: 'https://axs.com/events/52114' },
+    });
+    fireEvent.change(screen.getByLabelText(SOLD.noteLabel), {
+      target: { value: 'Friday GA gone.' },
+    });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    fireEvent.click(screen.getByRole('button', { name: SOLD.confirm }));
+    const tryAgain = await screen.findByRole('button', {
+      name: ADMIN_COPY.states.saveFailed.tryAgain,
+    });
+    // Snapped back to what is saved: Tickets available, so no form.
+    expect(pill('available')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByTestId('sold-out-form')).toBeNull();
+    // Picking Sold out again finds what the admin entered.
+    fireEvent.click(pill('soldout'));
+    expect(screen.getByLabelText(SOLD.methods.bought_myself)).toBeChecked();
+    expect(screen.getByLabelText(SOLD.sourceLabel)).toHaveValue(
+      'https://axs.com/events/52114',
+    );
+    expect(screen.getByLabelText(SOLD.noteLabel)).toHaveValue(
+      'Friday GA gone.',
+    );
+    fireEvent.click(pill('available'));
+    // Try again sends the same mark.
+    fireEvent.click(tryAgain);
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(post).toHaveBeenLastCalledWith(
+      '/v1/admin/events/evt-1/sold-out',
+      'token',
+      {
+        evidenceMethod: 'bought_myself',
+        evidenceUrl: 'https://axs.com/events/52114',
+        note: 'Friday GA gone.',
+      },
+    );
+  });
+
   it('confirms on the phone in a sheet, Mark sold out drawn above Cancel', () => {
     setPhone(true);
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);

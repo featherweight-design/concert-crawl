@@ -79,6 +79,9 @@ interface Fields {
   showTime: string | null;
 }
 
+/** A Save's writes, in order: the fields' PATCH, then the sale's POST. */
+type SaveStep = 'fields' | 'sale';
+
 /** A stored `HH:MM:SS` as the pickers' `HH:MM`. */
 const hhmm = (time: string | null): string | null =>
   time === null ? null : time.slice(0, 5);
@@ -522,6 +525,8 @@ export const EventEdit = ({
   const [merging, setMerging] = useState(false);
   /** The PATCH's 409 refusal, said as such: a retry would be refused again. */
   const [refusal, setRefusal] = useState<string | null>(null);
+  /** The write a failed save stopped at: the fields' PATCH or the sale's POST. */
+  const [failedStep, setFailedStep] = useState<SaveStep | null>(null);
 
   useEffect(() => {
     setPageTitle(detail.artist);
@@ -612,12 +617,16 @@ export const EventEdit = ({
           detail.status === 'delisted') && { status: 'upcoming' }),
     };
     let landed = false;
+    // Which write was running, so a failure names the step that failed.
+    let step: SaveStep = 'fields';
     setRefusal(null);
+    setFailedStep(null);
     try {
       if (Object.keys(body).length > 0) {
         await apiClient.patch(path, token, body);
         landed = true;
       }
+      step = 'sale';
       // Sold out is its own flag with its own Watcher notice (`watch.soldout`),
       // recorded with how the admin knows (addendum 7 §6).
       if (marksSoldOut(next)) {
@@ -634,6 +643,7 @@ export const EventEdit = ({
       }
     } catch (err) {
       console.error('[event edit] save failed', err);
+      setFailedStep(step);
       // `past_locked` (a field a past show locks) or `duplicate_show` (another
       // listing that night), or the sold-out POST's `not_on_sale`: the
       // snap-back's toast says which.
@@ -677,8 +687,15 @@ export const EventEdit = ({
   }, [snap.value]);
   // A save that fails fast can batch its pending and failed states into one
   // render, so the values above never change: snap back on the failure.
+  // A failed mark keeps how the admin knew, so Try again, or picking Sold out
+  // again, still has their method, link and note.
   useEffect(() => {
-    if (snap.failed !== null) setDraft(snap.failed.saved);
+    if (snap.failed !== null) {
+      setDraft({
+        ...snap.failed.saved,
+        evidence: snap.failed.attempted.evidence,
+      });
+    }
   }, [snap.failed]);
   const count = changedCount(draft, snap.value);
   // A new Sold out asks how the admin knows (`06/sold-out-mark-d`) and
@@ -990,17 +1007,21 @@ export const EventEdit = ({
         <SaveFailedToast
           what={COPY.saveFailed.what}
           saved={
-            snap.failed.attempted.title !== snap.failed.saved.title
-              ? COPY.saveFailed.saved(snap.failed.saved.title)
-              : tourChanged(snap.failed.attempted, snap.failed.saved)
-                ? COPY.saveFailed.savedTour(snap.failed.saved.tourName.trim())
-                : snap.failed.attempted.sale !== snap.failed.saved.sale
-                  ? COPY.statusSaved(
-                      ADMIN_COPY.eventsList.status[detail.status],
-                    )
-                  : COPY.saveFailed.savedWhen(
-                      fieldDate(snap.failed.saved.date, true),
-                    )
+            // The fields saved and the sale write failed after them: the
+            // status is what didn't change.
+            failedStep === 'sale'
+              ? COPY.statusSaved(ADMIN_COPY.eventsList.status[detail.status])
+              : snap.failed.attempted.title !== snap.failed.saved.title
+                ? COPY.saveFailed.saved(snap.failed.saved.title)
+                : tourChanged(snap.failed.attempted, snap.failed.saved)
+                  ? COPY.saveFailed.savedTour(snap.failed.saved.tourName.trim())
+                  : snap.failed.attempted.sale !== snap.failed.saved.sale
+                    ? COPY.statusSaved(
+                        ADMIN_COPY.eventsList.status[detail.status],
+                      )
+                    : COPY.saveFailed.savedWhen(
+                        fieldDate(snap.failed.saved.date, true),
+                      )
           }
           onRetry={() => void snap.retry()}
           retrying={snap.saving}

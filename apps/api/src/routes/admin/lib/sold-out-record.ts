@@ -1,27 +1,35 @@
-import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   db,
   eventReportConfirms,
   eventReports,
   userProfiles,
-  userRoles,
 } from '@concert-crawl/db';
-import { activeSoldOutWhere } from '../../../lib/sold-out.js';
+import { apiLogger } from '../../../lib/logger.js';
+import {
+  activeSoldOutWhere,
+  ADMIN_AUTHORED_SOLD_OUT_NOTE,
+} from '../../../lib/sold-out.js';
 
 const avatarColorSchema = z.enum(['signal', 'accent', 'success', 'warning']);
 
 /**
  * Event edit's WHY IT'S SOLD OUT (B+ addendum 7 §6): the active promoted
- * sold-out report, the row that makes the show Sold out. Parsed before it
- * leaves the API, so a drift in the read fails here rather than in the page.
+ * sold-out report, the row that makes the show Sold out. Checked before it
+ * leaves the API; a row that doesn't fit reads as no record, so the editor
+ * still loads.
  */
 export const soldOutRecordSchema = z.object({
   reporter: z.object({
     handle: z.string().nullable(),
     avatarColor: avatarColorSchema.nullable(),
     avatarSecondColor: avatarColorSchema.nullable(),
-    /** An admin or staff role in `user_roles` is Admin; anyone else, Fan. */
+    /**
+     * Admin when the report is an admin's mark (it carries the mark's
+     * `admin_note`, ADMIN_AUTHORED_SOLD_OUT_NOTE); any other report is a
+     * fan's that was promoted.
+     */
     kind: z.enum(['fan', 'admin']),
   }),
   evidenceMethod: z.enum([
@@ -42,8 +50,22 @@ export const soldOutRecordSchema = z.object({
 
 export type SoldOutRecord = z.infer<typeof soldOutRecordSchema>;
 
-/** The `user_roles` roles that read as Admin on the record. */
-const ADMIN_ROLES = ['admin', 'sub_admin'] as const;
+/**
+ * The record from what was read, or null (with a warning) when it doesn't fit
+ * the schema: a drifted row costs the Status card its record, never the page.
+ */
+export function parseSoldOutRecord(
+  candidate: unknown,
+  eventId: string,
+): SoldOutRecord | null {
+  const parsed = soldOutRecordSchema.safeParse(candidate);
+  if (parsed.success) return parsed.data;
+  apiLogger.warn(
+    { eventId, issues: parsed.error.issues },
+    'admin event: sold-out record did not fit its schema; sent as none',
+  );
+  return null;
+}
 
 /**
  * The record, or null when the show isn't sold out. With more than one live
@@ -56,59 +78,46 @@ export async function loadSoldOutRecord(
   const [report] = await db
     .select({
       id: eventReports.id,
-      reporterId: eventReports.reporterId,
       evidenceMethod: eventReports.evidenceMethod,
       evidenceUrl: eventReports.evidenceUrl,
       note: eventReports.note,
+      adminNote: eventReports.adminNote,
       createdAt: eventReports.createdAt,
       resolvedAt: eventReports.resolvedAt,
+      handle: userProfiles.handle,
+      avatarColor: userProfiles.avatarColor,
+      avatarSecondColor: userProfiles.avatarSecondColor,
     })
     .from(eventReports)
+    .leftJoin(userProfiles, eq(userProfiles.userId, eventReports.reporterId))
     .where(activeSoldOutWhere(eventId))
     .orderBy(desc(eventReports.resolvedAt), desc(eventReports.createdAt))
     .limit(1);
   if (!report) return null;
 
-  const [[confirms], [profile], [role]] = await Promise.all([
-    db
-      .select({ total: count() })
-      .from(eventReportConfirms)
-      .where(eq(eventReportConfirms.reportId, report.id)),
-    db
-      .select({
-        handle: userProfiles.handle,
-        avatarColor: userProfiles.avatarColor,
-        avatarSecondColor: userProfiles.avatarSecondColor,
-      })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, report.reporterId))
-      .limit(1),
-    db
-      .select({ id: userRoles.id })
-      .from(userRoles)
-      .where(
-        and(
-          eq(userRoles.userId, report.reporterId),
-          inArray(userRoles.role, [...ADMIN_ROLES]),
-        ),
-      )
-      .limit(1),
-  ]);
+  const [confirms] = await db
+    .select({ total: count() })
+    .from(eventReportConfirms)
+    .where(eq(eventReportConfirms.reportId, report.id));
 
-  return soldOutRecordSchema.parse({
-    reporter: {
-      handle: profile?.handle ?? null,
-      avatarColor: profile?.avatarColor ?? null,
-      avatarSecondColor: profile?.avatarSecondColor ?? null,
-      kind: role === undefined ? 'fan' : 'admin',
+  return parseSoldOutRecord(
+    {
+      reporter: {
+        handle: report.handle,
+        avatarColor: report.avatarColor,
+        avatarSecondColor: report.avatarSecondColor,
+        kind:
+          report.adminNote === ADMIN_AUTHORED_SOLD_OUT_NOTE ? 'admin' : 'fan',
+      },
+      evidenceMethod: report.evidenceMethod,
+      evidenceUrl: report.evidenceUrl,
+      note: report.note,
+      reportedAt: report.createdAt.toISOString(),
+      // The active-row filter requires resolved_at; the fallback only keeps
+      // the type honest.
+      madeLiveAt: (report.resolvedAt ?? report.createdAt).toISOString(),
+      confirmsCount: confirms?.total ?? 0,
     },
-    evidenceMethod: report.evidenceMethod,
-    evidenceUrl: report.evidenceUrl,
-    note: report.note,
-    reportedAt: report.createdAt.toISOString(),
-    // The active-row filter requires resolved_at; the fallback only keeps the
-    // type honest.
-    madeLiveAt: (report.resolvedAt ?? report.createdAt).toISOString(),
-    confirmsCount: confirms?.total ?? 0,
-  });
+    eventId,
+  );
 }
