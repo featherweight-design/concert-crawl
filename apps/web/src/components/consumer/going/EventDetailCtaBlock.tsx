@@ -74,11 +74,14 @@ export const EventDetailCtaBlock = ({
   children?: ReactNode;
 }) => {
   const router = useRouter();
-  // Read for two things only now that every plan carries Going: whether the
-  // session has resolved (the placeholder below), and whether the viewer is
-  // signed out (a tap goes to sign-in). There is no locked state to draw.
+  // Read for three things only now that every plan carries Going: whether the
+  // session has resolved (the placeholder below), whether the viewer is signed
+  // out (a tap goes to sign-in), and whether the matrix hides Going outright.
+  // There is no locked state to draw. Each cell is matched by name, so a cell
+  // nobody handled can never fall through to the working button.
   const { isLoading, surface } = useEntitlement('concert-history');
   const signedOut = surface === 'tier-picker-on-tap';
+  const hidden = surface === 'hidden';
   const toggle = useAttendingToggle();
   const goToSignIn = useSignInRedirect();
   // Holds the *intent* that failed, not just that something did. The error
@@ -119,7 +122,9 @@ export const EventDetailCtaBlock = ({
   // mount this block on a cancelled show at all (its board leads with the
   // status card and has no watch strip); this branch keeps any other host
   // from offering Going on one.
-  if (event.status === 'cancelled') {
+  // `hidden` takes the same exit: no Going half at all, and the Watch strip
+  // still renders, since watching never depends on Going.
+  if (event.status === 'cancelled' || hidden) {
     return <>{children}</>;
   }
 

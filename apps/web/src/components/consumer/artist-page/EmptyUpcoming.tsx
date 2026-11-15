@@ -3,20 +3,26 @@
 import React from 'react';
 
 import { ARTIST_COPY } from './definitions/copy';
-import { FollowButton, type FollowButtonProps } from './FollowButton';
+import {
+  FollowButton,
+  type FollowButtonBaseProps,
+  type FollowButtonLockProps,
+} from './FollowButton';
 import { SectionHead } from './SectionHead';
 
-interface EmptyUpcomingProps extends Omit<
-  FollowButtonProps,
+// The lock union is re-attached after the Omit, which would otherwise flatten it.
+type EmptyUpcomingProps = Omit<
+  FollowButtonBaseProps,
   'size' | 'tone' | 'full'
-> {
-  /**
-   * Whether THIS block owns the page's one live follow affordance. On desktop
-   * the sticky rail already holds it, so the card is copy only — two live
-   * follows on one page is the bug this prop exists to prevent.
-   */
-  inlineFollow: boolean;
-}
+> &
+  FollowButtonLockProps & {
+    /**
+     * Whether THIS block owns the page's one live follow affordance. On desktop
+     * the sticky rail already holds it, so the card is copy only — two live
+     * follows on one page is the bug this prop exists to prevent.
+     */
+    inlineFollow: boolean;
+  };
 
 /**
  * Not a placeholder. With no dates booked this is the strongest conversion

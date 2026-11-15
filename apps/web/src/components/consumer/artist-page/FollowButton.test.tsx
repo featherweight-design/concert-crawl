@@ -33,7 +33,6 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     const signedIn = getByRole('button');
@@ -47,7 +46,6 @@ describe('FollowButton', () => {
         following={false}
         signedOut
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     const signedOut = get2('button');
@@ -74,7 +72,6 @@ describe('FollowButton', () => {
         following={false}
         signedOut
         onToggle={onToggle}
-        onLockedTap={() => undefined}
       />,
     );
     expect(push).not.toHaveBeenCalled();
@@ -111,7 +108,6 @@ describe('FollowButton', () => {
         following={false}
         signedOut
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     expect(getByRole('button').getAttribute('data-return-to')).toBe(
@@ -126,7 +122,6 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     const row = getByRole('button');
@@ -147,7 +142,6 @@ describe('FollowButton', () => {
         signedOut={false}
         size="primary"
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     const hero = get2('button');
@@ -173,7 +167,6 @@ describe('FollowButton', () => {
         size="row"
         iconOnly
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     const button = getByRole('button');
@@ -194,7 +187,6 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     expect(getByRole('button').className).toContain('ap-follow');
@@ -208,7 +200,6 @@ describe('FollowButton', () => {
         signedOut={false}
         tone="loud"
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     const off = getByRole('button');
@@ -232,7 +223,6 @@ describe('FollowButton', () => {
         signedOut={false}
         tone="loud"
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     const on = get2('button');
@@ -258,7 +248,6 @@ describe('FollowButton', () => {
         following
         signedOut={false}
         onToggle={noop}
-        onLockedTap={() => undefined}
       />,
     );
     expect(container.querySelector('[data-glyph="eye"]')).toBeNull();
@@ -274,7 +263,6 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={onToggle}
-        onLockedTap={() => undefined}
       />,
     );
     fireEvent.click(getByRole('button'));
@@ -315,6 +303,34 @@ describe('FollowButton', () => {
       const button = getByRole('button');
       expect(button.hasAttribute('disabled')).toBe(false);
       expect(button.getAttribute('tabindex')).toBeNull();
+    });
+
+    it('will not type-check a locked control without a handler, or a handler without the lock', () => {
+      // A locked button with no handler is focusable, looks live and does
+      // nothing. The props union makes that a compile error; these
+      // expectations fail `pnpm typecheck` if it ever loosens again.
+      const lockedWithoutHandler = (
+        // @ts-expect-error `locked` requires `onLockedTap`
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          locked
+          onToggle={noop}
+        />
+      );
+      const handlerWithoutLock = (
+        // @ts-expect-error `onLockedTap` is only accepted with `locked`
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          onToggle={noop}
+          onLockedTap={noop}
+        />
+      );
+      expect(lockedWithoutHandler).toBeTruthy();
+      expect(handlerWithoutLock).toBeTruthy();
     });
 
     it('opens the upgrade instead of writing a follow', () => {
@@ -403,7 +419,6 @@ describe('FollowButton', () => {
           following={false}
           signedOut={false}
           onToggle={onToggle}
-          onLockedTap={() => undefined}
         />,
       );
       const button = getByRole('button');
@@ -417,7 +432,6 @@ describe('FollowButton', () => {
           following
           signedOut={false}
           onToggle={onToggle}
-          onLockedTap={() => undefined}
         />,
       );
       expect(button.textContent).toBe(ARTIST_COPY.following);
@@ -435,7 +449,6 @@ describe('FollowButton', () => {
           signedOut={false}
           size="row"
           onToggle={noop}
-          onLockedTap={noop}
         />,
       );
       const style = getByRole('button').getAttribute('style') ?? '';
@@ -452,7 +465,6 @@ describe('FollowButton', () => {
           size="row"
           iconOnly
           onToggle={noop}
-          onLockedTap={noop}
         />,
       );
       const button = getByRole('button');
@@ -477,7 +489,6 @@ describe('FollowButton', () => {
           signedOut={false}
           size={size}
           onToggle={noop}
-          onLockedTap={noop}
         />,
       );
 
@@ -513,7 +524,6 @@ describe('FollowButton', () => {
           size="primary"
           tone={tone}
           onToggle={noop}
-          onLockedTap={noop}
         />,
       );
 
@@ -536,7 +546,6 @@ describe('FollowButton', () => {
           size="primary"
           tone="hero"
           onToggle={noop}
-          onLockedTap={noop}
         />,
       );
       expect(getByRole('button').style.background).toContain('linear-gradient');
@@ -550,7 +559,6 @@ describe('FollowButton', () => {
           size="primary"
           tone="hero"
           onToggle={noop}
-          onLockedTap={noop}
         />,
       );
       expect(getByRole('button').style.background).not.toContain(

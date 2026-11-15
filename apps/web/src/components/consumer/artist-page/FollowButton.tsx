@@ -8,7 +8,33 @@ import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import { ARTIST_COPY } from './definitions/copy';
 import { NF_FOLLOW_SIZES, NF_TAP_MIN } from './definitions/constants';
 
-export interface FollowButtonProps {
+/**
+ * `locked`: signed in, the plan does not carry `following`, and there is no
+ * existing follow to undo. Never `disabled` — a locked tap is how the upgrade
+ * gets offered, so the control keeps its place in the tab order and calls
+ * `onLockedTap`. Computed by the parent with `nfLocked(planState)` from
+ * @concert-crawl/entitlements, never by testing a tier string here, and never
+ * while `following` is true (a downgraded user must be able to unfollow — eng
+ * spec §3.2).
+ *
+ * A union, not two optionals: a locked control with no handler would be a
+ * focusable button that looks live and does nothing, so `locked: true`
+ * requires `onLockedTap`, and an unlocked control takes neither.
+ */
+export type FollowButtonLockProps =
+  | { locked: true; onLockedTap: () => void }
+  | { locked?: false; onLockedTap?: never };
+
+/**
+ * Lock props from a runtime boolean, for a parent that computes `locked`:
+ * the handler only rides along when the control is actually locked.
+ */
+export const followLockProps = (
+  locked: boolean,
+  onLockedTap: () => void,
+): FollowButtonLockProps => (locked ? { locked: true, onLockedTap } : {});
+
+export interface FollowButtonBaseProps {
   /** Artist name — the accessible name, and the follow's confirmation. */
   name: string;
   /**
@@ -18,16 +44,6 @@ export interface FollowButtonProps {
   slug?: string;
   following: boolean;
   signedOut: boolean;
-  /**
-   * Signed in, the plan does not carry `following`, and there is no existing
-   * follow to undo. Never `disabled` — a locked tap is how the upgrade gets
-   * offered, so the control keeps its place in the tab order and calls
-   * `onLockedTap`. Computed by the parent with `nfLocked(planState)` from
-   * @concert-crawl/entitlements, never by testing a tier string here, and
-   * never while `following` is true (a downgraded user must be able to
-   * unfollow — eng spec §3.2).
-   */
-  locked?: boolean;
   /**
    * A key of `NF_FOLLOW_SIZES`, so the size table stays the only place a
    * density is defined. The keys name placement: `primary` is the artist
@@ -60,12 +76,9 @@ export interface FollowButtonProps {
    * the row. A second override in here could not see that and would strand.
    */
   onToggle: () => void;
-  /**
-   * Locked activation. Only read while `locked` is true; a call site that
-   * never passes `locked` (following is on every plan) omits it.
-   */
-  onLockedTap?: () => void;
 }
+
+export type FollowButtonProps = FollowButtonBaseProps & FollowButtonLockProps;
 
 /**
  * ONE affordance for the artist relationship. A show is WATCHED (an eye); an
@@ -85,19 +98,19 @@ export interface FollowButtonProps {
  * takes the same deal one step further: same label, different skin, and the
  * gate is told in an sr-only sentence rather than in the pixels.
  */
-export const FollowButton = ({
-  name,
-  slug,
-  following,
-  signedOut,
-  locked = false,
-  size = 'row',
-  tone = 'quiet',
-  full = false,
-  iconOnly = false,
-  onToggle,
-  onLockedTap,
-}: FollowButtonProps) => {
+export const FollowButton = (props: FollowButtonProps) => {
+  const {
+    name,
+    slug,
+    following,
+    signedOut,
+    size = 'row',
+    tone = 'quiet',
+    full = false,
+    iconOnly = false,
+    onToggle,
+  } = props;
+  const locked = props.locked === true;
   const goToSignIn = useSignInRedirect();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -128,8 +141,10 @@ export const FollowButton = ({
       );
       return;
     }
-    if (locked) {
-      onLockedTap?.();
+    // Read off `props`, not the boolean above, so the union narrows and the
+    // handler is guaranteed present.
+    if (props.locked) {
+      props.onLockedTap();
       return;
     }
     onToggle();

@@ -184,6 +184,20 @@ describe('FollowFilterChip', () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 
+  // `hidden` is matched by name, never left to fall through to the live
+  // switch: no chip, and a stale scope it can no longer clear is released.
+  it('hidden renders nothing and releases a stale active scope', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'hidden',
+    };
+    const onToggle = vi.fn();
+    const { container } = renderChip({ active: true, onToggle });
+    expect(container.innerHTML).toBe('');
+    expect(onToggle).toHaveBeenCalledWith(false);
+  });
+
   it('leaves the release to the owning instance when it does not own effects', () => {
     entitlementState.current = SIGNED_OUT;
     const onToggle = vi.fn();

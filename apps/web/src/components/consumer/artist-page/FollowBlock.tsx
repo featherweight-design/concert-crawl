@@ -3,9 +3,16 @@
 import React from 'react';
 
 import { ARTIST_COPY } from './definitions/copy';
-import { FollowButton, type FollowButtonProps } from './FollowButton';
+import {
+  FollowButton,
+  type FollowButtonBaseProps,
+  type FollowButtonLockProps,
+} from './FollowButton';
 
-type FollowBlockProps = Omit<FollowButtonProps, 'size' | 'tone' | 'full'>;
+// Omit the base, then re-attach the lock union: `Omit` over a union is not
+// distributive and would flatten it back into two optionals.
+type FollowBlockProps = Omit<FollowButtonBaseProps, 'size' | 'tone' | 'full'> &
+  FollowButtonLockProps;
 
 /**
  * The full-width follow bar plus the one line that says what a follow actually
