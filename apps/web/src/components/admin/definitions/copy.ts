@@ -501,9 +501,15 @@ export const ADMIN_COPY = {
     recrawl: 'Re-crawl',
     queued: 'Queued',
     running: 'Crawling now',
-    // Crawling now's line, "Page 2 of 4 · started 3:41 PM" on the board. No
-    // page progress is recorded while a run is out, so it is the start alone.
+    // Crawling now's line, "Page 2 of 4 · started 3:41 PM" on the board.
+    pageProgress: (done: number, total: number, time: string) =>
+      `Page ${done} of ${total} · started ${time}`,
+    // Until the crawler knows how many pages, it is the start alone.
     startedAt: (time: string) => `Started ${time}`,
+    // Queued's line behind another crawl, "Starts after the run in progress ·
+    // about 2 min" on the board; the wait is left off when it is unknown.
+    startsAfterRun: 'Starts after the run in progress',
+    aboutMinutes: (minutes: number) => `about ${minutes} min`,
     viewOnSite: 'View on site',
     // Why Re-crawl is off. The API refuses all four (paused 409, robots 409,
     // hidden or unverified 400). The board's "/events" has no source, so no
