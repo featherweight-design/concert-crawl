@@ -2023,7 +2023,12 @@ export const CONSUMER_COPY = {
     eyebrow: "Where it's sold",
     // `{tier}` is the stored tier: GA, Reserved, VIP, Pit, Lawn.
     allIn: '{tier} · all-in',
-    faceValue: 'face value · no fees',
+    // Box office carries its tier too, so two box office tiers never read alike
+    // (`40/where-its-sold` a).
+    faceValue: '{tier} · face value · no fees',
+    // The resale line (`40/where-its-sold` b): "{tier} · resale · all-in", with
+    // the word set in the Resale trust colour, so it is three pieces.
+    resale: { lead: '{tier} · ', word: 'resale', tail: ' · all-in' },
     // The letter tile for `Other` (plan default): no seller, no initial.
     otherTile: '?',
   },
