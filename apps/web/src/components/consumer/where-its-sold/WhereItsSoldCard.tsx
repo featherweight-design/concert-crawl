@@ -15,7 +15,11 @@ import {
   VENDOR_PICKER_COPY,
 } from '@/components/consumer/definitions/copy';
 import { formatPrice } from '@/components/consumer/definitions/lib';
-import { Eyebrow, PRICE_EYEBROW } from '@/components/consumer/glyphs';
+import {
+  Eyebrow,
+  PRICE_EYEBROW,
+  TRUST_TOKENS,
+} from '@/components/consumer/glyphs';
 import { GlyphChevron } from '@/components/consumer/following/my-shows/Glyphs';
 import { resolveAlternateKind } from '@/components/consumer/lib/price-source-kind';
 import { displayVendor } from '@/components/consumer/vendor-display';
@@ -39,15 +43,31 @@ export const sellerTile = (vendor: string): string =>
     : sellerName(vendor).charAt(0).toUpperCase();
 
 /**
- * The line under the seller: box office is face value, the rest all-in.
- * Design item 40 (⏸): the board draws no resale line, so resale reuses
- * "{tier} · all-in", and the box office line drops the tier, so two box
- * office tiers read alike. Both wait on Design.
+ * The line under the seller, always led by the tier (`40/where-its-sold`):
+ * box office "{tier} · face value · no fees", resale "{tier} · resale ·
+ * all-in" with "resale" in the Resale trust colour, the rest "{tier} · all-in".
  */
-export const sellerLine = (row: WhereItsSoldRow): string =>
-  resolveAlternateKind(row.vendor, row.sourceCategory) === 'boxoffice'
-    ? copy.faceValue
-    : copy.allIn.replace('{tier}', row.tier);
+export function SellerLine({ row }: { row: WhereItsSoldRow }) {
+  const kind = resolveAlternateKind(row.vendor, row.sourceCategory);
+  if (kind === 'boxoffice') {
+    return <>{copy.faceValue.replace('{tier}', row.tier)}</>;
+  }
+  if (kind === 'resale') {
+    return (
+      <>
+        {copy.resale.lead.replace('{tier}', row.tier)}
+        <span
+          data-testid="where-its-sold-resale"
+          style={{ color: TRUST_TOKENS.resale.text }}
+        >
+          {copy.resale.word}
+        </span>
+        {copy.resale.tail}
+      </>
+    );
+  }
+  return <>{copy.allIn.replace('{tier}', row.tier)}</>;
+}
 
 /**
  * One empty anchor per listed price, all at the top of the price slot, so a
@@ -149,7 +169,7 @@ export function WhereItsSoldCard({ rows }: { rows: WhereItsSoldRow[] }) {
                       color: 'var(--fg-subtle)',
                     }}
                   >
-                    {sellerLine(row)}
+                    <SellerLine row={row} />
                   </span>
                 </span>
                 <span

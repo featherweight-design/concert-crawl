@@ -236,8 +236,80 @@ describe('WhereItsSoldCard', () => {
     expect(rows.map((row) => row.textContent)).toEqual([
       'TTicketmasterGA · all-in$45',
       'AAXSGA · all-in$47',
-      'VVenue box officeface value · no fees$38',
+      'VVenue box officeGA · face value · no fees$38',
     ]);
+  });
+
+  it('names the tier on every box office row, so two box office tiers never read alike', () => {
+    renderCard(
+      boardEvent({
+        priceSubmissionId: 'bo-ga',
+        priceByTier: [
+          block(
+            'GA',
+            headline('bo-ga', 'VenueBoxOffice', '38.00', 'boxoffice'),
+          ),
+          block(
+            'Reserved',
+            headline('bo-res', 'VenueBoxOffice', '55.00', 'boxoffice'),
+          ),
+        ],
+        priceAlternates: [
+          {
+            id: 'tm',
+            tier: 'GA',
+            vendor: 'Ticketmaster',
+            priceMin: '45.00',
+            priceMax: null,
+            sourceCategory: 'standard',
+          },
+          {
+            id: 'bo-res',
+            tier: 'Reserved',
+            vendor: 'VenueBoxOffice',
+            priceMin: '55.00',
+            priceMax: null,
+            sourceCategory: 'boxoffice',
+          },
+        ],
+      }),
+    );
+    const lines = screen
+      .getAllByTestId('where-its-sold-line')
+      .map((line) => line.textContent);
+    expect(lines).toContain('GA · face value · no fees');
+    expect(lines).toContain('Reserved · face value · no fees');
+  });
+
+  it('draws a resale row as "{tier} · resale · all-in", the word in the Resale colour', () => {
+    renderCard(
+      boardEvent({
+        priceAlternates: [
+          {
+            id: 'sh',
+            tier: 'GA',
+            vendor: 'StubHub',
+            priceMin: '61.00',
+            priceMax: null,
+            sourceCategory: 'resale',
+          },
+        ],
+      }),
+    );
+    const row = screen
+      .getAllByTestId('where-its-sold-row')
+      .find((item) => item.textContent?.includes('StubHub'));
+    expect(row?.textContent).toBe('SStubHubGA · resale · all-in$61');
+    const word = within(row as HTMLElement).getByTestId(
+      'where-its-sold-resale',
+    );
+    expect(word.textContent).toBe('resale');
+    expect(word.style.color).toBe('var(--price-text-danger)');
+    // The letter tile stays neutral.
+    expect(
+      within(row as HTMLElement).getByTestId('where-its-sold-tile').style
+        .background,
+    ).toBe('var(--surface-2)');
   });
 
   it('names a non-GA tier in the all-in line', () => {
