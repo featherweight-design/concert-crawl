@@ -1,3 +1,23 @@
+# [1.503.0](https://github.com/featherweight-design/concert-crawl/compare/v1.502.0...v1.503.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** address the add-a-show review ([893205d](https://github.com/featherweight-design/concert-crawl/commit/893205df0bc691e5ee06647f9c41b96e660f957d))
+* **api:** drop the likeliest-match sort when no title is typed ([f5625d0](https://github.com/featherweight-design/concert-crawl/commit/f5625d007ab4f0d5bcb060335441e9ab4a836398))
+* **api:** the flag toggle writes its history and the ladder keeps a Me owner ([8c54410](https://github.com/featherweight-design/concert-crawl/commit/8c54410fb48be664fa156aa59860f0e8e0b95981))
+* **crawler:** keep closed, hidden and other-artist bills out of the fold union ([afa0689](https://github.com/featherweight-design/concert-crawl/commit/afa06891740470d4fe3907828043ef5aa72bcaff))
+* **crawler:** keep donor-only acts when folding duplicate nights ([0ceee96](https://github.com/featherweight-design/concert-crawl/commit/0ceee968d515efc5498dfec62d304894d3ca2cb1))
+* **crawler:** write non-bill fills apart from the guarded bill write ([03ce21e](https://github.com/featherweight-design/concert-crawl/commit/03ce21e0ffa36743a8bd49a29e20c0935ef7ab58))
+* **web:** stop a progressed updatedAt reading as a re-crawl's start ([6b627e1](https://github.com/featherweight-design/concert-crawl/commit/6b627e1cb11e060355ed6060e06efacc15ac7180))
+
+
+### Features
+
+* **api:** add a show by hand, its duplicate warning and the lineup save ([e6ee5c8](https://github.com/featherweight-design/concert-crawl/commit/e6ee5c8100093e3e7b9649af4729736181b3e5a3))
+* **db:** the feature flag ladder schema and its backfill ([d2ac03c](https://github.com/featherweight-design/concert-crawl/commit/d2ac03c3d9d94bb16d84d27b7724cae28a7fa464))
+* **web:** read re-crawl page progress and queue wait in the venue header ([04ec4dd](https://github.com/featherweight-design/concert-crawl/commit/04ec4dda93c37268fd19c1210a9428cbc459b4dd))
+
 # [1.502.0](https://github.com/featherweight-design/concert-crawl/compare/v1.501.0...v1.502.0) (2026-11-15)
 
 
