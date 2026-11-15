@@ -5,7 +5,7 @@ import type { PriceCheckViewerAction, Tier } from '@concert-crawl/types';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { CounterSubmitSheet } from '@/components/consumer/CounterSubmitSheet';
-import { formatAge, priceText } from '@/components/consumer/DisputedPriceCard';
+import { formatAge, priceText } from '@/components/consumer/price-check-format';
 import { displayVendor } from '@/components/consumer/vendor-display';
 import {
   ArrowGlyph,
@@ -199,7 +199,7 @@ export const TierAlternateRow = (props: TierAlternateRowProps) => {
               }}
             >
               <span style={{ color: 'var(--fg)' }}>
-                {formatPrice(floor, ceiling)}
+                {priceText(floor, ceiling)}
               </span>
               <span
                 aria-hidden="true"
