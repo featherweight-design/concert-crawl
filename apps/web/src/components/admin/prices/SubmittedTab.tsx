@@ -1149,7 +1149,8 @@ export const SubmittedTab = ({
         <Toast
           testId="approve-toast"
           title={COPY.approve.doneTitle(notice.price, notice.show)}
-          body={COPY.approve.doneBody}
+          // No fan notice exists, so no "the fan is told" line (Hugh).
+          body={null}
         />
       )}
       {notice?.kind === 'failed' && (

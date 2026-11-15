@@ -532,7 +532,6 @@ describe('SubmittedTab on a desktop', () => {
     expect(toast).toHaveTextContent(
       COPY.approve.doneTitle('$50–$450', 'Marian Hill'),
     );
-    expect(toast).toHaveTextContent(COPY.approve.doneBody);
     expect(within(toast).queryByRole('button')).toBeNull();
     // Now published: no Approve in its menu.
     await openMenu(1);
