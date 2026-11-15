@@ -1,26 +1,35 @@
-// Shown on the invite code entry screen (step 1 of onboarding, /auth/code)
+// Shown on the invite code entry screen (step 1 of sign-up, /auth/code).
+// design_handoff_custom_auth/COPY.md "Invite code". DRAFT until copy-review.
+// The step label ("Step 1 of 3") is the step trail's own.
 
 export const copy = {
-  stepLabel: 'Step 1 of 2',
   heading: 'Enter your invite code',
-  description: 'Concert Crawl is invite-only right now. Your code looks like',
-  // Both shapes a code can take: generated, or a custom word from a poster.
-  codeFormat: 'BETA-XXXX-XXXX or REDROCKS',
+  description:
+    'Concert Crawl is invite-only right now. Your code is on the invite you got, the poster you scanned or the text a friend sent.',
+  // A code that arrived in the link (a poster's QR) and was filled in for them.
+  prefilled: {
+    eyebrow: 'Your invite',
+    heading: 'You’re invited',
+    body: 'Your code is filled in from the link. Check it, then continue.',
+  },
   input: {
     placeholder: 'Your code',
     ariaLabel: 'Invite code',
   },
   hint: {
-    empty: 'Format: BETA-XXXX-XXXX',
-    valid: 'Looks good ✓',
-    remaining: (count: number) => `${count} characters remaining`,
+    // While a code is still being typed or pasted.
+    paste: 'Paste works too. We add the dashes.',
+    valid: 'Looks good',
   },
   button: {
-    idle: 'Continue →',
+    idle: 'Continue',
     pending: 'Checking…',
+    // Too many tries: the field locks and the button counts down.
+    wait: (clock: string) => `Try again in ${clock}`,
   },
   // Under the Continue button: "continuing" is that button. Same shape as the
   // checkout panel's legal line, and the link names the document's own heading.
+  // Goes with the cutover, when the sign-up form carries its own checkbox.
   agreement: {
     prefix: 'By continuing you agree to our ',
     link: 'Private Beta Agreement',
@@ -34,6 +43,19 @@ export const copy = {
     expired: 'This code has expired.',
     ratelimit: 'Too many attempts. Try again in a few minutes.',
     server_error: 'Something went wrong. Try again.',
+  },
+  // What to do next, after a used or an expired code. The link is part of the
+  // sentence, so each is a lead, the link and an end.
+  usedNext: {
+    lead: ' If it was yours, ',
+    link: 'sign in instead',
+    end: '.',
+    href: '/sign-in',
+  },
+  expiredNext: {
+    lead: ' Ask whoever sent it for a new one, or ',
+    link: 'join the waitlist',
+    end: '.',
   },
   // A code an admin ended on purpose (`code-ended-fan-m`). The board's last
   // sentence says Concert Crawl is "still open to everyone", which this app is
@@ -52,6 +74,8 @@ export const copy = {
   },
   footer: {
     waitlist: "Don't have a code? Join the waitlist",
-    back: '← Back to landing',
+    haveAccount: 'Already have an account?',
+    signIn: 'Sign in',
+    signInHref: '/sign-in',
   },
 } as const;

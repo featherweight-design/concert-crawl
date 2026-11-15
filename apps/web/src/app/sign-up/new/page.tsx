@@ -41,13 +41,14 @@ export default async function SignUpNewPage({ searchParams }: SignUpNewProps) {
       : null;
   }
 
-  // "Use a different code" keeps the destination, if it is a safe one.
+  // "Use a different code" keeps the destination, if it is a safe one, and
+  // says it is a change: the code page then releases the code they redeemed.
   const raw = params['redirect_url'];
   const requested = typeof raw === 'string' ? raw : null;
-  const changeHref =
-    requested && isSafeReturnPath(requested)
-      ? `/auth/code?${new URLSearchParams({ redirect_url: requested }).toString()}`
-      : '/auth/code';
+  const change: Record<string, string> = { change: '1' };
+  if (requested && isSafeReturnPath(requested))
+    change['redirect_url'] = requested;
+  const changeHref = `/auth/code?${new URLSearchParams(change).toString()}`;
 
   return (
     <SignUpFlow

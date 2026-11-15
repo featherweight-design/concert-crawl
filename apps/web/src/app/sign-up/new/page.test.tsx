@@ -86,10 +86,10 @@ describe('/sign-up/new', () => {
 
   it('carries only a safe destination to "Use a different code"', async () => {
     expect((await visit({ redirect_url: '/e/abc' })).props.changeHref).toBe(
-      '/auth/code?redirect_url=%2Fe%2Fabc',
+      '/auth/code?change=1&redirect_url=%2Fe%2Fabc',
     );
     expect(
       (await visit({ redirect_url: 'https://evil.test' })).props.changeHref,
-    ).toBe('/auth/code');
+    ).toBe('/auth/code?change=1');
   });
 });

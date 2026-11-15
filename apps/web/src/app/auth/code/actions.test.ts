@@ -2,8 +2,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const jar = vi.hoisted(() => ({ set: vi.fn(), delete: vi.fn() }));
 vi.mock('next/headers', () => ({
-  cookies: async () => ({ set: vi.fn(), delete: vi.fn() }),
+  cookies: async () => jar,
   headers: async () => new Headers(),
 }));
 vi.mock('next/navigation', () => ({
@@ -19,7 +20,7 @@ vi.mock('@/lib/invite-cookie', () => ({
   RETURN_PATH_COOKIE_NAME: 'return_path',
 }));
 
-import { validateAndSetInviteCode } from './actions';
+import { releaseInviteCode, validateAndSetInviteCode } from './actions';
 
 const CODE = 'BETA-AB12-CD34';
 
@@ -40,6 +41,18 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+});
+
+describe('releaseInviteCode', () => {
+  it('clears the invite and the return-path cookies, and nothing else', async () => {
+    jar.delete.mockClear();
+    await releaseInviteCode();
+    expect(jar.delete.mock.calls.map(([name]) => name).sort()).toEqual([
+      'invite_verified',
+      'return_path',
+    ]);
+    expect(jar.set).not.toHaveBeenCalled();
+  });
 });
 
 // `code-ended-fan-m`: 410 is "expired" or "ended" (revoked); the body says which.

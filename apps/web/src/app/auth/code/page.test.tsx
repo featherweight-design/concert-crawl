@@ -11,15 +11,17 @@ import {
 } from '@testing-library/react';
 
 // The server action pulls in next/headers; the link under test never calls it.
-const { validateAndSetInviteCode } = vi.hoisted(() => ({
+const { validateAndSetInviteCode, releaseInviteCode } = vi.hoisted(() => ({
   validateAndSetInviteCode: vi.fn(),
+  releaseInviteCode: vi.fn(),
 }));
-vi.mock('./actions', () => ({ validateAndSetInviteCode }));
+vi.mock('./actions', () => ({ validateAndSetInviteCode, releaseInviteCode }));
 vi.mock('@/components/waitlist/WaitlistModal', () => ({
   WaitlistModal: () => null,
 }));
 
 import InviteCodePage from './page';
+import { copy } from './definitions/copy';
 
 describe('invite-code screen links the Private Beta Agreement (#1619)', () => {
   it('renders a link to /legal/beta named after the agreement', () => {
@@ -52,6 +54,115 @@ describe('invite-code screen pre-fills a code from a poster link', () => {
     render(<InviteCodePage />);
 
     expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+});
+
+describe('invite-code screen (custom auth restyle)', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+    validateAndSetInviteCode.mockReset();
+    releaseInviteCode.mockReset();
+    vi.useRealTimers();
+  });
+
+  const press = () =>
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+  const type = (value: string) =>
+    fireEvent.change(screen.getByRole('textbox'), { target: { value } });
+
+  it('names the step in the trail and links to sign in', () => {
+    render(<InviteCodePage />);
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Enter your invite code' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Sign in' })[0]).toHaveAttribute(
+      'href',
+      '/sign-in',
+    );
+  });
+
+  it('says nothing on an empty field, the paste hint while typing and "Looks good" when whole', () => {
+    render(<InviteCodePage />);
+    expect(screen.queryByText(copy.hint.paste)).toBeNull();
+    type('BETA-7KQ');
+    expect(screen.getByText(copy.hint.paste)).toBeInTheDocument();
+    type('BETA-7KQ2-M9XD');
+    expect(screen.getByText(copy.hint.valid)).toBeInTheDocument();
+    expect(screen.queryByText(copy.hint.paste)).toBeNull();
+  });
+
+  it('shows "You\'re invited" for a code from the link, and the plain page once they type', () => {
+    window.history.replaceState(null, '', '/auth/code?code=beta-7kq2-m9xd');
+    render(<InviteCodePage />);
+    expect(
+      screen.getByRole('heading', { name: copy.prefilled.heading }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(copy.prefilled.body)).toBeInTheDocument();
+    type('REDROCKS');
+    expect(
+      screen.getByRole('heading', { name: copy.heading }),
+    ).toBeInTheDocument();
+  });
+
+  it('adds where to go next to a used code', async () => {
+    validateAndSetInviteCode.mockResolvedValue({ ok: false, error: 'used' });
+    render(<InviteCodePage />);
+    type('REDROCKS');
+    press();
+    expect(
+      await screen.findByText(/already been redeemed/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: copy.usedNext.link }),
+    ).toHaveAttribute('href', '/sign-in');
+    expect(screen.getByRole('textbox')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('adds the waitlist to an expired code', async () => {
+    validateAndSetInviteCode.mockResolvedValue({ ok: false, error: 'expired' });
+    render(<InviteCodePage />);
+    type('REDROCKS');
+    press();
+    expect(await screen.findByText(/has expired/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: copy.expiredNext.link }),
+    ).toBeInTheDocument();
+  });
+
+  it('locks the field and counts down after too many tries', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    validateAndSetInviteCode.mockResolvedValue({
+      ok: false,
+      error: 'ratelimit',
+    });
+    render(<InviteCodePage />);
+    type('REDROCKS');
+    press();
+    await act(async () => {});
+    expect(screen.getByText(copy.errors.ratelimit)).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toBeDisabled();
+    const wait = screen.getByRole('button', { name: /try again in 3:00/i });
+    expect(wait).toBeDisabled();
+    await act(async () => {
+      vi.advanceTimersByTime(181_000);
+    });
+    expect(screen.getByRole('textbox')).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: copy.button.idle }),
+    ).toBeEnabled();
+  });
+
+  it('releases the code they redeemed when they came to use a different one, once', () => {
+    window.history.replaceState(null, '', '/auth/code?change=1');
+    releaseInviteCode.mockResolvedValue(undefined);
+    render(<InviteCodePage />);
+    expect(releaseInviteCode).toHaveBeenCalledOnce();
+  });
+
+  it('releases nothing on an ordinary visit', () => {
+    render(<InviteCodePage />);
+    expect(releaseInviteCode).not.toHaveBeenCalled();
   });
 });
 
@@ -102,7 +213,7 @@ describe('invite-code screen shows "This code has ended"', () => {
     // The ended code is not carried over, and the ended page is gone.
     expect(screen.queryByText('This code has ended')).toBeNull();
     // The focused field draws the board's signal border.
-    expect(field.style.border).toContain('var(--signal)');
+    expect(field).toHaveClass('border-signal');
   });
 
   // The race behind a flaky run: the field is disabled while a redeem's
