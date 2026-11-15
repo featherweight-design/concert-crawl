@@ -2219,46 +2219,53 @@ export const ADMIN_COPY = {
       // Prefixes — concatenated with the row handle so each button gets a
       // unique accessible name. The "Expand feedback" stem stays intact for
       // the ui-audit harness, which targets buttons by /expand feedback/i.
+      // The row opens the item (4b); the stem stays for the harness.
       expandLabel: 'Expand feedback details from',
-      collapseLabel: 'Collapse feedback details from',
     },
-    expanded: {
-      sectionLabels: {
-        fullBody: 'full body',
-        screenshot: 'screenshot',
-        adminNotes: 'admin notes',
-        context: 'context',
-        linkedIssue: 'linked issue',
-        createIssue: 'create issue',
-      },
-      screenshotPlaceholder: 'User-attached screenshot',
-      openFullSize: 'Open full size',
-      adminNotesPlaceholder: 'Internal note — visible to you, not to the user…',
-      createIssuePrompt:
-        "Stage a GitHub issue using this feedback's body + context strip as the description. You can edit before submit.",
-      openInGitHub: 'Open in GitHub…',
-      copyUrlTitle: 'Copy URL',
-      actions: {
-        markRead: 'Mark read',
-        markUnread: 'Mark unread',
-        flag: 'Flag for investigation',
-        unflag: 'Unflag',
-        openInGitHub: 'Open in GitHub…',
-        resolve: 'Resolve',
-        archive: 'Archive',
-      },
-      contextRowLabels: {
-        route: 'Route',
-        theme: 'Theme',
-        build: 'Build',
-        device: 'Device',
-        submitted: 'Submitted',
-        userId: 'User ID',
+    // P47-19 4b: one item, in the side panel (`07/a-feedback-item-in-flow`)
+    // or as a page on the phone (`07/feedback-item-mobile`), with addendum 7's
+    // error report and venue suggestion (`02-error-reports`, `03-…`).
+    item: {
+      // "Nov 7 · 9:02 PM"
+      when: (day: string, time: string) => `${day} · ${time}`,
+      quote: (message: string) => `“${message}”`,
+      errorTitle: (page: string) => `Something went wrong on ${page}`,
+      venueTitle: 'A venue suggestion',
+      screenshotAlt: 'The screenshot sent with it',
+      fields: {
+        page: 'Page',
         doing: 'Was doing',
+        build: 'App version',
+        device: 'Device',
         // metadata.digest: a server digest, or for a browser error the
         // client-made ID (c-…) shown on the error page.
         errorId: 'Error ID',
         sentryEvent: 'Sentry event',
+        from: 'From',
+        sentFrom: 'Sent from',
+      },
+      copy: 'Copy',
+      copied: 'Copied',
+      copyLabel: (field: string) => `Copy ${field}`,
+      note: 'Note to yourself',
+      notePlaceholder: 'Saved as you type',
+      markDone: 'Mark done',
+      reopen: 'Reopen',
+      github: 'GitHub',
+      reply: 'Reply…',
+      replyPhone: 'Reply',
+      // `10/venue-blocked-before-3c`'s disabled-with-a-line.
+      replyLine: 'Reply arrives in a later update.',
+      errorFootnote:
+        'One report from one person. Copy the Sentry event to find it in Sentry.',
+      reopenFootnote: 'Reopen moves it back to To read.',
+      failed: {
+        markDone: "Couldn't mark it done",
+        reopen: "Couldn't reopen it",
+        note: "Couldn't save your note",
+        stillToRead: "It's still in To read.",
+        stillDone: "It's still in Done.",
+        noteKept: 'Your last note is still saved.',
       },
     },
   },

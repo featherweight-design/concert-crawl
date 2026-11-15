@@ -29,13 +29,20 @@ interface PhoneItemPageProps {
   /** A `KindLabel`, above the title. */
   eyebrow: ReactNode;
   title: string;
+  /** The back row's label; Needs you's own by default. */
+  back?: string;
+  /** The title's size: 21 on Needs you, 20 on `07/feedback-item-mobile`. */
+  titleSize?: number;
+  /** Between the body's blocks: 14 on Needs you, 12 on the feedback item. */
+  gap?: number;
   /** The ⋯ sheet's heading: the item's short name. */
-  menuTitle: string;
-  venue: { id: string; name: string } | null;
+  menuTitle?: string;
+  venue?: { id: string; name: string } | null;
   /** An answer or snooze is in flight: the page and ⋯ hold still. */
   busy: boolean;
   onClose: () => void;
-  onSnooze: (until: string) => void;
+  /** Left out, the page draws no ⋯ (the feedback item has no menu). */
+  onSnooze?: (until: string) => void;
   onNotUseful?: ((reason: string) => void) | undefined;
   /** The warning and venue the snooze steps name. */
   about?: { warning: string; venue: string | null };
@@ -50,8 +57,11 @@ interface PhoneItemPageProps {
 export const PhoneItemPage = ({
   eyebrow,
   title,
-  menuTitle,
-  venue,
+  back = COPY.title,
+  titleSize = 21,
+  gap = 14,
+  menuTitle = '',
+  venue = null,
   busy,
   onClose,
   onSnooze,
@@ -120,26 +130,28 @@ export const PhoneItemPage = ({
           }}
         >
           <ChevronLeft size={16} aria-hidden />
-          {COPY.title}
+          {back}
         </button>
-        <button
-          type="button"
-          onClick={() => setMenuOpen(true)}
-          disabled={busy}
-          aria-label={COPY.itemPage.more}
-          aria-haspopup="dialog"
-          data-testid="phone-item-more"
-          style={{
-            display: 'flex',
-            padding: 8,
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--fg-muted)',
-            cursor: 'pointer',
-          }}
-        >
-          <MoreHorizontal size={20} aria-hidden />
-        </button>
+        {onSnooze && (
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            disabled={busy}
+            aria-label={COPY.itemPage.more}
+            aria-haspopup="dialog"
+            data-testid="phone-item-more"
+            style={{
+              display: 'flex',
+              padding: 8,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--fg-muted)',
+              cursor: 'pointer',
+            }}
+          >
+            <MoreHorizontal size={20} aria-hidden />
+          </button>
+        )}
       </div>
 
       <div
@@ -150,7 +162,7 @@ export const PhoneItemPage = ({
           padding: '8px 16px 20px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 14,
+          gap,
         }}
       >
         <div style={{ display: 'flex' }}>{eyebrow}</div>
@@ -158,7 +170,7 @@ export const PhoneItemPage = ({
           id={titleId}
           style={{
             margin: 0,
-            fontSize: 21,
+            fontSize: titleSize,
             fontWeight: 800,
             lineHeight: 1.25,
             color: 'var(--fg)',
@@ -185,7 +197,7 @@ export const PhoneItemPage = ({
         }}
       />
 
-      {menuOpen && (
+      {menuOpen && onSnooze && (
         <AdminSheet
           // A date or reason step carries its own title and Back button, as
           // `01-snooze/snooze-until-a-date-m` draws it.
