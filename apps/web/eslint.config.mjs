@@ -69,6 +69,13 @@ export default [
           message:
             'Give this hook a block body. Vitest treats a function returned from a hook as cleanup, so `() => mock.mockReset()` calls the mock after every test.',
         },
+        {
+          // The member forms: `vi.beforeEach(...)`, `test.afterEach(...)`.
+          selector:
+            'CallExpression[callee.property.name=/^(before|after)(Each|All)$/] > ArrowFunctionExpression[expression=true]',
+          message:
+            'Give this hook a block body. Vitest treats a function returned from a hook as cleanup, so `() => mock.mockReset()` calls the mock after every test.',
+        },
       ],
     },
   },
