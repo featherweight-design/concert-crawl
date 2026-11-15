@@ -4,15 +4,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { Calendar, ExternalLink, Search, Tag, Users, X } from 'lucide-react';
+import {
+  Check,
+  ExternalLink,
+  MoreHorizontal,
+  Search,
+  Tag,
+  Users,
+  X,
+} from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
+  AdminSheet,
   CouldntLoad,
   EmptyState,
   PageSkeleton,
   PersonAvatar,
   RowMenu,
+  RowMenuItems,
+  SaveFailedToast,
+  Spinner,
+  Toast,
+  ToastDock,
   useIsPhone,
   type RowMenuItem,
 } from '@/components/admin/primitives';
@@ -31,6 +45,7 @@ import {
   backedPill,
   priceRange,
   stateWords,
+  ticketHost,
   type BackedTone,
   type RejectionReason,
   type StateFilter,
@@ -39,6 +54,25 @@ import {
 
 const COPY = ADMIN_COPY.pricesSubmitted;
 const PAGE = 50;
+// The approved toast leaves on its own, as the admin's other toasts do.
+const TOAST_MS = 6000;
+// `43/approve-failed-d` draws the toast's shadow at .45.
+const FAILED_SHADOW = '0 14px 30px rgba(0,0,0,.45)';
+
+/** A row mid-Approve, or one whose Approve just failed. */
+type RowStatus = 'approving' | 'failed';
+
+/** The one toast the tab shows at a time. */
+type Notice =
+  | { kind: 'approved'; price: string; show: string }
+  | { kind: 'failed'; row: SubmittedRow }
+  | { kind: 'not-waiting' };
+
+const withoutKey = <T,>(
+  record: Record<string, T>,
+  key: string,
+): Record<string, T> =>
+  Object.fromEntries(Object.entries(record).filter(([id]) => id !== key));
 
 const TONES: Record<
   BackedTone | 'pink',
@@ -156,7 +190,8 @@ const countOf = (
 /**
  * The Submitted prices tab (`06/prices-submitted-prices`, `submitted-prices-mobile`):
  * filter chips with counts, a search over shows and people, the list with a row
- * menu on a desktop, and Reject for a price that is waiting for you.
+ * menu on a desktop (a sheet from each waiting row on the phone), and Approve
+ * (`43/approve-*`, no Undo) and Reject for a price that is waiting for you.
  */
 export const SubmittedTab = ({
   initialFan = null,
@@ -182,6 +217,16 @@ export const SubmittedTab = ({
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [rejecting, setRejecting] = useState<SubmittedRow | null>(null);
   const [editing, setEditing] = useState<SubmittedRow | null>(null);
+  // Approve (`43/approve-*`): each row's request, the prices approved here
+  // ("Published by you" until the page reloads), the toast, the row whose
+  // ⋯ menu is open (it tints), and the phone's actions sheet.
+  const [rowStatus, setRowStatus] = useState<Record<string, RowStatus>>({});
+  const [approvedHere, setApprovedHere] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [menuRow, setMenuRow] = useState<string | null>(null);
+  const [sheetRow, setSheetRow] = useState<SubmittedRow | null>(null);
   // "This fan's other prices" (4d#12): the list narrowed to one fan on the
   // whole handle, shown as a chip rather than typed into the search box.
   const [fan, setFan] = useState<string | null>(initialFan);
@@ -229,6 +274,12 @@ export const SubmittedTab = ({
       setTotal(list.total);
       setCounts(nextCounts);
       setCountsFan(fan);
+      // A fresh list drops a failed Approve's tint; one in flight keeps its.
+      setRowStatus((prev) =>
+        Object.fromEntries(
+          Object.entries(prev).filter(([, status]) => status === 'approving'),
+        ),
+      );
       setFailed(false);
       setLoaded(true);
       setBusy(false);
@@ -243,6 +294,75 @@ export const SubmittedTab = ({
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Another filter, search or fan is another list: its toast goes with it.
+  useEffect(() => {
+    setNotice(null);
+  }, [filter, search, fan]);
+
+  // The approved toast, and the not-waiting one (no Try again), leave on
+  // their own. A failure with Try again stays until it's used.
+  useEffect(() => {
+    if (notice === null || notice.kind === 'failed') return undefined;
+    const timer = window.setTimeout(() => setNotice(null), TOAST_MS);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const showName = (row: SubmittedRow) =>
+    row.title === '' ? COPY.reject.thisShow : row.title;
+
+  /**
+   * Approve one waiting price, in place: the row reads Approving…, then
+   * Published by you with the counts moved (no reload), or Didn't approve
+   * with Try again. A price no longer waiting reloads the list.
+   */
+  const approve = async (row: SubmittedRow) => {
+    if (rowStatus[row.id] === 'approving') return;
+    const mine = latest.current;
+    setNotice(null);
+    setRowStatus((prev) => ({ ...prev, [row.id]: 'approving' }));
+    try {
+      await api.approve(row.id);
+    } catch (err) {
+      const status = refusedStatus(err);
+      // Decided elsewhere (approved, rejected, gone, or in a Price check):
+      // say so and show the list as it is now.
+      if (status === 409 || status === 404) {
+        setRowStatus((prev) => withoutKey(prev, row.id));
+        setNotice({ kind: 'not-waiting' });
+        void load();
+        return;
+      }
+      setRowStatus((prev) => ({ ...prev, [row.id]: 'failed' }));
+      setNotice({ kind: 'failed', row });
+      return;
+    }
+    setRowStatus((prev) => withoutKey(prev, row.id));
+    setApprovedHere((prev) => new Set(prev).add(row.id));
+    // The row stays where it is, now published, even under Waiting for you.
+    setRows((prev) =>
+      prev.map((each) =>
+        each.id === row.id ? { ...each, state: 'published' } : each,
+      ),
+    );
+    // A load since the tap counted afresh; otherwise move one price across.
+    if (mine === latest.current) {
+      setCounts((prev) =>
+        prev === null
+          ? prev
+          : {
+              ...prev,
+              waiting: Math.max(0, prev.waiting - 1),
+              published: prev.published + 1,
+            },
+      );
+    }
+    setNotice({
+      kind: 'approved',
+      price: priceRange(row.priceMin, row.priceMax),
+      show: showName(row),
+    });
+  };
 
   const loadMore = async () => {
     // A filter or search change while this runs makes its answer stale.
@@ -295,20 +415,41 @@ export const SubmittedTab = ({
     return null;
   };
 
-  const menuItems = (row: SubmittedRow): RowMenuItem[] => {
-    const items: RowMenuItem[] = [
+  /**
+   * The row's actions in `43/approve-menu-d`'s order: Approve first for a
+   * waiting price, then the show, the ticket, the fan's other prices, Edit
+   * price and Reject…. The phone's sheet words two hints shorter.
+   */
+  const menuItems = (row: SubmittedRow, phone = false): RowMenuItem[] => {
+    const price = priceRange(row.priceMin, row.priceMax);
+    const waiting = row.state === 'waiting';
+    const items: RowMenuItem[] = [];
+    if (waiting) {
+      items.push({
+        key: 'approve',
+        icon: Check,
+        label: COPY.menu.approve.label,
+        hint: phone
+          ? COPY.menu.approve.phoneHint(price)
+          : COPY.menu.approve.hint(price, row.backedBy),
+        success: true,
+        onSelect: () => void approve(row),
+      });
+    }
+    items.push(
       {
         key: 'show',
-        icon: Calendar,
+        icon: ExternalLink,
         label: COPY.menu.openShow.label,
-        hint: COPY.menu.openShow.hint,
+        hint: COPY.menu.openShow.hint(showName(row), row.venueName),
+        divided: waiting,
         onSelect: () => router.push(editEventHref(row.eventId)),
       },
       {
         key: 'ticket',
         icon: ExternalLink,
         label: COPY.menu.openTicket.label,
-        hint: COPY.menu.openTicket.hint,
+        hint: ticketHost(row.ticketUrl) ?? COPY.menu.openTicket.noTicket,
         disabled: !isSafeHttpUrl(row.ticketUrl),
         onSelect: () => {
           if (isSafeHttpUrl(row.ticketUrl)) {
@@ -316,7 +457,7 @@ export const SubmittedTab = ({
           }
         },
       },
-    ];
+    );
     // Already filtered to this fan: the item would do nothing.
     if (row.handle !== null && row.handle !== fan) {
       const handle = row.handle;
@@ -340,11 +481,11 @@ export const SubmittedTab = ({
         key: 'edit',
         icon: Tag,
         label: COPY.menu.editPrice.label,
-        hint: COPY.menu.editPrice.hint,
+        hint: phone ? COPY.menu.editPrice.phoneHint : COPY.menu.editPrice.hint,
         onSelect: () => setEditing(row),
       });
     }
-    if (row.state === 'waiting') {
+    if (waiting) {
       items.push({
         key: 'reject',
         icon: X,
@@ -362,6 +503,131 @@ export const SubmittedTab = ({
     row.handle === null ? COPY.noHandle : `@${row.handle}`;
   const sub = (row: SubmittedRow) =>
     [row.venueName, dayOf(row.date)].filter(Boolean).join(' · ');
+
+  const approvedByYou = (row: SubmittedRow) =>
+    row.state === 'published' && approvedHere.has(row.id);
+
+  /** The desktop row's tint: busy or its menu open, approved, or failed. */
+  const rowTint = (row: SubmittedRow): string | undefined =>
+    rowStatus[row.id] === 'approving' || menuRow === row.id
+      ? 'var(--surface-2)'
+      : approvedByYou(row)
+        ? 'color-mix(in srgb, var(--success) 6%, transparent)'
+        : rowStatus[row.id] === 'failed'
+          ? 'color-mix(in srgb, var(--danger) 6%, transparent)'
+          : undefined;
+
+  /** The desktop STATE cell (`43/approve-busy-d`, `-done-d`, `-failed-d`). */
+  const stateCell = (row: SubmittedRow) => {
+    const status = rowStatus[row.id];
+    const line: CSSProperties = {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      whiteSpace: 'nowrap',
+    };
+    if (status === 'approving') {
+      return (
+        <span style={{ ...line, gap: 8, color: 'var(--signal)' }}>
+          <Spinner size={13} tone="var(--signal)" />
+          {COPY.approve.approving}
+        </span>
+      );
+    }
+    if (approvedByYou(row)) {
+      return (
+        <span style={{ ...line, color: 'var(--success)' }}>
+          <Check size={13} strokeWidth={2.2} aria-hidden />
+          {COPY.approve.publishedByYou}
+        </span>
+      );
+    }
+    if (status === 'failed' && row.state === 'waiting') {
+      return (
+        <span style={{ ...line, color: 'var(--danger)' }}>
+          {/* The drawn cross: an 8px X in a 16px box. */}
+          <svg
+            width={12}
+            height={12}
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            aria-hidden
+          >
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+          {COPY.approve.didntApprove}
+        </span>
+      );
+    }
+    return stateWords(row, COPY.states);
+  };
+
+  /**
+   * The phone's action line under a waiting price (`43/approve-m`): a soft
+   * Approve and a ⋯ that opens the actions sheet. Both rest mid-request.
+   */
+  const phoneActions = (row: SubmittedRow) => {
+    const approving = rowStatus[row.id] === 'approving';
+    const button: CSSProperties = {
+      height: 38,
+      padding: '0 12px',
+      borderRadius: 9,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      fontFamily: 'inherit',
+      fontWeight: 600,
+      cursor: approving ? 'not-allowed' : 'pointer',
+    };
+    return (
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          type="button"
+          data-testid="approve-button"
+          aria-disabled={approving || undefined}
+          onClick={() => {
+            if (!approving) void approve(row);
+          }}
+          style={{
+            ...button,
+            flex: 1,
+            fontSize: 13.5,
+            color: 'var(--signal)',
+            background: 'color-mix(in srgb, var(--signal) 12%, transparent)',
+            border:
+              '1px solid color-mix(in srgb, var(--signal) 30%, transparent)',
+          }}
+        >
+          {approving ? (
+            <Spinner size={13} tone="var(--signal)" />
+          ) : (
+            <Check size={14} strokeWidth={1.8} aria-hidden />
+          )}
+          {approving ? COPY.approve.approving : COPY.menu.approve.label}
+        </button>
+        <button
+          type="button"
+          aria-label={COPY.menu.label}
+          aria-haspopup="dialog"
+          disabled={approving}
+          onClick={() => setSheetRow(row)}
+          style={{
+            ...button,
+            fontSize: 13,
+            color: 'var(--fg)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-strong)',
+          }}
+        >
+          <MoreHorizontal size={14} strokeWidth={1.8} aria-hidden />
+        </button>
+      </div>
+    );
+  };
 
   const remaining = total - rows.length;
 
@@ -595,7 +861,7 @@ export const SubmittedTab = ({
                 <span style={{ width: 90 }}>{COPY.columns.price}</span>
                 <span style={{ width: 120 }}>{COPY.columns.from}</span>
                 <span style={{ width: 110 }}>{COPY.columns.backedBy}</span>
-                <span style={{ width: 130 }}>{COPY.columns.state}</span>
+                <span style={{ width: 150 }}>{COPY.columns.state}</span>
                 <span style={{ width: 20 }} />
               </div>
             )}
@@ -608,98 +874,107 @@ export const SubmittedTab = ({
                 return isPhone ? (
                   <li
                     key={row.id}
+                    aria-busy={rowStatus[row.id] === 'approving' || undefined}
                     style={{
                       display: 'flex',
-                      gap: 12,
+                      flexDirection: 'column',
+                      gap: 10,
                       padding: '12px 0',
                       borderBottom: '1px solid var(--border)',
                     }}
                   >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 14.5,
-                          fontWeight: 700,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {row.title}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 12.5,
-                          color: 'var(--fg-muted)',
-                          marginTop: 3,
-                        }}
-                      >
-                        {sub(row)}
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          minWidth: 0,
-                          marginTop: 6,
-                        }}
-                      >
-                        {row.handle !== null && (
-                          // Every admin avatar is PersonAvatar (README rule
-                          // 12); the board's own disc is a Design conflict.
-                          <PersonAvatar
-                            initialOf={row.handle}
-                            avatarColor={row.avatarColor}
-                            avatarSecondColor={row.avatarSecondColor}
-                            size={22}
-                          />
-                        )}
-                        <span
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
                           style={{
-                            minWidth: 0,
-                            fontSize: 13.5,
+                            fontSize: 14.5,
                             fontWeight: 700,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {fanLabel(row)}
-                        </span>
+                          {row.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            color: 'var(--fg-muted)',
+                            marginTop: 3,
+                          }}
+                        >
+                          {sub(row)}
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            minWidth: 0,
+                            marginTop: 6,
+                          }}
+                        >
+                          {row.handle !== null && (
+                            // Every admin avatar is PersonAvatar (README rule
+                            // 12); the board's own disc is a Design conflict.
+                            <PersonAvatar
+                              initialOf={row.handle}
+                              avatarColor={row.avatarColor}
+                              avatarSecondColor={row.avatarSecondColor}
+                              size={22}
+                            />
+                          )}
+                          <span
+                            style={{
+                              minWidth: 0,
+                              fontSize: 13.5,
+                              fontWeight: 700,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {fanLabel(row)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-end',
-                        gap: 6,
-                      }}
-                    >
-                      <span
+                      <div
                         style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          fontVariantNumeric: 'tabular-nums',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-end',
+                          gap: 6,
                         }}
                       >
-                        {priceRange(row.priceMin, row.priceMax)}
-                      </span>
-                      <Pill tone={PHONE_TONE[row.state]}>
-                        {stateWords(row, COPY.phoneStates)}
-                      </Pill>
+                        <span
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 700,
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          {priceRange(row.priceMin, row.priceMax)}
+                        </span>
+                        <Pill tone={PHONE_TONE[row.state]}>
+                          {approvedByYou(row)
+                            ? COPY.approve.publishedByYou
+                            : stateWords(row, COPY.phoneStates)}
+                        </Pill>
+                      </div>
                     </div>
+                    {row.state === 'waiting' && phoneActions(row)}
                   </li>
                 ) : (
                   <li
                     key={row.id}
+                    aria-busy={rowStatus[row.id] === 'approving' || undefined}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 12,
                       padding: '10px 18px',
                       borderTop: '1px solid var(--border)',
+                      background: rowTint(row),
                     }}
                   >
                     <div style={{ flex: 1.6, minWidth: 0 }}>
@@ -757,19 +1032,28 @@ export const SubmittedTab = ({
                       </Pill>
                     </span>
                     <span
+                      data-testid="submitted-state"
                       style={{
-                        width: 130,
+                        // `43/approve-*` widens it to fit Published by you.
+                        width: 150,
                         fontSize: 12.5,
                         color: 'var(--fg-muted)',
                       }}
                     >
-                      {stateWords(row, COPY.states)}
+                      {stateCell(row)}
                     </span>
                     <span style={{ width: 20, flex: 'none' }}>
                       <RowMenu
                         label={COPY.menu.label}
                         items={menuItems(row)}
                         width={300}
+                        // Mid-request the row can't be acted on.
+                        disabled={rowStatus[row.id] === 'approving'}
+                        onOpenChange={(open) =>
+                          setMenuRow((cur) =>
+                            open ? row.id : cur === row.id ? null : cur,
+                          )
+                        }
                       />
                     </span>
                   </li>
@@ -828,6 +1112,67 @@ export const SubmittedTab = ({
           onConfirm={(reason, note) => reject(rejecting, reason, note)}
           onCancel={() => setRejecting(null)}
         />
+      )}
+
+      {/* `43/approve-sheet-m`: the row's actions as a bottom sheet, closed
+          from the scrim (no Cancel drawn). */}
+      {sheetRow && (
+        <AdminSheet
+          title={COPY.menu.sheetTitle(
+            showName(sheetRow),
+            priceRange(sheetRow.priceMin, sheetRow.priceMax),
+          )}
+          onClose={() => setSheetRow(null)}
+        >
+          <div
+            style={{
+              padding: 6,
+              borderRadius: 14,
+              border: '1px solid var(--border-strong)',
+              background: 'var(--bg-elevated)',
+            }}
+          >
+            <RowMenuItems
+              items={menuItems(sheetRow, true)}
+              testId="price-sheet"
+              onPick={(item) => {
+                setSheetRow(null);
+                item.onSelect();
+              }}
+            />
+          </div>
+        </AdminSheet>
+      )}
+
+      {/* No Undo (Hugh): the price goes out to fans at once. */}
+      {notice?.kind === 'approved' && (
+        <Toast
+          testId="approve-toast"
+          title={COPY.approve.doneTitle(notice.price, notice.show)}
+          body={COPY.approve.doneBody}
+        />
+      )}
+      {notice?.kind === 'failed' && (
+        <ToastDock>
+          <SaveFailedToast
+            title={COPY.approve.failedTitle}
+            body={COPY.approve.failedBody}
+            onRetry={() => void approve(notice.row)}
+            crossStroke={2.2}
+            shadow={FAILED_SHADOW}
+          />
+        </ToastDock>
+      )}
+      {notice?.kind === 'not-waiting' && (
+        <ToastDock>
+          {/* Trying again would only be refused again: no Try again. */}
+          <SaveFailedToast
+            title={COPY.approve.failedTitle}
+            body={COPY.approve.notWaitingBody}
+            crossStroke={2.2}
+            shadow={FAILED_SHADOW}
+          />
+        </ToastDock>
       )}
     </div>
   );

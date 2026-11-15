@@ -1,5 +1,6 @@
 /**
- * The Submitted prices tab's calls: the list, the chip counts and Reject. Same
+ * The Submitted prices tab's calls: the list, the chip counts, Approve and
+ * Reject. Same
  * contract as the Prices page's other calls (Clerk token through `call`,
  * payloads narrowed with guards so a shape drift fails into Couldn't load).
  */
@@ -169,6 +170,17 @@ export const submittedApi = (getToken: GetToken) => ({
     await call(getToken, `/v1/admin/prices/submissions/${id}/price`, {
       method: 'PATCH',
       body: { priceMin, priceMax },
+    });
+  },
+
+  /**
+   * Publish a waiting price (`POST .../:id/approve`, no body). Refused with a
+   * 409 when it is no longer waiting (`not_waiting`) or sits in a Price check
+   * (`price_check`), and a 404 when it is gone: `refusedStatus` reads either.
+   */
+  approve: async (id: string): Promise<void> => {
+    await call(getToken, `/v1/admin/prices/submissions/${id}/approve`, {
+      method: 'POST',
     });
   },
 
