@@ -2172,36 +2172,33 @@ export const ADMIN_COPY = {
 
   feedback: {
     title: 'Feedback',
-    statusChips: {
-      all: 'All',
-      unread: 'Unread',
-      flagged: 'Flagged',
-      issue_opened: 'Issue opened',
-      resolved: 'Resolved',
-      archived: 'Archived',
+    // `07/feedback` and `07/feedback-done`: the chips over the list.
+    chips: {
+      to_read: 'To read',
+      bugs: 'Bugs',
+      ideas: 'Ideas',
+      venues: 'Venues',
+      done: 'Done',
     },
-    panelTitle: {
-      all: 'Active feedback',
-      unread: 'Unread feedback',
-      flagged: 'Flagged feedback',
-      issue_opened: 'Issues opened',
-      resolved: 'Resolved feedback',
-      archived: 'Archived feedback',
-      read: 'Read feedback',
+    chipsLabel: 'Feedback filters',
+    search: 'Search feedback',
+    doneCaption:
+      'Done items keep who finished them and whether they got a reply. Open one to reopen it.',
+    // `07/feedback-nothing-to-read`.
+    empty: {
+      title: 'All read',
+      body: 'Bugs and error reports also show in Needs you. Ideas and venue suggestions wait here.',
     },
-    statCards: {
-      lastSevenDays: 'Last 7 days',
-      unread: 'Unread',
-      flagged: 'Flagged',
-      flaggedHint: 'awaiting investigation',
-      issuesOpened: 'Issues opened',
-      issuesOpenedHint: 'this month',
-    },
-    itemsCountSuffix: 'items',
-    markAllRead: 'Mark all read',
-    loadingState: 'Loading…',
-    emptyState: 'No feedback in this category',
+    // Undrawn: an empty Done, and a search with no hits.
+    doneEmpty: 'Nothing done yet',
+    noMatch: { title: 'No feedback matches', body: 'Nothing matches that.' },
     row: {
+      handle: (handle: string) => `@${handle}`,
+      // An error report with no reporter came in from Sentry.
+      sentry: 'Sentry',
+      separator: ' · ',
+      doneBy: (handle: string) => `Done by @${handle}`,
+      done: 'Done',
       // Lower case to match the raw values the row showed before 0117.
       categoryLabel: {
         bug: 'bug',
@@ -2211,38 +2208,11 @@ export const ADMIN_COPY = {
         error_report: 'error report',
         venue_suggestion: 'venue suggestion',
       },
-      statusLabel: {
-        unread: 'Unread',
-        flagged: 'Flagged',
-        issue_opened: 'Issue opened',
-        resolved: 'Resolved',
-        read: 'Read',
-        archived: 'Archived',
-      },
-      screenshotBadge: 'screenshot',
       // Prefixes — concatenated with the row handle so each button gets a
       // unique accessible name. The "Expand feedback" stem stays intact for
       // the ui-audit harness, which targets buttons by /expand feedback/i.
       expandLabel: 'Expand feedback details from',
       collapseLabel: 'Collapse feedback details from',
-    },
-    filterRail: {
-      viewLabel: 'View',
-      sourceLabel: 'Source',
-      statusItems: {
-        all: 'All',
-        unread: 'Unread',
-        flagged: 'Flagged',
-        issue_opened: 'Issue opened',
-        resolved: 'Resolved',
-        archived: 'Archived',
-      },
-      sourceItems: {
-        feedback_surface: 'FeedbackSurface',
-        sentry: 'Sentry',
-        email: 'Email',
-      },
-      soonBadge: 'soon',
     },
     expanded: {
       sectionLabels: {
@@ -4160,6 +4130,10 @@ export const ADMIN_COPY = {
     priceCheck: 'PRICE CHECK',
     inviteCode: 'INVITE CODE',
     guide: 'GUIDE',
+    // `07/feedback`'s kinds.
+    idea: 'IDEA',
+    errorReport: 'ERROR REPORT',
+    venueSuggestion: 'SUGGEST A VENUE',
   },
   // The venue page's Hide, Take down and Delete confirms (`A3/03/hide-other-d`,
   // `A3/03/take-down-d`, `04/delete-venue`) and the delete-refused line

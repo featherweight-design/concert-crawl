@@ -1,214 +1,143 @@
 'use client';
 
-import { ChevronDown, ChevronRight, Image } from 'lucide-react';
-import { StatusBadge } from '@/components/admin/primitives';
-import type { FeedbackStatusFilter } from './FeedbackFilterRail';
-import type { StatusKind } from '@/components/admin/primitives/utils';
+import { ChevronRight } from 'lucide-react';
+import { KindLabel } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants';
-import type { FeedbackCategory } from '@concert-crawl/types';
+import type { AdminFeedbackItem, FeedbackCategory } from '@concert-crawl/types';
+import {
+  FEEDBACK_KIND,
+  doneLine,
+  firstLine,
+  metaLine,
+} from './feedback-list-rules';
 
-export interface FeedbackItem {
-  id: string;
-  userId: string;
-  pageUrl: string;
-  category: FeedbackCategory;
-  message: string;
-  metadata: Record<string, unknown> | null;
-  status: Exclude<FeedbackStatusFilter, 'all'>;
-  adminNotes: string | null;
-  issueUrl: string | null;
-  createdAt: string;
-}
+export type FeedbackItem = AdminFeedbackItem;
 
-const CATEGORY_KIND: Record<FeedbackItem['category'], StatusKind> = {
-  bug: 'danger',
-  idea: 'accent',
-  praise: 'success',
-  other: 'neutral',
-  error_report: 'danger',
-  venue_suggestion: 'accent',
-};
-
-/** Readable category names: the row badge and the GitHub issue title share it. */
+/** Readable category names: the GitHub issue title uses it. */
 export const CATEGORY_LABEL: Record<FeedbackCategory, string> =
   ADMIN_COPY.feedback.row.categoryLabel;
 
-const STATUS_LABEL = ADMIN_COPY.feedback.row.statusLabel;
-
-function formatRelativeTime(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return 'yesterday';
-  if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
+const COPY = ADMIN_COPY.feedback.row;
 
 interface FeedbackRowProps {
   item: FeedbackItem;
   isExpanded: boolean;
   onToggle: (id: string) => void;
+  /** Done's rows say who finished them on the right. */
+  isDone: boolean;
+  isPhone: boolean;
+  isFirst: boolean;
 }
 
-export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
-  const isUnread = item.status === 'unread';
-  const handle = `@${item.userId.slice(0, 10)}`;
-  const hasScreenshot = Boolean(
-    item.metadata?.screenshotDataUrl ?? item.metadata?.screenshot,
-  );
-  const showDot = item.status === 'unread' || item.status === 'flagged';
-
+/**
+ * One row of `07/feedback`: the kind, a pink dot while unread, the message's
+ * first line, and who sent it when. Desktop adds a right side (Done's "Done
+ * by", nothing under To read) and a chevron; the phone draws neither. It
+ * opens today's inline detail, which 4b replaces.
+ */
+export function FeedbackRow({
+  item,
+  isExpanded,
+  onToggle,
+  isDone,
+  isPhone,
+  isFirst,
+}: FeedbackRowProps) {
+  const meta = metaLine(item);
+  const title = firstLine(item.message);
   return (
-    <div
+    <button
+      type="button"
+      data-testid="feedback-row"
+      onClick={() => onToggle(item.id)}
+      aria-expanded={isExpanded}
+      // The "Expand feedback" stem is what the ui-audit harness clicks.
+      aria-label={[
+        `${isExpanded ? COPY.collapseLabel : COPY.expandLabel} ${meta}`,
+        title,
+      ].join(COPY.separator)}
       style={{
-        borderBottom: '1px solid var(--border)',
-        background: isUnread ? 'var(--surface-2)' : undefined,
-        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        width: '100%',
+        padding: '13px 16px',
+        border: 'none',
+        borderTop: isFirst ? 'none' : '1px solid var(--border)',
+        background: 'none',
+        color: 'var(--fg)',
+        textAlign: 'left',
+        cursor: 'pointer',
+        font: 'inherit',
       }}
     >
-      {isUnread && (
+      <span style={{ flex: 1, minWidth: 0, display: 'block' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <KindLabel kind={FEEDBACK_KIND[item.category]} />
+          {item.status === 'unread' && (
+            <span
+              data-testid="feedback-unread-dot"
+              aria-hidden="true"
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                flex: 'none',
+              }}
+            />
+          )}
+        </span>
+        <span
+          data-testid="feedback-row-title"
+          style={{
+            display: isPhone ? '-webkit-box' : 'block',
+            marginTop: 7,
+            fontSize: 14,
+            fontWeight: 700,
+            lineHeight: 1.3,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            // The phone board wraps a long title to a second line.
+            ...(isPhone
+              ? { WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }
+              : { whiteSpace: 'nowrap' }),
+          }}
+        >
+          {title}
+        </span>
         <span
           style={{
-            position: 'absolute',
-            left: 8,
-            top: 22,
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            background: 'var(--signal)',
+            display: 'block',
+            marginTop: 4,
+            fontSize: 12,
+            color: 'var(--fg-muted)',
           }}
+        >
+          {meta}
+        </span>
+      </span>
+      {!isPhone && isDone && (
+        <span
+          data-testid="feedback-done-by"
+          style={{
+            flex: 'none',
+            fontSize: 12,
+            color: 'var(--fg-subtle)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {doneLine(item)}
+        </span>
+      )}
+      {!isPhone && (
+        <ChevronRight
+          size={14}
+          strokeWidth={1.8}
+          aria-hidden="true"
+          style={{ flex: 'none', display: 'block', color: 'var(--fg-subtle)' }}
         />
       )}
-      <button
-        type="button"
-        onClick={() => onToggle(item.id)}
-        aria-expanded={isExpanded}
-        aria-label={`${
-          isExpanded
-            ? ADMIN_COPY.feedback.row.collapseLabel
-            : ADMIN_COPY.feedback.row.expandLabel
-        } ${handle}`}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto',
-          gap: 16,
-          padding: '14px 16px 14px 24px',
-          width: '100%',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          textAlign: 'left',
-          alignItems: 'center',
-        }}
-      >
-        {/* Left: 2-line layout */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            minWidth: 0,
-          }}
-        >
-          {/* Line 1: username + badges */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 7,
-              flexWrap: 'wrap',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--accent)',
-                letterSpacing: '0.02em',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {handle}
-            </span>
-            <StatusBadge kind={CATEGORY_KIND[item.category]}>
-              {CATEGORY_LABEL[item.category]}
-            </StatusBadge>
-            <StatusBadge kind={FEEDBACK_STATUS_KIND[item.status]} dot={showDot}>
-              {STATUS_LABEL[item.status] ?? item.status}
-            </StatusBadge>
-            {hasScreenshot && (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: 'var(--fg-subtle)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 6,
-                  padding: '2px 6px',
-                }}
-              >
-                <Image size={10} color="var(--fg-subtle)" />
-                {ADMIN_COPY.feedback.row.screenshotBadge}
-              </span>
-            )}
-          </div>
-
-          {/* Line 2: message */}
-          <span
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 13,
-              fontWeight: isUnread ? 600 : 500,
-              color: isUnread ? 'var(--fg)' : 'var(--fg-muted)',
-              lineHeight: 1.4,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {item.message}
-          </span>
-        </div>
-
-        {/* Right: time + chevron */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            flexShrink: 0,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11,
-              color: 'var(--fg-subtle)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {formatRelativeTime(item.createdAt)}
-          </span>
-          {isExpanded ? (
-            <ChevronDown size={14} color="var(--fg-muted)" />
-          ) : (
-            <ChevronRight size={14} color="var(--fg-muted)" />
-          )}
-        </div>
-      </button>
-    </div>
+    </button>
   );
 }
