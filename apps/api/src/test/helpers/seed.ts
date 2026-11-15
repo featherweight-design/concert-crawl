@@ -14,6 +14,9 @@ import {
   eventReportConfirms,
   eventReports,
   events,
+  featureFlagHistory,
+  featureFlagUsers,
+  featureFlags,
   feedback,
   giftedComps,
   inviteCodes,
@@ -535,6 +538,21 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
     artistId: randomUUID(),
     reporterId: userId,
     reason: 'other',
+  });
+
+  // ---- Feature flag ladder (named person: delete; history subject: anonymize) ----
+  await testDb
+    .insert(featureFlags)
+    .values({ key: 'crews', enabled: false, updatedBy: 'seed-admin' })
+    .onConflictDoNothing();
+  await testDb
+    .insert(featureFlagUsers)
+    .values({ flagKey: 'crews', userId, addedBy: 'seed-admin' });
+  await testDb.insert(featureFlagHistory).values({
+    flagKey: 'crews',
+    kind: 'person_added',
+    subjectUserId: userId,
+    actorUserId: 'seed-admin',
   });
 
   // ---- Self-check ----
