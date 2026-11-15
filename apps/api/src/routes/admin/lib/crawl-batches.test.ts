@@ -436,6 +436,71 @@ describe('groupCrawlBatches: by hand', () => {
   });
 });
 
+describe('groupCrawlBatches: a test re-crawl', () => {
+  const trialOf = (input: {
+    runs: BatchRunInput[];
+    triggers: BatchTriggerInput[];
+  }) =>
+    groupCrawlBatches({ ...input, now: NOW })
+      .filter((batch) => batch.kind === 'by_hand')
+      .map(({ trial, venueCount }) => ({ trial, venueCount }));
+
+  it('reads a queued trial from its trigger before its run lands', () => {
+    expect(
+      trialOf({
+        runs: [],
+        triggers: [
+          trigger('t1', '2026-11-12T16:00:00Z', {
+            status: 'pending',
+            trial: true,
+          }),
+        ],
+      }),
+    ).toEqual([{ trial: true, venueCount: 1 }]);
+  });
+
+  it('reads a landed trial from its run, which the crawler may have run as a normal crawl', () => {
+    expect(
+      trialOf({
+        runs: [
+          run('r1', '2026-11-12T16:00:30Z', { trial: true }),
+          run('r2', '2026-11-12T18:00:30Z'),
+        ],
+        triggers: [
+          trigger('t1', '2026-11-12T16:00:00Z', {
+            crawlRunId: 'r1',
+            trial: true,
+          }),
+          // Resumed before it ran: the run is a normal crawl.
+          trigger('t2', '2026-11-12T18:00:00Z', {
+            crawlRunId: 'r2',
+            trial: true,
+          }),
+        ],
+      }),
+    ).toEqual([
+      { trial: false, venueCount: 1 },
+      { trial: true, venueCount: 1 },
+    ]);
+  });
+
+  it('never shares a batch with a plain re-crawl inside the burst gap', () => {
+    expect(
+      trialOf({
+        runs: [],
+        triggers: [
+          trigger('t1', '2026-11-12T16:00:00Z', { trial: true }),
+          trigger('t2', '2026-11-12T16:02:00Z'),
+          trigger('t3', '2026-11-12T16:04:00Z'),
+        ],
+      }),
+    ).toEqual([
+      { trial: false, venueCount: 2 },
+      { trial: true, venueCount: 1 },
+    ]);
+  });
+});
+
 describe('groupCrawlBatches: a trigger whose run is not linked yet', () => {
   it('claims a run on its venue that started after it, so the run is not filed as nightly', () => {
     const batches = groupCrawlBatches({

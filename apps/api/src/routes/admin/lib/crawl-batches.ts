@@ -417,7 +417,15 @@ export const groupCrawlBatches = ({
     }
   }
 
-  // By hand: bursts of one person's triggers.
+  // By hand: bursts of one person's triggers. A trigger is a test re-crawl by
+  // its own run once that lands (the crawler runs a trial as a normal crawl
+  // when the venue was resumed meanwhile), else by the trigger's flag.
+  const runOf = (trigger: BatchTriggerInput): BatchRunInput | undefined => {
+    const runId = trigger.crawlRunId ?? claimedRunByTrigger.get(trigger.id);
+    return runId === undefined ? undefined : runById.get(runId);
+  };
+  const isTrial = (trigger: BatchTriggerInput): boolean =>
+    runOf(trigger)?.trial ?? trigger.trial;
   const ordered = [...triggers].sort(
     (left, right) =>
       (left.triggeredBy ?? '').localeCompare(right.triggeredBy ?? '') ||
@@ -431,6 +439,8 @@ export const groupCrawlBatches = ({
       burst !== undefined &&
       previous !== undefined &&
       previous.triggeredBy === trigger.triggeredBy &&
+      // A test re-crawl never shares a batch with a plain one.
+      isTrial(previous) === isTrial(trigger) &&
       trigger.createdAt.getTime() - previous.createdAt.getTime() <= BURST_GAP_MS
     ) {
       burst.push(trigger);
@@ -443,10 +453,9 @@ export const groupCrawlBatches = ({
     if (first === undefined) continue;
     const burstRuns = burst
       .flatMap((trigger) => {
-        const runId = trigger.crawlRunId ?? claimedRunByTrigger.get(trigger.id);
-        return runId === undefined ? [] : [runById.get(runId)];
+        const run = runOf(trigger);
+        return run === undefined ? [] : [run];
       })
-      .flatMap((run) => (run === undefined ? [] : [run]))
       .sort(byTime);
     const actor = first.triggeredBy;
     const venueIds = new Set(burst.map((trigger) => trigger.venueId));
@@ -474,11 +483,9 @@ export const groupCrawlBatches = ({
         costUsd: costOf(burstRuns),
         linkKey: `run:${epochOf(first.createdAt)}:${actorTag(actor)}`,
         crawlAll: isCrawlAll(burst),
-        // A test re-crawl is one trigger and its one run. Its trigger says
-        // so before the run lands; its runs say so once they have.
-        trial:
-          burst.every((trigger) => trigger.trial) ||
-          (burstRuns.length > 0 && burstRuns.every((run) => run.trial)),
+        // Bursts split on the flag, so every trigger here agrees; `every`
+        // keeps the rule stated whole.
+        trial: burst.every(isTrial),
         venueName:
           venueIds.size === 1
             ? (first.venueName ?? burstRuns[0]?.venueName ?? null)

@@ -490,6 +490,64 @@ describe('admin crawl batches', () => {
         { kind: 'nightly', actor: null, trial: false },
       ]);
     });
+
+    it('reads a trial the crawler ran as a normal crawl as not trial, and keeps a test re-crawl apart from a plain one', async () => {
+      setAuth('admin');
+      const ball = await seedVenue({ name: 'Ball Arena', slug: 'ball-arena' });
+      const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      const gothic = await seedVenue({ name: 'Gothic', slug: 'gothic' });
+      const resumedAt = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const trialAt = new Date(Date.now() - 60 * 60 * 1000);
+      const plainAt = new Date(trialAt.getTime() + 2 * 60 * 1000);
+      // Resumed before it ran: the trigger asked for a trial, the run wasn't.
+      const resumedRun = await seedRun(
+        ball.id,
+        new Date(resumedAt.getTime() + 5e3),
+      );
+      const trialRun = await seedRun(
+        levitt.id,
+        new Date(trialAt.getTime() + 5e3),
+        { trial: true },
+      );
+      await testDb.insert(crawlTriggers).values([
+        {
+          venueId: ball.id,
+          triggeredBy: 'user_resumed',
+          status: 'done',
+          crawlRunId: resumedRun,
+          trial: true,
+          createdAt: resumedAt,
+        },
+        {
+          venueId: levitt.id,
+          triggeredBy: 'user_hugh',
+          status: 'done',
+          crawlRunId: trialRun,
+          trial: true,
+          createdAt: trialAt,
+        },
+        // Two minutes later, same actor: inside the burst gap, still apart.
+        {
+          venueId: gothic.id,
+          triggeredBy: 'user_hugh',
+          status: 'pending',
+          createdAt: plainAt,
+        },
+      ]);
+
+      const body: CrawlBatchPage = await (await get('?kind=by_hand')).json();
+      expect(
+        body.data.map(({ actor, trial, venueName }) => ({
+          actor,
+          trial,
+          venueName,
+        })),
+      ).toEqual([
+        { actor: 'user_hugh', trial: false, venueName: 'Gothic' },
+        { actor: 'user_hugh', trial: true, venueName: 'Levitt' },
+        { actor: 'user_resumed', trial: false, venueName: 'Ball Arena' },
+      ]);
+    });
   });
 
   describe('paging', () => {
