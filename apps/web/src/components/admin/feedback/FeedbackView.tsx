@@ -1,47 +1,62 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { StatCard, Panel, useIsPhone } from '@/components/admin/primitives';
-import { FeedbackFilterRail } from '@/components/admin/feedback/FeedbackFilterRail';
-import { FeedbackRow } from '@/components/admin/feedback/FeedbackRow';
-import { FeedbackExpanded } from '@/components/admin/feedback/FeedbackExpanded';
+import { Inbox, Search } from 'lucide-react';
 import type {
-  FeedbackStatusFilter,
-  FeedbackSource,
-} from '@/components/admin/feedback/FeedbackFilterRail';
-import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow';
+  AdminFeedbackCounts,
+  AdminFeedbackStatus,
+} from '@concert-crawl/types';
+import {
+  CouldntLoad,
+  EmptyState,
+  useIsPhone,
+} from '@/components/admin/primitives';
+import {
+  ChipCount,
+  chipStyle,
+} from '@/components/admin/events/list/FilterPicker';
+import { FeedbackRow, type FeedbackItem } from './FeedbackRow';
+import { FeedbackExpanded } from './FeedbackExpanded';
+import { FeedbackSkeleton } from './FeedbackSkeleton';
+import {
+  KIND_CHIPS,
+  PHONE_KIND_CHIPS,
+  listPath,
+  parseFeedbackCounts,
+  parseFeedbackList,
+  type FeedbackChip,
+} from './feedback-list-rules';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const COPY = ADMIN_COPY.feedback;
+const SEARCH_DEBOUNCE_MS = 300;
 
-const STATUS_CHIPS: { value: FeedbackStatusFilter; label: string }[] = [
-  { value: 'all', label: ADMIN_COPY.feedback.statusChips.all },
-  { value: 'unread', label: ADMIN_COPY.feedback.statusChips.unread },
-  { value: 'flagged', label: ADMIN_COPY.feedback.statusChips.flagged },
-  {
-    value: 'issue_opened',
-    label: ADMIN_COPY.feedback.statusChips.issue_opened,
-  },
-  { value: 'resolved', label: ADMIN_COPY.feedback.statusChips.resolved },
-  { value: 'archived', label: ADMIN_COPY.feedback.statusChips.archived },
-];
-
-const PANEL_TITLE: Record<FeedbackStatusFilter, string> =
-  ADMIN_COPY.feedback.panelTitle;
-
-/** What the inbox counts, for a tab label drawn outside it. */
+/** What the inbox counts, for the tab label drawn outside it. */
 export interface FeedbackCounts {
   unread: number;
-  flagged: number;
 }
 
+interface Loaded {
+  items: FeedbackItem[];
+  counts: AdminFeedbackCounts;
+}
+
+const chipCount = (chip: FeedbackChip, counts: AdminFeedbackCounts) =>
+  chip === 'to_read'
+    ? counts.toRead
+    : chip === 'done'
+      ? counts.done
+      : counts.kinds[chip];
+
 /**
- * The feedback inbox, drawn inside Operations under its title and tabs, so it
- * has no heading of its own (the page keeps one h1). `onCounts` reports the
- * counts the inbox shows once it has loaded, so the Feedback tab's count
- * cannot disagree with the list under it.
+ * `07/feedback`: the feedback list, drawn inside Operations under its title
+ * and tabs, so it has no heading of its own (the page keeps one h1). The
+ * chips pick To read, a kind inside it, or Done; Done adds a search. A row
+ * opens today's inline detail (4b replaces it with the item screen).
+ * `onCounts` reports the unread count once loaded, for the tab's badge.
  */
 export const FeedbackView = ({
   onCounts,
@@ -50,350 +65,252 @@ export const FeedbackView = ({
 }) => {
   const { getToken } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<FeedbackStatusFilter>('all');
-  const [activeSources, setActiveSources] = useState<Set<FeedbackSource>>(
-    new Set(['feedback_surface']),
-  );
+  const isPhone = useIsPhone();
+  const [chip, setChip] = useState<FeedbackChip>('to_read');
+  const [text, setText] = useState('');
+  const [search, setSearch] = useState('');
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [pending, setPending] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  // The admin breakpoint (ADMIN_PHONE_MAX_WIDTH), not a width of its own, so
-  // the inbox swaps layouts at the same width as the Operations tabs above it.
-  const isMobile = useIsPhone();
+  const latestLoad = useRef(0);
 
-  const fetchFeedback = async () => {
-    const token = await getToken();
-    if (!token) return;
-    const resp = await fetch(`${API_BASE}/v1/admin/feedback?limit=200`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!resp.ok) return;
-    const body = (await resp.json()) as { data: FeedbackItem[] };
-    setItems(body.data);
-  };
-
-  useEffect(() => {
-    setIsLoading(true);
-    void fetchFeedback().finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleToggle = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  };
-
-  const handleStatusChange = async (
-    id: string,
-    status: FeedbackItem['status'],
-  ) => {
-    const token = await getToken();
-    if (!token) return;
-    await fetch(`${API_BASE}/v1/admin/feedback/${id}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status }),
-    });
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status } : item)),
-    );
-    router.refresh();
-  };
-
-  const handleMarkAllRead = async () => {
-    const token = await getToken();
-    if (!token) return;
-    const unreadItems = items.filter((item) => item.status === 'unread');
-    await Promise.all(
-      unreadItems.map((item) =>
-        fetch(`${API_BASE}/v1/admin/feedback/${item.id}`, {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ status: 'read' }),
-        }),
-      ),
-    );
-    setItems((prev) =>
-      prev.map((item) =>
-        item.status === 'unread' ? { ...item, status: 'read' as const } : item,
-      ),
-    );
-    router.refresh();
-  };
-
-  const handleNotesChange = async (id: string, adminNotes: string) => {
-    const token = await getToken();
-    if (!token) return;
-    await fetch(`${API_BASE}/v1/admin/feedback/${id}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ adminNotes }),
-    });
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, adminNotes } : item)),
-    );
-  };
-
-  const handleSourceToggle = (source: FeedbackSource) => {
-    setActiveSources((prev) => {
-      const next = new Set(prev);
-      if (next.has(source)) {
-        next.delete(source);
-      } else {
-        next.add(source);
-      }
-      return next;
-    });
-  };
-
-  const sourceFiltered = activeSources.has('feedback_surface') ? items : [];
-
-  const filtered =
-    activeFilter === 'all'
-      ? sourceFiltered
-      : sourceFiltered.filter((item) => item.status === activeFilter);
-
-  const counts = {
-    all: items.length,
-    unread: items.filter((item) => item.status === 'unread').length,
-    read: items.filter((item) => item.status === 'read').length,
-    flagged: items.filter((item) => item.status === 'flagged').length,
-    issue_opened: items.filter((item) => item.status === 'issue_opened').length,
-    resolved: items.filter((item) => item.status === 'resolved').length,
-    archived: items.filter((item) => item.status === 'archived').length,
-  };
-
-  const lastWeek = items.filter(
-    (item) =>
-      Date.now() - new Date(item.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000,
-  ).length;
-
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const issuesThisMonth = items.filter(
-    (item) =>
-      item.status === 'issue_opened' &&
-      new Date(item.createdAt) >= startOfMonth,
-  ).length;
-
-  const mobileSubtitle = [
-    counts.unread > 0 ? `${counts.unread} unread` : null,
-    counts.flagged > 0 ? `${counts.flagged} flagged` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
-  useEffect(() => {
-    if (!isLoading)
-      onCounts?.({ unread: counts.unread, flagged: counts.flagged });
-  }, [isLoading, counts.unread, counts.flagged, onCounts]);
-
-  const feedbackList = (
-    <>
-      {isLoading ? (
-        <div
-          style={{
-            padding: 32,
-            textAlign: 'center',
-            color: 'var(--fg-subtle)',
-            fontSize: 13,
-          }}
-        >
-          {ADMIN_COPY.feedback.loadingState}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div
-          style={{
-            padding: 32,
-            textAlign: 'center',
-            color: 'var(--fg-subtle)',
-            fontSize: 13,
-          }}
-        >
-          {ADMIN_COPY.feedback.emptyState}
-        </div>
-      ) : (
-        filtered.map((item) => (
-          <div key={item.id}>
-            <FeedbackRow
-              item={item}
-              isExpanded={expandedId === item.id}
-              onToggle={handleToggle}
-            />
-            {expandedId === item.id && (
-              <FeedbackExpanded
-                item={item}
-                onStatusChange={handleStatusChange}
-                onNotesChange={handleNotesChange}
-              />
-            )}
-          </div>
-        ))
-      )}
-    </>
+  const authed = useCallback(
+    async (path: string, init: RequestInit = {}) => {
+      const token = await getToken();
+      if (!token) throw new Error('no token');
+      return fetch(`${API_BASE}${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        },
+      });
+    },
+    [getToken],
   );
 
-  if (isMobile) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* The phone has no stat cards, so the unread and flagged counts
-            lead the inbox here. */}
-        {mobileSubtitle && (
-          <p
-            data-testid="feedback-phone-counts"
-            style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}
-          >
-            {mobileSubtitle}
-          </p>
-        )}
+  const readJson = useCallback(
+    async (path: string): Promise<unknown> => {
+      const res = await authed(path);
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      return res.json();
+    },
+    [authed],
+  );
 
-        {/* Horizontal chip filter */}
-        <div
-          style={{
-            display: 'flex',
-            gap: 8,
-            overflowX: 'auto',
-            paddingBottom: 2,
-            scrollbarWidth: 'none',
-          }}
-        >
-          {STATUS_CHIPS.map((chip) => {
-            const isActive = activeFilter === chip.value;
-            return (
-              <button
-                key={chip.value}
-                type="button"
-                onClick={() => setActiveFilter(chip.value)}
-                style={{
-                  flexShrink: 0,
-                  height: 32,
-                  padding: '0 14px',
-                  borderRadius: 20,
-                  border: isActive
-                    ? '1.5px solid var(--signal)'
-                    : '1px solid var(--border-strong)',
-                  background: isActive ? 'var(--signal)' : 'var(--bg-elevated)',
-                  color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
-                  fontSize: 13,
-                  fontWeight: isActive ? 700 : 500,
-                  fontFamily: "'Inter', sans-serif",
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
+  /** A `quiet` load keeps the list on screen while it re-reads. */
+  const load = useCallback(
+    async (quiet = false) => {
+      latestLoad.current += 1;
+      const mine = latestLoad.current;
+      if (!quiet) setPending(true);
+      setFailed(false);
+      try {
+        const [rawList, rawCounts] = await Promise.all([
+          readJson(listPath(chip, search)),
+          readJson('/v1/admin/feedback/counts'),
+        ]);
+        const items = parseFeedbackList(rawList);
+        const counts = parseFeedbackCounts(rawCounts);
+        if (!items || !counts) throw new Error('feedback shape');
+        if (mine === latestLoad.current) setLoaded({ items, counts });
+      } catch {
+        if (mine === latestLoad.current) setFailed(true);
+      } finally {
+        if (mine === latestLoad.current) setPending(false);
+      }
+    },
+    [readJson, chip, search],
+  );
 
-        {/* Feedback list */}
-        <Panel padding={0}>{feedbackList}</Panel>
-      </div>
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Typing settles before it reaches the read.
+  useEffect(() => {
+    if (text.trim() === search) return undefined;
+    const timer = setTimeout(() => setSearch(text.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [text, search]);
+
+  const unread = loaded?.counts.unread;
+  useEffect(() => {
+    if (unread !== undefined) onCounts?.({ unread });
+  }, [unread, onCounts]);
+
+  const onChip = (next: FeedbackChip) => {
+    setExpandedId(null);
+    setChip(next);
+  };
+
+  // The inline detail's writes, kept as they were until 4b replaces it.
+  const patch = (id: string, body: Record<string, string>) =>
+    authed(`/v1/admin/feedback/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+
+  // A status move can take the item out of this view and changes the counts,
+  // so the list re-reads either way, keeping what it shows until then.
+  const onStatusChange = (id: string, status: AdminFeedbackStatus) => {
+    void patch(id, { status })
+      .catch(() => undefined)
+      .finally(() => {
+        void load(true);
+        router.refresh();
+      });
+  };
+  const onNotesChange = (id: string, adminNotes: string) => {
+    void patch(id, { adminNotes }).catch(() => undefined);
+    setLoaded(
+      (prev) =>
+        prev && {
+          ...prev,
+          items: prev.items.map((item) =>
+            item.id === id ? { ...item, adminNotes } : item,
+          ),
+        },
     );
+  };
+
+  if (failed) {
+    return <CouldntLoad page={COPY.title} onRetry={() => void load()} />;
   }
+  if (!loaded) return <FeedbackSkeleton />;
+
+  const { items, counts } = loaded;
+  const isDone = chip === 'done';
+  const chips: FeedbackChip[] = isDone
+    ? ['to_read', 'done']
+    : ['to_read', ...(isPhone ? PHONE_KIND_CHIPS : KIND_CHIPS), 'done'];
+
+  const searchBox = (
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        height: 36,
+        width: isPhone ? '100%' : 240,
+        flex: 'none',
+        padding: '0 12px',
+        borderRadius: 10,
+        border: '1px solid var(--border)',
+        background: 'var(--surface-1)',
+        color: 'var(--fg-subtle)',
+      }}
+    >
+      <Search size={15} strokeWidth={1.7} aria-hidden="true" />
+      <input
+        type="search"
+        value={text}
+        onChange={(evt) => setText(evt.target.value)}
+        placeholder={COPY.search}
+        aria-label={COPY.search}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          border: 'none',
+          outline: 'none',
+          background: 'transparent',
+          fontSize: 13,
+          color: 'var(--fg)',
+        }}
+      />
+    </label>
+  );
+
+  const chipRow = (
+    <div
+      role="group"
+      aria-label={COPY.chipsLabel}
+      style={{
+        display: 'flex',
+        gap: 8,
+        overflowX: 'auto',
+        scrollbarWidth: 'none',
+      }}
+    >
+      {chips.map((key) => (
+        <button
+          key={key}
+          type="button"
+          aria-pressed={chip === key}
+          data-testid={`feedback-chip-${key}`}
+          onClick={() => onChip(key)}
+          style={chipStyle(chip === key)}
+        >
+          {COPY.chips[key]}
+          <ChipCount count={chipCount(key, counts)} on={chip === key} />
+        </button>
+      ))}
+    </div>
+  );
+
+  const empty =
+    isDone && search ? (
+      <EmptyState title={COPY.noMatch.title} body={COPY.noMatch.body} />
+    ) : isDone ? (
+      <EmptyState title={COPY.doneEmpty} icon={Inbox} />
+    ) : (
+      <EmptyState
+        title={COPY.empty.title}
+        body={COPY.empty.body}
+        icon={Inbox}
+      />
+    );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Stat cards */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-        }}
-      >
-        <StatCard
-          label={ADMIN_COPY.feedback.statCards.lastSevenDays}
-          value={String(lastWeek)}
-          iconName="Inbox"
-          kind="signal"
-        />
-        <StatCard
-          label={ADMIN_COPY.feedback.statCards.unread}
-          value={String(counts.unread)}
-          iconName="AlertCircle"
-          kind="warning"
-        />
-        <StatCard
-          label={ADMIN_COPY.feedback.statCards.flagged}
-          value={String(counts.flagged)}
-          iconName="Flag"
-          kind="danger"
-          hint={ADMIN_COPY.feedback.statCards.flaggedHint}
-        />
-        <StatCard
-          label={ADMIN_COPY.feedback.statCards.issuesOpened}
-          value={String(issuesThisMonth)}
-          iconName="ExternalLink"
-          kind="accent"
-          hint={ADMIN_COPY.feedback.statCards.issuesOpenedHint}
-        />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {isDone && isPhone && searchBox}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {isDone && !isPhone && searchBox}
+        {chipRow}
       </div>
-
-      {/* Main layout */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '200px minmax(0, 1fr)',
-          gap: 20,
-          alignItems: 'start',
-        }}
-      >
-        <FeedbackFilterRail
-          active={activeFilter}
-          counts={counts}
-          onChange={setActiveFilter}
-          activeSources={activeSources}
-          onSourceToggle={handleSourceToggle}
-        />
-
-        <Panel
-          title={PANEL_TITLE[activeFilter]}
-          action={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <span
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 11,
-                  color: 'var(--fg-subtle)',
-                }}
-              >
-                {filtered.length} {ADMIN_COPY.feedback.itemsCountSuffix}
-              </span>
-              {counts.unread > 0 && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllRead}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--fg-muted)',
-                    padding: 0,
-                  }}
-                >
-                  {ADMIN_COPY.feedback.markAllRead}
-                </button>
+      {pending ? (
+        <FeedbackSkeleton chips={false} />
+      ) : items.length === 0 ? (
+        empty
+      ) : (
+        <div
+          data-testid="feedback-list"
+          style={{
+            borderRadius: 14,
+            border: '1px solid var(--border)',
+            background: 'var(--surface-1)',
+            overflow: 'hidden',
+          }}
+        >
+          {items.map((item, idx) => (
+            <div key={item.id}>
+              <FeedbackRow
+                item={item}
+                isExpanded={expandedId === item.id}
+                onToggle={(id) =>
+                  setExpandedId((prev) => (prev === id ? null : id))
+                }
+                isDone={isDone}
+                isPhone={isPhone}
+                isFirst={idx === 0}
+              />
+              {expandedId === item.id && (
+                <FeedbackExpanded
+                  item={item}
+                  onStatusChange={onStatusChange}
+                  onNotesChange={onNotesChange}
+                />
               )}
             </div>
-          }
-          padding={0}
-        >
-          {feedbackList}
-        </Panel>
-      </div>
+          ))}
+        </div>
+      )}
+      {isDone && !pending && items.length > 0 && (
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-muted)' }}>
+          {COPY.doneCaption}
+        </p>
+      )}
     </div>
   );
 };

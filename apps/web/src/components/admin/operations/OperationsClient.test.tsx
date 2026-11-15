@@ -29,6 +29,7 @@ const mockMatchMedia = (matches: boolean) => {
 const item = (id: string, status: FeedbackItem['status']): FeedbackItem => ({
   id,
   userId: 'user_1',
+  submittedBy: 'mira',
   pageUrl: '/',
   category: 'bug',
   message: `message ${id}`,
@@ -37,12 +38,33 @@ const item = (id: string, status: FeedbackItem['status']): FeedbackItem => ({
   adminNotes: null,
   issueUrl: null,
   createdAt: new Date().toISOString(),
+  resolvedBy: null,
+  resolvedAt: null,
 });
 
-const serve = (items: FeedbackItem[]) =>
+const json = (body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+/** The list and its counts, routed by URL; the badge reads `unread`. */
+const serve = (items: FeedbackItem[], unread = 0) =>
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({ ok: true, json: async () => ({ data: items }) })),
+    vi.fn(async (input: RequestInfo | URL) =>
+      new URL(String(input)).pathname === '/v1/admin/feedback/counts'
+        ? json({
+            success: true,
+            data: {
+              unread,
+              toRead: items.length,
+              done: 0,
+              kinds: { bugs: items.length, ideas: 0, venues: 0 },
+            },
+          })
+        : json({ success: true, data: items }),
+    ),
   );
 
 beforeEach(() => {
@@ -54,8 +76,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The inbox settles its first fetch; waiting on it keeps updates inside act.
-const settle = () => waitFor(() => expect(fetch).toHaveBeenCalled());
+// The inbox settles its first reads; waiting on them keeps updates inside act.
+const settle = () =>
+  waitFor(() =>
+    expect(
+      screen.queryByTestId('feedback-list') ??
+        screen.queryByTestId('empty-state'),
+    ).not.toBeNull(),
+  );
 
 const FOUR_UNREAD = [
   item('a', 'unread'),
@@ -87,8 +115,8 @@ describe('OperationsClient (07/activity-log)', () => {
     expect(panel).toHaveAttribute('aria-labelledby', tab.id);
   });
 
-  it("counts the tab from the inbox's own items, read out as N unread", async () => {
-    serve(FOUR_UNREAD);
+  it("counts the tab from the inbox's unread count, read out as N unread", async () => {
+    serve(FOUR_UNREAD, 4);
     render(<OperationsClient />);
     const count = await screen.findByTestId('operations-feedback-unread');
     expect(count).toHaveTextContent('4');
@@ -96,17 +124,12 @@ describe('OperationsClient (07/activity-log)', () => {
     const label = screen.getByText(COPY.unreadCountLabel(4));
     expect(label).toHaveClass('sr-only');
     expect(label).toHaveTextContent('4 unread');
-    // One read: the list. No separate counts endpoint.
-    expect(fetch).toHaveBeenCalledOnce();
   });
 
   it('draws no count when nothing is unread', async () => {
     serve([item('a', 'read')]);
     render(<OperationsClient />);
     await settle();
-    await waitFor(() =>
-      expect(screen.queryByText(ADMIN_COPY.feedback.loadingState)).toBeNull(),
-    );
     expect(screen.queryByTestId('operations-feedback-unread')).toBeNull();
     expect(screen.queryByText(/unread$/)).toBeNull();
   });
@@ -151,21 +174,12 @@ describe('FeedbackView', () => {
     );
   });
 
-  it('leads the phone inbox with its unread and flagged counts', async () => {
-    mockMatchMedia(true);
-    serve(FOUR_UNREAD);
-    render(<FeedbackView />);
-    expect(
-      await screen.findByTestId('feedback-phone-counts'),
-    ).toHaveTextContent('4 unread · 1 flagged');
-  });
-
-  it('reports its counts once loaded', async () => {
-    serve(FOUR_UNREAD);
+  it('reports its unread count once loaded', async () => {
+    serve(FOUR_UNREAD, 4);
     const onCounts = vi.fn();
     render(<FeedbackView onCounts={onCounts} />);
     await waitFor(() =>
-      expect(onCounts).toHaveBeenLastCalledWith({ unread: 4, flagged: 1 }),
+      expect(onCounts).toHaveBeenLastCalledWith({ unread: 4 }),
     );
   });
 });

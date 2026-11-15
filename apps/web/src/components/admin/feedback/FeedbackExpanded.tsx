@@ -66,7 +66,7 @@ function buildGitHubIssueUrl(item: FeedbackItem): string {
     (metaString(meta, 'userAgent') ?? metaString(meta, 'device'))
       ? `- Device: ${metaString(meta, 'userAgent') ?? metaString(meta, 'device')}`
       : null,
-    `- User ID: ${item.userId}`,
+    item.userId ? `- User ID: ${item.userId}` : null,
     `- Submitted: ${new Date(item.createdAt).toISOString()}`,
   ]
     .filter(Boolean)
@@ -157,7 +157,7 @@ export function FeedbackExpanded({
   })();
 
   const ghUrl = buildGitHubIssueUrl(item);
-  const handle = `@${item.userId.slice(0, 10)}`;
+  const handle = item.submittedBy ? `@${item.submittedBy}` : null;
 
   const contextRows: { label: string; value: string | null | undefined }[] = [
     {
@@ -572,11 +572,13 @@ export function FeedbackExpanded({
           {ADMIN_COPY.feedback.expanded.actions.openInGitHub}
         </a>
 
-        <a href={personHref(item.userId)} style={actionLinkStyle('ghost')}>
-          <User size={13} />
-          View {handle}
-          <ChevronRight size={12} />
-        </a>
+        {item.userId && handle && (
+          <a href={personHref(item.userId)} style={actionLinkStyle('ghost')}>
+            <User size={13} />
+            View {handle}
+            <ChevronRight size={12} />
+          </a>
+        )}
 
         {/* Right actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
