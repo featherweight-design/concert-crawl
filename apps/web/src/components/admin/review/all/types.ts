@@ -21,4 +21,9 @@ export interface AllEvent {
   isSoldOut: boolean;
   hiddenFromConsumer: boolean;
   isConcertReviewNeeded: boolean;
+  /**
+   * Added by hand: the only rows Delete is offered on (4b#10). Absent on an
+   * API older than this web build, which reads as not deletable.
+   */
+  manual?: boolean;
 }

@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -31,6 +37,12 @@ import { STATUS_CHIP, formatPrice, type When } from './events-rules';
 const COPY = ADMIN_COPY.eventsList;
 const HIDE_COPY = ADMIN_COPY.eventEdit.hide;
 const DELETE_COPY = ADMIN_COPY.eventDelete;
+
+/**
+ * The Events page heading's id, where focus lands after a delete leaves no
+ * row beside the deleted one (EventsClient gives its h1 this id).
+ */
+export const EVENTS_HEADING_ID = 'admin-events-heading';
 const NO_NEW_DATE = ADMIN_COPY.eventEdit.postponed.noDate;
 
 /**
@@ -207,26 +219,30 @@ const EventMenu = ({
   }, [open]);
   const { venueUrl } = row;
   return (
-    <span ref={wrapRef}>
-      {deleting && onDelete !== undefined && (
-        <EventDeleteConfirm
-          title={row.title}
-          onDelete={() => onDelete(row)}
-          onCancel={() => setDeleting(false)}
-          onDone={() => setDeleting(false)}
-        />
-      )}
-      {hiding && onHide !== undefined && (
-        <HideEventDialog
-          artist={row.title}
-          watchingCount={row.watchingCount}
-          onCancel={() => setHiding(false)}
-          onHide={async () => {
-            await onHide(row);
-            setHiding(false);
-          }}
-        />
-      )}
+    <span ref={wrapRef} data-event-id={row.id}>
+      {/* The dialogs render in place, inside the ⋯'s right-aligned cell, and
+          would inherit its alignment; they read left, as the venue's do. */}
+      <span data-testid="event-row-dialogs" style={{ textAlign: 'left' }}>
+        {deleting && onDelete !== undefined && (
+          <EventDeleteConfirm
+            title={row.title}
+            onDelete={() => onDelete(row)}
+            onCancel={() => setDeleting(false)}
+            onDone={() => setDeleting(false)}
+          />
+        )}
+        {hiding && onHide !== undefined && (
+          <HideEventDialog
+            artist={row.title}
+            watchingCount={row.watchingCount}
+            onCancel={() => setHiding(false)}
+            onHide={async () => {
+              await onHide(row);
+              setHiding(false);
+            }}
+          />
+        )}
+      </span>
       <RowMenu
         label={COPY.menu.label(row.title)}
         testId="event-row-menu"
@@ -383,8 +399,67 @@ const DesktopTable = ({
   onDelete: OnHide;
 }) => {
   const past = when === 'past';
+  const tableRef = useRef<HTMLTableElement>(null);
+  // A deleted row's ⋯ unmounts with it once the list reloads, so focus would
+  // drop to the body. Its neighbours are noted before the delete, and focus
+  // goes to the next row's ⋯, else the previous row's, else the heading.
+  const refocus = useRef<{
+    deleted: string;
+    next: string | null;
+    prev: string | null;
+  } | null>(null);
+  const focusAfterDelete = useCallback(() => {
+    const target = refocus.current;
+    if (target === null) return;
+    refocus.current = null;
+    const menuOf = (id: string | null): HTMLButtonElement | null => {
+      if (id === null) return null;
+      const cell = Array.from(
+        tableRef.current?.querySelectorAll<HTMLElement>('[data-event-id]') ??
+          [],
+      ).find((el) => el.dataset['eventId'] === id);
+      return (
+        cell?.querySelector<HTMLButtonElement>(
+          '[data-testid="event-row-menu"]',
+        ) ?? null
+      );
+    };
+    (
+      menuOf(target.next) ??
+      menuOf(target.prev) ??
+      document.getElementById(EVENTS_HEADING_ID)
+    )?.focus();
+  }, []);
+  // The reload landed without the row: move focus.
+  useEffect(() => {
+    const target = refocus.current;
+    if (target !== null && !rows.some((row) => row.id === target.deleted))
+      focusAfterDelete();
+  }, [rows, focusAfterDelete]);
+  // The last row went and the list gave way to its empty state.
+  useEffect(() => () => focusAfterDelete(), [focusAfterDelete]);
+  const deleteRow: OnHide =
+    onDelete === undefined
+      ? undefined
+      : async (row) => {
+          const index = rows.findIndex((each) => each.id === row.id);
+          // Noted before the call: the reload may commit before it returns.
+          refocus.current = {
+            deleted: row.id,
+            next: rows[index + 1]?.id ?? null,
+            prev: index > 0 ? (rows[index - 1]?.id ?? null) : null,
+          };
+          try {
+            await onDelete(row);
+          } catch (err: unknown) {
+            // Refused or failed: the row stays, and so does the dialog.
+            refocus.current = null;
+            throw err;
+          }
+        };
   return (
     <table
+      ref={tableRef}
       aria-label={COPY.title}
       style={{
         width: '100%',
@@ -517,7 +592,7 @@ const DesktopTable = ({
                 </td>
               ) : (
                 <td style={{ ...td, textAlign: 'right', paddingRight: 14 }}>
-                  <EventMenu row={row} onHide={onHide} onDelete={onDelete} />
+                  <EventMenu row={row} onHide={onHide} onDelete={deleteRow} />
                 </td>
               )}
             </tr>

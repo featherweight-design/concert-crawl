@@ -569,7 +569,10 @@ describe('AllEventsTabContent', () => {
     });
 
     it('says why a single Delete was refused, not the raw code', async () => {
-      mockApiGet.mockResolvedValue(counted([buildEvent({ id: 'evt-a' })]));
+      // Delete is offered on a manual row only; the API is still the guard.
+      mockApiGet.mockResolvedValue(
+        counted([buildEvent({ id: 'evt-a', manual: true })]),
+      );
       const api = buildApiMock({
         deleteEvent: vi.fn().mockRejectedValue(new ApiError(409, 'not_manual')),
       });

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom';
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   cleanup,
@@ -22,7 +23,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-import { EventsList } from './EventsList';
+import { EVENTS_HEADING_ID, EventsList } from './EventsList';
 
 const COPY = ADMIN_COPY.eventsList;
 
@@ -424,6 +425,128 @@ describe('EventsList on desktop', () => {
       ).toBeDisabled();
     },
   );
+
+  describe('focus after a delete removes the row', () => {
+    const SHOWS = ['First', 'Middle', 'Last'].map((title, index) =>
+      row({ id: `evt-${index + 1}`, title, manual: true }),
+    );
+
+    /** The page as EventsClient draws it: the heading, then the list, reloaded. */
+    const Page = ({ initial }: { initial: EventListRow[] }) => {
+      const [rows, setRows] = useState(initial);
+      return (
+        <>
+          <h1 id={EVENTS_HEADING_ID} tabIndex={-1}>
+            {COPY.title}
+          </h1>
+          <EventsList
+            when="upcoming"
+            rows={rows}
+            onDelete={async (gone) => {
+              setRows((prev) => prev.filter((each) => each.id !== gone.id));
+            }}
+          />
+        </>
+      );
+    };
+
+    const deleteShow = async (title: string) => {
+      fireEvent.click(
+        screen.getByRole('button', { name: COPY.menu.label(title) }),
+      );
+      fireEvent.click(
+        screen.getByRole('menuitem', { name: new RegExp(DELETE.menu) }),
+      );
+      const dialog = screen.getByRole('dialog');
+      fireEvent.change(within(dialog).getByLabelText(DELETE.field), {
+        target: { value: title },
+      });
+      fireEvent.click(
+        within(dialog).getByRole('button', {
+          name: new RegExp(DELETE.confirm),
+        }),
+      );
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(
+        screen.queryByRole('button', { name: COPY.menu.label(title) }),
+      ).toBeNull();
+    };
+
+    it('goes to the next row’s ⋯', async () => {
+      render(<Page initial={SHOWS} />);
+      await deleteShow('Middle');
+      expect(
+        screen.getByRole('button', { name: COPY.menu.label('Last') }),
+      ).toHaveFocus();
+    });
+
+    it('goes to the previous row’s ⋯ when the last row went', async () => {
+      render(<Page initial={SHOWS} />);
+      await deleteShow('Last');
+      expect(
+        screen.getByRole('button', { name: COPY.menu.label('Middle') }),
+      ).toHaveFocus();
+    });
+
+    it('goes to the heading when no row is left', async () => {
+      render(<Page initial={SHOWS.slice(0, 1)} />);
+      await deleteShow('First');
+      expect(screen.getByRole('heading', { name: COPY.title })).toHaveFocus();
+    });
+  });
+
+  it('says a failed delete in Delete’s own words and keeps the dialog', async () => {
+    render(
+      <EventsList
+        when="upcoming"
+        rows={[row({ title: 'By hand', manual: true })]}
+        onDelete={vi.fn(async () => {
+          throw new Error('500');
+        })}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('By hand') }),
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: new RegExp(DELETE.menu) }),
+    );
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText(DELETE.field), {
+      target: { value: 'By hand' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: new RegExp(DELETE.confirm) }),
+    );
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Couldn’t delete “By hand”. It’s still listed.',
+    );
+    expect(
+      within(dialog).getByRole('button', { name: new RegExp(DELETE.confirm) }),
+    ).toBeEnabled();
+  });
+
+  it('renders the row dialogs left-aligned, out of the ⋯ cell’s right alignment', () => {
+    render(
+      <EventsList
+        when="upcoming"
+        rows={[row({ title: 'By hand', manual: true })]}
+        onDelete={vi.fn(async () => undefined)}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('By hand') }),
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: new RegExp(DELETE.menu) }),
+    );
+    expect(screen.getByTestId('event-row-dialogs')).toHaveStyle({
+      textAlign: 'left',
+    });
+    expect(screen.getByTestId('event-row-dialogs')).toContainElement(
+      screen.getByRole('dialog'),
+    );
+  });
 
   it('draws no Hide line without onHide', () => {
     render(<EventsList when="upcoming" rows={[row({})]} />);

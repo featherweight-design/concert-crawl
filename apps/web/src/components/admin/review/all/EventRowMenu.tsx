@@ -78,11 +78,15 @@ const buildItems = (event: AllEvent, actions: EventRowActions): MenuItem[] => {
     label: COPY.markNonConcert,
     onClick: () => actions.onRequestMarkNonConcert(event),
   });
-  items.push({
-    label: COPY.delete,
-    destructive: true,
-    onClick: () => actions.onRequestDelete(event),
-  });
+  // Delete only for a show added by hand, as on the Events list (4b#10): the
+  // API refuses a crawled one, since the next crawl would add it back.
+  if (event.manual === true) {
+    items.push({
+      label: COPY.delete,
+      destructive: true,
+      onClick: () => actions.onRequestDelete(event),
+    });
+  }
   return items;
 };
 

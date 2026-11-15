@@ -22,7 +22,7 @@ import {
   type EventListPage,
   type VenueCount,
 } from './events-api';
-import { EventsList } from './EventsList';
+import { EVENTS_HEADING_ID, EventsList } from './EventsList';
 import { EventsSkeleton } from './EventsSkeleton';
 import {
   EMPTY_FILTERS,
@@ -247,7 +247,11 @@ export const EventsClient = () => {
       >
         {!isPhone && (
           <h1
+            id={EVENTS_HEADING_ID}
+            // Focus lands here after a delete leaves no row beside it.
+            tabIndex={-1}
             style={{
+              outline: 'none',
               margin: 0,
               fontSize: 28,
               fontWeight: 800,

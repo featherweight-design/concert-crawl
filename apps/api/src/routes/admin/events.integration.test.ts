@@ -4335,6 +4335,38 @@ describe('GET /v1/admin/events?count=true', () => {
     expect(body.data.rows.length).toBe(1);
     expect(body.data.total).toBe(1);
   });
+
+  it('says which rows an admin added, the only ones Delete is offered on', async () => {
+    const venue = await seedVenue();
+    const added = await seedEvent(venue.id, {
+      artist: 'Added Act',
+      supportingArtists: null,
+      tourName: null,
+      date: futureDate(1),
+      manual: true,
+    });
+    const crawled = await seedEvent(venue.id, {
+      artist: 'Crawled Act',
+      supportingArtists: null,
+      tourName: null,
+      date: futureDate(2),
+    });
+
+    const res = await app.request(
+      '/v1/admin/events?count=true&limit=10&offset=0',
+      { method: 'GET', headers: ADMIN_HEADERS },
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { rows: { id: string; manual: boolean }[] };
+    };
+    const manualById = new Map(
+      body.data.rows.map((row) => [row.id, row.manual]),
+    );
+    expect(manualById.get(added.id)).toBe(true);
+    expect(manualById.get(crawled.id)).toBe(false);
+  });
 });
 
 describe('GET /v1/admin/events?query= — LIKE metacharacters', () => {

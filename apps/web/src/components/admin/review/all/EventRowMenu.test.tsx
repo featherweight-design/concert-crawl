@@ -111,10 +111,28 @@ describe('EventRowMenu', () => {
     ).toBeNull();
   });
 
-  it('invokes onRequestDelete when Delete is clicked', () => {
+  it('offers no Delete on a crawled show, nor when the API sends no manual', () => {
+    render(
+      <EventRowMenu
+        event={baseEvent({ manual: false })}
+        actions={emptyActions()}
+      />,
+    );
+    openMenu();
+    expect(screen.queryByRole('menuitem', { name: 'Delete…' })).toBeNull();
+    cleanup();
+    render(<EventRowMenu event={baseEvent()} actions={emptyActions()} />);
+    openMenu();
+    expect(screen.queryByRole('menuitem', { name: 'Delete…' })).toBeNull();
+  });
+
+  it('invokes onRequestDelete when Delete is clicked on a manual show', () => {
     const actions = emptyActions();
     render(
-      <EventRowMenu event={baseEvent({ id: 'evt-99' })} actions={actions} />,
+      <EventRowMenu
+        event={baseEvent({ id: 'evt-99', manual: true })}
+        actions={actions}
+      />,
     );
     openMenu();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete…' }));

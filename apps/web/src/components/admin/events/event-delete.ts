@@ -6,6 +6,7 @@
  * `not_manual`, a show something depends on is 409 `has_dependents` with
  * the counts.
  */
+import { z } from 'zod';
 import { ApiError, apiClient } from '@/lib/api';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
@@ -59,61 +60,68 @@ export const isEventAlreadyGone = (err: unknown): boolean =>
   err.status === 404 &&
   err.message === 'Event not found';
 
-/** DELETE /v1/admin/events/:id. Throws the ApiError, refusals included. */
+/**
+ * DELETE /v1/admin/events/:id. The route's own 404 (another tab or a double
+ * submit got there first) resolves, since the show is gone as asked; any
+ * other failure throws its ApiError, refusals included.
+ */
 export const deleteEvent = async (
   getToken: () => Promise<string | null>,
   id: string,
 ): Promise<void> => {
   const token = await getToken();
   if (!token) throw new ApiError(401, 'Unauthorized');
-  await apiClient.delete(`/v1/admin/events/${encodeURIComponent(id)}`, token);
+  try {
+    await apiClient.delete(`/v1/admin/events/${encodeURIComponent(id)}`, token);
+  } catch (err: unknown) {
+    if (isEventAlreadyGone(err)) {
+      console.info('deleteEvent: already gone', { id });
+      return;
+    }
+    throw err;
+  }
 };
 
-export type BulkSkipReason = 'not_manual' | 'has_dependents';
+/**
+ * POST /v1/admin/events/bulk/delete's `data`. A skip's `reason` stays any
+ * string: one this build doesn't know is still a skipped row, and the summary
+ * counts it under a generic line rather than dropping it.
+ */
+const bulkDeleteSchema = z.object({
+  count: z.number().int().nonnegative(),
+  skipped: z.array(z.object({ id: z.string(), reason: z.string() })),
+  missing: z.array(z.string()),
+});
 
-/** POST /v1/admin/events/bulk/delete's `data`, narrowed. */
-export interface BulkDeleteResult {
-  count: number;
-  skipped: { id: string; reason: BulkSkipReason }[];
-  missing: string[];
-}
+export type BulkDeleteResult = z.infer<typeof bulkDeleteSchema>;
 
 /**
- * Narrows the bulk response. A malformed one reads as nothing skipped, with
- * the count it carries (0 when even that is missing), so the summary never
- * claims a refusal the API didn't send.
+ * The bulk response, checked. A malformed one throws, so the caller shows its
+ * generic failure rather than a summary the API never sent.
  */
 export const bulkDeleteResultOf = (value: unknown): BulkDeleteResult => {
-  const record = isRecord(value) ? value : {};
-  const count = isCount(record['count']) ? record['count'] : 0;
-  const skippedRaw = Array.isArray(record['skipped']) ? record['skipped'] : [];
-  const skipped = skippedRaw.flatMap(
-    (entry: unknown): BulkDeleteResult['skipped'] => {
-      if (!isRecord(entry) || typeof entry['id'] !== 'string') return [];
-      const id = entry['id'];
-      const reason = entry['reason'];
-      if (reason === 'not_manual') return [{ id, reason }];
-      if (reason === 'has_dependents') return [{ id, reason }];
-      return [];
-    },
-  );
-  const missingRaw = Array.isArray(record['missing']) ? record['missing'] : [];
-  const missing = missingRaw.filter(
-    (id: unknown): id is string => typeof id === 'string',
-  );
-  return { count, skipped, missing };
+  const parsed = bulkDeleteSchema.safeParse(value);
+  if (!parsed.success) {
+    console.warn('bulkDeleteResultOf: malformed response', {
+      issues: parsed.error.issues,
+    });
+    throw new Error('bulk delete: malformed response');
+  }
+  return parsed.data;
 };
 
 /** "Deleted 3 shows. Skipped 2: 1 crawled, 1 with Watchers…" */
 export const bulkDeleteSummary = (result: BulkDeleteResult): string => {
   const bulk = COPY.bulk;
-  const notManual = result.skipped.filter(
-    (entry) => entry.reason === 'not_manual',
-  ).length;
-  const dependents = result.skipped.length - notManual;
+  const counted = (reason: string) =>
+    result.skipped.filter((entry) => entry.reason === reason).length;
+  const notManual = counted('not_manual');
+  const dependents = counted('has_dependents');
+  const other = result.skipped.length - notManual - dependents;
   const reasons = [
     ...(notManual > 0 ? [bulk.notManual(notManual)] : []),
     ...(dependents > 0 ? [bulk.hasDependents(dependents)] : []),
+    ...(other > 0 ? [bulk.other(other)] : []),
   ];
   return [
     bulk.deleted(result.count),

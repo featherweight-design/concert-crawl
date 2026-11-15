@@ -489,6 +489,8 @@ eventsAdminRouter.get(
         verified: events.verified,
         hiddenFromConsumer: events.hiddenFromConsumer,
         isConcertReviewNeeded: events.isConcertReviewNeeded,
+        // An admin-added show: the Review row menu offers Delete only on these.
+        manual: events.manual,
         status: events.status,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,

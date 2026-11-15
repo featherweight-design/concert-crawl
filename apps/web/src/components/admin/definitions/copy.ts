@@ -4878,11 +4878,8 @@ export const ADMIN_COPY = {
     body: 'Only for a show added by mistake. Deleting removes the show and its lineup. This can’t be undone.',
     field: 'Type the show’s title to confirm',
     confirm: 'Delete show',
-    // Rule 10 through `states.saveFailed`, shown inside the dialog.
-    failed: {
-      what: (title: string) => title,
-      saved: 'It is still listed.',
-    },
+    // Rule 10, shown inside the dialog, with Delete's own verb.
+    failed: (title: string) => `Couldn’t delete “${title}”. It’s still listed.`,
     // DELETE's 409 `not_manual`.
     notManual:
       'Can’t delete: the crawl found this show, so it would add it back.',
@@ -4921,6 +4918,9 @@ export const ADMIN_COPY = {
       notManual: (count: number) => `${count.toLocaleString('en-US')} crawled`,
       hasDependents: (count: number) =>
         `${count.toLocaleString('en-US')} with Watchers, Concerts, Submitted prices or merges`,
+      // A skip reason this build doesn't know yet.
+      other: (count: number) =>
+        `${count.toLocaleString('en-US')} for another reason`,
       missing: (count: number) =>
         `${showCount(count)} ${count === 1 ? 'was' : 'were'} already gone.`,
     },

@@ -23,7 +23,7 @@ import {
   notOnSaleMessage,
   pastLockedMessage,
 } from '../past-locked';
-import { deleteRefusalMessage } from '../event-delete';
+import { deleteEvent, deleteRefusalMessage } from '../event-delete';
 
 export interface EditorEvent {
   id: string;
@@ -221,9 +221,8 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
     setDangerPending(true);
     setError(null);
     try {
-      const token = await getToken();
-      if (!token) throw new ApiError(401, 'Unauthorized');
-      await apiClient.delete(`/v1/admin/events/${event.id}`, token);
+      // Shared with the Events menus: an already-gone show counts as deleted.
+      await deleteEvent(getToken, event.id);
       // Clear the pending state BEFORE redirecting so the modal can't be
       // re-armed if navigation is delayed (would otherwise allow a second
       // DELETE on the now-deleted row).

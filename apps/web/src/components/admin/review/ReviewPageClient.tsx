@@ -10,7 +10,10 @@ import { useInvalidateReviewQueries } from '@/lib/queries/use-admin-review';
 import { AdminReviewMobile } from './AdminReviewMobile';
 import { ReviewTabs } from './ReviewTabs';
 import { editEventHref } from '@/lib/admin/edit-event-link';
-import { bulkDeleteResultOf } from '@/components/admin/events/event-delete';
+import {
+  bulkDeleteResultOf,
+  deleteEvent,
+} from '@/components/admin/events/event-delete';
 import {
   isReviewTabKey,
   resolveReviewTab,
@@ -172,9 +175,8 @@ export const ReviewPageClient = ({ decisions }: ReviewPageClientProps) => {
       });
     },
     deleteEvent: async (event: AllEvent) => {
-      const token = await getToken();
-      if (!token) throw new ApiError(401, 'Unauthorized');
-      await apiClient.delete(`/v1/admin/events/${event.id}`, token);
+      // Shared with the Events menus: an already-gone show counts as deleted.
+      await deleteEvent(getToken, event.id);
       void invalidate.eventFlags();
       void invalidate.counts();
     },

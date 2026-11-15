@@ -14,14 +14,23 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: () => Promise.resolve('token') }),
 }));
 const post = vi.fn();
+const del = vi.fn();
 vi.mock('@/lib/api', () => ({
   apiClient: {
     post: (...args: unknown[]) => post(...args),
     patch: vi.fn(),
-    delete: vi.fn(),
+    delete: (...args: unknown[]) => del(...args),
   },
-  ApiError: class ApiError extends Error {},
+  ApiError: class ApiError extends Error {
+    constructor(
+      public status: number,
+      message: string,
+    ) {
+      super(message);
+    }
+  },
 }));
+const { ApiError } = await import('@/lib/api');
 vi.mock('@/lib/queries/use-admin-review', () => ({
   useInvalidateReviewQueries: () => ({
     eventFlags: vi.fn(),
@@ -68,6 +77,7 @@ beforeEach(() => {
   captured.api = null;
   post.mockReset();
   post.mockResolvedValue({});
+  del.mockReset();
   // Desktop, so the page renders the All events tab content.
   window.matchMedia = vi.fn().mockImplementation(() => ({
     matches: true,
@@ -77,7 +87,34 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+describe('ReviewPageClient single Delete', () => {
+  it('counts the route’s own 404 as deleted, not "Event not found"', async () => {
+    del.mockRejectedValue(new ApiError(404, 'Event not found'));
+    render(<ReviewPageClient decisions={0} />);
+    const api = captured.api;
+    if (api === null) throw new Error('no api captured');
+    await expect(api.deleteEvent(EVENT)).resolves.toBeUndefined();
+    expect(del).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token');
+  });
+
+  it('still throws a refusal for the tab to say in words', async () => {
+    del.mockRejectedValue(new ApiError(409, 'not_manual'));
+    render(<ReviewPageClient decisions={0} />);
+    const api = captured.api;
+    if (api === null) throw new Error('no api captured');
+    await expect(api.deleteEvent(EVENT)).rejects.toThrow('not_manual');
+  });
+});
+
 describe('ReviewPageClient bulk Delete', () => {
+  it('throws on a malformed response, so the tab shows its generic failure', async () => {
+    post.mockResolvedValue({ count: 'two' });
+    render(<ReviewPageClient decisions={0} />);
+    const api = captured.api;
+    if (api === null) throw new Error('no api captured');
+    await expect(api.bulkDelete(['evt-1'])).rejects.toThrow();
+  });
+
   it('returns the bulk response, read, for the summary', async () => {
     post.mockResolvedValue({
       count: 2,
