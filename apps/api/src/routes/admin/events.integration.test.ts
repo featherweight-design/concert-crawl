@@ -143,9 +143,9 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     expect(rows).toHaveLength(1);
   });
 
-  // Expand/contract: the default stays until the web build that always sends
-  // a method is live (B+ addendum 7 §6).
-  it('defaults evidenceMethod to "other" when body is empty', async () => {
+  // Expand/contract, contract step: every web build on prod sends a method
+  // (B+ addendum 7 §6), so a mark without one is refused and records nothing.
+  it('refuses a mark with no evidenceMethod', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, { date: futureDate(31) });
 
@@ -154,12 +154,12 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
     });
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as {
-      success: boolean;
-      data: { evidenceMethod: string };
-    };
-    expect(body.data.evidenceMethod).toBe('other');
+    expect(res.status).toBe(422);
+    const reports = await db
+      .select({ id: eventReports.id })
+      .from(eventReports)
+      .where(eq(eventReports.eventId, event.id));
+    expect(reports).toHaveLength(0);
   });
 
   it('is idempotent — second call returns 200 with the existing report', async () => {
