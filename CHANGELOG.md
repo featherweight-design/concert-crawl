@@ -1,3 +1,11 @@
+## [1.520.1](https://github.com/featherweight-design/concert-crawl/compare/v1.520.0...v1.520.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** guard every async invite codes handler after unmount ([bcfaabc](https://github.com/featherweight-design/concert-crawl/commit/bcfaabc6f2a00e76783a272a4383d1c2b764bc7d))
+* **web:** invite codes set no state after the tab unmounts ([f990032](https://github.com/featherweight-design/concert-crawl/commit/f9900323de983ca595e319f696bb0867ea6a05ab))
+
 # [1.520.0](https://github.com/featherweight-design/concert-crawl/compare/v1.519.0...v1.520.0) (2026-11-15)
 
 
