@@ -1211,6 +1211,11 @@ export interface PromotedReportSummary {
   reportedAt: string;
 }
 
+export interface EventHeadliner {
+  name: string;
+  slug: string | null;
+}
+
 export interface EventDetailResponse extends EventWithVenue {
   // #1115 PR-G — artist-page entry points. The headliner's `artists.slug`, or
   // null when the projection has no row for that canonical name (an unresolved
@@ -1223,6 +1228,11 @@ export interface EventDetailResponse extends EventWithVenue {
   // canonicalizeSupporting) and therefore cannot be zipped against the display
   // names. Null exactly when `supportingArtists` is null (a legacy row).
   supportingArtistSlugs: Array<string | null> | null;
+  // Every act headlining the bill, in `events.headliners` order, each with its
+  // own `artists.slug` (null where the name has no visible row). A co-headline
+  // night reads "Clipse & J.I.D" in `artist` but lists both acts here. Null
+  // when the derivation ladder never ran on the row; [] when it found no act.
+  headliners: EventHeadliner[] | null;
   watching: number;
   isWatching: boolean;
   // ISO when the signed-in user said "I'm going!" (#70). Orthogonal to

@@ -80,6 +80,7 @@ function buildEvent(priceAlternates: Alternates): EventDetailResponse {
     supportingArtists: null,
     artistSlug: null,
     supportingArtistSlugs: null,
+    headliners: null,
     tourName: null,
     date: '2099-07-15',
     doorsTime: null,

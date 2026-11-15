@@ -619,6 +619,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       sourceUrl: events.sourceUrl,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt,
+      // Raw per-act spellings for the `headliners` slugs; stripped from the
+      // response below in favour of `headliners: [{ name, slug }]`.
+      headlinerNames: events.headliners,
       // Feed the followedArtists overlay; stripped from the response below.
       canonicalArtist: events.canonicalArtist,
       canonicalHeadliners: events.canonicalHeadliners,
@@ -1212,12 +1215,16 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       : null;
 
   // #1115 PR-G — slugs for the artist-page links on the detail title block.
-  const { artistSlug, supportingArtistSlugs } = await resolveArtistSlugs(
-    row.artist,
-    row.supportingArtists,
-  );
+  // `headliners` gives each act on a co-headline bill its own slug.
+  const { artistSlug, supportingArtistSlugs, headliners } =
+    await resolveArtistSlugs(
+      row.artist,
+      row.supportingArtists,
+      row.headlinerNames,
+    );
 
   const {
+    headlinerNames,
     canonicalArtist,
     canonicalHeadliners,
     canonicalSupporting,
@@ -1232,6 +1239,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       ...publicRow,
       artistSlug,
       supportingArtistSlugs,
+      headliners,
       venueGuidePublished: venueGuidePublishedAt !== null,
       ...(followMatcher
         ? {

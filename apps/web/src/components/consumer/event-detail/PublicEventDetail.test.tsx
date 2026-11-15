@@ -72,6 +72,7 @@ const buildEvent = (
   artist: 'Nightjar Choir',
   supportingArtists: null,
   supportingArtistSlugs: null,
+  headliners: null,
   artistSlug: null,
   tourName: null,
   date: '2026-12-31',
