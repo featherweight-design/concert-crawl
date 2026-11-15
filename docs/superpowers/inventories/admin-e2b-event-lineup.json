@@ -74,7 +74,7 @@
           }
         },
         {
-          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "goto": "/admin/events/b64eb55f-8645-4c10-b40b-0a61200a53de/edit",
           "expectStatus": 200,
           "wait": "[data-testid=\"event-edit\"]"
         },
@@ -104,7 +104,7 @@
           }
         },
         {
-          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "goto": "/admin/events/b64eb55f-8645-4c10-b40b-0a61200a53de/edit",
           "expectStatus": 200,
           "wait": "[data-testid=\"event-edit\"]"
         },
