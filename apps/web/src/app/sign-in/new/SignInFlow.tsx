@@ -4,7 +4,7 @@ import { useClerk, useSignIn } from '@clerk/nextjs';
 import { Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   AuthErrorLine,
   AuthField,
@@ -45,6 +45,13 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
+  // After a wrong password the field is empty and enabled again: focus it so
+  // the retry (and a screen reader) lands there. An effect, not the press
+  // handler, because the field is still disabled while the press is working.
+  useEffect(() => {
+    if (line === 'wrong') passwordRef.current?.focus();
+  }, [line]);
+
   // Clerk's script comes from our own domain; a blocker drops it silently, so
   // the loading state is also the blocked state after 10 seconds.
   if (!clerk.loaded) return <AuthLoadingState />;
@@ -52,7 +59,15 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
   const returnQuery = new URLSearchParams({
     redirect_url: returnTo,
   }).toString();
-  const forgotHref = `/sign-in/forgot?${new URLSearchParams({ email }).toString()}`;
+  // The return path travels; the email does not (it would land in history and
+  // logs), so the reset screen asks for it again.
+  const forgotHref = `/sign-in/forgot?${returnQuery}`;
+
+  function backToStart() {
+    setPassword('');
+    setLine(null);
+    setScreen('start');
+  }
 
   function onContinue(evt: FormEvent) {
     evt.preventDefault();
@@ -107,19 +122,23 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
       error = thrown;
     }
     await held(since);
-    if (!error) {
-      await next();
-    } else {
-      const outcome = classifyPasswordError(error);
-      if (outcome === 'breached') {
-        setScreen('breached');
-      } else if (outcome === 'wrong') {
-        setLine('wrong');
-        setPassword('');
-        passwordRef.current?.focus();
+    try {
+      if (!error) {
+        await next();
       } else {
-        setLine('failed');
+        const outcome = classifyPasswordError(error);
+        if (outcome === 'breached') {
+          setScreen('breached');
+        } else if (outcome === 'wrong') {
+          setLine('wrong');
+          setPassword('');
+        } else {
+          setLine('failed');
+        }
       }
+    } catch {
+      // finalize or the navigation threw: say so, never hang on "Signing in".
+      setLine('failed');
     }
     setBusy(false);
   }
@@ -145,7 +164,7 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
 
   if (screen === 'password') {
     return (
-      <AuthPage onBack={() => setScreen('start')}>
+      <AuthPage onBack={backToStart}>
         <AuthHeading
           title={COPY.password.title}
           sub={
@@ -153,7 +172,7 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
               {COPY.password.body(email)}{' '}
               <LinkButton
                 className="min-h-0 text-[14.5px]"
-                onClick={() => setScreen('start')}
+                onClick={backToStart}
               >
                 {COPY.password.change}
               </LinkButton>
