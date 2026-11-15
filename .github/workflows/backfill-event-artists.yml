@@ -19,7 +19,8 @@ name: Backfill event artists
 #   NO required reviewers (checked 2026-11-14), so the environment alone does
 #   not stop a prod run.
 # - A production run, dry or not, refuses unless `confirm_prod` is exactly
-#   "I have Hugh's OK". Prod runs only with Hugh's OK.
+#   "I have Hugh's OK to write prod" (the same string repair-event-artists.yml
+#   requires). Prod runs only with Hugh's OK.
 # - The script itself refuses the prod host unless `--allow-prod` is passed,
 #   which this workflow passes only for `target: production`, after the
 #   confirmation above.
@@ -41,7 +42,7 @@ on:
           - production
         default: staging
       confirm_prod:
-        description: "Production only: type exactly  I have Hugh's OK"
+        description: "Production only: type exactly  I have Hugh's OK to write prod"
         type: string
         default: ''
 
@@ -90,8 +91,8 @@ jobs:
           esac
           # The production environment has no required reviewers, so this is
           # the gate: a prod run needs the exact confirmation string.
-          if [ "$TARGET_ENV" = "production" ] && [ "$CONFIRM_PROD" != "I have Hugh's OK" ]; then
-            echo "Refusing production: confirm_prod must be exactly: I have Hugh's OK"
+          if [ "$TARGET_ENV" = "production" ] && [ "$CONFIRM_PROD" != "I have Hugh's OK to write prod" ]; then
+            echo "Refusing production: confirm_prod must be exactly: I have Hugh's OK to write prod"
             exit 1
           fi
           if [ -z "$CRAWLER_DATABASE_URL" ]; then
@@ -104,9 +105,16 @@ jobs:
           DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
           APPLY: ${{ inputs.apply }}
           TARGET_ENV: ${{ inputs.target }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
         run: |
           args=()
           [ "$APPLY" = "true" ] || args+=(--dry-run)
-          [ "$TARGET_ENV" = "production" ] && args+=(--allow-prod)
+          # --allow-prod only after the confirmation, re-checked here.
+          if [ "$TARGET_ENV" = "production" ]; then
+            if [ "$CONFIRM_PROD" != "I have Hugh's OK to write prod" ]; then
+              echo "Refusing production: confirm_prod does not match"; exit 1
+            fi
+            args+=(--allow-prod)
+          fi
           echo "backfill-event-artists ${args[*]}"
           pnpm --filter @concert-crawl/db run db:backfill-event-artists -- "${args[@]}"
