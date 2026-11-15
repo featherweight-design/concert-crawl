@@ -3,7 +3,7 @@ import type {
   EventDetailResponse,
 } from '@concert-crawl/types';
 import { anonymousRequest } from '@/lib/api';
-import { decodeIntent } from '@/lib/auth/intent';
+import { decodeIntent, isArtistSlug } from '@/lib/auth/intent';
 
 /**
  * What a signed-out visitor was about to do, resolved from the return path they
@@ -34,7 +34,7 @@ const PAGES: Readonly<Record<string, PageName>> = {
 
 const GENERIC: IntentSubject = { kind: 'generic' };
 const EVENT_PATH = /^\/events\/([A-Za-z0-9_-]{1,64})$/;
-const ARTIST_PATH = /^\/artists\/([a-z0-9][a-z0-9-]{0,127})$/;
+const ARTIST_PATH = /^\/artists\/([^/]+)$/;
 
 /**
  * The data is public and changes slowly, so a card is not worth a fetch per
@@ -102,7 +102,12 @@ export async function loadIntentSubject(
 
     // The same for an artist: the pending Follow must be for the page's artist.
     const slug = ARTIST_PATH.exec(path)?.[1];
-    if (slug && intent.action === 'follow' && intent.artistSlug === slug) {
+    if (
+      slug &&
+      isArtistSlug(slug) &&
+      intent.action === 'follow' &&
+      intent.artistSlug === slug
+    ) {
       const detail = await anonymousRequest<ArtistDetailResponse>(
         `/v1/artists/${slug}`,
         lookupOptions(),

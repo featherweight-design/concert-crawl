@@ -20,6 +20,8 @@ const UUID_PATTERN =
 
 /** The shape of an `artists.slug`: lowercase words joined by dashes. */
 const ARTIST_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
+export const isArtistSlug = (value: string): boolean =>
+  ARTIST_SLUG_PATTERN.test(value);
 
 export const encodeIntent = (intent: Intent): string =>
   intent.action === 'watch'
@@ -36,7 +38,7 @@ export const decodeIntent = (raw: string | null | undefined): Intent | null => {
   if (action === 'watch' && UUID_PATTERN.test(subject)) {
     return { action, eventId: subject };
   }
-  if (action === 'follow' && ARTIST_SLUG_PATTERN.test(subject)) {
+  if (action === 'follow' && isArtistSlug(subject)) {
     return { action, artistSlug: subject };
   }
   return null;
