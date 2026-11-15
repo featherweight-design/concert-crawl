@@ -1,5 +1,6 @@
 import {
   boolean,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -39,6 +40,11 @@ export const crawlTriggers = pgTable('crawl_triggers', {
   trial: boolean('trial').notNull().default(false),
   mode: crawlTriggerModeEnum('mode').notNull().default('crawl'),
   crawlRunId: uuid('crawl_run_id'),
+  // Page progress the triggered re-crawl reports (migration 0120), so the
+  // admin row can read "Page 2 of 4". Null means no progress reported yet.
+  pagesDone: integer('pages_done'),
+  pagesTotal: integer('pages_total'),
+  progressAt: timestamp('progress_at', { withTimezone: true }),
   triggeredBy: text('triggered_by'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
