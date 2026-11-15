@@ -4972,6 +4972,7 @@ export const ADMIN_COPY = {
         doorsTime: 'doors time',
         showTime: 'show time',
         lineup: 'lineup',
+        venue: 'venue',
       },
     },
     none: '—',

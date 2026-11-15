@@ -92,7 +92,7 @@ interface Fields {
   showTime: string | null;
   /** The bill in order, each act with its saved role. */
   lineup: Act[];
-  /** The venue's id; `''` for a show with none (never sent). */
+  /** The venue's id; `''` for a show with none until one is picked. */
   venueId: string;
 }
 
@@ -691,10 +691,12 @@ export const EventEdit = ({
   );
   const showApi = useMemo(() => addShowApi(getToken), [getToken]);
   const searchArtists = showApi.artists;
-  // Add a show's venue list, loaded once; a show that can't move needs none.
+  // Add a show's venue list. A show that can't move needs none; one that
+  // becomes movable after a refresh (a date now past) loads it then.
   const { venues, reload: reloadVenues } = usePickVenues(
-    canMoveVenue ? showApi.venues : () => Promise.resolve([]),
+    showApi.venues,
     'admin event edit',
+    canMoveVenue,
   );
   const venueName = (venueId: string): string =>
     (Array.isArray(venues)
@@ -716,6 +718,16 @@ export const EventEdit = ({
   /** The Save marks it sold out: a new mark, which asks for its evidence. */
   const marksSoldOut = (next: Fields): boolean =>
     saleChangedIn(next) && next.sale === 'soldout' && !detail.isSoldOut;
+  /**
+   * The pills pick one status: leaving Postponed, Cancelled or No longer
+   * listed for either sale pill puts the show back on (a status write also
+   * ends a delisting, server side).
+   */
+  const reopensIn = (next: Fields): boolean =>
+    saleChangedIn(next) &&
+    (detail.status === 'postponed' ||
+      detail.status === 'cancelled' ||
+      detail.status === 'delisted');
   const snap = useSnapBack<Fields>(saved, async (next) => {
     const token = await tokenOrThrow();
     const saleChanged = saleChangedIn(next);
@@ -740,13 +752,7 @@ export const EventEdit = ({
         doorsTime: stored(next.doorsTime),
       }),
       ...(next.showTime !== savedShow && { showTime: stored(next.showTime) }),
-      // The pills pick one status: leaving Postponed, Cancelled or No longer
-      // listed for either sale pill puts the show back on (a status write also
-      // ends a delisting, server side).
-      ...(saleChanged &&
-        (detail.status === 'postponed' ||
-          detail.status === 'cancelled' ||
-          detail.status === 'delisted') && { status: 'upcoming' }),
+      ...(reopensIn(next) && { status: 'upcoming' }),
     };
     let landed = false;
     // Which write was running, so a failure names the step that failed.
@@ -882,6 +888,16 @@ export const EventEdit = ({
       });
       return;
     }
+    // A failed sale write comes after the venue's POST: when a move landed,
+    // the page keeps it and what saved before it, as the toast says; only
+    // the sale snaps back.
+    if (
+      failedStep === 'sale' &&
+      snap.failed.attempted.venueId !== snap.failed.saved.venueId
+    ) {
+      setDraft({ ...snap.failed.attempted, sale: snap.failed.saved.sale });
+      return;
+    }
     setDraft({
       ...snap.failed.saved,
       evidence: snap.failed.attempted.evidence,
@@ -899,16 +915,23 @@ export const EventEdit = ({
     ];
     return changed.flatMap(([did, name]) => (did ? [name] : []));
   };
-  // What landed before the lineup's PUT or the venue's POST failed: the
-  // fields, and before a move, the lineup too.
+  // What landed before the lineup's PUT, the venue's POST or the sale's
+  // write failed: the fields, then the lineup, then a move. A sale failure
+  // names them only when a move landed, as the status line alone did before.
+  const movedBeforeSaleFailed =
+    snap.failed !== null &&
+    failedStep === 'sale' &&
+    snap.failed.attempted.venueId !== snap.failed.saved.venueId;
   const partlySaved =
-    snap.failed !== null && (failedStep === 'lineup' || failedStep === 'venue')
+    snap.failed !== null &&
+    (failedStep === 'lineup' || failedStep === 'venue' || movedBeforeSaleFailed)
       ? [
           ...savedFieldNames(snap.failed.attempted, snap.failed.saved),
-          ...(failedStep === 'venue' &&
+          ...(failedStep !== 'lineup' &&
           lineupChanged(snap.failed.attempted, snap.failed.saved)
             ? [COPY.saveFailed.fieldNames.lineup]
             : []),
+          ...(movedBeforeSaleFailed ? [COPY.saveFailed.fieldNames.venue] : []),
         ]
       : [];
   const partlySavedLine =
@@ -927,9 +950,15 @@ export const EventEdit = ({
   const marking = marksSoldOut(draft);
   const [confirmingSoldOut, setConfirmingSoldOut] = useState(false);
   // A move that tells the Watching confirms first, as Postponed and Hide do.
-  // A played show's correction, or one nobody Watches, saves at once.
+  // A played show's correction, or one nobody Watches, saves at once. Read
+  // after this Save's PATCH, which runs first: a new date, or a sale pill
+  // putting a cancelled show back on, changes what the move does.
   const movingTold =
-    draft.venueId !== snap.value.venueId && moveTellsWatchers(detail, today);
+    draft.venueId !== snap.value.venueId &&
+    moveTellsWatchers(detail, today, {
+      date: draft.date,
+      reopened: reopensIn(draft),
+    });
   const [confirmingMove, setConfirmingMove] = useState(false);
   // The API refuses an empty title, so Save waits for one; a new Sold out
   // waits for its method (and a link, if any, that is http(s)).
@@ -1060,10 +1089,8 @@ export const EventEdit = ({
           label={COPY.show.venue}
           value={venue}
           height={38}
-          // A crawled show still to come: say why it reads only.
-          {...(detail.venueId !== null && {
-            hint: COPY.venue.crawledLocked,
-          })}
+          // Only a crawled show still to come reads only: say why.
+          hint={COPY.venue.crawledLocked}
         />
       )}
       <div
@@ -1284,14 +1311,16 @@ export const EventEdit = ({
         />
       )}
       {snap.failed !== null && refusal === null && partlySaved.length > 0 && (
-        // What saved, then the lineup or venue that didn't: "Nothing
-        // changed" would be untrue.
+        // What saved, then the lineup, venue or status that didn't:
+        // "Nothing changed" would be untrue.
         <SaveFailedToast
           what={COPY.saveFailed.what}
           body={`${partlySavedLine}${
             failedStep === 'venue'
               ? savedVenueLine
-              : COPY.saveFailed.savedLineup
+              : failedStep === 'sale'
+                ? COPY.statusSaved(ADMIN_COPY.eventsList.status[detail.status])
+                : COPY.saveFailed.savedLineup
           }`}
           onRetry={() => void snap.retry()}
           retrying={snap.saving}
