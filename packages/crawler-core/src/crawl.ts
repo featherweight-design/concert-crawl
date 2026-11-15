@@ -583,6 +583,36 @@ function failureReason(err: unknown, isAccountWide: boolean): CrawlRunReason {
   return 'error';
 }
 
+// What flagged a venue blocked: the HTTP status it answered with, or a
+// bot-detection hang (a timeout read as a block).
+export type BlockCause =
+  { kind: 'http'; httpStatus: 403 | 429 } | { kind: 'timeout' };
+
+// Crawl rule: a 403 or 429 flags the venue blocked and notifies admin at
+// once. One notice per block, sent by the caller only when this run newly set
+// blocked_at, in the same admin_alert / crawl.failed shape the three-strikes
+// notice uses so the admin UI badges the failing run the same way.
+// Admin copy, so it stays inline like the other admin_alert strings here.
+async function notifyBlocked(params: {
+  venueId: string;
+  venueName: string;
+  crawlRunId: string;
+  cause: BlockCause;
+}): Promise<void> {
+  const { venueId, venueName, crawlRunId, cause } = params;
+  const body =
+    cause.kind === 'http'
+      ? `${venueName} answered with HTTP ${cause.httpStatus}; crawling is blocked`
+      : `${venueName} stopped responding (timed out); crawling is blocked`;
+  await db.insert(notifications).values({
+    type: 'admin_alert',
+    category: 'crawl.failed',
+    title: `Crawl blocked: ${venueName}`,
+    body,
+    metadata: JSON.stringify({ venueId, crawlRunId }),
+  });
+}
+
 export async function crawlVenue(
   venueId: string,
   browser: BrowserSource,
@@ -2284,9 +2314,12 @@ export async function crawlVenue(
     let systemAction: Parameters<typeof recordSystemAction>[0] | null = null;
 
     if (!isAccountWide) {
-      const isHttpBlocked =
+      const blockStatus =
         err instanceof CrawlFetchError &&
-        (err.httpStatus === 403 || err.httpStatus === 429);
+        (err.httpStatus === 403 || err.httpStatus === 429)
+          ? err.httpStatus
+          : null;
+      const isHttpBlocked = blockStatus !== null;
       // Playwright TimeoutError fires when bot-detection silently hangs the connection
       // (no HTTP error, just no response). When the current error is a TimeoutError
       // and consecutiveFailures is already ≥2 (i.e. this is the 3rd failure), treat
@@ -2357,7 +2390,26 @@ export async function crawlVenue(
         };
       }
 
-      if (newFailureCount >= 3) {
+      // A block notifies at once (crawl rule), once per block: only the run
+      // that turns blocked_at on, judged against the row read at the start of
+      // this run. A venue still blocked from an earlier run gets no new block
+      // notice; it re-alerts through the >= 3 crawl.failed notice below like
+      // any failing venue. When this same failure also reaches three strikes,
+      // the block notice stands in for crawl.failed so the admin gets one.
+      const newlyBlocked = isBlocked && venue.blockedAt === null;
+      if (newlyBlocked) {
+        await notifyBlocked({
+          venueId,
+          venueName: venue.name,
+          crawlRunId: id,
+          cause:
+            blockStatus !== null
+              ? { kind: 'http', httpStatus: blockStatus }
+              : { kind: 'timeout' },
+        });
+      }
+
+      if (newFailureCount >= 3 && !newlyBlocked) {
         const notificationBody = shouldAutoPause
           ? `${newFailureCount} consecutive failures for ${venue.name} — crawl paused`
           : `${newFailureCount} consecutive failures for ${venue.name}`;

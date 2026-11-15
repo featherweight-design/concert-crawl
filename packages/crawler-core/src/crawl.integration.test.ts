@@ -1789,12 +1789,14 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     expect(row?.blockedAt).not.toBeNull();
     expect(mockSendEmail).not.toHaveBeenCalled();
 
+    // The block notice stands in for the three-strikes notice: one, not two.
     const { notifications } = await import('@concert-crawl/db');
     const noteRows = await db
-      .select({ body: notifications.body })
+      .select({ title: notifications.title, body: notifications.body })
       .from(notifications)
       .where(eq(notifications.category, 'crawl.failed'));
     expect(noteRows.length).toBe(1);
+    expect(noteRows[0]?.title).toBe(`Crawl blocked: ${venue.name}`);
     expect(String(noteRows[0]?.body)).not.toMatch(/crawl paused/i);
   });
 
@@ -1825,13 +1827,117 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     expect(row?.crawlPausedAt).toBeNull();
     expect(mockSendEmail).not.toHaveBeenCalled();
 
+    // A timeout that newly blocks is a block: one block notice, which
+    // stands in for the three-strikes notice.
     const { notifications } = await import('@concert-crawl/db');
     const noteRows = await db
-      .select({ body: notifications.body })
+      .select({ title: notifications.title, body: notifications.body })
       .from(notifications)
       .where(eq(notifications.category, 'crawl.failed'));
     expect(noteRows.length).toBe(1);
+    expect(noteRows[0]?.title).toBe(`Crawl blocked: ${venue.name}`);
+    expect(String(noteRows[0]?.body)).toMatch(/timed out/i);
     expect(String(noteRows[0]?.body)).not.toMatch(/crawl paused/i);
+  });
+
+  // Crawl rule: a 403 or 429 flags the venue blocked and notifies admin at
+  // once, not only when the streak reaches three.
+  describe('immediate block notice', () => {
+    async function crawlFailedNotices(): Promise<
+      { title: string; body: string | null; metadata: string | null }[]
+    > {
+      const { notifications } = await import('@concert-crawl/db');
+      return db
+        .select({
+          title: notifications.title,
+          body: notifications.body,
+          metadata: notifications.metadata,
+        })
+        .from(notifications)
+        .where(eq(notifications.category, 'crawl.failed'));
+    }
+
+    it.each([403, 429])(
+      'a first %i on a healthy venue blocks it and notifies admin once',
+      async (status) => {
+        const venue = await seedVenueWithCount(0);
+        const { CrawlFetchError } = await import('./lib/fetcher.js');
+        mockFetchPage.mockRejectedValue(
+          new CrawlFetchError(status, `HTTP ${status}`),
+        );
+
+        const result = await crawlVenue(venue.id, mockBrowser);
+
+        const [row] = await db
+          .select({
+            blockedAt: venues.blockedAt,
+            consecutiveFailures: venues.consecutiveFailures,
+          })
+          .from(venues)
+          .where(eq(venues.id, venue.id));
+        expect(row?.consecutiveFailures).toBe(1);
+        expect(row?.blockedAt).toBeInstanceOf(Date);
+
+        const notes = await crawlFailedNotices();
+        expect(notes.length).toBe(1);
+        expect(notes[0]?.title).toBe(`Crawl blocked: ${venue.name}`);
+        expect(String(notes[0]?.body)).toContain(`HTTP ${status}`);
+        expect(String(notes[0]?.body)).toMatch(/blocked/i);
+        expect(JSON.parse(String(notes[0]?.metadata))).toEqual({
+          venueId: venue.id,
+          crawlRunId: result.id,
+        });
+      },
+    );
+
+    it('sends no new notice when an already-blocked venue 403s again', async () => {
+      const venue = await seedVenueWithCount(1);
+      await db
+        .update(venues)
+        .set({ blockedAt: new Date() })
+        .where(eq(venues.id, venue.id));
+      const { CrawlFetchError } = await import('./lib/fetcher.js');
+      mockFetchPage.mockRejectedValue(new CrawlFetchError(403, 'Forbidden'));
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      const [row] = await db
+        .select({ consecutiveFailures: venues.consecutiveFailures })
+        .from(venues)
+        .where(eq(venues.id, venue.id));
+      // The crawl ran and failed; only the notice is held back.
+      expect(row?.consecutiveFailures).toBe(2);
+      expect(await crawlFailedNotices()).toEqual([]);
+    });
+
+    it('sends one notice, not two, when a 403 newly blocks at the 3rd failure', async () => {
+      const venue = await seedVenueWithCount(2);
+      const { CrawlFetchError } = await import('./lib/fetcher.js');
+      mockFetchPage.mockRejectedValue(new CrawlFetchError(403, 'Forbidden'));
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      const notes = await crawlFailedNotices();
+      expect(notes.length).toBe(1);
+      expect(notes[0]?.title).toBe(`Crawl blocked: ${venue.name}`);
+    });
+
+    it('sends no notice for a plain 500 at the 1st failure', async () => {
+      const venue = await seedVenueWithCount(0);
+      const { CrawlFetchError } = await import('./lib/fetcher.js');
+      mockFetchPage.mockRejectedValue(
+        new CrawlFetchError(500, 'Internal Server Error'),
+      );
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      const [row] = await db
+        .select({ blockedAt: venues.blockedAt })
+        .from(venues)
+        .where(eq(venues.id, venue.id));
+      expect(row?.blockedAt).toBeNull();
+      expect(await crawlFailedNotices()).toEqual([]);
+    });
   });
 });
 
