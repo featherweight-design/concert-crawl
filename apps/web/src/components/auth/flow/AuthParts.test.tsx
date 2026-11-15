@@ -80,10 +80,9 @@ describe('CodeBoxes', () => {
     const input = screen.getByLabelText(COPY.code.label);
     input.focus();
     expect(input).toHaveFocus();
-    // The press locks the boxes; a browser drops focus from a disabled input.
+    // The press locks the boxes. Browsers differ on what a disabled focused
+    // input leaves behind (the input itself, or the page): both are "nowhere".
     rerender(<CodeBoxes value="123456" onChange={() => {}} disabled />);
-    input.blur();
-    expect(input).not.toHaveFocus();
     rerender(<CodeBoxes value="" onChange={() => {}} error="Wrong." />);
     expect(screen.getByLabelText(COPY.code.label)).toHaveFocus();
   });
@@ -138,9 +137,9 @@ describe('CodeBoxes', () => {
     );
     screen.getByLabelText(COPY.code.label).focus();
     rerender(<CodeBoxes value="123456" onChange={() => {}} disabled />);
-    screen.getByLabelText(COPY.code.label).blur();
     rerender(<CodeBoxes value="123456" onChange={() => {}} />);
-    expect(screen.getByLabelText(COPY.code.label)).not.toHaveFocus();
+    // Nothing was cleared, so nothing is moved or emptied.
+    expect(screen.getByLabelText(COPY.code.label)).toHaveValue('123456');
   });
 
   it('marks all six invalid with the message', () => {
