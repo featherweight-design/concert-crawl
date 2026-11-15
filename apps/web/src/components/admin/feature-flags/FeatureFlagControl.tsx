@@ -11,33 +11,47 @@ import {
   Panel,
   AdminButton,
   RelTime,
-  StatusBadge,
   useDialogKeyboard,
 } from '@/components/admin/primitives';
-import type { StatusKind } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const COPY = ADMIN_COPY.featureFlags;
 
-const stateKind = (enabled: boolean): StatusKind =>
-  enabled ? 'success' : 'neutral';
+type Stage = 'off' | 'me' | 'beta' | 'everyone';
+
+// The ladder, lowest rung first (`07-people-flags-operations/*-admin-feature-flags`).
+const STAGES: readonly Stage[] = ['off', 'me', 'beta', 'everyone'];
+
+const stageOf = (flag: AdminFeatureFlag): Stage =>
+  flag.stage ?? (flag.enabled ? 'everyone' : 'off');
+
+const rankOf = (stage: Stage): number => STAGES.indexOf(stage);
 
 interface FeatureFlagControlProps {
   initial: AdminFeatureFlag[];
+}
+
+/** A step the admin picked on a production flag that needs the extra ask. */
+interface PendingEveryone {
+  flag: AdminFeatureFlag;
+  from: Stage;
 }
 
 export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
   const { getToken } = useAuth();
   const [flags, setFlags] = useState<AdminFeatureFlag[]>(initial);
   const [pending, setPending] = useState<FeatureFlagKey | null>(null);
-  const [confirming, setConfirming] = useState<AdminFeatureFlag | null>(null);
+  const [asking, setAsking] = useState<PendingEveryone | null>(null);
   const [error, setError] = useState<{
     key: FeatureFlagKey;
     message: string;
   } | null>(null);
 
-  const saveFlag = async (flag: AdminFeatureFlag) => {
-    const next = !flag.enabled;
+  const moveFlag = async (
+    flag: AdminFeatureFlag,
+    stage: Stage,
+    confirm?: boolean,
+  ) => {
     setPending(flag.key);
     setError(null);
     try {
@@ -47,143 +61,330 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
         // row underneath the overlay, so leaving it open hides the only
         // explanation the admin gets.
         setError({ key: flag.key, message: COPY.saveError });
-        setConfirming(null);
+        setAsking(null);
         return;
       }
       const updated = await apiClient.patch<AdminFeatureFlag>(
         `/v1/admin/feature-flags/${flag.key}`,
         token,
-        { enabled: next },
+        confirm === true ? { stage, confirm } : { stage },
       );
       setFlags((prev) =>
         prev.map((row) => (row.key === updated.key ? updated : row)),
       );
-      setConfirming(null);
+      setAsking(null);
     } catch (err) {
       console.error('[admin] feature flag save failed', flag.key, err);
+      // A 409 is the production lock: the flag is not verified here yet.
       const message =
-        err instanceof ApiError
-          ? `${COPY.saveError} ${err.message}`
-          : COPY.saveError;
+        err instanceof ApiError && err.status === 409
+          ? COPY.lockedError
+          : err instanceof ApiError
+            ? `${COPY.saveError} ${err.message}`
+            : COPY.saveError;
       setError({ key: flag.key, message });
-      setConfirming(null);
+      setAsking(null);
     } finally {
       setPending(null);
     }
   };
 
+  const pick = (flag: AdminFeatureFlag, stage: Stage) => {
+    const from = stageOf(flag);
+    if (stage === from || pending !== null) return;
+    // Production asks first before a flag goes to everyone.
+    if (
+      flag.environment === 'production' &&
+      stage === 'everyone' &&
+      rankOf(stage) > rankOf(from)
+    ) {
+      setAsking({ flag, from });
+      return;
+    }
+    void moveFlag(flag, stage);
+  };
+
   return (
     <Panel padding={0}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 24,
+          padding: '12px 18px',
+        }}
+      >
+        <span style={{ ...COLUMN_HEAD, flex: '1 1 240px' }}>
+          {COPY.columnFlag}
+        </span>
+        <span style={{ ...COLUMN_HEAD, flex: '1 1 320px', maxWidth: 360 }}>
+          {COPY.columnWhoSees}
+        </span>
+        <span
+          style={{
+            ...COLUMN_HEAD,
+            flex: '0 0 190px',
+            textAlign: 'right',
+          }}
+        >
+          {COPY.columnVerified}
+        </span>
+      </div>
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        {flags.map((flag, idx) => (
-          <li
+        {flags.map((flag) => (
+          <FlagRow
             key={flag.key}
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              padding: '14px 18px',
-              borderTop: idx === 0 ? 'none' : '1px solid var(--border)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                minWidth: 200,
-                flex: '1 1 240px',
-              }}
-            >
-              <span
-                style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg)' }}
-              >
-                {flag.label}
-              </span>
-              <span
-                style={{
-                  fontSize: 13,
-                  lineHeight: 1.5,
-                  color: 'var(--fg-muted)',
-                }}
-              >
-                {flag.description}
-              </span>
-              <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-                {flag.updatedAt ? (
-                  <>
-                    {`${COPY.changedPrefix} `}
-                    <RelTime iso={flag.updatedAt} />
-                  </>
-                ) : (
-                  COPY.neverToggled
-                )}
-              </span>
-              {error?.key === flag.key && (
-                <span style={{ fontSize: 13, color: 'var(--danger)' }}>
-                  {error.message}
-                </span>
-              )}
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                flexShrink: 0,
-              }}
-            >
-              <StatusBadge kind={stateKind(flag.enabled)} dot>
-                {flag.enabled ? COPY.stateOn : COPY.stateOff}
-              </StatusBadge>
-              <AdminButton
-                variant="outline"
-                onClick={() => setConfirming(flag)}
-                disabled={pending !== null}
-              >
-                {flag.enabled ? COPY.toggleOff : COPY.toggleOn}
-              </AdminButton>
-            </div>
-          </li>
+            flag={flag}
+            busy={pending !== null}
+            error={error?.key === flag.key ? error.message : null}
+            onPick={(stage) => pick(flag, stage)}
+          />
         ))}
       </ul>
 
-      {confirming && (
-        <FeatureFlagConfirm
-          flag={confirming}
-          pending={pending === confirming.key}
+      {asking && (
+        <EveryoneInProductionAsk
+          flag={asking.flag}
+          from={asking.from}
+          pending={pending === asking.flag.key}
           onCancel={() => {
             if (pending !== null) return;
-            setConfirming(null);
+            setAsking(null);
           }}
-          onConfirm={() => void saveFlag(confirming)}
+          onConfirm={() => void moveFlag(asking.flag, 'everyone', true)}
         />
       )}
     </Panel>
   );
 };
 
-interface FeatureFlagConfirmProps {
+const COLUMN_HEAD = {
+  fontSize: 10,
+  letterSpacing: '0.14em',
+  fontWeight: 600,
+  color: 'var(--fg-subtle)',
+  textTransform: 'uppercase',
+} as const;
+
+interface FlagRowProps {
   flag: AdminFeatureFlag;
+  busy: boolean;
+  error: string | null;
+  onPick: (stage: Stage) => void;
+}
+
+const FlagRow = ({ flag, busy, error, onPick }: FlagRowProps) => {
+  const stage = stageOf(flag);
+  const people = flag.people?.length ?? 0;
+  // Production keeps a flag locked until it is verified there: a step UP is
+  // closed, stepping down never is.
+  const locked = flag.locked === true;
+
+  return (
+    <li
+      data-testid={`flag-row-${flag.key}`}
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 24,
+        padding: '16px 18px',
+        borderTop: '1px solid var(--border)',
+      }}
+    >
+      <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)' }}>
+            {flag.label}
+          </span>
+          {people > 0 && (
+            <span
+              data-testid={`flag-people-${flag.key}`}
+              style={{ fontSize: 12, color: 'var(--signal)' }}
+            >
+              {COPY.peopleCount(people)}
+            </span>
+          )}
+        </div>
+        <div
+          style={{
+            fontSize: 12.5,
+            color: 'var(--fg-muted)',
+            marginTop: 3,
+            lineHeight: 1.5,
+          }}
+        >
+          {flag.description}
+        </div>
+        <div
+          style={{ fontSize: 11.5, color: 'var(--fg-subtle)', marginTop: 5 }}
+        >
+          {flag.updatedAt ? (
+            <>
+              {`${COPY.changedPrefix} `}
+              <RelTime iso={flag.updatedAt} />
+            </>
+          ) : (
+            COPY.neverToggled
+          )}
+        </div>
+        {error !== null && (
+          <div
+            role="alert"
+            style={{ fontSize: 13, color: 'var(--danger)', marginTop: 6 }}
+          >
+            {error}
+          </div>
+        )}
+      </div>
+
+      <div style={{ flex: '1 1 320px', maxWidth: 360 }}>
+        <div
+          role="radiogroup"
+          aria-label={COPY.ladderAriaLabel(flag.label)}
+          style={{
+            display: 'flex',
+            padding: 3,
+            borderRadius: 10,
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          {STAGES.map((step) => {
+            const selected = step === stage;
+            const closed = locked && rankOf(step) > rankOf(stage);
+            return (
+              <button
+                key={step}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                aria-disabled={closed || busy}
+                disabled={closed || busy}
+                data-testid={`flag-step-${flag.key}-${step}`}
+                onClick={() => onPick(step)}
+                style={{
+                  flex: 1,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 10px',
+                  borderRadius: 7,
+                  border: 'none',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  cursor: closed || busy || selected ? 'default' : 'pointer',
+                  background: selected ? 'var(--bg-elevated)' : 'transparent',
+                  color: selected ? 'var(--fg)' : 'var(--fg-muted)',
+                  boxShadow: selected
+                    ? '0 0 0 1px var(--border-strong)'
+                    : 'none',
+                  opacity: closed ? 0.45 : 1,
+                }}
+              >
+                {COPY.stage[step]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div
+        style={{
+          flex: '0 0 190px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 5,
+        }}
+      >
+        {flag.verifiedAt ? (
+          <>
+            <span
+              data-testid={`flag-verified-${flag.key}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                height: 22,
+                padding: '0 9px',
+                borderRadius: 999,
+                fontSize: 11.5,
+                fontWeight: 600,
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+                color: 'var(--success)',
+                background:
+                  'color-mix(in oklab, var(--success) 14%, transparent)',
+                border:
+                  '1px solid color-mix(in oklab, var(--success) 32%, transparent)',
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--success)',
+                }}
+              />
+              {`${COPY.verifiedOn} `}
+              <RelTime iso={flag.verifiedAt} />
+            </span>
+          </>
+        ) : (
+          <>
+            <span
+              data-testid={`flag-unverified-${flag.key}`}
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--fg-muted)',
+              }}
+            >
+              {locked ? COPY.lockedChip : COPY.notVerified}
+            </span>
+            {locked && (
+              <span
+                style={{
+                  fontSize: 11.5,
+                  color: 'var(--fg-subtle)',
+                  textAlign: 'right',
+                }}
+              >
+                {COPY.lockedCaption}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+    </li>
+  );
+};
+
+interface EveryoneInProductionAskProps {
+  flag: AdminFeatureFlag;
+  from: Stage;
   pending: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
-const FeatureFlagConfirm = ({
+// "Everyone in production asks first" (`07-people-flags-operations`). The board
+// also reads staging's step into this dialog; production never reads staging
+// (Hugh's ruling), so only this environment's own step is shown.
+const EveryoneInProductionAsk = ({
   flag,
+  from,
   pending,
   onCancel,
   onConfirm,
-}: FeatureFlagConfirmProps) => {
+}: EveryoneInProductionAskProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   useDialogKeyboard(panelRef, onCancel, { dismissible: !pending });
-  const turningOn = !flag.enabled;
-  const heading = turningOn ? COPY.confirmTitleOn : COPY.confirmTitleOff;
-  const body = turningOn ? COPY.confirmBodyOn : COPY.confirmBodyOff;
+  const heading = COPY.everyoneAsk.title(flag.label);
 
   return (
     <div
@@ -237,7 +438,18 @@ const FeatureFlagConfirm = ({
               lineHeight: 1.6,
             }}
           >
-            {body}
+            {COPY.everyoneAsk.body(flag.label)}
+          </div>
+          <div
+            data-testid="everyone-ask-step"
+            style={{
+              marginTop: 14,
+              fontSize: 12.5,
+              color: 'var(--fg)',
+              fontWeight: 600,
+            }}
+          >
+            {COPY.everyoneAsk.step(COPY.stage[from], COPY.stage.everyone)}
           </div>
         </div>
         <div
@@ -255,7 +467,7 @@ const FeatureFlagConfirm = ({
             {COPY.confirmCancel}
           </AdminButton>
           <AdminButton variant="primary" onClick={onConfirm} disabled={pending}>
-            {COPY.confirmAccept}
+            {COPY.everyoneAsk.accept}
           </AdminButton>
         </div>
       </div>
