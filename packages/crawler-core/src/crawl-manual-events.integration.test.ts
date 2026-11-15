@@ -125,6 +125,7 @@ interface ExtractedEvent {
   confidence: number;
   ticketUrl?: string;
   eventUrl?: string;
+  showTime?: string;
   observedPerformers?: string[];
   observedSupportingArtists?: string[];
   isConcert?: boolean;
@@ -324,6 +325,52 @@ describe('crawlVenue — shows added by hand (admin 4a)', () => {
     expect(remaining.map((row) => row.id).sort()).toEqual(
       [hand.id, other.id].sort(),
     );
+  });
+
+  it("lands a title-shaped listing on the night's one manual row at its time, and inserts the late show", async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(20);
+    const [hand] = await db
+      .insert(events)
+      .values({
+        venueId: venue.id,
+        title: 'Kokoroko',
+        artist: 'Kokoroko',
+        canonicalArtist: 'kokoroko',
+        canonicalTitle: 'kokoroko',
+        headliners: ['Kokoroko'],
+        canonicalHeadliners: ['kokoroko'],
+        date,
+        showTime: '19:00',
+        manual: true,
+      })
+      .returning({ id: events.id });
+    if (!hand) throw new Error('manual insert returned no row');
+
+    mockExtraction([
+      makeEvent('Jazz Series presents', date, {
+        showTime: '19:00',
+        ticketUrl: 'https://tickets.example.org/early',
+      }),
+      makeEvent('Jazz Series presents', date, { showTime: '22:00' }),
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+      .orderBy(asc(events.showTime));
+    expect(rows).toHaveLength(2);
+    const [early, late] = rows;
+    expect(early?.id).toBe(hand.id);
+    expect(early?.manual).toBe(true);
+    expect(early?.artist).toBe('Kokoroko');
+    expect(early?.title).toBe('Kokoroko');
+    expect(early?.headliners).toEqual(['Kokoroko']);
+    expect(early?.ticketUrl).toBe('https://tickets.example.org/early');
+    expect(late?.manual).toBe(false);
+    expect(late?.showTime).toBe('22:00:00');
   });
 });
 
