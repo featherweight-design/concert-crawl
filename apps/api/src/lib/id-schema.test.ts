@@ -17,6 +17,12 @@ describe('idSchema', () => {
     expect(idSchema.safeParse(crypto.randomUUID()).success).toBe(true);
   });
 
+  it('lowercases, so two spellings of one id compare equal', () => {
+    expect(idSchema.parse('5EEDED00-0000-0000-0000-00000000000A')).toBe(
+      '5eeded00-0000-0000-0000-00000000000a',
+    );
+  });
+
   it.each(['', 'not-an-id', '5eeded00-0000-0000-0000-00000000000', '1 OR 1=1'])(
     'rejects %j',
     (id) => {

@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, notInArray, sql } from 'drizzle-orm';
 import { db } from './client.js';
 import {
   auditLog,
@@ -12,6 +12,7 @@ import {
   userEvents,
 } from './schema/index.js';
 import {
+  MERGE_FILL_GROUPS,
   type MergeFillField,
   mergeFillsFrom,
   mergeFillWritesBill,
@@ -27,18 +28,20 @@ export interface MergeEventRowsInput {
   /** Whether the caller fans out a watch notification afterwards (audit only). */
   notifyWatchers: boolean;
   /**
-   * Fill the target's blank columns from the source (`mergeFillsFrom`, the
-   * duplicate-night cleanup's rule), in this transaction, after the source is
-   * gone. The admin merge sets it; the cleanup fills on its own afterwards,
-   * from every folded row at once.
+   * Fill the target's blank columns from the source (`adminMergeFill`: the
+   * duplicate-night cleanup's rule, less the groups that would collide or
+   * belong to another venue), in this transaction, after the source is gone.
+   * The admin merge sets it; the cleanup fills on its own afterwards, from
+   * every folded row at once.
    */
   fillBlanks?: boolean;
   /**
-   * Today in Denver (`YYYY-MM-DD`). When given, a past row merges only with
-   * another past row: one past and one not is refused `past_mismatch`, judged
-   * under the row locks.
+   * A past row merges only with another past row: one past and one not is
+   * refused `past_mismatch`. Today in Denver is read inside the transaction,
+   * after the row locks, so a merge that waited across midnight or behind a
+   * PATCH that moved a date judges by the rows and the day it writes on.
    */
-  today?: string;
+  checkPast?: boolean;
 }
 
 export interface MergeEventRowsResult {
@@ -47,7 +50,91 @@ export interface MergeEventRowsResult {
   movedWatcherIds: string[];
   /** The fill's fields (`MergeFillField`) written onto the target; [] when none. */
   filled: MergeFillField[];
+  /** Fill groups the target lacked but did not take (see `adminMergeFill`). */
+  skipped: MergeFillField[];
 }
+
+type EventRow = typeof events.$inferSelect;
+/** `db` itself, or the `tx` a `db.transaction` callback receives. */
+type Executor = Pick<typeof db, 'select'>;
+
+/**
+ * Fill groups that hold where the listing is, not what the show is: the other
+ * venue's ticket links and event page are never the kept venue's.
+ */
+const VENUE_GROUPS = ['ticketUrl', 'eventUrl'] as const;
+
+/**
+ * Whether another upcoming row already holds the night key the kept row would
+ * take with `showTime` (the partial unique index on venue, date, artist and
+ * show time, NULLS NOT DISTINCT). Only an upcoming kept row is in the index.
+ */
+const nightKeyTaken = async (
+  executor: Executor,
+  kept: EventRow,
+  source: EventRow,
+): Promise<boolean> => {
+  if (kept.status !== 'upcoming' || source.showTime === null) return false;
+  const [taken] = await executor
+    .select({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        kept.venueId === null
+          ? isNull(events.venueId)
+          : eq(events.venueId, kept.venueId),
+        eq(events.date, kept.date),
+        eq(events.canonicalArtist, kept.canonicalArtist),
+        eq(events.showTime, source.showTime),
+        eq(events.status, 'upcoming'),
+        notInArray(events.id, [kept.id, source.id]),
+      ),
+    )
+    .limit(1);
+  return taken !== undefined;
+};
+
+/**
+ * What the admin merge fills on `kept` from `source`: `mergeFillsFrom`, less
+ * two kinds of group, reported as `skipped`:
+ * - the show time (and doors) when another upcoming row already holds that
+ *   night key, since writing it would break the night's unique index;
+ * - the ticket links and event page when the rows are at different venues.
+ * The merge preview calls this too, so it names exactly what the merge does.
+ */
+export const adminMergeFill = async (
+  executor: Executor,
+  kept: EventRow,
+  source: EventRow,
+): Promise<{
+  fields: MergeFillField[];
+  values: Partial<EventRow>;
+  skipped: MergeFillField[];
+}> => {
+  const full = mergeFillsFrom(kept, [source]);
+  const skip = new Set<MergeFillField>();
+  if (kept.venueId !== source.venueId) {
+    for (const group of VENUE_GROUPS) skip.add(group);
+  }
+  if (
+    full.fields.includes('showTime') &&
+    (await nightKeyTaken(executor, kept, source))
+  ) {
+    skip.add('showTime');
+  }
+  const dropped = new Set<string>(
+    MERGE_FILL_GROUPS.filter((group) => skip.has(group[0])).flat(),
+  );
+  const values: Partial<EventRow> = {};
+  for (const [key, value] of Object.entries(full.values)) {
+    if (!dropped.has(key)) Object.assign(values, { [key]: value });
+  }
+  return {
+    fields: full.fields.filter((field) => !skip.has(field)),
+    values,
+    skipped: full.fields.filter((field) => skip.has(field)),
+  };
+};
 
 export type EventMergeRefusal =
   'source_not_found' | 'target_not_found' | 'past_mismatch';
@@ -81,14 +168,17 @@ export class EventMergeRefusedError extends Error {
  * deletes an event does not write a redirect.
  */
 export const mergeEventRows = async ({
-  sourceId,
-  targetId,
   actorId,
   suggestion,
   notifyWatchers,
   fillBlanks = false,
-  today,
+  checkPast = false,
+  ...ids
 }: MergeEventRowsInput): Promise<MergeEventRowsResult> => {
+  // Postgres reads a uuid in any case, so compare them in one: a mixed-case
+  // copy of one id would otherwise pass the check below and delete the row.
+  const sourceId = ids.sourceId.toLowerCase();
+  const targetId = ids.targetId.toLowerCase();
   // A row merged into itself would delete the survivor, and its redirect with it.
   if (sourceId === targetId) {
     throw new Error('Cannot merge an event into itself');
@@ -123,11 +213,19 @@ export const mergeEventRows = async ({
     if (!targetRow) throw new EventMergeRefusedError('target_not_found');
     // Admin 4b (E4): a past show merges only with another past show. Judged
     // here, under the locks, so a PATCH that moved a date is seen.
-    if (
-      today !== undefined &&
-      sourceRow.date < today !== targetRow.date < today
-    ) {
-      throw new EventMergeRefusedError('past_mismatch');
+    if (checkPast) {
+      // clock_timestamp(), not now(): now() is the transaction's start, which
+      // is before any wait on the locks above.
+      const [clock] = await tx.execute<{ today: string }>(
+        sql`SELECT to_char((clock_timestamp() AT TIME ZONE 'America/Denver')::date, 'YYYY-MM-DD') AS today`,
+      );
+      const today = clock?.today;
+      if (
+        today !== undefined &&
+        sourceRow.date < today !== targetRow.date < today
+      ) {
+        throw new EventMergeRefusedError('past_mismatch');
+      }
     }
 
     // Captured BEFORE any row moves: these are the users who were watching
@@ -303,10 +401,12 @@ export const mergeEventRows = async ({
 
     // The fill, with the source gone (so a show time taken from it cannot
     // collide with it on the night's unique index) and the target still
-    // locked, so the row it was computed from is the row it writes.
+    // locked, so the row it was computed from is the row it writes. A third
+    // row holding the night key is checked here; one inserted after the
+    // check still breaks the index, which the route answers with a 409.
     const fill = fillBlanks
-      ? mergeFillsFrom(targetRow, [sourceRow])
-      : { fields: [], values: {} };
+      ? await adminMergeFill(tx, targetRow, sourceRow)
+      : { fields: [], values: {}, skipped: [] };
     if (fill.fields.length > 0) {
       await tx
         .update(events)
@@ -355,6 +455,7 @@ export const mergeEventRows = async ({
       counts,
       movedWatcherIds: movedWatchers.map((row) => row.userId),
       filled: fill.fields,
+      skipped: fill.skipped,
     };
   });
 };
