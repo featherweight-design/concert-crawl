@@ -550,9 +550,13 @@ export const ADMIN_COPY = {
     menu: {
       pause: 'Pause crawling…',
       pauseHint: 'Shows stay listed. Pick a reason.',
-      // A hidden venue's shows are already off the site.
-      pauseHintHidden: 'Stops crawling. Pick a reason.',
+      // A hidden venue isn't crawled; the pause holds once it's shown
+      // (`A6/22/hidden-venue-menu`).
+      pauseHintHidden: 'Keeps crawling off once it’s shown. Pick a reason.',
       resume: 'Resume crawling',
+      // A hidden, paused venue's Resume: its paused line, then this.
+      resumeHintHidden: (pausedLine: string) =>
+        `${pausedLine} Starts when it’s shown.`,
       // Undrawn: a paused, unblocked venue's test re-crawl. It runs once and
       // never moves the pause or the failure streak.
       tryRecrawl: 'Try a re-crawl',
@@ -570,6 +574,13 @@ export const ADMIN_COPY = {
       takeDown: 'Take down…',
       takeDownHint: 'They asked us to remove their data.',
       show: 'Show on site',
+      // Show on site's hint (`A6/22/hidden-venue-menu`): the hidden line,
+      // then what showing it does to crawling. "Tonight" is the 3 AM MT
+      // nightly crawl. Showing a paused venue keeps the pause.
+      showHint: (hiddenLine: string, crawl: string) => `${hiddenLine} ${crawl}`,
+      showCrawlResumes: 'Crawling starts again tonight.',
+      showCrawlStaysPaused: (reason: string | null) =>
+        reason ? `Crawling stays paused: ${reason}.` : 'Crawling stays paused.',
       delete: 'Delete venue…',
       deleteHint: 'Only for venues added by mistake.',
       deleteRefusedLabel: 'Delete venue',

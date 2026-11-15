@@ -170,6 +170,20 @@ describe('venue list rules', () => {
     );
   });
 
+  it('names a hidden venue’s pause too (A6/22/hidden-venue-menu)', () => {
+    expect(
+      crawlingLabel(
+        venue('H', {
+          active: false,
+          crawlPausedAt: PAUSED,
+          crawlPauseReason: 'other',
+          crawlPauseNote: 'off-season',
+        }),
+      ),
+    ).toBe('Paused: off-season');
+    expect(crawlingLabel(venue('I', { active: false }))).toBe(undefined);
+  });
+
   it('filters paused, hidden and disallowed apart', () => {
     const hiddenPaused = venue('H', { active: false, crawlPausedAt: PAUSED });
     expect(matchesFilter(hiddenPaused, 'paused')).toBe(false);

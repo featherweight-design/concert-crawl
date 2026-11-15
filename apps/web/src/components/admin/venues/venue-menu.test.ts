@@ -164,6 +164,62 @@ describe('venueMenuState', () => {
   });
 });
 
+describe('venueMenuItems: a hidden venue keeps Pause and Resume (A6/22/hidden-venue-menu)', () => {
+  const PAUSED_AT = '2026-10-28T18:00:00.000Z';
+  const noop = (): void => undefined;
+  const ACT = {
+    pause: noop,
+    resume: noop,
+    trial: noop,
+    flagship: noop,
+    hide: noop,
+    takeDown: noop,
+    show: noop,
+    remove: noop,
+  };
+  const hints = (over: Partial<VenueWithCrawlHealth>) =>
+    venueMenuItems(venue(over), ACT).map(
+      (item) => `${item.label}|${item.hint}`,
+    );
+  const OFF_SEASON = {
+    crawlPausedAt: PAUSED_AT,
+    crawlPauseReason: 'other',
+    crawlPauseNote: 'off-season',
+    crawlPausedByName: '@hugh',
+  } as const;
+
+  it('hidden, not paused: Show says crawling starts tonight, Pause that it holds once shown', () => {
+    expect(
+      hints({ hiddenByName: '@hugh', hiddenReason: 'venue_closed' }),
+    ).toEqual([
+      'Show on site|Hidden by @hugh, Nov 2: venue closed. Crawling starts again tonight.',
+      'Pause crawling…|Keeps crawling off once it’s shown. Pick a reason.',
+      'Delete venue…|Only for venues added by mistake.',
+      'Take down…|They asked us to remove their data.',
+    ]);
+  });
+
+  it('hidden and paused: Show keeps the pause, Resume starts when shown', () => {
+    expect(hints({ hiddenByName: '@hugh', ...OFF_SEASON })).toEqual([
+      'Show on site|Hidden by @hugh, Nov 2. Crawling stays paused: off-season.',
+      'Resume crawling|Paused by @hugh, Oct 28: off-season. Starts when it’s shown.',
+      'Delete venue…|Only for venues added by mistake.',
+      'Take down…|They asked us to remove their data.',
+    ]);
+  });
+
+  it('hidden and auto-paused: Show says it stays paused, with no reason', () => {
+    expect(hints({ crawlPausedAt: PAUSED_AT, consecutiveFailures: 3 })[0]).toBe(
+      'Show on site|Hidden since Nov 2. Crawling stays paused.',
+    );
+  });
+
+  it('a live paused venue’s Resume keeps its line alone', () => {
+    const items = venueMenuItems(venue({ active: true, ...OFF_SEASON }), ACT);
+    expect(items[0]?.hint).toBe('Paused by @hugh, Oct 28: off-season.');
+  });
+});
+
 describe('venueMenuItems icons (A3/03/venue-menu-states)', () => {
   const noop = (): void => undefined;
   const ACT = {
@@ -291,12 +347,15 @@ describe('venueMenuItems: Try a re-crawl', () => {
     expect(keysOf({ active: false, crawlPausedAt: PAUSED_AT })).not.toContain(
       'trial',
     );
-    // A hidden auto-paused venue's Resume line stops at the failures.
+    // A hidden auto-paused venue's Resume line stops at the failures, then
+    // says when it starts.
     const hiddenResume = venueMenuItems(
       venue({ crawlPausedAt: PAUSED_AT, consecutiveFailures: 3 }),
       ACT,
     ).find((item) => item.key === 'resume');
-    expect(hiddenResume?.hint).toBe('Auto-paused after 3 failures.');
+    expect(hiddenResume?.hint).toBe(
+      'Auto-paused after 3 failures. Starts when it’s shown.',
+    );
     expect(
       keysOf({ active: false, crawlPausedAt: PAUSED_AT, removedAt: PAUSED_AT }),
     ).not.toContain('trial');

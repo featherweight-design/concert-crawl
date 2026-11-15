@@ -14,7 +14,12 @@ import type {
 import type { RowMenuItem } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { isAutoPause } from '@/lib/admin/venue-status';
-import { pausedStateLine, reasonText, shortDate } from './pause-rules';
+import {
+  pauseReasonText,
+  pausedStateLine,
+  reasonText,
+  shortDate,
+} from './pause-rules';
 import { deleteRefused } from './delete-rules';
 import { canTryRecrawl } from './trial-rules';
 
@@ -105,12 +110,11 @@ const itemsFor = (
     danger: true,
     onSelect: act.takeDown,
   };
-  // Pausing never touches `active`, so a hidden venue keeps its crawl row,
-  // as the old danger zone did. Its shows are already off the site, so its
-  // hint doesn't say they stay listed. ⏸ pending Design item 22
-  // (QUESTIONS-2026-11-12:332): `A3/03/venue-menu-states` draws no crawl row
-  // on the hidden menu. Resume is the board's refresh arrows, not a play
-  // triangle.
+  // Pausing never touches `active`, so a hidden venue keeps its crawl row
+  // (Hugh's ruling, `A6/22/hidden-venue-menu`): the pause holds once it's
+  // shown, so a hidden venue's hints say so. Resume is the board's refresh
+  // arrows, not a play triangle.
+  const pausedLine = pausedStateLine(venue, canTryRecrawl(venue)) ?? '';
   const crawl: RowMenuItem =
     venue.crawlPausedAt === null
       ? {
@@ -124,7 +128,9 @@ const itemsFor = (
           key: 'resume',
           icon: RefreshCw,
           label: COPY.menu.resume,
-          hint: pausedStateLine(venue, canTryRecrawl(venue)) ?? '',
+          hint: venue.active
+            ? pausedLine
+            : COPY.menu.resumeHintHidden(pausedLine),
           onSelect: act.resume,
         };
 
@@ -175,7 +181,12 @@ const itemsFor = (
             key: 'show',
             icon: Eye,
             label: COPY.menu.show,
-            hint: line,
+            hint: COPY.menu.showHint(
+              line,
+              venue.crawlPausedAt === null
+                ? COPY.menu.showCrawlResumes
+                : COPY.menu.showCrawlStaysPaused(pauseReasonText(venue)),
+            ),
             onSelect: act.show,
           },
           crawl,

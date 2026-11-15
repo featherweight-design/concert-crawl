@@ -265,23 +265,44 @@ describe('VenueMenu — rows per state', () => {
     expect(screen.queryByTestId('venue-menu-trial')).toBeNull();
   });
 
-  it('hidden: Show on site with who hid it, Pause, Delete, Take down', () => {
+  // `A6/22/hidden-venue-menu`, hidden, not paused, word for word.
+  it('hidden: Show on site with who hid it and that crawling starts, Pause, Delete, Take down', () => {
     openMenu(buildVenue({ ...HIDDEN, deleteBlockers: NO_BLOCKERS }));
     expect(rows()).toEqual([
-      `${MENU.show}|Hidden by @hugh, Nov 2: venue closed.`,
-      // Its shows are already off the site, so not "Shows stay listed".
-      `${MENU.pause}|${MENU.pauseHintHidden}`,
-      `${MENU.delete}|${MENU.deleteHint}`,
-      `${MENU.takeDown}|${MENU.takeDownHint}`,
+      'Show on site|Hidden by @hugh, Nov 2: venue closed. Crawling starts again tonight.',
+      'Pause crawling…|Keeps crawling off once it’s shown. Pick a reason.',
+      'Delete venue…|Only for venues added by mistake.',
+      'Take down…|They asked us to remove their data.',
     ]);
     expect(row('delete').getAttribute('aria-disabled')).toBeNull();
+  });
+
+  // `A6/22/hidden-venue-menu`, hidden and paused, word for word.
+  it('hidden and paused: Show keeps the pause, and Resume says it starts when shown', () => {
+    openMenu(
+      buildVenue({
+        ...HIDDEN,
+        hiddenReason: null,
+        crawlPausedAt: '2026-10-28T18:00:00.000Z',
+        crawlPauseReason: 'other',
+        crawlPauseNote: 'off-season',
+        crawlPausedByName: '@hugh',
+        deleteBlockers: NO_BLOCKERS,
+      }),
+    );
+    expect(rows()).toEqual([
+      'Show on site|Hidden by @hugh, Nov 2. Crawling stays paused: off-season.',
+      'Resume crawling|Paused by @hugh, Oct 28: off-season. Starts when it’s shown.',
+      'Delete venue…|Only for venues added by mistake.',
+      'Take down…|They asked us to remove their data.',
+    ]);
   });
 
   it('hidden and paused: the crawl row is Resume, and it runs', async () => {
     mockResume.mockResolvedValue({ ok: true });
     openMenu(buildVenue({ ...HIDDEN, ...PAUSED }));
     expect(rows()[1]).toBe(
-      `${MENU.resume}|Paused by @hugh, Oct 28: waiting on permission.`,
+      `${MENU.resume}|Paused by @hugh, Oct 28: waiting on permission. Starts when it’s shown.`,
     );
     fireEvent.click(row('resume'));
     expect(mockResume).toHaveBeenCalledWith('venue-1');

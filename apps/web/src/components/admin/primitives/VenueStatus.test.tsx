@@ -37,7 +37,38 @@ describe('VenueStatus', () => {
     );
   });
 
-  it('names an auto-pause and a hidden venue', () => {
+  it('says a hidden venue is not crawled', () => {
+    render(<VenueStatus venue={{ ...venue, active: false }} />);
+    expect(screen.getByTestId('venue-status-on-site')).toHaveTextContent(
+      'Hidden',
+    );
+    expect(screen.getByTestId('venue-status-crawling')).toHaveTextContent(
+      'Not crawled',
+    );
+  });
+
+  // `A6/22/hidden-venue-menu`: the pause holds once it's shown.
+  it('gives a hidden, paused venue the pause chip with its reason', () => {
+    render(
+      <VenueStatus
+        venue={{
+          ...venue,
+          active: false,
+          crawlPausedAt: '2026-10-28T00:00:00Z',
+          crawlPauseReason: 'other',
+        }}
+        crawlingLabel="Paused: off-season"
+      />,
+    );
+    expect(screen.getByTestId('venue-status-on-site')).toHaveTextContent(
+      'Hidden',
+    );
+    const chip = screen.getByTestId('venue-status-crawling');
+    expect(chip).toHaveTextContent('Paused: off-season');
+    expect(chip).toHaveAttribute('data-tone', 'var(--warning)');
+  });
+
+  it('names an auto-pause on a hidden venue', () => {
     render(
       <VenueStatus
         venue={{
@@ -48,11 +79,8 @@ describe('VenueStatus', () => {
         }}
       />,
     );
-    expect(screen.getByTestId('venue-status-on-site')).toHaveTextContent(
-      'Hidden',
-    );
     expect(screen.getByTestId('venue-status-crawling')).toHaveTextContent(
-      'Not crawled',
+      'Auto-paused: 3 failures',
     );
   });
 
