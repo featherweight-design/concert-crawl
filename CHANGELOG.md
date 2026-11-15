@@ -1,3 +1,16 @@
+# [1.519.0](https://github.com/featherweight-design/concert-crawl/compare/v1.518.0...v1.519.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** make the merge compare card a native radio ([693e82f](https://github.com/featherweight-design/concert-crawl/commit/693e82fc8bf0bdde1d3a4225e4a6d8452540a588))
+
+
+### Features
+
+* **web:** add the merge panel's pick list, compare cards and summary ([65421e7](https://github.com/featherweight-design/concert-crawl/commit/65421e73f8311772b355c3ac30ef0a6a5884b53e))
+* **web:** draw added by [@handle](https://github.com/handle) from the merge reads ([0215030](https://github.com/featherweight-design/concert-crawl/commit/021503091399362b70439a9a0695cff628616ce2))
+
 # [1.518.0](https://github.com/featherweight-design/concert-crawl/compare/v1.517.0...v1.518.0) (2026-11-15)
 
 
