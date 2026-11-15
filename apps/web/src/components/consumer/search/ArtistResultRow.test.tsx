@@ -69,9 +69,11 @@ const ARTIST: ArtistSearchResult = {
   following: false,
 };
 
+// No default: a default parameter would swallow an explicit `undefined`, the
+// unresolved-Clerk case the tests below need.
 const renderRow = (
   artist: ArtistSearchResult,
-  isSignedIn: boolean | undefined = false,
+  isSignedIn: boolean | undefined,
 ) =>
   render(
     <ArtistResultRow
@@ -117,13 +119,13 @@ describe('<ArtistResultRow /> follow while auth resolves', () => {
 describe('<ArtistResultRow /> imagery', () => {
   it('renders the portrait when the artist has one', () => {
     const portrait = 'https://example.test/artist.jpg';
-    const { container } = renderRow({ ...ARTIST, photoUrl: portrait });
+    const { container } = renderRow({ ...ARTIST, photoUrl: portrait }, false);
 
     expect(container.querySelector('img')?.getAttribute('src')).toBe(portrait);
   });
 
   it('renders identity art rather than any photo when there is no portrait', () => {
-    const { container } = renderRow(ARTIST);
+    const { container } = renderRow(ARTIST, false);
 
     expect(container.querySelector('img')).toBeNull();
     expect(container.querySelector('svg')).not.toBeNull();
