@@ -7,6 +7,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => ({
@@ -135,9 +136,10 @@ describe('SignUpFlow, consent', () => {
   it('opens the legal sheet from a link without toggling the box, keeping the fields', () => {
     renderFlow();
     fill();
-    // The page foot has a Terms link too; the consent sentence comes first.
-    const [terms] = screen.getAllByRole('link', { name: FLOW.consent.terms });
-    if (!terms) throw new Error('no Terms link');
+    // The page header and foot have a Terms link too: take the one in the box.
+    const label = screen.getByRole('checkbox').closest('label');
+    if (!label) throw new Error('no consent label');
+    const terms = within(label).getByRole('link', { name: FLOW.consent.terms });
     expect(terms).toHaveAttribute('href', '/legal/terms');
     fireEvent.click(terms);
     expect(screen.getByRole('checkbox')).not.toBeChecked();
