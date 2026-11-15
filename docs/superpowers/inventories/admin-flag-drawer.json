@@ -1,6 +1,6 @@
 {
   "feature": "P47-17 PR 4b-ii · the flag drawer",
-  "note": "CONTACT_SHEET_ROLE=admin. Boards: 07-people-flags-operations/a-flag-in-staging-admin-in-flow, flag-add-a-person. Needs the staging API (SENTRY_ENVIRONMENT=staging) and the scratch crews flag at Beta, verified with a note, with two named people (the single-row scratch window, restored after). The drawer is photographed open; the add view searches 'an'. Nothing is saved.",
+  "note": "CONTACT_SHEET_ROLE=admin. Board: 07-people-flags-operations/a-flag-in-staging-admin-in-flow (the people section follows in its own PR). Needs the staging API (SENTRY_ENVIRONMENT=staging) and the scratch crews flag at Beta, verified with a note, with a few History rows (the single-row scratch window, restored after). The drawer is photographed open. Nothing is saved.",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 740, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -9,7 +9,7 @@
   "rows": [
     {
       "id": "drawer",
-      "label": "The flag drawer: ladder, people, verified line, History",
+      "label": "The flag drawer: ladder, verified line, History",
       "steps": [
         {
           "goto": "/admin/feature-flags",
@@ -18,26 +18,6 @@
         },
         { "click": "[data-testid=\"flag-open-crews\"]" },
         { "wait": "[data-testid=\"flag-drawer-crews\"]", "settle": 1800 }
-      ]
-    },
-    {
-      "id": "drawer-add",
-      "label": "Add a person by handle",
-      "steps": [
-        {
-          "goto": "/admin/feature-flags",
-          "wait": "[data-testid^=\"flag-row-\"]",
-          "settle": 2500
-        },
-        { "click": "[data-testid=\"flag-open-crews\"]" },
-        { "wait": "[data-testid=\"flag-drawer-crews\"]", "settle": 800 },
-        { "click": "[data-testid=\"flag-people-add-trigger\"]" },
-        { "wait": "[data-testid=\"flag-people-query\"]", "settle": 300 },
-        {
-          "fill": "[data-testid=\"flag-people-query\"]",
-          "text": "an",
-          "settle": 2200
-        }
       ]
     }
   ]

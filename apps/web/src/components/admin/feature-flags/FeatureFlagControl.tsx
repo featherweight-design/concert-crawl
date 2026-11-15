@@ -176,11 +176,6 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
           saving={pending === open.key}
           onClose={() => setOpenKey(null)}
           onPick={(stage) => pick(open, stage)}
-          onFlag={(updated) =>
-            setFlags((prev) =>
-              prev.map((row) => (row.key === updated.key ? updated : row)),
-            )
-          }
           onMarkVerified={() => {
             if (pending === null) setVerifyingKey(open.key);
           }}
