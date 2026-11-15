@@ -13,10 +13,14 @@ import {
 import { AuthHeading, AuthPage } from '@/components/auth/flow/AuthPage';
 import { AuthBanner, AuthIconTile } from '@/components/auth/flow/AuthNotices';
 import {
+  GoogleButton,
   LinkButton,
+  OrDivider,
   PrimaryButton,
   SecondaryButton,
 } from '@/components/auth/flow/AuthButtons';
+import { WaitlistModal } from '@/components/waitlist/WaitlistModal';
+import { ssoCallbackUrl, type GoogleNotice } from '@/lib/auth/sso';
 import { CodeBoxes } from '@/components/auth/flow/CodeBoxes';
 import { AUTH_FLOW_COPY } from '@/components/auth/flow/definitions/copy';
 import {
@@ -50,7 +54,14 @@ const isEmailShape = (value: string): boolean =>
  * email code, the new-device code, the throttle and the offline strip are here
  * too.
  */
-export function SignInFlow({ returnTo }: { returnTo: string }) {
+export function SignInFlow({
+  returnTo,
+  google = null,
+}: {
+  returnTo: string;
+  /** How a Google attempt ended, from the callback: a note or the refused card. */
+  google?: GoogleNotice | null;
+}) {
   const clerk = useClerk();
   const { signIn } = useSignIn();
   const router = useRouter();
@@ -62,6 +73,9 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
   const [codeLine, setCodeLine] = useState<CodeLine>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleFailed, setGoogleFailed] = useState(false);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
   const resend = useCountdown();
   const throttle = useCountdown();
   // The code screen's own wait: a 429 on a code must not lock the password.
@@ -69,6 +83,16 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
   const online = useOnline();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+
+  // Coming back with the browser's Back from Google restores this page with
+  // the press still dimmed: clear it.
+  useEffect(() => {
+    const onShow = (evt: PageTransitionEvent) => {
+      if (evt.persisted) setGoogleBusy(false);
+    };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
 
   // After a wrong password the field is empty and enabled again: focus it so
   // the retry (and a screen reader) lands there. An effect, not the press
@@ -94,6 +118,28 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
     setCode('');
     setCodeLine(null);
     setScreen('start');
+  }
+
+  // Signing in asks no consent: a Google account with no account here is
+  // refused, never made, so there is nothing to agree to.
+  async function onGoogle() {
+    if (googleBusy || !online) return;
+    setGoogleBusy(true);
+    setGoogleFailed(false);
+    try {
+      const { error } = await signIn.sso({
+        strategy: 'oauth_google',
+        redirectUrl: returnTo,
+        redirectCallbackUrl: ssoCallbackUrl(returnTo),
+      });
+      if (error) {
+        setGoogleFailed(true);
+        setGoogleBusy(false);
+      }
+    } catch {
+      setGoogleFailed(true);
+      setGoogleBusy(false);
+    }
   }
 
   function onContinue(evt: FormEvent) {
@@ -465,6 +511,40 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
         title={COPY.start.title}
         sub={COPY.start.body}
       />
+      {google === 'refused' ? (
+        <section className="flex flex-col gap-3 rounded-2xl border border-border-strong bg-surface-1 p-4">
+          <span className="font-mono text-[10px] font-bold tracking-[0.16em] text-signal uppercase">
+            {COPY.google.refusedEyebrow}
+          </span>
+          <h2 className="m-0 text-lg font-extrabold text-fg">
+            {COPY.google.refusedTitle}
+          </h2>
+          <p className="m-0 text-sm leading-normal text-fg-muted">
+            {COPY.google.refusedBody}
+          </p>
+          <PrimaryButton
+            type="button"
+            onClick={() => router.push(`/auth/code?${returnQuery}`)}
+          >
+            {COPY.google.refusedButton}
+          </PrimaryButton>
+          <SecondaryButton type="button" onClick={() => setWaitlistOpen(true)}>
+            {COPY.google.waitlist}
+          </SecondaryButton>
+        </section>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div aria-live="polite">
+            {google === 'cancelled' ? (
+              <AuthBanner>{COPY.google.cancelled}</AuthBanner>
+            ) : google === 'failed' || googleFailed ? (
+              <AuthErrorLine>{COPY.google.failed}</AuthErrorLine>
+            ) : null}
+          </div>
+          <GoogleButton busy={googleBusy} onClick={onGoogle} />
+        </div>
+      )}
+      <OrDivider />
       <form noValidate onSubmit={onContinue} className="flex flex-col gap-4">
         <AuthField
           ref={emailRef}
@@ -490,6 +570,10 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
           {COPY.start.footBetaLink}
         </Link>
       </p>
+      <WaitlistModal
+        open={waitlistOpen}
+        onClose={() => setWaitlistOpen(false)}
+      />
     </AuthPage>
   );
 }

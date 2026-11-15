@@ -1,10 +1,14 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { sanitizeReturnPath } from '@/lib/auth/intent';
+import { parseGoogleNotice } from '@/lib/auth/sso';
 import { SignInFlow } from './SignInFlow';
 
 interface SignInNewProps {
-  searchParams: Promise<{ redirect_url?: string | string[] }>;
+  searchParams: Promise<{
+    redirect_url?: string | string[];
+    google?: string | string[];
+  }>;
 }
 
 /**
@@ -13,9 +17,12 @@ interface SignInNewProps {
  * return path is sanitized here, once, and handed down as a prop.
  */
 export default async function SignInNewPage({ searchParams }: SignInNewProps) {
-  const raw = (await searchParams).redirect_url;
+  const params = await searchParams;
+  const raw = params.redirect_url;
   const returnTo = sanitizeReturnPath(Array.isArray(raw) ? raw[0] : raw);
   const { userId } = await auth();
   if (userId) redirect(returnTo);
-  return <SignInFlow returnTo={returnTo} />;
+  return (
+    <SignInFlow returnTo={returnTo} google={parseGoogleNotice(params.google)} />
+  );
 }

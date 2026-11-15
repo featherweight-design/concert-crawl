@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     password: vi.fn(),
     finalize: vi.fn(),
     create: vi.fn(),
+    sso: vi.fn(),
     emailCode: { sendCode: vi.fn(), verifyCode: vi.fn() },
     mfa: { sendEmailCode: vi.fn(), verifyEmailCode: vi.fn() },
     supportedSecondFactors: [{ strategy: 'email_code' }] as
@@ -37,6 +38,12 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
 }));
 
+vi.mock('@/components/waitlist/WaitlistModal', () => ({
+  WaitlistModal: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog">waitlist</div> : null,
+}));
+
+import { AUTH_FLOW_COPY } from '@/components/auth/flow/definitions/copy';
 import { SIGN_IN_COPY } from '../definitions/copy';
 import { FLOOR_MS, RESET_FLOOR_MS } from '@/lib/auth/timing-pad';
 import { SignInFlow } from './SignInFlow';
@@ -54,6 +61,7 @@ beforeEach(() => {
   mocks.signIn.password.mockReset().mockResolvedValue({ error: null });
   mocks.signIn.finalize.mockReset().mockResolvedValue({ error: null });
   mocks.signIn.create.mockReset().mockResolvedValue({ error: null });
+  mocks.signIn.sso.mockReset().mockResolvedValue({ error: null });
   mocks.signIn.emailCode.sendCode
     .mockReset()
     .mockResolvedValue({ error: null });
@@ -571,6 +579,70 @@ describe('SignInFlow, code edge cases', () => {
       screen.getByRole('button', { name: COPY.emailCode.submit }),
     ).toBeDisabled();
     expect(mocks.signIn.emailCode.verifyCode).not.toHaveBeenCalled();
+  });
+});
+
+describe('SignInFlow, Google', () => {
+  const press = () =>
+    fireEvent.click(
+      screen.getByRole('button', { name: AUTH_FLOW_COPY.google.label }),
+    );
+
+  it('starts Google with the return path and a callback under /sign-in, asking no consent', async () => {
+    render(<SignInFlow returnTo="/events/42" />);
+    press();
+    await act(async () => {});
+    expect(mocks.signIn.sso).toHaveBeenCalledWith({
+      strategy: 'oauth_google',
+      redirectUrl: '/events/42',
+      redirectCallbackUrl: '/sign-in/sso-callback?redirect_url=%2Fevents%2F42',
+    });
+    expect(
+      screen.getByRole('button', { name: AUTH_FLOW_COPY.google.busy }),
+    ).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('says so, and frees the button, when Clerk will not start Google', async () => {
+    mocks.signIn.sso.mockResolvedValue({ error: clerkError(400, 'x') });
+    render(<SignInFlow returnTo="/events" />);
+    press();
+    await act(async () => {});
+    expect(screen.getByText(COPY.google.failed)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: AUTH_FLOW_COPY.google.label }),
+    ).not.toHaveAttribute('aria-busy');
+  });
+
+  it('shows a quiet note above Google after a cancelled attempt', () => {
+    render(<SignInFlow returnTo="/events" google="cancelled" />);
+    expect(screen.getByText(COPY.google.cancelled)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: AUTH_FLOW_COPY.google.label }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the refused card, in place of Google, with the invite code and the waitlist', () => {
+    render(<SignInFlow returnTo="/events" google="refused" />);
+    expect(
+      screen.getByRole('heading', { name: COPY.google.refusedTitle }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(COPY.google.refusedBody)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: AUTH_FLOW_COPY.google.label }),
+    ).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.google.refusedButton }),
+    );
+    expect(mocks.push).toHaveBeenCalledWith(
+      '/auth/code?redirect_url=%2Fevents',
+    );
+    fireEvent.click(screen.getByRole('button', { name: COPY.google.waitlist }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('never names an address on the refused card', () => {
+    render(<SignInFlow returnTo="/events" google="refused" />);
+    expect(document.body.textContent).not.toMatch(/@/);
   });
 });
 

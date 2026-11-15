@@ -17,10 +17,13 @@ import {
 } from '@/components/auth/flow/AuthField';
 import { AuthHeading, AuthPage } from '@/components/auth/flow/AuthPage';
 import {
+  GoogleButton,
   InviteChip,
   LinkButton,
+  OrDivider,
   PrimaryButton,
 } from '@/components/auth/flow/AuthButtons';
+import { ssoCallbackUrl } from '@/lib/auth/sso';
 import { CodeBoxes } from '@/components/auth/flow/CodeBoxes';
 import { ConsentCheck, LegalLink } from '@/components/auth/flow/ConsentCheck';
 import { AUTH_FLOW_COPY } from '@/components/auth/flow/definitions/copy';
@@ -103,6 +106,7 @@ export function SignUpFlow({
   const [failed, setFailed] = useState(false);
   const [captchaFailed, setCaptchaFailed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [openDoc, setOpenDoc] = useState<Doc | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -142,6 +146,31 @@ export function SignUpFlow({
     setConsentError(true);
     consentRef.current?.focus();
     return false;
+  }
+
+  // The same rule as the password press: nothing leaves until the box is
+  // ticked, and `legalAccepted: true` goes with the sign-up Google starts, so
+  // no account exists without it.
+  async function onGoogle() {
+    if (locked || googleBusy || !online) return;
+    if (!requireConsent()) return;
+    setGoogleBusy(true);
+    setFailed(false);
+    try {
+      const { error } = await signUp.sso({
+        strategy: 'oauth_google',
+        redirectUrl: target,
+        redirectCallbackUrl: ssoCallbackUrl(target),
+        legalAccepted: true,
+      });
+      if (error) {
+        setFailed(true);
+        setGoogleBusy(false);
+      }
+    } catch {
+      setFailed(true);
+      setGoogleBusy(false);
+    }
   }
 
   async function onSubmit(evt: FormEvent) {
@@ -523,6 +552,16 @@ export function SignUpFlow({
             : COPY.form.submit}
         </PrimaryButton>
       </form>
+      {finished ? null : (
+        <>
+          <OrDivider />
+          <GoogleButton
+            busy={googleBusy || fetchStatus === 'fetching'}
+            disabled={locked}
+            onClick={onGoogle}
+          />
+        </>
+      )}
       <p className="m-0 text-center text-sm text-fg-muted">
         {COPY.form.foot}{' '}
         <Link href="/sign-in/new" className="font-bold text-signal">

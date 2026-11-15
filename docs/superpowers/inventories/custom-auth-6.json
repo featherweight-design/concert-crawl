@@ -1,0 +1,73 @@
+{
+  "feature": "Custom sign-in PR 6 · Google (/sign-in/new, /sign-up/new, /sign-in/sso-callback)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/03-google (google-busy-m, google-cancelled-m, google-refused-m, google-refused-d) and 05-sign-up (Google under the form). Signed out; the dev server runs with NEXT_PUBLIC_PUBLIC_BROWSE=true so /sign-up/new needs no invite cookie. Photographed without asking Clerk anything: the start screen with Google, the cancelled note and the refused card (both are the start screen with ?google=), and the sign-up form with Google under it. The refused card does not name the Google address (the board does): Clerk does not hand the address back when the transfer is refused, and the card needs none. Hand-walked on staging, because no sheet can complete a Google round trip: the busy state, Google back and signing in, a cancelled return, a Google account with no account here (refused, and no account made), the consent-return fallback, and a Google sign-up carrying legalAccepted.",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "signin-start-google",
+      "label": "/sign-in/new: Google above the email",
+      "steps": [
+        {
+          "goto": "/sign-in/new",
+          "wait": "button:has-text('Continue with Google')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "signin-google-cancelled",
+      "label": "/sign-in/new?google=cancelled: the quiet note",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/sign-in/new?google=cancelled",
+          "wait": "text=Google sign-in didn",
+          "settle": 1200
+        }
+      ]
+    },
+    {
+      "id": "signin-google-refused",
+      "label": "/sign-in/new?google=refused: no account for this Google sign-in",
+      "widths": ["phone", "desktop"],
+      "steps": [
+        {
+          "goto": "/sign-in/new?google=refused",
+          "wait": "h2:has-text('No account for this Google sign-in yet')",
+          "settle": 1200
+        }
+      ]
+    },
+    {
+      "id": "signup-google",
+      "label": "/sign-up/new: Google under the form",
+      "widths": ["phone", "desktop"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "button:has-text('Continue with Google')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "signup-google-unticked",
+      "label": "/sign-up/new: Google pressed unticked",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/sign-up/new",
+          "wait": "button:has-text('Continue with Google')",
+          "settle": 1000
+        },
+        { "clickRole": "button", "name": "^Continue with Google$" },
+        { "wait": "input[type='checkbox'][aria-invalid='true']", "settle": 600 }
+      ]
+    }
+  ]
+}

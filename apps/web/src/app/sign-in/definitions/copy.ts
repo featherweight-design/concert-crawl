@@ -95,6 +95,30 @@ export const SIGN_IN_COPY = {
     breached:
       'That password has appeared in a data breach, so it can’t be used. Choose a different one.',
   },
+  // Google (COPY.md "Google" and "Google · consent on return"). DRAFT until
+  // copy-review. The button's own label is AUTH_FLOW_COPY.google.
+  google: {
+    returnTitle: 'Signing you in',
+    returnBody: 'Back from Google. One moment.',
+    cancelled: 'Google sign-in didn’t finish. Try again, or use your email.',
+    failed: 'Google sign-in didn’t work. Try again, or use your email.',
+    refusedEyebrow: 'Google',
+    refusedTitle: 'No account for this Google sign-in yet',
+    refusedBody:
+      'Concert Crawl is invite-only for now. If you have an invite code, enter it to make your account, then use Google from there.',
+    refusedButton: 'Use an invite code',
+    waitlist: 'Join the waitlist',
+  },
+  googleConsent: {
+    eyebrow: 'One more step',
+    title: 'Agree to make your account',
+    body: (email: string) =>
+      `Google confirmed ${email}. Tick the box and we’ll make your Concert Crawl account.`,
+    bodyNoEmail:
+      'Google confirmed your address. Tick the box and we’ll make your Concert Crawl account.',
+    submit: 'Make my account',
+    cancel: 'Not now',
+  },
   // Not "on our side": a blocker or a bad connection reads the same.
   failed: 'Something went wrong. Try again.',
 } as const;
