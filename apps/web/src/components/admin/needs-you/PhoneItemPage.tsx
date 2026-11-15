@@ -25,6 +25,17 @@ const COPY = ADMIN_COPY.needsYou;
  */
 export const PhoneFooterContext = createContext<HTMLElement | null>(null);
 
+/** The ⋯ sheet (`01-snooze/item-menu-m`): snooze, not useful, open the venue. */
+export interface PhoneItemMenu {
+  /** The sheet's heading: the item's short name. */
+  title: string;
+  venue: { id: string; name: string } | null;
+  onSnooze: (until: string) => void;
+  onNotUseful?: ((reason: string) => void) | undefined;
+  /** The warning and venue the snooze steps name. */
+  about?: { warning: string; venue: string | null };
+}
+
 interface PhoneItemPageProps {
   /** A `KindLabel`, above the title. */
   eyebrow: ReactNode;
@@ -35,17 +46,11 @@ interface PhoneItemPageProps {
   titleSize?: number;
   /** Between the body's blocks: 14 on Needs you, 12 on the feedback item. */
   gap?: number;
-  /** The ⋯ sheet's heading: the item's short name. */
-  menuTitle?: string;
-  venue?: { id: string; name: string } | null;
+  /** The ⋯ menu; null draws no ⋯ (the feedback item has none). */
+  menu: PhoneItemMenu | null;
   /** An answer or snooze is in flight: the page and ⋯ hold still. */
   busy: boolean;
   onClose: () => void;
-  /** Left out, the page draws no ⋯ (the feedback item has no menu). */
-  onSnooze?: (until: string) => void;
-  onNotUseful?: ((reason: string) => void) | undefined;
-  /** The warning and venue the snooze steps name. */
-  about?: { warning: string; venue: string | null };
   children: ReactNode;
 }
 
@@ -60,18 +65,15 @@ export const PhoneItemPage = ({
   back = COPY.title,
   titleSize = 21,
   gap = 14,
-  menuTitle = '',
-  venue = null,
+  menu,
   busy,
   onClose,
-  onSnooze,
-  onNotUseful,
-  about,
   children,
 }: PhoneItemPageProps) => {
   const router = useRouter();
   const pageRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const venue = menu?.venue ?? null;
   const [footer, setFooter] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [step, setStep] = useState<'menu' | 'date' | 'reason'>('menu');
@@ -132,7 +134,7 @@ export const PhoneItemPage = ({
           <ChevronLeft size={16} aria-hidden />
           {back}
         </button>
-        {onSnooze && (
+        {menu && (
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
@@ -197,12 +199,12 @@ export const PhoneItemPage = ({
         }}
       />
 
-      {menuOpen && onSnooze && (
+      {menuOpen && menu && (
         <AdminSheet
           // A date or reason step carries its own title and Back button, as
           // `01-snooze/snooze-until-a-date-m` draws it.
-          title={step === 'menu' ? menuTitle : ''}
-          label={menuTitle}
+          title={step === 'menu' ? menu.title : ''}
+          label={menu.title}
           onClose={() => {
             setMenuOpen(false);
             setStep('menu');
@@ -226,17 +228,17 @@ export const PhoneItemPage = ({
               onStep={setStep}
               onSnooze={(until) => {
                 setMenuOpen(false);
-                onSnooze(until);
+                menu.onSnooze(until);
               }}
               onNotUseful={
-                onNotUseful
+                menu.onNotUseful
                   ? (reason) => {
                       setMenuOpen(false);
-                      onNotUseful(reason);
+                      menu.onNotUseful?.(reason);
                     }
                   : undefined
               }
-              {...(about ? { about } : {})}
+              {...(menu.about ? { about: menu.about } : {})}
               afterDate={
                 venue ? (
                   <MenuItem

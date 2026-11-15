@@ -2246,6 +2246,12 @@ export const ADMIN_COPY = {
       },
       copy: 'Copy',
       copied: 'Copied',
+      copyFailed: "Couldn't copy",
+      // A device the widget didn't name, or a user agent we can't read.
+      unknownDevice: 'Unknown device',
+      // Beside the Done pill (`12/feedback-reopen-d`), which already says Done.
+      doneBy: (handle: string, day: string | null) =>
+        `by @${handle}${day ? `, ${day}` : ''}`,
       copyLabel: (field: string) => `Copy ${field}`,
       note: 'Note to yourself',
       notePlaceholder: 'Saved as you type',
