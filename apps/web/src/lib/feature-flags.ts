@@ -9,7 +9,20 @@ import {
 
 import { connection } from 'next/server';
 
-import { publicApiClient } from '@/lib/api';
+import { auth } from '@clerk/nextjs/server';
+
+import { apiClient, publicApiClient } from '@/lib/api';
+
+// The signed-in viewer's session token, or null for a signed-out visitor. A
+// failure to read it is a signed-out answer, never a thrown 404.
+async function viewerToken(): Promise<string | null> {
+  try {
+    const session = await auth();
+    return session.userId ? await session.getToken() : null;
+  } catch {
+    return null;
+  }
+}
 
 // apps/web has no zod dependency, so the boundary is narrowed with the same
 // hand-written guard the client hook uses (`use-feature-flags.ts`). A partial
@@ -38,14 +51,26 @@ export const getFeatureFlags = async (): Promise<FeatureFlagView> => {
   // outside a request, connection() throws.
   await connection();
   try {
+    // A flag at Me or Beta is on for some people only, so the answer depends
+    // on who is asking: the viewer's own token goes with the request, or a Me
+    // or Beta user gets the logged-out map and a 404 on a page they should
+    // see. A token-less lookup (a signed-out visitor, or no request context)
+    // reads the logged-out map.
+    const token = await viewerToken();
     // Without a directive Next.js caches a server-component fetch for the life
     // of the build, which would freeze the flag map and make a flip in the
     // admin UI never reach the server-rendered routes. 30s matches both the
     // endpoint's own `max-age` and the client hook's `staleTime`, so a flip
-    // takes the same half-minute everywhere.
-    const raw = await publicApiClient.get<unknown>('/v1/flags', {
-      next: { revalidate: 30 },
-    });
+    // takes the same half-minute everywhere. A per-viewer answer is never
+    // shared between viewers: it is not cached by Next at all.
+    const raw =
+      token === null
+        ? await publicApiClient.get<unknown>('/v1/flags', {
+            next: { revalidate: 30 },
+          })
+        : await apiClient.get<unknown>('/v1/flags', token, {
+            cache: 'no-store',
+          });
     if (!isFeatureFlagView(raw)) {
       console.error('feature flags: unexpected payload');
       return featureFlagDefaults();

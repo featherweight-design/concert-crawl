@@ -35,6 +35,11 @@ import { setFeatureFlag } from '../test/helpers/feature-flags.js';
 
 const app = createApp();
 
+// These suites toggle flags freely. Production locks a flag until it is
+// verified, and an unset environment counts as production, so this file runs as
+// staging; the lock itself is covered in feature-flags-ladder.integration.test.
+process.env['SENTRY_ENVIRONMENT'] = 'staging';
+
 const ADMIN_USER_ID = 'admin_feature_flag_test';
 
 const setAdminAuth = (): void => {

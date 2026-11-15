@@ -3,10 +3,23 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const get = vi.fn();
-vi.mock('@/lib/api', () => ({ publicApiClient: { get } }));
+const authedGet = vi.fn();
+vi.mock('@/lib/api', () => ({
+  publicApiClient: { get },
+  apiClient: { get: authedGet },
+}));
+
+// Clerk settles before the query runs; `userId` is the viewer (null = signed out).
+const auth = vi.hoisted(() => ({
+  state: { isLoaded: true, userId: null as string | null },
+  getToken: vi.fn(),
+}));
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ ...auth.state, getToken: auth.getToken }),
+}));
 
 const { useFeatureFlag, useFeatureFlags } = await import('./use-feature-flags');
 
@@ -18,6 +31,37 @@ const wrapper = ({ children }: { children: ReactNode }) => {
 };
 
 describe('useFeatureFlags', () => {
+  beforeEach(() => {
+    auth.state = { isLoaded: true, userId: null };
+    get.mockReset();
+    authedGet.mockReset();
+    auth.getToken.mockReset();
+  });
+
+  // A flag at Me or Beta is on for some people only: the signed-in viewer's
+  // token goes with the request, or they get the signed-out map.
+  it('sends the signed-in viewer token so a Me or Beta flag reaches them', async () => {
+    auth.state = { isLoaded: true, userId: 'user_a' };
+    auth.getToken.mockResolvedValue('tok_a');
+    authedGet.mockResolvedValue({
+      'spotify-sync': false,
+      crews: true,
+      'release-notes': true,
+    });
+    const { result } = renderHook(() => useFeatureFlags(), { wrapper });
+    await waitFor(() => expect(result.current.data?.crews).toBe(true));
+    expect(authedGet).toHaveBeenCalledWith('/v1/flags', 'tok_a');
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('waits for Clerk before asking, so the first answer is not the signed-out one', async () => {
+    auth.state = { isLoaded: false, userId: null };
+    renderHook(() => useFeatureFlags(), { wrapper });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(get).not.toHaveBeenCalled();
+    expect(authedGet).not.toHaveBeenCalled();
+  });
+
   it('returns the flag map from the public endpoint', async () => {
     get.mockResolvedValue({
       'spotify-sync': false,

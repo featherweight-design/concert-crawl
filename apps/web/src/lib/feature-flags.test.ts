@@ -3,7 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 
 const get = vi.fn();
-vi.mock('@/lib/api', () => ({ publicApiClient: { get } }));
+const authedGet = vi.fn();
+vi.mock('@/lib/api', () => ({
+  publicApiClient: { get },
+  apiClient: { get: authedGet },
+}));
+
+// The viewer: signed out unless a test sets a user.
+const session = vi.hoisted(() => ({
+  current: { userId: null as string | null, token: 'tok_viewer' },
+}));
+vi.mock('@clerk/nextjs/server', () => ({
+  auth: async () => ({
+    userId: session.current.userId,
+    getToken: async () => session.current.token,
+  }),
+}));
 
 const connection = vi.fn(async () => {});
 vi.mock('next/server', () => ({ connection }));
@@ -14,7 +29,40 @@ const { getFeatureFlags, isFeatureEnabled } =
 describe('server-side getFeatureFlags', () => {
   beforeEach(() => {
     get.mockReset();
+    authedGet.mockReset();
+    session.current = { userId: null, token: 'tok_viewer' };
     vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  // The hole this closes: a flag at Me or Beta is on for some people only, so
+  // a server-side read that does not forward the viewer's auth hands them the
+  // signed-out map and a 404 on a page they should see.
+  it('forwards the signed-in viewer token and never lets Next share the answer', async () => {
+    session.current = { userId: 'user_beta', token: 'tok_beta' };
+    authedGet.mockResolvedValue({
+      'spotify-sync': false,
+      crews: true,
+      'release-notes': true,
+    });
+
+    expect(await isFeatureEnabled('crews')).toBe(true);
+    expect(authedGet).toHaveBeenCalledWith('/v1/flags', 'tok_beta', {
+      cache: 'no-store',
+    });
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('reads the signed-out map for a visitor, cached 30s as before', async () => {
+    get.mockResolvedValue({
+      'spotify-sync': false,
+      crews: false,
+      'release-notes': true,
+    });
+    expect(await isFeatureEnabled('crews')).toBe(false);
+    expect(get).toHaveBeenCalledWith('/v1/flags', {
+      next: { revalidate: 30 },
+    });
+    expect(authedGet).not.toHaveBeenCalled();
   });
 
   // Vitest is not configured to restore mocks, so the console spy has to be
