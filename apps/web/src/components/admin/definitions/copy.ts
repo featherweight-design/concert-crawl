@@ -192,12 +192,15 @@ export const ADMIN_COPY = {
     site: {
       title: 'The site',
       emails: 'Emails',
-      // `03/health-desktop`: "Resend · last sent 8:02 AM". None sent is undrawn.
+      // `03/health-desktop`: "Resend · last sent 8:02 AM"; `33/emails-states`
+      // draws the quiet line "Resend · nothing sent in 24 h".
       lastSent: (time: string) => `Resend · last sent ${time}`,
       noneSent: (hours: number) => `Resend · nothing sent in ${hours} h`,
       // `33/emails-states` draws "2 of 41 bounced or failed since 8:02 AM".
       // Bounces are recorded nowhere: the count is sends Resend refused
       // (email_send_log 'failed'), out of every send tried in the window.
+      // "in H h" instead of "since <time>" (copy-review): the window the
+      // Quiet line and the tile use.
       failedOf: (failed: number, tried: number, hours: number) =>
         `Resend · ${failed} of ${tried} failed in ${hours} h`,
       sending: 'Sending',
