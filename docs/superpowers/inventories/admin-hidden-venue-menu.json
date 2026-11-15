@@ -1,0 +1,32 @@
+{
+  "feature": "Admin item 22 · A hidden venue's ⋯ menu: Show on site, Pause or Resume crawling, as drawn",
+  "note": "Board: design_handoff_bplus_redesign/addendum-6/boards/22-hidden-venue-menu. CONTACT_SHEET_ROLE=admin. The scratch branch holds no hidden venue (Hidden 0), the venue page loads server-side so no browser fixture can make one, and the sheet never writes to scratch. Both hidden menus (paused and not) and their chips are therefore pinned by venue-menu.test.ts, VenueMenu.test.tsx, VenueStatus.test.tsx and venue-list-rules.test.ts. The sheet shows the shared menu on a live paused venue and on a live venue, so the visible rows of the changed menu are unchanged where they should be. By hand on staging: hide a venue, open its ⋯ menu.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "paused-live-menu",
+      "label": "Live paused venue ⋯ menu: Resume line has no 'Starts when it’s shown.' (Sheet Paused Venue)",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=Sheet Paused Venue",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "Sheet Paused Venue", "settle": 2500 },
+        { "click": "[data-testid=\"venue-menu\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "live-menu",
+      "label": "Live venue ⋯ menu: unchanged (Ball Arena)",
+      "steps": [
+        { "goto": "/admin/venues", "wait": "text=Ball Arena", "settle": 1500 },
+        { "clickRole": "link", "name": "Ball Arena", "settle": 2500 },
+        { "click": "[data-testid=\"venue-menu\"]", "settle": 800 }
+      ]
+    }
+  ]
+}
