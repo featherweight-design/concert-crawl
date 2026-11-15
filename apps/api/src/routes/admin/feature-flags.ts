@@ -60,13 +60,16 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
   // Set explicitly in both branches: DEFAULT now() fires on insert only, so an
   // update that omitted it would freeze the timestamp at the first toggle.
   const updatedAt = new Date();
+  // The ladder's column follows the boolean until the API reads it (migration
+  // 0122): on is Everyone, off is Off.
+  const stage = enabled ? 'everyone' : 'off';
 
   const [row] = await db
     .insert(featureFlags)
-    .values({ key, enabled, updatedAt, updatedBy: actorId })
+    .values({ key, enabled, stage, updatedAt, updatedBy: actorId })
     .onConflictDoUpdate({
       target: featureFlags.key,
-      set: { enabled, updatedAt, updatedBy: actorId },
+      set: { enabled, stage, updatedAt, updatedBy: actorId },
     })
     .returning();
 

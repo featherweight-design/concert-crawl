@@ -583,13 +583,38 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     tableName: 'feature_flags',
     disposition: 'none',
     userIdColumn: null,
-    otherUserIdColumns: ['updated_by'],
+    otherUserIdColumns: ['updated_by', 'stage_owner_user_id', 'verified_by'],
     exportKey: null,
     exportColumns: null,
     reason:
-      'Global release-gate config. `updated_by` is the admin who flipped the ' +
-      'flag, not a customer, and stays as the record of who acted — same basis ' +
+      'Global release-gate config. `updated_by`, `stage_owner_user_id` and ' +
+      '`verified_by` are the admin who flipped, owns ("Me") or verified the ' +
+      'flag, not a customer, and stay as the record of who acted — same basis ' +
       'as crawl_triggers.triggered_by.',
+  },
+  {
+    tableName: 'feature_flag_users',
+    disposition: 'delete',
+    userIdColumn: 'user_id',
+    otherUserIdColumns: ['added_by'],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'A named person on a release flag is admin config about the user, not ' +
+      'data they own: it goes with the account. `added_by` is the admin who ' +
+      'named them and stays as the record of who acted.',
+  },
+  {
+    tableName: 'feature_flag_history',
+    disposition: 'anonymize',
+    userIdColumn: 'subject_user_id',
+    otherUserIdColumns: ['actor_user_id'],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'The change history of a release flag outlives the people on it; the ' +
+      'named person (`subject_user_id`) is nulled. `actor_user_id` is the ' +
+      'admin who acted, not a customer, and stays as the record of who acted.',
   },
   {
     tableName: 'admin_settings',
