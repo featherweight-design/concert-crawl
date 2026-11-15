@@ -552,7 +552,7 @@ describe('ArtistPageContent', () => {
         }),
       );
       expect(pushMock).toHaveBeenCalledWith(
-        `/sign-in?redirect_url=${encodeURIComponent('/artists/neal-francis')}`,
+        `/sign-in?redirect_url=${encodeURIComponent('/artists/neal-francis?intent=follow%3Aneal-francis&label=Neal+Francis')}`,
       );
     });
   });

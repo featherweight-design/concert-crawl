@@ -644,14 +644,17 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
     fireEvent.click(button);
     expect(mockToggle).not.toHaveBeenCalled();
     expect(mockPush).toHaveBeenCalledTimes(1);
+    // Back to the artist's page, not to /search: the return seam replays a
+    // follow only there, and would strip it from /search unread.
     expect(mockPush).toHaveBeenCalledWith(
-      `/sign-in?redirect_url=${encodeURIComponent('/search')}`,
+      `/sign-in?redirect_url=${encodeURIComponent('/artists/radiohead?intent=follow%3Aradiohead&label=Radiohead')}`,
     );
   });
 
-  // The window where Clerk has not answered yet. Treated as signed out so the
-  // tap goes to sign-in instead of throwing `Not authenticated`.
-  it('unresolved session: a tap goes to sign-in rather than writing', () => {
+  // The window where Clerk has not answered yet. A tap does nothing: it would
+  // die on `Not authenticated` as a write, and sending a viewer who may well be
+  // signed in to sign-in is worse.
+  it('unresolved session: a tap is inert, neither writing nor signing in', () => {
     authState.isSignedIn = undefined;
     entitlementState.current = {
       isLoading: true,
@@ -659,13 +662,9 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
       surface: null,
     };
     renderRows();
-    fireEvent.click(
-      screen.getByLabelText(ARTIST_COPY.followSignedOutAria('Radiohead')),
-    );
+    fireEvent.click(screen.getByLabelText(ARTIST_COPY.followAria('Radiohead')));
     expect(mockToggle).not.toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith(
-      `/sign-in?redirect_url=${encodeURIComponent('/search')}`,
-    );
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   // ...but an already-followed row proves a session on its own, so it must not
