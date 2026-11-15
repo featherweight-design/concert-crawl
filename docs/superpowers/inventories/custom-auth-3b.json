@@ -17,7 +17,7 @@
           "wait": "h1:has-text('Sign in')",
           "settle": 1000
         },
-        { "fill": "input[type='email']", "text": "fan@example.com" },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
         { "clickRole": "button", "name": "^Continue$" },
         { "wait": "h1:has-text('Enter your password')", "settle": 600 },
         { "clickRole": "button", "name": "^Email me a code instead$" },
@@ -33,7 +33,7 @@
           "wait": "h1:has-text('Sign in')",
           "settle": 1000
         },
-        { "fill": "input[type='email']", "text": "fan@example.com" },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
         { "clickRole": "button", "name": "^Continue$" },
         { "wait": "h1:has-text('Enter your password')", "settle": 800 }
       ]

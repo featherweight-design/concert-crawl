@@ -24,7 +24,7 @@ import {
   codesOf,
   isRateLimited,
 } from '@/lib/auth/clerk-errors';
-import { held } from '@/lib/auth/timing-pad';
+import { held, RESET_FLOOR_MS } from '@/lib/auth/timing-pad';
 import { formatClock, useCountdown } from '@/lib/auth/use-countdown';
 import { useOnline } from '@/lib/auth/use-online';
 import { AuthLoadingState } from '../AuthLoadingState';
@@ -35,6 +35,13 @@ const COPY = SIGN_IN_COPY;
 type Screen = 'start' | 'password' | 'emailCode' | 'deviceCode' | 'breached';
 type Line = 'wrong' | 'failed' | 'rateLimited' | null;
 type CodeLine = 'wrong' | 'expired' | 'sent' | 'failed' | null;
+
+/** Clerk's answers for a code that is not the right one. */
+const WRONG_CODE_CODES: ReadonlySet<string> = new Set([
+  'form_code_incorrect',
+  'form_code_invalid',
+  'verification_failed',
+]);
 
 /** How long a throttled or resent screen waits, in seconds. */
 const WAIT_SECONDS = 60;
@@ -63,6 +70,8 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
   const [codeLine, setCodeLine] = useState<CodeLine>(null);
   const resend = useCountdown();
   const throttle = useCountdown();
+  // The code screen's own wait: a 429 on a code must not lock the password.
+  const codeThrottle = useCountdown();
   const online = useOnline();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -88,6 +97,8 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
   function backToStart() {
     setPassword('');
     setLine(null);
+    setCode('');
+    setCodeLine(null);
     setScreen('start');
   }
 
@@ -192,24 +203,36 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
     setBusy(false);
   }
 
-  // Sending the code never reveals anything: Clerk's answer is swallowed and
-  // the screen is the same whether or not the address has an account.
-  async function sendCode() {
+  // Sending the code never reveals anything: Clerk's answer, whether it
+  // returns an error or throws, is swallowed and the screen is the same whether
+  // or not the address has an account. Only a 429 is reported (true of every
+  // address), so a throttled resend does not say "sent".
+  async function sendCode(): Promise<{ limited: boolean }> {
     const since = Date.now();
+    let limited = false;
     try {
-      await signIn.create({ identifier: email });
-      await signIn.emailCode.sendCode();
+      const created = await signIn.create({ identifier: email });
+      const sent = await signIn.emailCode.sendCode();
+      limited = isRateLimited(created.error) || isRateLimited(sent.error);
     } catch {
       // Same screen either way.
     }
-    await held(since);
+    // Two Clerk calls, so the higher floor (as the reset press).
+    await held(since, RESET_FLOOR_MS);
+    return { limited };
   }
 
   async function onEmailCode() {
     if (busy || !online) return;
     setBusy(true);
     setLine(null);
-    await sendCode();
+    const { limited } = await sendCode();
+    if (limited) {
+      // Throttled: say so here rather than promise a code that is not coming.
+      throttled();
+      setBusy(false);
+      return;
+    }
     setCode('');
     setCodeLine(null);
     resend.start(WAIT_SECONDS);
@@ -220,28 +243,42 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
   async function onResend() {
     if (busy || resend.remaining > 0 || !online) return;
     setBusy(true);
+    let limited = false;
+    let failed = false;
     if (screen === 'deviceCode') {
+      // Past the password there is nothing to hide, so a failure is said.
       const since = Date.now();
       try {
-        await signIn.mfa.sendEmailCode();
+        const { error } = await signIn.mfa.sendEmailCode();
+        limited = isRateLimited(error);
+        failed = Boolean(error) && !limited;
       } catch {
-        // Same line either way.
+        failed = true;
       }
       await held(since);
     } else {
-      await sendCode();
+      limited = (await sendCode()).limited;
     }
     setCode('');
-    setCodeLine('sent');
-    resend.start(WAIT_SECONDS);
+    if (limited) {
+      codeThrottle.start(WAIT_SECONDS);
+      setCodeLine(null);
+    } else if (failed) {
+      setCodeLine('failed');
+    } else {
+      setCodeLine('sent');
+      resend.start(WAIT_SECONDS);
+    }
     setBusy(false);
   }
 
   async function onVerify(evt: FormEvent) {
     evt.preventDefault();
-    if (busy || code.length < 6 || !online) return;
+    if (busy || code.length < 6 || !online || codeThrottle.remaining > 0)
+      return;
     setBusy(true);
     setCodeLine(null);
+    setLine(null);
     const since = Date.now();
     let error: unknown = null;
     try {
@@ -258,13 +295,16 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
       if (!error) {
         await next();
       } else if (isRateLimited(error)) {
-        setCodeLine('failed');
-        throttle.start(WAIT_SECONDS);
+        codeThrottle.start(WAIT_SECONDS);
+      } else if (codesOf(error).includes('session_exists')) {
+        // Already signed in (another tab): carry on to where they were going.
+        router.replace(returnTo);
       } else if (codesOf(error).includes('verification_expired')) {
         setCodeLine('expired');
-      } else if (codesOf(error).length > 0) {
+      } else if (codesOf(error).some((item) => WRONG_CODE_CODES.has(item))) {
         setCodeLine('wrong');
       } else {
+        // Anything else (a captcha, a stale client) is not a wrong code.
         setCodeLine('failed');
       }
     } catch {
@@ -296,8 +336,10 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
     const device = screen === 'deviceCode';
     const waiting = resend.remaining > 0;
     const clock = formatClock(resend.remaining);
-    const codeError =
-      codeLine === 'wrong'
+    const codeLocked = codeThrottle.remaining > 0;
+    const codeError = codeLocked
+      ? COPY.rateLimited.message
+      : codeLine === 'wrong'
         ? COPY.emailCode.wrong
         : codeLine === 'expired'
           ? COPY.emailCode.expired
@@ -316,7 +358,7 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
             value={code}
             onChange={setCode}
             error={codeError}
-            disabled={busy || throttle.remaining > 0}
+            disabled={busy || codeLocked}
           />
           <div aria-live="polite">
             {codeLine === 'sent' ? (
@@ -331,9 +373,13 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
           <PrimaryButton
             busy={busy}
             busyLabel={COPY.password.busy}
-            disabled={code.length < 6}
+            disabled={code.length < 6 || codeLocked || !online}
           >
-            {device ? COPY.device.submit : COPY.emailCode.submit}
+            {codeLocked
+              ? COPY.rateLimited.countdown(formatClock(codeThrottle.remaining))
+              : device
+                ? COPY.device.submit
+                : COPY.emailCode.submit}
           </PrimaryButton>
         </form>
         <LinkButton
@@ -404,7 +450,7 @@ export function SignInFlow({ returnTo }: { returnTo: string }) {
           <PrimaryButton
             busy={busy}
             busyLabel={COPY.password.busy}
-            disabled={password.length === 0 || locked}
+            disabled={password.length === 0 || locked || !online}
           >
             {locked
               ? COPY.rateLimited.countdown(lockClock)

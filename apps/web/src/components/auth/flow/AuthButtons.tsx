@@ -128,7 +128,7 @@ export function LinkButton({
     <button
       type="button"
       {...rest}
-      className={`inline-flex min-h-11 items-center justify-center text-sm font-bold text-signal ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center text-sm font-bold text-signal disabled:font-semibold disabled:text-fg-subtle ${className}`}
     />
   );
 }
