@@ -1,3 +1,12 @@
+## [1.484.1](https://github.com/featherweight-design/concert-crawl/compare/v1.484.0...v1.484.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** answer a promoted Tickets available with the row clearSoldOut wrote ([3627aac](https://github.com/featherweight-design/concert-crawl/commit/3627aacf87f28fb624f3b6150309f8e32c34e3a3))
+* **api:** close a sold-out on a delisted show as moot; name every moot case ([2a13c8f](https://github.com/featherweight-design/concert-crawl/commit/2a13c8f360c5c81d40c1707a94517d19691cb1aa))
+* **api:** close reports a cancelled or postponed show makes moot; guard admin rejects ([af355a5](https://github.com/featherweight-design/concert-crawl/commit/af355a56c506af66756f5cdbbbfddffa5a345201))
+
 # [1.484.0](https://github.com/featherweight-design/concert-crawl/compare/v1.483.0...v1.484.0) (2026-11-14)
 
 
