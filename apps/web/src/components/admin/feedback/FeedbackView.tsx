@@ -17,6 +17,7 @@ import {
   ChipCount,
   chipStyle,
 } from '@/components/admin/events/list/FilterPicker';
+import { adminFetch } from '@/lib/api';
 import { FeedbackRow, type FeedbackItem } from './FeedbackRow';
 import { FeedbackExpanded } from './FeedbackExpanded';
 import { FeedbackSkeleton } from './FeedbackSkeleton';
@@ -80,7 +81,7 @@ export const FeedbackView = ({
     async (path: string, init: RequestInit = {}) => {
       const token = await getToken();
       if (!token) throw new Error('no token');
-      return fetch(`${API_BASE}${path}`, {
+      return adminFetch(`${API_BASE}${path}`, {
         ...init,
         headers: {
           Authorization: `Bearer ${token}`,

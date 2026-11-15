@@ -144,8 +144,44 @@ export async function anonymousRequest<T>(
   }
 }
 
+type UnauthorizedListener = () => void;
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+/**
+ * Tells `listener` whenever an API call answers 401, from `request()` and from
+ * `adminFetch()`. Only the admin shell listens (its signed-out overlay), so a
+ * 401 on a consumer page, or on the server where nothing listens, does
+ * nothing. Returns the unsubscribe.
+ */
+export function onApiUnauthorized(listener: UnauthorizedListener): () => void {
+  unauthorizedListeners.add(listener);
+  return () => {
+    unauthorizedListeners.delete(listener);
+  };
+}
+
+function reportUnauthorized(res: Response): void {
+  if (res.status !== 401) return;
+  for (const listener of unauthorizedListeners) listener();
+}
+
+/**
+ * `fetch` for the admin calls that do not go through `apiClient` (the same-origin
+ * admin routes, the multipart uploads): identical to `fetch`, but a 401 reaches
+ * the same listeners, so no admin surface misses a session that ended.
+ */
+export async function adminFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const res = await fetch(input, init);
+  reportUnauthorized(res);
+  return res;
+}
+
 async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
   timer.headers(res.status);
+  reportUnauthorized(res);
 
   // 204 No Content — no body to parse; return undefined as T. The admin
   // mark-available endpoint uses this status; callers that care receive

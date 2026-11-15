@@ -5,6 +5,8 @@
  * drawing bad rows.
  */
 
+import { adminFetch } from '@/lib/api';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const BASE = '/v1/admin/artists';
 
@@ -223,7 +225,7 @@ const request = async (
   const token = await getToken();
   if (!token) throw new ShapeError('no token');
   const auth = { Authorization: `Bearer ${token}` };
-  const res = await fetch(
+  const res = await adminFetch(
     `${API_BASE}${path}`,
     init
       ? {

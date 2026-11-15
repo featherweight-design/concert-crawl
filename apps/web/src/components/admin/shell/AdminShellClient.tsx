@@ -9,6 +9,7 @@ import { MobileBottomBar, TAB_BAR_HEIGHT } from './MobileBottomBar';
 import { OfflineBanner } from './OfflineBanner';
 import { MOBILE_BREAKPOINT, type AdminBadgeCounts } from './nav';
 import type { AdminShellUser } from './AdminAvatar';
+import { AdminSessionGuard } from './AdminSessionGuard';
 
 interface AdminShellClientProps {
   badgeCounts: AdminBadgeCounts;
@@ -121,6 +122,7 @@ export const AdminShellClient = (props: AdminShellClientProps) => {
       style={{ display: 'flex', height: '100%', width: '100%' }}
     >
       {isPhone ? <PhoneShell {...props} /> : <DesktopShell {...props} />}
+      <AdminSessionGuard />
     </div>
   );
 };

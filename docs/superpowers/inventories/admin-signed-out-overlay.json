@@ -1,0 +1,61 @@
+{
+  "feature": "P47-8b · the admin signed-out overlay (board 07/signed-out), over the shell, on a session that ended",
+  "note": "Board: design/design_handoff_admin_redesign/boards/07-people-flags-operations/signed-out.html (desktop: a 360px card over a scrim that covers the sidebar too; the phone shows the same card centred, resolved from it). Each cell opens Admin People, mocks Clerk's token refresh and the admin API to answer 401 (a session that really ended: a 401 alone with a live token shows nothing), then opens the Invite codes tab, whose first call is the 401. Run with CONTACT_SHEET_ROLE=admin. Dark (electric) and Light.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": { "cc-theme": "electric" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": { "cc-theme": "light" },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    { "label": "short", "width": 320, "height": 568, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "signed-out-people",
+      "label": "Admin People, session ended",
+      "steps": [
+        { "goto": "/admin/people", "settle": 4000 },
+        {
+          "route": "**/v1/client/sessions/*/tokens*",
+          "status": 401,
+          "body": { "errors": [{ "code": "authentication_invalid" }] }
+        },
+        {
+          "route": "**/v1/admin/**",
+          "status": 401,
+          "body": { "success": false, "error": "Unauthorized" }
+        },
+        { "clickRole": "tab", "name": "^Invite codes" },
+        {
+          "wait": "[data-testid=\"admin-signed-out-overlay\"]",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "live-session-401",
+      "label": "Admin People, a 401 with a live session shows no overlay",
+      "steps": [
+        { "goto": "/admin/people", "settle": 4000 },
+        {
+          "route": "**/v1/admin/**",
+          "status": 401,
+          "body": { "success": false, "error": "Unauthorized" }
+        },
+        { "clickRole": "tab", "name": "^Invite codes" },
+        { "settle": 2500 }
+      ]
+    }
+  ]
+}

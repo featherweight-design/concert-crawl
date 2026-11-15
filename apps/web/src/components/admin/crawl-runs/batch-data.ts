@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { adminFetch } from '@/lib/api';
 
 /**
  * `GET /v1/admin/crawl/batches`, checked at the boundary, keeping only the
@@ -103,7 +104,7 @@ export const fetchNextCrawlAt = async (
 ): Promise<string | null> => {
   const token = await getToken();
   if (!token) throw new Error('No session token');
-  const res = await fetch(`${API_BASE}/v1/admin/crawl/estimate`, {
+  const res = await adminFetch(`${API_BASE}/v1/admin/crawl/estimate`, {
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
@@ -119,7 +120,7 @@ export const fetchBatchPage = async (
 ): Promise<BatchPage> => {
   const token = await getToken();
   if (!token) throw new Error('No session token');
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await adminFetch(`${API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });

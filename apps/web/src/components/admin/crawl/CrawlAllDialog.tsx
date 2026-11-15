@@ -27,7 +27,7 @@ import {
   formatMtTime,
   formatUsd,
 } from '@/components/admin/health/health-model';
-import { apiClient } from '@/lib/api';
+import { adminFetch, apiClient } from '@/lib/api';
 
 const COPY = ADMIN_COPY.crawl.crawlAll;
 
@@ -182,7 +182,7 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
     postingRef.current = true;
     setPost('posting');
     try {
-      const res = await fetch(CRAWL_ALL_ENDPOINT, { method: 'POST' });
+      const res = await adminFetch(CRAWL_ALL_ENDPOINT, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const raw: unknown = await res.json().catch((err: unknown) => {
         // The POST was taken; only its count is unknown, so it still counts
