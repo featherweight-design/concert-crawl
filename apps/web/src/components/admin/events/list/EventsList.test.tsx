@@ -493,6 +493,67 @@ describe('EventsList on desktop', () => {
       await deleteShow('First');
       expect(screen.getByRole('heading', { name: COPY.title })).toHaveFocus();
     });
+
+    it('drops the target when the reload fails, so a later reload moves nothing', async () => {
+      /** The delete went through but the reload failed: the row stays drawn. */
+      const FailedReload = () => {
+        const [rows, setRows] = useState(SHOWS);
+        return (
+          <>
+            <h1 id={EVENTS_HEADING_ID} tabIndex={-1}>
+              {COPY.title}
+            </h1>
+            <button
+              type="button"
+              onClick={() =>
+                setRows((prev) => prev.filter((each) => each.id !== 'evt-2'))
+              }
+            >
+              Later reload
+            </button>
+            <EventsList
+              when="upcoming"
+              rows={rows}
+              onDelete={async () => undefined}
+            />
+          </>
+        );
+      };
+      render(<FailedReload />);
+      fireEvent.click(
+        screen.getByRole('button', { name: COPY.menu.label('Middle') }),
+      );
+      fireEvent.click(
+        screen.getByRole('menuitem', { name: new RegExp(DELETE.menu) }),
+      );
+      const dialog = screen.getByRole('dialog');
+      fireEvent.change(within(dialog).getByLabelText(DELETE.field), {
+        target: { value: 'Middle' },
+      });
+      fireEvent.click(
+        within(dialog).getByRole('button', {
+          name: new RegExp(DELETE.confirm),
+        }),
+      );
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      // The row is still there, and focus is back on its own ⋯.
+      expect(
+        screen.getByRole('button', { name: COPY.menu.label('Middle') }),
+      ).toHaveFocus();
+      // Somewhere else, focus moves on; then a later reload drops the row.
+      const elsewhere = screen.getByRole('button', { name: 'Later reload' });
+      elsewhere.focus();
+      fireEvent.click(elsewhere);
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('button', { name: COPY.menu.label('Middle') }),
+        ).toBeNull(),
+      );
+      expect(elsewhere).toHaveFocus();
+      expect(
+        screen.getByRole('button', { name: COPY.menu.label('Last') }),
+      ).not.toHaveFocus();
+    });
   });
 
   it('says a failed delete in Delete’s own words and keeps the dialog', async () => {

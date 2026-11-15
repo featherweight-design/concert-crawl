@@ -524,6 +524,56 @@ describe('AllEventsTabContent', () => {
       });
     });
 
+    it.each([
+      [
+        'an unreadable response says the delete ran, not a failure',
+        vi.fn().mockResolvedValue(null),
+        ADMIN_COPY.eventDelete.bulk.unreadable,
+        null,
+      ],
+      [
+        'a failed request keeps the generic failure',
+        vi.fn().mockRejectedValue(new Error('network')),
+        null,
+        'Failed to apply the change.',
+      ],
+    ])('bulk Delete: %s', async (_label, bulkDelete, notice, failure) => {
+      mockApiGet
+        .mockResolvedValueOnce(
+          counted([
+            buildEvent({ id: 'evt-a', title: 'Spoon', artist: 'Spoon' }),
+          ]),
+        )
+        .mockResolvedValueOnce(counted([]));
+      const api = buildApiMock({ bulkDelete });
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      );
+      await waitFor(() => {
+        expect(screen.getByText('Spoon')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByLabelText('Select all events on the page'));
+      const dock = screen.getByRole('region', { name: 'Bulk actions' });
+      fireEvent.click(within(dock).getByText('Delete 1'));
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.change(
+        within(dialog).getByLabelText('Type DELETE to confirm'),
+        {
+          target: { value: 'DELETE' },
+        },
+      );
+      fireEvent.click(within(dialog).getAllByText('Delete 1').slice(-1)[0]!);
+      if (notice !== null) {
+        const summary = await screen.findByTestId('bulk-delete-summary');
+        expect(summary.textContent).toBe(notice);
+        expect(screen.queryByText('Failed to apply the change.')).toBeNull();
+      }
+      if (failure !== null) {
+        expect(await screen.findByText(failure)).toBeTruthy();
+        expect(screen.queryByTestId('bulk-delete-summary')).toBeNull();
+      }
+    });
+
     it('says how many the bulk Delete deleted and skipped, and why', async () => {
       mockApiGet
         .mockResolvedValueOnce(

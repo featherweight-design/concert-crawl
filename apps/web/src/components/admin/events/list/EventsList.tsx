@@ -197,10 +197,16 @@ const EventMenu = ({
   row,
   onHide,
   onDelete,
+  onDialogClosed,
 }: {
   row: EventListRow;
   onHide: OnHide;
   onDelete: OnHide;
+  /**
+   * A dialog closed and this row is still drawn: a delete that ran ended
+   * without a reload removing the row, so the table drops its focus target.
+   */
+  onDialogClosed: (id: string) => void;
 }) => {
   const router = useRouter();
   const [hiding, setHiding] = useState(false);
@@ -211,12 +217,14 @@ const EventMenu = ({
   const open = hiding || deleting;
   const wasOpen = useRef(false);
   useEffect(() => {
-    if (wasOpen.current && !open)
+    if (wasOpen.current && !open) {
       wrapRef.current
         ?.querySelector<HTMLButtonElement>('[data-testid="event-row-menu"]')
         ?.focus();
+      onDialogClosed(row.id);
+    }
     wasOpen.current = open;
-  }, [open]);
+  }, [open, onDialogClosed, row.id]);
   const { venueUrl } = row;
   return (
     <span ref={wrapRef} data-event-id={row.id}>
@@ -408,6 +416,12 @@ const DesktopTable = ({
     next: string | null;
     prev: string | null;
   } | null>(null);
+  // The delete's dialog closed with its row still drawn (the delete ran but
+  // the reload failed or didn't come): the target is stale, so a later
+  // reload must not move focus out of nowhere.
+  const dropRefocus = useCallback((id: string) => {
+    if (refocus.current?.deleted === id) refocus.current = null;
+  }, []);
   const focusAfterDelete = useCallback(() => {
     const target = refocus.current;
     if (target === null) return;
@@ -592,7 +606,12 @@ const DesktopTable = ({
                 </td>
               ) : (
                 <td style={{ ...td, textAlign: 'right', paddingRight: 14 }}>
-                  <EventMenu row={row} onHide={onHide} onDelete={deleteRow} />
+                  <EventMenu
+                    row={row}
+                    onHide={onHide}
+                    onDelete={deleteRow}
+                    onDialogClosed={dropRefocus}
+                  />
                 </td>
               )}
             </tr>
