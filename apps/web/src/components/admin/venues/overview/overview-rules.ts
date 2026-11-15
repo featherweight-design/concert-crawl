@@ -203,27 +203,34 @@ export const barKind = (run: StoredRun): BarKind => {
 export interface Bar {
   id: string;
   kind: BarKind;
+  /** A test re-crawl of the paused venue, drawn faded (undrawn). */
+  trial: boolean;
   label: string;
 }
 
 /**
- * The newest 14 runs, oldest first, each with its "{date}: {kind}" label.
- * The API sends runs newest first.
+ * The newest 14 runs, oldest first, each with its "{date}: {kind}" label, or
+ * "{date}: Test re-crawl, {kind}" for a trial. The card computes no health %,
+ * so a trial only needs marking. The API sends runs newest first.
  */
 export const runBars = (
-  runs: readonly (StoredRun & Pick<CrawlRun, 'id' | 'createdAt'>)[],
+  runs: readonly (StoredRun &
+    Pick<CrawlRun, 'id' | 'createdAt'> & { trial?: boolean })[],
 ): Bar[] =>
   runs
     .slice(0, LAST_RUNS)
     .map((run) => {
       const kind = barKind(run);
+      const trial = run.trial === true;
+      const date = shortDate(run.createdAt);
+      const words = COPY.lastRuns.kinds[kind];
       return {
         id: run.id,
         kind,
-        label: COPY.lastRuns.bar(
-          shortDate(run.createdAt),
-          COPY.lastRuns.kinds[kind],
-        ),
+        trial,
+        label: trial
+          ? COPY.lastRuns.trialBar(date, words)
+          : COPY.lastRuns.bar(date, words),
       };
     })
     .reverse();
@@ -231,6 +238,10 @@ export const runBars = (
 /** The legend lists only the kinds drawn, in the legend board's order. */
 export const legendKinds = (bars: readonly Bar[]): BarKind[] =>
   BAR_KINDS.filter((kind) => bars.some((bar) => bar.kind === kind));
+
+/** Whether the legend needs its Test re-crawl entry. */
+export const hasTrialBar = (bars: readonly Bar[]): boolean =>
+  bars.some((bar) => bar.trial);
 
 /** A Needs you item's kind label (rule 8). */
 export const NEEDS_YOU_KIND_LABEL: Record<NeedsYouKind, Kind> = {

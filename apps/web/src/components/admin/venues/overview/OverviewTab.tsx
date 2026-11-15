@@ -25,6 +25,7 @@ import type { OverviewData, OverviewSnooze } from './overview-data';
 import {
   LAST_RUNS,
   NEEDS_YOU_KIND_LABEL,
+  hasTrialBar,
   isUnchanged,
   legendKinds,
   offSinceLine,
@@ -182,6 +183,12 @@ const LatestRunCard = ({
 
 // ── Last 14 runs ─────────────────────────────────────────────
 
+/**
+ * A test re-crawl's bar keeps its kind and draws faded (undrawn: the legend
+ * board has no trial), so the venue's own crawls read first.
+ */
+const TRIAL_OPACITY = 0.45;
+
 /** Each kind's drawn bar (`A3/03/last-14-runs-legend`), in a 40px box. */
 const BAR_STYLE: Record<BarKind, CSSProperties> = {
   found: {
@@ -270,6 +277,7 @@ const LastRunsCard = ({
   }
   const bars = runBars(runs);
   const kinds = legendKinds(bars);
+  const trial = hasTrialBar(bars);
   return (
     <Card
       title={COPY.lastRuns.title}
@@ -305,10 +313,12 @@ const LastRunsCard = ({
                       aria-label={bar.label}
                       data-testid="overview-run-bar"
                       data-kind={bar.kind}
+                      data-trial={bar.trial || undefined}
                       style={{
                         width: '100%',
                         boxSizing: 'border-box',
                         ...BAR_STYLE[bar.kind],
+                        ...(bar.trial && { opacity: TRIAL_OPACITY }),
                       }}
                     />
                   )}
@@ -340,6 +350,27 @@ const LastRunsCard = ({
                 </span>
               </li>
             ))}
+            {trial && (
+              <li
+                data-testid="overview-runs-legend-trial"
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 2,
+                    flex: 'none',
+                    background: BAR_STYLE.found.background,
+                    opacity: TRIAL_OPACITY,
+                  }}
+                />
+                <span style={{ fontSize: 11.5, color: 'var(--fg-muted)' }}>
+                  {COPY.lastRuns.trial}
+                </span>
+              </li>
+            )}
           </ul>
         </>
       )}

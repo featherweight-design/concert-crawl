@@ -18,7 +18,14 @@ import {
   isVenueNotFound,
   type DeleteVenueOutcome,
 } from '@/components/admin/venues/delete-rules';
-import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl';
+import {
+  triggerVenueCrawl,
+  triggerVenueTrial,
+} from '@/components/admin/crawl-trigger-button/lib/crawl';
+import {
+  trialRefusalOf,
+  type TrialOutcome,
+} from '@/components/admin/venues/trial-rules';
 import { buildUpdateVenueBody } from './build-update-venue-body';
 import { venueGuideSchema } from '@/lib/admin/venue-guide-schema';
 
@@ -252,6 +259,26 @@ export async function recrawlVenue(
     }
     return { ok: false, status: err.status };
   }
+}
+
+// Queues a test re-crawl of a crawl-paused venue (POST /v1/admin/crawl/:id
+// with `{ trial: true }`). The API's three refusals (`trial_pending`,
+// `blocked`, `not_paused`) come back as a value, so the menu can say which;
+// anything else throws. A queued trial refreshes the venue's pages, whose
+// Runs then carry its run.
+export async function trialCrawlVenue(id: string): Promise<TrialOutcome> {
+  const token = await getToken();
+  try {
+    await triggerVenueTrial(id, token);
+  } catch (err: unknown) {
+    const code = trialRefusalOf(err);
+    if (code === null) throw err;
+    console.warn('trialCrawlVenue: refused', { id, code });
+    return { ok: false, code };
+  }
+  revalidatePath('/admin/venues');
+  revalidatePath(`/admin/venues/${id}`);
+  return { ok: true };
 }
 
 export async function resumeCrawling(id: string): Promise<VenueChangeOutcome> {

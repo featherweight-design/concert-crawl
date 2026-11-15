@@ -163,11 +163,21 @@ export const runReader = (
  * since Nov 10" for Unchanged, otherwise the list's reason line ("Failed:
  * timed out"), or the outcome when there is none. A partial run read no
  * usable shows, so it names no reader: the board draws "via" on OK rows only.
+ * A test re-crawl of a paused venue leads with "Test re-crawl · " (undrawn).
  */
 export const runLine = (
   run: RunRow,
   lastFullRun: VenueLastFullRun | null,
 ): string => {
+  const line = outcomeLine(run, lastFullRun);
+  return run.trial ? COPY.trial(line) : line;
+};
+
+/** The line before any "Test re-crawl" lead. */
+function outcomeLine(
+  run: RunRow,
+  lastFullRun: VenueLastFullRun | null,
+): string {
   if (run.status === 'success') {
     const line = COPY.shows(run.eventsFound, run.eventsInserted);
     const reader = runReader(run.extractionStrategyUsed);
@@ -182,7 +192,7 @@ export const runLine = (
       : runOutcome(run);
   }
   return runReasonLine(run) ?? runOutcome(run);
-};
+}
 
 /**
  * The run detail's summary: the row's line as its title, and a sentence

@@ -36,6 +36,7 @@ const row = (overrides: Partial<RunRow> = {}): RunRow => ({
   durationMs: 230000,
   llmCostUsd: 0.15,
   errorMessage: null,
+  trial: false,
   createdAt: '2026-11-10T10:01:00.000Z',
   ...overrides,
 });
@@ -257,6 +258,15 @@ describe('runLine', () => {
     expect(
       runLine(row({ status: 'partial', extractionStrategyUsed: 'llm' }), null),
     ).toBe('106 shows · 2 new');
+  });
+
+  it('leads a test re-crawl’s line with "Test re-crawl"', () => {
+    expect(runLine(row({ trial: true }), null)).toBe(
+      'Test re-crawl · 106 shows · 2 new',
+    );
+    expect(runLine(row({ ...RUNS[2]!, trial: true }), null)).toBe(
+      'Test re-crawl · Failed: timed out',
+    );
   });
 
   it('names the date an Unchanged run kept', () => {

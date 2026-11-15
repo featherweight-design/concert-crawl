@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { Eye, RefreshCw, X } from 'lucide-react';
+import { Eye, FlaskConical, RefreshCw, X } from 'lucide-react';
 import { hiddenStateLine, venueMenuItems, venueMenuState } from './venue-menu';
 
 const COPY = ADMIN_COPY.venueHeader;
@@ -169,6 +169,7 @@ describe('venueMenuItems icons (A3/03/venue-menu-states)', () => {
   const ACT = {
     pause: noop,
     resume: noop,
+    trial: noop,
     flagship: noop,
     hide: noop,
     takeDown: noop,
@@ -202,5 +203,83 @@ describe('venueMenuItems icons (A3/03/venue-menu-states)', () => {
     expect(icons.resume).toBe(RefreshCw);
     expect(icons.delete).toBe(X);
     expect(icons['take-down']).toBe(X);
+  });
+});
+
+describe('venueMenuItems: Try a re-crawl', () => {
+  const PAUSED_AT = '2026-10-28T18:00:00.000Z';
+  const noop = (): void => undefined;
+  const ACT = {
+    pause: noop,
+    resume: noop,
+    trial: noop,
+    flagship: noop,
+    hide: noop,
+    takeDown: noop,
+    show: noop,
+    remove: noop,
+  };
+  const keysOf = (over: Partial<VenueWithCrawlHealth>) =>
+    venueMenuItems(venue({ active: true, ...over }), ACT).map(
+      (item) => item.key,
+    );
+
+  it('follows Resume on a hand-paused venue', () => {
+    const items = venueMenuItems(
+      venue({
+        active: true,
+        crawlPausedAt: PAUSED_AT,
+        crawlPauseReason: 'waiting_on_permission',
+      }),
+      ACT,
+    );
+    expect(items.map((item) => item.key).slice(0, 2)).toEqual([
+      'resume',
+      'trial',
+    ]);
+    const trial = items[1]!;
+    expect(trial.label).toBe('Try a re-crawl');
+    expect(trial.hint).toBe(COPY.menu.tryRecrawlHint);
+    expect(trial.icon).toBe(FlaskConical);
+  });
+
+  it('is offered on an auto-paused venue, whose Resume says to try it first', () => {
+    const items = venueMenuItems(
+      venue({
+        active: true,
+        crawlPausedAt: PAUSED_AT,
+        consecutiveFailures: 3,
+      }),
+      ACT,
+    );
+    expect(items.map((item) => item.key)).toContain('trial');
+    expect(items[0]!.hint).toBe(
+      'Auto-paused after 3 failures. Try a re-crawl first.',
+    );
+  });
+
+  it('is never offered while crawling', () => {
+    expect(keysOf({})).not.toContain('trial');
+  });
+
+  it('is never offered on a blocked venue, whose hint drops the re-crawl', () => {
+    const blocked = {
+      crawlPausedAt: PAUSED_AT,
+      consecutiveFailures: 3,
+      blockedAt: '2026-10-29T18:00:00.000Z',
+    };
+    expect(keysOf(blocked)).not.toContain('trial');
+    expect(
+      venueMenuItems(venue({ active: true, ...blocked }), ACT)[0]!.hint,
+    ).toBe('Auto-paused after 3 failures.');
+  });
+
+  it('is never offered on a hidden or taken-down venue', () => {
+    expect(keysOf({ active: false, crawlPausedAt: PAUSED_AT })).not.toContain(
+      'trial',
+    );
+    expect(
+      keysOf({ active: false, crawlPausedAt: PAUSED_AT, removedAt: PAUSED_AT }),
+    ).not.toContain('trial');
   });
 });

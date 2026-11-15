@@ -1,4 +1,12 @@
-import { Eye, Info, Pause, RefreshCw, Sparkle, X } from 'lucide-react';
+import {
+  Eye,
+  FlaskConical,
+  Info,
+  Pause,
+  RefreshCw,
+  Sparkle,
+  X,
+} from 'lucide-react';
 import type {
   VenueDeleteBlockers,
   VenueWithCrawlHealth,
@@ -55,6 +63,8 @@ export const hiddenStateLine = (venue: VenueWithCrawlHealth): string | null => {
 export interface VenueMenuActions {
   pause: () => void;
   resume: () => void;
+  /** A test re-crawl of the paused venue (`{ trial: true }`). */
+  trial: () => void;
   flagship: () => void;
   hide: () => void;
   takeDown: () => void;
@@ -173,8 +183,25 @@ const itemsFor = (
         ];
   }
 
+  // Undrawn: the board's auto-paused hint says "Try a re-crawl first." and
+  // nothing offers one, so it follows Resume as a row of its own. Paused or
+  // auto-paused only, never blocked: the API refuses a blocked venue's trial.
+  const trial: RowMenuItem[] =
+    venue.crawlPausedAt !== null && venue.blockedAt === null
+      ? [
+          {
+            key: 'trial',
+            icon: FlaskConical,
+            label: COPY.menu.tryRecrawl,
+            hint: COPY.menu.tryRecrawlHint,
+            onSelect: act.trial,
+          },
+        ]
+      : [];
+
   return [
     crawl,
+    ...trial,
     {
       key: 'flagship',
       icon: Sparkle,

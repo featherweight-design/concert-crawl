@@ -3,6 +3,7 @@ import {
   RUN_REASONS,
   RUN_STATUSES,
   parseRows,
+  trialField,
 } from '@/components/admin/venues/overview/overview-data';
 
 /**
@@ -26,6 +27,8 @@ const runRowSchema = z.object({
   // a new reader never drops the row.
   extractionStrategyUsed: z.string().nullable().optional().catch(null),
   errorMessage: z.string().nullable(),
+  // A test re-crawl of a paused venue. An older API sends none: not a trial.
+  trial: trialField,
   createdAt: z.string(),
 });
 export type RunRow = z.infer<typeof runRowSchema>;

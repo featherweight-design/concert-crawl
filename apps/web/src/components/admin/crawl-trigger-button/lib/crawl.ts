@@ -17,6 +17,18 @@ export const triggerVenueCrawl = async (
     force ? { force: true } : {},
   );
 
+/**
+ * Queues a test re-crawl of a crawl-paused venue: a real crawl whose run
+ * never moves the pause or the failure streak.
+ */
+export const triggerVenueTrial = async (
+  venueId: string,
+  token: string,
+): Promise<{ triggerId: string }> =>
+  apiClient.post<{ triggerId: string }>(`/v1/admin/crawl/${venueId}`, token, {
+    trial: true,
+  });
+
 export const fetchCrawlTrigger = async (
   triggerId: string,
   token: string,

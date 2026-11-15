@@ -102,7 +102,11 @@ export type PausedVenue = Pick<
   | 'crawlPauseReason'
   | 'crawlPauseNote'
   | 'consecutiveFailures'
-> & { crawlPausedByName?: string | null };
+> & {
+  crawlPausedByName?: string | null;
+  /** Known only where the caller has it; absent never offers a re-crawl. */
+  blockedAt?: Venue['blockedAt'];
+};
 
 /** "Oct 28", in Mountain Time, as the paused and hidden lines date it. */
 export const shortDate = (iso: string): string =>
@@ -131,14 +135,20 @@ export const reasonText = (
  * admin pause path requires a reason (`pauseBodySchema`), and the crawler's
  * auto-pause writes none (crawler-core `crawl.ts`), while a name goes missing
  * for other reasons (an admin keeping an auto-pause keeps the crawler as the
- * pauser). It reads "Auto-paused after 3 failures." ("Try a re-crawl first."
- * is HOLD). A reasonless pause under 3 failures is a hand pause from before
+ * pauser). It reads "Auto-paused after 3 failures. Try a re-crawl first."
+ * when the venue is known not to be blocked, since the menu then offers Try a
+ * re-crawl; a blocked venue's trial is refused, so its line stops at the
+ * failures. A reasonless pause under 3 failures is a hand pause from before
  * reasons existed.
  */
 export const pausedStateLine = (venue: PausedVenue): string | null => {
   if (venue.crawlPausedAt === null) return null;
   // The chip's own rule, so the line and the crawling chip agree.
-  if (isAutoPause(venue)) return PAUSE_LINE.autoPaused;
+  if (isAutoPause(venue)) {
+    return venue.blockedAt === null
+      ? PAUSE_LINE.autoPausedTryRecrawl
+      : PAUSE_LINE.autoPaused;
+  }
   const date = shortDate(venue.crawlPausedAt);
   const name = venue.crawlPausedByName ?? null;
   const why = reasonText(
