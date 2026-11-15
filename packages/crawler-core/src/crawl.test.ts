@@ -154,6 +154,8 @@ vi.mock('@concert-crawl/db', () => {
   return {
     db,
     // Admin 4a-2: the lineup rebuild has its own integration tests.
+    plannedLineup: vi.fn(() => []),
+    clearEventArtists: vi.fn().mockResolvedValue(0),
     syncEventArtists: vi.fn().mockResolvedValue({
       events: 0,
       inserted: 0,

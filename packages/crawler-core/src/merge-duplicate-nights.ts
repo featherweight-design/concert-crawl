@@ -43,6 +43,7 @@ import {
   secondsOf,
   showTimeKey,
 } from '@concert-crawl/types';
+import { reportFailure } from '@concert-crawl/logger';
 import { alignToNights } from './lib/align-nights.js';
 
 export const CLEANUP_ACTOR = 'system:duplicate-night-cleanup';
@@ -94,7 +95,10 @@ export interface NightGroupPlan {
   /** Filled in by an apply run. */
   outcome?: 'merged' | 'failed' | 'skipped';
   error?: string;
-  /** A fill that failed after the merge, with the values it could not write. */
+  /**
+   * A fill that failed after the merge, with the values it could not write,
+   * and/or a lineup-row rebuild that failed after the fill was kept.
+   */
   fillError?: string;
 }
 
@@ -437,63 +441,70 @@ export async function mergeDuplicateNights(
       // it on the unique index. Re-read the survivor: only a field still empty
       // is filled. A failure here is reported with the values it could not
       // write, since the donors no longer exist.
-      //
-      // Admin 4a-2: the fill, its audit row and the survivor's `event_artists`
-      // rebuild share one transaction, so a filled bill and its lineup rows
-      // land together or not at all. The rebuild runs even with nothing to
-      // fill: the folded rows' lineup rows cascaded away with them, and the
-      // survivor's own are brought up to date.
       let unwritten: Partial<EventRow> = {};
       try {
-        await db.transaction(async (tx) => {
-          const [current] = await tx
-            .select()
-            .from(events)
-            .where(eq(events.id, survivor.id));
-          const filled = current
-            ? fillsFrom(current, losers)
-            : { fields: [], values: {} };
-          const fields = [...filled.fields];
-          const values: Partial<EventRow> = { ...filled.values };
-          // The folded rows are gone, so the evening time cannot collide with one.
-          if (plan.setShowTime !== undefined && current) {
-            values.showTime = plan.setShowTime;
-            fields.push('showTime');
+        const [current] = await db
+          .select()
+          .from(events)
+          .where(eq(events.id, survivor.id));
+        const filled = current
+          ? fillsFrom(current, losers)
+          : { fields: [], values: {} };
+        const fields = [...filled.fields];
+        const values: Partial<EventRow> = { ...filled.values };
+        // The folded rows are gone, so the evening time cannot collide with one.
+        if (plan.setShowTime !== undefined && current) {
+          values.showTime = plan.setShowTime;
+          fields.push('showTime');
+        }
+        unwritten = values;
+        if (fields.length > 0) {
+          // A bill fill re-checks the lineup lock at write time, as Repair
+          // does: an admin may save the lineup after the re-read above.
+          const fillsBill = fields.includes('headliners');
+          const written = await db
+            .update(events)
+            .set({ ...values, updatedAt: new Date() })
+            .where(
+              fillsBill
+                ? and(eq(events.id, survivor.id), isNull(events.lineupEditedAt))
+                : eq(events.id, survivor.id),
+            )
+            .returning({ id: events.id });
+          if (written.length === 0) {
+            throw new Error('lineup saved during the fill; nothing written');
           }
-          unwritten = values;
-          if (fields.length > 0) {
-            // A bill fill re-checks the lineup lock at write time, as Repair
-            // does: an admin may save the lineup after the re-read above.
-            const fillsBill = fields.includes('headliners');
-            const written = await tx
-              .update(events)
-              .set({ ...values, updatedAt: new Date() })
-              .where(
-                fillsBill
-                  ? and(
-                      eq(events.id, survivor.id),
-                      isNull(events.lineupEditedAt),
-                    )
-                  : eq(events.id, survivor.id),
-              )
-              .returning({ id: events.id });
-            if (written.length === 0) {
-              throw new Error('lineup saved during the fill; nothing written');
-            }
-            await tx.insert(auditLog).values({
-              actorId: CLEANUP_ACTOR,
-              action: 'event.fill_from_merge',
-              targetId: survivor.id,
-              metadata: {
-                fromIds: losers.map((loser) => loser.id),
-                fields: Object.keys(values),
-              },
-            });
-          }
-          if (current) await syncEventArtists(tx, [survivor.id]);
-        });
+          await db.insert(auditLog).values({
+            actorId: CLEANUP_ACTOR,
+            action: 'event.fill_from_merge',
+            targetId: survivor.id,
+            metadata: {
+              fromIds: losers.map((loser) => loser.id),
+              fields: Object.keys(values),
+            },
+          });
+        }
       } catch (err) {
         plan.fillError = `${err instanceof Error ? err.message : String(err)}; unwritten values: ${JSON.stringify(unwritten)}`;
+      }
+
+      // Admin 4a-2: rebuild the survivor's `event_artists` rows from its
+      // (possibly filled) bill, as its own step AFTER the fill has committed.
+      // The donors are gone, so a failure here must never undo the fill: it
+      // is reported, and the next crawl of the row or the backfill rebuilds
+      // the rows. It runs even with nothing filled, since the folded rows'
+      // lineup rows cascaded away with them.
+      try {
+        await syncEventArtists(db, [survivor.id]);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        reportFailure({
+          event: 'merge_duplicate_nights.event_artists_sync_failed',
+          severity: 'warn',
+          eventId: survivor.id,
+          error: message,
+        });
+        plan.fillError = `${plan.fillError === undefined ? '' : `${plan.fillError}; `}fill kept, lineup rows not rebuilt: ${message}`;
       }
     } catch (err) {
       // A fold that failed part-way leaves the rows folded before it merged.

@@ -127,6 +127,7 @@ interface ExtractedEvent {
   eventUrl?: string;
   observedPerformers?: string[];
   observedSupportingArtists?: string[];
+  isConcert?: boolean;
 }
 
 function makeEvent(
@@ -708,6 +709,93 @@ describe('event_artists from the crawl and the cleanup (admin 4a-2)', () => {
       { canonicalName: 'a opener', role: 'support', position: 1 },
       { canonicalName: 'b opener', role: 'support', position: 2 },
     ]);
+  });
+
+  it('clears the lineup rows of a listing the crawl now reads as not a concert', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(22);
+    const bill = {
+      observedPerformers: ['Turned Bingo'],
+      observedSupportingArtists: ['Bingo Opener'],
+    };
+
+    mockExtraction([makeEvent('Turned Bingo', date, bill)]);
+    await crawlVenue(venue.id, mockBrowser);
+    const row = await rowFor('Turned Bingo');
+    expect(await lineupOf(row.id)).toHaveLength(2);
+
+    mockExtraction(
+      [
+        makeEvent('Turned Bingo', date, {
+          ...bill,
+          title: 'Turned Bingo Night',
+          rawTitle: 'Turned Bingo Night',
+          isConcert: false,
+        }),
+      ],
+      `${HTML_BASE}<!-- 2 -->`,
+    );
+    await crawlVenue(venue.id, mockBrowser);
+
+    expect(await lineupOf(row.id)).toEqual([]);
+  });
+
+  it('clears the lineup rows of a listing an admin hid', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(22);
+    const listing = makeEvent('Hidden Later', date, {
+      observedPerformers: ['Hidden Later'],
+    });
+
+    mockExtraction([listing]);
+    await crawlVenue(venue.id, mockBrowser);
+    const row = await rowFor('Hidden Later');
+    expect(await lineupOf(row.id)).toHaveLength(1);
+    await db
+      .update(events)
+      .set({ hiddenFromConsumer: true })
+      .where(eq(events.id, row.id));
+
+    // Same listing, so the row is not upserted; it is still cleared.
+    mockExtraction([listing], `${HTML_BASE}<!-- 2 -->`);
+    await crawlVenue(venue.id, mockBrowser);
+
+    expect(await lineupOf(row.id)).toEqual([]);
+  });
+
+  it('relinks an unchanged listing only when it names an artist created this run', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(22);
+    const relinked = makeEvent('Relink Act', date, {
+      observedPerformers: ['Relink Act'],
+      observedSupportingArtists: ['Gone Opener'],
+    });
+    const untouched = makeEvent('Steady Act', date, {
+      observedPerformers: ['Steady Act'],
+    });
+
+    mockExtraction([relinked, untouched]);
+    await crawlVenue(venue.id, mockBrowser);
+    const relinkedRow = await rowFor('Relink Act');
+    const untouchedRow = await rowFor('Steady Act');
+
+    // The opener's artist row disappears (its lineup row cascades); the
+    // steady act's lineup row is removed while its artist stays.
+    await db.delete(artists).where(eq(artists.canonicalName, 'gone opener'));
+    await db
+      .delete(eventArtists)
+      .where(eq(eventArtists.eventId, untouchedRow.id));
+
+    // Same listings, so neither row is upserted.
+    mockExtraction([relinked, untouched], `${HTML_BASE}<!-- 2 -->`);
+    await crawlVenue(venue.id, mockBrowser);
+
+    expect(await lineupOf(relinkedRow.id)).toEqual([
+      { canonicalName: 'relink act', role: 'headliner', position: 0 },
+      { canonicalName: 'gone opener', role: 'support', position: 1 },
+    ]);
+    // Created nothing it names, so it is not re-offered (the backfill's job).
+    expect(await lineupOf(untouchedRow.id)).toEqual([]);
   });
 
   it('a re-crawl keeps the lineup rows of a lineup an admin saved', async () => {

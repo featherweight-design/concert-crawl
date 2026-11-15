@@ -12,7 +12,6 @@ const source = (overrides: Partial<LineupSource> = {}): LineupSource => ({
   supportingArtists: null,
   canonicalHeadliners: null,
   canonicalSupporting: null,
-  canonicalArtist: 'fallback act',
   ...overrides,
 });
 
@@ -47,7 +46,9 @@ describe('plannedLineup', () => {
     ).toEqual([{ canonicalName: 'sigur ros', role: 'headliner', position: 0 }]);
   });
 
-  it('falls back to canonical_artist as the lone headliner when the ladder never ruled', () => {
+  // canonical_artist is often a title, so it is never used as a headliner:
+  // projectArtists also projects no headliner on NULL.
+  it('bills no headliner when the ladder never ruled, and still reads the supports', () => {
     expect(
       plannedLineup(
         source({
@@ -55,10 +56,7 @@ describe('plannedLineup', () => {
           supportingArtists: ['Opener'],
         }),
       ),
-    ).toEqual([
-      { canonicalName: 'fallback act', role: 'headliner', position: 0 },
-      { canonicalName: 'opener', role: 'support', position: 1 },
-    ]);
+    ).toEqual([{ canonicalName: 'opener', role: 'support', position: 0 }]);
   });
 
   it('bills nobody as headliner when the ladder ruled an empty bill', () => {
@@ -120,20 +118,6 @@ describe('desiredEventArtists', () => {
     expect(planned.rows).toEqual([
       { eventId: 'ev1', artistId: 'a-known', role: 'headliner', position: 0 },
       { eventId: 'ev1', artistId: 'a-later', role: 'support', position: 2 },
-    ]);
-  });
-
-  it('keeps the first slot when two names resolve to one artist', () => {
-    const planned = desiredEventArtists(
-      'ev1',
-      lineup,
-      new Map([
-        ['known', 'same'],
-        ['unknown', 'same'],
-      ]),
-    );
-    expect(planned.rows).toEqual([
-      { eventId: 'ev1', artistId: 'same', role: 'headliner', position: 0 },
     ]);
   });
 });

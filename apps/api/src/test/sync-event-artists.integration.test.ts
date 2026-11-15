@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { asc, eq } from 'drizzle-orm';
 import {
   artists,
+  clearEventArtists,
   eventArtists,
   events,
   syncEventArtists,
@@ -160,6 +161,98 @@ describe('syncEventArtists integration', () => {
     ).rejects.toThrow('caller failed after the sync');
 
     expect(await lineupOf(event.id)).toEqual([]);
+  });
+
+  it('never bills canonical_artist as a headliner when the ladder never ruled', async () => {
+    // canonical_artist is often a title: an artist row with that name exists
+    // here, and is still not linked.
+    await seedArtist({ name: 'Zeta' });
+    await seedArtist({ name: 'Opener' });
+    const event = await seedBill({ canonicalHeadliners: null });
+
+    await syncEventArtists(testDb, [event.id]);
+
+    expect(await lineupOf(event.id)).toEqual([
+      { canonicalName: 'opener', role: 'support', position: 0 },
+    ]);
+  });
+
+  it('removes the rows of a show once it is hidden from consumers', async () => {
+    await seedArtist({ name: 'Zeta' });
+    const event = await seedBill();
+    await syncEventArtists(testDb, [event.id]);
+    expect(await lineupOf(event.id)).toHaveLength(1);
+
+    await testDb
+      .update(events)
+      .set({ hiddenFromConsumer: true })
+      .where(eq(events.id, event.id));
+    const result = await syncEventArtists(testDb, [event.id]);
+
+    expect(result).toMatchObject({ deleted: 1, unmatched: 0 });
+    expect(await lineupOf(event.id)).toEqual([]);
+  });
+
+  it('clears every row of the events it is given, and only those', async () => {
+    await seedArtist({ name: 'Zeta' });
+    const cleared = await seedBill();
+    const kept = await seedBill();
+    await syncEventArtists(testDb, [cleared.id, kept.id]);
+
+    expect(await clearEventArtists(testDb, [cleared.id])).toBe(1);
+
+    expect(await lineupOf(cleared.id)).toEqual([]);
+    expect(await lineupOf(kept.id)).toHaveLength(1);
+  });
+
+  // The row lock: a writer that changed the arrays and has not committed yet
+  // makes the sync wait, so the sync projects the committed (new) arrays and
+  // never writes the old lineup back over them.
+  it('waits for a concurrent writer of the arrays and projects what it committed', async () => {
+    await seedArtist({ name: 'Zeta' });
+    await seedArtist({ name: 'Alpha' });
+    await seedArtist({ name: 'Opener' });
+    const event = await seedBill();
+
+    let signalLocked = (): void => {};
+    const locked = new Promise<void>((resolve) => {
+      signalLocked = resolve;
+    });
+    let release = (): void => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const writer = testDb.transaction(async (tx) => {
+      await tx
+        .update(events)
+        .set({
+          headliners: ['Alpha'],
+          canonicalHeadliners: ['alpha'],
+          supportingArtists: [],
+          canonicalSupporting: [],
+        })
+        .where(eq(events.id, event.id));
+      signalLocked();
+      await released;
+    });
+    await locked;
+
+    let syncDone = false;
+    const sync = syncEventArtists(testDb, [event.id]).then((result) => {
+      syncDone = true;
+      return result;
+    });
+    // Long enough for an unlocked sync to have read and written.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(syncDone).toBe(false);
+
+    release();
+    await writer;
+    await sync;
+
+    expect(await lineupOf(event.id)).toEqual([
+      { canonicalName: 'alpha', role: 'headliner', position: 0 },
+    ]);
   });
 
   it('writes nothing on a dry run but counts what it would write', async () => {

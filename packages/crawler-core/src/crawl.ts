@@ -14,7 +14,9 @@ import {
 } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
+  clearEventArtists,
   db,
+  plannedLineup,
   syncEventArtists,
   venues,
   crawlRuns,
@@ -195,23 +197,26 @@ async function hiddenEventKeys(venueId: string): Promise<Set<string>> {
 }
 
 /**
- * Admin 4a-2: rebuild these events' `event_artists` rows. Swallows its own
- * failures on the same reasoning as `projectArtists`: the table is a projection
- * the backfill can always rebuild, and it must never cost a crawl its events.
+ * Admin 4a-2: rebuild `event_artists` for `syncIds` and clear it for
+ * `clearIds`. Swallows its own failures on the same reasoning as
+ * `projectArtists`: the table is a projection the backfill can always rebuild,
+ * and it must never cost a crawl its events.
  */
 async function syncCrawledLineups(
   venueId: string,
-  eventIds: string[],
+  syncIds: string[],
+  clearIds: string[],
 ): Promise<void> {
-  if (eventIds.length === 0) return;
+  if (syncIds.length === 0 && clearIds.length === 0) return;
   try {
-    await syncEventArtists(db, eventIds);
+    if (syncIds.length > 0) await syncEventArtists(db, syncIds);
+    if (clearIds.length > 0) await clearEventArtists(db, clearIds);
   } catch (err) {
     reportFailure({
       event: 'crawl.event_artists_sync_failed',
       severity: 'warn',
       venueId,
-      eventCount: eventIds.length,
+      eventCount: syncIds.length + clearIds.length,
       error: err instanceof Error ? err.message : String(err),
     });
   }
@@ -1475,9 +1480,9 @@ export async function crawlVenue(
     // upsert's RETURNING clause by checking each returned (canonical_artist,
     // date, show_time) key against existingMap. Feeds the Spotify fan-out (#763 §10.1).
     const insertedEventIds: string[] = [];
-    // Admin 4a-2: every row this run wrote or saw, whose `event_artists` rows
-    // are rebuilt once `projectArtists` has created the artists.
-    const lineupEventIds = new Set<string>();
+    // Admin 4a-2: the id of every row this run upserted, by dedup key, so its
+    // `event_artists` rows are rebuilt once `projectArtists` has run.
+    const upsertedIdByKey = new Map<string, string>();
     // Admin 4a: keys of listings routed to a merge target. Their bill names
     // the target's show, whose lineup is the target's own, so it is not
     // projected.
@@ -2001,7 +2006,10 @@ export async function crawlVenue(
         // (onConflictDoNothing per user/event/kind) makes the duplicate
         // fan-out a no-op — no re-alert.
         for (const row of upsertedRows) {
-          lineupEventIds.add(row.id);
+          upsertedIdByKey.set(
+            dedupKey(row.canonicalArtist, row.date, row.showTime),
+            row.id,
+          );
           if (
             !existingMap.has(
               dedupKey(row.canonicalArtist, row.date, row.showTime),
@@ -2055,13 +2063,17 @@ export async function crawlVenue(
           .filter(([, row]) => row.manual || row.lineupEditedAt !== null)
           .map(([key]) => key),
       );
-      await projectArtists(
+      // Shared with the `event_artists` rebuild below: a show this predicate
+      // rejects names no artist, so it projects nothing and links nothing.
+      const isConcertListing = (evt: (typeof eventsWithHashes)[number]) =>
+        evt.isConcert !== false &&
+        !hiddenKeys.has(dedupKey(evt.canonicalArtist, evt.date, evt.showTime));
+      const createdArtists = await projectArtists(
         eventsWithHashes
           .filter((evt) => {
             const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime);
             return (
-              evt.isConcert !== false &&
-              !hiddenKeys.has(key) &&
+              isConcertListing(evt) &&
               !billLockedKeys.has(key) &&
               !mergedListingKeys.has(key)
             );
@@ -2100,20 +2112,36 @@ export async function crawlVenue(
       );
 
       // Admin 4a-2: rebuild `event_artists` from the stored arrays, after
-      // projectArtists so the artists it just created link today. Rows the
-      // venue still lists but this run did not rewrite are included, for the
-      // same reason projectArtists re-offers them: an artist created since
-      // their last write links on the next crawl, not never. A listing routed
-      // to a merge target leaves the target's lineup alone, so it adds
-      // nothing. A locked bill (manual, or `lineup_edited_at`) was not
-      // rewritten by the upsert, so its rebuild reproduces the admin's lineup.
+      // projectArtists so the artists it just created link today. Rebuilt:
+      // every row this run upserted, and an unchanged row whose stored bill
+      // names an artist created just now (so it links today, not never). A
+      // listing routed to a merge target leaves the target's lineup alone. A
+      // locked bill (manual, or `lineup_edited_at`) was not rewritten by the
+      // upsert, so its rebuild reproduces the admin's lineup. A listing that
+      // is not a concert (the predicate projectArtists uses) has its rows
+      // cleared instead, whatever its stored arrays say.
+      const createdNames = new Set(createdArtists);
+      const syncIds: string[] = [];
+      const clearIds: string[] = [];
       for (const evt of eventsWithHashes) {
         const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime);
         if (mergedListingKeys.has(key)) continue;
+        const upsertedId = upsertedIdByKey.get(key);
         const stored = existingMap.get(key);
-        if (stored !== undefined) lineupEventIds.add(stored.id);
+        const id = upsertedId ?? stored?.id;
+        if (id === undefined) continue;
+        if (!isConcertListing(evt)) clearIds.push(id);
+        else if (upsertedId !== undefined) syncIds.push(id);
+        else if (
+          stored !== undefined &&
+          plannedLineup(stored).some((slot) =>
+            createdNames.has(slot.canonicalName),
+          )
+        ) {
+          syncIds.push(id);
+        }
       }
-      await syncCrawledLineups(venueId, [...lineupEventIds]);
+      await syncCrawledLineups(venueId, syncIds, clearIds);
     }
 
     // Stale-event detection (#607) — two-pass update on a successful crawl.
