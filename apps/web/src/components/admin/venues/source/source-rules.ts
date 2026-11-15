@@ -26,7 +26,11 @@ export const SOURCE_COLUMNS = [
   'crawlWaitForSelector',
 ] as const satisfies ReadonlyArray<Exclude<keyof Venue, CrawlRuleColumn>>;
 export type SourceColumn = (typeof SOURCE_COLUMNS)[number];
-export type SourceColumns = Pick<Venue, SourceColumn>;
+/**
+ * The Source columns, plus who set `crawl_mode` (#688): read, never sent. The
+ * API stamps it from the `crawlMode` a save sends.
+ */
+export type SourceColumns = Pick<Venue, SourceColumn | 'crawlModeSource'>;
 
 export const sourceColumnsOf = (venue: SourceColumns): SourceColumns => ({
   websiteUrl: venue.websiteUrl,
@@ -36,9 +40,18 @@ export const sourceColumnsOf = (venue: SourceColumns): SourceColumns => ({
   apiProvider: venue.apiProvider,
   apiAccountId: venue.apiAccountId,
   crawlMode: venue.crawlMode,
+  crawlModeSource: venue.crawlModeSource,
   crawlWaitUntil: venue.crawlWaitUntil,
   crawlWaitForSelector: venue.crawlWaitForSelector,
 });
+
+/**
+ * Whether Page loading is set by hand: a stored mode an admin picked. The
+ * crawler stores its own pick on a venue's first Automatic crawl ('auto'),
+ * and an older row's is unknown (null); both read as Automatic.
+ */
+export const isPageLoadingForced = (columns: SourceColumns): boolean =>
+  columns.crawlMode !== null && columns.crawlModeSource === 'admin';
 
 /**
  * The radios of How we read it. Don't crawl is out of 6b: the crawler does not
@@ -71,8 +84,9 @@ export const READERS: readonly Reader[] = [
 ];
 
 /**
- * Advanced page loading; `auto` is `crawl_mode = null` (`18/source-advanced-d`
- * draws Automatic · Plain fetch · Full browser).
+ * Advanced page loading; `auto` is a null draft `crawlMode` (`18/source-advanced-d`
+ * draws Automatic · Plain fetch · Full browser). A draft holds a mode only
+ * when it is set by hand, saved or not; see `isPageLoadingForced`.
  */
 export type PageLoading = 'auto' | NonNullable<Venue['crawlMode']>;
 export const PAGE_LOADINGS: readonly PageLoading[] = [
@@ -152,7 +166,9 @@ export const draftOf = (columns: SourceColumns): SourceDraft => {
     seller,
     feedId: feedIdOf(columns, seller),
     reader: readerOf(columns),
-    crawlMode: columns.crawlMode,
+    // The crawler's own pick (or an unknown one) reads as Automatic, so
+    // picking that same mode by hand is an edit that saves it as forced.
+    crawlMode: isPageLoadingForced(columns) ? columns.crawlMode : null,
     waitUntil: columns.crawlWaitUntil,
     waitFor: columns.crawlWaitForSelector ?? '',
   };
@@ -201,25 +217,27 @@ export interface AdvancedChip {
 }
 
 /**
- * Advanced, closed (`18/source-forced-d`): an amber chip for a Reader that
- * isn't Automatic, and one for a Wait for selector (🔸 undrawn: the board
- * draws Wait for as never a chip, but a selector is a hand pick, so "All
- * automatic" would be untrue). A feed's or a stored `manual`'s reader is a
- * neutral lock chip (🔸 undrawn). Wait until is never a chip; it has no
- * Automatic.
- *
- * Page loading is never a chip, and never counts as set by hand: the crawler
- * writes `crawl_mode` itself on a venue's first Automatic crawl
- * (crawler-core `crawl.ts`), so a stored value can't be told apart from an
- * admin's pick.
- * ⏸ item 18 follow-up: the Page loading forced chip waits for
- * crawl_mode_source (0123).
+ * Advanced, closed (`18/source-forced-d`): amber chips for a Page loading set
+ * by hand, then a Reader that isn't Automatic, then a Wait for selector
+ * (🔸 undrawn: the board draws Wait for as never a chip, but a selector is a
+ * hand pick, so "All automatic" would be untrue). A feed's or a stored
+ * `manual`'s reader is a neutral lock chip (🔸 undrawn). Wait until is never
+ * a chip; it has no Automatic. A crawl mode the crawler stored itself is a
+ * null draft mode (`draftOf`), so it is never a chip.
  */
 export const closedChipsOf = (
   draft: SourceDraft,
   saved: SourceColumns,
 ): AdvancedChip[] => {
   const chips: AdvancedChip[] = [];
+  if (draft.crawlMode !== null) {
+    chips.push({
+      kind: 'forced',
+      text: COPY.advanced.forced.pageLoading(
+        COPY.advanced.pageLoading[draft.crawlMode],
+      ),
+    });
+  }
   const lock = readerLockOf(draft, saved);
   if (lock !== null) {
     chips.push({
@@ -240,22 +258,26 @@ export const closedChipsOf = (
 };
 
 /**
- * Whether Back to Automatic has anything to clear: a forced Reader only (a
- * lock never counts, Wait for is left alone, and Page loading isn't known to
- * be forced; see `closedChipsOf`).
+ * Whether Back to Automatic has anything to clear: a Page loading set by
+ * hand, or a forced Reader (a lock never counts, and Wait for is left alone).
  */
 export const canGoBackToAutomatic = (draft: SourceDraft): boolean =>
-  draft.mode === 'page' && draft.reader !== 'auto';
+  draft.crawlMode !== null ||
+  (draft.mode === 'page' && draft.reader !== 'auto');
 
 /**
- * Back to Automatic (`18/source-advanced-states`), as a patch: Reader to
- * Automatic, an unsaved edit. On save, a forced JSON-LD, Haiku or Detail
- * pages reader is a null strategy and platform. Page loading stays as
- * stored, never sent (see `closedChipsOf`), as do Wait until and Wait for; a
- * feed's platform and a stored `manual` are locks and stay too.
+ * Back to Automatic (`18/source-advanced-states`), as a patch: Page loading
+ * and Reader to Automatic, an unsaved edit. On save, a Page loading set by
+ * hand is `crawl_mode = null`, and a forced JSON-LD, Haiku or Detail pages
+ * reader is a null strategy and platform. Wait until and Wait for stay
+ * (README); a feed's platform and a stored `manual` are locks and stay too.
  */
-export const backToAutomatic = (draft: SourceDraft): Partial<SourceDraft> =>
-  draft.mode === 'page' ? { reader: 'auto' } : {};
+export const backToAutomatic = (draft: SourceDraft): Partial<SourceDraft> => {
+  const patch: Partial<SourceDraft> = {};
+  if (draft.crawlMode !== null) patch.crawlMode = null;
+  if (draft.mode === 'page' && draft.reader !== 'auto') patch.reader = 'auto';
+  return patch;
+};
 
 const ADVANCED_KEYS = [
   'crawlMode',
@@ -352,12 +374,30 @@ const strategyOf = (
   return reader === 'auto' ? null : reader;
 };
 
+/**
+ * Page loading as the row will hold it: a mode picked by hand is the admin's
+ * (the API stamps 'admin'); Automatic over a forced mode clears it (the API
+ * stamps null); Automatic over the crawler's own pick, or an unknown one,
+ * leaves the row as it is.
+ */
+const pageLoadingColumnsOf = (
+  draft: SourceDraft,
+  saved: SourceColumns,
+): Pick<SourceColumns, 'crawlMode' | 'crawlModeSource'> => {
+  if (draft.crawlMode !== null) {
+    return { crawlMode: draft.crawlMode, crawlModeSource: 'admin' };
+  }
+  return isPageLoadingForced(saved)
+    ? { crawlMode: null, crawlModeSource: null }
+    : { crawlMode: saved.crawlMode, crawlModeSource: saved.crawlModeSource };
+};
+
 export const columnsOf = (
   draft: SourceDraft,
   saved: SourceColumns,
 ): SourceColumns => {
   const advanced = {
-    crawlMode: draft.crawlMode,
+    ...pageLoadingColumnsOf(draft, saved),
     crawlWaitUntil: draft.waitUntil,
     crawlWaitForSelector: draft.waitFor.trim() || null,
   };
@@ -399,6 +439,8 @@ export const pristineColumns = (saved: SourceColumns): SourceColumns =>
  * wants a platform's venue ID in the same body as the platform, and an
  * account ID with its provider. Unchanged browser-gate fields stay out, so an
  * old browser venue with no selector can still change its calendar page.
+ * A change of who set the crawl mode sends `crawlMode`: picking the crawler's
+ * own mode by hand is how it becomes the admin's.
  */
 export const changedColumns = (
   next: SourceColumns,
@@ -407,6 +449,7 @@ export const changedColumns = (
   const changed = new Set(
     SOURCE_COLUMNS.filter((key) => next[key] !== saved[key]),
   );
+  if (next.crawlModeSource !== saved.crawlModeSource) changed.add('crawlMode');
   const pairs: ReadonlyArray<readonly [SourceColumn, SourceColumn]> = [
     ['platform', 'platformVenueId'],
     ['apiProvider', 'apiAccountId'],

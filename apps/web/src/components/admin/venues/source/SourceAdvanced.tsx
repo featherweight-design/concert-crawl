@@ -4,7 +4,7 @@
  * The Source tab's Advanced section (`18/*`): page loading, reader, wait until
  * and wait for. Closed, it says "All automatic", or chips each setting forced
  * by hand (amber, under "Set by hand") and each locked reader (neutral), with
- * Back to Automatic for a forced Reader. Open, desktop draws it as its own card
+ * Back to Automatic for a forced Page loading or Reader. Open, desktop draws it as its own card
  * under the two columns (`SourceAdvancedCard`); the phone stacks the controls
  * in How we read it.
  */
@@ -172,6 +172,8 @@ const AdvancedControls = ({
           disabled={saving}
           onChange={(value) => edit({ crawlMode: crawlModeOf(value) })}
         />
+        {/* A draft holds Plain fetch or Full browser only when set by hand,
+            so their hints say so; the crawler's own pick reads as Automatic. */}
         <div style={advancedHint}>
           {ADVANCED.pageLoading.hints[pageLoadingOf(draft.crawlMode)]}
         </div>

@@ -55,6 +55,7 @@ const browserVenue: SourceVenue = {
   apiProvider: null,
   apiAccountId: null,
   crawlMode: 'browser',
+  crawlModeSource: 'admin',
   crawlWaitUntil: 'networkidle',
   crawlWaitForSelector: null,
   crawlDelayMs: 3000,
