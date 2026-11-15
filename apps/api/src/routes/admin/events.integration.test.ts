@@ -155,7 +155,7 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(422);
-    const reports = await db
+    const reports = await testDb
       .select({ id: eventReports.id })
       .from(eventReports)
       .where(eq(eventReports.eventId, event.id));
