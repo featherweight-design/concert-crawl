@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Release } from '@/lib/definitions/releases';
 import { SpotlightHero } from './SpotlightHero';
-import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
+import { useDialogKeyboard } from '@/components/admin/primitives/useDialogKeyboard';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const COPY = CONSUMER_COPY.releaseNotes;
@@ -23,6 +23,7 @@ export function SpotlightModal({
   const featureName = sp ? COPY.modal.heroFeatureNames.get(sp.hero) : undefined;
   const [step, setStep] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const pressedBackdrop = useRef(true);
   const [heroScale, setHeroScale] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
@@ -34,16 +35,18 @@ export function SpotlightModal({
     if (!sp) return;
     const last = sp.steps.length - 1;
     function handleKeyDown(ev: KeyboardEvent) {
-      if (ev.key === 'Escape') onClose();
       // With the Back and Next buttons gone, the arrows step too.
       if (ev.key === 'ArrowRight') setStep((cur) => Math.min(last, cur + 1));
       if (ev.key === 'ArrowLeft') setStep((cur) => Math.max(0, cur - 1));
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, sp]);
+  }, [sp]);
 
-  useBodyScrollLock(Boolean(sp));
+  // aria-modal claims the page behind is inert: this moves focus in on open,
+  // keeps Tab inside, returns focus to the opener on close, and owns Escape
+  // and the page scroll lock.
+  useDialogKeyboard(dialogRef, onClose, { enabled: Boolean(sp) });
 
   // isMobile tracks viewport width — intentionally separate from heroScale so
   // the dialog layout never feeds back into the ResizeObserver measurement.
@@ -101,6 +104,7 @@ export function SpotlightModal({
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="spotlight-modal-title"

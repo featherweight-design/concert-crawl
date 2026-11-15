@@ -29,6 +29,35 @@ const RELEASE: Release = {
   },
 };
 
+describe('SpotlightModal focus', () => {
+  it('moves focus into the dialog, traps Tab, and returns focus on close', () => {
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+    const { unmount } = render(
+      <SpotlightModal release={RELEASE} onClose={vi.fn()} />,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    // Shift+Tab from the first control wraps to the last, never out.
+    const buttons = Array.from(dialog.querySelectorAll('button')).filter(
+      (el) => !el.disabled,
+    );
+    const first = buttons[0] as HTMLElement;
+    const last = buttons[buttons.length - 1] as HTMLElement;
+    first.focus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+
+    unmount();
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
+});
+
 describe('SpotlightModal', () => {
   it('renders spotlight title and tagline', () => {
     render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
