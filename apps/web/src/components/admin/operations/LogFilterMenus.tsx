@@ -102,12 +102,20 @@ const NOTE: CSSProperties = {
   color: 'var(--fg-subtle)',
 };
 
-const SearchField = ({
+/**
+ * The drawn search box: Anyone's "Find an admin", and "Search the log" left
+ * of the chips (`37/log-day-picker-d`, 240 wide; full width on `37/log-m`).
+ */
+export const SearchField = ({
   value,
   onChange,
+  label,
+  style,
 }: {
   value: string;
   onChange: (value: string) => void;
+  label: string;
+  style?: CSSProperties;
 }) => (
   <label
     style={{
@@ -116,18 +124,19 @@ const SearchField = ({
       gap: 8,
       height: 36,
       padding: '0 12px',
-      marginBottom: 6,
       borderRadius: 10,
       border: '1px solid var(--border)',
       background: 'var(--surface-1)',
+      boxSizing: 'border-box',
+      ...style,
     }}
   >
     <Search size={15} strokeWidth={1.7} color="var(--fg-subtle)" aria-hidden />
     <input
       type="search"
       value={value}
-      placeholder={COPY.findAdmin}
-      aria-label={COPY.findAdmin}
+      placeholder={label}
+      aria-label={label}
       onChange={(evt) => onChange(evt.target.value)}
       style={{
         flex: 1,
@@ -168,7 +177,14 @@ const AnyoneList = ({
   const avatar = isPhone ? 28 : 24;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {searchable && <SearchField value={query} onChange={setQuery} />}
+      {searchable && (
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          label={COPY.findAdmin}
+          style={{ marginBottom: 6 }}
+        />
+      )}
       <Row
         on={actor === null}
         label={COPY.anyone}
@@ -219,6 +235,7 @@ const AnyoneList = ({
                 {COPY.personLine(
                   COPY.changesOn(person.count, isToday),
                   person.you,
+                  person.role === 'sub_admin',
                 )}
               </span>
             )}
