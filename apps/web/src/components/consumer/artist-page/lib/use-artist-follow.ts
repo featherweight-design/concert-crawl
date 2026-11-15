@@ -34,6 +34,18 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
 
+  // The server's answer can change under a mounted hook: the sign-in replay
+  // follows on arrival and then `router.refresh()`es, which re-renders with
+  // `initialFollowing` true while `following` still holds the first render's
+  // false. Adopt a changed prop during render (React's "adjust state when a
+  // prop changes" pattern), but not mid-toggle: the in-flight request settles
+  // on the server's own answer, which is at least as fresh as the prop.
+  const [seenInitial, setSeenInitial] = useState(initialFollowing);
+  if (initialFollowing !== seenInitial) {
+    setSeenInitial(initialFollowing);
+    if (!pending) setFollowing(initialFollowing);
+  }
+
   const toggle = useCallback(() => {
     if (inFlight.current) return;
     inFlight.current = true;

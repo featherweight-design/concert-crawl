@@ -102,9 +102,10 @@ interface ShelfCardProps {
    */
   starter: boolean;
   /**
-   * Clerk has not answered yet. The badge draws at rest and a tap goes to
-   * `onGatedTap`, which ignores it: a follow written before the session
-   * resolves would die on a missing token.
+   * Clerk has not answered yet. The badge draws the gated look (the lock
+   * glyph, the at-rest colours, and the gate description for screen readers)
+   * and a tap goes to `onGatedTap`, which ignores it: a follow written before
+   * the session resolves would die on a missing token.
    */
   resolving: boolean;
   /** No session at all — the badge hands off rather than writing anything. */

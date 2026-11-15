@@ -1,7 +1,12 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { buildReturnUrl, encodeIntent, type Intent } from '@/lib/auth/intent';
+import {
+  buildReturnUrl,
+  encodeIntent,
+  isArtistSlug,
+  type Intent,
+} from '@/lib/auth/intent';
 
 /** What the visitor pressed, so it can be done for them once they are in. */
 export interface PendingAction {
@@ -25,7 +30,12 @@ export const signInReturnPath = (
   action: PendingAction | undefined,
 ): string => {
   if (action?.intent.action !== 'follow') return here;
-  const artistPath = `/artists/${action.intent.artistSlug}`;
+  // The slug becomes a path, so it must be one. A value that is not an
+  // artist slug stays where the visitor was; `ReturnSeamReplay` would reject
+  // its intent anyway.
+  const { artistSlug } = action.intent;
+  if (!isArtistSlug(artistSlug)) return here;
+  const artistPath = `/artists/${artistSlug}`;
   return pathname === artistPath ? here : artistPath;
 };
 
