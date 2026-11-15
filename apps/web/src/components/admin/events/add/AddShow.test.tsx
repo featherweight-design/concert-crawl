@@ -11,6 +11,7 @@ import {
   within,
 } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { fieldDate } from '../edit/event-detail';
 import type { CreateResult, DuplicateShow } from './add-show-api';
 import type { AddShowBody } from './add-show-rules';
 
@@ -189,7 +190,9 @@ describe('AddShow', () => {
     await waitFor(() =>
       expect(push).toHaveBeenCalledWith('/admin/events/new-1/edit'),
     );
-    expect(onClose).toHaveBeenCalled();
+    // Leaves exactly once.
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledWith({
       venueId: MISSION,
       date: TODAY,
@@ -220,7 +223,7 @@ describe('AddShow', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('shows Save failed with Try again when a timed-out save finds no show', async () => {
+  it('says it may have been added when a timed-out save finds no show, with Try again', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
       create.mockResolvedValueOnce({ kind: 'timeout' });
@@ -228,7 +231,8 @@ describe('AddShow', () => {
       await fill();
       fireEvent.click(addShowButton());
       const toast = await screen.findByTestId('save-failed');
-      expect(toast).toHaveTextContent(COPY.saveFailed.body);
+      expect(toast).toHaveTextContent(COPY.saveFailed.maybe);
+      expect(toast).not.toHaveTextContent(COPY.saveFailed.body);
       expect(findCreated).toHaveBeenCalled();
       expect(push).not.toHaveBeenCalled();
       fireEvent.click(
@@ -243,6 +247,147 @@ describe('AddShow', () => {
     } finally {
       vi.mocked(console.error).mockRestore();
     }
+  });
+
+  it('still saves when the before-read fails, and a timeout then says it may have been added', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      manualIdsBefore.mockRejectedValueOnce(new Error('read down'));
+      create.mockResolvedValueOnce({ kind: 'timeout' });
+      renderIt();
+      await fill();
+      fireEvent.click(addShowButton());
+      const toast = await screen.findByTestId('save-failed');
+      expect(create).toHaveBeenCalledTimes(1);
+      // No before-set, so an older twin can't be told apart: no guess.
+      expect(findCreated).not.toHaveBeenCalled();
+      expect(toast).toHaveTextContent(COPY.saveFailed.maybe);
+      expect(
+        within(toast).getByRole('button', {
+          name: ADMIN_COPY.states.saveFailed.tryAgain,
+        }),
+      ).toBeInTheDocument();
+    } finally {
+      vi.mocked(console.error).mockRestore();
+    }
+  });
+
+  it('saves the show when the before-read fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      manualIdsBefore.mockRejectedValueOnce(new Error('read down'));
+      renderIt();
+      await fill();
+      fireEvent.click(addShowButton());
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith('/admin/events/new-1/edit'),
+      );
+    } finally {
+      vi.mocked(console.error).mockRestore();
+    }
+  });
+
+  it('never navigates when the form closes mid-save', async () => {
+    let resolve: (result: CreateResult) => void = () => undefined;
+    create.mockImplementationOnce(
+      () =>
+        new Promise<CreateResult>((done) => {
+          resolve = done;
+        }),
+    );
+    const { unmount } = renderIt();
+    await fill();
+    fireEvent.click(addShowButton());
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    unmount();
+    resolve({ kind: 'created', id: 'late-1' });
+    await new Promise((done) => {
+      setTimeout(done, 0);
+    });
+    expect(push).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('locks the fields, Escape and the scrim while saving, and sends one POST', async () => {
+    let resolve: (result: CreateResult) => void = () => undefined;
+    create.mockImplementationOnce(
+      () =>
+        new Promise<CreateResult>((done) => {
+          resolve = done;
+        }),
+    );
+    renderIt();
+    await fill();
+    fireEvent.click(addShowButton());
+    fireEvent.click(addShowButton());
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(screen.getByLabelText(COPY.titleField)).toBeDisabled();
+    expect(screen.getByLabelText(COPY.ticket)).toBeDisabled();
+    expect(screen.getByLabelText(COPY.venue)).toBeDisabled();
+    expect(screen.getByRole('combobox')).toBeDisabled();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByTestId('side-panel-scrim'));
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(addShowButton());
+    resolve({ kind: 'created', id: 'new-1' });
+    await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(manualIdsBefore).toHaveBeenCalledTimes(1);
+  });
+
+  it('wires Title’s error to aria-invalid and aria-describedby', () => {
+    renderIt();
+    const title = screen.getByLabelText(COPY.titleField);
+    expect(title).not.toHaveAttribute('aria-invalid');
+    expect(title).not.toHaveAttribute('aria-describedby');
+    fireEvent.click(addShowButton());
+    expect(title).toHaveAttribute('aria-invalid', 'true');
+    const describedBy = title.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy ?? '')).toHaveTextContent(
+      COPY.errors.title_required,
+    );
+  });
+
+  it('announces the first error after Add show, politely', () => {
+    renderIt();
+    const announcer = screen.getByTestId('add-show-announcer');
+    expect(announcer).toHaveAttribute('aria-live', 'polite');
+    expect(announcer).toHaveTextContent('');
+    fireEvent.click(addShowButton());
+    expect(announcer).toHaveTextContent(COPY.errors.title_required);
+  });
+
+  it('keeps the warning while the title changes, and clears it on a new date', async () => {
+    duplicates.mockImplementation(async () => [
+      {
+        id: 'crawled-1',
+        title: 'KALEO',
+        showTime: '20:00:00',
+        manual: false,
+        hidden: false,
+      },
+    ]);
+    renderIt();
+    await fill();
+    await screen.findByTestId('duplicate-warning');
+    const calls = duplicates.mock.calls.length;
+    fireEvent.change(screen.getByLabelText(COPY.titleField), {
+      target: { value: 'Kaleo live' },
+    });
+    // Still drawn while the next check is pending.
+    expect(screen.getByTestId('duplicate-warning')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(duplicates.mock.calls.length).toBeGreaterThan(calls),
+    );
+    expect(screen.getByTestId('duplicate-warning')).toBeInTheDocument();
+    // Another night clears it at once.
+    duplicates.mockImplementation(async () => []);
+    fireEvent.click(screen.getByLabelText(COPY.date));
+    fireEvent.click(
+      screen.getByRole('button', { name: fieldDate('2026-11-21', true) }),
+    );
+    expect(screen.queryByTestId('duplicate-warning')).toBeNull();
   });
 
   it('shows a form-level refusal, with no Try again, for a 400 it can’t place', async () => {
@@ -336,6 +481,12 @@ describe('AddShow', () => {
     const warning = await screen.findByTestId('duplicate-warning');
     expect(warning).toHaveTextContent(COPY.duplicate.exact.trim());
     expect(addShowButton()).toBeDisabled();
+    // Focus moves to the existing show's Open it.
+    await waitFor(() =>
+      expect(
+        within(warning).getByRole('button', { name: COPY.duplicate.open }),
+      ).toHaveFocus(),
+    );
     fireEvent.click(
       within(warning).getByRole('button', { name: COPY.duplicate.open }),
     );
@@ -352,6 +503,11 @@ describe('AddShow', () => {
     fireEvent.click(addShowButton());
     expect(await screen.findByText(COPY.errors.date_past)).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
+    // Focus moves to the refused field, and the error is announced.
+    await waitFor(() => expect(screen.getByLabelText(COPY.date)).toHaveFocus());
+    expect(screen.getByTestId('add-show-announcer')).toHaveTextContent(
+      COPY.errors.date_past,
+    );
   });
 
   it('keeps the form on a failed save and tries again', async () => {
