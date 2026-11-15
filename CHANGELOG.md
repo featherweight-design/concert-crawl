@@ -1,3 +1,22 @@
+# [1.506.0](https://github.com/featherweight-design/concert-crawl/compare/v1.505.0...v1.506.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** verify the flags viewer, lock the row for the flag lock, keep state on an outage ([fe6e231](https://github.com/featherweight-design/concert-crawl/commit/fe6e2311d9294b67ee3820dae783498ef077ee6d))
+* **crawler:** let an admin's mid-crawl crawl mode win over the first pick ([be019e0](https://github.com/featherweight-design/concert-crawl/commit/be019e04b2da0310c8544baf37b2acd6399137bd))
+
+
+### Features
+
+* **api:** flags resolve per viewer on the ladder, with the production lock ([44a02f6](https://github.com/featherweight-design/concert-crawl/commit/44a02f60b49a18f551df46ef3eb98db03eb95de0))
+* **db:** record who set a venue's crawl mode ([aded3fe](https://github.com/featherweight-design/concert-crawl/commit/aded3fe64b6ca70cdd1fa5ea794eb427511d217b))
+
+
+### Performance Improvements
+
+* **web:** a signed-in flag read asks per viewer only when the flag is not on for everyone ([5dd3137](https://github.com/featherweight-design/concert-crawl/commit/5dd31371dc3c7299ae9c8d9889b11ce04c9353c3))
+
 # [1.505.0](https://github.com/featherweight-design/concert-crawl/compare/v1.504.1...v1.505.0) (2026-11-15)
 
 
