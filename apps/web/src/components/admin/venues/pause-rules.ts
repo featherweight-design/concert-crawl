@@ -228,6 +228,31 @@ export const canPause = (venue: RecrawlFacts): boolean =>
   deriveVenueStatusChips(venue).crawling === 'crawling';
 
 /**
+ * Whether the nightly crawl would pick a hidden venue up once it's shown,
+ * leaving its pause aside: the crawler's own gates (`apps/crawler` run.ts:
+ * verified, not blocked, not taken down) plus robots.txt, which skips a
+ * disallowed venue. A hidden venue's menu only promises a crawl when this
+ * holds (`A6/22/hidden-venue-menu`).
+ */
+export const crawlsOnceShown = (
+  venue: Pick<
+    Venue,
+    | 'verified'
+    | 'blockedAt'
+    | 'robotsTxtAllowed'
+    | 'removedAt'
+    | 'consecutiveFailures'
+  >,
+): boolean => {
+  const { crawling } = deriveVenueStatusChips({
+    ...venue,
+    active: true,
+    crawlPausedAt: null,
+  });
+  return crawling === 'crawling' && venue.verified && venue.removedAt === null;
+};
+
+/**
  * Why some picked venues are left out of Re-crawl: `paused` when every one of
  * them is paused or auto-paused (the drawn "Resume crawling to re-crawl"),
  * `other` for any other mix, null when none are.
