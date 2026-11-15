@@ -555,10 +555,16 @@ export const findDuplicates = async (
   query: z.infer<typeof duplicateQuerySchema>,
 ): Promise<DuplicateCandidate[]> => {
   const typed = query.title ?? '';
+  // With no title there is no likeliest match, so the sort skips the term:
+  // Postgres refuses a bare constant (`false`) in ORDER BY.
   const likely =
     typed === ''
-      ? sql<boolean>`false`
-      : sql<boolean>`(${events.canonicalTitle} = ${canonicalizeTitle(typed)} OR ${events.canonicalArtist} = ${canonicalizeArtist(typed)})`;
+      ? []
+      : [
+          desc(
+            sql<boolean>`(${events.canonicalTitle} = ${canonicalizeTitle(typed)} OR ${events.canonicalArtist} = ${canonicalizeArtist(typed)})`,
+          ),
+        ];
   return db
     .select({
       id: events.id,
@@ -575,10 +581,6 @@ export const findDuplicates = async (
         ne(events.status, 'cancelled'),
       ),
     )
-    .orderBy(
-      desc(likely),
-      sql`${events.showTime} NULLS LAST`,
-      asc(events.title),
-    )
+    .orderBy(...likely, sql`${events.showTime} NULLS LAST`, asc(events.title))
     .limit(DUPLICATE_LIMIT);
 };
