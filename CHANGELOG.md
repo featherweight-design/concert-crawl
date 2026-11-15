@@ -1,3 +1,10 @@
+# [1.508.0](https://github.com/featherweight-design/concert-crawl/compare/v1.507.0...v1.508.0) (2026-11-15)
+
+
+### Features
+
+* **web:** chip a Page loading set by hand, from crawl_mode_source ([6875be0](https://github.com/featherweight-design/concert-crawl/commit/6875be085825b6d99115e0aa983a9deee5bb0338))
+
 # [1.507.0](https://github.com/featherweight-design/concert-crawl/compare/v1.506.0...v1.507.0) (2026-11-15)
 
 
