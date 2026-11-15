@@ -1,0 +1,43 @@
+{
+  "feature": "Free-app close-out PR 4 part B2 · follow shelf, My shows artists, search and the artist page without the tier picker",
+  "note": "Sweep: ~/Downloads/fwd-handoff/plans/cc-free-app-closeout-sweep-2026-11-15.md (W4, W6). Signed in as the audit fan. Every follow control is the working one: no lock glyph, no picker. Read-only: the sheet never taps Follow.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "events-shelf",
+      "label": "/events: the follow shelf",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "main a[href^=\"/events/\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "my-shows-artists",
+      "label": "My shows ▸ Artists",
+      "steps": [{ "goto": "/following", "settle": 3000 }]
+    },
+    {
+      "id": "search-artists",
+      "label": "Search results with an artist row",
+      "steps": [
+        { "goto": "/search", "settle": 1500 },
+        {
+          "fill": "input[type=\"search\"], input[placeholder^=\"Search\"]",
+          "text": "mike",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "artist-page",
+      "label": "An artist page: Follow in the hero",
+      "steps": [{ "goto": "/artists/mike", "settle": 3500 }]
+    }
+  ]
+}
