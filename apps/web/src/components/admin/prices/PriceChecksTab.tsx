@@ -7,11 +7,10 @@ import { ExternalLink, Tag } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
-  AdminTabs,
   CouldntLoad,
   EmptyState,
   PageSkeleton,
-  useIsPhone,
+  useIsPhoneResolved,
 } from '@/components/admin/primitives';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
@@ -23,6 +22,12 @@ import {
   type ResolvedCheck,
 } from './checks-api';
 import { decidedWhen, filedWhen, shortDay } from './checks-rules';
+import { kindTag, smallLabel, ticketStyle } from './checks-styles';
+import {
+  AnswerPill,
+  PHONE_PAGE,
+  ResolvedChecksPhone,
+} from './ResolvedChecksPhone';
 import { dollars, priceRange } from './submitted-rules';
 
 const COPY = ADMIN_COPY.pricesChecks;
@@ -69,49 +74,6 @@ const useButtonStyle: CSSProperties = {
   color: 'var(--signal)',
   background: 'color-mix(in srgb, var(--signal) 12%, transparent)',
   border: '1px solid color-mix(in srgb, var(--signal) 30%, transparent)',
-};
-
-/** The phone card's kind label (`06/price-checks-mobile`). */
-const kindTag: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  flex: 'none',
-  height: 18,
-  padding: '0 7px',
-  borderRadius: 5,
-  fontFamily: "'JetBrains Mono', monospace",
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: '0.12em',
-  lineHeight: 1,
-  textTransform: 'uppercase',
-  color: 'var(--accent)',
-  border: '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
-};
-
-/** Ticket page: outline, with its icon on both widths. */
-const ticketStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 6,
-  padding: '0 12px',
-  borderRadius: 9,
-  fontWeight: 600,
-  whiteSpace: 'nowrap',
-  color: 'var(--fg)',
-  background: 'var(--surface-2)',
-  border: '1px solid var(--border-strong)',
-  textDecoration: 'none',
-};
-
-const smallLabel: CSSProperties = {
-  fontFamily: "'JetBrains Mono', monospace",
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
-  color: 'var(--fg-subtle)',
 };
 
 const fan = (side: CheckSide): string =>
@@ -199,7 +161,9 @@ const Side = ({
  */
 export const PriceChecksTab = () => {
   const { getToken } = useAuth();
-  const isPhone = useIsPhone();
+  // Null until read, so the first fetch asks for the right page size.
+  const phoneResolved = useIsPhoneResolved();
+  const isPhone = phoneResolved === true;
   const api = useMemo(() => checksApi(getToken), [getToken]);
 
   const [view, setView] = useState<View>('open');
@@ -213,6 +177,8 @@ export const PriceChecksTab = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
 
+  // The phone takes five at a time (`23/checks-resolved-m`).
+  const resolvedPageSize = isPhone ? PHONE_PAGE : PAGE;
   const latest = useRef(0);
   const everLoaded = useRef(false);
   const load = useCallback(async () => {
@@ -220,7 +186,7 @@ export const PriceChecksTab = () => {
     try {
       const [openPage, resolvedPage] = await Promise.all([
         api.open(0, OPEN_PAGE),
-        api.resolved(0, PAGE),
+        api.resolved(0, resolvedPageSize),
       ]);
       if (mine !== latest.current) return;
       setOpen(openPage.items);
@@ -235,11 +201,11 @@ export const PriceChecksTab = () => {
       // answer was saved, and a "Couldn't load" page would hide that.
       if (mine === latest.current && !everLoaded.current) setFailed(true);
     }
-  }, [api]);
+  }, [api, resolvedPageSize]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (phoneResolved !== null) void load();
+  }, [load, phoneResolved]);
 
   const decide = async (check: OpenCheck, answer: 'use' | 'keep') => {
     setBusyIds((current) => new Set(current).add(check.contestId));
@@ -276,7 +242,7 @@ export const PriceChecksTab = () => {
     const mine = latest.current;
     setMore('loading');
     try {
-      const page = await api.resolved(resolved.length, PAGE);
+      const page = await api.resolved(resolved.length, resolvedPageSize);
       if (mine !== latest.current) {
         setMore('idle');
         return;
@@ -302,68 +268,39 @@ export const PriceChecksTab = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* The phone's Open / Resolved segment (A3 4d #20); desktop keeps the
-          drawn pills. */}
-      {isPhone && (
-        <AdminTabs
-          tabs={(['open', 'resolved'] as const).map((key) => ({
-            key,
-            label: (
-              <>
-                {COPY.views[key]}{' '}
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--fg-subtle)',
-                    marginLeft: 2,
-                  }}
-                >
-                  {key === 'open' ? openTotal : resolvedTotal}
-                </span>
-              </>
-            ),
-          }))}
-          value={view}
-          onChange={(key) => setView(key === 'resolved' ? 'resolved' : 'open')}
-          label={COPY.viewsLabel}
-          tabId={(key) => `price-checks-view-${key}`}
-          panelId={() => 'price-checks-view'}
-          variant="segments"
-          phone
-          testId="price-checks-views"
-        />
-      )}
-      {!isPhone && (
-        <div
-          role="group"
-          aria-label={COPY.viewsLabel}
-          style={{ display: 'flex', gap: 8 }}
-        >
-          {(['open', 'resolved'] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={view === key}
-              onClick={() => setView(key)}
-              style={pillStyle(view === key)}
-            >
-              {COPY.views[key]}{' '}
-              <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
-                {key === 'open' ? openTotal : resolvedTotal}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
+      {/* Open / Resolved pills on both widths (`23/checks-resolved-m` draws
+          the desktop's on the phone, the chosen count a step brighter). */}
       <div
-        {...(isPhone && {
-          id: 'price-checks-view',
-          role: 'tabpanel',
-          'aria-labelledby': `price-checks-view-${view}`,
-        })}
-        style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+        role="group"
+        aria-label={COPY.viewsLabel}
+        data-testid="price-checks-views"
+        style={{ display: 'flex', gap: 8 }}
       >
+        {(['open', 'resolved'] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={view === key}
+            onClick={() => setView(key)}
+            style={pillStyle(view === key)}
+          >
+            {COPY.views[key]}{' '}
+            <span
+              style={{
+                fontSize: 11.5,
+                color:
+                  isPhone && view === key
+                    ? 'var(--fg-muted)'
+                    : 'var(--fg-subtle)',
+              }}
+            >
+              {key === 'open' ? openTotal : resolvedTotal}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {showing === 'open' ? (
           open.length === 0 ? (
             <EmptyState
@@ -611,6 +548,13 @@ export const PriceChecksTab = () => {
             title={COPY.resolved.empty.title}
             body={COPY.resolved.empty.body}
           />
+        ) : isPhone ? (
+          <ResolvedChecksPhone
+            rows={resolved}
+            total={resolvedTotal}
+            more={more}
+            onLoadMore={() => void loadMoreResolved()}
+          />
         ) : (
           <div
             style={{
@@ -677,31 +621,10 @@ export const PriceChecksTab = () => {
                     </div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        height: 22,
-                        padding: '0 9px',
-                        borderRadius: 999,
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        color:
-                          row.answer === 'used'
-                            ? 'var(--success)'
-                            : 'var(--fg-muted)',
-                        background: `color-mix(in srgb, ${row.answer === 'used' ? 'var(--success)' : 'var(--fg-subtle)'} 14%, transparent)`,
-                        border: `1px solid color-mix(in srgb, ${row.answer === 'used' ? 'var(--success)' : 'var(--fg-subtle)'} 32%, transparent)`,
-                      }}
-                    >
-                      {row.answer === 'used'
-                        ? COPY.resolved.used(
-                            row.price === null ? '' : dollars(row.price),
-                          )
-                        : COPY.resolved.kept(
-                            row.price === null ? '' : dollars(row.price),
-                          )}
-                    </span>
+                    <AnswerPill
+                      answer={row.answer}
+                      price={row.price === null ? '' : dollars(row.price)}
+                    />
                   </div>
                   <div
                     data-testid="resolved-decided-by"

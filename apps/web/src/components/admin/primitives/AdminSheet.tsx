@@ -30,6 +30,11 @@ export interface AdminSheetProps {
   backLabel?: string;
   /** Full screen without `backLabel` only: a ⋯ menu beside the close button. */
   menu?: ReactNode;
+  /**
+   * Bottom sheet only: a row above the title with a close button at its end
+   * (`23/checks-resolved-detail-m` draws the kind label and answer there).
+   */
+  eyebrow?: ReactNode;
 }
 
 /**
@@ -49,6 +54,7 @@ export const AdminSheet = ({
   footerReversed = false,
   backLabel,
   menu,
+  eyebrow,
 }: AdminSheetProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -149,6 +155,29 @@ export const AdminSheet = ({
               flex: 'none',
             }}
           />
+        )}
+        {!fullScreen && eyebrow && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {eyebrow}
+            <span style={{ flex: 1 }} />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={ADMIN_COPY.panel.close}
+              style={{
+                display: 'flex',
+                // A bigger tap target than the drawn 16px glyph, same place.
+                padding: 8,
+                margin: -8,
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--fg-muted)',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={16} strokeWidth={1.5} aria-hidden />
+            </button>
+          </div>
         )}
         <div>
           <h2

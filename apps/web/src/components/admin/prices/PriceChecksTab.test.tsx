@@ -43,17 +43,45 @@ const OPEN: OpenCheck = {
 
 const RESOLVED: ResolvedCheck = {
   id: 'r-1',
+  eventId: 'e-9',
   title: 'Ninth Key',
   venueName: 'Gothic Theatre',
-  date: '2026-11-20',
+  date: '2026-11-12',
+  ticketUrl: 'https://tickets.example/ninth',
   answer: 'used',
   price: '45.00',
   decidedBy: 'hugh',
+  decidedByAvatar: { color: 'warning', secondColor: 'success' },
   decidedAt: '2026-11-11T16:40:00.000Z',
+  note: 'Ticketmaster page shows $45 GA with fees.',
+  parent: {
+    priceMin: '65.00',
+    priceMax: '495.00',
+    handle: 'kmusic',
+    confirmed: 2,
+    note: null,
+  },
+  challenger: {
+    priceMin: '45.00',
+    priceMax: null,
+    handle: 'theo.wav',
+    confirmed: 1,
+    note: 'fees in',
+  },
+  told: ['parent', 'challenger'],
+  snapshot: true,
 };
 
 const open = vi.fn(async () => ({ items: [OPEN], total: 1 }));
-const resolved = vi.fn(async () => ({ items: [RESOLVED], total: 17 }));
+const resolved = vi.fn(
+  async (
+    _offset: number,
+    _limit: number,
+  ): Promise<{ items: ResolvedCheck[]; total: number }> => ({
+    items: [RESOLVED],
+    total: 17,
+  }),
+);
 vi.mock('./checks-api', () => ({
   checksApi: () => ({ open, resolved, resolve: vi.fn() }),
 }));
@@ -85,6 +113,24 @@ describe('PriceChecksTab on desktop', () => {
     expect(column.style.flexDirection).toBe('column');
     expect(ticket.style.height).toBe('32px');
   });
+
+  it('keeps the Resolved table, its deciding handle wrapping in its column', async () => {
+    render(<PriceChecksTab />);
+    const chips = await screen.findByTestId('price-checks-views');
+    fireEvent.click(
+      within(chips).getByRole('button', { name: `${COPY.views.resolved} 17` }),
+    );
+    const decided = await screen.findByTestId('resolved-decided-by');
+    expect(decided.style.minWidth).toBe('0px');
+    expect(decided.style.overflowWrap).toBe('anywhere');
+    expect(resolved).toHaveBeenLastCalledWith(0, 50);
+    // Desktop rows open nothing.
+    expect(
+      within(
+        screen.getByRole('list', { name: COPY.resolvedLabel }),
+      ).queryByRole('button'),
+    ).toBeNull();
+  });
 });
 
 describe('PriceChecksTab on the phone', () => {
@@ -103,35 +149,6 @@ describe('PriceChecksTab on the phone', () => {
     });
   });
 
-  it('has an Open / Resolved segment that shows the resolved list', async () => {
-    setPhone(true);
-    render(<PriceChecksTab />);
-    const tabs = await screen.findByTestId('price-checks-views');
-    // Named with a space before the count, not "Resolved17".
-    const tab = within(tabs).getByRole('tab', {
-      name: `${COPY.views.resolved} 17`,
-    });
-    fireEvent.click(tab);
-    expect(await screen.findByText('Ninth Key')).toBeInTheDocument();
-    expect(screen.queryByText(/Vince Staples/)).toBeNull();
-    expect(screen.getByRole('tabpanel')).toHaveAttribute(
-      'aria-labelledby',
-      tab.id,
-    );
-  });
-
-  it('wraps a long deciding handle inside its column', async () => {
-    setPhone(true);
-    render(<PriceChecksTab />);
-    const tabs = await screen.findByTestId('price-checks-views');
-    fireEvent.click(
-      within(tabs).getByRole('tab', { name: `${COPY.views.resolved} 17` }),
-    );
-    const decided = await screen.findByTestId('resolved-decided-by');
-    expect(decided.style.minWidth).toBe('0px');
-    expect(decided.style.overflowWrap).toBe('anywhere');
-  });
-
   it('puts Use before Keep, as ruled (A3 4d #20)', async () => {
     setPhone(true);
     render(<PriceChecksTab />);
@@ -142,5 +159,176 @@ describe('PriceChecksTab on the phone', () => {
     expect(buttons.findIndex((text) => text.startsWith('Use'))).toBeLessThan(
       buttons.findIndex((text) => text.startsWith('Keep')),
     );
+  });
+
+  it('has Open / Resolved chips that switch views', async () => {
+    setPhone(true);
+    render(<PriceChecksTab />);
+    const chips = await screen.findByTestId('price-checks-views');
+    // Named with a space before the count, not "Resolved17".
+    const resolvedChip = within(chips).getByRole('button', {
+      name: `${COPY.views.resolved} 17`,
+    });
+    expect(within(chips).queryByRole('tab')).toBeNull();
+    fireEvent.click(resolvedChip);
+    expect(resolvedChip).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByText('Ninth Key')).toBeInTheDocument();
+    expect(screen.queryByText(/Vince Staples/)).toBeNull();
+    fireEvent.click(
+      within(chips).getByRole('button', { name: `${COPY.views.open} 1` }),
+    );
+    expect(await screen.findByText(/Vince Staples ·/)).toBeInTheDocument();
+  });
+
+  it('asks for five resolved checks at a time', async () => {
+    setPhone(true);
+    render(<PriceChecksTab />);
+    await screen.findByTestId('price-checks-views');
+    expect(resolved).toHaveBeenLastCalledWith(0, 5);
+  });
+});
+
+const openResolved = async () => {
+  setPhone(true);
+  render(<PriceChecksTab />);
+  const chips = await screen.findByTestId('price-checks-views');
+  fireEvent.click(
+    within(chips).getByRole('button', { name: `${COPY.views.resolved} 17` }),
+  );
+  return screen.findByRole('list', { name: COPY.resolvedLabel });
+};
+
+const SHEET = COPY.resolved.sheet;
+
+describe('PriceChecksTab › Resolved on the phone', () => {
+  afterEach(() => {
+    resolved.mockClear();
+    resolved.mockImplementation(async () => ({ items: [RESOLVED], total: 17 }));
+  });
+
+  it('draws title, venue · date, @handle · decided day and the answer', async () => {
+    const list = await openResolved();
+    const row = within(list).getByRole('button');
+    expect(within(row).getByText('Ninth Key')).toBeInTheDocument();
+    expect(
+      within(row).getByText('Gothic Theatre · Nov 12'),
+    ).toBeInTheDocument();
+    expect(within(row).getByText('@hugh · Nov 11')).toBeInTheDocument();
+    expect(within(row).getByTestId('person-avatar')).toHaveAttribute(
+      'data-avatar-first',
+      'warning',
+    );
+    expect(within(row).getByTestId('resolved-answer')).toHaveTextContent(
+      'Used $45+',
+    );
+  });
+
+  it('opens a read-only sheet with both prices, Decided, Told, Note and the links', async () => {
+    const list = await openResolved();
+    fireEvent.click(within(list).getByRole('button'));
+    const sheet = screen.getByRole('dialog', { name: 'Ninth Key' });
+    const scope = within(sheet);
+    expect(scope.getByText('Gothic Theatre · Thu Nov 12')).toBeInTheDocument();
+    const other = scope.getByTestId('resolved-side-other');
+    expect(within(other).getByText(SHEET.wasListed)).toBeInTheDocument();
+    expect(within(other).getByText('$65–$495')).toHaveStyle({
+      textDecoration: 'line-through',
+    });
+    expect(
+      within(other).getByText('@kmusic · 2 confirmed'),
+    ).toBeInTheDocument();
+    const chosen = scope.getByTestId('resolved-side-chosen');
+    expect(within(chosen).getByText(SHEET.used)).toBeInTheDocument();
+    expect(within(chosen).getByText('$45+')).toBeInTheDocument();
+    expect(
+      within(chosen).getByText('@theo.wav · “fees in”'),
+    ).toBeInTheDocument();
+    expect(scope.getByText(SHEET.decided)).toBeInTheDocument();
+    expect(scope.getByText(/^@hugh · Nov 11, \d/)).toBeInTheDocument();
+    expect(scope.getByText(SHEET.toldBoth)).toBeInTheDocument();
+    expect(scope.getByText(RESOLVED.note ?? '')).toBeInTheDocument();
+    expect(scope.getByRole('link', { name: SHEET.openShow })).toHaveAttribute(
+      'href',
+      '/admin/events/e-9/edit',
+    );
+    expect(
+      scope.getByRole('link', {
+        name: ADMIN_COPY.pricesPage.add.openTicketPage,
+      }),
+    ).toHaveAttribute('href', 'https://tickets.example/ninth');
+    expect(scope.getByText(SHEET.readOnly)).toBeInTheDocument();
+    expect(scope.queryByRole('button', { name: /^(Use|Keep)/ })).toBeNull();
+    fireEvent.click(
+      scope.getByRole('button', { name: ADMIN_COPY.panel.close }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('outlines the kept listing and strikes the fan’s price on Kept', async () => {
+    resolved.mockImplementation(async () => ({
+      items: [{ ...RESOLVED, answer: 'kept', price: '65.00' }],
+      total: 1,
+    }));
+    const list = await openResolved();
+    fireEvent.click(within(list).getByRole('button'));
+    const sheet = screen.getByRole('dialog');
+    const chosen = within(sheet).getByTestId('resolved-side-chosen');
+    expect(within(chosen).getByText(SHEET.kept)).toBeInTheDocument();
+    expect(within(chosen).getByText('$65–$495')).toBeInTheDocument();
+    const other = within(sheet).getByTestId('resolved-side-other');
+    expect(within(other).getByText(COPY.priceCheck)).toBeInTheDocument();
+    expect(within(other).getByText('$45+')).toHaveStyle({
+      textDecoration: 'line-through',
+    });
+  });
+
+  it('omits Told when unknown, and the links it has nothing for', async () => {
+    resolved.mockImplementation(async () => ({
+      items: [{ ...RESOLVED, told: null, ticketUrl: null, eventId: null }],
+      total: 1,
+    }));
+    const list = await openResolved();
+    fireEvent.click(within(list).getByRole('button'));
+    const scope = within(screen.getByRole('dialog'));
+    expect(scope.queryByText(SHEET.told)).toBeNull();
+    expect(scope.queryByRole('link', { name: SHEET.openShow })).toBeNull();
+    expect(
+      scope.queryByRole('link', {
+        name: ADMIN_COPY.pricesPage.add.openTicketPage,
+      }),
+    ).toBeNull();
+    expect(scope.getByText(SHEET.readOnly)).toBeInTheDocument();
+  });
+
+  it('says who was told when only one side was', async () => {
+    resolved.mockImplementation(async () => ({
+      items: [{ ...RESOLVED, told: ['challenger'] }],
+      total: 1,
+    }));
+    const list = await openResolved();
+    fireEvent.click(within(list).getByRole('button'));
+    expect(
+      within(screen.getByRole('dialog')).getByText(SHEET.toldOne('@theo.wav')),
+    ).toBeInTheDocument();
+  });
+
+  it('loads the next five from where the list ends', async () => {
+    const five = Array.from({ length: 5 }, (_, i) => ({
+      ...RESOLVED,
+      id: `r-${i}`,
+    }));
+    resolved.mockImplementation(async (offset: number) => ({
+      items: offset === 0 ? five : [{ ...RESOLVED, id: 'r-next' }],
+      total: 17,
+    }));
+    await openResolved();
+    expect(screen.getByText(COPY.resolved.showing(5, 17))).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.resolved.loadMore }),
+    );
+    expect(
+      await screen.findByText(COPY.resolved.showing(6, 17)),
+    ).toBeInTheDocument();
+    expect(resolved).toHaveBeenLastCalledWith(5, 5);
   });
 });

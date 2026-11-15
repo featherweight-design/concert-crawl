@@ -1,0 +1,655 @@
+{
+  "feature": "Admin Prices · Price checks › Resolved on the phone (P47 item 23b)",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/23-checks-resolved-phone/checks-resolved-m (list) and checks-resolved-detail-m (sheet). CONTACT_SHEET_ROLE=admin. Every row answers the two Price checks reads (`route`) with the boards' own rows: scratch data has few resolved checks carrying the PR #639 fields. Phone: Open / Resolved pills, five resolved rows (title, venue · date, PersonAvatar @handle · day, the answer pill, a chevron), Showing 5 of 17 · Load more; a row opens the read-only sheet. Row 2 (Kept) is undrawn as a sheet: the KEPT card outlined, the fan's price struck. Desktop keeps its Resolved table; its rows open nothing.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "resolved-list",
+      "label": "Phone: Checks › Resolved, five rows, Showing 5 of 17 · Load more (`23/checks-resolved-m`)",
+      "widths": ["phone-320", "phone"],
+      "steps": [
+        {
+          "route": "**/v1/admin/contests/prices?**",
+          "body": {
+            "success": true,
+            "data": {
+              "items": [
+                {
+                  "contestId": "00000000-0000-4000-8000-0000000000c1",
+                  "eventId": "00000000-0000-4000-8000-0000000000e1",
+                  "eventTitle": "Vince Staples",
+                  "venueName": "Fillmore Auditorium",
+                  "eventDate": "2026-11-21",
+                  "ticketUrl": "https://tickets.example/vince",
+                  "watching": 44,
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-0000000000b1",
+                    "priceMin": "50.00",
+                    "priceMax": "450.00",
+                    "observedAt": "2026-11-01T18:00:00.000Z",
+                    "submitter": { "userId": "user_dlo", "handle": "dlo" }
+                  },
+                  "counter": {
+                    "id": "00000000-0000-4000-8000-0000000000b2",
+                    "priceMin": "180.00",
+                    "priceMax": null,
+                    "observedAt": "2026-11-12T18:00:00.000Z",
+                    "submitter": { "userId": "user_theo", "handle": "theo.wav" }
+                  }
+                },
+                {
+                  "contestId": "00000000-0000-4000-8000-0000000000c2",
+                  "eventId": "00000000-0000-4000-8000-0000000000e2",
+                  "eventTitle": "Japanese Breakfast",
+                  "venueName": "Ogden Theatre",
+                  "eventDate": "2026-11-28",
+                  "ticketUrl": null,
+                  "watching": 12,
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-0000000000b3",
+                    "priceMin": "38.00",
+                    "priceMax": null,
+                    "observedAt": "2026-11-03T18:00:00.000Z",
+                    "submitter": { "userId": "user_mira", "handle": "mira.k" }
+                  },
+                  "counter": {
+                    "id": "00000000-0000-4000-8000-0000000000b4",
+                    "priceMin": "45.00",
+                    "priceMax": "55.00",
+                    "observedAt": "2026-11-13T18:00:00.000Z",
+                    "submitter": { "userId": "user_kofi", "handle": "kofi.s" }
+                  }
+                }
+              ],
+              "total": 2,
+              "limit": 100,
+              "offset": 0
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/contests/prices/resolved**",
+          "body": {
+            "success": true,
+            "data": {
+              "items": [
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a1",
+                  "contestId": "00000000-0000-4000-8000-0000000000d1",
+                  "eventId": "00000000-0000-4000-8000-0000000000f1",
+                  "eventTitle": "Clipse & J.I.D",
+                  "eventDate": "2026-11-12",
+                  "venueName": "Red Rocks",
+                  "resolution": "challenger_wins",
+                  "answer": "used",
+                  "price": "45.00",
+                  "decidedBy": "hugh",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-11T16:40:00.000Z",
+                  "ticketUrl": "https://tickets.example/clipse",
+                  "note": "Ticketmaster page shows $45 GA with fees.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000011",
+                    "priceMin": "65.00",
+                    "priceMax": "495.00",
+                    "submittedBy": "kmusic",
+                    "corroborationCount": 2,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000012",
+                    "priceMin": "45.00",
+                    "priceMax": null,
+                    "submittedBy": "theo.wav",
+                    "corroborationCount": 1,
+                    "note": "fees in"
+                  },
+                  "told": ["parent", "challenger"],
+                  "snapshot": true
+                },
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a2",
+                  "contestId": "00000000-0000-4000-8000-0000000000d2",
+                  "eventId": "00000000-0000-4000-8000-0000000000f2",
+                  "eventTitle": "Vince Staples",
+                  "eventDate": "2026-11-11",
+                  "venueName": "Fillmore",
+                  "resolution": "parent_wins",
+                  "answer": "kept",
+                  "price": "50.00",
+                  "decidedBy": "jules",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-09T18:15:00.000Z",
+                  "ticketUrl": "https://tickets.example/vince",
+                  "note": "Box office confirms $50.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000013",
+                    "priceMin": "50.00",
+                    "priceMax": null,
+                    "submittedBy": "dlo",
+                    "corroborationCount": 3,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000014",
+                    "priceMin": "39.00",
+                    "priceMax": null,
+                    "submittedBy": "mira.k",
+                    "corroborationCount": 1,
+                    "note": "presale"
+                  },
+                  "told": ["parent", "challenger"],
+                  "snapshot": true
+                },
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a3",
+                  "contestId": "00000000-0000-4000-8000-0000000000d3",
+                  "eventId": "00000000-0000-4000-8000-0000000000f3",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2027-04-29",
+                  "venueName": "Mission Ballroom",
+                  "resolution": "challenger_wins",
+                  "answer": "used",
+                  "price": "68.00",
+                  "decidedBy": "hugh",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-08T17:00:00.000Z",
+                  "ticketUrl": "https://tickets.example/fkj",
+                  "note": null,
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000015",
+                    "priceMin": "55.00",
+                    "priceMax": null,
+                    "submittedBy": "kofi.s",
+                    "corroborationCount": 1,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000016",
+                    "priceMin": "68.00",
+                    "priceMax": "75.00",
+                    "submittedBy": "ana.b",
+                    "corroborationCount": 2,
+                    "note": null
+                  },
+                  "told": ["challenger"],
+                  "snapshot": true
+                },
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a4",
+                  "contestId": "00000000-0000-4000-8000-0000000000d4",
+                  "eventId": "00000000-0000-4000-8000-0000000000f4",
+                  "eventTitle": "Marian Hill",
+                  "eventDate": "2027-02-22",
+                  "venueName": "Bluebird",
+                  "resolution": "parent_wins",
+                  "answer": "kept",
+                  "price": "44.00",
+                  "decidedBy": "hugh",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-02T20:30:00.000Z",
+                  "ticketUrl": null,
+                  "note": "Fan saw the resale listing.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000017",
+                    "priceMin": "44.00",
+                    "priceMax": null,
+                    "submittedBy": "mira.k",
+                    "corroborationCount": 2,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000018",
+                    "priceMin": "120.00",
+                    "priceMax": null,
+                    "submittedBy": null,
+                    "corroborationCount": null,
+                    "note": null
+                  },
+                  "told": null,
+                  "snapshot": false
+                },
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a5",
+                  "contestId": "00000000-0000-4000-8000-0000000000d5",
+                  "eventId": null,
+                  "eventTitle": "Ninth Key",
+                  "eventDate": "2026-11-20",
+                  "venueName": "Gothic Theatre",
+                  "resolution": "challenger_wins",
+                  "answer": "used",
+                  "price": "35.00",
+                  "decidedBy": "jules",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-10-30T16:00:00.000Z",
+                  "ticketUrl": "https://tickets.example/ninth",
+                  "note": "Two tiers on AXS.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000019",
+                    "priceMin": "35.00",
+                    "priceMax": null,
+                    "submittedBy": "dlo",
+                    "corroborationCount": 1,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-00000000001a",
+                    "priceMin": "35.00",
+                    "priceMax": "65.00",
+                    "submittedBy": "theo.wav",
+                    "corroborationCount": 1,
+                    "note": null
+                  },
+                  "told": [],
+                  "snapshot": true
+                }
+              ],
+              "total": 17,
+              "limit": 5,
+              "offset": 0
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=checks",
+          "wait": "[data-testid=\"price-checks-views\"]"
+        },
+        {
+          "click": "[data-testid=\"price-checks-views\"] button:has-text(\"Resolved\")"
+        },
+        { "wait": "[aria-label=\"Resolved Price checks\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "sheet-used",
+      "label": "Phone: the read-only sheet, Used $45+ (`23/checks-resolved-detail-m`)",
+      "widths": ["phone-320", "phone"],
+      "steps": [
+        {
+          "route": "**/v1/admin/contests/prices?**",
+          "body": {
+            "success": true,
+            "data": { "items": [], "total": 2, "limit": 100, "offset": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/contests/prices/resolved**",
+          "body": {
+            "success": true,
+            "data": {
+              "items": [
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a1",
+                  "contestId": "00000000-0000-4000-8000-0000000000d1",
+                  "eventId": "00000000-0000-4000-8000-0000000000f1",
+                  "eventTitle": "Clipse & J.I.D",
+                  "eventDate": "2026-11-12",
+                  "venueName": "Red Rocks",
+                  "resolution": "challenger_wins",
+                  "answer": "used",
+                  "price": "45.00",
+                  "decidedBy": "hugh",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-11T16:40:00.000Z",
+                  "ticketUrl": "https://tickets.example/clipse",
+                  "note": "Ticketmaster page shows $45 GA with fees.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000011",
+                    "priceMin": "65.00",
+                    "priceMax": "495.00",
+                    "submittedBy": "kmusic",
+                    "corroborationCount": 2,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000012",
+                    "priceMin": "45.00",
+                    "priceMax": null,
+                    "submittedBy": "theo.wav",
+                    "corroborationCount": 1,
+                    "note": "fees in"
+                  },
+                  "told": ["parent", "challenger"],
+                  "snapshot": true
+                },
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a2",
+                  "contestId": "00000000-0000-4000-8000-0000000000d2",
+                  "eventId": "00000000-0000-4000-8000-0000000000f2",
+                  "eventTitle": "Vince Staples",
+                  "eventDate": "2026-11-11",
+                  "venueName": "Fillmore",
+                  "resolution": "parent_wins",
+                  "answer": "kept",
+                  "price": "50.00",
+                  "decidedBy": "jules",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-09T18:15:00.000Z",
+                  "ticketUrl": "https://tickets.example/vince",
+                  "note": "Box office confirms $50.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000013",
+                    "priceMin": "50.00",
+                    "priceMax": null,
+                    "submittedBy": "dlo",
+                    "corroborationCount": 3,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000014",
+                    "priceMin": "39.00",
+                    "priceMax": null,
+                    "submittedBy": "mira.k",
+                    "corroborationCount": 1,
+                    "note": "presale"
+                  },
+                  "told": ["parent", "challenger"],
+                  "snapshot": true
+                },
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a3",
+                  "contestId": "00000000-0000-4000-8000-0000000000d3",
+                  "eventId": "00000000-0000-4000-8000-0000000000f3",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2027-04-29",
+                  "venueName": "Mission Ballroom",
+                  "resolution": "challenger_wins",
+                  "answer": "used",
+                  "price": "68.00",
+                  "decidedBy": "hugh",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-08T17:00:00.000Z",
+                  "ticketUrl": "https://tickets.example/fkj",
+                  "note": null,
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000015",
+                    "priceMin": "55.00",
+                    "priceMax": null,
+                    "submittedBy": "kofi.s",
+                    "corroborationCount": 1,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000016",
+                    "priceMin": "68.00",
+                    "priceMax": "75.00",
+                    "submittedBy": "ana.b",
+                    "corroborationCount": 2,
+                    "note": null
+                  },
+                  "told": ["challenger"],
+                  "snapshot": true
+                }
+              ],
+              "total": 17,
+              "limit": 5,
+              "offset": 0
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=checks",
+          "wait": "[data-testid=\"price-checks-views\"]"
+        },
+        {
+          "click": "[data-testid=\"price-checks-views\"] button:has-text(\"Resolved\")"
+        },
+        { "wait": "[aria-label=\"Resolved Price checks\"]" },
+        {
+          "click": "[aria-label=\"Resolved Price checks\"] li:nth-child(1) button"
+        },
+        { "wait": "[data-testid=\"admin-sheet\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "sheet-kept",
+      "label": "Phone: the read-only sheet, Kept $50 (undrawn: KEPT outlined, the fan's price struck)",
+      "widths": ["phone-320", "phone"],
+      "steps": [
+        {
+          "route": "**/v1/admin/contests/prices?**",
+          "body": {
+            "success": true,
+            "data": { "items": [], "total": 2, "limit": 100, "offset": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/contests/prices/resolved**",
+          "body": {
+            "success": true,
+            "data": {
+              "items": [
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a1",
+                  "contestId": "00000000-0000-4000-8000-0000000000d1",
+                  "eventId": "00000000-0000-4000-8000-0000000000f1",
+                  "eventTitle": "Clipse & J.I.D",
+                  "eventDate": "2026-11-12",
+                  "venueName": "Red Rocks",
+                  "resolution": "challenger_wins",
+                  "answer": "used",
+                  "price": "45.00",
+                  "decidedBy": "hugh",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-11T16:40:00.000Z",
+                  "ticketUrl": "https://tickets.example/clipse",
+                  "note": "Ticketmaster page shows $45 GA with fees.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000011",
+                    "priceMin": "65.00",
+                    "priceMax": "495.00",
+                    "submittedBy": "kmusic",
+                    "corroborationCount": 2,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000012",
+                    "priceMin": "45.00",
+                    "priceMax": null,
+                    "submittedBy": "theo.wav",
+                    "corroborationCount": 1,
+                    "note": "fees in"
+                  },
+                  "told": ["parent", "challenger"],
+                  "snapshot": true
+                },
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a2",
+                  "contestId": "00000000-0000-4000-8000-0000000000d2",
+                  "eventId": "00000000-0000-4000-8000-0000000000f2",
+                  "eventTitle": "Vince Staples",
+                  "eventDate": "2026-11-11",
+                  "venueName": "Fillmore",
+                  "resolution": "parent_wins",
+                  "answer": "kept",
+                  "price": "50.00",
+                  "decidedBy": "jules",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-09T18:15:00.000Z",
+                  "ticketUrl": "https://tickets.example/vince",
+                  "note": "Box office confirms $50.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000013",
+                    "priceMin": "50.00",
+                    "priceMax": null,
+                    "submittedBy": "dlo",
+                    "corroborationCount": 3,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000014",
+                    "priceMin": "39.00",
+                    "priceMax": null,
+                    "submittedBy": "mira.k",
+                    "corroborationCount": 1,
+                    "note": "presale"
+                  },
+                  "told": ["parent", "challenger"],
+                  "snapshot": true
+                }
+              ],
+              "total": 17,
+              "limit": 5,
+              "offset": 0
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=checks",
+          "wait": "[data-testid=\"price-checks-views\"]"
+        },
+        {
+          "click": "[data-testid=\"price-checks-views\"] button:has-text(\"Resolved\")"
+        },
+        { "wait": "[aria-label=\"Resolved Price checks\"]" },
+        {
+          "click": "[aria-label=\"Resolved Price checks\"] li:nth-child(2) button"
+        },
+        { "wait": "[data-testid=\"admin-sheet\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "desktop-resolved",
+      "label": "Desktop: the Resolved table, unchanged (`11/price-checks-resolved-d`)",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "route": "**/v1/admin/contests/prices?**",
+          "body": {
+            "success": true,
+            "data": { "items": [], "total": 2, "limit": 100, "offset": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/contests/prices/resolved**",
+          "body": {
+            "success": true,
+            "data": {
+              "items": [
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a1",
+                  "contestId": "00000000-0000-4000-8000-0000000000d1",
+                  "eventId": "00000000-0000-4000-8000-0000000000f1",
+                  "eventTitle": "Clipse & J.I.D",
+                  "eventDate": "2026-11-12",
+                  "venueName": "Red Rocks",
+                  "resolution": "challenger_wins",
+                  "answer": "used",
+                  "price": "45.00",
+                  "decidedBy": "hugh",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-11T16:40:00.000Z",
+                  "ticketUrl": "https://tickets.example/clipse",
+                  "note": "Ticketmaster page shows $45 GA with fees.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000011",
+                    "priceMin": "65.00",
+                    "priceMax": "495.00",
+                    "submittedBy": "kmusic",
+                    "corroborationCount": 2,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000012",
+                    "priceMin": "45.00",
+                    "priceMax": null,
+                    "submittedBy": "theo.wav",
+                    "corroborationCount": 1,
+                    "note": "fees in"
+                  },
+                  "told": ["parent", "challenger"],
+                  "snapshot": true
+                },
+                {
+                  "id": "00000000-0000-4000-8000-0000000000a2",
+                  "contestId": "00000000-0000-4000-8000-0000000000d2",
+                  "eventId": "00000000-0000-4000-8000-0000000000f2",
+                  "eventTitle": "Vince Staples",
+                  "eventDate": "2026-11-11",
+                  "venueName": "Fillmore",
+                  "resolution": "parent_wins",
+                  "answer": "kept",
+                  "price": "50.00",
+                  "decidedBy": "jules",
+                  "decidedByAvatar": {
+                    "color": "warning",
+                    "secondColor": "success"
+                  },
+                  "decidedAt": "2026-11-09T18:15:00.000Z",
+                  "ticketUrl": "https://tickets.example/vince",
+                  "note": "Box office confirms $50.",
+                  "parent": {
+                    "id": "00000000-0000-4000-8000-000000000013",
+                    "priceMin": "50.00",
+                    "priceMax": null,
+                    "submittedBy": "dlo",
+                    "corroborationCount": 3,
+                    "note": null
+                  },
+                  "challenger": {
+                    "id": "00000000-0000-4000-8000-000000000014",
+                    "priceMin": "39.00",
+                    "priceMax": null,
+                    "submittedBy": "mira.k",
+                    "corroborationCount": 1,
+                    "note": "presale"
+                  },
+                  "told": ["parent", "challenger"],
+                  "snapshot": true
+                }
+              ],
+              "total": 17,
+              "limit": 50,
+              "offset": 0
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=checks",
+          "wait": "[data-testid=\"price-checks-views\"]"
+        },
+        {
+          "click": "[data-testid=\"price-checks-views\"] button:has-text(\"Resolved\")"
+        },
+        { "wait": "[aria-label=\"Resolved Price checks\"]", "settle": 800 }
+      ]
+    }
+  ]
+}
