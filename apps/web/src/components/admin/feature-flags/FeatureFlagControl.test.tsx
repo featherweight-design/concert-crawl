@@ -144,7 +144,7 @@ describe('FeatureFlagControl (the ladder)', () => {
   });
 
   it('shows the verified chip, or says it is not verified', () => {
-    const { rerender } = render(
+    const { unmount } = render(
       <FeatureFlagControl
         initial={[flag({ verifiedAt: '2026-09-07T00:00:00.000Z' })]}
       />,
@@ -152,7 +152,10 @@ describe('FeatureFlagControl (the ladder)', () => {
     expect(screen.getByTestId('flag-verified-crews')).toHaveTextContent(
       /^Verified/,
     );
-    rerender(<FeatureFlagControl initial={[flag()]} />);
+    // The control keeps its flags in state from `initial`, so a fresh mount
+    // (not a rerender) is what shows the unverified row.
+    unmount();
+    render(<FeatureFlagControl initial={[flag()]} />);
     expect(screen.getByTestId('flag-unverified-crews')).toHaveTextContent(
       'Not verified',
     );
