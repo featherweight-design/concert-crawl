@@ -365,6 +365,92 @@ describe('PATCH /v1/admin/venues/:id — integration', () => {
     expect(row?.apiAccountId).toBeNull();
   });
 
+  describe('crawlModeSource', () => {
+    async function patch(id: string, payload: Record<string, unknown>) {
+      return app.request(`/v1/admin/venues/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    async function sourceOf(id: string) {
+      const [row] = await testDb
+        .select({ crawlModeSource: venues.crawlModeSource })
+        .from(venues)
+        .where(eq(venues.id, id));
+      return row?.crawlModeSource;
+    }
+
+    it('records an admin-set crawl mode as forced', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({ crawlMode: null });
+
+      const res = await patch(venue.id, { crawlMode: 'http' });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        data: { crawlMode: string; crawlModeSource: string | null };
+      };
+      expect(body.data.crawlMode).toBe('http');
+      expect(body.data.crawlModeSource).toBe('admin');
+      expect(await sourceOf(venue.id)).toBe('admin');
+
+      // The admin detail payload carries it too.
+      const detail = await app.request(`/v1/admin/venues/${venue.id}`);
+      const detailBody = (await detail.json()) as {
+        data: { crawlModeSource: string | null };
+      };
+      expect(detailBody.data.crawlModeSource).toBe('admin');
+    });
+
+    it('overrides a crawler pick when an admin sets the mode', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({
+        crawlMode: 'http',
+        crawlModeSource: 'auto',
+      });
+
+      expect((await patch(venue.id, { crawlMode: 'http' })).status).toBe(200);
+      expect(await sourceOf(venue.id)).toBe('admin');
+    });
+
+    it('clears the source when an admin clears the mode', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({
+        crawlMode: 'http',
+        crawlModeSource: 'admin',
+      });
+
+      expect((await patch(venue.id, { crawlMode: null })).status).toBe(200);
+      const [row] = await testDb
+        .select()
+        .from(venues)
+        .where(eq(venues.id, venue.id));
+      expect(row?.crawlMode).toBeNull();
+      expect(row?.crawlModeSource).toBeNull();
+    });
+
+    it('leaves the source alone on a PATCH without crawlMode', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({
+        crawlMode: 'http',
+        crawlModeSource: 'auto',
+      });
+
+      expect((await patch(venue.id, { name: 'Renamed' })).status).toBe(200);
+      expect(await sourceOf(venue.id)).toBe('auto');
+    });
+
+    it('refuses a source outside admin and auto at the database', async () => {
+      await expect(
+        seedVenue({
+          // @ts-expect-error -- the CHECK constraint is what this exercises
+          crawlModeSource: 'robot',
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
   it('rejects a partial PATCH that sets a provider with no saved account ID', async () => {
     setAuth('admin');
     const venue = await seedVenue({

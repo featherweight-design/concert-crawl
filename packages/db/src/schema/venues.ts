@@ -157,6 +157,9 @@ export const venues = pgTable(
     crawlMode: varchar('crawl_mode', { length: 10 }).$type<
       'http' | 'browser'
     >(),
+    // Who set crawl_mode: 'admin' by hand, 'auto' on the crawler's first pick.
+    // NULL = not recorded (rows before 0123, or mode cleared); read as Automatic.
+    crawlModeSource: text('crawl_mode_source').$type<'admin' | 'auto'>(),
     address: text('address'),
     capacity: integer('capacity'),
     venueType: text('venue_type'),
@@ -189,6 +192,10 @@ export const venues = pgTable(
     check(
       'venues_crawl_pause_reason_check',
       sql`${table.crawlPauseReason} IS NULL OR ${table.crawlPauseReason} IN ('waiting_on_permission', 'site_broken_or_moved', 'other')`,
+    ),
+    check(
+      'venues_crawl_mode_source_check',
+      sql`${table.crawlModeSource} IS NULL OR ${table.crawlModeSource} IN ('admin', 'auto')`,
     ),
     check(
       'venues_hidden_reason_check',
