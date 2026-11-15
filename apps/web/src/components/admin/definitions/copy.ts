@@ -4679,6 +4679,92 @@ export const ADMIN_COPY = {
     },
     none: '—',
   },
+  // 4b-3 Add a show by hand (`06/add-a-show-by-hand`, addendum 3
+  // `11/add-a-show-lineup-d`, addendum 5 `04/add-show-errors-d`). Strings the
+  // boards don't draw are drafts for copy-review.
+  addShow: {
+    open: 'Add a show',
+    title: 'Add a show by hand',
+    lede: 'For a show the crawler can’t see. The next crawl won’t remove it.',
+    // The phone's full screen returns to Events.
+    back: 'Events',
+    titleField: 'Title',
+    titlePlaceholder: 'The show’s name, as fans would search it',
+    venue: 'Venue',
+    venuePlaceholder: 'Pick a venue',
+    date: 'Date',
+    datePlaceholder: 'Pick a date',
+    doors: 'Doors',
+    show: 'Show',
+    timeNone: '—',
+    ticket: 'Ticket link',
+    ticketPlaceholder: 'https://',
+    lineup: 'Lineup',
+    priceNote: 'Add a price after it’s saved, from the show.',
+    submit: 'Add show',
+    submitting: 'Adding…',
+    cancel: 'Cancel',
+    venuePicker: {
+      title: 'Venue',
+      search: (count: number) =>
+        `Search ${count.toLocaleString('en-US')} venues`,
+      noMatch: 'No venues match',
+      loadFailed: 'Couldn’t load venues.',
+      tryAgain: 'Try again',
+    },
+    lineupField: {
+      add: 'Add an artist',
+      hint: 'The first is the headliner. Drag to reorder. Each name is matched on Artists.',
+      // No drag on the phone: the arrow moves an act up the bill.
+      hintPhone:
+        'The first is the headliner. Use the arrow to move an act up. Each name is matched on Artists.',
+      headliner: 'Headliner',
+      support: 'Support',
+      chipLabel: (name: string, role: string) => `${name}, ${role}`,
+      remove: (name: string) => `Remove ${name}`,
+      moveEarlier: (name: string) => `Move ${name} up the bill`,
+      suggestions: 'Matching artists',
+      addTyped: (name: string) => `Add “${name}” as typed`,
+    },
+    // `04/add-show-errors-d`: "Mission Ballroom already has a show on Fri,
+    // Dec 4, from the crawl: KALEO. Open it instead, or add this one anyway."
+    duplicate: {
+      lead: (venue: string, date: string, fromCrawl: boolean) =>
+        `${venue} already has a show on ${date}${fromCrawl ? ', from the crawl' : ''}: `,
+      afterTitle: '. ',
+      open: 'Open it',
+      tail: ' instead, or add this one anyway.',
+      // The API's 409: a show with this exact venue, date, headliner and
+      // show time is already listed, so this one can't be added.
+      exact:
+        'This show is already listed, with the same headliner and show time. ',
+      exactTail: ' instead.',
+    },
+    saveFailed: {
+      title: 'Couldn’t add the show',
+      body: 'Nothing was added. What you typed is still here.',
+    },
+    // One line per API field code (`ADD_SHOW_ERROR_CODES`).
+    errors: {
+      title_required: 'Add a title.',
+      title_too_long: 'Keep the title under 300 characters.',
+      venue_required: 'Pick a venue.',
+      venue_not_found: 'That venue is gone. Pick another.',
+      date_required: 'Pick a date.',
+      date_past: 'That date has passed.',
+      time_invalid: 'Enter a time, like 7:30 PM.',
+      show_before_doors: 'Before doors.',
+      ticket_url_invalid: 'Enter a full link, starting with https://',
+      headliner_required: 'Add the headliner.',
+      lineup_name_required: 'Every act needs a name.',
+      lineup_name_too_long: 'Keep each name under 200 characters.',
+      lineup_name_invalid: 'One name has no letters to match on.',
+      lineup_role_invalid: 'Add the headliner first.',
+      lineup_too_long: 'A bill holds 50 acts at most.',
+      artist_not_found:
+        'One artist is no longer on Artists. Remove it and type the name again.',
+    },
+  },
   panel: { close: 'Close' },
   confirm: { cancel: 'Cancel' },
   states: {
