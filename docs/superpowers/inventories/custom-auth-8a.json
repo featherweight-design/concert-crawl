@@ -1,0 +1,35 @@
+{
+  "feature": "Custom auth PR 8a · arriving with intent: the card (/sign-in/new, /sign-up/new)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/06-arriving-with-intent (intent-page-m, intent-watch-m and intent-watch-d, intent-signup-watch-m). Signed out; the dev server runs with NEXT_PUBLIC_PUBLIC_BROWSE=true so /sign-up/new needs no invite cookie. Photographed with no API: the page card (My shows) on both pages, which needs no lookup. The show card (the board's Static Dress) needs a real event and the public events route, so it is hand-walked on staging with a real Watch from a signed-out show page: the card, its eyebrow (date and venue), and the same card over the sign-up form. Not built here: the artist card and the crew card (the artist card comes with the Follow verb in 8b; the crew card needs a decision on exposing a crew's name to a signed-out token holder), and no thumbnail on the card (names only).",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "signin-intent-page",
+      "label": "/sign-in/new: arriving from My shows",
+      "steps": [
+        {
+          "goto": "/sign-in/new?redirect_url=%2Fwatching",
+          "wait": "h1:has-text('Sign in to see My shows')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "signup-intent-page",
+      "label": "/sign-up/new: arriving from My shows",
+      "widths": ["phone", "desktop"],
+      "steps": [
+        {
+          "goto": "/sign-up/new?redirect_url=%2Fwatching",
+          "wait": "text=Sign in to see My shows",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}

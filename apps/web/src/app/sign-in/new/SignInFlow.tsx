@@ -512,7 +512,7 @@ export function SignInFlow({
   return (
     <AuthPage>
       {intentText(intent) ? (
-        <IntentCard subject={intent} level={1} />
+        <IntentCard subject={intent} asTitle />
       ) : (
         <AuthHeading
           eyebrow={COPY.start.eyebrow}

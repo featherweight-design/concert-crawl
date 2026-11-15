@@ -481,7 +481,7 @@ export function SignUpFlow({
         total={total}
         done={finished}
       />
-      <IntentCard subject={intent} level={2} />
+      <IntentCard subject={intent} asTitle={false} />
       <AuthHeading
         title={COPY.form.title}
         sub={beta ? COPY.form.body : COPY.form.bodyLaunch}

@@ -8,34 +8,19 @@ import { IntentCard, intentText } from './IntentCard';
 const COPY = AUTH_FLOW_COPY.intent;
 afterEach(() => cleanup());
 
+const show = {
+  kind: 'show',
+  title: 'Static Dress',
+  eyebrow: 'Fri, Nov 14 · Marquis',
+} as const;
+
 describe('intentText', () => {
   it('says what pressing Watch will do', () => {
-    expect(
-      intentText({
-        kind: 'show',
-        title: 'Static Dress',
-        eyebrow: 'Fri, Nov 14 · Marquis',
-      }),
-    ).toEqual({
+    expect(intentText(show)).toEqual({
       eyebrow: 'Fri, Nov 14 · Marquis',
       title: 'Sign in to watch Static Dress',
       sub: COPY.watchSub,
     });
-  });
-
-  it('counts an artist’s dates, and says "date" for one', () => {
-    expect(
-      intentText({ kind: 'artist', name: 'TOKiMONSTA', dates: 2 }),
-    ).toMatchObject({
-      eyebrow: 'Artist · 2 Denver dates',
-      title: 'Sign in to follow TOKiMONSTA',
-    });
-    expect(intentText({ kind: 'artist', name: 'X', dates: 1 })?.eyebrow).toBe(
-      'Artist · 1 Denver date',
-    );
-    expect(intentText({ kind: 'artist', name: 'X', dates: 0 })?.eyebrow).toBe(
-      COPY.artistEyebrowNone,
-    );
   });
 
   it('names a page, and has nothing for the generic subject', () => {
@@ -50,9 +35,7 @@ describe('intentText', () => {
 
 describe('IntentCard', () => {
   it('is the page title (h1) on sign-in', () => {
-    render(
-      <IntentCard subject={{ kind: 'page', page: 'Settings' }} level={1} />,
-    );
+    render(<IntentCard subject={{ kind: 'page', page: 'Settings' }} asTitle />);
     expect(
       screen.getByRole('heading', {
         level: 1,
@@ -62,28 +45,17 @@ describe('IntentCard', () => {
     expect(screen.getByText(COPY.pageSub)).toBeInTheDocument();
   });
 
-  it('sits under the form’s own title (h2) on sign-up', () => {
-    render(
-      <IntentCard
-        subject={{
-          kind: 'show',
-          title: 'Static Dress',
-          eyebrow: 'Fri, Nov 14 · Marquis',
-        }}
-        level={2}
-      />,
-    );
+  it('is styled as a title but is no heading on sign-up, where the form owns the h1', () => {
+    render(<IntentCard subject={show} asTitle={false} />);
+    expect(screen.queryByRole('heading')).toBeNull();
     expect(
-      screen.getByRole('heading', {
-        level: 2,
-        name: 'Sign in to watch Static Dress',
-      }),
+      screen.getByText('Sign in to watch Static Dress'),
     ).toBeInTheDocument();
   });
 
   it('draws nothing for the generic subject', () => {
     const { container } = render(
-      <IntentCard subject={{ kind: 'generic' }} level={1} />,
+      <IntentCard subject={{ kind: 'generic' }} asTitle />,
     );
     expect(container).toBeEmptyDOMElement();
   });
