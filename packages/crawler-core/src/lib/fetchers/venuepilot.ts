@@ -448,7 +448,12 @@ async function venuePilotFetch(
     }
     // Page 1 names the page count, so the total is known from the first
     // report on; it is the pages this run will actually read, cap included.
-    await opts.onPageProgress?.(pagesFetched, Math.min(totalPages, pageCap));
+    // Never below the pages already read, so an account that reports zero
+    // pages never shows "0 of 0".
+    await opts.onPageProgress?.(
+      pagesFetched,
+      Math.max(pagesFetched, Math.min(totalPages, pageCap)),
+    );
   }
 
   // totalPages > MAX_PAGES means we stopped short of the full set — surface it

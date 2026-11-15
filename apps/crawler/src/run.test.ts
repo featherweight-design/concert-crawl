@@ -1430,116 +1430,197 @@ describe('runTriggeredCrawls', () => {
   });
 
   describe('page progress (re-crawl progress)', () => {
-    type Progress = (done: number, total: number | null) => Promise<void>;
-    let clock = 1_000_000;
-    let nowSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      clock = 1_000_000;
-      nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => clock);
-    });
-    afterEach(() => {
-      nowSpy.mockRestore();
-    });
-
-    // Run the drain with the first trigger's crawl driving its progress
-    // callback through `drive`; returns every progress write's values.
-    async function runWithProgress(
-      drive: (report: Progress) => Promise<void>,
-    ): Promise<Record<string, unknown>[]> {
-      mockCrawlVenue.mockImplementationOnce(async (...args: unknown[]) => {
-        const report = args[7];
-        if (typeof report !== 'function') {
-          throw new Error('crawlVenue got no progress callback');
-        }
-        await drive(async (done, total) => {
-          await report(done, total);
-        });
-        return SUCCESSFUL_CRAWL_RUN;
-      });
-      const { runTriggeredCrawls } = await import('./run.js');
-      await runTriggeredCrawls();
+    // Every progress write's values. Only a progress write sets progressAt;
+    // the completion update sets pagesDone too, so that key can't tell them
+    // apart.
+    function progressWrites(): Record<string, unknown>[] {
       return mockDbUpdate.set.mock.calls
         .map((call) => call[0])
         .filter(
           (values): values is Record<string, unknown> =>
             typeof values === 'object' &&
             values !== null &&
-            'pagesDone' in values,
+            'progressAt' in values,
         );
     }
 
-    it('writes pages done and total, progress_at and updated_at onto the processing trigger', async () => {
-      const { eq } = await import('drizzle-orm');
-      const writes = await runWithProgress(async (report) => {
-        await report(1, 4);
-      });
+    function completionWrite(
+      status: string,
+    ): Record<string, unknown> | undefined {
+      return mockDbUpdate.set.mock.calls
+        .map((call) => call[0])
+        .find(
+          (values): values is Record<string, unknown> =>
+            typeof values === 'object' &&
+            values !== null &&
+            values.status === status,
+        );
+    }
 
-      expect(writes).toEqual([
-        {
-          pagesDone: 1,
-          pagesTotal: 4,
-          progressAt: new Date(1_000_000),
-          // The stale-processing reaper reads updated_at: a crawl still
-          // reporting must look alive to it.
-          updatedAt: new Date(1_000_000),
-        },
-      ]);
+    it('hands the crawl a writer that puts progress, progress_at and updated_at on the processing trigger', async () => {
+      const { eq } = await import('drizzle-orm');
+      mockCrawlVenue.mockImplementationOnce(async (...args: unknown[]) => {
+        const report = args[7];
+        if (typeof report !== 'function') {
+          throw new Error('crawlVenue got no progress callback');
+        }
+        report(1, 4);
+        // The write runs in the background; let it land.
+        await new Promise((resolve) => setImmediate(resolve));
+        return SUCCESSFUL_CRAWL_RUN;
+      });
+      const { runTriggeredCrawls } = await import('./run.js');
+      await runTriggeredCrawls();
+
+      const [write] = progressWrites();
+      expect(write).toMatchObject({ pagesDone: 1, pagesTotal: 4 });
+      // The stale-processing reaper reads updated_at: a crawl still
+      // reporting must look alive to it.
+      expect(write?.updatedAt).toBeInstanceOf(Date);
+      expect(write?.progressAt).toEqual(write?.updatedAt);
       expect(vi.mocked(eq)).toHaveBeenCalledWith('id', 'trigger-1');
       expect(vi.mocked(eq)).toHaveBeenCalledWith('status', 'processing');
     });
 
-    it('skips a write under 2 s after the last, but always writes the final page', async () => {
-      const writes = await runWithProgress(async (report) => {
-        await report(1, 4);
-        clock += 500;
-        await report(2, 4); // throttled
-        clock += 2000;
-        await report(3, 4); // written
-        clock += 100;
-        await report(3, 4); // same page again: never a second write
-        clock += 100;
-        await report(4, 4); // final page: written despite the throttle
-      });
+    it('settles pages done to the total when the trigger is done, not when it failed', async () => {
+      const { runTriggeredCrawls } = await import('./run.js');
+      await runTriggeredCrawls();
+      expect(completionWrite('done')).toHaveProperty('pagesDone');
 
-      expect(writes.map((values) => values.pagesDone)).toEqual([1, 3, 4]);
+      vi.clearAllMocks();
+      mockDbUpdate.returning
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { id: 'trigger-1', venueId: 'venue-a', force: false, trial: false },
+        ])
+        .mockResolvedValue([]);
+      mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'failed' });
+      const rerun = await import('./run.js');
+      await rerun.runTriggeredCrawls();
+      expect(completionWrite('failed')).not.toHaveProperty('pagesDone');
     });
 
-    it('clamps pages done to the total and keeps an unknown total null', async () => {
-      const writes = await runWithProgress(async (report) => {
-        await report(1, null);
-        clock += 2000;
-        await report(5, 3);
+    describe('the writer', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ now: 1_000_000 });
+      });
+      afterEach(() => {
+        vi.useRealTimers();
       });
 
-      expect(
-        writes.map(({ pagesDone, pagesTotal }) => [pagesDone, pagesTotal]),
-      ).toEqual([
-        [1, null],
-        [3, 3],
-      ]);
-    });
+      // Let the background write and its follow-ups run.
+      const settle = () => vi.advanceTimersByTimeAsync(0);
 
-    it('swallows a failed write and lets the crawl finish', async () => {
-      let reported = false;
-      const writes = await runWithProgress(async (report) => {
+      async function newWriter() {
+        const { createTriggerProgressWriter } = await import('./run.js');
+        return createTriggerProgressWriter('trigger-1');
+      }
+
+      it('throttles to one write per 2 s, flushes a held report when the window ends, and always writes the final page', async () => {
+        const writer = await newWriter();
+        writer.report(1, 4);
+        await settle();
+        await vi.advanceTimersByTimeAsync(500);
+        writer.report(2, 4); // held back by the interval
+        await settle();
+        expect(progressWrites().map((values) => values.pagesDone)).toEqual([1]);
+
+        // The trailing flush lands page 2 when the window ends.
+        await vi.advanceTimersByTimeAsync(1500);
+        await settle();
+        writer.report(2, 4); // the same page again: never a second write
+        writer.report(4, 4); // the final page: written despite the interval
+        await settle();
+
+        expect(progressWrites().map((values) => values.pagesDone)).toEqual([
+          1, 2, 4,
+        ]);
+      });
+
+      it("lands detail-page's late total without waiting for the next page", async () => {
+        const writer = await newWriter();
+        writer.report(1, null);
+        await settle();
+        await vi.advanceTimersByTimeAsync(100);
+        writer.report(1, 12);
+        await vi.advanceTimersByTimeAsync(2000);
+
+        expect(
+          progressWrites().map(({ pagesDone, pagesTotal }) => [
+            pagesDone,
+            pagesTotal,
+          ]),
+        ).toEqual([
+          [1, null],
+          [1, 12],
+        ]);
+      });
+
+      it('drops a held report once stopped', async () => {
+        const writer = await newWriter();
+        writer.report(1, 4);
+        await settle();
+        writer.report(2, 4);
+        writer.stop();
+        await vi.advanceTimersByTimeAsync(5000);
+        writer.report(3, 4);
+        await settle();
+
+        expect(progressWrites().map((values) => values.pagesDone)).toEqual([1]);
+      });
+
+      it('clamps pages done to the total and keeps an unknown total null', async () => {
+        const writer = await newWriter();
+        writer.report(1, null);
+        await settle();
+        await vi.advanceTimersByTimeAsync(2000);
+        writer.report(5, 3);
+        await settle();
+
+        expect(
+          progressWrites().map(({ pagesDone, pagesTotal }) => [
+            pagesDone,
+            pagesTotal,
+          ]),
+        ).toEqual([
+          [1, null],
+          [3, 3],
+        ]);
+      });
+
+      it('returns at once while a write hangs, and gives the write up after 3 s', async () => {
+        const writer = await newWriter();
+        mockDbUpdate.where.mockImplementationOnce(
+          () => new Promise(() => undefined),
+        );
+        // Nothing a fetcher could await: the report returns synchronously.
+        expect(writer.report(1, 4)).toBeUndefined();
+        await settle();
+        writer.report(2, 4); // queued behind the hung write
+        await settle();
+        expect(progressWrites()).toHaveLength(1);
+
+        // The hung write times out; the queued report goes out after it.
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(progressWrites().map((values) => values.pagesDone)).toEqual([
+          1, 2,
+        ]);
+      });
+
+      it('retries a failed final write on the next report', async () => {
+        const writer = await newWriter();
         mockDbUpdate.where.mockImplementationOnce(() =>
           Promise.reject(new Error('db down')),
         );
-        await report(1, 2);
-        reported = true;
-      });
+        expect(() => writer.report(4, 4)).not.toThrow();
+        await settle();
+        writer.report(4, 4);
+        await settle();
 
-      expect(writes).toHaveLength(1);
-      expect(reported).toBe(true);
-      const statuses = mockDbUpdate.set.mock.calls.map(
-        (call) => call[0]?.status,
-      );
-      expect(statuses).toContain('done');
-      expect(mockSentryLoggerError).not.toHaveBeenCalledWith(
-        'crawl.error',
-        expect.anything(),
-      );
+        expect(progressWrites().map((values) => values.pagesDone)).toEqual([
+          4, 4,
+        ]);
+      });
     });
   });
 });
