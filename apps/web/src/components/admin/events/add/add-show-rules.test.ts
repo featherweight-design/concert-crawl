@@ -50,6 +50,21 @@ describe('validateDraft', () => {
     ).toEqual({ showTime: 'show_before_doors' });
   });
 
+  it('reads 20:00 and 20:00:00 as the same time, as the API does', () => {
+    expect(
+      validateDraft(
+        { ...VALID, doorsTime: '20:00:00', showTime: '20:00' },
+        TODAY,
+      ).showTime,
+    ).toBeUndefined();
+    expect(
+      validateDraft(
+        { ...VALID, doorsTime: '20:00', showTime: '19:59:59' },
+        TODAY,
+      ).showTime,
+    ).toBe('show_before_doors');
+  });
+
   it('wants a full link, and takes none', () => {
     expect(
       validateDraft({ ...VALID, ticketUrl: 'axs.com/events/kaleo' }, TODAY)
@@ -170,5 +185,10 @@ describe('the bill', () => {
     ]);
     expect(moveAct(bill, 0, -1)).toEqual(bill);
     expect(moveAct(bill, 2, 3)).toEqual(bill);
+  });
+
+  it('ignores a move from off either end', () => {
+    expect(moveAct(bill, -1, 0)).toEqual(bill);
+    expect(moveAct(bill, 3, 0)).toEqual(bill);
   });
 });
