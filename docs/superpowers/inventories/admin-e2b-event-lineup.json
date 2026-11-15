@@ -78,7 +78,7 @@
           "expectStatus": 200,
           "wait": "[data-testid=\"event-edit\"]"
         },
-        { "wait": "[data-testid=\"lineup-chip\"]", "settle": 500 }
+        { "wait": "[data-testid=\"lineup-chip\"]", "settle": 2500 }
       ]
     },
     {
