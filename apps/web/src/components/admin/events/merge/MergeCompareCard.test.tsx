@@ -16,10 +16,11 @@ describe('MergeCompareCard', () => {
         kept
         onKeep={vi.fn()}
         showVenueDay={false}
+        name="keep"
       />,
     );
-    const card = screen.getByRole('radio');
-    expect(card).toBeChecked();
+    expect(screen.getByRole('radio')).toBeChecked();
+    const card = screen.getByTestId('merge-card-first');
     expect(card).toHaveTextContent('First listing');
     expect(card).toHaveTextContent('Keep');
     expect(card).toHaveTextContent('Clipse & J.I.D');
@@ -38,10 +39,11 @@ describe('MergeCompareCard', () => {
         kept={false}
         onKeep={vi.fn()}
         showVenueDay
+        name="keep"
       />,
     );
-    const card = screen.getByRole('radio');
-    expect(card).not.toBeChecked();
+    expect(screen.getByRole('radio')).not.toBeChecked();
+    const card = screen.getByTestId('merge-card-second');
     expect(card).toHaveTextContent('Venue');
     expect(card).toHaveTextContent('Red Rocks');
     expect(card).toHaveTextContent('Thu Nov 12');
@@ -50,7 +52,7 @@ describe('MergeCompareCard', () => {
     expect(card).toHaveTextContent('no price');
   });
 
-  it('moves KEEP when tapped, and not while disabled', () => {
+  it('moves KEEP when the card is tapped, and not while disabled', () => {
     const onKeep = vi.fn();
     const { rerender } = render(
       <MergeCompareCard
@@ -59,9 +61,11 @@ describe('MergeCompareCard', () => {
         kept={false}
         onKeep={onKeep}
         showVenueDay={false}
+        name="keep"
       />,
     );
-    fireEvent.click(screen.getByRole('radio'));
+    // The label is the whole card: tapping its text reaches the radio.
+    fireEvent.click(screen.getByText('CLIPSE with special guest JID'));
     expect(onKeep).toHaveBeenCalledTimes(1);
     rerender(
       <MergeCompareCard
@@ -70,14 +74,15 @@ describe('MergeCompareCard', () => {
         kept={false}
         onKeep={onKeep}
         showVenueDay={false}
+        name="keep"
         disabled
       />,
     );
-    fireEvent.click(screen.getByRole('radio'));
+    fireEvent.click(screen.getByText('CLIPSE with special guest JID'));
     expect(onKeep).toHaveBeenCalledTimes(1);
   });
 
-  it('names the kept card to a screen reader', () => {
+  it('names the card by its rows, so the data behind the choice is read out', () => {
     render(
       <MergeCompareCard
         listing={CRAWLED}
@@ -85,12 +90,11 @@ describe('MergeCompareCard', () => {
         kept
         onKeep={vi.fn()}
         showVenueDay={false}
+        name="keep"
       />,
     );
     expect(
-      screen.getByRole('radio', {
-        name: 'First listing: Clipse & J.I.D, kept',
-      }),
+      screen.getByRole('radio', { name: /First listing.*\$65–\$495/s }),
     ).toBeInTheDocument();
   });
 });

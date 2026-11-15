@@ -4636,9 +4636,6 @@ export const ADMIN_COPY = {
       first: 'First listing',
       second: 'Second listing',
       keep: 'Keep',
-      // The card's accessible name, so a screen reader hears which one is kept.
-      cardLabel: (which: string, title: string, kept: boolean) =>
-        `${which}: ${title}${kept ? ', kept' : ''}`,
       rows: {
         venue: 'Venue',
         day: 'Day',
