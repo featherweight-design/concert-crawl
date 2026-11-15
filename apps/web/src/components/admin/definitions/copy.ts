@@ -4093,8 +4093,8 @@ export const ADMIN_COPY = {
       },
       // The hint is the ticket page's host ("axs.com"); this when there is none.
       openTicket: { label: 'Open ticket', noTicket: 'No ticket page' },
-      // The other prices on the row's show; the hint is how many ("1 for this
-      // show" reads as well as "2 for this show").
+      // The other prices on the row's show. The hint counts the show's prices
+      // with this one (always 2 or more), matching the show chip's total.
       otherPrices: {
         label: 'Other prices',
         hint: (count: number) => `${count} for this show`,

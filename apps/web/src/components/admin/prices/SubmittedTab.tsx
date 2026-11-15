@@ -79,6 +79,10 @@ const listKeyOf = (
   eventId: string | null,
 ): string => JSON.stringify([filter, search, fan, eventId]);
 
+/** The fan or show a chip's count was counted over. */
+const narrowKeyOf = (fan: string | null, eventId: string | null): string =>
+  JSON.stringify([fan, eventId]);
+
 /** The show the list is narrowed to ("Other prices", 43). */
 type ShowFilter = { eventId: string; title: string };
 
@@ -263,7 +267,7 @@ export const SubmittedTab = ({
   }, [initialFan]);
   // Which fan or show `counts` were counted over, so a chip never shows
   // another load's figure.
-  const narrowKey = JSON.stringify([fan, eventId]);
+  const narrowKey = narrowKeyOf(fan, eventId);
   const [countsKey, setCountsKey] = useState<string | null>(null);
 
   // The search waits for a pause in typing. A typed search replaces the fan or
@@ -298,7 +302,7 @@ export const SubmittedTab = ({
         setRows(list.rows);
         setTotal(list.total);
         setCounts(nextCounts);
-        setCountsKey(JSON.stringify([fan, eventId]));
+        setCountsKey(narrowKeyOf(fan, eventId));
         // A fresh list drops a failed Approve's tint; one in flight keeps its.
         const stillWaiting = list.rows.some(
           (row) => row.id === keepFailed && row.state === 'waiting',
@@ -532,13 +536,14 @@ export const SubmittedTab = ({
       },
     );
     // The show's other prices, only when it has some and the list is not
-    // already narrowed to it (the item would do nothing).
+    // already narrowed to it (the item would do nothing). The hint counts the
+    // show's prices with this one, the figure its chip shows under All.
     if (row.showOthers > 0 && row.eventId !== eventId) {
       items.push({
         key: 'others',
         icon: Tag,
         label: COPY.menu.otherPrices.label,
-        hint: COPY.menu.otherPrices.hint(row.showOthers),
+        hint: COPY.menu.otherPrices.hint(row.showOthers + 1),
         onSelect: () => {
           setFilter('all');
           setTyped('');

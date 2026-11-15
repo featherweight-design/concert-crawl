@@ -319,15 +319,24 @@ describe('SubmittedTab on a desktop', () => {
       }),
     );
 
-  it('offers Other prices 4th, with how many the show has, only when it has some (43/approve-menu-d)', async () => {
+  it('offers Other prices 4th on a waiting price, counting the show’s prices, only when the show has another (43/approve-menu-d)', async () => {
+    list.mockResolvedValue({
+      rows: [
+        row({ id: 'sub-w', state: 'waiting', showOthers: 2 }),
+        row({ id: 'sub-2', title: 'Marian Hill', state: 'waiting' }),
+      ],
+      total: 2,
+    });
     render(<SubmittedTab />);
     await openMenu(0);
     const items = screen.getAllByRole('menuitem');
-    // Open show, Open ticket, Other prices, Edit price (a published price).
-    expect(items[2]).toHaveTextContent(COPY.menu.otherPrices.label);
-    expect(items[2]).toHaveTextContent(COPY.menu.otherPrices.hint(2));
-    expect(items[2]).toHaveTextContent('2 for this show');
-    expect(items[3]).toHaveTextContent(COPY.menu.editPrice.label);
+    // Approve, Open show, Open ticket, Other prices, Edit price, Reject….
+    expect(items[2]).toHaveTextContent(COPY.menu.openTicket.label);
+    expect(items[3]).toHaveTextContent(COPY.menu.otherPrices.label);
+    // The show's prices with this one, as the show chip will count them.
+    expect(items[3]).toHaveTextContent(COPY.menu.otherPrices.hint(3));
+    expect(items[3]).toHaveTextContent('3 for this show');
+    expect(items[4]).toHaveTextContent(COPY.menu.editPrice.label);
     fireEvent.keyDown(window, { key: 'Escape' });
 
     // No other prices on that show: no item.
@@ -394,6 +403,12 @@ describe('SubmittedTab on a desktop', () => {
   it("filters to the show's prices, counts the show only once counted, and × clears it (43)", async () => {
     render(<SubmittedTab />);
     await openMenu(0);
+    // The hint promises the figure the chip shows: the show's prices under All.
+    expect(
+      screen.getByRole('menuitem', {
+        name: new RegExp(COPY.menu.otherPrices.label),
+      }),
+    ).toHaveTextContent(COPY.menu.otherPrices.hint(3));
 
     // Hold the show's counts so the chip can be seen before they land.
     let release: (value: StateCounts) => void = () => undefined;
@@ -421,6 +436,7 @@ describe('SubmittedTab on a desktop', () => {
     // No stale figure while the show's counts are in flight.
     expect(chip).toHaveTextContent(/^Vince Staples$/);
 
+    // This row and its two others: the hint's 3.
     release({ all: 3, waiting: 1, published: 2, priceCheck: 0 });
     await waitFor(() =>
       expect(screen.getByTestId('show-filter')).toHaveTextContent(

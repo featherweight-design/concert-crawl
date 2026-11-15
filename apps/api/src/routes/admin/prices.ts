@@ -419,7 +419,8 @@ const stateCountsQuerySchema = z.object({
 /**
  * The other prices on this row's show: every price on the same event but this
  * one, contest counter rows left out (the list never shows them). The
- * (event_id, user_id, created_at) index covers the lookup.
+ * (event_id, user_id, created_at) index finds the siblings; id and
+ * disputed_submission_id are read from the rows.
  */
 const showOthersCount = (): SQL<number> => {
   const sibling = alias(priceSubmissions, 'sibling');
