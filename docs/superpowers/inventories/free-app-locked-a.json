@@ -1,0 +1,28 @@
+{
+  "feature": "Free-app close-out PR 3 · Concerts, Passport and Crews with the paywalls deleted",
+  "note": "Sweep: ~/Downloads/fwd-handoff/plans/cc-free-app-closeout-sweep-2026-11-15.md (W5, W9). Signed in as the audit fan. Concerts and Passport render their content; Crews' Start a crew opens the create sheet (no gate, no star). The sheet never submits the create form.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "history",
+      "label": "/history: the fan's Concerts",
+      "steps": [{ "goto": "/history", "settle": 3000 }]
+    },
+    {
+      "id": "passport",
+      "label": "/passport: the booklet",
+      "steps": [{ "goto": "/passport", "settle": 4000 }]
+    },
+    {
+      "id": "crews-create",
+      "label": "/crews: Start a crew opens the create sheet",
+      "steps": [
+        { "goto": "/crews", "settle": 2500 },
+        { "clickRole": "button", "name": "Start a crew", "settle": 1200 }
+      ]
+    }
+  ]
+}
