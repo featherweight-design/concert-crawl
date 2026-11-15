@@ -25,6 +25,10 @@ interface PeopleAnswer {
 
 interface FlagPeopleSearchProps {
   flag: AdminFeatureFlag;
+  /** A failed add, shown here because this view replaces the panel. */
+  error: string | null;
+  /** Another people change is in flight: Add waits for it. */
+  busy: boolean;
   onBack: () => void;
   /** Adds the person; resolves once the flag has the new list. */
   onAdd: (userId: string) => Promise<void>;
@@ -37,6 +41,8 @@ const SEARCH_DELAY_MS = 250;
 // instead of offering Add.
 export const FlagPeopleSearch = ({
   flag,
+  error,
+  busy,
   onBack,
   onAdd,
 }: FlagPeopleSearchProps) => {
@@ -55,6 +61,10 @@ export const FlagPeopleSearch = ({
       setFailed(false);
       return;
     }
+    // The rows for the old query are not the answer to this one: drop them
+    // while the new search is pending, so none can be added by mistake.
+    setFound(null);
+    setFailed(false);
     let cancelled = false;
     const timer = setTimeout(() => {
       const load = async () => {
@@ -81,9 +91,13 @@ export const FlagPeopleSearch = ({
     };
   }, [query, getToken]);
 
+  // The same rule the API applies: the owner and named people see a flag at Me
+  // and at Beta, the Beta role also at Beta, and everyone at Everyone. An admin
+  // is not included because of the role.
   const alreadySees = (person: FoundPerson): boolean =>
-    named.has(person.id) ||
     stage === 'everyone' ||
+    (stage !== 'off' &&
+      (named.has(person.id) || flag.stageOwnerUserId === person.id)) ||
     (stage === 'beta' && person.role === 'beta');
 
   const add = async (person: FoundPerson) => {
@@ -232,7 +246,7 @@ export const FlagPeopleSearch = ({
                 {!sees && (
                   <button
                     type="button"
-                    disabled={adding !== null}
+                    disabled={adding !== null || busy}
                     aria-label={DRAWER.addAriaLabel(mention(person.handle))}
                     data-testid={`flag-people-add-${person.id}`}
                     onClick={() => void add(person)}
@@ -254,6 +268,12 @@ export const FlagPeopleSearch = ({
           })}
         </ul>
       ) : null}
+
+      {error !== null && (
+        <div role="alert" style={{ fontSize: 12.5, color: 'var(--danger)' }}>
+          {error}
+        </div>
+      )}
 
       <div style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
         {DRAWER.addFooter}

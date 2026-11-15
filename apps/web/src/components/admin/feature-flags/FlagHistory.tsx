@@ -101,11 +101,13 @@ export const FlagHistory = ({ flagKey, version }: FlagHistoryProps) => {
       >
         {DRAWER.history}
       </h4>
-      {failed && rows === null ? (
+      {/* A failed reload still says so when older rows are showing. */}
+      {failed && (
         <div role="alert" style={{ fontSize: 12.5, color: 'var(--danger)' }}>
           {DRAWER.historyError}
         </div>
-      ) : rows !== null && rows.length === 0 ? (
+      )}
+      {rows !== null && rows.length === 0 && !failed ? (
         <div style={{ fontSize: 12.5, color: 'var(--fg-subtle)' }}>
           {DRAWER.historyEmpty}
         </div>
