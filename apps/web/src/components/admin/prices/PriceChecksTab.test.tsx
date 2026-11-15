@@ -193,8 +193,11 @@ const openResolved = async () => {
   setPhone(true);
   render(<PriceChecksTab />);
   const chips = await screen.findByTestId('price-checks-views');
+  // Any count: some tests answer with a one-row fixture (`total: 1`).
   fireEvent.click(
-    within(chips).getByRole('button', { name: `${COPY.views.resolved} 17` }),
+    within(chips).getByRole('button', {
+      name: new RegExp(`^${COPY.views.resolved} \\d+$`),
+    }),
   );
   return screen.findByRole('list', { name: COPY.resolvedLabel });
 };
