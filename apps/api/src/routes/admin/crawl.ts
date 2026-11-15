@@ -17,7 +17,7 @@ import { getAuthUser } from '../../middleware/auth.js';
 import { dispatchCrawlerInBackground } from '../../lib/crawler-dispatch.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
-import { queueVenueCrawl } from './lib/crawl-trigger.js';
+import { queueVenueCrawl, queueVenueTrial } from './lib/crawl-trigger.js';
 import { venueRemovedBody } from './lib/venue-hide.js';
 import { crawlAllSkipReason } from './lib/crawl-all.js';
 
@@ -35,24 +35,42 @@ const triggerIdSchema = z.object({ id: z.guid('id must be a UUID') });
 // short-circuits and re-extracts + re-upserts every event — used to reprocess
 // legacy rows whose listings are unchanged (e.g. backfilling supportingArtists).
 // `trial` (one venue only) queues a test re-crawl of a crawl-paused venue
-// (lib/crawl-trigger.ts); Crawl all never reads it.
+// (lib/crawl-trigger.ts queueVenueTrial); Crawl all never reads it.
+//
+// The body must be an object; each field is then validated on its own by
+// `flagSchema`, so one bad field never resets the other.
 const triggerBodySchema = z.object({
-  force: z.boolean().optional().default(false),
-  trial: z.boolean().optional().default(false),
+  force: z.unknown().optional(),
+  trial: z.unknown().optional(),
 });
+const flagSchema = z.boolean().optional().default(false);
 
-type TriggerBody = z.infer<typeof triggerBodySchema>;
+interface TriggerBody {
+  force: boolean;
+  trial: boolean;
+}
 
 const DEFAULT_TRIGGER_BODY: TriggerBody = { force: false, trial: false };
+
+/** One body flag: a boolean or absent, else a warning and false. */
+const readFlag = (name: keyof TriggerBody, value: unknown): boolean => {
+  const result = flagSchema.safeParse(value);
+  if (result.success) return result.data;
+  logger.warn(
+    { field: name, issues: result.error.issues },
+    `crawl trigger: ${name} failed schema validation — defaulting ${name}=false`,
+  );
+  return false;
+};
 
 // Parse the request body without requiring one. The admin UI (and the Next.js
 // proxy routes) POST no body — often with a `Content-Type: application/json`
 // header but an empty payload — so an empty body silently resolves to
-// force=false, trial=false. A *non-empty* body that is present but wrong —
-// either unparseable JSON or valid JSON that fails the schema (e.g.
-// `{"force":"true"}`) — is a caller/proxy bug worth surfacing: we warn (house
-// rule: every catch logs) and still default both to false rather than 400-ing
-// the trigger. A bad body therefore never queues a trial.
+// force=false, trial=false. A *non-empty* body that is present but wrong is a
+// caller/proxy bug worth surfacing: we warn (house rule: every catch logs) and
+// default rather than 400-ing the trigger. Unparseable JSON or a non-object
+// defaults both fields; a field of the wrong type (e.g. `{"force":"true"}`)
+// defaults only that field. Anything but a literal `true` is never a trial.
 async function parseTriggerBody(ctx: {
   req: { text: () => Promise<string> };
 }): Promise<TriggerBody> {
@@ -72,11 +90,14 @@ async function parseTriggerBody(ctx: {
   if (!result.success) {
     logger.warn(
       { issues: result.error.issues },
-      'crawl trigger: body failed schema validation — defaulting force=false, trial=false',
+      'crawl trigger: body is not an object — defaulting force=false, trial=false',
     );
     return DEFAULT_TRIGGER_BODY;
   }
-  return result.data;
+  return {
+    force: readFlag('force', result.data.force),
+    trial: readFlag('trial', result.data.trial),
+  };
 }
 
 // Subset of notification.metadata shape this route cares about (#804).
@@ -226,7 +247,10 @@ crawlAdminRouter.post(
 
     const { force, trial } = await parseTriggerBody(ctx);
     const actor = getAuthUser(ctx).userId;
-    const queued = await queueVenueCrawl(venueId, actor, force, trial);
+    // A trial ignores `force`: it is the paused venue's check, not a backfill.
+    const queued = trial
+      ? await queueVenueTrial(venueId, actor)
+      : await queueVenueCrawl(venueId, actor, force);
 
     if (queued.ok === 'not_found') {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);

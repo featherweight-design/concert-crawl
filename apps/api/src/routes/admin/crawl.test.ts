@@ -229,7 +229,7 @@ describe('Admin crawl routes', () => {
     });
 
     // The Next.js proxy POSTs Content-Type: application/json with an empty
-    // body, so parseForce must treat an empty JSON body as force=false without
+    // body, so parseTriggerBody must treat an empty JSON body as force=false without
     // logging a malformed-body warning.
     it('defaults force=false for an empty application/json body', async () => {
       adminAuth();
@@ -250,7 +250,7 @@ describe('Admin crawl routes', () => {
     });
 
     // A present-but-invalid body (valid JSON, wrong type) must not fail the
-    // trigger — it defaults to force=false (and warns, see parseForce).
+    // trigger — it defaults to force=false (and warns, see parseTriggerBody).
     it('defaults force=false when the body fails schema validation', async () => {
       adminAuth();
       const { db } = await import('@concert-crawl/db');
@@ -404,7 +404,7 @@ describe('Admin crawl routes', () => {
     });
 
     // Mirrors the Next.js proxy's empty application/json body (see bulk route
-    // test) — parseForce must default to force=false without a warning log.
+    // test) — parseTriggerBody must default to force=false without a warning log.
     it('defaults force=false for an empty application/json body', async () => {
       adminAuth();
       const { db } = await import('@concert-crawl/db');
