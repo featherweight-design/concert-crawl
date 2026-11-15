@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Copy,
 } from 'lucide-react';
+import { feedbackScreenshotOf } from '@concert-crawl/types';
 import { MonoLabel } from '@/components/admin/primitives';
 import { CATEGORY_LABEL, type FeedbackItem } from './FeedbackRow';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -144,9 +145,10 @@ export function FeedbackExpanded({
   };
 
   const meta = item.metadata ?? {};
-  const screenshot =
-    (meta['screenshot'] as string | null | undefined) ??
-    (meta['screenshotDataUrl'] as string | null | undefined);
+  // Reporter-controlled, and older rows may hold any string: only our own
+  // inline image format renders, so the admin's browser is never sent to a
+  // host the reporter chose. Anything else shows the no-screenshot state.
+  const screenshot = feedbackScreenshotOf(item.metadata);
 
   const route = (() => {
     try {
@@ -258,6 +260,8 @@ export function FeedbackExpanded({
                   <img
                     src={screenshot}
                     alt="User screenshot"
+                    referrerPolicy="no-referrer"
+                    data-testid="feedback-screenshot"
                     style={{
                       display: 'block',
                       width: '100%',

@@ -614,6 +614,18 @@ describe('BugPanel', () => {
       'src',
       'data:image/png;base64,AAAA',
     );
+    expect(screen.getByTestId('bug-screenshot')).toHaveAttribute(
+      'referrerpolicy',
+      'no-referrer',
+    );
+  });
+
+  it('never draws a screenshot that is a URL to another host', () => {
+    open(bugRow({ screenshot: 'https://tracker.example.com/pixel.png' }));
+    expect(screen.queryByTestId('bug-screenshot')).toBeNull();
+    expect(
+      document.querySelector('img[src*="tracker.example.com"]'),
+    ).toBeNull();
   });
 
   it('links to GitHub only with an issue, and has no reply box', () => {
