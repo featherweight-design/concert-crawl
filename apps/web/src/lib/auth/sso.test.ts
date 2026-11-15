@@ -12,6 +12,7 @@ const base: CallbackState = {
   transferable: false,
   signUpStatus: null,
   signUpMissing: [],
+  signUpTransferable: false,
 };
 
 describe('ssoCallbackUrl', () => {
@@ -61,6 +62,20 @@ describe('decideCallback', () => {
         signUpStatus: null,
       },
       'refused',
+    ],
+    [
+      'an unknown Google account beats a stale sign-up still missing the legal box',
+      {
+        transferable: true,
+        signUpStatus: 'missing_requirements',
+        signUpMissing: ['legal_accepted'],
+      },
+      'refused',
+    ],
+    [
+      'a sign-up for an account that already exists',
+      { signUpStatus: 'missing_requirements', signUpTransferable: true },
+      'signInTransfer',
     ],
     ['a second factor', { signInStatus: 'needs_second_factor' }, 'failed'],
     ['a device check', { signInStatus: 'needs_client_trust' }, 'failed'],
