@@ -36,6 +36,11 @@
       "import": "./dist/lib/canonical-title.js",
       "default": "./dist/lib/canonical-title.js"
     },
+    "./ticket-links": {
+      "types": "./dist/lib/ticket-links/index.d.ts",
+      "import": "./dist/lib/ticket-links/index.js",
+      "default": "./dist/lib/ticket-links/index.js"
+    },
     "./robots": {
       "types": "./dist/lib/robots.d.ts",
       "import": "./dist/lib/robots.js",
