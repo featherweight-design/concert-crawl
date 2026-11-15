@@ -1,0 +1,63 @@
+{
+  "feature": "Custom auth PR 7 · the invite code screen (/auth/code)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/04-invite-code (code-plain-m, code-typing-m, code-prefilled-m, code-320, code-d, code-light-m). Signed out. Photographed with no API: the empty field, a code being typed (the paste hint), a whole code (Looks good), and a code arriving in the link (You're invited). The answers need the redeem API and are hand-walked on staging: busy (code-busy-m), not found, used (with its sign-in link), expired (with its waitlist link), too many tries (code-ratelimit-m: the field locks and the button counts down from 3:00), and the ended page (its own inventory, code-ended-way-back.json). The By continuing you agree line stays until the cutover, so it is drawn here and not on the boards.",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "code-plain",
+      "label": "/auth/code: the empty field",
+      "steps": [
+        {
+          "goto": "/auth/code",
+          "wait": "h1:has-text('Enter your invite code')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "code-typing",
+      "label": "/auth/code: a code being typed",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/auth/code",
+          "wait": "h1:has-text('Enter your invite code')",
+          "settle": 1000
+        },
+        { "fill": "input[aria-label='Invite code']", "text": "beta7kq" },
+        { "wait": "text=Paste works too", "settle": 600 }
+      ]
+    },
+    {
+      "id": "code-whole",
+      "label": "/auth/code: a whole code",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/auth/code",
+          "wait": "h1:has-text('Enter your invite code')",
+          "settle": 1000
+        },
+        { "fill": "input[aria-label='Invite code']", "text": "beta7kq2m9xd" },
+        { "wait": "text=Looks good", "settle": 600 }
+      ]
+    },
+    {
+      "id": "code-prefilled",
+      "label": "/auth/code?code=: filled in from the link",
+      "widths": ["phone", "desktop"],
+      "steps": [
+        {
+          "goto": "/auth/code?code=beta-7kq2-m9xd",
+          "wait": "h1:has-text('invited')",
+          "settle": 1200
+        }
+      ]
+    }
+  ]
+}
