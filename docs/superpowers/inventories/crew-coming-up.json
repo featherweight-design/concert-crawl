@@ -1,6 +1,6 @@
 {
   "feature": "Addendum 6 item 41a · the crew page's Coming up list (board 41/crew-coming-up)",
-  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/boards/41-crew-coming-up/crew-coming-up.html (six cards at one row width: just you, you and others, others not you, tonight, postponed or cancelled, nothing yet). 41a builds every state the crew payload carries; postponed and cancelled follow in 41b (CrewShow has no status yet). The crew page loads on the server, so the cells open the real scratch crews: /crews, then each crew's Coming up tab, whatever shows its members are going to. Behind the crews flag. Signed in as the audit user. Electric and Light.",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/boards/41-crew-coming-up/crew-coming-up.html (six cards at one row width: just you, you and others, others not you, tonight, postponed or cancelled, nothing yet). 41a built every state the crew payload carried; 41b adds the postponed chip and, on a show tonight, the Doors time (CrewShow now carries status and doorsTime). Cancelled stays open for Design batch 4. The crew page loads on the server, so the cells open the real scratch crews: /crews, then each crew's Coming up tab, whatever shows its members are going to. Behind the crews flag. Signed in as the audit user. Electric and Light.",
   "themes": [
     {
       "label": "electric",
