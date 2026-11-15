@@ -28,7 +28,6 @@ vi.mock('@/app/legal/BetaBody', () => ({ BetaBody: () => null }));
 import SignUpNewPage from './page';
 
 interface Props {
-  target: string;
   beta: boolean;
   inviteCode: string | null;
   changeHref: string;
@@ -53,15 +52,12 @@ const visit = async (params: Record<string, string | string[]> = {}) =>
   };
 
 describe('/sign-up/new', () => {
-  it('computes the same /auth/complete target as the stock page', async () => {
-    const { props } = await visit({ redirect_url: '/e/abc', tier: 'premium' });
-    expect(props.target).toBe('/auth/complete?return=%2Fe%2Fabc&tier=premium');
-  });
-
-  it('sends a signed-in visitor to the target', async () => {
+  it('sends a signed-in visitor to the same /auth/complete target as the stock page', async () => {
     mocks.auth.mockResolvedValue({ userId: 'user_1' });
-    await expect(visit({ redirect_url: '/e/abc' })).rejects.toThrow(
-      'NEXT_REDIRECT:/auth/complete?return=%2Fe%2Fabc',
+    await expect(
+      visit({ redirect_url: '/e/abc', tier: 'premium' }),
+    ).rejects.toThrow(
+      'NEXT_REDIRECT:/auth/complete?return=%2Fe%2Fabc&tier=premium',
     );
   });
 

@@ -135,7 +135,9 @@ describe('SignUpFlow, consent', () => {
   it('opens the legal sheet from a link without toggling the box, keeping the fields', () => {
     renderFlow();
     fill();
-    const terms = screen.getByRole('link', { name: FLOW.consent.terms });
+    // The page foot has a Terms link too; the consent sentence comes first.
+    const [terms] = screen.getAllByRole('link', { name: FLOW.consent.terms });
+    if (!terms) throw new Error('no Terms link');
     expect(terms).toHaveAttribute('href', '/legal/terms');
     fireEvent.click(terms);
     expect(screen.getByRole('checkbox')).not.toBeChecked();
@@ -255,7 +257,10 @@ describe('SignUpFlow, the press', () => {
     fill();
     tick();
     await press();
-    fireEvent.click(screen.getByRole('button', { name: FLOW.back }));
+    // The page draws a phone arrow and a desktop link; either goes back.
+    const [back] = screen.getAllByRole('button', { name: FLOW.back });
+    if (!back) throw new Error('no Back button');
+    fireEvent.click(back);
     expect(screen.getByLabelText(COPY.form.emailLabel)).toHaveValue(
       'fan+clerk_test@example.com',
     );
