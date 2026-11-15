@@ -36,8 +36,6 @@ interface MyShowsArtistsContentProps {
    * mistake this surface must never make.
    */
   artists: FollowedArtist[] | undefined;
-  /** Unread since the tier picker left this surface; removed with PR 7. */
-  scaRegion?: boolean;
 }
 
 export const MyShowsArtistsContent = ({

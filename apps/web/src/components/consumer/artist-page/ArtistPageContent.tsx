@@ -63,8 +63,6 @@ export const ArtistPageContent = ({
   olderHref,
 }: {
   data: ArtistDetailResponse;
-  /** Unread since the tier picker left the artist page; removed with PR 7. */
-  scaRegion?: boolean;
   /** "Show older" target: the next past-shows window; absent when none. */
   olderHref?: string | undefined;
 }) => {
