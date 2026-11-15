@@ -126,7 +126,14 @@ export const FlagHistory = ({ flagKey, version }: FlagHistoryProps) => {
               >
                 <WhenCell iso={row.createdAt} />
               </span>
-              <span style={{ color: 'var(--fg-muted)', minWidth: 0 }}>
+              <span
+                style={{
+                  color: 'var(--fg-muted)',
+                  minWidth: 0,
+                  // A long handle wraps inside the drawer instead of running past it.
+                  overflowWrap: 'anywhere',
+                }}
+              >
                 {lineOf(row)}
               </span>
             </li>
