@@ -52,11 +52,6 @@ vi.mock('./lib/attendance-toasts', () => ({
   showRemovedToast: vi.fn(),
   showAttendanceError: vi.fn(),
 }));
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="tier-picker" /> : null,
-}));
-
 const { EventDetailCtaBlock } = await import('./EventDetailCtaBlock');
 
 const event: GoingCtaEvent = {
@@ -93,7 +88,9 @@ describe('EventDetailCtaBlock, signed in with /v1/users/me failing', () => {
     mockFetchMe.mockReset();
     mockFetchMe.mockRejectedValue(new Error('500'));
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+  });
 
   it('keeps Going live and marks it on tap', async () => {
     const queryClient = new QueryClient({
@@ -111,15 +108,10 @@ describe('EventDetailCtaBlock, signed in with /v1/users/me failing', () => {
       ).toBe('error'),
     );
 
-    expect(screen.queryByText(GOING_COPY.locked.line)).toBeNull();
-    expect(goingButton()).not.toHaveAttribute(
-      'aria-label',
-      GOING_COPY.locked.aria,
-    );
+    expect(goingButton()).toHaveTextContent(GOING_COPY.button.default);
 
     fireEvent.click(goingButton());
     expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: true });
     expect(push).not.toHaveBeenCalled();
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 });

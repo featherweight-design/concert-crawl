@@ -33,9 +33,6 @@ const settled = { going: true, attendingAt: '2026-01-01T00:00:00.000Z' };
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement,
 }));
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: null }),
-}));
 vi.mock('@/lib/queries/use-attending-toggle', () => ({
   useAttendingToggle: () => ({ mutateAsync: mutate, isPending }),
 }));
@@ -48,11 +45,6 @@ vi.mock('./lib/attendance-toasts', () => ({
   showRemovedToast: (arg: unknown) => showRemovedToast(arg),
   showAttendanceError: (arg: unknown) => showAttendanceError(arg),
 }));
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
-    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
-}));
-
 const { EventDetailCtaBlock } = await import('./EventDetailCtaBlock');
 
 const event = (over: Partial<GoingCtaEvent> = {}): GoingCtaEvent => ({
@@ -103,7 +95,9 @@ describe('EventDetailCtaBlock', () => {
     isPending = false;
     entitlement = { isLoading: false, active: true, surface: 'visible-active' };
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+  });
 
   it('offers the commitment on an upcoming show the user has not marked', () => {
     renderBlock();
@@ -166,7 +160,6 @@ describe('EventDetailCtaBlock', () => {
     renderBlock({ date: '2020-10-14' });
     fireEvent.click(goingButton());
     expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: true });
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   it('keeps the "I went" pill and raises the error toast when a stamp fails', async () => {
@@ -257,7 +250,7 @@ describe('EventDetailCtaBlock', () => {
 
   // Returning nothing while the plan resolved let the watch strip render alone
   // and uncarded, then reparent into the card once it landed — a visible pop-in.
-  it('reserves the card while the plan resolves rather than flashing a lock', () => {
+  it('reserves the card while the session resolves', () => {
     entitlement = { isLoading: true, active: false, surface: null };
     renderBlock();
     const placeholder = screen.getByTestId('going-button-placeholder');
@@ -267,7 +260,6 @@ describe('EventDetailCtaBlock', () => {
       screen.getByRole('button', { name: EXPLAINER_LABEL }),
     ).toBeInTheDocument();
     expect(screen.queryByText(GOING_COPY.button.default)).toBeNull();
-    expect(screen.queryByText(GOING_COPY.locked.line)).toBeNull();
   });
 
   it('commits and refreshes the server-rendered page on tap', () => {
@@ -282,34 +274,39 @@ describe('EventDetailCtaBlock', () => {
     expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: false });
   });
 
-  it('routes a locked tap to the upgrade path instead of mutating', () => {
+  // Everything is free: a signed-in fan whose plan reads as not carrying
+  // Going still gets the live button, and a tap marks Going. There is no
+  // locked treatment and no picker left to route to.
+  it('marks Going for a signed-in fan whatever the plan reads as', () => {
     entitlement = {
       isLoading: false,
       active: false,
       surface: 'paywall-on-tap',
     };
     renderBlock();
-    fireEvent.click(goingButton());
-    expect(mutate).not.toHaveBeenCalled();
-    expect(screen.getByTestId('tier-picker')).toHaveAttribute(
-      'data-entry',
-      'paywall',
+    expect(goingButton()).toHaveTextContent(GOING_COPY.button.default);
+    expect(goingButton()).toHaveAttribute(
+      'aria-label',
+      GOING_COPY.button.ariaNotGoing,
     );
+    fireEvent.click(goingButton());
+    expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: true });
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it('shows the locked treatment to a user without the entitlement', () => {
-    entitlement = {
-      isLoading: false,
-      active: false,
-      surface: 'paywall-on-tap',
-    };
+  // A branded 403 used to open the picker. It is now an ordinary failure:
+  // the retry lives in the button and the line names what survived.
+  it('treats an entitlement 403 as an ordinary failure', async () => {
+    mutate.mockRejectedValue(
+      new ApiError(403, 'Forbidden', 'entitlement_required'),
+    );
     renderBlock();
-    // Same label as unlocked, so the control reads as the thing you'd get.
-    expect(goingButton()).toHaveTextContent(GOING_COPY.button.default);
-    expect(goingButton()).toHaveAttribute('aria-label', GOING_COPY.locked.aria);
-    // A disabled control can't sell anything.
-    expect(goingButton()).toBeEnabled();
-    expect(screen.getByText(GOING_COPY.locked.line)).toBeInTheDocument();
+    fireEvent.click(goingButton());
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      GOING_COPY.error.survived,
+    );
+    expect(goingButton()).toHaveTextContent(GOING_COPY.error.retry);
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('leaves a past show alone even when the entitlement is gone', () => {
@@ -320,7 +317,6 @@ describe('EventDetailCtaBlock', () => {
     };
     renderBlock({ date: '2020-10-14' });
     expect(goingButton()).toHaveTextContent(GOING_COPY.button.pastNo);
-    expect(screen.queryByText(GOING_COPY.locked.line)).toBeNull();
   });
 
   it('puts the retry in the button and names what survived beneath it', async () => {
@@ -355,26 +351,6 @@ describe('EventDetailCtaBlock', () => {
     expect(mutate).toHaveBeenLastCalledWith({ eventId: 'ev1', going: false });
   });
 
-  it('keeps the locked treatment when a failure and a lost entitlement collide', async () => {
-    mutate.mockRejectedValue(new Error('down'));
-    const { rerender } = render(
-      <EventDetailCtaBlock event={event()} scaRegion={false} />,
-    );
-    fireEvent.click(goingButton());
-    await waitFor(() =>
-      expect(goingButton()).toHaveTextContent(GOING_COPY.error.retry),
-    );
-
-    // The entitlement lapses while the failure is still on screen.
-    entitlement = {
-      isLoading: false,
-      active: false,
-      surface: 'paywall-on-tap',
-    };
-    rerender(<EventDetailCtaBlock event={event()} scaRegion={false} />);
-    expect(goingButton()).toHaveAttribute('aria-label', GOING_COPY.locked.aria);
-  });
-
   it('sends a logged-out tap straight to sign-in', () => {
     entitlement = {
       isLoading: false,
@@ -388,33 +364,20 @@ describe('EventDetailCtaBlock', () => {
     expect(push).toHaveBeenCalledWith(
       `/sign-in?redirect_url=${encodeURIComponent('/events/ev1')}`,
     );
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   // The explainer used to render only in the else-branch beneath the button, so
-  // the gate and a failure both silenced it — the two moments someone is most
-  // likely to ask what Going even is.
-  it.each(['locked', 'error'] as const)(
-    'keeps the explainer reachable in the %s treatment',
-    async (treatment) => {
-      if (treatment === 'locked') {
-        entitlement = {
-          isLoading: false,
-          active: false,
-          surface: 'paywall-on-tap',
-        };
-        renderBlock();
-      } else {
-        mutate.mockRejectedValue(new Error('down'));
-        renderBlock();
-        fireEvent.click(goingButton());
-        await screen.findByRole('alert');
-      }
-      expect(
-        screen.getByRole('button', { name: EXPLAINER_LABEL }),
-      ).toBeInTheDocument();
-    },
-  );
+  // a failure silenced it — the moment someone is most likely to ask what
+  // Going even is.
+  it('keeps the explainer reachable in the error treatment', async () => {
+    mutate.mockRejectedValue(new Error('down'));
+    renderBlock();
+    fireEvent.click(goingButton());
+    await screen.findByRole('alert');
+    expect(
+      screen.getByRole('button', { name: EXPLAINER_LABEL }),
+    ).toBeInTheDocument();
+  });
 
   it('heads the block with an eyebrow so the tip has a line to sit on', () => {
     renderBlock();
@@ -445,22 +408,6 @@ describe('EventDetailCtaBlock', () => {
     const trigger = screen.getByRole('button', { name: EXPLAINER_LABEL });
     expect(trigger).toHaveTextContent('');
     expect(trigger.querySelector('svg')).not.toBeNull();
-  });
-
-  // The gate line sells Concerts, so it carries its own tip; the header
-  // tip explains the going/watching distinction, which is a different question.
-  it('pairs the locked line with a Concerts tip', () => {
-    entitlement = {
-      isLoading: false,
-      active: false,
-      surface: 'paywall-on-tap',
-    };
-    renderBlock();
-    expect(
-      screen.getByRole('button', {
-        name: TIP_CONTENT['concert-history'].label,
-      }),
-    ).toBeInTheDocument();
   });
 
   // Watching is free and ungated, so a suppressed commitment must never take
@@ -529,16 +476,6 @@ describe('EventDetailCtaBlock', () => {
     expect(
       await screen.findByText(GOING_COPY.error.survived),
     ).toBeInTheDocument();
-  });
-
-  it('routes a server-side entitlement 403 to the upgrade path, not the error line', async () => {
-    mutate.mockRejectedValue(
-      new ApiError(403, 'Upgrade required', 'entitlement_required'),
-    );
-    renderBlock();
-    fireEvent.click(goingButton());
-    expect(await screen.findByTestId('tier-picker')).toBeInTheDocument();
-    expect(screen.queryByText(GOING_COPY.error.survived)).toBeNull();
   });
 
   it('refreshes the page after a successful commitment', async () => {

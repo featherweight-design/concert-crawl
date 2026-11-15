@@ -26,14 +26,7 @@ import { GOING_COPY } from './definitions/copy';
 import { pillInkFor } from './lib/pill-ink';
 
 export type GoingButtonState =
-  | 'default'
-  | 'going'
-  | 'past-yes'
-  | 'past-no'
-  // Free or logged-out. Deliberately never disabled: a disabled control cannot
-  // sell anything, and this one is the discovery surface for the perk.
-  | 'locked'
-  | 'error';
+  'default' | 'going' | 'past-yes' | 'past-no' | 'error';
 export type GoingButtonSize = 'sm' | 'md' | 'lg';
 
 type GoingButtonProps = {
@@ -94,33 +87,6 @@ const formatWentDate = (date: string): string =>
 /** The pill's accessible name keeps the year, which the drawn label drops. */
 const formatWentDateFull = (date: string): string =>
   formatDate(date, { month: 'short', day: 'numeric', year: 'numeric' });
-
-const LockIcon = ({ size }: { size: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    aria-hidden="true"
-    focusable="false"
-  >
-    <rect
-      x="4.5"
-      y="10.5"
-      width="15"
-      height="10"
-      rx="2"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
-    <path
-      d="M8 10.5V7.5a4 4 0 118 0v3"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-  </svg>
-);
 
 const AlertIcon = ({ size }: { size: number }) => (
   <svg
@@ -197,18 +163,16 @@ export const GoingButton = ({
     }
   }, [state]);
 
-  // `locked` and `error` drop the ticket-stub interior and render as one
-  // centred control. The stub is the shape of a night you committed to; neither
-  // of these is that, and both keep the outer geometry so the row never jumps.
-  if (state === 'locked' || state === 'error') {
-    const isLocked = state === 'locked';
-    const tone = isLocked ? 'var(--accent)' : 'var(--danger)';
+  // `error` drops the ticket-stub interior and renders as one centred control.
+  // The stub is the shape of a night you committed to; a failure is not that,
+  // and it keeps the outer geometry so the row never jumps.
+  if (state === 'error') {
+    const tone = 'var(--danger)';
     return (
       <button
         type="button"
         className="going-cta"
-        // Never disabled: locked is the pitch, and error is the retry.
-        aria-label={isLocked ? GOING_COPY.locked.aria : undefined}
+        // Never disabled: the error treatment is the retry.
         onClick={() => onChange?.(!isOn)}
         style={{
           all: 'unset',
@@ -232,11 +196,7 @@ export const GoingButton = ({
           letterSpacing: '-0.01em',
         }}
       >
-        {isLocked ? (
-          <LockIcon size={Math.round(sizes.font * 1.05)} />
-        ) : (
-          <AlertIcon size={Math.round(sizes.font * 1.05)} />
-        )}
+        <AlertIcon size={Math.round(sizes.font * 1.05)} />
         <span
           style={{
             overflow: 'hidden',
@@ -244,7 +204,7 @@ export const GoingButton = ({
             whiteSpace: 'nowrap',
           }}
         >
-          {isLocked ? GOING_COPY.button.default : GOING_COPY.error.retry}
+          {GOING_COPY.error.retry}
         </span>
       </button>
     );

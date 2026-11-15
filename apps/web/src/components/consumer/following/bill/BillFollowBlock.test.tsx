@@ -40,13 +40,6 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// The picker is a lazy client sheet with its own checkout tree; the claims
-// here are about what the block draws, not about what the sheet renders.
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="tier-picker" /> : null,
-}));
-
 const { followArtistsBulk, apiPost, apiDelete } = vi.hoisted(() => ({
   followArtistsBulk: vi.fn(),
   apiPost: vi.fn(),
@@ -70,9 +63,9 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: planState.current, isPending: false }),
 }));
 
-// Going free (2026-10-29) left no signed-in plan the matrix denies following,
-// so the locked branch is driven by forcing the hook's answer. It is kept for
-// a future re-gate; with `regate.surface` null the real hook answers.
+// Going free (2026-10-29) left no signed-in plan the matrix denies following.
+// The block no longer reads the entitlement at all; forcing a denied answer
+// here proves that, because the old block locked itself on exactly this.
 const regate = vi.hoisted(() => ({
   surface: null as EntitlementCell | null,
 }));
@@ -133,7 +126,9 @@ beforeEach(() => {
   apiDelete.mockReset();
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+});
 
 describe('BillFollowBlock — the block itself', () => {
   it('lists the whole bill, headliner first, with the billed count', () => {
@@ -235,32 +230,36 @@ describe('BillFollowBlock — the name is the way to the artist', () => {
   });
 });
 
-describe('BillFollowBlock — ONE paywall, ONE tap (ED-05)', () => {
-  it('gives a denied plan a single locked action instead of a lock per act', async () => {
-    regate.surface = 'paywall-on-tap';
-    render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+describe('BillFollowBlock — following is on every plan', () => {
+  // The block used to collapse to one locked action that opened the tier
+  // picker for any plan the matrix denied. Everything is free now, so a
+  // signed-in viewer whatever the plan reads as gets the rows and a live
+  // bulk action that follows.
+  it.each(['paywall-on-tap', 'tier-picker-on-tap'] as const)(
+    'gives a signed-in viewer whose plan reads %s live rows and a live bulk follow',
+    async (surface) => {
+      regate.surface = surface;
+      routerPush.mockClear();
+      followArtistsBulk.mockResolvedValue(bulkOk(BILL.map((row) => row.slug)));
+      render(<BillFollowBlock artists={BILL} scaRegion={false} />);
 
-    // The whole point: three acts must not mean three walls.
-    expect(followButtons()).toHaveLength(0);
+      expect(followButtons()).toHaveLength(3);
+      const bulk = screen.getByTestId('bill-follow-all');
+      expect(bulk).not.toHaveAttribute('aria-haspopup');
+      expect(bulk).not.toHaveAttribute('aria-describedby');
+      expect(bulk.querySelector('[data-glyph="lock"]')).toBeNull();
+      expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
 
-    const bulk = screen.getByTestId('bill-follow-all');
-    expect(bulk).toHaveAttribute('aria-haspopup', 'dialog');
-    // The label counts the whole bill while locked — none of it is reachable,
-    // so "Follow all 3" is the honest number.
-    expect(bulk).toHaveTextContent(COPY.followAll(3));
-
-    // The gate is told in an sr-only sentence, and it has to be IN the a11y
-    // tree for aria-describedby to announce anything.
-    const gateId = bulk.getAttribute('aria-describedby');
-    expect(gateId).toBeTruthy();
-    const gate = document.getElementById(gateId ?? '');
-    expect(gate).toHaveTextContent(FOLLOWING_COPY.followGate);
-    expect(gate).not.toHaveAttribute('hidden');
-
-    fireEvent.click(bulk);
-    expect(screen.getByTestId('tier-picker')).toBeInTheDocument();
-    expect(followArtistsBulk).not.toHaveBeenCalled();
-  });
+      fireEvent.click(bulk);
+      await waitFor(() =>
+        expect(followArtistsBulk).toHaveBeenCalledWith(
+          'token',
+          BILL.map((row) => row.slug),
+        ),
+      );
+      expect(routerPush).not.toHaveBeenCalled();
+    },
+  );
 
   it('gives a Premium subscriber independent rows and no gate', () => {
     render(<BillFollowBlock artists={BILL} scaRegion={false} />);
@@ -327,7 +326,6 @@ describe('BillFollowBlock — ONE paywall, ONE tap (ED-05)', () => {
     expect(routerPush).toHaveBeenCalledWith(
       `/sign-in?redirect_url=${encodeURIComponent('/events/evt-1')}`,
     );
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 });
 
@@ -410,19 +408,27 @@ describe('BillFollowBlock — "Follow all N"', () => {
     expect(screen.queryByTestId('bill-follow-all')).toBeNull();
   });
 
-  it('rolls the bill back and opens the picker on a stale entitlement', async () => {
+  // An entitlement 403 used to open the tier picker. It is an ordinary failed
+  // write now: the bill rolls back and the rows stay live.
+  it('rolls the bill back on an entitlement 403 like any other failure', async () => {
     const { ApiError } = await vi.importActual<typeof ApiModule>('@/lib/api');
     followArtistsBulk.mockRejectedValue(
-      new ApiError(403, 'Premium required', 'entitlement_required'),
+      new ApiError(403, 'Forbidden', 'entitlement_required'),
     );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     render(<BillFollowBlock artists={BILL} scaRegion={false} />);
     fireEvent.click(screen.getByTestId('bill-follow-all'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('tier-picker')).toBeInTheDocument(),
+      expect(warn).toHaveBeenCalledWith(
+        'bulk bill follow failed; rolling back',
+        expect.anything(),
+      ),
     );
     expect(followButtons()).toHaveLength(3);
+    expect(screen.getByTestId('bill-follow-all')).toBeInTheDocument();
+    warn.mockRestore();
   });
 
   // A failed bulk used to restore a snapshot of the whole set, which also
@@ -505,34 +511,6 @@ describe('BillFollowBlock — "Follow all N"', () => {
         name: ARTIST_COPY.followAria('Nightjar Choir'),
       }),
     ).toBeInTheDocument();
-  });
-
-  // ...unless the rows are not drawn at all, which is every act while locked.
-  it('survives on a one-act bill while locked, as the only control there', () => {
-    regate.surface = 'paywall-on-tap';
-
-    render(<BillFollowBlock artists={[BILL[0]!]} scaRegion={false} />);
-
-    expect(screen.getByTestId('bill-follow-all')).toBeInTheDocument();
-    expect(followButtons()).toHaveLength(0);
-  });
-
-  // The downgrade case: a lapsed Premium viewer follows the whole bill, so
-  // there is nothing left to commit — but nothing is reachable either, and a
-  // block with no control in it is a dead surface.
-  it('keeps the locked action even when the viewer follows every act', () => {
-    regate.surface = 'paywall-on-tap';
-
-    render(
-      <BillFollowBlock
-        artists={BILL.map((artist) => ({ ...artist, following: true }))}
-        scaRegion={false}
-      />,
-    );
-
-    const bulk = screen.getByTestId('bill-follow-all');
-    expect(bulk).toHaveAttribute('aria-haspopup', 'dialog');
-    expect(bulk).toHaveTextContent(COPY.followAll(3));
   });
 });
 

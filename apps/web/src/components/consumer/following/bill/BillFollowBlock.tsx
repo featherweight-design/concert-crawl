@@ -6,18 +6,9 @@
 // optional prop and it renders itself, so neither detail surface is forked to
 // carry it (design table ED-06).
 //
-// ⚠️ ONE PAYWALL, ONE TAP (ED-05). Below Premium the whole block is a single
-// gate: the per-row buttons are not drawn at all and one locked action stands
-// in for them. A four-act bill that draws four locks asks a free user to meet
-// the same wall four times, which is the state this rule exists to forbid.
-// Above Premium the rows are independent again and the bulk action is a
-// convenience rather than the only way through.
-//
-// This holds for a viewer who downgraded while already following acts on the
-// bill: locked draws the at-rest skin and no Following state, exactly as
-// `ShelfCard` does. Their follows are not lost — DELETE is ungated at the API
-// and the artist page still unfollows — but a surface whose whole job is the
-// upsell is not the place to hand a lapsed viewer four toggles.
+// Following is on every plan, so the rows are always independent and the bulk
+// action is a convenience rather than the only way through. Signed out, every
+// row recruits to sign-up and the bulk action is withheld.
 //
 // ⚠️ Following an act here does NOT touch the event's watch state (ED-08).
 // Watching is the show; following is the artist. Nothing in this block's copy
@@ -30,7 +21,7 @@
 // therefore structural: there is no breakpoint at which one viewport gets a
 // block the other does not.
 
-import React, { useId, useState } from 'react';
+import React, { useId } from 'react';
 import Link from 'next/link';
 
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
@@ -38,11 +29,6 @@ import {
   NF_FOLLOW_SIZES,
   NF_TAP_MIN,
 } from '@/components/consumer/artist-page/definitions/constants';
-import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { usePlanState } from '@/lib/queries/use-plan-state';
 
 import { BILL_FOLLOW_COPY } from './definitions/copy';
 import type { BillArtist } from './lib/bill-artists';
@@ -68,54 +54,26 @@ const NAME_STYLE: React.CSSProperties = {
   color: 'var(--fg)',
 };
 
-const LockGlyph = () => (
-  <svg
-    data-glyph="lock"
-    width={BULK.glyph}
-    height={BULK.glyph}
-    viewBox="0 0 12 14"
-    fill="none"
-    stroke="currentColor"
-    aria-hidden
-    style={{ flexShrink: 0 }}
-  >
-    <rect x="1.2" y="6" width="9.6" height="7" rx="2" strokeWidth={1.5} />
-    <path d="M3.6 6V4.2a2.4 2.4 0 014.8 0V6" strokeWidth={1.5} />
-  </svg>
-);
-
 export interface BillFollowBlockProps {
   /** Headliner first, then support. Slug-less names are dropped upstream. */
   artists: BillArtist[];
   /** The public mirror at /e/:id. Rows recruit; the bulk action is withheld. */
   signedOut?: boolean;
-  /** Server-resolved, forwarded to the picker's checkout legal block. */
-  scaRegion: boolean;
+  /** Unread since the tier picker left this block; the scaRegion removal
+   *  takes it off the event pages' call sites. */
+  scaRegion?: boolean;
 }
 
 export const BillFollowBlock = ({
   artists,
   signedOut = false,
-  scaRegion,
 }: BillFollowBlockProps) => {
-  const { surface } = useEntitlement('following');
-  const { data: planState } = usePlanState();
-  const [pickerOpen, setPickerOpen] = useState(false);
-
   // useId, not a module counter: two blocks could share a page, and a
-  // colliding id aims every gate sentence at one node.
+  // colliding id would point the heading's label at the wrong node.
   const uid = useId().replace(/:/g, '');
   const titleId = `nf-bill-title-${uid}`;
-  const gateId = `nf-bill-gate-${uid}`;
 
-  const onEntitlementRequired = () => setPickerOpen(true);
-  const follows = useBillFollows(artists, onEntitlementRequired);
-
-  // Signed out draws the at-rest skin and routes to sign-up, per #794 §3.10 —
-  // there is no plan to lock a visitor out of. Fails OPEN while the plan is
-  // still resolving: showing a paying subscriber an upgrade-shaped block is
-  // the worse of the two wrong answers, and the server enforces regardless.
-  const locked = !signedOut && surface !== null && surface !== 'visible-active';
+  const follows = useBillFollows(artists);
 
   // Hooks above this line run unconditionally.
   if (artists.length === 0) return null;
@@ -129,21 +87,9 @@ export const BillFollowBlock = ({
   // and a second route to the same place in the same block is noise.
   //
   // A one-act bill is the same case: the row's own button already reads
-  // "Follow", so a bulk action beside it offers one decision twice. Locked is
-  // the exception, because the rows are not drawn at all there (ED-05) and
-  // this is the block's only control however many acts are on the bill.
-  //
-  // Locked therefore counts the BILL, not what is left of it. A viewer who
-  // downgraded while following all three acts still has none of it reachable,
-  // which is the same reasoning that makes `bulkLabel` say "Follow all 3"
-  // there; keying the control off `unfollowed` instead would leave that
-  // viewer a block with no control in it at all.
-  const showBulk = signedOut
-    ? false
-    : locked
-      ? artists.length > 0
-      : unfollowed.length > 1;
-  const bulkLabel = COPY.followAll(locked ? artists.length : unfollowed.length);
+  // "Follow", so a bulk action beside it offers one decision twice.
+  const showBulk = !signedOut && unfollowed.length > 1;
+  const bulkLabel = COPY.followAll(unfollowed.length);
 
   const onBulkClick = () => {
     // Honour `aria-disabled` here rather than only in the hook. The hook's ref
@@ -151,10 +97,6 @@ export const BillFollowBlock = ({
     // itself as disabled and still runs its handler is the inconsistency the
     // attribute exists to prevent.
     if (follows.committing) return;
-    if (locked) {
-      setPickerOpen(true);
-      return;
-    }
     follows.followAll();
   };
 
@@ -169,9 +111,7 @@ export const BillFollowBlock = ({
       data-testid="bill-follow-all"
       onClick={onBulkClick}
       // An action, not a toggle — `aria-pressed` would announce a switch
-      // that has no off. Locked it is a dialog trigger and says so.
-      aria-haspopup={locked ? 'dialog' : undefined}
-      aria-describedby={locked ? gateId : undefined}
+      // that has no off.
       aria-busy={follows.committing || undefined}
       // `aria-disabled`, never `disabled`: a disabled button drops focus
       // to the body mid-commit. The ref guard swallows the second tap.
@@ -215,7 +155,6 @@ export const BillFollowBlock = ({
         data-hit-overlay=""
         style={{ position: 'absolute', inset: -BULK_GROW }}
       />
-      {locked && <LockGlyph />}
       {bulkLabel}
     </button>
   );
@@ -338,53 +277,17 @@ export const BillFollowBlock = ({
             {/* Quiet at `row`: a bill can carry four of these, and four
                 filled pills made the button the section's subject. The 28px
                 pill still owns a 44px target, so nothing is asked of the row
-                it sits in. Below Premium there is no per-row button at all —
-                the bulk control is the single gate. */}
-            {!locked && (
-              <FollowButton
-                name={artist.name}
-                following={follows.following.has(artist.slug)}
-                signedOut={signedOut}
-                size="row"
-                onToggle={() => follows.toggle(artist.slug)}
-                // Unreachable while `locked` is false; a stale entitlement
-                // comes back as a 403 and lands on the same picker.
-                onLockedTap={onEntitlementRequired}
-              />
-            )}
+                it sits in. */}
+            <FollowButton
+              name={artist.name}
+              following={follows.following.has(artist.slug)}
+              signedOut={signedOut}
+              size="row"
+              onToggle={() => follows.toggle(artist.slug)}
+            />
           </li>
         ))}
       </ul>
-
-      {/* Visually hidden by CLIP, not `hidden`: the hidden attribute drops a
-          node from the a11y tree, so an aria-describedby aimed at it announces
-          nothing at all. */}
-      {locked && (
-        <span
-          id={gateId}
-          style={{
-            position: 'absolute',
-            width: 1,
-            height: 1,
-            padding: 0,
-            margin: -1,
-            overflow: 'hidden',
-            clip: 'rect(0 0 0 0)',
-            whiteSpace: 'nowrap',
-            border: 0,
-          }}
-        >
-          {FOLLOWING_COPY.followGate}
-        </span>
-      )}
-
-      <TierPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        planState={planState ?? LOGGED_OUT_PLAN_STATE}
-        scaRegion={scaRegion}
-        entry="paywall"
-      />
     </section>
   );
 };

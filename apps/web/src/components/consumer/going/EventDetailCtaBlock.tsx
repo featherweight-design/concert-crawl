@@ -18,11 +18,8 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import type { EventDetailResponse } from '@concert-crawl/types';
-import { ApiError } from '@/lib/api';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { usePlanState } from '@/lib/queries/use-plan-state';
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { CCTip } from '@/components/ui/cc-tip';
 import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay';
 import {
@@ -39,7 +36,6 @@ import {
 } from './lib/attendance-toasts';
 import { GOING_COPY } from './definitions/copy';
 import { gradientEdge } from '@/lib/gradient-edge';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 
 // Structurally narrowed to the fields this row actually reads, so an
 // EventDetailResponse satisfies it without dragging the whole payload into
@@ -67,20 +63,23 @@ export type GoingCtaEvent = Pick<
 
 export const EventDetailCtaBlock = ({
   event,
-  scaRegion,
   children,
 }: {
   event: GoingCtaEvent;
-  scaRegion: boolean;
+  /** Unread since the tier picker left this block; the scaRegion removal
+   *  takes it off the event page's call site. */
+  scaRegion?: boolean;
   /** The Watch strip. Rendered inside the card, and on its own whenever the
    *  commitment half is suppressed — watching a show never depends on Going. */
   children?: ReactNode;
 }) => {
   const router = useRouter();
-  const { isLoading, active, surface } = useEntitlement('concert-history');
-  const { data: planState } = usePlanState();
+  // Read for two things only now that every plan carries Going: whether the
+  // session has resolved (the placeholder below), and whether the viewer is
+  // signed out (a tap goes to sign-in). There is no locked state to draw.
+  const { isLoading, surface } = useEntitlement('concert-history');
+  const signedOut = surface === 'tier-picker-on-tap';
   const toggle = useAttendingToggle();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const goToSignIn = useSignInRedirect();
   // Holds the *intent* that failed, not just that something did. The error
   // button can't re-derive it: the `error` treatment reports as off, so a
@@ -139,28 +138,14 @@ export const EventDetailCtaBlock = ({
     timezone: event.venue.timezone,
   });
 
-  // Past rows are read-only displays of something that already happened and have
-  // nothing left to sell, so neither gate touches them. Among the rest `locked`
-  // outranks `error`: a locked tap routes to the upgrade path and never retries
-  // anything, so offering a retry the button can't honour would lie.
+  // Past rows are read-only displays of something that already happened, so a
+  // failed stamp never turns them into the retry treatment (see `onChange`).
   const isPast = serverState === 'past-yes' || serverState === 'past-no';
   const state = isPast
     ? serverState
-    : !active
-      ? 'locked'
-      : failedIntent !== null
-        ? 'error'
-        : serverState;
-
-  const openUpgrade = () => {
-    // Signed out goes to sign-in and back here; the picker is for a locked
-    // signed-in viewer only.
-    if (surface === 'tier-picker-on-tap') {
-      goToSignIn();
-      return;
-    }
-    setPickerOpen(true);
-  };
+    : failedIntent !== null
+      ? 'error'
+      : serverState;
 
   // Undo of a remove: put back exactly the attendance the DELETE took out.
   // `mutateAsync` rather than per-call callbacks, which the mutation observer
@@ -205,11 +190,10 @@ export const EventDetailCtaBlock = ({
     // treatment itself reports.
     const going =
       state === 'error' && failedIntent !== null ? failedIntent : tapped;
-    // A past night is never gated (see `state`), so its taps skip the lock too.
-    if (!active && !isPast) {
-      // Locked: the button is the discovery surface for the perk, so a tap
-      // routes to the upgrade path instead of mutating anything.
-      openUpgrade();
+    // Signed out there is no account to write to: the tap goes to sign-in and
+    // back here. Every signed-in plan carries Going, so nothing else is gated.
+    if (signedOut) {
+      goToSignIn();
       return;
     }
     setFailedIntent(null);
@@ -225,15 +209,8 @@ export const EventDetailCtaBlock = ({
           onOpenPassport: () => router.push('/passport'),
         });
       }
-    } catch (err) {
+    } catch {
       setOptimisticGoing(null);
-      // A stale client entitlement can lose a race with server-side
-      // enforcement. The API brands that 403, so route to the same upgrade
-      // path a locked tap takes instead of showing a generic failure.
-      if (err instanceof ApiError && err.code === 'entitlement_required') {
-        openUpgrade();
-        return;
-      }
       // A failed stamp is the error toast, not the retry button: the past pill
       // stays an "I went" the reader can tap again.
       if (isPast) {
@@ -276,7 +253,7 @@ export const EventDetailCtaBlock = ({
     >
       {/* Eyebrow + tip share one row above the button, so the trigger has a
           line to belong to instead of floating in the gap. Living here also
-          means the explainer survives `locked` and `error` — exactly when
+          means the explainer survives `error` — exactly when
           someone most wants to know what Going even is. */}
       <div
         style={{
@@ -319,9 +296,10 @@ export const EventDetailCtaBlock = ({
       {/* Full width down to 320px — the button ellipsizes its own label, so
           nothing here needs a fixed floor. */}
       {isLoading ? (
-        // Holds the button's exact geometry until the entitlement resolves.
-        // Rendering the button early would flash `locked` at a paying user,
-        // and rendering nothing would reflow the whole page underneath. The
+        // Holds the button's exact geometry until the session resolves.
+        // Rendering the button early would offer a tap whose destination
+        // (write or sign-in) is not known yet, and rendering nothing would
+        // reflow the whole page underneath. The
         // sweep is what tells the difference between "loading" and "broken".
         <div
           aria-hidden
@@ -378,24 +356,15 @@ export const EventDetailCtaBlock = ({
           under the button. */}
       {isPast ? null : children}
 
-      {/* Only a real failure or the gate earns a line here. The standing
-          support line is gone — "we'll add this to your history" restated what
-          the button just did. */}
+      {/* Only a real failure earns a line here. The standing support line is
+          gone — "we'll add this to your history" restated what the button just
+          did. */}
       {isLoading ? null : state === 'error' ? (
         // The retry lives in the button; this line only names what survived, so
         // a failed commit never reads as having lost the watch too.
         <p role="alert" style={{ ...supportLine, color: 'var(--danger)' }}>
           {GOING_COPY.error.survived}
         </p>
-      ) : state === 'locked' ? (
-        // The gate line gets its own tip: Concerts is the thing being sold, and
-        // the header tip explains the distinction, not the product.
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ ...supportLine, color: 'var(--fg-subtle)' }}>
-            {GOING_COPY.locked.line}
-          </span>
-          <CCTip tip="concert-history" placement="top" align="start" />
-        </div>
       ) : null}
 
       <RemoveConfirm
@@ -428,14 +397,6 @@ export const EventDetailCtaBlock = ({
         onConfirm={() => void confirmRemove()}
         pending={removing === 'pending'}
         failed={removing === 'failed'}
-      />
-
-      <TierPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        planState={planState ?? LOGGED_OUT_PLAN_STATE}
-        scaRegion={scaRegion}
-        entry="paywall"
       />
     </div>
   );

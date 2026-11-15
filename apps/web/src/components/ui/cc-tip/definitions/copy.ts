@@ -26,13 +26,6 @@ export const TIP_CONTENT = {
       },
     ],
   },
-  // Event Detail: what Concerts is, beside the locked Going line.
-  'concert-history': {
-    label: 'Concerts',
-    variant: 'titled',
-    title: 'Your gig log, kept for you.',
-    body: "Mark the shows you're going to and they stack up: what you saw, where, who opened, what you paid.",
-  },
   // Event Detail: price provenance.
   'who-set-this-price': {
     label: 'Where this price came from',

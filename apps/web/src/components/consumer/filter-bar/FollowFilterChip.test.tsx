@@ -12,15 +12,6 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlementState.current,
 }));
 
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: undefined }),
-}));
-
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
-    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
-}));
-
 const push = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
@@ -39,6 +30,13 @@ const ENTITLED: EntitlementResult = {
   surface: 'visible-active',
 };
 
+// What the matrix answers a visitor with no account.
+const SIGNED_OUT: EntitlementResult = {
+  isLoading: false,
+  active: false,
+  surface: 'tier-picker-on-tap',
+};
+
 const renderChip = (
   overrides: Partial<React.ComponentProps<typeof FollowFilterChip>> = {},
 ) =>
@@ -47,7 +45,6 @@ const renderChip = (
       active={false}
       onToggle={vi.fn()}
       followCount={3}
-      scaRegion={false}
       {...overrides}
     />,
   );
@@ -121,14 +118,10 @@ describe('FollowFilterChip', () => {
     },
   );
 
-  // D1: entitlement is read BEFORE the count, so the paywall is reachable from
-  // browse for a free user who has never followed anyone.
-  it('locked beats absent for a free viewer with zero follows', () => {
-    entitlementState.current = {
-      isLoading: false,
-      active: false,
-      surface: 'paywall-on-tap',
-    };
+  // A signed-out visitor sees the chip whatever the count: it is how they
+  // learn the feature exists.
+  it('locked beats absent for a signed-out visitor', () => {
+    entitlementState.current = SIGNED_OUT;
     renderChip({ followCount: 0 });
     const chip = screen.getByRole('button', {
       name: FOLLOWING_COPY.chipAria,
@@ -140,29 +133,26 @@ describe('FollowFilterChip', () => {
     expect(chip.querySelector('[data-testid="switch-track"]')).not.toBeNull();
   });
 
-  it('locked taps open the picker at the paywall entry', () => {
+  // Following is on every plan: a signed-in fan whose plan reads as not
+  // carrying it still gets the live switch, never a lock or a picker.
+  it('a signed-in fan whose plan reads inactive gets the live switch', () => {
     entitlementState.current = {
       isLoading: false,
       active: false,
       surface: 'paywall-on-tap',
     };
+    push.mockClear();
     const onToggle = vi.fn();
     renderChip({ onToggle });
-    fireEvent.click(
-      screen.getByRole('button', { name: FOLLOWING_COPY.chipAria }),
-    );
-    expect(onToggle).not.toHaveBeenCalled();
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'paywall',
-    );
+    const chip = screen.getByRole('switch', { name: FOLLOWING_COPY.chipAria });
+    expect(chip.className).not.toContain('border-dashed');
+    fireEvent.click(chip);
+    expect(onToggle).toHaveBeenCalledWith(true);
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it('locked (logged out) sends the tap to sign-in instead of the picker', () => {
-    entitlementState.current = {
-      isLoading: false,
-      active: false,
-      surface: 'tier-picker-on-tap',
-    };
+  it('locked (logged out) sends the tap to sign-in', () => {
+    entitlementState.current = SIGNED_OUT;
     push.mockClear();
     const onToggle = vi.fn();
     renderChip({ onToggle });
@@ -174,10 +164,16 @@ describe('FollowFilterChip', () => {
     expect(push).toHaveBeenCalledWith(
       `/sign-in?redirect_url=${encodeURIComponent('/events')}`,
     );
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
-  it('releases a stale active scope once the entitlement resolves locked', () => {
+  it('releases a stale active scope once the session resolves signed out', () => {
+    entitlementState.current = SIGNED_OUT;
+    const onToggle = vi.fn();
+    renderChip({ active: true, onToggle });
+    expect(onToggle).toHaveBeenCalledWith(false);
+  });
+
+  it('keeps an active scope for a signed-in fan whose plan reads inactive', () => {
     entitlementState.current = {
       isLoading: false,
       active: false,
@@ -185,15 +181,11 @@ describe('FollowFilterChip', () => {
     };
     const onToggle = vi.fn();
     renderChip({ active: true, onToggle });
-    expect(onToggle).toHaveBeenCalledWith(false);
+    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it('leaves the release to the owning instance when it does not own effects', () => {
-    entitlementState.current = {
-      isLoading: false,
-      active: false,
-      surface: 'paywall-on-tap',
-    };
+    entitlementState.current = SIGNED_OUT;
     const onToggle = vi.fn();
     renderChip({ active: true, onToggle, ownsEffects: false });
     expect(onToggle).not.toHaveBeenCalled();
@@ -236,12 +228,9 @@ describe('FollowFilterChip', () => {
       expect(container.innerHTML).toBe('');
     });
 
-    it('locked opens the picker instead of toggling', () => {
-      entitlementState.current = {
-        isLoading: false,
-        active: false,
-        surface: 'paywall-on-tap',
-      };
+    it('locked (logged out) goes to sign-in instead of toggling', () => {
+      entitlementState.current = SIGNED_OUT;
+      push.mockClear();
       const onToggle = vi.fn();
       renderChip({ variant: 'segment', onToggle });
       expect(screen.queryByRole('switch')).toBeNull();
@@ -249,7 +238,21 @@ describe('FollowFilterChip', () => {
         screen.getByRole('button', { name: FOLLOWING_COPY.chipAria }),
       );
       expect(onToggle).not.toHaveBeenCalled();
-      expect(screen.getByTestId('tier-picker')).toBeTruthy();
+      expect(push).toHaveBeenCalledTimes(1);
+    });
+
+    it('a signed-in fan whose plan reads inactive gets the live switch', () => {
+      entitlementState.current = {
+        isLoading: false,
+        active: false,
+        surface: 'paywall-on-tap',
+      };
+      const onToggle = vi.fn();
+      renderChip({ variant: 'segment', onToggle });
+      fireEvent.click(
+        screen.getByRole('switch', { name: FOLLOWING_COPY.chipAria }),
+      );
+      expect(onToggle).toHaveBeenCalledWith(true);
     });
   });
 });

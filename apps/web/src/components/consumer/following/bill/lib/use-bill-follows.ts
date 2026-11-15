@@ -10,15 +10,13 @@
 //
 // The optimistic contract is the same one `useArtistFollow` documents: flip
 // first, take the SERVER's answer on success (unfollowing an act a Spotify
-// sync also holds legitimately comes back still-following), roll back on
-// failure, and route a branded 403 to the upgrade path rather than leaving the
-// tap looking like it did nothing.
+// sync also holds legitimately comes back still-following), and roll back on
+// failure. Following is on every plan, so a 403 is a failure like any other.
 
 import { useCallback, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 
-import { ApiError, apiClient } from '@/lib/api';
-import { ENTITLEMENT_REQUIRED_CODE } from '@/lib/history';
+import { apiClient } from '@/lib/api';
 import { followArtistsBulk } from '@/lib/following';
 import type { BillArtist } from './bill-artists';
 
@@ -40,10 +38,7 @@ const isFollowResponse = (value: unknown): value is { following: boolean } =>
 const seedFollowing = (artists: BillArtist[]): Set<string> =>
   new Set(artists.filter((artist) => artist.following).map((row) => row.slug));
 
-export const useBillFollows = (
-  artists: BillArtist[],
-  onEntitlementRequired: () => void,
-): BillFollowsResult => {
+export const useBillFollows = (artists: BillArtist[]): BillFollowsResult => {
   const { getToken } = useAuth();
   const [following, setFollowing] = useState<Set<string>>(() =>
     seedFollowing(artists),
@@ -95,21 +90,13 @@ export const useBillFollows = (
             else next.delete(slug);
             return next;
           });
-          if (
-            err instanceof ApiError &&
-            err.code === ENTITLEMENT_REQUIRED_CODE
-          ) {
-            console.info('bill follow needs Premium; opening the tier picker');
-            onEntitlementRequired();
-            return;
-          }
           console.warn('bill follow toggle failed; rolling back', err);
         } finally {
           rowsInFlight.current.delete(slug);
         }
       })();
     },
-    [following, getToken, onEntitlementRequired],
+    [following, getToken],
   );
 
   const followAll = useCallback(() => {
@@ -159,11 +146,6 @@ export const useBillFollows = (
           for (const slug of slugs) next.delete(slug);
           return next;
         });
-        if (err instanceof ApiError && err.code === ENTITLEMENT_REQUIRED_CODE) {
-          console.info('bulk bill follow needs Premium; opening the picker');
-          onEntitlementRequired();
-          return;
-        }
         console.warn('bulk bill follow failed; rolling back', err);
       } finally {
         for (const slug of slugs) rowsInFlight.current.delete(slug);
@@ -171,7 +153,7 @@ export const useBillFollows = (
         setCommitting(false);
       }
     })();
-  }, [artists, following, getToken, onEntitlementRequired]);
+  }, [artists, following, getToken]);
 
   const result: BillFollowsResult = {
     following,
