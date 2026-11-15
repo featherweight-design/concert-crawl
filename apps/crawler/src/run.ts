@@ -182,7 +182,12 @@ async function isCrawlPaused(venueId: string): Promise<boolean> {
   return row?.crawlPausedAt != null;
 }
 
-async function runPricesForVenue(venueId: string): Promise<void> {
+// A trial (an admin's test re-crawl of a paused venue) prices the venue's
+// events despite the pause; every other run skips a paused venue.
+async function runPricesForVenue(
+  venueId: string,
+  trial = false,
+): Promise<void> {
   const unpricedEvents = await db
     .select({
       id: events.id,
@@ -202,15 +207,16 @@ async function runPricesForVenue(venueId: string): Promise<void> {
         isNull(events.ticketPriceMin),
         isNull(events.pipelineExhaustedAt),
         // A paused venue's pages are not fetched at all, prices included.
-        isNull(venues.crawlPausedAt),
+        trial ? undefined : isNull(venues.crawlPausedAt),
       ),
     );
 
   for (const event of unpricedEvents) {
     if (event.venueId === null) continue;
     // Each pipeline run can take a while, so a pause made while this batch is
-    // under way has to stop the events still waiting in it.
-    if (await isCrawlPaused(venueId)) return;
+    // under way has to stop the events still waiting in it. A trial's venue
+    // is paused already, so the check would stop it before it began.
+    if (!trial && (await isCrawlPaused(venueId))) return;
     try {
       await runPricePipeline({
         eventId: event.id,
@@ -263,12 +269,18 @@ export function triggerDrainLimits(): {
   };
 }
 
+interface ClaimedTrigger {
+  id: string;
+  venueId: string;
+  force: boolean;
+  // A test re-crawl of a crawl-paused venue (crawlVenue's `trial`).
+  trial: boolean;
+}
+
 // Claim the oldest pending trigger (MAX_CONCURRENT is 1). Drizzle's update() has no limit(), so
 // the bound goes in an id subquery; `skip locked` hands each row to exactly one
 // claimer when two crawler processes overlap.
-async function claimPendingTriggers(): Promise<
-  { id: string; venueId: string; force: boolean }[]
-> {
+async function claimPendingTriggers(): Promise<ClaimedTrigger[]> {
   return db
     .update(crawlTriggers)
     .set({ status: 'processing', updatedAt: new Date() })
@@ -285,6 +297,7 @@ async function claimPendingTriggers(): Promise<
       id: crawlTriggers.id,
       venueId: crawlTriggers.venueId,
       force: crawlTriggers.force,
+      trial: crawlTriggers.trial,
     });
 }
 
@@ -292,7 +305,7 @@ async function claimPendingTriggers(): Promise<
 // marks this trigger failed and the drain moves on to the next one. Returns the
 // number of new events the crawl inserted.
 async function processTrigger(
-  trigger: { id: string; venueId: string; force: boolean },
+  trigger: ClaimedTrigger,
   getBrowser: () => Promise<Browser>,
   crossVenueCandidates: CrossVenueCandidate[],
   llmBudget: LlmBudgetStatus | null,
@@ -306,6 +319,7 @@ async function processTrigger(
       crossVenueCandidates,
       trigger.force,
       llmBudget,
+      trigger.trial,
     );
     if (crawlRun.status === 'failed') {
       const message = crawlRun.errorMessage ?? 'Crawl failed';
@@ -352,7 +366,7 @@ async function processTrigger(
     }
     if (crawlRun.status !== 'failed') {
       eventsInserted = crawlRun.eventsInserted ?? 0;
-      await runPricesForVenue(trigger.venueId);
+      await runPricesForVenue(trigger.venueId, trigger.trial);
       // #763 §10.1: Spotify new-show fan-out for this crawl's inserted
       // events. Awaited (not detached) because this process hard-exits
       // via process.exit(0) — a floating promise would be severed

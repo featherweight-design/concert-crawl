@@ -689,8 +689,8 @@ describe('runDailyCrawl', () => {
 
 describe('runTriggeredCrawls', () => {
   const mockTriggers = [
-    { id: 'trigger-1', venueId: 'venue-a', force: false },
-    { id: 'trigger-2', venueId: 'venue-b', force: false },
+    { id: 'trigger-1', venueId: 'venue-a', force: false, trial: false },
+    { id: 'trigger-2', venueId: 'venue-b', force: false, trial: false },
   ];
 
   beforeEach(() => {
@@ -787,6 +787,7 @@ describe('runTriggeredCrawls', () => {
       expect.any(Array),
       false,
       NO_LLM_BUDGET,
+      false,
     );
     expect(mockCrawlVenue).toHaveBeenCalledWith(
       'venue-b',
@@ -795,6 +796,7 @@ describe('runTriggeredCrawls', () => {
       expect.any(Array),
       false,
       NO_LLM_BUDGET,
+      false,
     );
     // One budget read for the whole drain, not one per trigger.
     expect(mockReadLlmBudgetStatus).toHaveBeenCalledTimes(1);
@@ -856,9 +858,9 @@ describe('runTriggeredCrawls', () => {
 
   describe('draining the queue', () => {
     const queue = [
-      { id: 'trigger-1', venueId: 'venue-a', force: false },
-      { id: 'trigger-2', venueId: 'venue-b', force: false },
-      { id: 'trigger-3', venueId: 'venue-c', force: false },
+      { id: 'trigger-1', venueId: 'venue-a', force: false, trial: false },
+      { id: 'trigger-2', venueId: 'venue-b', force: false, trial: false },
+      { id: 'trigger-3', venueId: 'venue-c', force: false, trial: false },
     ];
 
     // returning() order: the reap, then one claim per loop iteration. Each
@@ -1136,6 +1138,81 @@ describe('runTriggeredCrawls', () => {
     );
     expect(priced).toContain('evt-1');
     expect(priced).not.toContain('evt-2');
+  });
+
+  describe('a trial trigger (test re-crawl of a paused venue)', () => {
+    const unpriced = {
+      venueId: 'venue-a',
+      artist: 'Artist X',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-06-15',
+      ticketUrl: null,
+    };
+
+    // One trigger for venue-a, which is crawl-paused throughout: the price
+    // batch finds an unpriced event and every pause re-check says paused.
+    function claimPausedVenueTrigger(trial: boolean): void {
+      mockDbUpdate.returning.mockReset();
+      mockDbUpdate.returning
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { id: 'trigger-1', venueId: 'venue-a', force: false, trial },
+        ])
+        .mockResolvedValue([]);
+      mockDbChain.where.mockImplementation(() => {
+        const fields: unknown = mockDbChain.select.mock.lastCall?.[0];
+        if (fields && typeof fields === 'object' && 'priceUrl' in fields) {
+          return Promise.resolve([{ id: 'evt-1', ...unpriced }]);
+        }
+        if (fields && typeof fields === 'object' && 'crawlPausedAt' in fields) {
+          return Promise.resolve([{ crawlPausedAt: new Date() }]);
+        }
+        return Promise.resolve([]);
+      });
+    }
+
+    it('passes trial through to crawlVenue', async () => {
+      claimPausedVenueTrigger(true);
+      const { runTriggeredCrawls } = await import('./run.js');
+      await runTriggeredCrawls();
+
+      expect(mockCrawlVenue).toHaveBeenCalledWith(
+        'venue-a',
+        expect.any(Function),
+        undefined,
+        expect.any(Array),
+        false,
+        NO_LLM_BUDGET,
+        true,
+      );
+    });
+
+    it('runs the price pass for the paused venue on a trial', async () => {
+      const { isNull } = await import('drizzle-orm');
+      claimPausedVenueTrigger(true);
+      vi.mocked(isNull).mockClear();
+
+      const { runTriggeredCrawls } = await import('./run.js');
+      await runTriggeredCrawls();
+
+      expect(vi.mocked(isNull)).not.toHaveBeenCalledWith('crawlPausedAt');
+      expect(mockRunPricePipeline).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: 'evt-1', venueId: 'venue-a' }),
+      );
+    });
+
+    it('still skips the price pass for a paused venue on a normal trigger', async () => {
+      const { isNull } = await import('drizzle-orm');
+      claimPausedVenueTrigger(false);
+      vi.mocked(isNull).mockClear();
+
+      const { runTriggeredCrawls } = await import('./run.js');
+      await runTriggeredCrawls();
+
+      expect(vi.mocked(isNull)).toHaveBeenCalledWith('crawlPausedAt');
+      expect(mockRunPricePipeline).not.toHaveBeenCalled();
+    });
   });
 
   it('does not fail triggered crawl when runPricePipeline throws', async () => {
