@@ -48,7 +48,8 @@ export interface PlatformFetchResult {
  * Told after each page a crawl fetches: `done` pages so far, out of `total`
  * when the crawl knows how many it will fetch (null until then). A triggered
  * re-crawl uses it to show the admin "Page 2 of 4". crawl.ts hands fetchers a
- * wrapper that never rejects, so a fetcher may simply await it.
+ * wrapper that returns at once and never rejects, so a fetcher may simply
+ * await it: the report is fired and forgotten, never waited on.
  */
 export type PageProgressCallback = (
   done: number,

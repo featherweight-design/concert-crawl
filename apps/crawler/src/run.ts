@@ -319,59 +319,146 @@ async function claimPendingTriggers(): Promise<ClaimedTrigger[]> {
 
 // The least time between two progress writes for one trigger, except the
 // final page's, which always lands so the count ends where the crawl did.
-const PROGRESS_WRITE_INTERVAL_MS = 2000;
+export const PROGRESS_WRITE_INTERVAL_MS = 2000;
+// How long one progress write may take before it is given up as failed, so a
+// hung database connection can never wedge the writer.
+export const PROGRESS_WRITE_TIMEOUT_MS = 3000;
+
+interface PageProgress {
+  pagesDone: number;
+  pagesTotal: number | null;
+}
+
+function isFinalPage(progress: PageProgress): boolean {
+  return (
+    progress.pagesTotal !== null && progress.pagesDone >= progress.pagesTotal
+  );
+}
+
+export interface TriggerProgressWriter {
+  /** Returns at once; the write happens in the background. */
+  report: PageProgressCallback;
+  /** Drops any pending or scheduled write. Called when the crawl ends. */
+  stop: () => void;
+}
 
 /**
- * The page-progress callback for one claimed trigger: writes "page N of M"
- * onto its crawl_triggers row so the admin can watch a re-crawl. It also
- * bumps updated_at, which the stale-processing reaper reads, so a long crawl
- * that is still reporting is never reaped as dead. Writes only while the row
- * is 'processing', at most once per page and once per 2 s, and never throws:
- * a failed write is a warning and the crawl carries on.
+ * The page-progress writer for one claimed trigger: puts "page N of M" on its
+ * crawl_triggers row so the admin can watch a re-crawl. It also bumps
+ * updated_at, which the stale-processing reaper reads, so a long crawl that is
+ * still reporting is never reaped as dead. Writes only while the row is
+ * 'processing'.
+ *
+ * `report` never blocks and never throws: the write runs in the background,
+ * one at a time, each raced against PROGRESS_WRITE_TIMEOUT_MS, and a failure
+ * is logged once here and dropped. Writes land at most once per page and once
+ * per PROGRESS_WRITE_INTERVAL_MS, except the final page's. A report the
+ * interval holds back is written when the interval ends (a trailing flush),
+ * unless a newer one replaces it first. Only a successful write counts, so a
+ * failed one, the final page's included, is retried by the next report.
  */
 export function createTriggerProgressWriter(
   triggerId: string,
-): PageProgressCallback {
-  let lastWriteAt: number | null = null;
-  let lastDone: number | null = null;
-  let lastTotal: number | null = null;
-  return async (done, total) => {
-    const pagesTotal = total === null ? null : Math.max(0, total);
-    const pagesDone = pagesTotal === null ? done : Math.min(done, pagesTotal);
-    if (pagesDone === lastDone && pagesTotal === lastTotal) return;
-    const isFinal = pagesTotal !== null && pagesDone >= pagesTotal;
-    const now = Date.now();
-    if (
-      !isFinal &&
-      lastWriteAt !== null &&
-      now - lastWriteAt < PROGRESS_WRITE_INTERVAL_MS
-    ) {
-      return;
-    }
-    lastWriteAt = now;
-    lastDone = pagesDone;
-    lastTotal = pagesTotal;
+): TriggerProgressWriter {
+  let written: (PageProgress & { at: number }) | null = null;
+  let pending: PageProgress | null = null;
+  let writing = false;
+  let stopped = false;
+  let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function cancelFlush(): void {
+    if (flushTimer === null) return;
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+
+  async function write(progress: PageProgress): Promise<void> {
+    const startedAt = Date.now();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      await db
-        .update(crawlTriggers)
-        .set({
-          pagesDone,
-          pagesTotal,
-          progressAt: new Date(now),
-          updatedAt: new Date(now),
-        })
-        .where(
-          and(
-            eq(crawlTriggers.id, triggerId),
-            eq(crawlTriggers.status, 'processing'),
+      await Promise.race([
+        db
+          .update(crawlTriggers)
+          .set({
+            pagesDone: progress.pagesDone,
+            pagesTotal: progress.pagesTotal,
+            progressAt: new Date(startedAt),
+            updatedAt: new Date(startedAt),
+          })
+          .where(
+            and(
+              eq(crawlTriggers.id, triggerId),
+              eq(crawlTriggers.status, 'processing'),
+            ),
           ),
-        );
+        new Promise<never>((_resolve, reject) => {
+          timeout = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `Progress write timed out after ${PROGRESS_WRITE_TIMEOUT_MS} ms`,
+                ),
+              ),
+            PROGRESS_WRITE_TIMEOUT_MS,
+          );
+        }),
+      ]);
+      written = { ...progress, at: startedAt };
     } catch (err) {
       logger.warn(
-        { err, triggerId, pagesDone, pagesTotal },
+        { err, triggerId, ...progress },
         'Trigger progress write failed — crawl continues',
       );
+    } finally {
+      clearTimeout(timeout);
     }
+  }
+
+  function drain(): void {
+    if (stopped || writing || pending === null) return;
+    const wait =
+      written === null || isFinalPage(pending)
+        ? 0
+        : written.at + PROGRESS_WRITE_INTERVAL_MS - Date.now();
+    if (wait > 0) {
+      // Trailing flush: the newest held-back report lands when the interval
+      // ends, without waiting for another page.
+      flushTimer ??= setTimeout(() => {
+        flushTimer = null;
+        drain();
+      }, wait);
+      return;
+    }
+    cancelFlush();
+    const next = pending;
+    pending = null;
+    writing = true;
+    void write(next).finally(() => {
+      writing = false;
+      drain();
+    });
+  }
+
+  return {
+    report(done, total) {
+      if (stopped) return;
+      const pagesTotal = total === null ? null : Math.max(0, total);
+      const pagesDone = pagesTotal === null ? done : Math.min(done, pagesTotal);
+      if (
+        written !== null &&
+        written.pagesDone === pagesDone &&
+        written.pagesTotal === pagesTotal
+      ) {
+        return;
+      }
+      pending = { pagesDone, pagesTotal };
+      drain();
+    },
+    stop() {
+      stopped = true;
+      pending = null;
+      cancelFlush();
+    },
   };
 }
 
@@ -385,17 +472,24 @@ async function processTrigger(
   llmBudget: LlmBudgetStatus | null,
 ): Promise<number> {
   let eventsInserted = 0;
+  const progress = createTriggerProgressWriter(trigger.id);
   try {
-    const crawlRun = await crawlVenue(
-      trigger.venueId,
-      getBrowser,
-      undefined,
-      crossVenueCandidates,
-      trigger.force,
-      llmBudget,
-      trigger.trial,
-      createTriggerProgressWriter(trigger.id),
-    );
+    let crawlRun: Awaited<ReturnType<typeof crawlVenue>>;
+    try {
+      crawlRun = await crawlVenue(
+        trigger.venueId,
+        getBrowser,
+        undefined,
+        crossVenueCandidates,
+        trigger.force,
+        llmBudget,
+        trigger.trial,
+        progress.report,
+      );
+    } finally {
+      // The crawl is over: no held-back report should land after it.
+      progress.stop();
+    }
     if (crawlRun.status === 'failed') {
       const message = crawlRun.errorMessage ?? 'Crawl failed';
       const grouping = crawlFailureGrouping(message);
@@ -457,6 +551,14 @@ async function processTrigger(
         status: triggerStatus,
         crawlRunId: crawlRun.id,
         updatedAt: new Date(),
+        // A finished crawl read every page it set out to, so a done trigger
+        // never reads as partial even if its last progress write was held
+        // back or failed. With no known total the count stays as it was.
+        ...(triggerStatus === 'done'
+          ? {
+              pagesDone: sql`coalesce(${crawlTriggers.pagesTotal}, ${crawlTriggers.pagesDone})`,
+            }
+          : {}),
       })
       .where(eq(crawlTriggers.id, trigger.id));
   } catch (err) {

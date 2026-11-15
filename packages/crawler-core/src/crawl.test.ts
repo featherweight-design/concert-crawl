@@ -3260,4 +3260,42 @@ describe('crawlVenue — page progress (re-crawl progress)', () => {
     expect(onPageProgress).toHaveBeenCalledTimes(1);
     expect(run.status).toBe('success');
   });
+
+  it('never waits on a progress callback that never settles', async () => {
+    const venue = seedVenue();
+    mockDispatch.mockReturnValue({
+      source: 'venuepilot',
+      maxRequests: 2,
+      canHandle: () => true,
+      fetch: async (
+        _venue: unknown,
+        opts: {
+          onPageProgress?: (done: number, total: number | null) => unknown;
+        },
+      ) => {
+        // A fetcher awaits its report inline, as the real adapters do.
+        await opts.onPageProgress?.(1, 2);
+        await opts.onPageProgress?.(2, 2);
+        return {
+          events: [],
+          sourceUrl: 'https://platform.example.com/graphql',
+        };
+      },
+    });
+    const onPageProgress = vi.fn(() => new Promise<void>(() => undefined));
+
+    // Resolving at all is the proof: awaiting either report would hang here.
+    await crawlVenue(
+      venue.id,
+      mockBrowser,
+      undefined,
+      [],
+      false,
+      null,
+      false,
+      onPageProgress,
+    );
+
+    expect(onPageProgress).toHaveBeenCalledTimes(2);
+  });
 });

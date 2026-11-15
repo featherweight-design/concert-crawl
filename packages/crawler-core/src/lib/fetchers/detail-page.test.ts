@@ -650,6 +650,32 @@ describe('detailPageFetcher.fetch', () => {
     ).rejects.toThrow(DetailPageFetchError);
   });
 
+  it('reports the listing, then each detail page, a skipped one included', async () => {
+    mockSiteFetch({
+      listing: `<a href="/e/one">1</a><a href="/e/two">2</a><a href="/e/three">3</a>`,
+      sitemap: '',
+      detail: (url) =>
+        url.endsWith('/e/two')
+          ? { ok: false, status: 404, body: '' }
+          : { ok: true, status: 200, body: DETAIL_HTML },
+    });
+    const onPageProgress = vi.fn();
+    const result = await detailPageFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      onPageProgress,
+    });
+
+    expect(result.meta?.['failedPageCount']).toBe(1);
+    // The listing's total is unknown until its links clear robots.txt.
+    expect(onPageProgress.mock.calls).toEqual([
+      [1, null],
+      [1, 4],
+      [2, 4],
+      [3, 4],
+      [4, 4],
+    ]);
+  });
+
   it('falls back to listing anchors when the site publishes no sitemap', async () => {
     const fetchMock = mockSiteFetch({
       listing: `<a href="/e/one/tickets">One</a>`,

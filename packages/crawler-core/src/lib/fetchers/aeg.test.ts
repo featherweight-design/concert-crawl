@@ -148,6 +148,15 @@ describe('aegFetcher.fetch', () => {
     expect(result.sourceUrl).toBe(calledUrl);
   });
 
+  it('reports its one blob as page 1 of 1', async () => {
+    mockFetchOk(BLUEBIRD_FIXTURE);
+    const onPageProgress = vi.fn();
+
+    await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0, onPageProgress });
+
+    expect(onPageProgress.mock.calls).toEqual([[1, 1]]);
+  });
+
   it('makes the single blob request and returns its events when firstPageOnly is set', async () => {
     // The blob is AEG's only listing request, so the probe's first-page cut
     // changes nothing here: still exactly one request, still every event.

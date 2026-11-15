@@ -667,27 +667,19 @@ async function notifyBlocked(params: {
   });
 }
 
-// Wrap a caller's progress callback so it can never reject or throw into the
-// crawl: a failed progress report is a warning, not a crawl failure.
-export function safePageProgress(
-  venueId: string,
+// Wrap a caller's progress callback so it can neither hold up nor fail the
+// crawl: it is fired and forgotten, so a fetcher that awaits a report never
+// waits on it, and a throw or rejection is dropped here. Reporting a failure
+// is the callback's own job (the trigger writer logs its own), so nothing is
+// logged twice.
+function safePageProgress(
   onPageProgress: PageProgressCallback | undefined,
-): (done: number, total: number | null) => Promise<void> {
-  return async (done, total) => {
+): PageProgressCallback {
+  return (done, total) => {
     if (!onPageProgress) return;
-    try {
-      await onPageProgress(done, total);
-    } catch (err) {
-      console.warn(
-        JSON.stringify({
-          event: 'crawl.page_progress_failed',
-          venueId,
-          done,
-          total,
-          error: err instanceof Error ? err.message : String(err),
-        }),
-      );
-    }
+    void Promise.resolve()
+      .then(() => onPageProgress(done, total))
+      .catch(() => undefined);
   };
 }
 
@@ -716,12 +708,13 @@ export async function crawlVenue(
   // was queued gets an ordinary crawl, and a blocked one is not crawled.
   trialRequested = false,
   // Told after each listing page this crawl fetches, so a triggered re-crawl
-  // can show the admin its progress. The daily crawl passes none. A callback
-  // that throws or rejects is logged and ignored: progress never fails a crawl.
+  // can show the admin its progress. The daily crawl passes none. It is never
+  // awaited, and a throw or rejection is ignored: progress never holds up or
+  // fails a crawl.
   onPageProgress?: PageProgressCallback,
 ): Promise<CrawlVenueResult> {
   const getBrowser = memoizeBrowser(browser);
-  const reportPageProgress = safePageProgress(venueId, onPageProgress);
+  const reportPageProgress = safePageProgress(onPageProgress);
   // Budget spent with "If it runs out" on: no Haiku call in this crawl at all,
   // so artist adjudication falls back to its no-adjudicator path too.
   const llmStopped = llmBudgetVerdict(llmBudget) === 'over_stop';
@@ -1064,7 +1057,7 @@ export async function crawlVenue(
 
       // The cascade reads one listing page. An auto-detect browser re-read
       // below is the same page again, so it is not a second one.
-      await reportPageProgress(1, 1);
+      reportPageProgress(1, 1);
 
       const { html, finalUrl } = fetchResult;
       httpStatus = fetchResult.httpStatus;

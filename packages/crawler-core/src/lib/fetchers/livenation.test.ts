@@ -284,6 +284,19 @@ describe('liveNationFetcher.fetch', () => {
     expect(result.meta?.calendarMonthsFetched).toBe(12);
   });
 
+  it('reports each calendar month as a page, the sitemap not counted', async () => {
+    mockSiteFetch();
+    const onPageProgress = vi.fn();
+    await liveNationFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      onPageProgress,
+    });
+    // The captured sitemap lists 12 months.
+    expect(onPageProgress.mock.calls).toEqual(
+      Array.from({ length: 12 }, (_, i) => [i + 1, 12]),
+    );
+  });
+
   it('reads the sitemap and only the current month when firstPageOnly is set', async () => {
     // The admin probe sets this: one listing request proves the site answers,
     // and walking all 12 months would hit the venue a dozen times per probe.
