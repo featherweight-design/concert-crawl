@@ -1,0 +1,34 @@
+{
+  "feature": "Addendum 6 item 40 · Where it's sold: the tier on box office rows and the resale line (board 40/where-its-sold)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/boards/40-where-its-sold/where-its-sold.html. Needs CC_EVENT_ID: an upcoming event whose sellers are two box office tiers (GA, Reserved), Ticketmaster GA and a StubHub resale GA, so the card shows (a) every box office line led by its tier, (b) the resale line with the word in the Resale colour, and (c) the resale price in both the price card and Where it's sold. The card sits below the price block: the sheet photographs the whole page. Signed in as the audit user. Electric and Light.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": { "cc-theme": "electric" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": { "cc-theme": "light" },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    { "label": "short", "width": 320, "height": 568, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "where-its-sold",
+      "label": "Event page: Where it's sold with two box office tiers and a resale seller",
+      "fullPage": true,
+      "steps": [
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 3000 },
+        { "wait": "[data-testid=\"where-its-sold\"]", "settle": 1500 }
+      ]
+    }
+  ]
+}
