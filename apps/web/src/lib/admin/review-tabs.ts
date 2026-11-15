@@ -1,9 +1,8 @@
 /**
- * Canonical list of Admin > Review tab keys. Two callers share this source
- * of truth:
+ * Canonical list of Admin > Review tab keys. The Review page itself is a
+ * redirect now; the keys stay because:
  *
- *   - `ReviewPageClient` uses it to validate `?tab=<key>` off the URL and
- *     narrow to `ReviewTabKey` for `activeTab` state.
+ *   - the `/admin/review` redirect reads them to send old URLs on.
  *   - `edit-event-link.ts` uses it as the whitelist for the `?from=<tab>`
  *     handoff back from the event editor / Review sub-pages (#1083), so
  *     the topbar breadcrumb + sidebar + mobile bottom bar can rebuild

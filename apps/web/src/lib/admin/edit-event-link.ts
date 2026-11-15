@@ -14,9 +14,8 @@ import {
  * The optional `from` param records which Review tab the editor was opened
  * from so the topbar breadcrumb and nav links can take the admin back there
  * (#1083). Callers outside Review can omit it; callers inside Review should
- * pass the active tab key. The tab whitelist lives in `./review-tabs.ts` so
- * it stays in lock-step with `ReviewPageClient`'s `?tab=` validation
- * (Copilot #1089).
+ * pass the active tab key. The tab whitelist lives in `./review-tabs.ts`,
+ * the one list of Review tab keys (Copilot #1089).
  */
 export const editEventHref = (eventId: string, from?: ReviewTabKey): string => {
   const base = `/admin/events/${eventId}/edit`;

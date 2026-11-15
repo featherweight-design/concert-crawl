@@ -35,8 +35,9 @@ export interface AdminDialogProps {
  * Shared chrome and modal behaviour for admin dialogs.
  *
  * Ten components hand-rolled this scrim and panel. Three handled Escape
- * (StagedApplyConfirm, BulkApproveConfirm, and MoveConfirmDialog, which also
- * had the trap and restore from #1736) — so seven claimed `aria-modal="true"`
+ * (StagedApplyConfirm, and the since-removed Review dialogs BulkApproveConfirm
+ * and MoveConfirmDialog, which also had the trap and restore from #1736) — so
+ * seven claimed `aria-modal="true"`
  * over a background that was still fully reachable by keyboard, and only one
  * contained focus. The behaviour lives in `useDialogKeyboard`; this adds the
  * chrome so the two cannot drift apart again.
@@ -115,8 +116,8 @@ export const AdminDialog = ({
           <h3
             style={{
               margin: eyebrow ? '9px 0 0' : 0,
-              // 21 across the board. Two of the four migrated dialogs
-              // (BulkDeleteConfirm, MoveConfirmDialog) rendered their h3 at
+              // 21 across the board. Two of the four migrated dialogs (the
+              // since-removed BulkDeleteConfirm, MoveConfirmDialog) rendered their h3 at
               // 22, which was drift rather than intent — extracting the
               // chrome is what forced the choice, so it is declared in the PR
               // rather than shipped as a silent 1px shrink.

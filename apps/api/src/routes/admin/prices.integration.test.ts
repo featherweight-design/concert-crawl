@@ -948,7 +948,7 @@ describe('GET /v1/admin/prices/events', () => {
   });
 
   // The admin UI fetches this surface via ?count=true (see
-  // use-admin-review.ts). Pin the hidden filter on the counted shape
+  // prices-api.ts and submitted-api.ts). Pin the hidden filter on the counted shape
   // too — a future regression that applied the filter to rows but not
   // to the count(*) would otherwise slip past the array-shape test
   // above.
