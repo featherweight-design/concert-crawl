@@ -73,6 +73,7 @@ import {
 import { calculateCost } from './lib/cost.js';
 import { dispatch } from './lib/fetchers/index.js';
 import { CalendarNotFoundError } from './lib/fetchers/detail-page.js';
+import { VenuePilotFetchError } from './lib/fetchers/venuepilot.js';
 import { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js';
 import { FetchLog } from './lib/fetch-log.js';
 import { insertCrawlRun } from './lib/record-run.js';
@@ -583,27 +584,71 @@ function failureReason(err: unknown, isAccountWide: boolean): CrawlRunReason {
   return 'error';
 }
 
-// What flagged a venue blocked: the HTTP status it answered with, or a
-// bot-detection hang (a timeout read as a block).
-export type BlockCause =
-  { kind: 'http'; httpStatus: 403 | 429 } | { kind: 'timeout' };
+// What flagged a venue blocked: the HTTP status it answered with (or that a
+// shared platform API answered with for it), or a bot-detection hang (a
+// timeout read as a block).
+type BlockCause =
+  | { kind: 'http'; httpStatus: 403 | 429; platform?: 'venuepilot' }
+  | { kind: 'timeout' };
+
+// Whether this failure blocks the venue, and why. `failuresBefore` is the
+// venue's consecutive_failures as this run read it.
+function blockCauseOf(err: unknown, failuresBefore: number): BlockCause | null {
+  if (
+    err instanceof CrawlFetchError &&
+    (err.httpStatus === 403 || err.httpStatus === 429)
+  ) {
+    // A VenuePilot 403/429 comes from the shared VenuePilot API, not the
+    // venue's own site. It still blocks, but the notice names the platform.
+    return err instanceof VenuePilotFetchError
+      ? { kind: 'http', httpStatus: err.httpStatus, platform: 'venuepilot' }
+      : { kind: 'http', httpStatus: err.httpStatus };
+  }
+  // Playwright TimeoutError fires when bot-detection silently hangs the
+  // connection (no HTTP error, just no response). When the current error is
+  // a TimeoutError and consecutiveFailures is already ≥2 (i.e. this is the
+  // 3rd failure), treat it the same as a 403/429 block so the venue is
+  // flagged blocked and admin is notified. CrawlSelectorTimeoutError wraps a
+  // Playwright TimeoutError to carry the captured HTML, which renames it — it
+  // must still count as a timeout here or a browser-mode venue would never
+  // reach the 3-strikes block.
+  if (
+    err instanceof Error &&
+    (err.name === 'TimeoutError' || err instanceof CrawlSelectorTimeoutError) &&
+    failuresBefore >= 2 // becomes 3 after the increment
+  ) {
+    return { kind: 'timeout' };
+  }
+  return null;
+}
 
 // Crawl rule: a 403 or 429 flags the venue blocked and notifies admin at
 // once. One notice per block, sent by the caller only when this run newly set
 // blocked_at, in the same admin_alert / crawl.failed shape the three-strikes
-// notice uses so the admin UI badges the failing run the same way.
-// Admin copy, so it stays inline like the other admin_alert strings here.
+// notice uses so the admin UI badges the failing run the same way. At three
+// or more failures it stands in for the three-strikes notice, so it gives the
+// count. Admin copy, so it stays inline like the other admin_alert strings.
 async function notifyBlocked(params: {
   venueId: string;
   venueName: string;
   crawlRunId: string;
   cause: BlockCause;
+  consecutiveFailures: number;
 }): Promise<void> {
-  const { venueId, venueName, crawlRunId, cause } = params;
-  const body =
-    cause.kind === 'http'
-      ? `${venueName} answered with HTTP ${cause.httpStatus}; crawling is blocked`
-      : `${venueName} stopped responding (timed out); crawling is blocked`;
+  const { venueId, venueName, crawlRunId, cause, consecutiveFailures } = params;
+  let what: string;
+  if (cause.kind === 'timeout') {
+    what = `${venueName} stopped responding (timed out)`;
+  } else if (cause.platform === 'venuepilot') {
+    what = `VenuePilot answered with HTTP ${cause.httpStatus} for ${venueName}`;
+  } else {
+    what = `${venueName} answered with HTTP ${cause.httpStatus}`;
+  }
+  const streak =
+    consecutiveFailures >= 3
+      ? ` after ${consecutiveFailures} failures in a row`
+      : '';
+  const body = `${what}; crawling is blocked${streak}`;
   await db.insert(notifications).values({
     type: 'admin_alert',
     category: 'crawl.failed',
@@ -2312,27 +2357,13 @@ export async function crawlVenue(
     // Set below when this failure paused or blocked the venue, and written once
     // the failed run row is safely recorded.
     let systemAction: Parameters<typeof recordSystemAction>[0] | null = null;
+    // Set below when this failure newly blocked the venue; sent after the run
+    // row and the audit, so a failed notice can never lose either.
+    let blockNotice: Parameters<typeof notifyBlocked>[0] | null = null;
 
     if (!isAccountWide) {
-      const blockStatus =
-        err instanceof CrawlFetchError &&
-        (err.httpStatus === 403 || err.httpStatus === 429)
-          ? err.httpStatus
-          : null;
-      const isHttpBlocked = blockStatus !== null;
-      // Playwright TimeoutError fires when bot-detection silently hangs the connection
-      // (no HTTP error, just no response). When the current error is a TimeoutError
-      // and consecutiveFailures is already ≥2 (i.e. this is the 3rd failure), treat
-      // it the same as a 403/429 block so the venue is paused and admin is notified.
-      // CrawlSelectorTimeoutError wraps a Playwright TimeoutError to carry the
-      // captured HTML, which renames it — it must still count as a timeout here
-      // or a browser-mode venue would never reach the 3-strikes auto-pause.
-      const isTimeoutBlock =
-        err instanceof Error &&
-        (err.name === 'TimeoutError' ||
-          err instanceof CrawlSelectorTimeoutError) &&
-        venue.consecutiveFailures >= 2; // becomes 3 after the increment below
-      const isBlocked = isHttpBlocked || isTimeoutBlock;
+      const blockCause = blockCauseOf(err, venue.consecutiveFailures);
+      const isBlocked = blockCause !== null;
 
       // CLAUDE.md crawl rule: "3 consecutive failures → pause the crawl + notify
       // admin". Use a SQL increment + CASE so the increment, the auto-pause
@@ -2340,10 +2371,11 @@ export async function crawlVenue(
       // This is what gives the auto-pause + crawl-failure email exactly-once
       // semantics at the threshold under concurrent crawls of the same venue
       // (the daily cron and the triggers cron CAN overlap on the same venue —
-      // there's no per-venue lock above this layer). The crawl.failed
-      // notification still inserts on every failure where newFailureCount >=
-      // 3 — that's intentional re-alerting; only the "crawl paused"
-      // wording is gated to the === 3 transition.
+      // there's no per-venue lock above this layer). A crawl.failed
+      // notification inserts on every failure where newFailureCount >= 3
+      // (intentional re-alerting; only the "crawl paused" wording is gated to
+      // the === 3 transition), and also on the failure that first blocks the
+      // venue (a 403/429 or a timeout-block), whatever the count.
       //
       // Block vs auto-pause are intentionally separate signals: HTTP blocks
       // (403/429) and TimeoutErrors set `blockedAt`, while non-block
@@ -2385,7 +2417,7 @@ export async function crawlVenue(
             venueName: venue.name,
             crawlRunId: id,
             consecutiveFailures: newFailureCount,
-            ...(isBlocked ? { cause: isHttpBlocked ? 'http' : 'timeout' } : {}),
+            ...(blockCause !== null ? { cause: blockCause.kind } : {}),
           },
         };
       }
@@ -2396,17 +2428,16 @@ export async function crawlVenue(
       // notice; it re-alerts through the >= 3 crawl.failed notice below like
       // any failing venue. When this same failure also reaches three strikes,
       // the block notice stands in for crawl.failed so the admin gets one.
-      const newlyBlocked = isBlocked && venue.blockedAt === null;
+      // Sent after the run row and the audit (below).
+      const newlyBlocked = blockCause !== null && venue.blockedAt === null;
       if (newlyBlocked) {
-        await notifyBlocked({
+        blockNotice = {
           venueId,
           venueName: venue.name,
           crawlRunId: id,
-          cause:
-            blockStatus !== null
-              ? { kind: 'http', httpStatus: blockStatus }
-              : { kind: 'timeout' },
-        });
+          cause: blockCause,
+          consecutiveFailures: newFailureCount,
+        };
       }
 
       if (newFailureCount >= 3 && !newlyBlocked) {
@@ -2417,9 +2448,12 @@ export async function crawlVenue(
         // alert badge on the specific failing row (see #804). A
         // crawl.failed notification fires on every run once
         // consecutive_failures >= 3 (the first, the auto-pause trip at
-        // exactly 3 on a non-blocked venue, and every subsequent failure)
-        // — the badge attaches to whichever of those failures is most
-        // recently unread per the API's first-match-wins join.
+        // exactly 3 on a non-blocked venue, and every subsequent failure),
+        // except the run that newly blocks the venue, whose block notice
+        // (same category) stands in for it; the block notice also fires on
+        // a first 403/429 below three. The badge attaches to whichever of
+        // those failures is most recently unread per the API's
+        // first-match-wins join.
         // event_count_dropped notifications have stored crawlRunId since
         // their introduction; this brings crawl.failed to parity.
         await db.insert(notifications).values({
@@ -2476,6 +2510,20 @@ export async function crawlVenue(
       // run, but still written if that insert throws: the venue is already
       // paused or blocked by now.
       if (systemAction !== null) await recordSystemAction(systemAction);
+      // Last, and guarded: a notice that fails to insert must not lose the
+      // run row or the audit, nor replace the crawl's own error.
+      if (blockNotice !== null) {
+        try {
+          await notifyBlocked(blockNotice);
+        } catch (noticeErr) {
+          reportFailure({
+            event: 'crawl.block_notice_error',
+            severity: 'error',
+            venueId,
+            error: String(noticeErr),
+          });
+        }
+      }
     }
 
     reportFailure({

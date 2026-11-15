@@ -384,7 +384,8 @@ crawlAdminRouter.get(
     // params to false) the list rows still need the badge annotation,
     // so we fetch alerts unconditionally. Scope is the categories a crawl
     // row surfaces (`crawl.event_count_dropped` for went-dark / sharp-drop,
-    // `crawl.failed` for the consecutive-failure path,
+    // `crawl.failed` for the consecutive-failure path and the first 403/429
+    // or timeout-block,
     // `crawl.event_ceiling_suspected` for a capped catalogue) and only
     // unread rows — once an operator clears the notification, the badge
     // clears too.
