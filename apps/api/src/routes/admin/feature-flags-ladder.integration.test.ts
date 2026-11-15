@@ -364,6 +364,9 @@ describe('what the flags page draws about people', () => {
   it('still answers when Clerk cannot be read: role and Beta count are null', async () => {
     await seedUserProfile('named-a', { handle: 'ana.b' });
     await post('/people', { userId: 'named-a' });
+    // The add above read Clerk while it was up and memoized the answer: drop
+    // that, so the next read has to ask Clerk again, and fail.
+    clearBetaRoleCache();
     clerkUsers.failing = true;
     const flag = await crews();
     expect(flag.betaCount).toBeNull();
