@@ -1,0 +1,29 @@
+{
+  "feature": "Free-app close-out PR 4 part B2 · signed out: search and the follow shelf carry a Follow through sign-in",
+  "note": "signedOut is per inventory. Browse is launch-gated (NEXT_PUBLIC_PUBLIC_BROWSE unset), so signed out /events and /search redirect to /sign-in today and these rows photograph the wall. The new intent carry (follow:<slug> + label, cf's #712 replay) from the search row and the follow shelf is pinned by ArtistResultRow.test.tsx and FollowShelf.test.tsx. The rows fail the day browse opens, the cue to shoot the real signed-out taps.",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "events-signed-out",
+      "label": "Signed-out /events (follow shelf): launch-gated wall",
+      "steps": [
+        { "goto": "/events", "expectRedirect": "/sign-in", "settle": 2000 }
+      ]
+    },
+    {
+      "id": "search-signed-out",
+      "label": "Signed-out /search (artist rows): launch-gated wall",
+      "steps": [
+        {
+          "goto": "/search?q=the",
+          "expectRedirect": "/sign-in",
+          "settle": 2000
+        }
+      ]
+    }
+  ]
+}
