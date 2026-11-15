@@ -50,14 +50,17 @@ export default function InviteCodePage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const fromLink = params.get('code');
-    if (fromLink) {
-      setCode(formatInviteCodeInput(fromLink));
+    const filled = fromLink ? formatInviteCodeInput(fromLink) : '';
+    if (filled) {
+      setCode(filled);
       setPrefilled(true);
     }
     // "Use a different code" on the sign-up form: the code they redeemed goes.
     if (params.get('change') === '1' && !released.current) {
       released.current = true;
-      void releaseInviteCode().catch(() => {});
+      // If the release fails the old cookie still opens sign-up: say so rather
+      // than let them carry on with a code they gave up.
+      void releaseInviteCode().catch(() => setErrorKind('server_error'));
       // Spent: Back, Forward or a reload must not release the code they are
       // about to redeem next.
       const url = new URL(window.location.href);
@@ -77,6 +80,18 @@ export default function InviteCodePage() {
 
   const isComplete = isCompleteInviteCode(code);
   const locked = lock.remaining > 0;
+
+  // The lock ending: the old "too many attempts" line is spent (the field was
+  // disabled, so nothing the visitor typed could clear it) and focus, dropped
+  // when the field was disabled, goes back to it.
+  const wasLocked = useRef(false);
+  useEffect(() => {
+    if (wasLocked.current && !locked) {
+      setErrorKind((kind) => (kind === 'ratelimit' ? null : kind));
+      setRefocus(true);
+    }
+    wasLocked.current = locked;
+  }, [locked]);
 
   // The way back from the ended page: the form again, empty. The ended code
   // is not carried over.
@@ -109,6 +124,8 @@ export default function InviteCodePage() {
       const result = await validateAndSetInviteCode(code, returnPath);
       if (!result.ok) {
         setErrorKind(result.error);
+        // The link's welcome no longer fits over an error about its code.
+        setPrefilled(false);
         if (result.error === 'ratelimit') lock.start(LOCK_SECONDS);
       }
     });

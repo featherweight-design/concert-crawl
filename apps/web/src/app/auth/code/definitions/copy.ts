@@ -29,7 +29,9 @@ export const copy = {
   },
   // Under the Continue button: "continuing" is that button. Same shape as the
   // checkout panel's legal line, and the link names the document's own heading.
-  // Goes with the cutover, when the sign-up form carries its own checkbox.
+  // Stays until the cutover: the sign-up form that carries its own consent
+  // checkbox is not live yet, so this line is still the Beta Agreement's
+  // consent. It goes in the cutover PR.
   agreement: {
     prefix: 'By continuing you agree to our ',
     link: 'Private Beta Agreement',

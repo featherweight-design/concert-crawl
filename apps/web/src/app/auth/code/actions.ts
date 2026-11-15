@@ -159,8 +159,9 @@ export async function validateAndSetInviteCode(
 /**
  * "Use a different code" on the sign-up form: the visitor is giving up the
  * code they redeemed, so it goes. Otherwise the signed cookie of the code they
- * walked away from would keep the sign-up open to anyone who typed nothing.
- * Clears only the visitor's own cookies, so it takes no argument.
+ * walked away from would still open the sign-up if they went back to it
+ * without entering another. Clears only the visitor's own cookies, so it takes
+ * no argument.
  */
 export async function releaseInviteCode(): Promise<void> {
   const cookieStore = await cookies();
