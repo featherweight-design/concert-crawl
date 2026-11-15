@@ -111,6 +111,26 @@ describe('InviteCodesClient unmounted mid-load', () => {
   // takes `window` away after the unmount to make any such update throw here.
   const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+  /**
+   * Runs `settle` with `window` gone, waits for the rejection to surface, and
+   * hands back the unhandled-rejection spy. The globals and the listener are
+   * put back even when something in between throws.
+   */
+  const afterUnmount = async (settle: () => void) => {
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    try {
+      vi.stubGlobal('window', undefined);
+      settle();
+      await flush();
+      await flush();
+    } finally {
+      vi.unstubAllGlobals();
+      process.off('unhandledRejection', unhandled);
+    }
+    return unhandled;
+  };
+
   it.each([
     ['the list answers', true],
     ['the list fails', false],
@@ -130,23 +150,39 @@ describe('InviteCodesClient unmounted mid-load', () => {
           }),
       ),
     );
-    const unhandled = vi.fn();
-    process.on('unhandledRejection', unhandled);
-
     const { unmount } = render(
       <InviteCodesClient origin="https://concertcrawl.app" />,
     );
     unmount();
-    vi.stubGlobal('window', undefined);
-    settle(
-      answers ? json({ success: true, data: ROWS }) : new Error('network down'),
+    const unhandled = await afterUnmount(() =>
+      settle(
+        answers
+          ? json({ success: true, data: ROWS })
+          : new Error('network down'),
+      ),
     );
-    await flush();
-    await flush();
-    vi.unstubAllGlobals();
-    process.off('unhandledRejection', unhandled);
-
     expect(unhandled).not.toHaveBeenCalled();
+  });
+
+  it('sets no state when the clipboard answers after the unmount', async () => {
+    let finish: () => void = () => undefined;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => new Promise<void>((resolve) => (finish = resolve)),
+      },
+    });
+    try {
+      render(<InviteCodesClient origin="https://concertcrawl.app" />);
+      await openMenu('REDROCKS');
+      fireEvent.click(screen.getByRole('menuitem', { name: /^Copy link/ }));
+      cleanup();
+      const unhandled = await afterUnmount(() => finish());
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      // The other tests expect no clipboard at all.
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 });
 

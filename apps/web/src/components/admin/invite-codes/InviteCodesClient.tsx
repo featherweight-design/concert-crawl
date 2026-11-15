@@ -132,6 +132,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   }, []);
 
   const load = useCallback(async () => {
+    if (isUnmounted.current) return;
     setLoadFailed(false);
     try {
       // Newest first, as the board lists them.
@@ -162,6 +163,8 @@ export function InviteCodesClient({ origin }: { origin: string }) {
 
   const copyLink = (code: ListedInviteCode) => {
     const note = (text: string) => {
+      // The clipboard can answer after the tab has gone.
+      if (isUnmounted.current) return;
       setCopyNote(text);
       if (copyNoteTimer.current !== null) clearTimeout(copyNoteTimer.current);
       copyNoteTimer.current = setTimeout(() => setCopyNote(null), 2000);
@@ -184,8 +187,11 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     setFailure(null);
     replace({ ...row, ...edit });
     try {
-      replace({ ...row, ...(await api.edit(row.id, edit)) });
+      const saved = await api.edit(row.id, edit);
+      if (isUnmounted.current) return;
+      replace({ ...row, ...saved });
     } catch {
+      if (isUnmounted.current) return;
       replace(row);
       setFailure(failureFor(row, () => void saveEdit(row, edit)));
       // A refusal (409) usually means the code changed elsewhere.
@@ -204,15 +210,18 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     setPending(true);
     setFailure(null);
     try {
-      replace({ ...row, ...(await action()) });
+      const ended = await action();
+      if (isUnmounted.current) return;
+      replace({ ...row, ...ended });
       setOpen(null);
     } catch {
+      if (isUnmounted.current) return;
       setOpen(null);
       setFailure(failureFor(row, () => void runEnding(row, action)));
       void load();
     } finally {
       ending.current = false;
-      setPending(false);
+      if (!isUnmounted.current) setPending(false);
     }
   };
 
