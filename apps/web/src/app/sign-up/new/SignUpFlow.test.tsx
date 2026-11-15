@@ -235,7 +235,12 @@ describe('SignUpFlow, the press', () => {
     await press();
     expect(document.body.textContent).toBe(fresh);
     expect(mocks.signUp.verifications.sendEmailCode).toHaveBeenCalledTimes(1);
-    expect(document.body.textContent).not.toMatch(/already|exists|taken/i);
+    // The one "Already" is the sign-in link every verify screen carries.
+    const text = (document.body.textContent ?? '').replace(
+      COPY.verify.haveAccount,
+      '',
+    );
+    expect(text).not.toMatch(/already|exists|taken/i);
   });
 
   it('retries only the code when the account was made but the send failed', async () => {
@@ -546,7 +551,12 @@ describe('SignUpFlow, verify', () => {
       screen.getByRole('button', { name: COPY.verify.wrongEmail }),
     );
     await settle(FLOOR_MS);
-    expect(screen.queryByLabelText(COPY.form.emailLabel)).toBeNull();
+    // Back did nothing: the check finished, and the form is drawn finished
+    // (fields fixed), not open for editing.
+    expect(screen.getByLabelText(COPY.form.emailLabel)).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: COPY.form.done }),
+    ).toBeInTheDocument();
     expect(mocks.signUp.finalize).toHaveBeenCalledOnce();
   });
 
