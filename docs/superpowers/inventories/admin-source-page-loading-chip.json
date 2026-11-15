@@ -1,0 +1,37 @@
+{
+  "feature": "Admin item 18 follow-up · Source Advanced: the Page loading chip for an admin-set crawl mode",
+  "note": "Board: design_handoff_bplus_redesign/addendum-6/boards/18-source-reader (source-forced-d, source-advanced-d). CONTACT_SHEET_ROLE=admin. Run under the orchestrator's scratch lock: a guarded script snapshots CF Fixture Old Room's crawl_mode and crawl_mode_source, sets them to 'browser' and 'admin', the sheet shoots read-only (it never presses Save or Back to Automatic), then the script restores them exactly and re-reads. A venue with no recorded source (every other scratch venue after 0123) reads All automatic, as admin-source-reader-automatic.json's sheet shows.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "forced-closed",
+      "label": "Admin-set Full browser, Advanced closed: Set by hand, Page loading chip, Back to Automatic (CF Fixture Old Room)",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=CF Fixture Old Room",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "CF Fixture Old Room", "settle": 2500 },
+        { "clickRole": "tab", "name": "Source", "settle": 1500 }
+      ]
+    },
+    {
+      "id": "forced-open",
+      "label": "Admin-set Full browser, Advanced open: Full browser selected, Set by hand hint (CF Fixture Old Room)",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=CF Fixture Old Room",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "CF Fixture Old Room", "settle": 2500 },
+        { "clickRole": "tab", "name": "Source", "settle": 1500 },
+        { "clickRole": "button", "name": "^Advanced", "settle": 1200 }
+      ]
+    }
+  ]
+}
