@@ -38,7 +38,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 import { SIGN_IN_COPY } from '../definitions/copy';
-import { FLOOR_MS } from '@/lib/auth/timing-pad';
+import { FLOOR_MS, RESET_FLOOR_MS } from '@/lib/auth/timing-pad';
 import { SignInFlow } from './SignInFlow';
 
 const COPY = SIGN_IN_COPY;
@@ -248,13 +248,13 @@ describe('SignInFlow, password', () => {
     expect(screen.queryByText(COPY.password.didntWork)).toBeNull();
   });
 
-  it('reads a 429 as the generic line even when it carries a wrong-credential code', async () => {
+  it('reads a 429 as the wait, never as a wrong password, even when it carries a wrong-credential code', async () => {
     toPassword();
     mocks.signIn.password.mockResolvedValue({
       error: clerkError(429, 'form_password_incorrect', 'too_many_requests'),
     });
     await press();
-    expect(screen.getByText(COPY.failed)).toBeInTheDocument();
+    expect(screen.getByText(COPY.rateLimited.message)).toBeInTheDocument();
     expect(screen.queryByText(COPY.password.didntWork)).toBeNull();
   });
 
@@ -301,8 +301,9 @@ async function toEmailCode() {
   fireEvent.click(
     screen.getByRole('button', { name: COPY.password.codeInstead }),
   );
+  // The send is two Clerk calls, so it is held to the higher floor.
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(FLOOR_MS);
+    await vi.advanceTimersByTimeAsync(RESET_FLOOR_MS);
   });
 }
 
@@ -352,7 +353,7 @@ describe('SignInFlow, email code', () => {
       screen.getByRole('button', { name: COPY.emailCode.resend }),
     );
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(FLOOR_MS);
+      await vi.advanceTimersByTimeAsync(RESET_FLOOR_MS);
     });
     expect(screen.queryByText(COPY.emailCode.sent)).toBeNull();
     expect(screen.getByText(COPY.rateLimited.message)).toBeInTheDocument();
@@ -408,7 +409,7 @@ describe('SignInFlow, email code', () => {
       screen.getByRole('button', { name: COPY.emailCode.resend }),
     );
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(FLOOR_MS);
+      await vi.advanceTimersByTimeAsync(RESET_FLOOR_MS);
     });
     expect(screen.getByText(COPY.emailCode.sent)).toBeInTheDocument();
   });
