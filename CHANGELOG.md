@@ -1,3 +1,16 @@
+# [1.511.0](https://github.com/featherweight-design/concert-crawl/compare/v1.510.1...v1.511.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** chunk role reads, dedupe the beta scan, and keep subjects unlabelled ([78d4b02](https://github.com/featherweight-design/concert-crawl/commit/78d4b02c9f89a28dd3628c092a61093dccc29596))
+
+
+### Features
+
+* **api:** flag unsure acts in the admin event lineup ([21c6e9c](https://github.com/featherweight-design/concert-crawl/commit/21c6e9cc79cbdb49898ffc1a3ca39e260bc996c6))
+* **api:** the flags admin names people, verifiers and the Beta count ([3ff7f9f](https://github.com/featherweight-design/concert-crawl/commit/3ff7f9f39c74bffa01647861ee50cb48afa56270))
+
 ## [1.510.1](https://github.com/featherweight-design/concert-crawl/compare/v1.510.0...v1.510.1) (2026-11-15)
 
 
