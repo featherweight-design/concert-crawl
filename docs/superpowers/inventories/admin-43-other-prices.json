@@ -1,0 +1,192 @@
+{
+  "feature": "Admin 43 · Other prices for this show",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/43-approve-one/approve-menu-d, approve-sheet-m (Other prices, '2 for this show', tag icon, 4th). CONTACT_SHEET_ROLE=admin. Route fixtures answer the list and the counts, so nothing is written to the scratch branch. The menu and chip rows press the desktop menu; the sheet row is phone-only, so each times out at the other width by design.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "other-prices-menu",
+      "label": "Row menu with Other prices 4th, '3 for this show' (desktop)",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 3, "waiting": 1, "published": 1, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 3,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": true,
+                  "showOthers": 2
+                },
+                {
+                  "id": "fx-2",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "70.00",
+                  "priceMax": null,
+                  "handle": "annab",
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 2,
+                  "state": "published",
+                  "forYou": false,
+                  "showOthers": 2
+                },
+                {
+                  "id": "fx-3",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "40.00",
+                  "priceMax": null,
+                  "handle": null,
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "backedBy": 1,
+                  "state": "not-used",
+                  "forYou": false,
+                  "showOthers": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]",
+          "settle": 1000
+        },
+        { "click": "[aria-label=\"Price actions\"]:visible >> nth=0" },
+        { "wait": "[role=\"menu\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "other-prices-chip",
+      "label": "Other prices picked: the show chip with its count (desktop)",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 3, "waiting": 1, "published": 1, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 3,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": true,
+                  "showOthers": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]",
+          "settle": 1000
+        },
+        {
+          "click": "[aria-label=\"Price actions\"]:visible >> nth=0",
+          "settle": 400
+        },
+        { "clickRole": "menuitem", "name": "^Other prices", "settle": 1200 },
+        { "wait": "[data-testid=\"show-filter\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "other-prices-sheet",
+      "label": "Phone ⋯ sheet with Other prices (phone only)",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 3, "waiting": 1, "published": 1, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 1,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": true,
+                  "showOthers": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[data-testid=\"approve-button\"]",
+          "settle": 1000
+        },
+        { "click": "[aria-label=\"Price actions\"]:visible >> nth=0" },
+        { "wait": "[role=\"dialog\"]", "settle": 600 }
+      ]
+    }
+  ]
+}
