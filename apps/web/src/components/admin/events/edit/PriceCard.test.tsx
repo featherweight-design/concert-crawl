@@ -70,6 +70,7 @@ const DETAIL: EventDetail = {
   date: '2026-11-14',
   doorsTime: null,
   showTime: '19:00:00',
+  venueId: 'ven-larimer',
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
   status: 'available',

@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import Link from 'next/link';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton } from './AdminButton';
 
@@ -31,6 +32,11 @@ type SaveFailedToastProps = {
   retrying?: boolean;
   /** Adds a Dismiss beside Try again, as the venue header's notices have. */
   onDismiss?: () => void;
+  /**
+   * A way on, before Dismiss: Event edit's "Open it" to the listing a venue
+   * move collided with. Drawn as the toast's buttons.
+   */
+  link?: { label: string; href: string };
   /**
    * The block's padding. `09/crawl-all-failed-m` draws 12px all round where
    * `07/save-failed` draws 12px 14px.
@@ -78,6 +84,7 @@ export const SaveFailedToast = ({
   onRetry,
   retrying = false,
   onDismiss,
+  link,
   // `07/save-failed` draws 12px 14px (it had drifted to 12px 16px).
   padding = '12px 14px',
   // `07/save-failed` draws this shadow; `09/crawl-all-failed-m` draws .45.
@@ -149,6 +156,22 @@ export const SaveFailedToast = ({
       >
         {copy.tryAgain}
       </AdminButton>
+    )}
+    {link && (
+      <Link
+        href={link.href}
+        style={{
+          ...TOAST_BUTTON,
+          flex: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          border: '1px solid var(--border-strong)',
+          textDecoration: 'none',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {link.label}
+      </Link>
     )}
     {onDismiss && (
       <AdminButton

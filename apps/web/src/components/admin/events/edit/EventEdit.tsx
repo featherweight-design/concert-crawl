@@ -34,7 +34,12 @@ import { EventDeleteConfirm } from '../EventDeleteConfirm';
 import { deleteEvent } from '../event-delete';
 import { PriceCard } from './PriceCard';
 import { DateField, TimeField } from './pickers';
-import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
+import {
+  EventConfirm,
+  StatusCard,
+  type Sale,
+  type StatusDialog,
+} from './StatusCard';
 import {
   evidenceBody,
   evidenceReady,
@@ -61,6 +66,13 @@ import {
 import { addShowApi } from '../add/add-show-api';
 import { lineupEntries, rolesOf, type Act } from '../add/add-show-rules';
 import { LineupField } from '../add/LineupField';
+import { usePickVenues, VenuePicker } from '../add/VenuePicker';
+import {
+  moveTellsWatchers,
+  venueEditable,
+  venueMoveResultOf,
+  venueRefusalOf,
+} from './venue-move';
 
 const COPY = ADMIN_COPY.eventEdit;
 const PASSED = COPY.passed;
@@ -85,13 +97,22 @@ interface Fields {
   showTime: string | null;
   /** The bill in order, each act with its saved role. */
   lineup: Act[];
+  /** The venue's id; `''` for a show with none (never sent). */
+  venueId: string;
 }
 
 /**
- * A Save's writes, in order: the fields' PATCH, the lineup's PUT, then the
- * sale's POST.
+ * A Save's writes, in order: the fields' PATCH, the lineup's PUT, the venue's
+ * POST, then the sale's POST.
  */
-type SaveStep = 'fields' | 'lineup' | 'sale';
+type SaveStep = 'fields' | 'lineup' | 'venue' | 'sale';
+
+/** After a move this visit: `06/event-edit`'s "Moved to … · Watchers were told on …". */
+interface MovedNote {
+  venue: string;
+  /** "Nov 11"; null when nobody was told. */
+  toldOn: string | null;
+}
 
 /** The GET's lineup as the field's acts, roles and matches kept. */
 const actsOf = (items: readonly LineupItem[]): Act[] =>
@@ -134,7 +155,8 @@ const changedCount = (draft: Fields, saved: Fields): number =>
   (draft.date !== saved.date ? 1 : 0) +
   (draft.doorsTime !== saved.doorsTime ? 1 : 0) +
   (draft.showTime !== saved.showTime ? 1 : 0) +
-  (lineupChanged(draft, saved) ? 1 : 0);
+  (lineupChanged(draft, saved) ? 1 : 0) +
+  (draft.venueId !== saved.venueId ? 1 : 0);
 
 /** The header's 36px buttons, as on the venue header (`06/event-edit`). */
 const BUTTON: CSSProperties = {
@@ -179,26 +201,44 @@ const Field = ({
   </div>
 );
 
+/** The 12px line under a field: the tour name's hint, the venue's reason. */
+const HINT: CSSProperties = {
+  fontSize: 12,
+  lineHeight: 1.4,
+  color: 'var(--fg-subtle)',
+  marginTop: 6,
+};
+
 /**
- * A value drawn as its field but not editable here: the venue (its picker
- * lands with the 4b venue work) and a passed postponed show's Original date.
+ * A value drawn as its field but not editable here: a crawled upcoming
+ * show's venue (with why, under it) and a passed postponed show's Original
+ * date.
  */
 const ReadOnlyField = ({
   id,
   label,
   value,
+  hint,
 }: {
   id: string;
   label: string;
   value: string;
+  /** Why it can't change, tied to the field for screen readers. */
+  hint?: string;
 }) => (
   <Field label={label} htmlFor={id}>
     <input
       id={id}
       readOnly
       value={value}
+      aria-describedby={hint === undefined ? undefined : `${id}-hint`}
       style={{ ...inputStyle(false), height: 40, color: 'var(--fg-muted)' }}
     />
+    {hint !== undefined && (
+      <div id={`${id}-hint`} data-testid={`${id}-hint`} style={HINT}>
+        {hint}
+      </div>
+    )}
   </Field>
 );
 
@@ -555,8 +595,9 @@ const SaveBar = ({
 
 /**
  * Event edit (`06/event-edit`, phone `06/event-edit-mobile`). Every desktop
- * field, stacked on the phone (4b#4). The lineup saves through its own PUT;
- * the venue picker waits for the 4b venue work, so the venue reads only.
+ * field, stacked on the phone (4b#4). The lineup saves through its own PUT
+ * and the venue through its own POST (E2-D); a crawled show still to come
+ * reads its venue only.
  *
  * A played past show (B+ addendum 6 item 36, `04/past-show-d`,
  * `36/past-show-m`) takes corrections that notify nobody: title, times and a
@@ -585,8 +626,15 @@ export const EventEdit = ({
   const [deleting, setDeleting] = useState(false);
   /** The PATCH's 409 refusal, said as such: a retry would be refused again. */
   const [refusal, setRefusal] = useState<string | null>(null);
+  /** `duplicate_show`'s other listing on a refused move: the toast's Open it. */
+  const [refusalLink, setRefusalLink] = useState<string | null>(null);
   /** The write a failed save stopped at: the fields' PATCH or the sale's POST. */
   const [failedStep, setFailedStep] = useState<SaveStep | null>(null);
+  /** A move saved this visit (`06/event-edit`'s Moved line). */
+  const [moved, setMoved] = useState<MovedNote | null>(null);
+  // Played shows and shows added by hand; a crawled one still to come is its
+  // venue's calendar's, so it reads only.
+  const canMoveVenue = venueEditable(detail, today);
 
   useEffect(() => {
     setPageTitle(detail.artist);
@@ -618,6 +666,7 @@ export const EventEdit = ({
   const savedDate = detail.date;
   const savedDoors = hhmm(detail.doorsTime);
   const savedShow = hhmm(detail.showTime);
+  const savedVenueId = detail.venueId ?? '';
   // Keyed on the acts' text: every refresh sends a new array, the same bill.
   const savedLineupKey = JSON.stringify(detail.lineup);
   const savedLineup = useMemo(
@@ -635,6 +684,7 @@ export const EventEdit = ({
       doorsTime: savedDoors,
       showTime: savedShow,
       lineup: savedLineup,
+      venueId: savedVenueId,
     }),
     [
       savedTitle,
@@ -644,9 +694,22 @@ export const EventEdit = ({
       savedDoors,
       savedShow,
       savedLineup,
+      savedVenueId,
     ],
   );
-  const searchArtists = useMemo(() => addShowApi(getToken).artists, [getToken]);
+  const showApi = useMemo(() => addShowApi(getToken), [getToken]);
+  const searchArtists = showApi.artists;
+  // Add a show's venue list, loaded once; a show that can't move needs none.
+  const { venues, reload: reloadVenues } = usePickVenues(
+    canMoveVenue ? showApi.venues : () => Promise.resolve([]),
+    'admin event edit',
+  );
+  const venueName = (venueId: string): string =>
+    (Array.isArray(venues)
+      ? venues.find((venue) => venue.id === venueId)?.name
+      : undefined) ??
+    detail.venueName ??
+    COPY.none;
   /**
    * While the date is still past, no sale write goes out: a played show has
    * no status to set, and a passed postponed one stays Postponed until its
@@ -697,6 +760,7 @@ export const EventEdit = ({
     // Which write was running, so a failure names the step that failed.
     let step: SaveStep = 'fields';
     setRefusal(null);
+    setRefusalLink(null);
     setFailedStep(null);
     try {
       if (Object.keys(body).length > 0) {
@@ -712,6 +776,27 @@ export const EventEdit = ({
           lineup: lineupEntries(next.lineup),
         });
         landed = true;
+      }
+      step = 'venue';
+      // Its own route (E2-C): a show still to come moves, and its Watchers
+      // hear the new room; a played one is a silent correction. After the
+      // PATCH, so a date change is in place first; before the sale, so a
+      // Sold out notice names the new room.
+      if (next.venueId !== savedVenueId && next.venueId !== '') {
+        const data: unknown = await apiClient.post(`${path}/venue`, token, {
+          venueId: next.venueId,
+        });
+        landed = true;
+        const result = venueMoveResultOf(data);
+        if (result?.outcome === 'moved') {
+          setMoved({
+            venue: venueName(next.venueId),
+            toldOn:
+              result.watchersNotified > 0
+                ? shortDate(new Date().toISOString())
+                : null,
+          });
+        }
       }
       step = 'sale';
       // Sold out is its own flag with its own Watcher notice (`watch.soldout`),
@@ -731,6 +816,14 @@ export const EventEdit = ({
     } catch (err) {
       console.error('[event edit] save failed', err);
       setFailedStep(step);
+      if (step === 'venue') {
+        // The move's own refusals: another listing that night at the new
+        // venue (with a link to it), a crawled show, a venue taken down.
+        const venueRefusal = venueRefusalOf(err);
+        setRefusal(venueRefusal?.message ?? null);
+        setRefusalLink(venueRefusal?.existingId ?? null);
+        throw err;
+      }
       // `past_locked` (a field a past show locks) or `duplicate_show` (another
       // listing that night), or the sold-out POST's `not_on_sale`: the
       // snap-back's toast says which.
@@ -776,6 +869,7 @@ export const EventEdit = ({
         JSON.stringify(was.lineup) !== JSON.stringify(now.lineup)
           ? now.lineup
           : prev.lineup,
+      venueId: was.venueId !== now.venueId ? now.venueId : prev.venueId,
     }));
   }, [snap.value]);
   // A save that fails fast can batch its pending and failed states into one
@@ -790,6 +884,17 @@ export const EventEdit = ({
       setDraft({
         ...snap.failed.attempted,
         lineup: snap.failed.saved.lineup,
+        venueId: snap.failed.saved.venueId,
+        sale: snap.failed.saved.sale,
+      });
+      return;
+    }
+    // The fields and the lineup landed before the move failed: only the
+    // venue (and the sale, never sent) snaps back.
+    if (failedStep === 'venue') {
+      setDraft({
+        ...snap.failed.attempted,
+        venueId: snap.failed.saved.venueId,
         sale: snap.failed.saved.sale,
       });
       return;
@@ -811,15 +916,38 @@ export const EventEdit = ({
     ];
     return changed.flatMap(([did, name]) => (did ? [name] : []));
   };
+  // What landed before the lineup's PUT or the venue's POST failed: the
+  // fields, and before a move, the lineup too.
   const partlySaved =
-    snap.failed !== null && failedStep === 'lineup'
-      ? savedFieldNames(snap.failed.attempted, snap.failed.saved)
+    snap.failed !== null && (failedStep === 'lineup' || failedStep === 'venue')
+      ? [
+          ...savedFieldNames(snap.failed.attempted, snap.failed.saved),
+          ...(failedStep === 'venue' &&
+          lineupChanged(snap.failed.attempted, snap.failed.saved)
+            ? [COPY.saveFailed.fieldNames.lineup]
+            : []),
+        ]
       : [];
+  const partlySavedLine =
+    partlySaved.length === 0
+      ? ''
+      : `${COPY.saveFailed.savedFields(
+          new Intl.ListFormat('en', { type: 'conjunction' }).format(
+            partlySaved,
+          ),
+        )} `;
+  /** The venue as saved, for a failed move's toast. */
+  const savedVenueLine = COPY.saveFailed.savedVenue(venueName(savedVenueId));
   const count = changedCount(draft, snap.value);
   // A new Sold out asks how the admin knows (`06/sold-out-mark-d`) and
   // confirms before it tells the Watching (`06/sold-out-confirm-d`).
   const marking = marksSoldOut(draft);
   const [confirmingSoldOut, setConfirmingSoldOut] = useState(false);
+  // A move that tells the Watching confirms first, as Postponed and Hide do.
+  // A played show's correction, or one nobody Watches, saves at once.
+  const movingTold =
+    draft.venueId !== snap.value.venueId && moveTellsWatchers(detail, today);
+  const [confirmingMove, setConfirmingMove] = useState(false);
   // The API refuses an empty title, so Save waits for one; a new Sold out
   // waits for its method (and a link, if any, that is http(s)).
   // A changed bill needs a headliner (the API's `headliner_required`). The
@@ -906,15 +1034,7 @@ export const EventEdit = ({
             ...(phone && { fontSize: 16 }),
           }}
         />
-        <div
-          id="event-edit-tour-name-hint"
-          style={{
-            fontSize: 12,
-            lineHeight: 1.4,
-            color: 'var(--fg-subtle)',
-            marginTop: 6,
-          }}
-        >
+        <div id="event-edit-tour-name-hint" style={HINT}>
           {COPY.show.tourNameHint}
         </div>
       </div>
@@ -930,11 +1050,53 @@ export const EventEdit = ({
           invalid={lineupInvalid}
         />
       </Field>
-      <ReadOnlyField
-        id="event-edit-venue"
-        label={COPY.show.venue}
-        value={venue}
-      />
+      {canMoveVenue ? (
+        <Field label={COPY.show.venue} htmlFor="event-edit-venue">
+          <VenuePicker
+            id="event-edit-venue"
+            variant="edit"
+            venues={venues}
+            value={draft.venueId}
+            onChange={(venueId) => setDraft({ ...draft, venueId })}
+            onRetry={reloadVenues}
+            phone={phone}
+            invalid={false}
+            // The saved venue draws while the list loads.
+            known={
+              draft.venueId === savedVenueId &&
+              detail.venueName !== null &&
+              detail.venueSlug !== null
+                ? { name: detail.venueName, slug: detail.venueSlug }
+                : undefined
+            }
+          />
+          {moved !== null && draft.venueId === snap.value.venueId && (
+            // `06/event-edit`: under the Moved pill there; here, under the
+            // field that moved it, until the page is next opened.
+            <div
+              data-testid="event-edit-moved"
+              role="status"
+              style={{ ...HINT, fontSize: 12.5, color: 'var(--fg-muted)' }}
+            >
+              {COPY.venue.movedLead}
+              <b style={{ color: 'var(--fg)' }}>{moved.venue}</b>
+              {moved.toldOn === null
+                ? COPY.venue.movedQuiet
+                : COPY.venue.movedTold(moved.toldOn)}
+            </div>
+          )}
+        </Field>
+      ) : (
+        <ReadOnlyField
+          id="event-edit-venue"
+          label={COPY.show.venue}
+          value={venue}
+          // A crawled show still to come: say why it reads only.
+          {...(detail.venueId !== null && {
+            hint: COPY.venue.crawledLocked,
+          })}
+        />
+      )}
       <div
         style={{
           display: 'grid',
@@ -1139,22 +1301,29 @@ export const EventEdit = ({
       )}
       {snap.failed !== null && refusal !== null && (
         // A refusal would only be refused again: no Try again.
+        // A refused move after the fields saved says what saved first.
         <SaveFailedToast
           what={COPY.saveFailed.what}
-          body={refusal}
+          body={`${partlySavedLine}${refusal}`}
           onDismiss={snap.dismiss}
+          {...(refusalLink !== null && {
+            link: {
+              label: COPY.venue.openIt,
+              href: editEventHref(refusalLink),
+            },
+          })}
         />
       )}
       {snap.failed !== null && refusal === null && partlySaved.length > 0 && (
-        // What saved, then the lineup that didn't: "Nothing changed" would
-        // be untrue.
+        // What saved, then the lineup or venue that didn't: "Nothing
+        // changed" would be untrue.
         <SaveFailedToast
           what={COPY.saveFailed.what}
-          body={`${COPY.saveFailed.savedFields(
-            new Intl.ListFormat('en', { type: 'conjunction' }).format(
-              partlySaved,
-            ),
-          )} ${COPY.saveFailed.savedLineup}`}
+          body={`${partlySavedLine}${
+            failedStep === 'venue'
+              ? savedVenueLine
+              : COPY.saveFailed.savedLineup
+          }`}
           onRetry={() => void snap.retry()}
           retrying={snap.saving}
           onDismiss={snap.dismiss}
@@ -1170,19 +1339,21 @@ export const EventEdit = ({
               ? COPY.statusSaved(ADMIN_COPY.eventsList.status[detail.status])
               : failedStep === 'lineup'
                 ? COPY.saveFailed.savedLineup
-                : snap.failed.attempted.title !== snap.failed.saved.title
-                  ? COPY.saveFailed.saved(snap.failed.saved.title)
-                  : tourChanged(snap.failed.attempted, snap.failed.saved)
-                    ? COPY.saveFailed.savedTour(
-                        snap.failed.saved.tourName.trim(),
-                      )
-                    : snap.failed.attempted.sale !== snap.failed.saved.sale
-                      ? COPY.statusSaved(
-                          ADMIN_COPY.eventsList.status[detail.status],
+                : failedStep === 'venue'
+                  ? savedVenueLine
+                  : snap.failed.attempted.title !== snap.failed.saved.title
+                    ? COPY.saveFailed.saved(snap.failed.saved.title)
+                    : tourChanged(snap.failed.attempted, snap.failed.saved)
+                      ? COPY.saveFailed.savedTour(
+                          snap.failed.saved.tourName.trim(),
                         )
-                      : COPY.saveFailed.savedWhen(
-                          fieldDate(snap.failed.saved.date, true),
-                        )
+                      : snap.failed.attempted.sale !== snap.failed.saved.sale
+                        ? COPY.statusSaved(
+                            ADMIN_COPY.eventsList.status[detail.status],
+                          )
+                        : COPY.saveFailed.savedWhen(
+                            fieldDate(snap.failed.saved.date, true),
+                          )
           }
           onRetry={() => void snap.retry()}
           retrying={snap.saving}
@@ -1199,10 +1370,47 @@ export const EventEdit = ({
           inline={past}
           onDiscard={() => setDraft(snap.value)}
           onSave={() => {
-            if (marking) setConfirmingSoldOut(true);
+            if (movingTold) setConfirmingMove(true);
+            else if (marking) setConfirmingSoldOut(true);
             else void saveDraft();
           }}
         />
+      )}
+      {confirmingMove && (
+        // Undrawn (🔸): the Postponed and Hide confirms' dialog, for a move
+        // that tells the Watching the new room.
+        <EventConfirm
+          title={COPY.venue.confirmTitle(
+            detail.artist,
+            venueName(draft.venueId),
+          )}
+          confirmLabel={COPY.venue.confirm}
+          danger={false}
+          failedWhat={COPY.saveFailed.what}
+          failedSaved={savedVenueLine}
+          onCancel={() => setConfirmingMove(false)}
+          // A failed save closes it and shows the page's Couldn't change, as
+          // the Sold out confirm does. A new Sold out still asks its own.
+          act={async () => {
+            if (marking) {
+              setConfirmingMove(false);
+              setConfirmingSoldOut(true);
+              return;
+            }
+            await saveDraft();
+            setConfirmingMove(false);
+          }}
+        >
+          <div>
+            {COPY.venue.confirmBody(
+              detail.watchingCount,
+              venueName(draft.venueId),
+            )}
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
+            {COPY.venue.confirmFoot}
+          </div>
+        </EventConfirm>
       )}
       {confirmingSoldOut && (
         <SoldOutConfirm
