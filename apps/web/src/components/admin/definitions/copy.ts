@@ -4568,6 +4568,13 @@ export const ADMIN_COPY = {
       date: 'Date',
       doors: 'Doors',
       showTime: 'Show',
+      // `06/event-edit`, `06/event-edit-mobile`.
+      lineup: 'Lineup',
+      lineupHint:
+        'Each name links to its artist. Amber means unsure: opens the match on Artists.',
+      // Undrawn: the keys on a lineup chip, read to screen readers only.
+      lineupKeys:
+        'Delete removes it. Alt and an arrow key move it along the bill.',
     },
     crawl: {
       title: 'From the crawl',
@@ -4776,6 +4783,8 @@ export const ADMIN_COPY = {
           : `The tour name is still “${tour}”.`,
       savedWhen: (date: string) =>
         `It’s still on ${date}, at the times it had.`,
+      // Undrawn: a lineup that didn't save, as the title's line.
+      savedLineup: 'The lineup is as it was.',
     },
     none: '—',
   },

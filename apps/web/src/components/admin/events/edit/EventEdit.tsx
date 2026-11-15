@@ -54,7 +54,11 @@ import {
   isPast,
   isPostponedPassed,
   type EventDetail,
+  type LineupItem,
 } from './event-detail';
+import { addShowApi } from '../add/add-show-api';
+import { lineupEntries, type Act } from '../add/add-show-rules';
+import { LineupField } from '../add/LineupField';
 
 const COPY = ADMIN_COPY.eventEdit;
 const PASSED = COPY.passed;
@@ -77,10 +81,32 @@ interface Fields {
   /** `HH:MM`, or null for none. */
   doorsTime: string | null;
   showTime: string | null;
+  /** The bill in order, each act with its saved role. */
+  lineup: Act[];
 }
 
-/** A Save's writes, in order: the fields' PATCH, then the sale's POST. */
-type SaveStep = 'fields' | 'sale';
+/**
+ * A Save's writes, in order: the fields' PATCH, the lineup's PUT, then the
+ * sale's POST.
+ */
+type SaveStep = 'fields' | 'lineup' | 'sale';
+
+/** The GET's lineup as the field's acts, roles and matches kept. */
+const actsOf = (items: readonly LineupItem[]): Act[] =>
+  items.map((item) => ({
+    name: item.name,
+    role: item.role,
+    ...(item.artistId !== null && { artistId: item.artistId }),
+    ...(item.slug !== null && { slug: item.slug }),
+    ...(item.unsure && { unsure: true }),
+  }));
+
+/** The bill as the PUT would write it: names, roles and links, in order. */
+const billKey = (lineup: readonly Act[]): string =>
+  JSON.stringify(lineupEntries(lineup));
+
+const lineupChanged = (draft: Fields, saved: Fields): boolean =>
+  billKey(draft.lineup) !== billKey(saved.lineup);
 
 /** A stored `HH:MM:SS` as the pickers' `HH:MM`. */
 const hhmm = (time: string | null): string | null =>
@@ -105,7 +131,8 @@ const changedCount = (draft: Fields, saved: Fields): number =>
   (draft.sale !== saved.sale ? 1 : 0) +
   (draft.date !== saved.date ? 1 : 0) +
   (draft.doorsTime !== saved.doorsTime ? 1 : 0) +
-  (draft.showTime !== saved.showTime ? 1 : 0);
+  (draft.showTime !== saved.showTime ? 1 : 0) +
+  (lineupChanged(draft, saved) ? 1 : 0);
 
 /** The header's 36px buttons, as on the venue header (`06/event-edit`). */
 const BUTTON: CSSProperties = {
@@ -497,12 +524,13 @@ const SaveBar = ({
 
 /**
  * Event edit (`06/event-edit`, phone `06/event-edit-mobile`). Every desktop
- * field, stacked on the phone (4b#4). The lineup waits for its data (4a-2)
- * and the venue picker for the 4b venue work, so the venue reads only.
+ * field, stacked on the phone (4b#4). The lineup saves through its own PUT;
+ * the venue picker waits for the 4b venue work, so the venue reads only.
  *
  * A played past show (B+ addendum 6 item 36, `04/past-show-d`,
  * `36/past-show-m`) takes corrections that notify nobody: title, times and a
- * date still in the past, under a banner; status and price read only. A
+ * date still in the past, and the lineup, under a banner; status and price
+ * read only. A
  * postponed show whose date passed (`36/postponed-passed-d`) keeps this
  * editor, headed "Was …", with its New date under the status pills.
  */
@@ -558,6 +586,13 @@ export const EventEdit = ({
   const savedDate = detail.date;
   const savedDoors = hhmm(detail.doorsTime);
   const savedShow = hhmm(detail.showTime);
+  // Keyed on the acts' text: every refresh sends a new array, the same bill.
+  const savedLineupKey = JSON.stringify(detail.lineup);
+  const savedLineup = useMemo(
+    () => actsOf(detail.lineup),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on content, not the array's identity
+    [savedLineupKey],
+  );
   const saved = useMemo(
     () => ({
       title: savedTitle,
@@ -567,9 +602,19 @@ export const EventEdit = ({
       date: savedDate,
       doorsTime: savedDoors,
       showTime: savedShow,
+      lineup: savedLineup,
     }),
-    [savedTitle, savedTour, savedSale, savedDate, savedDoors, savedShow],
+    [
+      savedTitle,
+      savedTour,
+      savedSale,
+      savedDate,
+      savedDoors,
+      savedShow,
+      savedLineup,
+    ],
   );
+  const searchArtists = useMemo(() => addShowApi(getToken).artists, [getToken]);
   /**
    * While the date is still past, no sale write goes out: a played show has
    * no status to set, and a passed postponed one stays Postponed until its
@@ -624,6 +669,16 @@ export const EventEdit = ({
     try {
       if (Object.keys(body).length > 0) {
         await apiClient.patch(path, token, body);
+        landed = true;
+      }
+      step = 'lineup';
+      // The whole bill, roles kept: the PUT rewrites it, so every name the
+      // page shows goes back. Only when it changed, so a title save never
+      // locks a crawled bill (`lineup_edited_at`).
+      if (billKey(next.lineup) !== billKey(savedLineup)) {
+        await apiClient.put(`${path}/lineup`, token, {
+          lineup: lineupEntries(next.lineup),
+        });
         landed = true;
       }
       step = 'sale';
@@ -683,6 +738,12 @@ export const EventEdit = ({
       doorsTime:
         was.doorsTime !== now.doorsTime ? now.doorsTime : prev.doorsTime,
       showTime: was.showTime !== now.showTime ? now.showTime : prev.showTime,
+      // By content, links included, so a save's refresh brings each new
+      // act's slug and match while an unrelated refresh keeps the draft.
+      lineup:
+        JSON.stringify(was.lineup) !== JSON.stringify(now.lineup)
+          ? now.lineup
+          : prev.lineup,
     }));
   }, [snap.value]);
   // A save that fails fast can batch its pending and failed states into one
@@ -704,8 +765,14 @@ export const EventEdit = ({
   const [confirmingSoldOut, setConfirmingSoldOut] = useState(false);
   // The API refuses an empty title, so Save waits for one; a new Sold out
   // waits for its method (and a link, if any, that is http(s)).
+  // A changed bill needs an act (the API's `headliner_required`); a crawled
+  // show saved with none can still save its other fields.
+  const lineupEmpty =
+    draft.lineup.length === 0 && lineupChanged(draft, snap.value);
   const valid =
-    draft.title.trim() !== '' && (!marking || evidenceReady(draft.evidence));
+    draft.title.trim() !== '' &&
+    !lineupEmpty &&
+    (!marking || evidenceReady(draft.evidence));
   const saveDraft = () => snap.save({ ...draft, title: draft.title.trim() });
   const tourDirty = tourChanged(draft, snap.value);
 
@@ -791,6 +858,18 @@ export const EventEdit = ({
           {COPY.show.tourNameHint}
         </div>
       </div>
+      {/* `06/event-edit`: the bill as 24px chips, tinted by their match. */}
+      <Field label={COPY.show.lineup} htmlFor="event-edit-lineup">
+        <LineupField
+          id="event-edit-lineup"
+          variant="edit"
+          lineup={draft.lineup}
+          onChange={(lineup) => setDraft({ ...draft, lineup })}
+          search={searchArtists}
+          phone={phone}
+          invalid={lineupEmpty}
+        />
+      </Field>
       <ReadOnlyField
         id="event-edit-venue"
         label={COPY.show.venue}
@@ -1011,17 +1090,21 @@ export const EventEdit = ({
             // status is what didn't change.
             failedStep === 'sale'
               ? COPY.statusSaved(ADMIN_COPY.eventsList.status[detail.status])
-              : snap.failed.attempted.title !== snap.failed.saved.title
-                ? COPY.saveFailed.saved(snap.failed.saved.title)
-                : tourChanged(snap.failed.attempted, snap.failed.saved)
-                  ? COPY.saveFailed.savedTour(snap.failed.saved.tourName.trim())
-                  : snap.failed.attempted.sale !== snap.failed.saved.sale
-                    ? COPY.statusSaved(
-                        ADMIN_COPY.eventsList.status[detail.status],
+              : failedStep === 'lineup'
+                ? COPY.saveFailed.savedLineup
+                : snap.failed.attempted.title !== snap.failed.saved.title
+                  ? COPY.saveFailed.saved(snap.failed.saved.title)
+                  : tourChanged(snap.failed.attempted, snap.failed.saved)
+                    ? COPY.saveFailed.savedTour(
+                        snap.failed.saved.tourName.trim(),
                       )
-                    : COPY.saveFailed.savedWhen(
-                        fieldDate(snap.failed.saved.date, true),
-                      )
+                    : snap.failed.attempted.sale !== snap.failed.saved.sale
+                      ? COPY.statusSaved(
+                          ADMIN_COPY.eventsList.status[detail.status],
+                        )
+                      : COPY.saveFailed.savedWhen(
+                          fieldDate(snap.failed.saved.date, true),
+                        )
           }
           onRetry={() => void snap.retry()}
           retrying={snap.saving}

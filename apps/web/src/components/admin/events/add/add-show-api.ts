@@ -38,7 +38,7 @@ const artistSchema = z.object({
   name: z.string(),
   matchStatus: z.string(),
 });
-export type ArtistSuggestion = { id: string; name: string };
+export type ArtistSuggestion = { id: string; name: string; unsure?: boolean };
 
 const duplicateSchema = z.object({
   id: z.string(),
@@ -212,10 +212,17 @@ export const addShowApi = (getToken: GetToken) => ({
       send(getToken, `/v1/admin/artists?${query.toString()}`, { signal }),
       z.array(artistSchema),
     );
-    return rows
-      .filter((row) => row.matchStatus !== 'not_an_artist')
-      .slice(0, ARTIST_SUGGESTIONS)
-      .map(({ id, name }) => ({ id, name }));
+    return (
+      rows
+        .filter((row) => row.matchStatus !== 'not_an_artist')
+        .slice(0, ARTIST_SUGGESTIONS)
+        // Event edit tints a pick Artists calls Unsure amber (`06/event-edit`).
+        .map(({ id, name, matchStatus }) => ({
+          id,
+          name,
+          ...(matchStatus === 'ambiguous' && { unsure: true }),
+        }))
+    );
   },
 
   /** Shows already at the venue that night, the likeliest first. */

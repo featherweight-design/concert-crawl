@@ -23,11 +23,15 @@ vi.mock('@clerk/nextjs', () => ({
 }));
 const patch = vi.fn();
 const post = vi.fn();
+const put = vi.fn();
 vi.mock('@/lib/api', () => ({
   apiClient: {
     patch: (...args: unknown[]) => patch(...args),
     post: (...args: unknown[]) => post(...args),
+    put: (...args: unknown[]) => put(...args),
   },
+  // The lineup's artist search (add-show-api); no test types into it.
+  adminFetch: vi.fn(),
   ApiError: class ApiError extends Error {
     constructor(
       public status: number,
@@ -74,6 +78,7 @@ const DETAIL: EventDetail = {
   venueUrl: 'https://larimer.example/shows/1',
   tourName: null,
   soldOutRecord: null,
+  lineup: [],
 };
 
 // `useIsPhone` reads matchMedia, which jsdom does not ship.
@@ -89,6 +94,7 @@ beforeEach(() => {
   setPhone(false);
   patch.mockReset();
   post.mockReset();
+  put.mockReset();
   push.mockReset();
   refresh.mockReset();
 });
@@ -869,6 +875,132 @@ describe('EventEdit Tour name', () => {
     ).toBeInTheDocument();
     // The snap-back lands in the render after the toast's.
     await waitFor(() => expect(tourInput()).toHaveValue(''));
+  });
+});
+
+// `06/event-edit`, `06/event-edit-mobile`: the lineup as tinted chips.
+describe('EventEdit lineup', () => {
+  // A crawled bill with two headliners, an Unsure support and a typed name.
+  const BILL: EventDetail = {
+    ...DETAIL,
+    lineup: [
+      {
+        name: 'Six Foot Blonde',
+        role: 'headliner',
+        position: 0,
+        artistId: 'art-1',
+        slug: 'six-foot-blonde',
+        unsure: false,
+      },
+      {
+        name: 'Co Headliner',
+        role: 'headliner',
+        position: 1,
+        artistId: 'art-2',
+        slug: 'co-headliner',
+        unsure: false,
+      },
+      {
+        name: 'The Man is Dead',
+        role: 'support',
+        position: 0,
+        artistId: 'art-3',
+        slug: 'the-man-is-dead',
+        unsure: true,
+      },
+      {
+        name: 'Opener',
+        role: 'support',
+        position: 1,
+        artistId: null,
+        slug: null,
+        unsure: false,
+      },
+    ],
+  };
+  const chips = () => screen.getAllByTestId('lineup-chip');
+  const chipFor = (name: string) => {
+    const found = chips().find((chip) => chip.textContent === name);
+    if (!found) throw new Error(`no chip for ${name}`);
+    return found;
+  };
+  const SAVED_BILL = [
+    { name: 'Six Foot Blonde', role: 'headliner', artistId: 'art-1' },
+    { name: 'Co Headliner', role: 'headliner', artistId: 'art-2' },
+    { name: 'The Man is Dead', role: 'support', artistId: 'art-3' },
+  ];
+
+  it('tints matched cyan and unsure amber, each a link, and a typed name neutral', () => {
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    expect(chips().map((chip) => chip.dataset['tone'])).toEqual([
+      'matched',
+      'matched',
+      'unsure',
+      'typed',
+    ]);
+    expect(chipFor('Six Foot Blonde')).toHaveAttribute(
+      'href',
+      '/artists/six-foot-blonde',
+    );
+    // Amber opens the match on Artists.
+    expect(chipFor('The Man is Dead')).toHaveAttribute(
+      'href',
+      '/admin/artists',
+    );
+    expect(chipFor('Opener').tagName).toBe('SPAN');
+    // Both headliners stay headliners; no role tag is drawn.
+    expect(chipFor('Co Headliner')).toHaveAttribute(
+      'aria-label',
+      ADMIN_COPY.addShow.lineupField.chipLabel('Co Headliner', 'Headliner'),
+    );
+    expect(screen.queryByText('Headliner')).toBeNull();
+    expect(screen.getByText(COPY.show.lineupHint)).toBeInTheDocument();
+  });
+
+  it('saves an edit with one PUT, roles kept, and nothing else', async () => {
+    put.mockResolvedValue({});
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    fireEvent.keyDown(chipFor('Opener'), { key: 'Delete' });
+    expect(chips()).toHaveLength(3);
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() => expect(put).toHaveBeenCalledTimes(1));
+    expect(put).toHaveBeenCalledWith('/v1/admin/events/evt-1/lineup', 'token', {
+      lineup: SAVED_BILL,
+    });
+    expect(patch).not.toHaveBeenCalled();
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  it('sends no PUT when the lineup is unchanged', async () => {
+    patch.mockResolvedValue({});
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    fireEvent.change(titleInput(), { target: { value: 'New title' } });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it('snaps the bill back and says so when the PUT fails', async () => {
+    put.mockRejectedValue(new Error('500'));
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    fireEvent.keyDown(chipFor('Opener'), { key: 'Delete' });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    expect(
+      await screen.findByText(new RegExp(COPY.saveFailed.savedLineup)),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(chips()).toHaveLength(4));
+  });
+
+  it('keeps Save off for an emptied bill', () => {
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    for (const name of ['Opener', 'The Man is Dead', 'Co Headliner']) {
+      fireEvent.keyDown(chipFor(name), { key: 'Delete' });
+    }
+    fireEvent.keyDown(chipFor('Six Foot Blonde'), { key: 'Delete' });
+    expect(screen.queryAllByTestId('lineup-chip')).toHaveLength(0);
+    expect(screen.getByTestId('event-edit-save')).toBeDisabled();
   });
 });
 
