@@ -331,9 +331,10 @@ crawlAdminRouter.post(
   },
 );
 
-// GET /v1/admin/crawl/triggers/:id — poll a single trigger by ID. The row
-// plus `progress` (lib/crawl-trigger-progress.ts): queue place, page
-// progress and the venue's typical crawl time, for the re-crawl states.
+// GET /v1/admin/crawl/triggers/:id — poll a single trigger by ID. The whole
+// row (page progress and `startedAt` included) plus `progress`
+// (lib/crawl-trigger-progress.ts): queue place, the venue's typical crawl
+// time and the wait to start, for the re-crawl states.
 crawlAdminRouter.get(
   '/triggers/:id',
   zValidator('param', triggerIdSchema, validationHook),

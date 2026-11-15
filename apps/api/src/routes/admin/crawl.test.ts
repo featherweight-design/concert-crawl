@@ -18,13 +18,10 @@ vi.mock('../../lib/crawler-dispatch.js', () => ({
 // crawl-trigger-progress.integration.test.ts; here they are a fixed answer.
 const { MOCK_PROGRESS } = vi.hoisted(() => ({
   MOCK_PROGRESS: {
-    status: 'pending',
-    pagesDone: null,
-    pagesTotal: null,
-    progressAt: null,
     queuePosition: 0,
     runningAhead: false,
     estimateMs: null,
+    waitMs: null,
   },
 }));
 vi.mock('./lib/crawl-trigger-progress.js', () => ({

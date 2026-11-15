@@ -788,6 +788,12 @@ export interface CrawlTrigger {
   pagesDone?: number | null;
   pagesTotal?: number | null;
   progressAt?: string | null;
+  /**
+   * When the crawler claimed the trigger, pending to processing (migration
+   * 0121); null while pending and on rows that predate it. Progress writes
+   * leave it alone, unlike `updatedAt`.
+   */
+  startedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   /** Present on GET /v1/admin/crawl/triggers/:id. */
@@ -797,29 +803,37 @@ export interface CrawlTrigger {
 /**
  * Where a re-crawl stands, for its drawn states (`A3/03/re-crawl-states`):
  * "Starts after the run in progress · about 2 min" while queued, "Page 2 of
- * 4" while crawling.
+ * 4" while crawling. Derived values only: the status, page progress and
+ * `startedAt` are on the trigger itself.
  */
 export interface CrawlTriggerProgress {
-  status: CrawlTriggerStatus;
-  /** Null until the crawler reports a page, and on a pending trigger. */
-  pagesDone: number | null;
-  pagesTotal: number | null;
-  progressAt: string | null;
   /**
    * Pending triggers (any venue) the crawler will claim first, oldest first;
    * 0 when this one is next. Always 0 once it is no longer pending.
    */
   queuePosition: number;
-  /** A pending trigger only: another trigger is being crawled right now. */
+  /**
+   * A pending trigger only: another trigger is being crawled right now (one
+   * in 'processing' that has not gone stale, i.e. touched in the last 30 min).
+   */
   runningAhead: boolean;
   /**
    * How long a whole crawl of this venue typically takes: the median duration
    * of its last 10 successful non-trial runs. Null with fewer than 3 such
-   * runs, and once the trigger has settled. The time left is this minus the
-   * time since the run started, which the reader works out against its own
-   * clock (the API keeps no claim time once progress writes move updatedAt).
+   * runs, on a forced re-extraction (no comparable history), and once the
+   * trigger has settled. While processing, the time left is this minus the
+   * time since `startedAt`.
    */
   estimateMs: number | null;
+  /**
+   * A pending trigger only: about how long until the crawler starts it. What
+   * is left of the run in progress plus the typical time of each pending
+   * trigger ahead; 0 when it is next and nothing is running. Null when any
+   * part is unknown (no start time on the run ahead, a venue with fewer than
+   * 3 full runs, a forced re-extraction among them), when more than 20 are
+   * ahead (too far to estimate), and once it is no longer pending.
+   */
+  waitMs: number | null;
 }
 
 export interface ActiveCrawlAlert {
