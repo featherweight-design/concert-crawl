@@ -137,11 +137,6 @@ export const BottomSheet = ({
   const previousFocus = useRef<Element | null>(null);
   const titleId = useId();
   const drag = useSheetDrag(onClose, open);
-  const bodyRef = useRef<HTMLDivElement | null>(null);
-  const { edges, measure } = useScrollEdges(
-    bodyRef,
-    open && footer !== undefined,
-  );
   useBodyScrollLock(open);
 
   // The sheet is portalled out of wherever it is mounted. Inline, `fixed` and
@@ -156,6 +151,16 @@ export const BottomSheet = ({
   useIsomorphicLayoutEffect(() => {
     setHost(document.querySelector(THEME_SCOPE) ?? document.body);
   }, []);
+
+  // A pinned sheet lays out its own header, body and footer; the slot is for
+  // the sheets that scroll as a whole. The body only exists once the portal
+  // host does, so the scroll watchers wait for it.
+  const hasFooter = footer !== undefined && !pinned;
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const { edges, measure } = useScrollEdges(
+    bodyRef,
+    open && hasFooter && host !== null,
+  );
 
   useEffect(() => {
     // Waits for the host too: a sheet mounted already open has no DOM to
@@ -255,9 +260,7 @@ export const BottomSheet = ({
               // content scrolls inside it (addendum 6 item 15); from `lg` up
               // it is the 85vh dialog.
               `max-h-[calc(100dvh-24px)] lg:max-h-[85vh] ${
-                footer === undefined
-                  ? 'overflow-y-auto'
-                  : 'flex flex-col overflow-hidden'
+                hasFooter ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'
               }`
         } rounded-t-2xl ${
           pinned
@@ -356,7 +359,7 @@ export const BottomSheet = ({
             )}
           </button>
         </div>
-        {footer === undefined ? (
+        {!hasFooter ? (
           children
         ) : (
           <>
