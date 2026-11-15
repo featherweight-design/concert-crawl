@@ -9,9 +9,11 @@ import {
   eventRedirects,
   events,
   mergeEventRows,
+  moveEventVenue,
   venues,
 } from '@concert-crawl/db';
 import { crawlVenue } from './crawl.js';
+import { deriveTicketLinks } from './lib/ticket-links/index.js';
 import { sweepStaleEvents } from './lib/stale-event-sweep.js';
 import { reconcileDriftDuplicates } from './reconcile-drift-duplicates.js';
 import { mergeDuplicateNights } from './merge-duplicate-nights.js';
@@ -689,6 +691,52 @@ describe('crawlVenue — a merged-away listing (admin 4a, READINESS A1)', () => 
       .where(eq(events.id, target.id));
     expect(after?.ticketUrl).toBeNull();
     expect(after?.lastSeenAt.getTime()).toBe(target.lastSeenAt.getTime());
+  });
+
+  // Admin E2-C: an admin moving a show to another venue writes the same kind
+  // of redirect, keyed on the old venue's listing, with the show as target.
+  it('drops the old venue listing of a show an admin moved, and inserts nothing', async () => {
+    const venue = await seedTestVenue();
+    const elsewhere = await seedTestVenue();
+    const date = futureDate(26);
+
+    mockExtraction([makeEvent('Venue Swap', date)]);
+    await crawlVenue(venue.id, mockBrowser);
+    const show = await rowFor('Venue Swap');
+
+    const moved = await moveEventVenue({
+      eventId: show.id,
+      venueId: elsewhere.id,
+      actorId: 'user_admin',
+      today: () => new Date().toISOString().slice(0, 10),
+      deriveTicketLinks,
+    });
+    expect(moved.kind).toBe('moved');
+
+    // The old venue still lists it, changed enough to skip the page hash.
+    mockExtraction(
+      [
+        makeEvent('Venue Swap', date, {
+          title: 'Venue Swap (moved)',
+          rawTitle: 'Venue Swap (moved)',
+          ticketUrl: 'https://tickets.example.org/old-room',
+        }),
+      ],
+      `${HTML_BASE}<!-- 2 -->`,
+    );
+    await crawlVenue(venue.id, mockBrowser);
+
+    const atOldVenue = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.venueId, venue.id));
+    expect(atOldVenue).toEqual([]);
+    const all = await db.select().from(events);
+    expect(all.map((row) => row.id)).toEqual([show.id]);
+    expect(all[0]?.venueId).toBe(elsewhere.id);
+    // The old room's fields never land on the moved show.
+    expect(all[0]?.ticketUrl).toBeNull();
+    expect(all[0]?.title).toBe(show.title);
   });
 
   it('inserts the listing again when the merge target has since been cancelled', async () => {

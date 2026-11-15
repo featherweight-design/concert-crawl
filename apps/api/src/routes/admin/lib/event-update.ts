@@ -82,9 +82,9 @@ const PAST_CORRECTIONS: readonly PatchKey[] = ['title'];
  * only to another past date: moving a played show into the future is not a
  * correction.
  *
- * Headliner/lineup and venue corrections (addendum 5 §4) land with the 4b
- * lineup/venue work, which must add them here (and to the postponed set);
- * this PATCH has no `venueId` and does not write the bill yet.
+ * Headliner/lineup and venue corrections (addendum 5 §4) are not PATCH
+ * fields: the lineup saves through PUT /:id/lineup and the venue through
+ * POST /:id/venue (`moveEventVenue`), which carry their own past rules.
  */
 const PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
   ...PAST_UNCHECKED,

@@ -3633,6 +3633,8 @@ export const ADMIN_COPY = {
         'event.sold_out.mark': ['Marked ', ' sold out'],
         'event.sold_out.clear': ['Marked ', ' not sold out'],
         'event.update': ['Edited ', ''],
+        'event.venue.correct': ['Corrected the venue of ', ''],
+        'event.venue.move': ['Moved ', ' to another venue'],
         'event.verify': ['Verified ', ''],
         'feature_flag.toggle': (args: { on: boolean | null }) =>
           args.on === null

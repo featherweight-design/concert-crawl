@@ -796,6 +796,8 @@ const WRITTEN_ACTIONS = [
   'event.sold_out.mark',
   'event.sold_out.clear',
   'event.update',
+  'event.venue.correct',
+  'event.venue.move',
   'event.verify',
   'feature_flag.toggle',
   'feedback.update',
