@@ -1,0 +1,28 @@
+{
+  "feature": "Event page: no vendor link under a live multi-tier price",
+  "note": "Hold PR (removing behaviour is Hugh's call). Boards: addendum-2 14-tickets-available/event-tickets-back-live-m, design_handoff_event_detail_cta_tooltip README:219, design_handoff_price_source_discoverability README:46-52. Needs the scratch event with two live tier prices (GA 45, VIP 120) and one primary ticket link (the single scratch window, restored after). Shot twice, on origin/main (before: the vendor link under the card) and on the branch (after: none). Signed in; nothing is saved.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "live-price",
+      "label": "The live multi-tier price card and what sits under it",
+      "steps": [
+        {
+          "goto": "/events/${CC_EVENT_ID}",
+          "settle": 1500
+        },
+        {
+          "wait": "[data-testid=\"stage-meta\"]"
+        },
+        {
+          "scrollTo": "text=$45",
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}
