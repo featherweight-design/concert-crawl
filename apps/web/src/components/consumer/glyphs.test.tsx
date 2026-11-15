@@ -39,7 +39,7 @@ describe('TierMark', () => {
     );
 
     // Filled with the box office warning gold, as text (AA-safe on Light).
-    expect(svg?.getAttribute('fill')).toBe('var(--price-text-warning)');
+    expect(svg?.getAttribute('fill')).toBe('var(--trust-boxoffice)');
   });
 
   it('omits the star SVG when glyph=false (default)', () => {
@@ -82,11 +82,17 @@ describe('TierMark', () => {
 });
 
 describe('TRUST_TOKENS', () => {
-  it('maps each trust kind to the B+ signal / danger / warning tokens', () => {
+  it('maps each trust kind to its own --trust-* theme token', () => {
     expect(TRUST_TOKENS).toEqual({
-      community: { tone: 'var(--signal)', text: 'var(--price-text-signal)' },
-      resale: { tone: 'var(--danger)', text: 'var(--price-text-danger)' },
-      boxoffice: { tone: 'var(--warning)', text: 'var(--price-text-warning)' },
+      community: {
+        tone: 'var(--trust-community)',
+        text: 'var(--trust-community)',
+      },
+      resale: { tone: 'var(--trust-resale)', text: 'var(--trust-resale)' },
+      boxoffice: {
+        tone: 'var(--trust-boxoffice)',
+        text: 'var(--trust-boxoffice)',
+      },
     });
   });
 
