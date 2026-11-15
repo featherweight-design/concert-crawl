@@ -3,10 +3,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import type { ArtistSearchResult } from '@concert-crawl/types';
+import type * as FollowButtonModule from '@/components/consumer/artist-page/FollowButton';
 
-vi.mock('@/components/consumer/artist-page/FollowButton', () => ({
-  FollowButton: () => <button data-testid="follow-stub" type="button" />,
-}));
+vi.mock(
+  '@/components/consumer/artist-page/FollowButton',
+  async (importOriginal) => {
+    const actual = await importOriginal<typeof FollowButtonModule>();
+    return {
+      ...actual,
+      FollowButton: () => <button data-testid="follow-stub" type="button" />,
+    };
+  },
+);
 
 vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
   useArtistFollow: () => ({

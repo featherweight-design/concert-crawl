@@ -202,9 +202,21 @@ describe('FilterBar desktop segmented bar', () => {
     expect(lastQuery().get('filterFollowing')).toBeNull();
   });
 
-  it('one lapsed entitlement releases filterFollowing with one update', () => {
+  it('a hidden surface releases filterFollowing with one update', () => {
     // Both My artists instances are mounted (phone chip and desktop segment);
     // only one of them may run the release, or the bar writes the URL twice.
+    searchParams.current = new URLSearchParams('filterFollowing=1');
+    entitlement.current = {
+      isLoading: false,
+      active: false,
+      surface: 'hidden',
+    };
+    renderBar();
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(lastQuery().get('filterFollowing')).toBeNull();
+  });
+
+  it('a signed-in paywall-on-tap surface keeps filterFollowing', () => {
     searchParams.current = new URLSearchParams('filterFollowing=1');
     entitlement.current = {
       isLoading: false,
@@ -212,11 +224,10 @@ describe('FilterBar desktop segmented bar', () => {
       surface: 'paywall-on-tap',
     };
     renderBar();
-    expect(replace).toHaveBeenCalledTimes(1);
-    expect(lastQuery().get('filterFollowing')).toBeNull();
+    expect(replace).not.toHaveBeenCalled();
   });
 
-  it('a locked My artists segment opens the plans picker', () => {
+  it('a signed-in paywall-on-tap My artists segment is a working switch', () => {
     entitlement.current = {
       isLoading: false,
       active: false,
@@ -225,13 +236,14 @@ describe('FilterBar desktop segmented bar', () => {
     renderBar();
     // The phone chip renders too (CSS hides it from sm up), so reach the
     // segment through the bar.
-    fireEvent.click(
-      within(screen.getByTestId('filter-segment-bar')).getByRole('button', {
-        name: FOLLOWING_COPY.chipAria,
-      }),
+    const toggle = within(screen.getByTestId('filter-segment-bar')).getByRole(
+      'switch',
+      { name: FOLLOWING_COPY.chipAria },
     );
-    expect(screen.getByTestId('tier-picker')).toBeTruthy();
-    expect(replace).not.toHaveBeenCalled();
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(toggle);
+    expect(lastQuery().get('filterFollowing')).toBe('1');
+    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   it("an active segment's ✕ clears only its own param", () => {
