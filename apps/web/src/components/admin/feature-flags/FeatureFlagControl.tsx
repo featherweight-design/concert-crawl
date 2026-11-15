@@ -93,11 +93,7 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
     const from = stageOf(flag);
     if (stage === from || pending !== null) return;
     // Production asks first before a flag goes to everyone.
-    if (
-      flag.environment === 'production' &&
-      stage === 'everyone' &&
-      rankOf(stage) > rankOf(from)
-    ) {
+    if (flag.environment === 'production' && stage === 'everyone') {
       setAsking({ flag, from });
       return;
     }
@@ -135,7 +131,6 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
           <FlagRow
             key={flag.key}
             flag={flag}
-            busy={pending !== null}
             error={error?.key === flag.key ? error.message : null}
             onPick={(stage) => pick(flag, stage)}
           />
@@ -168,12 +163,11 @@ const COLUMN_HEAD = {
 
 interface FlagRowProps {
   flag: AdminFeatureFlag;
-  busy: boolean;
   error: string | null;
   onPick: (stage: Stage) => void;
 }
 
-const FlagRow = ({ flag, busy, error, onPick }: FlagRowProps) => {
+const FlagRow = ({ flag, error, onPick }: FlagRowProps) => {
   const stage = stageOf(flag);
   const people = flag.people?.length ?? 0;
   // Production keeps a flag locked until it is verified there: a step UP is
@@ -240,7 +234,7 @@ const FlagRow = ({ flag, busy, error, onPick }: FlagRowProps) => {
 
       <div style={{ flex: '1 1 320px', maxWidth: 360 }}>
         <div
-          role="radiogroup"
+          role="group"
           aria-label={COPY.ladderAriaLabel(flag.label)}
           style={{
             display: 'flex',
@@ -257,10 +251,11 @@ const FlagRow = ({ flag, busy, error, onPick }: FlagRowProps) => {
               <button
                 key={step}
                 type="button"
-                role="radio"
-                aria-checked={selected}
-                aria-disabled={closed || busy}
-                disabled={closed || busy}
+                aria-pressed={selected}
+                aria-describedby={
+                  closed ? `flag-locked-${flag.key}` : undefined
+                }
+                disabled={closed}
                 data-testid={`flag-step-${flag.key}-${step}`}
                 onClick={() => onPick(step)}
                 style={{
@@ -274,7 +269,7 @@ const FlagRow = ({ flag, busy, error, onPick }: FlagRowProps) => {
                   border: 'none',
                   fontSize: 12.5,
                   fontWeight: 600,
-                  cursor: closed || busy || selected ? 'default' : 'pointer',
+                  cursor: closed || selected ? 'default' : 'pointer',
                   background: selected ? 'var(--bg-elevated)' : 'transparent',
                   color: selected ? 'var(--fg)' : 'var(--fg-muted)',
                   boxShadow: selected
@@ -348,6 +343,7 @@ const FlagRow = ({ flag, busy, error, onPick }: FlagRowProps) => {
             </span>
             {locked && (
               <span
+                id={`flag-locked-${flag.key}`}
                 style={{
                   fontSize: 11.5,
                   color: 'var(--fg-subtle)',
