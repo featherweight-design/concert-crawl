@@ -1,0 +1,98 @@
+{
+  "feature": "Admin V4d · A re-crawl's queue wait and page progress in the venue header",
+  "note": "Board: design_handoff_admin_redesign/addendum-3/boards/03-venues/re-crawl-states (desktop only; the phone header draws no line). CONTACT_SHEET_ROLE=admin. Pressing Re-crawl posts from the browser, so browser fixtures answer the queue (POST /v1/admin/crawl/:venueId) and the poll (GET /v1/admin/crawl/triggers/t-sheet). Nothing is written to the scratch branch. The phone rows show the button state with no line, as drawn.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "queued-behind-run",
+      "label": "Queued behind a run in progress: Starts after the run in progress · about 2 min",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=Ball Arena",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "Ball Arena", "settle": 2500 },
+        {
+          "route": "http://localhost:3081/v1/admin/crawl/*",
+          "body": { "success": true, "data": { "triggerId": "t-sheet" } }
+        },
+        {
+          "route": "http://localhost:3081/v1/admin/crawl/triggers/t-sheet",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "t-sheet",
+              "venueId": "v-sheet",
+              "status": "pending",
+              "force": false,
+              "trial": false,
+              "crawlRunId": null,
+              "errorMessage": null,
+              "pagesDone": null,
+              "pagesTotal": null,
+              "progressAt": null,
+              "startedAt": null,
+              "createdAt": "2026-11-14T22:40:00.000Z",
+              "updatedAt": "2026-11-14T22:40:00.000Z",
+              "progress": {
+                "queuePosition": 0,
+                "runningAhead": true,
+                "estimateMs": 150000,
+                "waitMs": 120000
+              }
+            }
+          }
+        },
+        { "click": "[data-testid=\"recrawl-button\"]", "settle": 3500 }
+      ]
+    },
+    {
+      "id": "crawling-page-progress",
+      "label": "Crawling: Page 2 of 4 · started 3:41 PM",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=Ball Arena",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "Ball Arena", "settle": 2500 },
+        {
+          "route": "http://localhost:3081/v1/admin/crawl/*",
+          "body": { "success": true, "data": { "triggerId": "t-sheet" } }
+        },
+        {
+          "route": "http://localhost:3081/v1/admin/crawl/triggers/t-sheet",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "t-sheet",
+              "venueId": "v-sheet",
+              "status": "processing",
+              "force": false,
+              "trial": false,
+              "crawlRunId": null,
+              "errorMessage": null,
+              "pagesDone": 2,
+              "pagesTotal": 4,
+              "progressAt": "2026-11-14T22:42:30.000Z",
+              "startedAt": "2026-11-14T22:41:00.000Z",
+              "createdAt": "2026-11-14T22:40:00.000Z",
+              "updatedAt": "2026-11-14T22:42:30.000Z",
+              "progress": {
+                "queuePosition": 0,
+                "runningAhead": false,
+                "estimateMs": 150000,
+                "waitMs": null
+              }
+            }
+          }
+        },
+        { "click": "[data-testid=\"recrawl-button\"]", "settle": 3500 }
+      ]
+    }
+  ]
+}
