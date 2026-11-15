@@ -38,6 +38,8 @@ export interface EventListRow {
   venueUrl: string | null;
   status: EventListStatus;
   hidden: boolean;
+  /** An admin-added show, the only kind the API lets an admin delete. */
+  manual: boolean;
   hiddenReason: HiddenReason | null;
   priceMin: string | null;
   priceMax: string | null;
@@ -122,6 +124,8 @@ export const rowFrom = (value: unknown): EventListRow | null => {
     venueUrl: resolveVenueCheckUrl(eventUrl, sourceUrl),
     status: value['status'],
     hidden: value['hidden'],
+    // Absent on an API older than this web build: not deletable.
+    manual: value['manual'] === true,
     hiddenReason,
     priceMin,
     priceMax,

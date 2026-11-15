@@ -2241,6 +2241,7 @@ describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
     const event = await seedEvent(venue.id, {
       date: futureDate(7),
       verified: true,
+      manual: true,
     });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
@@ -3218,6 +3219,7 @@ describe('PR 10 — bulk endpoints', () => {
       supportingArtists: null,
       tourName: null,
       date: futureDate(7),
+      manual: true,
     });
 
     const noConfirm = await app.request('/v1/admin/events/bulk/delete', {
@@ -4361,5 +4363,223 @@ describe('GET /v1/admin/events?query= — LIKE metacharacters', () => {
 
     expect(await titlesFor('_')).toEqual(['a_b']);
     expect(await titlesFor('%')).toEqual(['a%c']);
+  });
+});
+
+// E5-a (plan 4b#10): Delete is for a show an admin added by mistake. A crawled
+// row would come back on the next crawl, and a row people depend on would take
+// their Watchers, Submitted prices or a merged-away listing with it.
+describe('DELETE /v1/admin/events/:id — guard (E5-a)', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  const deleteEvent = (id: string) =>
+    app.request(`/v1/admin/events/${id}`, {
+      method: 'DELETE',
+      headers: ADMIN_HEADERS,
+    });
+
+  const stillThere = async (id: string) =>
+    (
+      await testDb
+        .select({ id: events.id })
+        .from(events)
+        .where(eq(events.id, id))
+    ).length === 1;
+
+  const deleteAudits = (action: string) =>
+    testDb
+      .select({ targetId: auditLog.targetId, metadata: auditLog.metadata })
+      .from(auditLog)
+      .where(eq(auditLog.action, action));
+
+  it('refuses a crawled row with 409 not_manual and keeps it', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: futureDate(7) });
+
+    const res = await deleteEvent(event.id);
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ success: false, error: 'not_manual' });
+    expect(await stillThere(event.id)).toBe(true);
+    expect(await deleteAudits('event.delete')).toEqual([]);
+  });
+
+  it('refuses a manual row with a Watcher, with the counts, and keeps it', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      manual: true,
+    });
+    await seedUserEvent('fan_1', event.id, { status: 'watching' });
+    await seedUserEvent('fan_2', event.id, { status: 'watching' });
+
+    const res = await deleteEvent(event.id);
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'has_dependents',
+      counts: { watchers: 2, submittedPrices: 0, redirects: 0 },
+    });
+    expect(await stillThere(event.id)).toBe(true);
+  });
+
+  it('refuses a manual row with a Submitted price', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      manual: true,
+    });
+    await seedPriceSubmission(event.id, 'fan_1');
+
+    const res = await deleteEvent(event.id);
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'has_dependents',
+      counts: { watchers: 0, submittedPrices: 1, redirects: 0 },
+    });
+    expect(await stillThere(event.id)).toBe(true);
+  });
+
+  it('refuses a manual row a merged-away listing redirects to', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      manual: true,
+    });
+    await testDb.insert(eventRedirects).values({
+      sourceId: '00000000-0000-4000-8000-000000000001',
+      targetId: event.id,
+    });
+
+    const res = await deleteEvent(event.id);
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'has_dependents',
+      counts: { watchers: 0, submittedPrices: 0, redirects: 1 },
+    });
+    expect(await stillThere(event.id)).toBe(true);
+    expect(
+      await testDb
+        .select()
+        .from(eventRedirects)
+        .where(eq(eventRedirects.targetId, event.id)),
+    ).toHaveLength(1);
+  });
+
+  it('deletes a clean manual row and audits its title, venue and date', async () => {
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    const date = futureDate(7);
+    const event = await seedEvent(venue.id, {
+      artist: 'Added By Mistake',
+      date,
+      manual: true,
+    });
+
+    const res = await deleteEvent(event.id);
+
+    expect(res.status).toBe(200);
+    expect(await stillThere(event.id)).toBe(false);
+    expect(await deleteAudits('event.delete')).toEqual([
+      {
+        targetId: event.id,
+        metadata: {
+          title: event.title,
+          venueId: venue.id,
+          venueName: 'Globe Hall',
+          date,
+          wasVerified: event.verified,
+        },
+      },
+    ]);
+  });
+
+  it('answers 404 for an id that names no event', async () => {
+    const res = await deleteEvent('00000000-0000-4000-8000-0000000000ff');
+    expect(res.status).toBe(404);
+  });
+
+  it('bulk: deletes only the clean manual rows and reports the rest', async () => {
+    const venue = await seedVenue({ name: 'Bluebird Theater', slug: 'bb' });
+    const crawled = await seedEvent(venue.id, {
+      artist: 'Crawled',
+      date: futureDate(7),
+    });
+    const watched = await seedEvent(venue.id, {
+      artist: 'Watched',
+      date: futureDate(8),
+      manual: true,
+    });
+    await seedUserEvent('fan_1', watched.id, { status: 'watching' });
+    const priced = await seedEvent(venue.id, {
+      artist: 'Priced',
+      date: futureDate(9),
+      manual: true,
+    });
+    await seedPriceSubmission(priced.id, 'fan_2');
+    const clean = await seedEvent(venue.id, {
+      artist: 'Clean',
+      date: futureDate(10),
+      manual: true,
+    });
+
+    const res = await app.request('/v1/admin/events/bulk/delete', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({
+        ids: [crawled.id, watched.id, priced.id, clean.id],
+        confirmation: 'DELETE',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      success: boolean;
+      data: {
+        count: number;
+        deletedIds: string[];
+        skipped: { id: string; reason: string; counts?: unknown }[];
+      };
+    };
+    expect(body.data.count).toBe(1);
+    expect(body.data.deletedIds).toEqual([clean.id]);
+    const skipped = [
+      { id: crawled.id, reason: 'not_manual' },
+      {
+        id: watched.id,
+        reason: 'has_dependents',
+        counts: { watchers: 1, submittedPrices: 0, redirects: 0 },
+      },
+      {
+        id: priced.id,
+        reason: 'has_dependents',
+        counts: { watchers: 0, submittedPrices: 1, redirects: 0 },
+      },
+    ];
+    expect(body.data.skipped).toHaveLength(3);
+    expect(body.data.skipped).toEqual(expect.arrayContaining(skipped));
+
+    expect(await stillThere(clean.id)).toBe(false);
+    for (const kept of [crawled, watched, priced]) {
+      expect(await stillThere(kept.id)).toBe(true);
+    }
+
+    const audits = await deleteAudits('event.bulk_delete');
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.targetId).toBe(clean.id);
+    expect(audits[0]?.metadata).toMatchObject({
+      title: clean.title,
+      venueId: venue.id,
+      venueName: 'Bluebird Theater',
+      date: clean.date,
+      skipped: expect.arrayContaining(skipped),
+    });
   });
 });

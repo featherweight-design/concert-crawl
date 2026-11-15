@@ -61,6 +61,7 @@ import {
 import { idSchema } from '../../lib/id-schema.js';
 import { eventPatchSchema, updateEvent } from './lib/event-update.js';
 import { mergeEvents } from './lib/event-merge.js';
+import { deleteManualEvents } from './lib/event-delete.js';
 import { containsPattern } from '../../lib/escape-like.js';
 import { setHiddenFromConsumer, verifyEvent } from './lib/event-actions.js';
 import {
@@ -961,20 +962,35 @@ eventsAdminRouter.patch(
   },
 );
 
-// DELETE /v1/admin/events/:id — remove an event from the catalog.
-// PR 6 loosened the original "unverified-only" guard: admins can delete
-// verified events too (every delete is audit-logged).
+// DELETE /v1/admin/events/:id — remove a show an admin added by mistake.
+// Only a manual row nobody depends on (E5-a, plan 4b#10; the guard is
+// lib/event-delete.ts): a crawled row is 409 `not_manual` (the crawl would
+// re-add it; hide it instead), and a manual row with Watchers, Submitted
+// prices or incoming redirects is 409 `has_dependents` with the counts.
+// The legacy editor's Delete calls this route too.
 eventsAdminRouter.delete(
   '/:id',
   zValidator('param', eventIdSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
 
-    const [deleted] = await db
-      .delete(events)
-      .where(eq(events.id, id))
-      .returning();
+    const result = await db.transaction((tx) => deleteManualEvents(tx, [id]));
 
+    const [refusal] = result.skipped;
+    if (refusal?.reason === 'not_manual') {
+      return ctx.json({ success: false, error: 'not_manual' } as const, 409);
+    }
+    if (refusal?.reason === 'has_dependents') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'has_dependents',
+          counts: refusal.counts,
+        } as const,
+        409,
+      );
+    }
+    const [deleted] = result.deleted;
     if (!deleted) {
       return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
@@ -983,7 +999,13 @@ eventsAdminRouter.delete(
     ctx.set('auditAction', 'event.delete');
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', actor.userId);
-    ctx.set('auditMeta', { wasVerified: deleted.verified });
+    ctx.set('auditMeta', {
+      title: deleted.title,
+      venueId: deleted.venueId,
+      venueName: deleted.venueName,
+      date: deleted.date,
+      wasVerified: deleted.wasVerified,
+    });
 
     return ctx.json({ success: true });
   },
@@ -1362,6 +1384,9 @@ eventsAdminRouter.post(
 );
 
 // POST /v1/admin/events/bulk/delete — permanent removal with typed-DELETE gate.
+// Each row takes the single delete's guard (lib/event-delete.ts): the rows it
+// allows are deleted, the rest are skipped and reported with the reason, so a
+// mixed batch is a 200. `count` stays for the callers that read only it.
 eventsAdminRouter.post(
   '/bulk/delete',
   zValidator('json', bulkDeleteSchema, (result, ctx) => {
@@ -1373,25 +1398,38 @@ eventsAdminRouter.post(
     const { ids } = ctx.req.valid('json');
     const actor = getAuthUser(ctx);
 
-    const count = await db.transaction(async (tx) => {
-      const deleted = await tx
-        .delete(events)
-        .where(inArray(events.id, ids))
-        .returning({ id: events.id });
-      if (deleted.length > 0) {
+    const result = await db.transaction(async (tx) => {
+      const outcome = await deleteManualEvents(tx, ids);
+      if (outcome.deleted.length > 0) {
         await tx.insert(auditLog).values(
-          deleted.map((row) => ({
+          outcome.deleted.map((row) => ({
             actorId: actor.userId,
             action: 'event.bulk_delete',
             targetId: row.id,
-            metadata: null,
+            metadata: {
+              title: row.title,
+              venueId: row.venueId,
+              venueName: row.venueName,
+              date: row.date,
+              wasVerified: row.wasVerified,
+              // The batch's refusals, so any one audit row tells the whole
+              // story of the request.
+              skipped: outcome.skipped,
+            },
           })),
         );
       }
-      return deleted.length;
+      return outcome;
     });
 
-    return ctx.json({ success: true, data: { count } });
+    return ctx.json({
+      success: true,
+      data: {
+        count: result.deleted.length,
+        deletedIds: result.deleted.map((row) => row.id),
+        skipped: result.skipped,
+      },
+    });
   },
 );
 

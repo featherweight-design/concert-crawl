@@ -447,29 +447,9 @@ describe('DELETE /v1/admin/events/:id', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns 200 and deletes the event', async () => {
-    adminAuth();
-    const { db } = await import('@concert-crawl/db');
-    vi.mocked(db.delete().where().returning).mockResolvedValueOnce([
-      mockEventRow,
-    ]);
-    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
-      method: 'DELETE',
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-  });
-
-  it('returns 404 when event not found', async () => {
-    adminAuth();
-    const { db } = await import('@concert-crawl/db');
-    vi.mocked(db.delete().where().returning).mockResolvedValueOnce([]);
-    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
-      method: 'DELETE',
-    });
-    expect(res.status).toBe(404);
-  });
+  // The delete itself (the manual-only and dependents guard, 404, the audit)
+  // runs a locked transaction against a real database:
+  // events.integration.test.ts, "DELETE /v1/admin/events/:id — guard (E5-a)".
 });
 
 describe('POST /v1/admin/events/:id/sold-out', () => {

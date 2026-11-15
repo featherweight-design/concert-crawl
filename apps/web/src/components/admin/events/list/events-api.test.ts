@@ -44,6 +44,11 @@ describe('rowFrom', () => {
     expect(rowFrom(ROW)).toMatchObject({ id: 'evt-1', venueUrl: null });
   });
 
+  it('reads manual, and a row from an API that predates it as not manual', () => {
+    expect(rowFrom({ ...ROW, manual: true })).toMatchObject({ manual: true });
+    expect(rowFrom(ROW)).toMatchObject({ manual: false });
+  });
+
   it('refuses a non-text URL', () => {
     expect(rowFrom({ ...ROW, sourceUrl: 42 })).toBeNull();
     expect(rowFrom({ ...ROW, eventUrl: 42 })).toBeNull();
