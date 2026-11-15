@@ -49,8 +49,12 @@ export interface AllEventsApi {
   bulkUnverify: (ids: string[]) => Promise<void>;
   bulkMarkNonConcert: (ids: string[]) => Promise<void>;
   bulkMarkAsConcert: (ids: string[]) => Promise<void>;
-  /** Resolves with what was deleted and what the guard skipped. */
-  bulkDelete: (ids: string[]) => Promise<BulkDeleteResult>;
+  /**
+   * Resolves with what was deleted and what the guard skipped, or null when
+   * the delete ran but its response couldn't be read. Throws when the request
+   * itself failed.
+   */
+  bulkDelete: (ids: string[]) => Promise<BulkDeleteResult | null>;
 }
 
 type BulkKind = 'unverify' | 'non-concert' | 'mark-as-concert' | 'delete';
@@ -328,9 +332,15 @@ export const AllEventsTabContent = ({
     setActionError(null);
     setNotice(null);
     try {
-      if (bulkConfirm === 'delete')
-        setNotice(bulkDeleteSummary(await api.bulkDelete(ids)));
-      else if (bulkConfirm === 'non-concert') await api.bulkMarkNonConcert(ids);
+      if (bulkConfirm === 'delete') {
+        const result = await api.bulkDelete(ids);
+        setNotice(
+          result === null
+            ? ADMIN_COPY.eventDelete.bulk.unreadable
+            : bulkDeleteSummary(result),
+        );
+      } else if (bulkConfirm === 'non-concert')
+        await api.bulkMarkNonConcert(ids);
       else if (bulkConfirm === 'mark-as-concert')
         await api.bulkMarkAsConcert(ids);
       else await api.bulkUnverify(ids);

@@ -107,12 +107,28 @@ describe('ReviewPageClient single Delete', () => {
 });
 
 describe('ReviewPageClient bulk Delete', () => {
-  it('throws on a malformed response, so the tab shows its generic failure', async () => {
+  it('resolves null and logs on a malformed response: the delete still ran', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
     post.mockResolvedValue({ count: 'two' });
     render(<ReviewPageClient decisions={0} />);
     const api = captured.api;
     if (api === null) throw new Error('no api captured');
-    await expect(api.bulkDelete(['evt-1'])).rejects.toThrow();
+    await expect(api.bulkDelete(['evt-1'])).resolves.toBeNull();
+    expect(logged).toHaveBeenCalledWith(
+      'ReviewPageClient: bulk delete response unreadable',
+      expect.objectContaining({ ids: ['evt-1'] }),
+    );
+    logged.mockRestore();
+  });
+
+  it('throws when the request itself fails, for the generic failure', async () => {
+    post.mockRejectedValue(new ApiError(500, 'Internal Server Error'));
+    render(<ReviewPageClient decisions={0} />);
+    const api = captured.api;
+    if (api === null) throw new Error('no api captured');
+    await expect(api.bulkDelete(['evt-1'])).rejects.toThrow(
+      'Internal Server Error',
+    );
   });
 
   it('returns the bulk response, read, for the summary', async () => {

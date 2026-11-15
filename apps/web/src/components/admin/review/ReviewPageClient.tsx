@@ -211,8 +211,18 @@ export const ReviewPageClient = ({ decisions }: ReviewPageClientProps) => {
       );
       void invalidate.eventFlags();
       void invalidate.counts();
-      // What was deleted and what the guard skipped, for the summary.
-      return bulkDeleteResultOf(data);
+      // What was deleted and what the guard skipped, for the summary. The
+      // request succeeded, so rows may really be gone: a response that won't
+      // parse is null (the tab says the delete ran), never a failure.
+      try {
+        return bulkDeleteResultOf(data);
+      } catch (parseErr: unknown) {
+        console.error('ReviewPageClient: bulk delete response unreadable', {
+          ids,
+          parseErr,
+        });
+        return null;
+      }
     },
   };
 

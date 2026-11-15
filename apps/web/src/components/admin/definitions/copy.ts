@@ -4918,6 +4918,9 @@ export const ADMIN_COPY = {
       notManual: (count: number) => `${count.toLocaleString('en-US')} crawled`,
       hasDependents: (count: number) =>
         `${count.toLocaleString('en-US')} with Watchers, Concerts, Submitted prices or merges`,
+      // The delete went through but its response couldn't be read, so the
+      // counts are unknown. Not a failure: rows may well have gone.
+      unreadable: 'Delete ran. Refresh to see what changed.',
       // A skip reason this build doesn't know yet.
       other: (count: number) =>
         `${count.toLocaleString('en-US')} for another reason`,
