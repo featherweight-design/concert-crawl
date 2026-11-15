@@ -1,0 +1,252 @@
+{
+  "feature": "Admin · Operations, the Feedback item (P47-19 PR 4b)",
+  "note": "Boards: design_handoff_admin_redesign/boards/07-people-flags-operations/a-feedback-item-in-flow, feedback-item-mobile; addendum-3/boards/12-people-codes-operations/feedback-reopen-d (Done, Reopen) and 10-needs-you-panels/venue-blocked-before-3c (Reply disabled with its line); addendum-7/boards/02-error-reports/error-report-d, error-report-m, feedback-rulings and 03-venue-suggestions/suggestion-d, suggestion-m (layout only: Start adding it is held). No idea board: an idea takes the bug's layout. CONTACT_SHEET_ROLE=admin. Each row answers the feedback reads with the boards' own item and opens it by `?tab=feedback&item=<id>`: desktop shows the side panel over the list, the phone widths the full page with the pinned actions. FeedbackItemView.test.tsx covers the actions, the failed write and the note.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "bug",
+      "label": "A bug (07/a-feedback-item-in-flow, feedback-item-mobile): screenshot, Page, Device, App version, From; Reply disabled with its line",
+      "steps": [
+        {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000c1",
+                "userId": "user_mira",
+                "submittedBy": "mira.k",
+                "pageUrl": "https://concertcrawl.app/e/vince-staples-fillmore",
+                "category": "bug",
+                "message": "Map button does nothing on iPhone\nTapped Directions on the Vince Staples page and nothing happened. Tried twice.",
+                "metadata": {
+                  "screenshot": "https://img.example/shot.png",
+                  "device": "iPhone · Safari 18",
+                  "build": "0.42.1"
+                },
+                "status": "unread",
+                "adminNotes": "Probably the maps:// link on iOS 18",
+                "issueUrl": null,
+                "createdAt": "2026-11-09T04:14:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/operations?tab=feedback&item=00000000-0000-4000-8000-0000000000c1",
+          "wait": "[data-testid='feedback-item']",
+          "settle": 2000
+        }
+      ]
+    },
+    {
+      "id": "idea",
+      "label": "An idea: the bug's layout, no screenshot (no board)",
+      "steps": [
+        {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000c2",
+                "userId": "user_kofi",
+                "submittedBy": "kofi.s",
+                "pageUrl": "https://concertcrawl.app/events",
+                "category": "idea",
+                "message": "Let me paste a ticket link instead of typing the price\nTyping it on the phone is slow.",
+                "metadata": { "device": "Pixel 8 · Chrome 131" },
+                "status": "read",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-05T18:00:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/operations?tab=feedback&item=00000000-0000-4000-8000-0000000000c2",
+          "wait": "[data-testid='feedback-item']",
+          "settle": 2000
+        }
+      ]
+    },
+    {
+      "id": "error-report",
+      "label": "An error report (addendum 7 02/error-report-d, -m): every line, Error ID and Sentry event with Copy, Mark done and GitHub",
+      "steps": [
+        {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000c3",
+                "userId": "user_dlo",
+                "submittedBy": "dlo",
+                "pageUrl": "https://concertcrawl.app/watching",
+                "category": "bug",
+                "message": "Opening a show from a notification. Tapped it and the page went blank.",
+                "metadata": {
+                  "source": "error",
+                  "doing": "Opening a show from a notification",
+                  "build": "0.42.1",
+                  "device": "iPhone · Safari 18",
+                  "digest": "c-7f3a91d2",
+                  "sentryEventId": "4b1e7c2d9f0a4e8b9c3d5f6a7b8c09ac"
+                },
+                "status": "unread",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-08T04:02:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/operations?tab=feedback&item=00000000-0000-4000-8000-0000000000c3",
+          "wait": "[data-testid='feedback-item']",
+          "settle": 2000
+        }
+      ]
+    },
+    {
+      "id": "venue-suggestion",
+      "label": "A venue suggestion (addendum 7 03/suggestion-d, -m): the set title, From and Sent from, Mark done (Start adding it held)",
+      "steps": [
+        {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000c4",
+                "userId": "user_ana",
+                "submittedBy": "ana.b",
+                "pageUrl": "https://concertcrawl.app/venues",
+                "category": "venue_suggestion",
+                "message": "Dazzle on Curtis has jazz almost every night and nobody lists it. dazzledenver.com",
+                "metadata": null,
+                "status": "read",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-05T01:40:00Z",
+                "resolvedBy": null,
+                "resolvedAt": null
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/operations?tab=feedback&item=00000000-0000-4000-8000-0000000000c4",
+          "wait": "[data-testid='feedback-item']",
+          "settle": 2000
+        }
+      ]
+    },
+    {
+      "id": "done",
+      "label": "A Done item (addendum 3 12/feedback-reopen-d): Done pill, Done by, Reopen and GitHub",
+      "steps": [
+        {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 2,
+              "toRead": 4,
+              "done": 41,
+              "kinds": { "bugs": 2, "ideas": 1, "venues": 1 }
+            }
+          }
+        },
+        {
+          "route": "**/v1/admin/feedback?view=**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000c5",
+                "userId": "user_mira",
+                "submittedBy": "mira.k",
+                "pageUrl": "https://concertcrawl.app/venues/fillmore",
+                "category": "bug",
+                "message": "Map button does nothing on iPhone",
+                "metadata": { "device": "iPhone · Safari 18" },
+                "status": "resolved",
+                "adminNotes": null,
+                "issueUrl": null,
+                "createdAt": "2026-11-02T18:00:00Z",
+                "resolvedBy": "hugh",
+                "resolvedAt": "2026-11-03T18:00:00Z"
+              }
+            ]
+          }
+        },
+        {
+          "goto": "/admin/operations?tab=feedback&item=00000000-0000-4000-8000-0000000000c5",
+          "wait": "[data-testid='feedback-item']",
+          "settle": 2000
+        }
+      ]
+    }
+  ]
+}
