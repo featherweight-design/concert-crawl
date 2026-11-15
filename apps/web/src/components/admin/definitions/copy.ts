@@ -4089,7 +4089,8 @@ export const ADMIN_COPY = {
         label: 'Edit price',
         hint: 'Same sheet as Add a price',
       },
-      reject: { label: 'Reject…', hint: 'Unpublish it and tell the fan why' },
+      // The fan never hears why: their row just reads "We didn't use this price".
+      reject: { label: 'Reject…', hint: 'Take it off the show' },
     },
     reject: {
       eyebrow: 'Reject price',
