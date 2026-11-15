@@ -106,7 +106,6 @@ describe('MyShowsArtistsContent', () => {
           artist('Wax Harbour', '2026-09-12'),
           artist('Null Signal', null),
         ]}
-        scaRegion={false}
       />,
     );
 
@@ -131,7 +130,6 @@ describe('MyShowsArtistsContent', () => {
           artist('Wax Harbour', '2026-09-12'),
           artist('Null Signal', null),
         ]}
-        scaRegion={false}
       />,
     );
 
@@ -153,10 +151,7 @@ describe('MyShowsArtistsContent', () => {
   // A heading over nothing is a heading that lies about there being content.
   it('renders no undated heading when every follow has a date', () => {
     render(
-      <MyShowsArtistsContent
-        artists={[artist('Wax Harbour', '2026-09-12')]}
-        scaRegion={false}
-      />,
+      <MyShowsArtistsContent artists={[artist('Wax Harbour', '2026-09-12')]} />,
     );
 
     expect(screen.queryByText(COPY.groups.undated(0))).toBeNull();
@@ -167,7 +162,6 @@ describe('MyShowsArtistsContent', () => {
       <MyShowsShell signedIn>
         <MyShowsArtistsContent
           artists={[artist('One', '2026-09-12'), artist('Two', null)]}
-          scaRegion={false}
         />
       </MyShowsShell>,
     );
@@ -187,18 +181,12 @@ describe('MyShowsArtistsContent', () => {
     render(
       <MyShowsArtistsContent
         artists={[artist('One', '2026-09-12', 'spotify_followed')]}
-        scaRegion={false}
       />,
     );
     expect(screen.getAllByText(COPY.spotifyFootnote(1))).not.toHaveLength(0);
 
     cleanup();
-    render(
-      <MyShowsArtistsContent
-        artists={[artist('One', '2026-09-12')]}
-        scaRegion={false}
-      />,
-    );
+    render(<MyShowsArtistsContent artists={[artist('One', '2026-09-12')]} />);
     expect(screen.queryByText(COPY.spotifyFootnote(1))).toBeNull();
   });
 
@@ -211,7 +199,6 @@ describe('MyShowsArtistsContent', () => {
     render(
       <MyShowsArtistsContent
         artists={[artist('One', '2026-09-12', 'spotify_followed')]}
-        scaRegion={false}
       />,
     );
 
@@ -221,12 +208,7 @@ describe('MyShowsArtistsContent', () => {
   });
 
   it('offers the find pill and the alerts deep link', () => {
-    render(
-      <MyShowsArtistsContent
-        artists={[artist('One', '2026-09-12')]}
-        scaRegion={false}
-      />,
-    );
+    render(<MyShowsArtistsContent artists={[artist('One', '2026-09-12')]} />);
 
     expect(
       screen.getAllByRole('link', { name: new RegExp(COPY.find.title) }),
@@ -248,7 +230,6 @@ describe('MyShowsArtistsContent', () => {
             artist('Wax Harbour', '2026-09-12', 'spotify_followed'),
             artist('Null Signal', null),
           ]}
-          scaRegion={false}
         />,
       );
 
@@ -282,7 +263,6 @@ describe('MyShowsArtistsContent', () => {
       const { container } = render(
         <MyShowsArtistsContent
           artists={[artist('Wax Harbour', '2026-09-12')]}
-          scaRegion={false}
         />,
       );
 
@@ -305,7 +285,7 @@ describe('MyShowsArtistsContent', () => {
   );
 
   it('renders the empty state when the viewer follows nobody', () => {
-    render(<MyShowsArtistsContent artists={[]} scaRegion={false} />);
+    render(<MyShowsArtistsContent artists={[]} />);
 
     expect(screen.getAllByText(COPY.empty.headline)).not.toHaveLength(0);
     // B+ `bp-s-empty_artists_m`: the dashed card with the ARTISTS eyebrow.
@@ -321,7 +301,7 @@ describe('MyShowsArtistsContent', () => {
   // The Artists empty card is the shared My shows empty card, with its own
   // actions slot: the palette primary plus the Watching link under it.
   it('draws the empty state through the shared card with both actions', () => {
-    render(<MyShowsArtistsContent artists={[]} scaRegion={false} />);
+    render(<MyShowsArtistsContent artists={[]} />);
 
     const card = screen.getAllByTestId('artists-empty-card')[0];
     if (!(card instanceof HTMLElement)) throw new Error('no empty card');
@@ -340,7 +320,7 @@ describe('MyShowsArtistsContent', () => {
 
   // A failed read is not a claim that the account is empty.
   it('renders an error rather than the empty state when the fetch failed', () => {
-    render(<MyShowsArtistsContent artists={undefined} scaRegion={false} />);
+    render(<MyShowsArtistsContent artists={undefined} />);
 
     expect(screen.getByText(COPY.error)).toBeInTheDocument();
     expect(screen.queryByText(COPY.empty.headline)).toBeNull();

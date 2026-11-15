@@ -99,8 +99,6 @@ interface FollowShelfProps {
   artists: ShelfArtist[];
   /** Follows the server counted. Drives the `some` eyebrow only. */
   followCount: number;
-  /** Unread since the tier picker left the shelf; removed with PR 7. */
-  scaRegion?: boolean;
 }
 
 export const FollowShelf = ({

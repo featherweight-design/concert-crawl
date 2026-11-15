@@ -732,7 +732,6 @@ export function FilterBar({
             active={followActive}
             onToggle={toggleFollow}
             followCount={followCount}
-            scaRegion={scaRegion}
           />
           {!isDesktop && tasteChip(PHONE_PILL_HEIGHT)}
         </div>
@@ -756,7 +755,6 @@ export function FilterBar({
             active={followActive}
             onToggle={toggleFollow}
             followCount={followCount}
-            scaRegion={scaRegion}
           />
           {segments.map((segment, index) => (
             <Fragment key={segment.key}>

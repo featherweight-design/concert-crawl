@@ -47,9 +47,6 @@ interface FollowFilterChipProps {
    * would delete the chip out from under someone who follows fifty artists.
    */
   followCount: number | null;
-  /** Unread since the tier picker left this chip; the scaRegion removal
-   *  takes it off the filter bar's call sites. */
-  scaRegion?: boolean;
   /**
    * `chip` is the phone row's switch pill (B+ B6b). `segment` is the desktop bar's first
    * segment (B+ B6a): a switch with a MY ARTISTS eyebrow over its state. Both

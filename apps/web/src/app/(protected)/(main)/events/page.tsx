@@ -536,7 +536,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
           mode={shelfMode}
           artists={shelfArtists}
           followCount={followCount}
-          scaRegion={scaRegion}
         />
       ) : (
         shelfSlotOpen && (

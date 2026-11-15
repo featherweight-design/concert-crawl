@@ -5,10 +5,8 @@
 // public at launch, and the nav's prefix matcher would light "My shows" on
 // every public artist page.
 
-import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { seedFollowedArtists } from '@/lib/following';
-import { isScaRegion } from '@/lib/sca-region';
 import { MyShowsArtistsContent } from '@/components/consumer/following/my-shows';
 
 export const metadata = { title: 'Artists — Concert Crawl' };
@@ -25,8 +23,5 @@ export default async function FollowingPage() {
   // on this route with no way back out.
   const artists = token ? await seedFollowedArtists(token) : undefined;
 
-  const requestHeaders = await headers();
-  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'));
-
-  return <MyShowsArtistsContent artists={artists} scaRegion={scaRegion} />;
+  return <MyShowsArtistsContent artists={artists} />;
 }

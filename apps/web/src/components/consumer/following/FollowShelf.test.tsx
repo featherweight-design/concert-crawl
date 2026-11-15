@@ -97,7 +97,6 @@ const renderShelf = (
       mode="zero"
       artists={[artist()]}
       followCount={0}
-      scaRegion={false}
       {...overrides}
     />,
   );
