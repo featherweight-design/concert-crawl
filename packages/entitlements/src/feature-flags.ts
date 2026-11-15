@@ -79,7 +79,21 @@ export interface AdminFeatureFlag {
   key: FeatureFlagKey;
   label: string;
   description: string;
+  /** The old boolean: on only at Everyone. Kept until the contract step. */
   enabled: boolean;
   updatedAt: string | null;
   updatedBy: string | null;
+  // The ladder (admin redesign Phase 5c). Optional so the first admin page that
+  // reads only `enabled` keeps compiling; the API always sends them.
+  stage?: 'off' | 'me' | 'beta' | 'everyone';
+  stageOwnerUserId?: string | null;
+  verifiedAt?: string | null;
+  verifiedBy?: string | null;
+  verifiedNote?: string | null;
+  /** The named people, as Clerk user ids. */
+  people?: string[];
+  /** Which environment this admin is, from the API's own marker. */
+  environment?: 'staging' | 'production';
+  /** Production keeps the flag locked until it is verified there. */
+  locked?: boolean;
 }

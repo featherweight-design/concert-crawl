@@ -88,6 +88,7 @@ import {
 } from '../lib/spotify-matches.js';
 import { canUseFeature } from '@concert-crawl/entitlements';
 import { isFeatureEnabled } from '../lib/feature-flags.js';
+import { flagViewerFrom } from '../lib/flag-ladder.js';
 import { loadPlanState } from '../lib/plan.js';
 import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js';
 import { parseGenreRows } from '../lib/parse-genre-rows.js';
@@ -226,7 +227,7 @@ eventsRouter.get(
       // The flag is checked before the entitlement so a flagged-off scope
       // answers 404 rather than a 403 upsell, matching requireFlag: an
       // unreleased feature must not advertise itself as purchasable.
-      if (!(await isFeatureEnabled('spotify-sync'))) {
+      if (!(await isFeatureEnabled('spotify-sync', flagViewerFrom(listAuth)))) {
         return ctx.notFound();
       }
       if (!listAuth?.userId) {
@@ -391,7 +392,7 @@ eventsRouter.get(
     const followMatcher =
       listAuth?.userId &&
       rows.length > 0 &&
-      (await isFeatureEnabled('spotify-sync'))
+      (await isFeatureEnabled('spotify-sync', flagViewerFrom(listAuth)))
         ? await getFollowedArtistMatcher(listAuth.userId)
         : null;
 
@@ -1205,7 +1206,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // Same flag gate as the list route: the overlay is Spotify-sourced data on a
   // router that serves every viewer, so it is suppressed per field.
   const followMatcher =
-    authInfo?.userId && (await isFeatureEnabled('spotify-sync'))
+    authInfo?.userId &&
+    (await isFeatureEnabled('spotify-sync', flagViewerFrom(authInfo)))
       ? await getFollowedArtistMatcher(authInfo.userId)
       : null;
 
