@@ -92,6 +92,7 @@ const DETAIL: EventDetail = {
   tourName: null,
   soldOutRecord: null,
   lineup: [],
+  manual: false,
 };
 
 beforeEach(() => {

@@ -115,7 +115,13 @@ describe('eventDetailFrom', () => {
       tourName: null,
       soldOutRecord: null,
       lineup: PAYLOAD.lineup,
+      manual: false,
     });
+  });
+
+  it('reads manual, and an absent or malformed one as not manual', () => {
+    expect(eventDetailFrom({ ...PAYLOAD, manual: true })?.manual).toBe(true);
+    expect(eventDetailFrom({ ...PAYLOAD, manual: 'yes' })?.manual).toBe(false);
   });
 
   it('refuses a lineup that drifted or went missing (a save would erase it)', () => {

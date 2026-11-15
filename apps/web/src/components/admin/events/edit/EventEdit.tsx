@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { Calendar, ExternalLink, EyeOff, GitMerge } from 'lucide-react';
+import { Calendar, ExternalLink, EyeOff, GitMerge, Trash2 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -30,6 +30,8 @@ import { apiClient } from '@/lib/api';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { MergeEventDialog } from '../editor/MergeEventDialog';
+import { EventDeleteConfirm } from '../EventDeleteConfirm';
+import { deleteEvent } from '../event-delete';
 import { PriceCard } from './PriceCard';
 import { DateField, TimeField } from './pickers';
 import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
@@ -255,6 +257,7 @@ const Header = ({
   phone,
   onMerge,
   onHide,
+  onDelete,
 }: {
   detail: EventDetail;
   /** Date · venue, or "Was …" on a postponed show whose date passed. */
@@ -263,6 +266,8 @@ const Header = ({
   onMerge: () => void;
   /** Opens the Hide dialog; `null` once the show is hidden. */
   onHide: (() => void) | null;
+  /** Opens the Delete dialog; `null` on a crawled show (4b#10). */
+  onDelete: (() => void) | null;
 }) => {
   const { venueUrl } = detail;
   const grow = phone ? 1 : 'none';
@@ -309,7 +314,12 @@ const Header = ({
           </h1>
           {/* The phone board draws the ⋯ at the top right, beside the title. */}
           {phone && (
-            <EventEditMenu detail={detail} onMerge={onMerge} onHide={onHide} />
+            <EventEditMenu
+              detail={detail}
+              onMerge={onMerge}
+              onHide={onHide}
+              onDelete={onDelete}
+            />
           )}
         </div>
         {/* `19/event-edit-hidden-header`: desktop draws chip, tag and meta on
@@ -369,7 +379,12 @@ const Header = ({
           </a>
         )}
         {!phone && (
-          <EventEditMenu detail={detail} onMerge={onMerge} onHide={onHide} />
+          <EventEditMenu
+            detail={detail}
+            onMerge={onMerge}
+            onHide={onHide}
+            onDelete={onDelete}
+          />
         )}
       </div>
     </div>
@@ -379,15 +394,19 @@ const Header = ({
 /**
  * The edit page's ⋯ (`06/event-menu`, less Edit, which is this page). Merge
  * opens the existing merge dialog until 4b-4 rebuilds it to the boards.
+ * Delete… shows on a manual show only; on the phone, whose list has no ⋯,
+ * this is its one way in.
  */
 const EventEditMenu = ({
   detail,
   onMerge,
   onHide,
+  onDelete,
 }: {
   detail: EventDetail;
   onMerge: () => void;
   onHide: (() => void) | null;
+  onDelete: (() => void) | null;
 }) => (
   <RowMenu
     label={LIST.menu.label(detail.title)}
@@ -433,6 +452,18 @@ const EventEditMenu = ({
               hint: COPY.hide.menuHint,
               warning: true,
               onSelect: onHide,
+            },
+          ]),
+      ...(onDelete === null
+        ? []
+        : [
+            {
+              key: 'delete',
+              icon: Trash2,
+              label: ADMIN_COPY.eventDelete.menu,
+              hint: ADMIN_COPY.eventDelete.menuHint,
+              danger: true,
+              onSelect: onDelete,
             },
           ]),
     ]}
@@ -551,6 +582,7 @@ export const EventEdit = ({
   const passed = isPostponedPassed(detail, today);
   const past = isPast(detail, today) && !passed;
   const [merging, setMerging] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   /** The PATCH's 409 refusal, said as such: a retry would be refused again. */
   const [refusal, setRefusal] = useState<string | null>(null);
   /** The write a failed save stopped at: the fields' PATCH or the sale's POST. */
@@ -1069,6 +1101,9 @@ export const EventEdit = ({
         phone={phone}
         onMerge={() => setMerging(true)}
         onHide={detail.hidden || snap.saving ? null : () => setDialog('hide')}
+        onDelete={
+          detail.manual && !snap.saving ? () => setDeleting(true) : null
+        }
       />
       {phone ? (
         // `06/event-edit-mobile`: the Show fields, Status, then Price, stacked;
@@ -1189,6 +1224,15 @@ export const EventEdit = ({
           sourceTitle={detail.title}
           onCancel={() => setMerging(false)}
           onMerged={(targetId) => router.push(editEventHref(targetId))}
+        />
+      )}
+      {deleting && (
+        <EventDeleteConfirm
+          title={detail.title}
+          onDelete={() => deleteEvent(getToken, detail.id)}
+          onCancel={() => setDeleting(false)}
+          // The show is gone, so this page is too: back to the Events list.
+          onDone={() => router.push('/admin/events')}
         />
       )}
     </div>

@@ -22,9 +22,23 @@ vi.mock('@clerk/nextjs', () => ({
 const mockApiGet = vi.fn();
 vi.mock('@/lib/api', () => ({
   apiClient: { get: (...args: unknown[]) => mockApiGet(...args) },
-  ApiError: class ApiError extends Error {},
+  ApiError: class ApiError extends Error {
+    constructor(
+      public status: number,
+      message: string,
+      public code?: string,
+      public zodIssues?: unknown,
+      public reason?: string,
+      public field?: string,
+      public body?: unknown,
+    ) {
+      super(message);
+    }
+  },
 }));
 
+import { ApiError } from '@/lib/api';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AllEventsTabContent } from './AllEventsTabContent';
 
 // Tests get their own QueryClient with retries off so a single failure
@@ -57,7 +71,7 @@ const buildApiMock = (overrides: Partial<AllEventsApi> = {}): AllEventsApi => ({
   bulkUnverify: vi.fn().mockResolvedValue(undefined),
   bulkMarkNonConcert: vi.fn().mockResolvedValue(undefined),
   bulkMarkAsConcert: vi.fn().mockResolvedValue(undefined),
-  bulkDelete: vi.fn().mockResolvedValue(undefined),
+  bulkDelete: vi.fn().mockResolvedValue({ count: 0, skipped: [], missing: [] }),
   ...overrides,
 });
 
@@ -508,6 +522,72 @@ describe('AllEventsTabContent', () => {
       await waitFor(() => {
         expect(api.bulkDelete).toHaveBeenCalledWith(['evt-a', 'evt-b']);
       });
+    });
+
+    it('says how many the bulk Delete deleted and skipped, and why', async () => {
+      mockApiGet
+        .mockResolvedValueOnce(
+          counted([
+            buildEvent({ id: 'evt-a', title: 'Spoon', artist: 'Spoon' }),
+            buildEvent({ id: 'evt-b', title: 'Phoebe', artist: 'Phoebe' }),
+            buildEvent({ id: 'evt-c', title: 'Wilco', artist: 'Wilco' }),
+          ]),
+        )
+        .mockResolvedValueOnce(counted([]));
+      const api = buildApiMock({
+        bulkDelete: vi.fn().mockResolvedValue({
+          count: 1,
+          skipped: [
+            { id: 'evt-b', reason: 'not_manual' },
+            { id: 'evt-c', reason: 'has_dependents' },
+          ],
+          missing: [],
+        }),
+      });
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      );
+      await waitFor(() => {
+        expect(screen.getByText('Spoon')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByLabelText('Select all events on the page'));
+      const dock = screen.getByRole('region', { name: 'Bulk actions' });
+      fireEvent.click(within(dock).getByText('Delete 3'));
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.change(
+        within(dialog).getByLabelText('Type DELETE to confirm'),
+        {
+          target: { value: 'DELETE' },
+        },
+      );
+      fireEvent.click(within(dialog).getAllByText('Delete 3').slice(-1)[0]!);
+      const summary = await screen.findByTestId('bulk-delete-summary');
+      expect(summary.textContent).toBe(
+        'Deleted 1 show. Skipped 2: 1 crawled, 1 with Watchers, Concerts, Submitted prices or merges.',
+      );
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('says why a single Delete was refused, not the raw code', async () => {
+      mockApiGet.mockResolvedValue(counted([buildEvent({ id: 'evt-a' })]));
+      const api = buildApiMock({
+        deleteEvent: vi.fn().mockRejectedValue(new ApiError(409, 'not_manual')),
+      });
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      );
+      await waitFor(() => {
+        expect(screen.getByText('Lord Huron')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByLabelText('Row actions'));
+      fireEvent.click(screen.getByText('Delete…'));
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.click(within(dialog).getByText('Delete event'));
+      expect(
+        await screen.findByText(ADMIN_COPY.eventDelete.notManual),
+      ).toBeTruthy();
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(screen.queryByText('not_manual')).toBeNull();
     });
 
     it('clears the selection after a successful bulk action (refetch fires)', async () => {

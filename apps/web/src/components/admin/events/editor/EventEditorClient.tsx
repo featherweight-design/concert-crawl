@@ -23,6 +23,7 @@ import {
   notOnSaleMessage,
   pastLockedMessage,
 } from '../past-locked';
+import { deleteRefusalMessage } from '../event-delete';
 
 export interface EditorEvent {
   id: string;
@@ -229,6 +230,14 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
       setPendingDanger(null);
       router.push('/admin/events');
     } catch (dangerErr) {
+      // Delete's 409s in words, not the raw code. A refusal would only be
+      // refused again, so the confirm closes on it and the error shows.
+      const refused = deleteRefusalMessage(dangerErr);
+      if (refused !== null) {
+        setPendingDanger(null);
+        setError(refused);
+        return;
+      }
       const message =
         dangerErr instanceof ApiError
           ? dangerErr.message

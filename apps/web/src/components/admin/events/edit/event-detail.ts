@@ -61,6 +61,8 @@ export interface EventDetail {
   soldOutRecord: SoldOutRecord | null;
   /** The bill in display order: headliners, then supports. */
   lineup: LineupItem[];
+  /** Added by hand, so the ⋯ offers Delete… (4b#10). */
+  manual: boolean;
 }
 
 /**
@@ -276,6 +278,8 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     tourName,
     soldOutRecord: soldOutRecordOf(value['soldOutRecord']),
     lineup: lineup.data,
+    // Absent on an API older than this web build: not deletable.
+    manual: value['manual'] === true,
   };
 };
 

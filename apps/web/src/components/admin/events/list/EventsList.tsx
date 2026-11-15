@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Trash2,
 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
@@ -23,11 +24,13 @@ import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { DateTile } from '../../prices/MissingTab';
 import { shortDate } from '../../prices/prices-rules';
 import { HideEventDialog } from '../edit/StatusCard';
+import { EventDeleteConfirm } from '../EventDeleteConfirm';
 import type { EventListRow } from './events-api';
 import { STATUS_CHIP, formatPrice, type When } from './events-rules';
 
 const COPY = ADMIN_COPY.eventsList;
 const HIDE_COPY = ADMIN_COPY.eventEdit.hide;
+const DELETE_COPY = ADMIN_COPY.eventDelete;
 const NO_NEW_DATE = ADMIN_COPY.eventEdit.postponed.noDate;
 
 /**
@@ -174,33 +177,45 @@ const VenueLine = ({
 /**
  * The row's ⋯ (`06/event-menu`). Only the lines whose action exists today:
  * View on the venue's site shows when the row has a safe venue page
- * (`venueUrl`); Open the crawl run is dropped (4b#3); Merge lands in 4b-4,
- * and Delete with its dialog. Hide from site… opens Event edit's Hide dialog,
- * on a show that isn't hidden.
+ * (`venueUrl`); Open the crawl run is dropped (4b#3); Merge lands with E4.
+ * Hide from site… opens Event edit's Hide dialog, on a show that isn't
+ * hidden. Delete… shows on a manual row only (4b#10), with its dialog.
  */
 const EventMenu = ({
   row,
   onHide,
+  onDelete,
 }: {
   row: EventListRow;
-  onHide: ((row: EventListRow) => Promise<void>) | undefined;
+  onHide: OnHide;
+  onDelete: OnHide;
 }) => {
   const router = useRouter();
   const [hiding, setHiding] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
   // The dialog opened from a menu item that has since unmounted, so focus
   // goes back to the ⋯ itself once the dialog closes.
-  const wasHiding = useRef(false);
+  const open = hiding || deleting;
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (wasHiding.current && !hiding)
+    if (wasOpen.current && !open)
       wrapRef.current
         ?.querySelector<HTMLButtonElement>('[data-testid="event-row-menu"]')
         ?.focus();
-    wasHiding.current = hiding;
-  }, [hiding]);
+    wasOpen.current = open;
+  }, [open]);
   const { venueUrl } = row;
   return (
     <span ref={wrapRef}>
+      {deleting && onDelete !== undefined && (
+        <EventDeleteConfirm
+          title={row.title}
+          onDelete={() => onDelete(row)}
+          onCancel={() => setDeleting(false)}
+          onDone={() => setDeleting(false)}
+        />
+      )}
       {hiding && onHide !== undefined && (
         <HideEventDialog
           artist={row.title}
@@ -254,6 +269,18 @@ const EventMenu = ({
                   hint: HIDE_COPY.menuHint,
                   warning: true,
                   onSelect: () => setHiding(true),
+                },
+              ]
+            : []),
+          ...(onDelete !== undefined && row.manual
+            ? [
+                {
+                  key: 'delete',
+                  icon: Trash2,
+                  label: DELETE_COPY.menu,
+                  hint: DELETE_COPY.menuHint,
+                  danger: true,
+                  onSelect: () => setDeleting(true),
                 },
               ]
             : []),
@@ -348,10 +375,12 @@ const DesktopTable = ({
   rows,
   when,
   onHide,
+  onDelete,
 }: {
   rows: EventListRow[];
   when: When;
   onHide: OnHide;
+  onDelete: OnHide;
 }) => {
   const past = when === 'past';
   return (
@@ -488,7 +517,7 @@ const DesktopTable = ({
                 </td>
               ) : (
                 <td style={{ ...td, textAlign: 'right', paddingRight: 14 }}>
-                  <EventMenu row={row} onHide={onHide} />
+                  <EventMenu row={row} onHide={onHide} onDelete={onDelete} />
                 </td>
               )}
             </tr>
@@ -636,11 +665,17 @@ export const EventsList = ({
   rows,
   when,
   onHide,
+  onDelete,
 }: {
   rows: EventListRow[];
   when: When;
   /** Hide from site… in a row's ⋯: saves, then reloads the list. */
   onHide?: OnHide;
+  /**
+   * Delete… in a manual row's ⋯: sends the DELETE (throwing its ApiError),
+   * then reloads the list.
+   */
+  onDelete?: OnHide;
 }) => {
   const isPhone = useIsPhone();
   if (isPhone) {
@@ -658,7 +693,12 @@ export const EventsList = ({
   }
   return (
     <div data-testid="events-list">
-      <DesktopTable rows={rows} when={when} onHide={onHide} />
+      <DesktopTable
+        rows={rows}
+        when={when}
+        onHide={onHide}
+        onDelete={onDelete}
+      />
     </div>
   );
 };

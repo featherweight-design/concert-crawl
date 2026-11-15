@@ -7,6 +7,11 @@ import {
   duplicateShowMessage,
   pastLockedMessage,
 } from '@/components/admin/events/past-locked';
+import {
+  bulkDeleteSummary,
+  deleteRefusalMessage,
+  type BulkDeleteResult,
+} from '@/components/admin/events/event-delete';
 import { Pagination } from '@/components/admin/primitives';
 import {
   REVIEW_ALL_EVENTS_PAGE_SIZE,
@@ -44,7 +49,8 @@ export interface AllEventsApi {
   bulkUnverify: (ids: string[]) => Promise<void>;
   bulkMarkNonConcert: (ids: string[]) => Promise<void>;
   bulkMarkAsConcert: (ids: string[]) => Promise<void>;
-  bulkDelete: (ids: string[]) => Promise<void>;
+  /** Resolves with what was deleted and what the guard skipped. */
+  bulkDelete: (ids: string[]) => Promise<BulkDeleteResult>;
 }
 
 type BulkKind = 'unverify' | 'non-concert' | 'mark-as-concert' | 'delete';
@@ -156,6 +162,8 @@ export const AllEventsTabContent = ({
   // Local error state for mutation failures (network errors from the `api`
   // prop). Fetch errors come straight out of `useQuery` below.
   const [actionError, setActionError] = useState<string | null>(null);
+  /** The bulk Delete's summary: how many went, how many were skipped and why. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<{
     kind: 'delete' | 'non-concert';
     event: AllEvent;
@@ -182,6 +190,7 @@ export const AllEventsTabContent = ({
     // new dataset — clear them so a successful filter change doesn't leave
     // an unrelated banner up.
     setActionError(null);
+    setNotice(null);
   }, [filterQuery]);
 
   // Filter changes forward straight to `onFiltersChange`. Resetting the
@@ -223,6 +232,7 @@ export const AllEventsTabContent = ({
   const runApi = useCallback(
     async (fn: () => Promise<void>): Promise<void> => {
       setActionError(null);
+      setNotice(null);
       try {
         await fn();
         refresh();
@@ -275,6 +285,7 @@ export const AllEventsTabContent = ({
       return;
     }
     setConfirmPending(true);
+    setNotice(null);
     try {
       if (pendingConfirm.kind === 'delete') {
         await api.deleteEvent(pendingConfirm.event);
@@ -284,6 +295,14 @@ export const AllEventsTabContent = ({
       setPendingConfirm(null);
       refresh();
     } catch (confirmErr) {
+      // Delete's 409s say why; a retry would be refused again, so the
+      // confirm closes and the banner (behind its scrim otherwise) shows.
+      const refused = deleteRefusalMessage(confirmErr);
+      if (refused !== null) {
+        setPendingConfirm(null);
+        setActionError(refused);
+        return;
+      }
       const message =
         confirmErr instanceof ApiError
           ? confirmErr.message
@@ -306,8 +325,11 @@ export const AllEventsTabContent = ({
       return;
     }
     setBulkPending(true);
+    setActionError(null);
+    setNotice(null);
     try {
-      if (bulkConfirm === 'delete') await api.bulkDelete(ids);
+      if (bulkConfirm === 'delete')
+        setNotice(bulkDeleteSummary(await api.bulkDelete(ids)));
       else if (bulkConfirm === 'non-concert') await api.bulkMarkNonConcert(ids);
       else if (bulkConfirm === 'mark-as-concert')
         await api.bulkMarkAsConcert(ids);
@@ -448,6 +470,23 @@ export const AllEventsTabContent = ({
     </div>
   );
 
+  const noticeBanner = notice && (
+    <div
+      role="status"
+      data-testid="bulk-delete-summary"
+      style={{
+        padding: '10px 14px',
+        borderRadius: 8,
+        border: '1px solid var(--border)',
+        background: 'var(--bg-elevated)',
+        fontSize: 13,
+        color: 'var(--fg)',
+      }}
+    >
+      {notice}
+    </div>
+  );
+
   // Only the absence-of-error empty case is a true "no events" state — a
   // failed fetch leaves events=[] too, but the admin needs to see the error
   // banner, not an empty state that hides the failure.
@@ -460,6 +499,7 @@ export const AllEventsTabContent = ({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filterBar}
+        {noticeBanner}
         <EmptyState view={filters.view} />
       </div>
     );
@@ -468,6 +508,7 @@ export const AllEventsTabContent = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {filterBar}
       {errorBanner}
+      {noticeBanner}
       {events.length > 0 &&
         (isDesktop ? (
           <EventsTable
