@@ -1,3 +1,15 @@
+# [1.491.0](https://github.com/featherweight-design/concert-crawl/compare/v1.490.0...v1.491.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** keep loaded resolved pages on refresh, and match the 23 boards ([a67681b](https://github.com/featherweight-design/concert-crawl/commit/a67681be3febbc38a4016ab9fc1f5db20f62ce31))
+
+
+### Features
+
+* **web:** resolved Price checks on the phone, with a read-only sheet ([642d236](https://github.com/featherweight-design/concert-crawl/commit/642d236a0e100e90bcef2abf163e79fa8489af7c)), closes [#639](https://github.com/featherweight-design/concert-crawl/issues/639)
+
 # [1.490.0](https://github.com/featherweight-design/concert-crawl/compare/v1.489.0...v1.490.0) (2026-11-15)
 
 
