@@ -1,3 +1,18 @@
+# [1.501.0](https://github.com/featherweight-design/concert-crawl/compare/v1.500.0...v1.501.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **admin:** draw venue status only from stored state ([66b401e](https://github.com/featherweight-design/concert-crawl/commit/66b401ef59f55ea91de996c0fc4bbe48d9b9e64d))
+
+
+### Features
+
+* **admin:** draw the venue panel with the shared VenueStatus and the crawled path ([02ae4ca](https://github.com/featherweight-design/concert-crawl/commit/02ae4cad03f9f2769bc0669ce1dab163b430d2b0))
+* **api:** estimate a queued re-crawl's wait from the claim time ([b044ec2](https://github.com/featherweight-design/concert-crawl/commit/b044ec243e853c94dbf51583201378ed96a587b0))
+* **api:** report a re-crawl's progress, queue place and estimate ([18fc5c5](https://github.com/featherweight-design/concert-crawl/commit/18fc5c5084592da90d505b37e245194e63e82fda))
+* **db:** add the event_artists backfill ([dc6fb77](https://github.com/featherweight-design/concert-crawl/commit/dc6fb779fbccb21a40f576ee8bb734b4d16710b4)), closes [#674](https://github.com/featherweight-design/concert-crawl/issues/674)
+
 # [1.500.0](https://github.com/featherweight-design/concert-crawl/compare/v1.499.0...v1.500.0) (2026-11-15)
 
 
