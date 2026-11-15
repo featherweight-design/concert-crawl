@@ -7,6 +7,7 @@ import {
   publishedCount,
   rowState,
   withSection,
+  writtenCount,
 } from './guide-rules';
 
 const guide = (over: Partial<VenueGuide> = {}): VenueGuide => ({
@@ -52,6 +53,19 @@ describe('guide rows', () => {
     expect(
       publishedCount(guide({ publishedAt: '2026-11-01', chips: [] })),
     ).toBe(1);
+  });
+
+  it('counts written sections, not blanks or Can’t document yet', () => {
+    expect(writtenCount(guide())).toBe(3);
+    expect(writtenCount(guide({ insiderTip: '  ', chips: [] }))).toBe(0);
+    expect(
+      writtenCount(
+        guide({
+          insiderTip: null,
+          chips: [{ chipType: 'accessibility', body: '', isPlaceholder: true }],
+        }),
+      ),
+    ).toBe(0);
   });
 });
 

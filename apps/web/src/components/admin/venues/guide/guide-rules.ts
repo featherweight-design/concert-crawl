@@ -62,6 +62,15 @@ export const rowState = (
 export const publishedCount = (guide: VenueGuide): number =>
   GUIDE_SECTIONS.filter((key) => rowState(guide, key) === 'published').length;
 
+/**
+ * Sections with text in them: the Guide tab bar's "{N} sections written".
+ * Can't document yet is a placeholder, not writing, so it isn't counted.
+ */
+export const writtenCount = (guide: VenueGuide): number =>
+  GUIDE_SECTIONS.filter(
+    (key) => sectionDraft(guide, key).text.trim().length > 0,
+  ).length;
+
 /** The publish gate the API runs: Accessibility written, or Can't document yet. */
 export const publishBlocked = (guide: VenueGuide): boolean => {
   const access = sectionDraft(guide, 'accessibility');

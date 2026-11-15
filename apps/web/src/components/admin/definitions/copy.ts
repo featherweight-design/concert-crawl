@@ -1275,8 +1275,23 @@ export const ADMIN_COPY = {
     writeLabel: (section: string) => `Write ${section}`,
     counter: (length: number, max: number) => `${length} / ${max}`,
     cantDocument: 'Can’t document yet',
-    publish: 'Publish',
+    // Publishing acts on the whole guide, so the button says so (item 16).
+    publish: 'Publish guide',
     publishing: 'Publishing…',
+    // The Guide tab's bar on an unpublished guide with something written
+    // (`16/guide-tab-d`, `16/guide-m`). There is no draft model, so it counts
+    // sections written rather than changes not published (ruling).
+    unpublishedBar: {
+      lead: (written: number) =>
+        written === 1 ? '1 section written.' : `${written} sections written.`,
+      body: 'Fans don’t see the guide until you publish it.',
+    },
+    // The panel's line above Publish guide, before the first publish
+    // (`16/guide-panel-d`). Rendered as a bold lead, then the rest.
+    publishNote: {
+      lead: 'Publish guide',
+      rest: 'puts the guide live, every section at once.',
+    },
     saveDraft: 'Save draft',
     saving: 'Saving…',
     publishBlocked:
@@ -1296,6 +1311,9 @@ export const ADMIN_COPY = {
       saved: 'Your text is still in the box.',
       unpublish: 'Couldn’t unpublish the guide',
       unpublishSaved: 'It is still on the venue page.',
+      // The Guide tab bar's Publish guide: nothing was edited, only published.
+      publish: 'Couldn’t publish the guide',
+      publishSaved: 'Fans still don’t see it. Every section is kept.',
     },
   },
 

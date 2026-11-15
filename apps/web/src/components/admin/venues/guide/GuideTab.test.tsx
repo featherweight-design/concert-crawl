@@ -93,6 +93,17 @@ const stateOf = (section: string) =>
     .getByTestId('guide-state')
     .getAttribute('data-state');
 
+// The panel's Publish guide, not the tab bar's (both say Publish guide).
+const panelPublish = () => {
+  const button = within(screen.getByTestId('side-panel')).getByRole('button', {
+    name: COPY.publish,
+  });
+  if (!(button instanceof HTMLButtonElement)) throw new Error('no button');
+  return button;
+};
+
+const bar = () => screen.queryByTestId('guide-unpublished-bar');
+
 beforeEach(() => {
   phone = false;
   vi.stubGlobal('matchMedia', matchMediaStub);
@@ -218,7 +229,7 @@ describe('GuideTab edit panel', () => {
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'A-line.' },
     });
-    fireEvent.click(screen.getByRole('button', { name: COPY.publish }));
+    fireEvent.click(panelPublish());
     await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('venue-1'));
     expect(mockSave).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(onGuideChange).toHaveBeenCalledWith(published));
@@ -227,13 +238,11 @@ describe('GuideTab edit panel', () => {
   it('holds Publish while Accessibility is blank, until it is written or marked', () => {
     renderTab({ ...draftGuide, chips: [] });
     open('accessibility', true);
-    const publish = () => {
-      const button = screen.getByRole('button', { name: COPY.publish });
-      if (!(button instanceof HTMLButtonElement)) throw new Error('no button');
-      return button;
-    };
+    const publish = panelPublish;
     expect(publish().disabled).toBe(true);
-    expect(screen.getByText(COPY.publishBlocked)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('side-panel')).getByText(COPY.publishBlocked),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('switch', { name: COPY.cantDocument }));
     expect(publish().disabled).toBe(false);
     fireEvent.click(screen.getByRole('switch', { name: COPY.cantDocument }));
@@ -311,7 +320,7 @@ describe('GuideTab edit panel', () => {
     mockPublish.mockResolvedValue({ success: false, field: 'accessibility' });
     renderTab();
     open('parking');
-    fireEvent.click(screen.getByRole('button', { name: COPY.publish }));
+    fireEvent.click(panelPublish());
     await waitFor(() => expect(onGuideChange).toHaveBeenCalledWith(saved));
     expect(screen.getByRole('alert').textContent).toBe(COPY.publishGate);
     expect(screen.getByTestId('side-panel')).toBeTruthy();
@@ -322,7 +331,7 @@ describe('GuideTab edit panel', () => {
     mockPublish.mockResolvedValue({ success: false });
     renderTab();
     open('parking');
-    fireEvent.click(screen.getByRole('button', { name: COPY.publish }));
+    fireEvent.click(panelPublish());
     await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
     expect(onGuideChange).toHaveBeenCalledWith(draftGuide);
   });
@@ -383,6 +392,149 @@ describe('GuideTab edit panel', () => {
         name: COPY.writeLabel(COPY.section.insider_tip),
       }),
     ).toBeTruthy();
+  });
+});
+
+describe('GuideTab unpublished bar (item 16)', () => {
+  it('counts the written sections and publishes the whole guide', async () => {
+    const published = { ...draftGuide, publishedAt: '2026-11-15' };
+    mockPublish.mockResolvedValue({ success: true, data: published });
+    renderTab();
+    const shown = bar();
+    if (shown === null) throw new Error('no bar');
+    // The insider tip, Accessibility and Parking are written.
+    expect(shown.textContent).toBe(
+      '3 sections written. Fans don’t see the guide until you publish it.',
+    );
+    // It sits above the rows (`16/guide-tab-d`).
+    expect(
+      shown.compareDocumentPosition(
+        screen.getByTestId('guide-row-insider_tip'),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    fireEvent.click(
+      within(shown).getByRole('button', { name: 'Publish guide' }),
+    );
+    await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('venue-1'));
+    // Nothing was edited, so nothing is saved first.
+    expect(mockSave).not.toHaveBeenCalled();
+    await waitFor(() => expect(onGuideChange).toHaveBeenCalledWith(published));
+  });
+
+  it('says "1 section written." and holds Publish behind the Accessibility gate', () => {
+    renderTab({ ...draftGuide, chips: [] });
+    const shown = bar();
+    if (shown === null) throw new Error('no bar');
+    expect(shown.textContent).toContain('1 section written.');
+    const button = within(shown).getByRole('button', { name: COPY.publish });
+    expect(button.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText(COPY.publishBlocked)).toBeTruthy();
+    fireEvent.click(button);
+    expect(mockPublish).not.toHaveBeenCalled();
+  });
+
+  it('shows the gate line when the API’s publish gate refuses', async () => {
+    mockPublish.mockResolvedValue({ success: false, field: 'accessibility' });
+    renderTab();
+    const shown = bar();
+    if (shown === null) throw new Error('no bar');
+    fireEvent.click(within(shown).getByRole('button', { name: COPY.publish }));
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe(COPY.publishGate),
+    );
+    expect(onGuideChange).not.toHaveBeenCalled();
+  });
+
+  it('a failed publish says so and offers a retry', async () => {
+    mockPublish.mockResolvedValue({ success: false });
+    renderTab();
+    const shown = bar();
+    if (shown === null) throw new Error('no bar');
+    fireEvent.click(within(shown).getByRole('button', { name: COPY.publish }));
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(screen.getByTestId('save-failed').textContent).toContain(
+      COPY.failed.publish,
+    );
+    expect(onGuideChange).not.toHaveBeenCalled();
+  });
+
+  it('is gone once the guide is live, and the count line stays', () => {
+    renderTab({ ...draftGuide, publishedAt: '2026-11-01' });
+    expect(bar()).toBeNull();
+    expect(screen.getByTestId('guide-count').textContent).toBe(
+      COPY.countLive(3, 9),
+    );
+  });
+
+  it('is not drawn with nothing written: the empty state stands', () => {
+    renderTab({ ...draftGuide, chips: [], insiderTip: null });
+    expect(bar()).toBeNull();
+    cleanup();
+    // Can't document yet is a placeholder, not writing.
+    renderTab({
+      chips: [{ chipType: 'accessibility', body: '', isPlaceholder: true }],
+      insiderTip: null,
+      publishedAt: null,
+    });
+    expect(bar()).toBeNull();
+  });
+
+  it('stacks on the phone with a full-width Publish guide (`16/guide-m`)', async () => {
+    phone = true;
+    renderTab();
+    // useIsPhone settles after mount, so wait for the phone layout.
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('guide-unpublished-bar').style.flexDirection,
+      ).toBe('column'),
+    );
+    const shown = screen.getByTestId('guide-unpublished-bar');
+    const button = within(shown).getByRole('button', { name: COPY.publish });
+    expect(button.style.width).toBe('100%');
+    expect(button.style.height).toBe('40px');
+  });
+});
+
+describe('GuideEditPanel publish footer (item 16)', () => {
+  const openParking = () =>
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: COPY.editLabel(COPY.section.parking),
+      }),
+    );
+
+  it('before the first publish: the note, then Save draft leading Publish guide', () => {
+    renderTab();
+    openParking();
+    const panel = screen.getByTestId('side-panel');
+    expect(within(panel).getByTestId('guide-publish-note').textContent).toBe(
+      'Publish guide puts the guide live, every section at once.',
+    );
+    const save = within(panel).getByTestId('guide-save');
+    const publish = within(panel).getByTestId('guide-publish');
+    expect(publish.textContent).toBe('Publish guide');
+    expect(save.getAttribute('data-rank')).toBe('primary');
+    expect(publish.getAttribute('data-rank')).toBe('secondary');
+    expect(
+      save.compareDocumentPosition(publish) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(save.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('on a live guide: no note, Publish guide leads, Save draft is held', () => {
+    renderTab({ ...draftGuide, publishedAt: '2026-11-01' });
+    openParking();
+    const panel = screen.getByTestId('side-panel');
+    expect(within(panel).queryByTestId('guide-publish-note')).toBeNull();
+    const save = within(panel).getByTestId('guide-save');
+    const publish = within(panel).getByTestId('guide-publish');
+    expect(publish.textContent).toBe('Publish guide');
+    expect(publish.getAttribute('data-rank')).toBe('primary');
+    expect(save.getAttribute('data-rank')).toBe('secondary');
+    expect(
+      publish.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(save.hasAttribute('disabled')).toBe(true);
   });
 });
 
