@@ -527,6 +527,35 @@ describe('AddShow', () => {
       expect(push).toHaveBeenCalledWith('/admin/events/new-1/edit'),
     );
     expect(create).toHaveBeenCalledTimes(2);
+    // Try again reads the night afresh before its own POST.
+    expect(manualIdsBefore).toHaveBeenCalledTimes(2);
+    const [, secondRead] = manualIdsBefore.mock.invocationCallOrder;
+    const [firstCreate, secondCreate] = create.mock.invocationCallOrder;
+    expect(secondRead).toBeGreaterThan(firstCreate ?? Infinity);
+    expect(secondRead).toBeLessThan(secondCreate ?? 0);
+  });
+
+  it('says it may have been added when finding a timed-out show throws, with Try again', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      create.mockResolvedValueOnce({ kind: 'timeout' });
+      findCreated.mockRejectedValueOnce(new Error('read down'));
+      renderIt();
+      await fill();
+      fireEvent.click(addShowButton());
+      const toast = await screen.findByTestId('save-failed');
+      expect(findCreated).toHaveBeenCalledTimes(1);
+      expect(toast).toHaveTextContent(COPY.saveFailed.maybe);
+      expect(toast).not.toHaveTextContent(COPY.saveFailed.body);
+      expect(
+        within(toast).getByRole('button', {
+          name: ADMIN_COPY.states.saveFailed.tryAgain,
+        }),
+      ).toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+    } finally {
+      vi.mocked(console.error).mockRestore();
+    }
   });
 
   it('builds the bill: Enter adds a typed name, × removes, the first is the headliner', async () => {
