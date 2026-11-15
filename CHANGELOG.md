@@ -1,3 +1,22 @@
+# [1.490.0](https://github.com/featherweight-design/concert-crawl/compare/v1.489.0...v1.490.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* tell a fan a Price check that wasn't used wasn't used ([ad45790](https://github.com/featherweight-design/concert-crawl/commit/ad45790fbbeb377f6fe3785d443c2cdf1770f029))
+* tell a fan a rejected price wasn't used, not that a newer one replaced it ([a5ce2f6](https://github.com/featherweight-design/concert-crawl/commit/a5ce2f686c4b1e10a0c8cf14410e73b6e1e1969c))
+* **web:** address the Feedback list review, and draw addendum 7's row marks ([ef42e0d](https://github.com/featherweight-design/concert-crawl/commit/ef42e0dd973e9b971847054bdce1cfa512e7502b))
+* **web:** cap the log search and page Load more with its own query ([b05a8fb](https://github.com/featherweight-design/concert-crawl/commit/b05a8fb56d724b3cb4be5c3286af20e2e24e4eb9))
+* **web:** keep the offline banner's live region mounted ([fd6fe2f](https://github.com/featherweight-design/concert-crawl/commit/fd6fe2fe5fca3e468b31476c727772b5fffc9fcb))
+* **web:** stop promising the fan hears why a price was rejected ([b1d037a](https://github.com/featherweight-design/concert-crawl/commit/b1d037a903fa697b1be605d795584eee9e01ede8))
+
+
+### Features
+
+* **web:** search the activity log ([e625f2b](https://github.com/featherweight-design/concert-crawl/commit/e625f2b9400f56459db941f1b0af1d1eee4e6ab6))
+* **web:** the admin Feedback list, with To read, kind and Done chips ([06b3829](https://github.com/featherweight-design/concert-crawl/commit/06b382920b52562d12af1c1f9a50c666379d41c6))
+* **web:** the admin shell shows an offline banner when the browser is offline ([ce37783](https://github.com/featherweight-design/concert-crawl/commit/ce37783638527032baab6ef4c3c28a83f8968ea9))
+
 # [1.489.0](https://github.com/featherweight-design/concert-crawl/compare/v1.488.1...v1.489.0) (2026-11-15)
 
 
