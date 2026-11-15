@@ -4073,23 +4073,51 @@ export const ADMIN_COPY = {
     loadingMore: 'Loading…',
     loadMoreFailed: "Couldn't load more prices.",
     showing: (shown: number, total: number) => `Showing ${shown} of ${total}`,
+    // `43/approve-menu-d` (desktop) and `43/approve-sheet-m` (the phone's
+    // sheet, titled "{show} · {price}"), in the board's order.
     menu: {
       label: 'Price actions',
-      openShow: {
-        label: 'Open the show',
-        hint: 'Event edit, with this price in context',
+      approve: {
+        label: 'Approve',
+        hint: (price: string, backers: number) =>
+          `Publishes ${price} to fans now. ${backers === 1 ? '1 fan backs it' : `${backers} fans back it`}.`,
+        // The phone drops the backer sentence.
+        phoneHint: (price: string) => `Publishes ${price} to fans now.`,
       },
-      openTicket: { label: 'Open ticket page', hint: 'Where the fan saw it' },
+      openShow: {
+        label: 'Open show',
+        hint: (show: string, venue: string | null) =>
+          venue === null ? show : `${show} · ${venue}`,
+      },
+      // The hint is the ticket page's host ("axs.com"); this when there is none.
+      openTicket: { label: 'Open ticket', noTicket: 'No ticket page' },
+      // Still the fan's other prices: the board's per-show count needs a
+      // ruling and an API field first.
       otherPrices: {
         label: 'This fan’s other prices',
         hint: (handle: string) => `Filter to @${handle}`,
       },
       editPrice: {
         label: 'Edit price',
-        hint: 'Same sheet as Add a price',
+        hint: 'Change the number before it goes live.',
+        phoneHint: 'Change the number first.',
       },
       // The fan never hears why: their row just reads "We didn't use this price".
       reject: { label: 'Reject…', hint: 'Take it off the show' },
+      sheetTitle: (show: string, price: string) => `${show} · ${price}`,
+    },
+    // Approve one waiting price (`43/approve-*`). No Undo (Hugh): the price
+    // goes out to fans at once.
+    approve: {
+      approving: 'Approving…',
+      publishedByYou: 'Published by you',
+      didntApprove: 'Didn’t approve',
+      doneTitle: (price: string, show: string) =>
+        `Approved. ${price} is live on ${show}.`,
+      doneBody: 'The fan who sent it is told.',
+      failedTitle: 'Couldn’t approve that price.',
+      failedBody: 'It’s still waiting. Nothing changed.',
+      notWaitingBody: 'That price isn’t waiting any more.',
     },
     reject: {
       eyebrow: 'Reject price',

@@ -1,3 +1,5 @@
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
+
 export type SubmissionState =
   'waiting' | 'published' | 'price-check' | 'not-used' | 'stale';
 
@@ -60,6 +62,15 @@ export const priceRange = (min: string, max: string | null): string => {
   return Number(max) > Number(min)
     ? `${dollars(min)}–${dollars(max)}`
     : dollars(min);
+};
+
+/**
+ * "axs.com" from a safe ticket URL (`43/approve-menu-d`'s Open ticket hint);
+ * null for none or one that isn't http(s).
+ */
+export const ticketHost = (url: string | null): string | null => {
+  if (!isSafeHttpUrl(url)) return null;
+  return new URL(url).hostname.replace(/^www\./, '');
 };
 
 export type BackedTone = 'green' | 'amber' | 'red';

@@ -16,3 +16,37 @@ describe('the reject dialog body', () => {
     );
   });
 });
+
+describe('Approve (43/approve-*)', () => {
+  const MENU = ADMIN_COPY.pricesSubmitted.menu;
+  const APPROVE = ADMIN_COPY.pricesSubmitted.approve;
+
+  it('counts the backers in the menu hint, singular as drawn and plural', () => {
+    expect(MENU.approve.hint('$68–$75', 1)).toBe(
+      'Publishes $68–$75 to fans now. 1 fan backs it.',
+    );
+    expect(MENU.approve.hint('$44', 3)).toBe(
+      'Publishes $44 to fans now. 3 fans back it.',
+    );
+  });
+
+  it('drops the backer sentence on the phone', () => {
+    expect(MENU.approve.phoneHint('$68–$75')).toBe(
+      'Publishes $68–$75 to fans now.',
+    );
+  });
+
+  it('names the show and venue, and titles the phone sheet show · price', () => {
+    expect(MENU.openShow.hint('FKJ', 'Mission Ballroom')).toBe(
+      'FKJ · Mission Ballroom',
+    );
+    expect(MENU.openShow.hint('FKJ', null)).toBe('FKJ');
+    expect(MENU.sheetTitle('FKJ', '$68–$75')).toBe('FKJ · $68–$75');
+  });
+
+  it('says what went live in the toast', () => {
+    expect(APPROVE.doneTitle('$68–$75', 'FKJ')).toBe(
+      'Approved. $68–$75 is live on FKJ.',
+    );
+  });
+});

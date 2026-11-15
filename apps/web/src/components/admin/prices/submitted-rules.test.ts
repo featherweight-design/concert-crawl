@@ -5,6 +5,7 @@ import {
   isSubmissionState,
   priceRange,
   stateWords,
+  ticketHost,
 } from './submitted-rules';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
@@ -65,5 +66,20 @@ describe('guards', () => {
     expect(isSubmissionState('disputed')).toBe(false);
     expect(isRejectionReason('fees-included')).toBe(true);
     expect(isRejectionReason('because')).toBe(false);
+  });
+});
+
+describe('ticketHost', () => {
+  it('reads the host of a ticket page without www, as the Open ticket hint draws it', () => {
+    expect(ticketHost('https://www.axs.com/events/123')).toBe('axs.com');
+    expect(ticketHost('http://tickets.example.com/x')).toBe(
+      'tickets.example.com',
+    );
+  });
+
+  it('is null for no ticket page or one that isn’t http(s)', () => {
+    expect(ticketHost(null)).toBeNull();
+    expect(ticketHost('javascript:alert(1)')).toBeNull();
+    expect(ticketHost('not a url')).toBeNull();
   });
 });

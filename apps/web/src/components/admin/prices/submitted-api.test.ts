@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { refusedStatus } from '../invite-codes/codes-api';
 import { submittedApi } from './submitted-api';
 
 afterEach(() => {
@@ -57,5 +58,32 @@ describe('submitted prices forYou flag', () => {
       apiRow({ id: 's-4', forYou: null }),
     ]);
     expect(rows.map((row) => row.forYou)).toEqual([true, false, true, true]);
+  });
+});
+
+describe('approve', () => {
+  it('POSTs to the price’s approve route with no body', async () => {
+    const fetch = vi.fn(async (_url: string, _init?: RequestInit) =>
+      Response.json({ success: true, data: { id: 's-1' } }),
+    );
+    vi.stubGlobal('fetch', fetch);
+    await submittedApi(async () => 'token').approve('s-1');
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(url).toMatch(/\/v1\/admin\/prices\/submissions\/s-1\/approve$/);
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('carries a 409 not_waiting through to refusedStatus, as Reject does', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({ success: false, code: 'not_waiting' }, { status: 409 }),
+      ),
+    );
+    const err = await submittedApi(async () => 'token')
+      .approve('s-1')
+      .catch((caught: unknown) => caught);
+    expect(refusedStatus(err)).toBe(409);
   });
 });
