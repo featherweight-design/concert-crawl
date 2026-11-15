@@ -65,20 +65,21 @@ describe('TierMark', () => {
     expect(communityContainer.querySelector('svg')).toBeNull();
   });
 
-  // The B+ trust tokens (addendum 4, price-states-age-trust): Community is
-  // the theme's signal, Resale its danger, Box office its warning gold.
-  it.each([
-    ['community', 'signal'],
-    ['resale', 'danger'],
-    ['boxoffice', 'warning'],
-  ] as const)('draws %s in the B+ --%s token', (kind, token) => {
-    render(<TierMark kind={kind}>{kind}</TierMark>);
-    const span = screen.getByTestId(`tier-mark-${kind}`);
-    expect(span.style.color).toBe(`var(--price-text-${token})`);
-    expect(span.style.border).toContain(`var(--${token})`);
-    expect(span.style.background).toContain(`var(--${token})`);
-    expect(span.getAttribute('style')).not.toContain('oklch(0.6');
-  });
+  // The trust tokens (addendum 4 price-states-age-trust, addendum 6 item 38):
+  // each kind reads its own --trust-* token, which defaults to the theme's
+  // signal (Community), danger (Resale) and warning gold (Box office).
+  it.each(['community', 'resale', 'boxoffice'] as const)(
+    'draws %s in its --trust token',
+    (kind) => {
+      const token = `trust-${kind}`;
+      render(<TierMark kind={kind}>{kind}</TierMark>);
+      const span = screen.getByTestId(`tier-mark-${kind}`);
+      expect(span.style.color).toBe(`var(--${token})`);
+      expect(span.style.border).toContain(`var(--${token})`);
+      expect(span.style.background).toContain(`var(--${token})`);
+      expect(span.getAttribute('style')).not.toContain('oklch(0.6');
+    },
+  );
 });
 
 describe('TRUST_TOKENS', () => {
