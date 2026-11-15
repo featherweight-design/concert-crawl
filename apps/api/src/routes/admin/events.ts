@@ -1411,6 +1411,8 @@ eventsAdminRouter.post(
           // Title, venue and date of each deleted show.
           deleted: outcome.deleted,
           skipped: outcome.skipped,
+          // Ids that named no event (already gone, or never existed).
+          missing: outcome.missing,
         },
       });
       return outcome;
@@ -1422,6 +1424,7 @@ eventsAdminRouter.post(
         count: result.deleted.length,
         deletedIds: result.deleted.map((row) => row.id),
         skipped: result.skipped,
+        missing: result.missing,
       },
     });
   },
