@@ -2,7 +2,6 @@ import { z } from 'zod';
 import {
   ADMIN_FEEDBACK_STATUSES,
   FEEDBACK_CATEGORIES,
-  feedbackScreenshotOf,
   type AdminFeedbackCounts,
   type AdminFeedbackItem,
   type AdminFeedbackKind,
@@ -102,10 +101,14 @@ export const kindOf = (item: AdminFeedbackItem): Kind =>
     ? 'errorReport'
     : FEEDBACK_KIND[item.category];
 
-// The same check the expanded row draws by, so the mark never promises a
-// screenshot that will not render.
-const hasScreenshot = (item: AdminFeedbackItem): boolean =>
-  feedbackScreenshotOf(item.metadata) !== null;
+// The API hands out a screenshot only once it has passed the full check
+// (admin/feedback.ts sanitisedMetadata), always under `screenshot`, so the
+// row's mark needs only the cheap prefix test, not the whole pattern over a
+// multi-megabyte string on every render. The <img> keeps the full check.
+const hasScreenshot = (item: AdminFeedbackItem): boolean => {
+  const screenshot = item.metadata?.['screenshot'];
+  return typeof screenshot === 'string' && /^data:image\//i.test(screenshot);
+};
 
 /**
  * The row's marks (addendum 7 `04/feedback-hints`): Screenshot when one came

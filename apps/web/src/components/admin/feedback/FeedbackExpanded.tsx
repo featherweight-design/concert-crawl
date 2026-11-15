@@ -260,6 +260,7 @@ export function FeedbackExpanded({
                   <img
                     src={screenshot}
                     alt="User screenshot"
+                    // Defence in depth: the src is always a data: URI now.
                     referrerPolicy="no-referrer"
                     data-testid="feedback-screenshot"
                     style={{

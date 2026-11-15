@@ -9,6 +9,11 @@ import { CCMark } from '@/components/brand/cc-mark';
 import { ModalShell } from '@/components/consumer/modal-shell';
 import { deviceSummary } from '@/components/consumer/error-report/lib/report-context';
 import { clearDraft, loadDraft, saveDraft } from '@/lib/feedback-draft';
+import {
+  FEEDBACK_SCREENSHOT_TYPES,
+  MAX_FEEDBACK_SCREENSHOT_BYTES,
+  isFeedbackScreenshotType,
+} from '@concert-crawl/types';
 
 type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other';
 type ModalState = 'form' | 'loading' | 'success' | 'error';
@@ -43,6 +48,11 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     name: string;
     dataUrl: string;
   } | null>(null);
+  // Why the picked file was refused (wrong type, or too big), shown under
+  // the picker until the fan picks again or removes it.
+  const [screenshotError, setScreenshotError] = useState<
+    'type' | 'size' | null
+  >(null);
   // Banner shown when a previously-saved draft was rehydrated on open.
   // User can dismiss via "Discard draft" which also clears localStorage.
   const [draftRestored, setDraftRestored] = useState(false);
@@ -101,17 +111,37 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setState('form');
   }, [open, cancelPendingReset]);
 
-  const handleScreenshotChange = useCallback((file: File | null) => {
-    if (!file) {
-      setScreenshot(null);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setScreenshot({ name: file.name, dataUrl: reader.result as string });
-    };
-    reader.readAsDataURL(file);
-  }, []);
+  const handleScreenshotChange = useCallback(
+    (file: File | null) => {
+      setScreenshotError(null);
+      if (!file) {
+        setScreenshot(null);
+        return;
+      }
+      // The same types and size the API keeps: refuse here, before reading,
+      // so the fan knows rather than the screenshot silently going missing.
+      const refusal = !isFeedbackScreenshotType(file.type)
+        ? 'type'
+        : file.size > MAX_FEEDBACK_SCREENSHOT_BYTES
+          ? 'size'
+          : null;
+      if (refusal) {
+        setScreenshot(null);
+        setScreenshotError(refusal);
+        clearFileInput();
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const { result } = reader;
+        if (typeof result === 'string') {
+          setScreenshot({ name: file.name, dataUrl: result });
+        }
+      };
+      reader.readAsDataURL(file);
+    },
+    [clearFileInput],
+  );
 
   const reset = useCallback(() => {
     setState('form');
@@ -120,6 +150,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setCatError(false);
     setMsgError(false);
     setScreenshot(null);
+    setScreenshotError(null);
     setDraftRestored(false);
     setDraftSaveFailed(false);
     clearFileInput();
@@ -167,6 +198,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setCategory(null);
     setMessage('');
     setScreenshot(null);
+    setScreenshotError(null);
     setCatError(false);
     setMsgError(false);
     clearFileInput();
@@ -332,6 +364,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             msgError={msgError}
             ctxData={ctxData}
             screenshot={screenshot}
+            screenshotError={screenshotError}
             onScreenshotChange={handleScreenshotChange}
             draftRestored={draftRestored}
             onDiscardDraft={discardDraft}
@@ -368,6 +401,7 @@ interface FormProps {
   msgError: boolean;
   ctxData: CtxData;
   screenshot: ScreenshotValue | null;
+  screenshotError: 'type' | 'size' | null;
   onScreenshotChange: (file: File | null) => void;
   draftRestored: boolean;
   onDiscardDraft: () => void;
@@ -384,6 +418,7 @@ function FormFields({
   msgError,
   ctxData,
   screenshot,
+  screenshotError,
   onScreenshotChange,
   draftRestored,
   onDiscardDraft,
@@ -524,7 +559,7 @@ function FormFields({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={FEEDBACK_SCREENSHOT_TYPES.join(',')}
           style={{ display: 'none' }}
           disabled={disabled}
           onChange={(ev) => {
@@ -702,6 +737,15 @@ function FormFields({
               </span>
             </span>
           </button>
+        )}
+        {screenshotError && (
+          <div role="alert">
+            <HelpText tone="error">
+              {screenshotError === 'size'
+                ? CONSUMER_COPY.feedback.modal.errors.screenshotTooBig
+                : CONSUMER_COPY.feedback.modal.errors.screenshotWrongType}
+            </HelpText>
+          </div>
         )}
       </div>
 

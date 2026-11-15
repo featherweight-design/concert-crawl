@@ -393,6 +393,8 @@ export const CONSUMER_COPY = {
       errors: {
         categoryRequired: 'Pick a feedback category.',
         messageRequired: "Don't leave us hanging, what's up?",
+        screenshotTooBig: 'That image is too big. Try a smaller screenshot.',
+        screenshotWrongType: 'Use a PNG, JPEG, WebP or GIF.',
       },
       footer: {
         cancel: 'Cancel',

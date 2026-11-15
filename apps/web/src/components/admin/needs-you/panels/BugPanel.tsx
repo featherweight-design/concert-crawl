@@ -1,7 +1,10 @@
 'use client';
 
 import { ExternalLink } from 'lucide-react';
-import { isFeedbackScreenshot } from '@concert-crawl/types';
+import {
+  MAX_QUEUE_SCREENSHOT_CHARS,
+  isFeedbackScreenshot,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { minutesSince, pageNameOf, pagePathOf } from '../needs-you-rules';
 import type { PanelProps } from './panel-props';
@@ -47,11 +50,15 @@ export const BugPanel = ({ row, busy, onAnswer }: PanelProps) => {
       </ChipRow>
       <Section label={PANEL.bug.report}>
         <Prose>{`“${message}”`}</Prose>
-        {isFeedbackScreenshot(facts?.screenshot) && (
+        {isFeedbackScreenshot(
+          facts?.screenshot,
+          MAX_QUEUE_SCREENSHOT_CHARS,
+        ) && (
           // eslint-disable-next-line @next/next/no-img-element -- the reporter's inline data image, never fetched from a URL
           <img
             src={facts.screenshot}
             alt={PANEL.bug.screenshotAlt}
+            // Defence in depth: the src is always a data: URI now.
             referrerPolicy="no-referrer"
             data-testid="bug-screenshot"
             style={{
