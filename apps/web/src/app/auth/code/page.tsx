@@ -58,6 +58,11 @@ export default function InviteCodePage() {
     if (params.get('change') === '1' && !released.current) {
       released.current = true;
       void releaseInviteCode().catch(() => {});
+      // Spent: Back, Forward or a reload must not release the code they are
+      // about to redeem next.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('change');
+      window.history.replaceState(null, '', url);
     }
   }, []);
 

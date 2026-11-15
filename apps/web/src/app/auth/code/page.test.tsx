@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   act,
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -156,6 +157,21 @@ describe('invite-code screen (custom auth restyle)', () => {
   it('releases the code they redeemed when they came to use a different one, once', () => {
     window.history.replaceState(null, '', '/auth/code?change=1');
     releaseInviteCode.mockResolvedValue(undefined);
+    render(<InviteCodePage />);
+    expect(releaseInviteCode).toHaveBeenCalledOnce();
+  });
+
+  it('takes change=1 out of the address once it has released, keeping the rest', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/code?change=1&redirect_url=%2Fe%2Fabc',
+    );
+    releaseInviteCode.mockResolvedValue(undefined);
+    render(<InviteCodePage />);
+    expect(window.location.search).toBe('?redirect_url=%2Fe%2Fabc');
+    // A remount (Back, Forward, reload) finds nothing left to release.
+    cleanup();
     render(<InviteCodePage />);
     expect(releaseInviteCode).toHaveBeenCalledOnce();
   });
