@@ -1,0 +1,35 @@
+{
+  "feature": "P47-5 (4) · the Needs you venue panel: shared VenueStatus chips and the robots row",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 02-needs-you/venue-auto-paused-after-3-failures, venue-blocked-403-429. Read-only: the scratch fixture venues 'CF Fixture Failing Hall' and 'CF Fixture Blocked Hall' give a venue-failing and a venue-blocked item. The chips read Live plus the crawling state from the shared VenueStatus ('Auto-paused: 3 failures', 'Blocked: 429'); the CHECKED FOR YOU robots row reads 'Still allows /events' only on a blocked venue whose stored check allows the crawler and whose URL has a path.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "panel-venue-failing",
+      "label": "Venue failing panel",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"venue-failing:\"]"
+        },
+        { "click": "[data-item-key^=\"venue-failing:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "panel-venue-blocked",
+      "label": "Venue blocked panel",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"venue-blocked:\"]"
+        },
+        { "click": "[data-item-key^=\"venue-blocked:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 600 }
+      ]
+    }
+  ]
+}
