@@ -33,6 +33,15 @@ import { MergeEventDialog } from '../editor/MergeEventDialog';
 import { PriceCard } from './PriceCard';
 import { DateField, TimeField } from './pickers';
 import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
+import {
+  evidenceBody,
+  evidenceReady,
+  NO_EVIDENCE,
+  SoldOutConfirm,
+  SoldOutForm,
+  SoldOutRecordView,
+  type Evidence,
+} from './SoldOutEvidence';
 import { StatusChips } from '../list/EventsList';
 import {
   duplicateShowMessage,
@@ -54,8 +63,15 @@ const LIST = ADMIN_COPY.eventsList;
 /** The fields this editor saves. Status, Hidden and price save on their own. */
 interface Fields {
   title: string;
+  /** The Show card's Tour name; `''` for none (saved as null). */
+  tourName: string;
   /** Tickets available or Sold out; `null` while neither pill is chosen. */
   sale: Sale | null;
+  /**
+   * How the admin knows it's sold out (addendum 7 §6), sent with the mark.
+   * Part of picking Sold out, so the Save bar never counts it on its own.
+   */
+  evidence: Evidence;
   /** YYYY-MM-DD. */
   date: string;
   /** `HH:MM`, or null for none. */
@@ -75,9 +91,14 @@ const stored = (time: string | null): string | null =>
 const saleOf = (status: EventDetail['status']): Sale | null =>
   status === 'available' || status === 'soldout' ? status : null;
 
+/** Clearing a tour name is a change too (`05/tour-name-states`). */
+const tourChanged = (draft: Fields, saved: Fields): boolean =>
+  draft.tourName.trim() !== saved.tourName.trim();
+
 /** How many fields differ from what is saved: the Save bar's count. */
 const changedCount = (draft: Fields, saved: Fields): number =>
   (draft.title.trim() !== saved.title.trim() ? 1 : 0) +
+  (tourChanged(draft, saved) ? 1 : 0) +
   (draft.sale !== saved.sale ? 1 : 0) +
   (draft.date !== saved.date ? 1 : 0) +
   (draft.doorsTime !== saved.doorsTime ? 1 : 0) +
@@ -226,6 +247,22 @@ const Header = ({
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
+        {/* `05/tour-name-m`: the phone header puts the saved tour name above
+            the title, the way fans see it. Desktop draws none. */}
+        {phone && detail.tourName !== null && (
+          <div
+            data-testid="event-edit-tour-kicker"
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--fg-muted)',
+              marginBottom: 2,
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {detail.tourName}
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <h1
             style={{
@@ -511,6 +548,7 @@ export const EventEdit = ({
   // Keyed on the saved title and sale alone, so a refresh after another save
   // (Hidden, a merge) never throws away a title being typed.
   const savedTitle = detail.title;
+  const savedTour = detail.tourName ?? '';
   const savedSale = saleOf(detail.status);
   const savedDate = detail.date;
   const savedDoors = hhmm(detail.doorsTime);
@@ -518,32 +556,46 @@ export const EventEdit = ({
   const saved = useMemo(
     () => ({
       title: savedTitle,
+      tourName: savedTour,
       sale: savedSale,
+      evidence: NO_EVIDENCE,
       date: savedDate,
       doorsTime: savedDoors,
       showTime: savedShow,
     }),
-    [savedTitle, savedSale, savedDate, savedDoors, savedShow],
+    [savedTitle, savedTour, savedSale, savedDate, savedDoors, savedShow],
   );
+  /**
+   * While the date is still past, no sale write goes out: a played show has
+   * no status to set, and a passed postponed one stays Postponed until its
+   * new date (`36/postponed-passed-d`). No `status: 'upcoming'`, no sold-out
+   * or available call.
+   */
+  const saleChangedIn = (next: Fields): boolean =>
+    next.sale !== null &&
+    next.sale !== savedSale &&
+    !past &&
+    !(passed && next.date < today);
+  /** The Save marks it sold out: a new mark, which asks for its evidence. */
+  const marksSoldOut = (next: Fields): boolean =>
+    saleChangedIn(next) && next.sale === 'soldout' && !detail.isSoldOut;
   const snap = useSnapBack<Fields>(saved, async (next) => {
     const token = await tokenOrThrow();
-    // While the date is still past, no sale write goes out: a played show has
-    // no status to set, and a passed postponed one stays Postponed until its
-    // new date (`36/postponed-passed-d`). No `status: 'upcoming'`, no
-    // sold-out or available call.
-    const saleChanged =
-      next.sale !== null &&
-      next.sale !== savedSale &&
-      !past &&
-      !(passed && next.date < today);
+    const saleChanged = saleChangedIn(next);
+    const tourName = next.tourName.trim();
     const body: {
       title?: string;
+      tourName?: string | null;
       status?: 'upcoming';
       date?: string;
       doorsTime?: string | null;
       showTime?: string | null;
     } = {
       ...(next.title !== savedTitle && { title: next.title }),
+      // Empty saves null, never '' (`05/tour-name-states`).
+      ...(tourName !== savedTour.trim() && {
+        tourName: tourName === '' ? null : tourName,
+      }),
       // A date change on a show that is on sends Watchers `watch.postponed`
       // server side; a correction is the admin's call.
       ...(next.date !== savedDate && { date: next.date }),
@@ -566,9 +618,14 @@ export const EventEdit = ({
         await apiClient.patch(path, token, body);
         landed = true;
       }
-      // Sold out is its own flag with its own Watcher notice (`watch.soldout`).
-      if (saleChanged && next.sale === 'soldout' && !detail.isSoldOut) {
-        await apiClient.post(`${path}/sold-out`, token, {});
+      // Sold out is its own flag with its own Watcher notice (`watch.soldout`),
+      // recorded with how the admin knows (addendum 7 §6).
+      if (marksSoldOut(next)) {
+        await apiClient.post(
+          `${path}/sold-out`,
+          token,
+          evidenceBody(next.evidence),
+        );
         landed = true;
       }
       if (saleChanged && next.sale === 'available' && detail.isSoldOut) {
@@ -609,7 +666,9 @@ export const EventEdit = ({
     lastSaved.current = now;
     setDraft((prev) => ({
       title: was.title !== now.title ? now.title : prev.title,
+      tourName: was.tourName !== now.tourName ? now.tourName : prev.tourName,
       sale: was.sale !== now.sale ? now.sale : prev.sale,
+      evidence: was.evidence !== now.evidence ? now.evidence : prev.evidence,
       date: was.date !== now.date ? now.date : prev.date,
       doorsTime:
         was.doorsTime !== now.doorsTime ? now.doorsTime : prev.doorsTime,
@@ -622,8 +681,16 @@ export const EventEdit = ({
     if (snap.failed !== null) setDraft(snap.failed.saved);
   }, [snap.failed]);
   const count = changedCount(draft, snap.value);
-  // The API refuses an empty title, so Save waits for one.
-  const valid = draft.title.trim() !== '';
+  // A new Sold out asks how the admin knows (`06/sold-out-mark-d`) and
+  // confirms before it tells the Watching (`06/sold-out-confirm-d`).
+  const marking = marksSoldOut(draft);
+  const [confirmingSoldOut, setConfirmingSoldOut] = useState(false);
+  // The API refuses an empty title, so Save waits for one; a new Sold out
+  // waits for its method (and a link, if any, that is http(s)).
+  const valid =
+    draft.title.trim() !== '' && (!marking || evidenceReady(draft.evidence));
+  const saveDraft = () => snap.save({ ...draft, title: draft.title.trim() });
+  const tourDirty = tourChanged(draft, snap.value);
 
   /** Doors or Show: the shared time picker (a correction on a past show). */
   const timeField = (
@@ -660,6 +727,53 @@ export const EventEdit = ({
           }}
         />
       </Field>
+      {/* `05/tour-name-d`, `05/tour-name-states`: right under Title, with the
+          unsaved dot once it differs from what is saved. */}
+      <div style={{ minWidth: 0 }}>
+        <label htmlFor="event-edit-tour-name" style={LABEL}>
+          {COPY.show.tourName}
+          {tourDirty && (
+            <span
+              aria-hidden
+              data-testid="event-edit-tour-name-dot"
+              style={{
+                display: 'inline-block',
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: 'var(--warning)',
+                marginLeft: 6,
+                verticalAlign: 'middle',
+              }}
+            />
+          )}
+        </label>
+        <input
+          id="event-edit-tour-name"
+          value={draft.tourName}
+          onChange={(evt) => setDraft({ ...draft, tourName: evt.target.value })}
+          placeholder={COPY.show.tourNameNone}
+          // The API's limit.
+          maxLength={200}
+          aria-describedby="event-edit-tour-name-hint"
+          style={{
+            ...inputStyle(false),
+            height: 40,
+            ...(phone && { fontSize: 16 }),
+          }}
+        />
+        <div
+          id="event-edit-tour-name-hint"
+          style={{
+            fontSize: 12,
+            lineHeight: 1.4,
+            color: 'var(--fg-subtle)',
+            marginTop: 6,
+          }}
+        >
+          {COPY.show.tourNameHint}
+        </div>
+      </div>
       <ReadOnlyField
         id="event-edit-venue"
         label={COPY.show.venue}
@@ -753,6 +867,22 @@ export const EventEdit = ({
         if (next === null || !snap.saving) setDialog(next);
       }}
     >
+      {marking && (
+        <SoldOutForm
+          value={draft.evidence}
+          onChange={(evidence: Evidence) => setDraft({ ...draft, evidence })}
+          watchingCount={detail.watchingCount}
+          phone={phone}
+        />
+      )}
+      {/* `06/sold-out-live-d`: only while Sold out is picked. Picking Tickets
+          available hides it; saving that clears it. */}
+      {!past &&
+        draft.sale === 'soldout' &&
+        detail.isSoldOut &&
+        detail.soldOutRecord !== null && (
+          <SoldOutRecordView record={detail.soldOutRecord} />
+        )}
       {passed && (
         // `36/postponed-passed-d`: highlighted until it is set; it saves with
         // the Save bar, and the date move tells the Watching.
@@ -862,11 +992,15 @@ export const EventEdit = ({
           saved={
             snap.failed.attempted.title !== snap.failed.saved.title
               ? COPY.saveFailed.saved(snap.failed.saved.title)
-              : snap.failed.attempted.sale !== snap.failed.saved.sale
-                ? COPY.statusSaved(ADMIN_COPY.eventsList.status[detail.status])
-                : COPY.saveFailed.savedWhen(
-                    fieldDate(snap.failed.saved.date, true),
-                  )
+              : tourChanged(snap.failed.attempted, snap.failed.saved)
+                ? COPY.saveFailed.savedTour(snap.failed.saved.tourName.trim())
+                : snap.failed.attempted.sale !== snap.failed.saved.sale
+                  ? COPY.statusSaved(
+                      ADMIN_COPY.eventsList.status[detail.status],
+                    )
+                  : COPY.saveFailed.savedWhen(
+                      fieldDate(snap.failed.saved.date, true),
+                    )
           }
           onRetry={() => void snap.retry()}
           retrying={snap.saving}
@@ -882,7 +1016,24 @@ export const EventEdit = ({
           phone={phone}
           inline={past}
           onDiscard={() => setDraft(snap.value)}
-          onSave={() => void snap.save({ ...draft, title: draft.title.trim() })}
+          onSave={() => {
+            if (marking) setConfirmingSoldOut(true);
+            else void saveDraft();
+          }}
+        />
+      )}
+      {confirmingSoldOut && (
+        <SoldOutConfirm
+          artist={detail.artist}
+          watchingCount={detail.watchingCount}
+          evidence={draft.evidence}
+          onCancel={() => setConfirmingSoldOut(false)}
+          // A failed save closes it and shows the page's Couldn't change,
+          // with Try again, as every Save bar save does.
+          onConfirm={async () => {
+            await saveDraft();
+            setConfirmingSoldOut(false);
+          }}
         />
       )}
       {merging && (

@@ -89,6 +89,8 @@ const DETAIL: EventDetail = {
   lastSeenAt: null,
   delistedAt: null,
   venueUrl: null,
+  tourName: null,
+  soldOutRecord: null,
 };
 
 beforeEach(() => {

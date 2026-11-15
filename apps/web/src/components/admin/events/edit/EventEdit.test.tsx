@@ -72,6 +72,8 @@ const DETAIL: EventDetail = {
   lastSeenAt: '2026-11-10T18:00:00.000Z',
   delistedAt: null,
   venueUrl: 'https://larimer.example/shows/1',
+  tourName: null,
+  soldOutRecord: null,
 };
 
 // `useIsPhone` reads matchMedia, which jsdom does not ship.
@@ -94,6 +96,15 @@ afterEach(cleanup);
 
 const titleInput = () =>
   screen.getByLabelText(COPY.show.titleField) as HTMLInputElement;
+
+const SOLD = COPY.soldOut;
+
+/** With Sold out picked: pick how, Save, and press the confirm's Mark sold out. */
+const markSoldOut = () => {
+  fireEvent.click(screen.getByLabelText(SOLD.methods.venue_site));
+  fireEvent.click(screen.getByTestId('event-edit-save'));
+  fireEvent.click(screen.getByRole('button', { name: SOLD.confirm }));
+};
 
 describe('EventEdit', () => {
   it('draws the header, the Show card and From the crawl', () => {
@@ -230,12 +241,12 @@ describe('EventEdit Status card', () => {
     fireEvent.click(pill('soldout'));
     expect(pill('soldout')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('event-edit-save'));
+    markSoldOut();
     await waitFor(() =>
       expect(post).toHaveBeenCalledWith(
         '/v1/admin/events/evt-1/sold-out',
         'token',
-        {},
+        { evidenceMethod: 'venue_site' },
       ),
     );
     expect(patch).not.toHaveBeenCalled();
@@ -274,12 +285,12 @@ describe('EventEdit Status card', () => {
       />,
     );
     fireEvent.click(pill('soldout'));
-    fireEvent.click(screen.getByTestId('event-edit-save'));
+    markSoldOut();
     await waitFor(() =>
       expect(post).toHaveBeenCalledWith(
         '/v1/admin/events/evt-1/sold-out',
         'token',
-        {},
+        { evidenceMethod: 'venue_site' },
       ),
     );
     expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
@@ -327,7 +338,7 @@ describe('EventEdit Status card', () => {
       />,
     );
     fireEvent.click(pill('soldout'));
-    fireEvent.click(screen.getByTestId('event-edit-save'));
+    markSoldOut();
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(await screen.findByText(/The status is still/)).toBeInTheDocument();
   });
@@ -680,7 +691,7 @@ describe('EventEdit past show (B+ addendum 6 item 36)', () => {
     fireEvent.click(screen.getByLabelText(COPY.passed.newDate));
     fireEvent.click(screen.getByRole('button', { name: 'Fri, Nov 27, 2026' }));
     fireEvent.click(screen.getByTestId('status-pill-soldout'));
-    fireEvent.click(screen.getByTestId('event-edit-save'));
+    markSoldOut();
     await waitFor(() =>
       expect(patch).toHaveBeenCalledWith(
         '/v1/admin/events/evt-1',
@@ -695,7 +706,7 @@ describe('EventEdit past show (B+ addendum 6 item 36)', () => {
       expect(post).toHaveBeenCalledWith(
         '/v1/admin/events/evt-1/sold-out',
         'token',
-        {},
+        { evidenceMethod: 'venue_site' },
       ),
     );
     const patchOrder = patch.mock.invocationCallOrder[0] ?? Infinity;
@@ -755,5 +766,278 @@ describe('EventEdit past show (B+ addendum 6 item 36)', () => {
         date: '2026-11-27',
       }),
     );
+  });
+});
+
+// B+ addendum 7 §5: `05/tour-name-d`, `05/tour-name-m`, `05/tour-name-states`.
+describe('EventEdit Tour name', () => {
+  const tourInput = () =>
+    screen.getByLabelText(COPY.show.tourName) as HTMLInputElement;
+
+  it('is empty with the None placeholder and the hint, and no dot', () => {
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    expect(tourInput()).toHaveValue('');
+    expect(tourInput()).toHaveAttribute('placeholder', COPY.show.tourNameNone);
+    expect(tourInput()).toHaveAccessibleDescription(COPY.show.tourNameHint);
+    expect(screen.queryByTestId('event-edit-tour-name-dot')).toBeNull();
+    expect(screen.getByTestId('event-edit-save')).toBeDisabled();
+  });
+
+  it('is filled from what is saved, and the phone header shows it above the title', () => {
+    setPhone(true);
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, tourName: 'Jubilee Tour' }}
+        today="2026-11-13"
+      />,
+    );
+    expect(tourInput()).toHaveValue('Jubilee Tour');
+    expect(screen.queryByTestId('event-edit-tour-name-dot')).toBeNull();
+    expect(screen.getByTestId('event-edit-tour-kicker')).toHaveTextContent(
+      'Jubilee Tour',
+    );
+  });
+
+  it('draws no kicker on desktop or with no tour name', () => {
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, tourName: 'Jubilee Tour' }}
+        today="2026-11-13"
+      />,
+    );
+    expect(screen.queryByTestId('event-edit-tour-kicker')).toBeNull();
+    cleanup();
+    setPhone(true);
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    expect(screen.queryByTestId('event-edit-tour-kicker')).toBeNull();
+  });
+
+  it('marks a change with the dot, counts it once, and saves it trimmed', async () => {
+    patch.mockResolvedValue({});
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.change(tourInput(), { target: { value: '  Jubilee Tour ' } });
+    expect(screen.getByTestId('event-edit-tour-name-dot')).toBeInTheDocument();
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        tourName: 'Jubilee Tour',
+      }),
+    );
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('counts clearing it as a change and saves null, never an empty string', async () => {
+    patch.mockResolvedValue({});
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, tourName: 'Jubilee Tour' }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.change(tourInput(), { target: { value: '   ' } });
+    expect(screen.getByTestId('event-edit-tour-name-dot')).toBeInTheDocument();
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        tourName: null,
+      }),
+    );
+  });
+
+  it('discards a change back to what is saved', () => {
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, tourName: 'Jubilee Tour' }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.change(tourInput(), { target: { value: 'Other Tour' } });
+    fireEvent.click(screen.getByRole('button', { name: COPY.saveBar.discard }));
+    expect(tourInput()).toHaveValue('Jubilee Tour');
+    expect(screen.queryByTestId('event-edit-tour-name-dot')).toBeNull();
+  });
+
+  it('says the tour name is unchanged when its save fails', async () => {
+    patch.mockRejectedValue(new Error('500'));
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.change(tourInput(), { target: { value: 'Jubilee Tour' } });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    expect(
+      await screen.findByText(new RegExp(COPY.saveFailed.savedTour(''))),
+    ).toBeInTheDocument();
+    expect(tourInput()).toHaveValue('');
+  });
+});
+
+// B+ addendum 7 §6: `06/sold-out-mark-d`, `-confirm-d`/`-m`, `-live-d`.
+describe('EventEdit sold-out evidence', () => {
+  const pill = (key: string) => screen.getByTestId(`status-pill-${key}`);
+
+  const RECORD = {
+    reporter: {
+      handle: 'mira.k',
+      avatarColor: 'signal',
+      avatarSecondColor: 'accent',
+      kind: 'fan',
+    },
+    evidenceMethod: 'bought_myself',
+    evidenceUrl: 'https://axs.com/events/52114',
+    note: 'Friday GA gone; pit waitlist still open.',
+    reportedAt: '2026-11-10T02:15:00.000Z',
+    madeLiveAt: '2026-11-10T04:02:00.000Z',
+    confirmsCount: 2,
+  } as const;
+
+  it('opens the form only while Sold out is picked, with nothing picked and the Watching line', () => {
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    expect(screen.queryByTestId('sold-out-form')).toBeNull();
+    fireEvent.click(pill('soldout'));
+    const form = screen.getByTestId('sold-out-form');
+    expect(form).toHaveTextContent(SOLD.question);
+    // Two columns of methods on desktop (`06/sold-out-mark-d`).
+    expect(
+      screen.getByRole('radiogroup', { name: SOLD.question }).style
+        .gridTemplateColumns,
+    ).toBe('1fr 1fr');
+    for (const method of [
+      'saw_listing',
+      'venue_site',
+      'bought_myself',
+      'other',
+    ] as const) {
+      expect(screen.getByLabelText(SOLD.methods[method])).not.toBeChecked();
+    }
+    expect(form).toHaveTextContent(SOLD.notice(4));
+    expect(screen.getByTestId('sold-out-note-count')).toHaveTextContent(
+      SOLD.noteCount(0, 280),
+    );
+    fireEvent.click(pill('available'));
+    expect(screen.queryByTestId('sold-out-form')).toBeNull();
+  });
+
+  it('holds Save until a method is picked, and for a link that is not http(s)', () => {
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(pill('soldout'));
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    expect(screen.getByTestId('event-edit-save')).toBeDisabled();
+    fireEvent.click(screen.getByLabelText(SOLD.methods.other));
+    expect(screen.getByLabelText(SOLD.methods.other)).toBeChecked();
+    // The method rides with the pill: still one change.
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    expect(screen.getByTestId('event-edit-save')).toBeEnabled();
+    fireEvent.change(screen.getByLabelText(SOLD.sourceLabel), {
+      target: { value: 'axs.com/events' },
+    });
+    expect(screen.getByTestId('event-edit-save')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(SOLD.sourceLabel), {
+      target: { value: 'https://axs.com/events/52114' },
+    });
+    expect(screen.getByTestId('event-edit-save')).toBeEnabled();
+  });
+
+  it('asks first, repeating what it records, and sends nothing on Cancel', () => {
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(pill('soldout'));
+    fireEvent.click(screen.getByLabelText(SOLD.methods.venue_site));
+    fireEvent.change(screen.getByLabelText(SOLD.sourceLabel), {
+      target: { value: 'https://www.missionballroom.com/events/jbrekkie' },
+    });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent(SOLD.confirmTitle(DETAIL.artist));
+    expect(dialog).toHaveTextContent(SOLD.confirmBody(4));
+    const rows = screen.getByTestId('sold-out-confirm-rows');
+    expect(rows).toHaveTextContent(
+      `${SOLD.howYouKnew}${SOLD.methods.venue_site}`,
+    );
+    expect(rows).toHaveTextContent(
+      `${SOLD.source}missionballroom.com/events/jbrekkie`,
+    );
+    expect(rows).toHaveTextContent(`${SOLD.note}${SOLD.noneValue}`);
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.confirm.cancel }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(post).not.toHaveBeenCalled();
+    expect(patch).not.toHaveBeenCalled();
+  });
+
+  it('marks it with the method, link and trimmed note on Mark sold out', async () => {
+    post.mockResolvedValue({});
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(pill('soldout'));
+    fireEvent.click(screen.getByLabelText(SOLD.methods.bought_myself));
+    fireEvent.change(screen.getByLabelText(SOLD.sourceLabel), {
+      target: { value: ' https://axs.com/events/52114 ' },
+    });
+    fireEvent.change(screen.getByLabelText(SOLD.noteLabel), {
+      target: { value: ' Friday GA gone. ' },
+    });
+    expect(screen.getByTestId('sold-out-note-count')).toHaveTextContent(
+      SOLD.noteCount(' Friday GA gone. '.length, 280),
+    );
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    fireEvent.click(screen.getByRole('button', { name: SOLD.confirm }));
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        '/v1/admin/events/evt-1/sold-out',
+        'token',
+        {
+          evidenceMethod: 'bought_myself',
+          evidenceUrl: 'https://axs.com/events/52114',
+          note: 'Friday GA gone.',
+        },
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('confirms on the phone in a sheet, Mark sold out drawn above Cancel', () => {
+    setPhone(true);
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(pill('soldout'));
+    // One column of methods on the phone (`06/sold-out-mark-m`).
+    expect(
+      screen.getByRole('radiogroup', { name: SOLD.question }).style
+        .gridTemplateColumns,
+    ).toBe('1fr');
+    fireEvent.click(screen.getByLabelText(SOLD.methods.saw_listing));
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      SOLD.confirmTitle(DETAIL.artist),
+    );
+    const confirm = screen.getByRole('button', { name: SOLD.confirm });
+    // The sheet paints its footer bottom-up: Cancel is first in the DOM and
+    // drawn last (`06/sold-out-confirm-m`).
+    expect(confirm.parentElement).toHaveStyle({
+      flexDirection: 'column-reverse',
+    });
+  });
+
+  it('shows the live record under the pills on a sold-out show, and hides it when Tickets available is picked', () => {
+    render(
+      <EventEdit
+        detail={{
+          ...DETAIL,
+          status: 'soldout',
+          isSoldOut: true,
+          soldOutRecord: RECORD,
+        }}
+        today="2026-11-13"
+      />,
+    );
+    expect(screen.getByTestId('sold-out-record')).toHaveAttribute(
+      'data-reporter',
+      'fan',
+    );
+    expect(screen.queryByTestId('sold-out-form')).toBeNull();
+    fireEvent.click(pill('available'));
+    expect(screen.queryByTestId('sold-out-record')).toBeNull();
+    expect(screen.queryByTestId('sold-out-form')).toBeNull();
+    // Clearing it needs no evidence and asks nothing here.
+    expect(screen.getByTestId('event-edit-save')).toBeEnabled();
   });
 });

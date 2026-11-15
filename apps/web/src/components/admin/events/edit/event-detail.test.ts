@@ -39,6 +39,23 @@ const PAYLOAD = {
   lastSeenAt: '2026-11-10T09:00:00.000Z',
   eventUrl: 'https://larimer.example/shows/six-foot-blonde',
   sourceUrl: 'https://larimer.example/calendar',
+  tourName: null,
+  soldOutRecord: null,
+};
+
+const RECORD = {
+  reporter: {
+    handle: 'mira.k',
+    avatarColor: 'signal',
+    avatarSecondColor: 'accent',
+    kind: 'fan',
+  },
+  evidenceMethod: 'bought_myself',
+  evidenceUrl: 'https://axs.com/events/52114',
+  note: 'Friday GA gone; pit waitlist still open.',
+  reportedAt: '2026-11-10T02:15:00.000Z',
+  madeLiveAt: '2026-11-10T04:02:00.000Z',
+  confirmsCount: 2,
 };
 
 describe('eventDetailFrom', () => {
@@ -74,7 +91,42 @@ describe('eventDetailFrom', () => {
       lastSeenAt: '2026-11-10T09:00:00.000Z',
       delistedAt: null,
       venueUrl: 'https://larimer.example/shows/six-foot-blonde',
+      tourName: null,
+      soldOutRecord: null,
     });
+  });
+
+  it('reads the tour name, and refuses one that drifted (a save would clear it)', () => {
+    expect(
+      eventDetailFrom({ ...PAYLOAD, tourName: 'Jubilee Tour' })?.tourName,
+    ).toBe('Jubilee Tour');
+    expect(eventDetailFrom({ ...PAYLOAD, tourName: 7 })).toBeNull();
+  });
+
+  it('reads the sold-out record, and none for one that drifted', () => {
+    expect(
+      eventDetailFrom({ ...PAYLOAD, isSoldOut: true, soldOutRecord: RECORD })
+        ?.soldOutRecord,
+    ).toEqual(RECORD);
+    expect(
+      eventDetailFrom({
+        ...PAYLOAD,
+        isSoldOut: true,
+        soldOutRecord: { ...RECORD, evidenceMethod: 'guessed' },
+      })?.soldOutRecord,
+    ).toBeNull();
+    expect(
+      eventDetailFrom({
+        ...PAYLOAD,
+        soldOutRecord: {
+          ...RECORD,
+          reporter: { ...RECORD.reporter, kind: 'beta' },
+        },
+      })?.soldOutRecord,
+    ).toBeNull();
+    const older: Record<string, unknown> = { ...PAYLOAD };
+    delete older['soldOutRecord'];
+    expect(eventDetailFrom(older)?.soldOutRecord).toBeNull();
   });
 
   it('falls back to the calendar, and to no link when neither URL is safe', () => {
