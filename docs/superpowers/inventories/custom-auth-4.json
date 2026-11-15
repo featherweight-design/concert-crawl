@@ -1,0 +1,56 @@
+{
+  "feature": "Custom sign-in PR 4 · forgot password (/sign-in/forgot)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/02-forgot-password (forgot-email-m, forgot-code-m, forgot-code-d, forgot-too-short-m, forgot-weak-m, forgot-breached-m, forgot-busy-m, forgot-done-m). Signed out. Photographed: the email screen, the code and new-password screen (the send answer is swallowed, so it draws the same for any address; a +clerk_test address is used so no real email is sent), and the client-side too-short error. Walked by hand on staging: a wrong and an expired code, a too-easy and a breached password (Clerk's answer), the saving state, the changed screen and its return, and a real reset email.",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "forgot-email",
+      "label": "/sign-in/forgot: the email screen",
+      "steps": [
+        {
+          "goto": "/sign-in/forgot",
+          "wait": "h1:has-text('Reset your password')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "forgot-code",
+      "label": "/sign-in/forgot: the code and new password screen",
+      "steps": [
+        {
+          "goto": "/sign-in/forgot",
+          "wait": "h1:has-text('Reset your password')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        { "clickRole": "button", "name": "^Send code$" },
+        { "wait": "h1:has-text('Choose a new password')", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "forgot-too-short",
+      "label": "/sign-in/forgot: a password under 8 characters",
+      "widths": ["phone-320", "phone"],
+      "steps": [
+        {
+          "goto": "/sign-in/forgot",
+          "wait": "h1:has-text('Reset your password')",
+          "settle": 1000
+        },
+        { "fill": "input[type='email']", "text": "fan+clerk_test@example.com" },
+        { "clickRole": "button", "name": "^Send code$" },
+        { "wait": "h1:has-text('Choose a new password')", "settle": 1000 },
+        { "fill": "input[autocomplete='one-time-code']", "text": "123456" },
+        { "fill": "input[autocomplete='new-password']", "text": "short" },
+        { "clickRole": "button", "name": "^Save and sign in$" },
+        { "wait": "[aria-invalid='true']", "settle": 600 }
+      ]
+    }
+  ]
+}
