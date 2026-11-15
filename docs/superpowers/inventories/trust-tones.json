@@ -1,0 +1,46 @@
+{
+  "feature": "Addendum 6 item 38 · Trust tones in every theme (board 38/trust-tones)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/boards/38-trust-tones/trust-tones.html. The three trust tokens (--trust-community, --trust-boxoffice, --trust-resale) changed in Forge, Cedar, Gloss (Community) and Light (all three); the other five themes keep --signal, --warning and --danger, so they are not shot. Needs CC_EVENT_ID: an upcoming event whose sellers are box office (two tiers), Ticketmaster (community) and StubHub (resale), so the price card and Where it's sold show all three trust kinds. The unit test asserts every theme's ratio against the board's printed numbers (all nine themes, AA on the pill's own 8% tint over --surface-1). Signed in as the audit user.",
+  "themes": [
+    {
+      "label": "forge",
+      "dataTheme": "forge",
+      "storage": { "cc-theme": "forge" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "cedar",
+      "dataTheme": "cedar",
+      "storage": { "cc-theme": "cedar" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "gloss",
+      "dataTheme": "gloss",
+      "storage": { "cc-theme": "gloss" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": { "cc-theme": "light" },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    { "label": "short", "width": 320, "height": 568, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "trust-pills",
+      "label": "Event page: the price card and Where it's sold with every trust kind",
+      "fullPage": true,
+      "steps": [
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 3000 },
+        { "wait": "[data-testid=\"where-its-sold\"]", "settle": 1500 }
+      ]
+    }
+  ]
+}
