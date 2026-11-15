@@ -38,7 +38,11 @@ export function CodeBoxes({
       // Only if focus is still nowhere: a visitor who moved on while it was
       // locked keeps the control they went to.
       const active = document.activeElement;
-      if (!active || active === document.body) input.current?.focus();
+      // Chrome leaves a disabled input as the active element; others drop to
+      // the page. Either way the visitor is nowhere else.
+      if (!active || active === document.body || active === input.current) {
+        input.current?.focus();
+      }
     }
     wasDisabled.current = disabled;
   }, [disabled, value]);
