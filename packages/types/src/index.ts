@@ -773,6 +773,14 @@ export interface CrawlTrigger {
   status: CrawlTriggerStatus;
   crawlRunId: string | null;
   triggeredBy: string | null;
+  /**
+   * Page progress while the crawler runs it (migration 0120); null before the
+   * first page and on rows that predate it. Only meaningful while `status` is
+   * 'processing'.
+   */
+  pagesDone?: number | null;
+  pagesTotal?: number | null;
+  progressAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
