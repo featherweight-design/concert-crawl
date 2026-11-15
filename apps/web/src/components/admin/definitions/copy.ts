@@ -4414,6 +4414,11 @@ export const ADMIN_COPY = {
     show: {
       title: 'Show',
       titleField: 'Title',
+      // B+ addendum 7 `05/tour-name-d`, `05/tour-name-states`.
+      tourName: 'Tour name',
+      tourNameNone: 'None',
+      tourNameHint:
+        'Optional. Fans see it above the title. If the venue’s listing names a tour, the crawl’s name replaces this one.',
       venue: 'Venue',
       date: 'Date',
       doors: 'Doors',
@@ -4476,6 +4481,57 @@ export const ADMIN_COPY = {
       newDate: 'New date',
       confirm: 'Mark postponed',
       failed: 'mark it postponed',
+    },
+    // B+ addendum 7 §6: `06/sold-out-mark-d`, `-confirm-d`, `-live-d`,
+    // `06/sold-out-states`.
+    soldOut: {
+      question: 'How do you know it’s sold out?',
+      methods: {
+        saw_listing: 'Saw it listed',
+        venue_site: 'Venue website',
+        bought_myself: 'Tried to buy it',
+        other: 'Other',
+      },
+      sourceLabel: 'Source link (optional)',
+      sourcePlaceholder: 'https://…',
+      noteLabel: 'Note (optional)',
+      notePlaceholder: 'For example: Friday GA gone; pit waitlist still open.',
+      noteCount: (length: number, max: number) => `${length} / ${max}`,
+      // Undrawn with nobody Watching: the postponed notice's zero line.
+      notice: (watching: number) =>
+        watching === 0
+          ? 'Nobody is Watching it yet. Fans see it as Confirmed by Concert Crawl.'
+          : `Saving tells the ${watching.toLocaleString('en-US')} Watching. Fans see it as Confirmed by Concert Crawl.`,
+      confirmTitle: (show: string) => `Mark ${show} sold out?`,
+      confirmBody: (watching: number) =>
+        watching === 0
+          ? 'Nobody is Watching it yet. Fans see Sold out, marked Confirmed by Concert Crawl.'
+          : `The ${watching.toLocaleString('en-US')} Watching are told it’s sold out. Fans see Sold out, marked Confirmed by Concert Crawl.`,
+      confirm: 'Mark sold out',
+      howYouKnew: 'How you knew',
+      howTheyKnew: 'How they knew',
+      source: 'Source',
+      note: 'Note',
+      noneValue: 'None',
+      recordTitle: 'Why it’s sold out',
+      fan: 'Fan',
+      admin: 'Admin',
+      handle: (handle: string) => `@${handle}`,
+      // Undrawn: a reporter with no handle, as People's panel says it.
+      noHandle: 'No handle yet',
+      quote: (note: string) => `“${note}”`,
+      noNote: 'No note recorded.',
+      noneRecorded: 'None recorded',
+      reported: 'Reported',
+      madeLive: 'Made live',
+      marked: 'Marked',
+      madeLiveValue: (when: string, confirms: number) =>
+        confirms === 0
+          ? when
+          : `${when} · ${confirms.toLocaleString('en-US')} ${confirms === 1 ? 'fan' : 'fans'} confirmed`,
+      when: (date: string, time: string) => `${date}, ${time}`,
+      recordFoot:
+        'A record: it can’t be edited. Picking Tickets available clears it and tells the Watching.',
     },
     // `04/hide-from-site`, without the Why row: no column holds a reason yet.
     hide: {
@@ -4568,6 +4624,11 @@ export const ADMIN_COPY = {
     saveFailed: {
       what: 'the show',
       saved: (title: string) => `The title is still “${title}”.`,
+      // Undrawn: a tour name that didn't save, as the title's line.
+      savedTour: (tour: string) =>
+        tour === ''
+          ? 'It still has no tour name.'
+          : `The tour name is still “${tour}”.`,
       savedWhen: (date: string) =>
         `It’s still on ${date}, at the times it had.`,
     },

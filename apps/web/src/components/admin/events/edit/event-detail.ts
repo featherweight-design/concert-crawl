@@ -54,7 +54,94 @@ export interface EventDetail {
   delistedAt: string | null;
   /** The show's own page, else its calendar; `null` when neither is safe. */
   venueUrl: string | null;
+  /** The kicker fans see above the title; `null` for none. */
+  tourName: string | null;
+  /** WHY IT'S SOLD OUT (B+ addendum 7 §6); `null` unless it is sold out. */
+  soldOutRecord: SoldOutRecord | null;
 }
+
+export type EvidenceMethod =
+  'saw_listing' | 'venue_site' | 'bought_myself' | 'other';
+
+/** The order the form lists them in (`06/sold-out-mark-d`). */
+export const EVIDENCE_METHODS: readonly EvidenceMethod[] = [
+  'saw_listing',
+  'venue_site',
+  'bought_myself',
+  'other',
+];
+
+export const isEvidenceMethod = (value: unknown): value is EvidenceMethod =>
+  EVIDENCE_METHODS.some((method) => method === value);
+
+type AvatarColor = 'signal' | 'accent' | 'success' | 'warning';
+
+const isAvatarColorOrNull = (value: unknown): value is AvatarColor | null =>
+  value === null ||
+  value === 'signal' ||
+  value === 'accent' ||
+  value === 'success' ||
+  value === 'warning';
+
+/** The active promoted sold-out report, as the admin event GET sends it. */
+export interface SoldOutRecord {
+  reporter: {
+    handle: string | null;
+    avatarColor: AvatarColor | null;
+    avatarSecondColor: AvatarColor | null;
+    kind: 'fan' | 'admin';
+  };
+  evidenceMethod: EvidenceMethod;
+  evidenceUrl: string | null;
+  note: string | null;
+  /** ISO timestamps. */
+  reportedAt: string;
+  madeLiveAt: string;
+  confirmsCount: number;
+}
+
+/**
+ * An edit-only extra, like `mySubmission`: anything but a well-formed record
+ * reads as none, so a drift costs the Status card its record, never the page.
+ */
+export const soldOutRecordOf = (value: unknown): SoldOutRecord | null => {
+  if (!isRecord(value)) return null;
+  const reporter = value['reporter'];
+  if (
+    !isRecord(reporter) ||
+    !isTextOrNull(reporter['handle']) ||
+    !isAvatarColorOrNull(reporter['avatarColor']) ||
+    !isAvatarColorOrNull(reporter['avatarSecondColor'])
+  ) {
+    return null;
+  }
+  const kind = reporter['kind'];
+  if (kind !== 'fan' && kind !== 'admin') return null;
+  if (
+    !isEvidenceMethod(value['evidenceMethod']) ||
+    !isTextOrNull(value['evidenceUrl']) ||
+    !isTextOrNull(value['note']) ||
+    !isText(value['reportedAt']) ||
+    !isText(value['madeLiveAt']) ||
+    !isCount(value['confirmsCount'])
+  ) {
+    return null;
+  }
+  return {
+    reporter: {
+      handle: reporter['handle'],
+      avatarColor: reporter['avatarColor'],
+      avatarSecondColor: reporter['avatarSecondColor'],
+      kind,
+    },
+    evidenceMethod: value['evidenceMethod'],
+    evidenceUrl: value['evidenceUrl'],
+    note: value['note'],
+    reportedAt: value['reportedAt'],
+    madeLiveAt: value['madeLiveAt'],
+    confirmsCount: value['confirmsCount'],
+  };
+};
 
 export interface MySubmission {
   id: string;
@@ -122,6 +209,10 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
   const eventUrl = value['eventUrl'] ?? null;
   const sourceUrl = value['sourceUrl'];
   if (!isTextOrNull(eventUrl) || !isTextOrNull(sourceUrl)) return null;
+  // Saved through the Show card, so a drift fails rather than reading as none
+  // (a save would then clear it).
+  const tourName = value['tourName'];
+  if (!isTextOrNull(tourName)) return null;
   const priceMin = priceText(value['ticketPriceMin']);
   const priceMax = priceText(value['ticketPriceMax']);
   if (priceMin === undefined || priceMax === undefined) return null;
@@ -156,6 +247,8 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     lastSeenAt: value['lastSeenAt'],
     delistedAt: isText(value['delistedAt']) ? value['delistedAt'] : null,
     venueUrl: resolveVenueCheckUrl(eventUrl, sourceUrl),
+    tourName,
+    soldOutRecord: soldOutRecordOf(value['soldOutRecord']),
   };
 };
 
