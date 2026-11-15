@@ -14,18 +14,10 @@ import {
   useDialogKeyboard,
 } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { FlagDrawer } from './FlagDrawer';
+import { StageLadder, stageOf, type Stage } from './StageLadder';
 
 const COPY = ADMIN_COPY.featureFlags;
-
-type Stage = 'off' | 'me' | 'beta' | 'everyone';
-
-// The ladder, lowest rung first (`07-people-flags-operations/*-admin-feature-flags`).
-const STAGES: readonly Stage[] = ['off', 'me', 'beta', 'everyone'];
-
-const stageOf = (flag: AdminFeatureFlag): Stage =>
-  flag.stage ?? (flag.enabled ? 'everyone' : 'off');
-
-const rankOf = (stage: Stage): number => STAGES.indexOf(stage);
 
 interface FeatureFlagControlProps {
   initial: AdminFeatureFlag[];
@@ -45,6 +37,8 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
   // The flag whose Mark verified ask is open, by key: the ask reads the live
   // row, not a copy taken when it opened.
   const [verifyingKey, setVerifyingKey] = useState<FeatureFlagKey | null>(null);
+  // The flag whose drawer (people, verified line, History) is open, by key.
+  const [openKey, setOpenKey] = useState<FeatureFlagKey | null>(null);
   const [error, setError] = useState<{
     key: FeatureFlagKey;
     message: string;
@@ -131,6 +125,7 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
   };
 
   const verifying = flags.find((row) => row.key === verifyingKey) ?? null;
+  const open = flags.find((row) => row.key === openKey) ?? null;
 
   return (
     <Panel padding={0}>
@@ -165,6 +160,7 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
             flag={flag}
             error={error?.key === flag.key ? error.message : null}
             onPick={(stage) => pick(flag, stage)}
+            onOpen={() => setOpenKey(flag.key)}
             onMarkVerified={() => {
               if (pending === null) setVerifyingKey(flag.key);
             }}
@@ -173,6 +169,24 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
           />
         ))}
       </ul>
+
+      {open && (
+        <FlagDrawer
+          flag={open}
+          saving={pending === open.key}
+          onClose={() => setOpenKey(null)}
+          onPick={(stage) => pick(open, stage)}
+          onFlag={(updated) =>
+            setFlags((prev) =>
+              prev.map((row) => (row.key === updated.key ? updated : row)),
+            )
+          }
+          onMarkVerified={() => {
+            if (pending === null) setVerifyingKey(open.key);
+          }}
+          onUndoVerified={() => void undoVerified(open)}
+        />
+      )}
 
       {verifying && (
         <MarkVerifiedAsk
@@ -229,6 +243,7 @@ interface FlagRowProps {
   flag: AdminFeatureFlag;
   error: string | null;
   onPick: (stage: Stage) => void;
+  onOpen: () => void;
   onMarkVerified: () => void;
   onUndoVerified: () => void;
   saving: boolean;
@@ -238,6 +253,7 @@ const FlagRow = ({
   flag,
   error,
   onPick,
+  onOpen,
   onMarkVerified,
   onUndoVerified,
   saving,
@@ -246,8 +262,6 @@ const FlagRow = ({
   // The verified mark is set on staging; the production control is not drawn.
   const onStaging = flag.environment !== 'production';
   const people = flag.people?.length ?? 0;
-  // Production keeps a flag locked until it is verified there: a step UP is
-  // closed, stepping down never is.
   const locked = flag.locked === true;
 
   return (
@@ -264,9 +278,25 @@ const FlagRow = ({
     >
       <div style={{ flex: '1 1 240px', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)' }}>
+          {/* The boards do not draw what opens the drawer; the name does. */}
+          <button
+            type="button"
+            onClick={onOpen}
+            aria-label={COPY.drawer.openAriaLabel(flag.label)}
+            data-testid={`flag-open-${flag.key}`}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontSize: 15,
+              fontWeight: 700,
+              color: 'var(--fg)',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
             {flag.label}
-          </span>
+          </button>
           {people > 0 && (
             <span
               data-testid={`flag-people-${flag.key}`}
@@ -309,56 +339,7 @@ const FlagRow = ({
       </div>
 
       <div style={{ flex: '1 1 320px', maxWidth: 360 }}>
-        <div
-          role="group"
-          aria-label={COPY.ladderAriaLabel(flag.label)}
-          style={{
-            display: 'flex',
-            padding: 3,
-            borderRadius: 10,
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          {STAGES.map((step) => {
-            const selected = step === stage;
-            const closed = locked && rankOf(step) > rankOf(stage);
-            return (
-              <button
-                key={step}
-                type="button"
-                aria-pressed={selected}
-                aria-describedby={
-                  closed ? `flag-locked-${flag.key}` : undefined
-                }
-                disabled={closed}
-                data-testid={`flag-step-${flag.key}-${step}`}
-                onClick={() => onPick(step)}
-                style={{
-                  flex: 1,
-                  height: 30,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 10px',
-                  borderRadius: 7,
-                  border: 'none',
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  cursor: closed || selected ? 'default' : 'pointer',
-                  background: selected ? 'var(--bg-elevated)' : 'transparent',
-                  color: selected ? 'var(--fg)' : 'var(--fg-muted)',
-                  boxShadow: selected
-                    ? '0 0 0 1px var(--border-strong)'
-                    : 'none',
-                  opacity: closed ? 0.45 : 1,
-                }}
-              >
-                {COPY.stage[step]}
-              </button>
-            );
-          })}
-        </div>
+        <StageLadder flag={flag} onPick={onPick} />
       </div>
 
       <div
