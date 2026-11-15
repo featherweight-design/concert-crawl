@@ -1,3 +1,23 @@
+# [1.485.0](https://github.com/featherweight-design/concert-crawl/compare/v1.484.1...v1.485.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** no sold out on a cancelled or postponed show ([f143356](https://github.com/featherweight-design/concert-crawl/commit/f143356e902772e514de89ec31e51007576a8991))
+* **api:** one not-on-sale list; fans skip a delisted show's sold-out too ([29d9c73](https://github.com/featherweight-design/concert-crawl/commit/29d9c73e96ba75902c448c0418a5ba451d287e56))
+* **api:** search metadata values only, and pin the sentence table to the key list ([28b263a](https://github.com/featherweight-design/concert-crawl/commit/28b263ad84d0b44c4d1bce5ca147cff798b8d406))
+* **api:** search what the log shows: matched sentence keys, handles, labels and kept names ([4d0d2b5](https://github.com/featherweight-design/concert-crawl/commit/4d0d2b5109b19957266f71479e61151b5e61f11b))
+* **ci:** pass SENTRY_AUTH_TOKEN through turbo's strict env to the web build ([52c80a2](https://github.com/featherweight-design/concert-crawl/commit/52c80a29563ace1c8b2e9282a95c3f02e1cbe9a4))
+* **web:** clear stale counts and dots on a new filter, and describe each person ([bd3cc00](https://github.com/featherweight-design/concert-crawl/commit/bd3cc00ee95797915c5e4b9d3c68ac60f9f73bca))
+
+
+### Features
+
+* **api:** search the activity log, and name each admin's role ([eee3d9f](https://github.com/featherweight-design/concert-crawl/commit/eee3d9f0c82b6fc29a20cef5480a7949d2673fba)), closes [#37](https://github.com/featherweight-design/concert-crawl/issues/37)
+* **web:** filter the activity log by who and by page ([7a49120](https://github.com/featherweight-design/concert-crawl/commit/7a49120e811ba469764d23318e243f494b448e16)), closes [#37](https://github.com/featherweight-design/concert-crawl/issues/37)
+* **web:** name why a show can't be marked sold out ([7e931a0](https://github.com/featherweight-design/concert-crawl/commit/7e931a05885b45e1cbab005336f5d424fc766294))
+* **web:** the filter sheets follow the short-phone sheet rule ([e0fa942](https://github.com/featherweight-design/concert-crawl/commit/e0fa9426782cea5988792f3ceff5880e8b8069ed))
+
 ## [1.484.1](https://github.com/featherweight-design/concert-crawl/compare/v1.484.0...v1.484.1) (2026-11-15)
 
 
