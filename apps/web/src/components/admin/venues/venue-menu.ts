@@ -16,6 +16,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { isAutoPause } from '@/lib/admin/venue-status';
 import { pausedStateLine, reasonText, shortDate } from './pause-rules';
 import { deleteRefused } from './delete-rules';
+import { canTryRecrawl } from './trial-rules';
 
 const COPY = ADMIN_COPY.venueHeader;
 
@@ -123,7 +124,7 @@ const itemsFor = (
           key: 'resume',
           icon: RefreshCw,
           label: COPY.menu.resume,
-          hint: pausedStateLine(venue) ?? '',
+          hint: pausedStateLine(venue, canTryRecrawl(venue)) ?? '',
           onSelect: act.resume,
         };
 
@@ -184,20 +185,20 @@ const itemsFor = (
   }
 
   // Undrawn: the board's auto-paused hint says "Try a re-crawl first." and
-  // nothing offers one, so it follows Resume as a row of its own. Paused or
-  // auto-paused only, never blocked: the API refuses a blocked venue's trial.
-  const trial: RowMenuItem[] =
-    venue.crawlPausedAt !== null && venue.blockedAt === null
-      ? [
-          {
-            key: 'trial',
-            icon: FlaskConical,
-            label: COPY.menu.tryRecrawl,
-            hint: COPY.menu.tryRecrawlHint,
-            onSelect: act.trial,
-          },
-        ]
-      : [];
+  // nothing offers one, so it follows Resume as a row of its own. Offered only
+  // where the API would queue it (`canTryRecrawl`): paused, not blocked, on
+  // the site, verified and not disallowed by robots.txt.
+  const trial: RowMenuItem[] = canTryRecrawl(venue)
+    ? [
+        {
+          key: 'trial',
+          icon: FlaskConical,
+          label: COPY.menu.tryRecrawl,
+          hint: COPY.menu.tryRecrawlHint,
+          onSelect: act.trial,
+        },
+      ]
+    : [];
 
   return [
     crawl,

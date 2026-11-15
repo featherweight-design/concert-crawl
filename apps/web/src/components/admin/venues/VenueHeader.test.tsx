@@ -28,12 +28,15 @@ vi.mock('next/navigation', () => ({
 
 // The ⋯ menu's server actions; `VenueMenu.test.tsx` covers what they do.
 const mockFeatured = vi.fn();
+const mockTrial = vi.fn();
+const mockResume = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
   activateVenue: vi.fn(),
   hideVenue: vi.fn(),
   pauseCrawling: vi.fn(),
   removeVenue: vi.fn(),
-  resumeCrawling: vi.fn(),
+  resumeCrawling: (...args: unknown[]) => mockResume(...args),
+  trialCrawlVenue: (...args: unknown[]) => mockTrial(...args),
   setVenueFeatured: (...args: unknown[]) => mockFeatured(...args),
   tryDeleteVenue: vi.fn(),
 }));
@@ -265,6 +268,50 @@ describe('VenueHeader — ⋯ menu failures', () => {
       finish();
     });
     expect(screen.queryByTestId('save-failed')).toBeNull();
+  });
+});
+
+describe('VenueHeader — ⋯ Try a re-crawl', () => {
+  const PAUSED = {
+    crawlPausedAt: '2026-10-28T18:00:00.000Z',
+    consecutiveFailures: 3,
+  };
+  const menu = () =>
+    screen.getByRole('button', { name: COPY.menuLabel('Ball Arena') });
+
+  beforeEach(() => {
+    mockTrial.mockReset().mockResolvedValue({ ok: true });
+    mockResume.mockReset().mockResolvedValue({ ok: true });
+  });
+
+  it('shows the queued notice and announces it in the live region', async () => {
+    render(<VenueHeader venue={buildVenue(PAUSED)} />);
+    expect(liveStatus()).toBe('');
+    fireEvent.click(menu());
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('venue-menu-trial'));
+    });
+    expect(mockTrial).toHaveBeenCalledWith('venue-1');
+    expect(screen.getByTestId('recrawl-notice').textContent).toContain(
+      COPY.notice.trialQueued,
+    );
+    expect(liveStatus()).toBe(COPY.notice.trialQueued);
+  });
+
+  it('a later change that goes through clears the notice', async () => {
+    render(<VenueHeader venue={buildVenue(PAUSED)} />);
+    fireEvent.click(menu());
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('venue-menu-trial'));
+    });
+    expect(screen.getByTestId('recrawl-notice')).toBeTruthy();
+    fireEvent.click(menu());
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('venue-menu-resume'));
+    });
+    expect(mockResume).toHaveBeenCalledWith('venue-1');
+    expect(screen.queryByTestId('recrawl-notice')).toBeNull();
+    expect(liveStatus()).toBe('');
   });
 });
 

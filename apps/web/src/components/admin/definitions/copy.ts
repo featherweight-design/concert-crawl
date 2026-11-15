@@ -531,6 +531,10 @@ export const ADMIN_COPY = {
         blocked:
           'It’s blocked, so a test re-crawl can’t run. Clear the block first.',
         not_paused: 'Its crawl isn’t paused any more. Use Re-crawl.',
+        robots_disallowed:
+          'robots.txt disallows the page we crawl. We never override it.',
+        // The 400: hidden or unverified.
+        not_crawlable: 'Only a verified venue on the site can be crawled.',
       },
       // The ⋯ menu's changes that run at once.
       flagship: 'the flagship',

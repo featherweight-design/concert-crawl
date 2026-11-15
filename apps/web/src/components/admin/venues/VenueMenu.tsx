@@ -115,6 +115,13 @@ export const VenueMenu = ({
     },
   });
 
+  // Any change that went through: an earlier failure is moot, and a queued
+  // test re-crawl's notice is stale, so neither stacks with what comes next.
+  const settled = () => {
+    onFailure(null);
+    onNotice?.(null);
+  };
+
   // Rule 10: a failed change snaps back, and the toast can try it again. A
   // refusal that comes back as a value (Show or Resume on a venue removed at
   // its request, seen from a page loaded before the removal) puts the API's
@@ -139,7 +146,7 @@ export const VenueMenu = ({
           });
           return;
         }
-        onFailure(null);
+        settled();
       } catch (err: unknown) {
         console.warn('VenueMenu: change failed', { what, err });
         onFailure(failure(what, saved, () => attempt(run, what, saved)));
@@ -148,7 +155,8 @@ export const VenueMenu = ({
 
   // Try a re-crawl, confirmed as Re-crawl's settled outcomes are: a notice
   // with Dismiss, since Try again would only queue a second trial. A refusal
-  // (one queued already, blocked, not paused) says which, with no Try again;
+  // (one queued already, blocked, not paused, robots, not crawlable) says
+  // which, with no Try again;
   // any other failure offers one, as the menu's other changes do.
   const trial = (): boolean =>
     guarded(async () => {
@@ -187,19 +195,21 @@ export const VenueMenu = ({
     );
     if (!outcome.ok && outcome.error !== null) return outcome.error;
     setDialog(null);
-    if (outcome.ok) router.refresh();
+    if (outcome.ok) {
+      router.refresh();
+      settled();
+      return null;
+    }
     onFailure(
-      outcome.ok
-        ? null
-        : failure(PAUSE.failedWhat(venue.name), PAUSE.failedSaved, () =>
-            guarded(async () => {
-              const error = await pause(body);
-              if (error === null) return;
-              onFailure(null);
-              setPauseRefused({ body, error });
-              setDialog('pause');
-            }),
-          ),
+      failure(PAUSE.failedWhat(venue.name), PAUSE.failedSaved, () =>
+        guarded(async () => {
+          const error = await pause(body);
+          if (error === null) return;
+          onFailure(null);
+          setPauseRefused({ body, error });
+          setDialog('pause');
+        }),
+      ),
     );
     return null;
   };
@@ -243,14 +253,14 @@ export const VenueMenu = ({
   const close = () => setDialog(null);
   // A confirmed change went through: any earlier failure is moot.
   const stay = () => {
-    onFailure(null);
+    settled();
     close();
     router.refresh();
   };
   // A taken-down or deleted venue is done with, so the page goes back to the
   // Venues list, as the old danger zone's delete did.
   const leave = () => {
-    onFailure(null);
+    settled();
     router.push('/admin/venues');
   };
 
