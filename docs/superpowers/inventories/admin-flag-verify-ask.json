@@ -1,0 +1,29 @@
+{
+  "feature": "P47-17 PR 4 · Mark verified asks first",
+  "note": "CONTACT_SHEET_ROLE=admin. Board: 07-people-flags-operations/mark-verified-asks-first. Needs the staging API (SENTRY_ENVIRONMENT=staging) and a crews flag above Off and not verified (the scratch default). Nothing is saved: the dialog is photographed with the three ticks made and then left open.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "mark-verified-ask",
+      "label": "Mark verified asks first",
+      "steps": [
+        {
+          "goto": "/admin/feature-flags",
+          "wait": "[data-testid^=\"flag-row-\"]",
+          "settle": 2500
+        },
+        { "click": "[data-testid=\"flag-mark-verified-crews\"]" },
+        { "wait": "[role=\"dialog\"]", "settle": 400 },
+        { "click": "[data-testid=\"verify-check-triedAsMe\"]" },
+        {
+          "click": "[data-testid=\"verify-check-checkedOnPhone\"]",
+          "settle": 300
+        }
+      ]
+    }
+  ]
+}
