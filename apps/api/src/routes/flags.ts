@@ -1,4 +1,4 @@
-import { getAuth } from '@hono/clerk-auth';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { Hono } from 'hono';
 
 import {
@@ -8,6 +8,11 @@ import {
 import { flagViewerFrom } from '../lib/flag-ladder.js';
 
 export const flagsRouter = new Hono();
+
+// Verifies a bearer token if there is one, and never rejects: a missing or bad
+// token is just a signed-out visitor. Without it `getAuth` has nothing to read
+// and every caller would get the signed-out map.
+flagsRouter.use('*', clerkMiddleware());
 
 // Open to logged-out visitors on purpose: their surfaces need an answer too,
 // and the keys are in the client bundle regardless. The answer depends on who

@@ -86,14 +86,22 @@ const refreshFlagStates = async (): Promise<FlagStates> => {
       });
     }
   } catch (err) {
-    // Fail closed for the flags that default off, which is the safe direction:
-    // an unreachable table must never reveal an unreleased feature. With no
-    // stored state every flag reads its registry default, and the failure is
-    // cached like any other answer, so an outage costs one query and one log
-    // line per TTL window rather than one per request. Recovery lands on the
-    // next expiry, or immediately on the `clearFeatureFlagCache()` that follows
-    // an admin write.
-    apiLogger.error({ err }, 'feature flag read failed, using defaults');
+    // An unreachable table must never widen a flag. If there is a previous
+    // answer it is kept (an admin may have staged a default-on flag down to Off
+    // or Me, and the registry default would undo that for everyone); only a
+    // cold start with nothing cached falls back to the registry defaults, which
+    // keep the unreleased features off. The failure is cached like any other
+    // answer, so an outage costs one query and one log line per TTL window
+    // rather than one per request. Recovery lands on the next expiry, or
+    // immediately on the `clearFeatureFlagCache()` that follows an admin write.
+    apiLogger.error(
+      { err },
+      'feature flag read failed, using last known state',
+    );
+    if (cached) {
+      cachedAt = Date.now();
+      return cached;
+    }
     states.clear();
   }
 
