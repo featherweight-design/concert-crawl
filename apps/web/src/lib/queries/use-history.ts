@@ -13,8 +13,7 @@ export const historyQueryKey = (userId: string | null | undefined) =>
   ['history', userId ?? null] as const;
 
 interface UseHistoryOptions {
-  initialData?: HistoryResponse | null;
-  enabled?: boolean;
+  initialData?: HistoryResponse;
 }
 
 export function useHistory(options: UseHistoryOptions = {}) {
@@ -32,15 +31,15 @@ export function useHistory(options: UseHistoryOptions = {}) {
       }
       return apiClient.get<HistoryResponse>('/v1/history', token);
     },
-    enabled: !!isSignedIn && !!userId && options.enabled !== false,
+    enabled: !!isSignedIn && !!userId,
     staleTime: 5 * 60 * 1000,
     // A 403 is the plan's verdict, not a transient failure — retrying it just
     // burns requests. Everything else keeps the default retry behaviour.
     retry: (failureCount, error) =>
       !isEntitlementError(error) && failureCount < 3,
     // Seeded onto the userId-scoped key, so the server's payload can never be
-    // adopted by a different account. Skipped when null — that is the locked
-    // 403, not a history worth caching as fresh.
+    // adopted by a different account. Skipped when the caller has no server
+    // payload to seed.
     ...(options.initialData ? { initialData: options.initialData } : {}),
   });
 }

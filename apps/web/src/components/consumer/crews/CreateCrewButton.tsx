@@ -7,6 +7,7 @@
 // Starting a crew is free for every signed-in fan. A signed-out viewer is sent
 // to sign in; everyone else gets the create sheet.
 
+import { useAuth } from '@clerk/nextjs';
 import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import { useState } from 'react';
 import type { CrewSummary } from '@concert-crawl/types';
@@ -28,12 +29,19 @@ export const CreateCrewButton = ({
   variant,
   onCreated,
 }: CreateCrewButtonProps) => {
-  const { isLoading, surface } = useEntitlement('crews');
+  const { isSignedIn } = useAuth();
+  const { isLoading: entitlementLoading, surface } = useEntitlement('crews');
   const [createOpen, setCreateOpen] = useState(false);
   const goToSignIn = useSignInRedirect();
 
-  // The matrix's logged-out cell: the tap is a sign-in, not a sheet.
-  const signedOut = surface === 'tier-picker-on-tap';
+  // The release flag is the only thing that can still hide crews. Flagged
+  // off, the route itself 404s, so the affordance renders nothing either.
+  if (surface === 'hidden') return null;
+
+  // Read from the session, not inferred from the entitlement surface: every
+  // signed-in fan can start a crew, whatever the plan fetch said.
+  const isLoading = entitlementLoading || isSignedIn === undefined;
+  const signedOut = isSignedIn === false;
 
   const onTap = () => {
     if (isLoading) return;
