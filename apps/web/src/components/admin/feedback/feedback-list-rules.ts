@@ -92,6 +92,34 @@ export const FEEDBACK_KIND: Record<FeedbackCategory, Kind> = {
   other: 'idea',
 };
 
+/**
+ * The row's kind. The error page's Tell us card stores a bug with
+ * `metadata.source = 'error'`, so that reads ERROR REPORT too (addendum 7 §2).
+ */
+export const kindOf = (item: AdminFeedbackItem): Kind =>
+  item.metadata?.['source'] === 'error'
+    ? 'errorReport'
+    : FEEDBACK_KIND[item.category];
+
+const hasScreenshot = (item: AdminFeedbackItem): boolean => {
+  const meta = item.metadata ?? {};
+  return [meta['screenshot'], meta['screenshotDataUrl']].some(
+    (value) => typeof value === 'string' && value.length > 0,
+  );
+};
+
+/**
+ * The row's marks (addendum 7 `04/feedback-hints`): Screenshot when one came
+ * with it, then Also in Needs you while Needs you lists it, which is an unread
+ * bug (`needs-you/sources.ts` reads the same rule). Empty for most rows.
+ */
+export const rowHints = (item: AdminFeedbackItem): string[] => [
+  ...(hasScreenshot(item) ? [COPY.screenshot] : []),
+  ...(item.category === 'bug' && item.status === 'unread'
+    ? [COPY.alsoInNeedsYou]
+    : []),
+];
+
 /** The row's title: the message's first non-empty line. */
 export const firstLine = (message: string): string =>
   message
@@ -104,14 +132,14 @@ export const shortDay = (iso: string): string =>
   formatISODate(iso, MT, { month: 'short', day: 'numeric' });
 
 /**
- * "@handle · Nov 8": who sent it (Sentry for an error report with no
- * reporter) and when. The page label is left out: there is no helper that
+ * "@handle · Nov 8": who sent it (Sentry for an error report with no user
+ * behind it; a user with no handle is left out) and when. The page label is left out: there is no helper that
  * names a page from its URL yet.
  */
 export const metaLine = (item: AdminFeedbackItem): string => {
   const who = item.submittedBy
     ? COPY.handle(item.submittedBy)
-    : item.category === 'error_report'
+    : item.category === 'error_report' && item.userId === null
       ? COPY.sentry
       : null;
   return [who, shortDay(item.createdAt)]

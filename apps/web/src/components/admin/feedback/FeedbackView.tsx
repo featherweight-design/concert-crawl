@@ -33,6 +33,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const COPY = ADMIN_COPY.feedback;
 const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_MAX = 200;
 
 /** What the inbox counts, for the tab label drawn outside it. */
 export interface FeedbackCounts {
@@ -128,6 +129,18 @@ export const FeedbackView = ({
     void load();
   }, [load]);
 
+  // A write that settles after the chip or search moved re-reads what is on
+  // screen now, never the view it started from.
+  const loadRef = useRef(load);
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
+
+  // The phone draws no Venues chip, so a view narrowed to it falls back.
+  useEffect(() => {
+    if (isPhone && chip === 'venues') setChip('to_read');
+  }, [isPhone, chip]);
+
   // Typing settles before it reaches the read.
   useEffect(() => {
     if (text.trim() === search) return undefined;
@@ -146,11 +159,13 @@ export const FeedbackView = ({
   };
 
   // The inline detail's writes, kept as they were until 4b replaces it.
-  const patch = (id: string, body: Record<string, string>) =>
-    authed(`/v1/admin/feedback/${id}`, {
+  const patch = async (id: string, body: Record<string, string>) => {
+    const res = await authed(`/v1/admin/feedback/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
     });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+  };
 
   // A status move can take the item out of this view and changes the counts,
   // so the list re-reads either way, keeping what it shows until then.
@@ -158,12 +173,13 @@ export const FeedbackView = ({
     void patch(id, { status })
       .catch(() => undefined)
       .finally(() => {
-        void load(true);
+        void loadRef.current(true);
         router.refresh();
       });
   };
+  // Notes show at once; a refused save re-reads, so the row shows what stuck.
   const onNotesChange = (id: string, adminNotes: string) => {
-    void patch(id, { adminNotes }).catch(() => undefined);
+    void patch(id, { adminNotes }).catch(() => loadRef.current(true));
     setLoaded(
       (prev) =>
         prev && {
@@ -202,13 +218,17 @@ export const FeedbackView = ({
         color: 'var(--fg-subtle)',
       }}
     >
-      <Search size={15} strokeWidth={1.7} aria-hidden="true" />
+      {/* 1.7 on the board's 20 grid is 2 on Lucide's 24. */}
+      <Search size={15} strokeWidth={2} aria-hidden="true" />
       <input
         type="search"
         value={text}
         onChange={(evt) => setText(evt.target.value)}
+        // The API refuses a longer search.
+        maxLength={SEARCH_MAX}
         placeholder={COPY.search}
         aria-label={COPY.search}
+        className="placeholder:text-[var(--fg-subtle)]"
         style={{
           flex: 1,
           minWidth: 0,
@@ -226,11 +246,13 @@ export const FeedbackView = ({
     <div
       role="group"
       aria-label={COPY.chipsLabel}
+      // The desktop board wraps the chips; the phone's scroll sideways.
       style={{
         display: 'flex',
         gap: 8,
-        overflowX: 'auto',
-        scrollbarWidth: 'none',
+        ...(isPhone
+          ? { overflowX: 'auto', scrollbarWidth: 'none' }
+          : { flexWrap: 'wrap' }),
       }}
     >
       {chips.map((key) => (
@@ -263,7 +285,13 @@ export const FeedbackView = ({
     );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: isPhone ? 10 : 16,
+      }}
+    >
       {isDone && isPhone && searchBox}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {isDone && !isPhone && searchBox}

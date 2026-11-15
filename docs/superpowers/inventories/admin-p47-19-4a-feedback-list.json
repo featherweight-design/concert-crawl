@@ -1,0 +1,158 @@
+{
+  "feature": "Admin · Operations, the Feedback list (P47-19 PR 4a)",
+  "note": "Boards: design_handoff_admin_redesign/boards/07-people-flags-operations/feedback, feedback-mobile, feedback-done, feedback-nothing-to-read, loading-feedback. CONTACT_SHEET_ROLE=admin. The empty and failure rows answer the list read from the inventory (`route`), since the scratch branch's inbox is not empty. A row opens today's inline detail; the item screen is 4b. The loading skeleton is covered by FeedbackView.test.tsx and walked by hand.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "to-read",
+      "label": "Feedback, To read",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "[data-testid='feedback-chip-to_read']",
+          "settle": 3000
+        }
+      ]
+    },
+    {
+      "id": "bugs",
+      "label": "Feedback, Bugs chip",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "[data-testid='feedback-chip-bugs']",
+          "settle": 2000
+        },
+        { "click": "[data-testid='feedback-chip-bugs']" },
+        {
+          "wait": "[data-testid='feedback-chip-bugs'][aria-pressed='true']",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "ideas",
+      "label": "Feedback, Ideas chip",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "[data-testid='feedback-chip-ideas']",
+          "settle": 2000
+        },
+        { "click": "[data-testid='feedback-chip-ideas']" },
+        {
+          "wait": "[data-testid='feedback-chip-ideas'][aria-pressed='true']",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "venues",
+      "label": "Feedback, Venues chip (desktop only)",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "[data-testid='feedback-chip-venues']",
+          "settle": 2000
+        },
+        { "click": "[data-testid='feedback-chip-venues']" },
+        {
+          "wait": "[data-testid='feedback-chip-venues'][aria-pressed='true']",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "done",
+      "label": "Feedback, Done",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "[data-testid='feedback-chip-done']",
+          "settle": 2000
+        },
+        { "click": "[data-testid='feedback-chip-done']" },
+        { "wait": "input[type='search']", "settle": 2500 }
+      ]
+    },
+    {
+      "id": "done-no-match",
+      "label": "Feedback, Done search with no match",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "[data-testid='feedback-chip-done']",
+          "settle": 2000
+        },
+        { "click": "[data-testid='feedback-chip-done']" },
+        { "wait": "input[type='search']" },
+        { "fill": "input[type='search']", "text": "zzqqxx-no-such-feedback" },
+        { "wait": "text=No feedback matches", "settle": 1000 }
+      ]
+    },
+    {
+      "id": "expanded",
+      "label": "Feedback, a row opened (inline detail until 4b)",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "[data-testid='feedback-row']",
+          "settle": 2000
+        },
+        { "click": "[data-testid='feedback-row']" },
+        {
+          "wait": "[data-testid='feedback-row'][aria-expanded='true']",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "all-read",
+      "label": "Feedback, nothing to read (All read)",
+      "steps": [
+        {
+          "route": "**/v1/admin/feedback?view=to_read**",
+          "body": { "success": true, "data": [] }
+        },
+        {
+          "route": "**/v1/admin/feedback/counts",
+          "body": {
+            "success": true,
+            "data": {
+              "unread": 0,
+              "toRead": 0,
+              "done": 41,
+              "kinds": { "bugs": 0, "ideas": 0, "venues": 0 }
+            }
+          }
+        },
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "text=All read",
+          "settle": 2000
+        }
+      ]
+    },
+    {
+      "id": "couldnt-load",
+      "label": "Feedback, the read fails",
+      "steps": [
+        {
+          "route": "**/v1/admin/feedback?view=to_read**",
+          "status": 500,
+          "body": "{}"
+        },
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "text=Try again",
+          "settle": 2000
+        }
+      ]
+    }
+  ]
+}
