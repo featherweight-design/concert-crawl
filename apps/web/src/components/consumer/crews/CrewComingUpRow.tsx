@@ -52,13 +52,16 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
   const [refreshing, startRefresh] = useTransition();
   const metaId = useId();
   const goingId = useId();
+  const statusId = useId();
+  const postponed = show.status === 'postponed';
   const row = fromCrewShow(show);
   const summary = summariseGoing(show, viewerId, COPY.you);
   const tonight = isTonight(show.iso);
   const tile = tileParts(show.iso);
   // Tonight is the night the doors matter (the board's "Doors 7:00 PM"); a
   // later show reads its show time, and so does tonight without a doors time.
-  const doors = tonight ? formatShowTime(show.doorsTime) : null;
+  // A postponed show does not open its doors, so it never says so.
+  const doors = tonight && !postponed ? formatShowTime(show.doorsTime) : null;
   const whenLabel = doors === null ? row.timeLabel : COPY.doors(doors);
 
   const imIn = () => {
@@ -165,7 +168,7 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
           // The date, venue and who is going describe the link, so a screen
           // reader hears them with the act's name; the ring is drawn round the
           // whole card the link opens.
-          aria-describedby={`${metaId} ${goingId}`}
+          aria-describedby={`${metaId} ${goingId}${postponed ? ` ${statusId}` : ''}`}
           className="after:absolute after:inset-0 after:rounded-[16px] after:content-[''] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-[var(--focus)]"
           style={{
             display: 'block',
@@ -233,10 +236,11 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             {goingLine(show.goingCount, summary, COPY.going)}
           </span>
         </div>
-        {show.status === 'postponed' && (
+        {postponed && (
           // The board keeps the date tile and the time: a postponed crew plan
-          // still has its surviving date. Only the chip says it moved.
-          <div style={{ marginTop: 6 }}>
+          // still has its surviving date. Only the chip says it moved, and the
+          // link's description repeats it for a screen reader.
+          <div id={statusId} style={{ marginTop: 6 }}>
             <StatusChip
               status="postponed"
               label={CONSUMER_COPY.postponedLabel}
