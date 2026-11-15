@@ -22,6 +22,13 @@ import {
  */
 export async function loadPriceByTierByEventId(
   eventIds: string[],
+  options: {
+    /**
+     * Read every row as this event's: the price the kept row shows after a
+     * merge moves the other row's submissions onto it (the merge preview).
+     */
+    mergeInto?: string;
+  } = {},
 ): Promise<Map<string, TierPriceBlock[]>> {
   if (eventIds.length === 0) return new Map();
 
@@ -47,7 +54,12 @@ export async function loadPriceByTierByEventId(
       and(inArray(priceSubmissions.eventId, eventIds), currentPriceCondition()),
     );
 
+  const { mergeInto } = options;
+  const owned =
+    mergeInto === undefined
+      ? rows
+      : rows.map((row) => ({ ...row, eventId: mergeInto }));
   return buildPriceByTierMap(
-    dropCheckedWhereLive(rows, (row) => `${row.eventId}:${row.tier}`),
+    dropCheckedWhereLive(owned, (row) => `${row.eventId}:${row.tier}`),
   );
 }

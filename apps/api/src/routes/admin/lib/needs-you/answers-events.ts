@@ -152,6 +152,8 @@ const mergeResult = (
   if (result.ok === 'target_not_found') {
     return fail(404, 'Target event not found');
   }
+  // Not reached: these answers merge without the admin rules (adminRules).
+  if (result.ok === 'past_mismatch') return fail(409, 'not_mergeable');
   return {
     ok: true,
     params: { toEventId: targetId },

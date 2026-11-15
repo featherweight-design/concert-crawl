@@ -1,6 +1,7 @@
 import { eq, or } from 'drizzle-orm';
 import {
   db,
+  EventMergeRefusedError,
   events,
   mergeEventRows,
   notifications,
@@ -8,6 +9,7 @@ import {
   venues,
 } from '@concert-crawl/db';
 import { fanoutWatchNotification } from '@concert-crawl/push';
+import { todayInDenver } from '../../../lib/time.js';
 
 export interface MergeEventsInput {
   sourceId: string;
@@ -17,6 +19,14 @@ export interface MergeEventsInput {
   notifyWatchers: boolean;
   /** Matcher provenance, recorded on the `event.merge` audit row only. */
   suggestion: { reason: 'date' | 'venue' } | null | undefined;
+  /**
+   * The admin merge's rules (POST /:id/merge, admin 4b E4): the target's
+   * blank columns are filled from the source, and a past row merges only
+   * with another past row. The Needs-you relocation answers leave both off:
+   * a show that moved from a date now past to a later one is exactly the
+   * pair they merge, and an old venue's links are not the new listing's.
+   */
+  adminRules?: boolean;
 }
 
 export type MergeEventsResult =
@@ -25,9 +35,12 @@ export type MergeEventsResult =
       referencesMoved: Record<string, number>;
       /** In-app notices written to the movers; 0 when no one was told. */
       watchersNotified: number;
+      /** The target's blank fields the merge filled (`MergeFillField`). */
+      filled: string[];
     }
   | { ok: 'source_not_found' }
-  | { ok: 'target_not_found' };
+  | { ok: 'target_not_found' }
+  | { ok: 'past_mismatch' };
 
 /**
  * Fold a source event into a target event: every user-side reference moves
@@ -42,6 +55,7 @@ export const mergeEvents = async ({
   actorId,
   notifyWatchers,
   suggestion,
+  adminRules = false,
 }: MergeEventsInput): Promise<MergeEventsResult> => {
   // Pre-flight existence checks return 404 with a clear message before we
   // open a transaction — cheaper than rolling back inside.
@@ -67,13 +81,23 @@ export const mergeEvents = async ({
     return { ok: 'target_not_found' };
   }
 
-  const merged = await mergeEventRows({
-    sourceId,
-    targetId,
-    actorId,
-    suggestion,
-    notifyWatchers,
-  });
+  // The existence check above is only the cheap path: the core re-reads both
+  // rows under FOR UPDATE locks, and a row a concurrent merge or delete took
+  // in between is refused there, rolled back, and answered like a miss.
+  let merged: Awaited<ReturnType<typeof mergeEventRows>>;
+  try {
+    merged = await mergeEventRows({
+      sourceId,
+      targetId,
+      actorId,
+      suggestion,
+      notifyWatchers,
+      ...(adminRules ? { fillBlanks: true, today: todayInDenver() } : {}),
+    });
+  } catch (err) {
+    if (err instanceof EventMergeRefusedError) return { ok: err.reason };
+    throw err;
+  }
 
   // After commit, mirroring the PATCH call site: the fan-out is best-effort
   // by contract and never throws, so it must not sit inside the transaction
@@ -110,5 +134,10 @@ export const mergeEvents = async ({
     watchersNotified = sent.watchersNotified;
   }
 
-  return { ok: 'merged', referencesMoved: merged.counts, watchersNotified };
+  return {
+    ok: 'merged',
+    referencesMoved: merged.counts,
+    watchersNotified,
+    filled: merged.filled,
+  };
 };

@@ -78,11 +78,13 @@ const countsById = (rows: { eventId: string; total: number }[]) =>
  * under both locks.
  *
  * Lock order is events, then user_events. Two delete calls cannot deadlock
- * each other. Two paths take the other order and could, rarely: an admin
- * merge that locks two rows of the same batch, and a fan's "hide this
- * delisted show", which locks their user_events row and then inserts a
- * dismissal keyed on the event. Postgres aborts one side with a deadlock
- * error: the request 500s and nothing is deleted.
+ * each other, nor a delete and a merge (`mergeEventRows` locks both of its
+ * rows in id order before it touches user_events; a merge into a row this
+ * deletes waits, then is refused `target_not_found`). One path takes the
+ * other order and could, rarely: a fan's "hide this delisted show", which
+ * locks their user_events row and then inserts a dismissal keyed on the
+ * event. Postgres aborts one side with a deadlock error: the request 500s
+ * and nothing is deleted.
  */
 export const deleteManualEvents = async (
   tx: DbTransaction,
