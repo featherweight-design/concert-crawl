@@ -1,0 +1,89 @@
+{
+  "feature": "Admin primitives: menu and toast shadows, phone toast offset, tab borders",
+  "note": "Boards: 43/approve-menu-d (menu shadow 0 18px 40px), 07/test-email-sent and 43/approve-done-d (toast shadow 0 14px 30px), 43/approve-m (phone toast 96px from the bottom, 32px above the tab bar). CONTACT_SHEET_ROLE=admin. Route fixtures answer the submitted-prices list and the test-email send, so nothing is written to the scratch branch. The menu row is desktop-only by design (the phone draws a sheet). Before cells: the 43-B sheet (~/Downloads/fwd-handoff/plans/admin-43-approve-one-contact-sheet), shot on main's primitives.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "row-menu-shadow",
+      "label": "Submitted prices row menu open: the drawn shadow (desktop)",
+      "steps": [
+        {
+          "route": "**/v1/admin/prices/submissions/state-counts**",
+          "body": {
+            "success": true,
+            "data": { "all": 1, "waiting": 1, "published": 0, "priceCheck": 0 }
+          }
+        },
+        {
+          "route": "**/v1/admin/prices/submissions?**",
+          "body": {
+            "success": true,
+            "data": {
+              "total": 1,
+              "rows": [
+                {
+                  "id": "fx-1",
+                  "eventId": "fx-e1",
+                  "eventTitle": "FKJ",
+                  "eventDate": "2026-12-04",
+                  "venueName": "Mission Ballroom",
+                  "ticketUrl": "https://www.axs.com/events/1",
+                  "priceMin": "68.00",
+                  "priceMax": "75.00",
+                  "handle": "dlo",
+                  "avatarColor": "accent",
+                  "avatarSecondColor": "success",
+                  "backedBy": 1,
+                  "state": "waiting",
+                  "forYou": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]",
+          "settle": 1000
+        },
+        { "click": "[aria-label=\"Price actions\"]:visible >> nth=0" },
+        { "wait": "[role=\"menu\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "toast-shadow",
+      "label": "Test email sent toast: the drawn shadow; on the phone 32px above the tab bar",
+      "steps": [
+        {
+          "route": "**/v1/admin/notifications/test-email",
+          "body": {
+            "success": true,
+            "data": { "sent": true, "sentTo": "audit@example.com" }
+          }
+        },
+        {
+          "goto": "/admin/operations?tab=emails",
+          "wait": "[data-testid=\"emails-send-test\"]",
+          "settle": 2500
+        },
+        { "click": "[data-testid=\"emails-send-test\"]", "settle": 1200 },
+        { "wait": "[data-testid=\"admin-toast\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "tabs-no-issue",
+      "label": "Operations tabs on the phone: no dev issue badge after switching tabs",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=feedback",
+          "wait": "[role=\"tablist\"]",
+          "settle": 2000
+        },
+        { "clickRole": "tab", "name": "^(Log|Activity log)$", "settle": 1500 }
+      ]
+    }
+  ]
+}
