@@ -43,5 +43,6 @@ export const SIGN_IN_COPY = {
     body: 'This password showed up in a data breach on another site, so it can’t be used here anymore. Reset it to sign in. Your shows and settings stay as they are.',
     button: 'Reset password',
   },
-  failed: 'Something went wrong on our side. Try again.',
+  // Not "on our side": a blocker or a bad connection reads the same.
+  failed: 'Something went wrong. Try again.',
 } as const;

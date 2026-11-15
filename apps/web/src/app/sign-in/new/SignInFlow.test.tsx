@@ -182,9 +182,11 @@ describe('SignInFlow, password', () => {
     const button = screen.getByRole('button', { name: COPY.password.submit });
     button.focus();
     fireEvent.click(button);
-    expect(
-      screen.getByRole('button', { name: COPY.password.busy }),
-    ).toHaveAttribute('aria-busy', 'true');
+    const busy = screen.getByRole('button', { name: COPY.password.busy });
+    expect(busy).toHaveAttribute('aria-busy', 'true');
+    // Held with aria-disabled, not `disabled`: focus stays on the button.
+    expect(busy).toBe(button);
+    expect(busy).toHaveFocus();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(FLOOR_MS);
     });
@@ -205,7 +207,7 @@ describe('SignInFlow, password', () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: COPY.breached.button }));
     expect(mocks.push).toHaveBeenCalledWith(
-      '/sign-in/forgot?email=fan%40example.com',
+      '/sign-in/forgot?redirect_url=%2Fevents',
     );
   });
 
@@ -225,6 +227,42 @@ describe('SignInFlow, password', () => {
     });
     await press();
     expect(screen.getByText(COPY.failed)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.password.didntWork)).toBeNull();
+  });
+
+  it('reads a 429 as the generic line even when it carries a wrong-credential code', async () => {
+    toPassword();
+    mocks.signIn.password.mockResolvedValue({
+      error: clerkError(429, 'form_password_incorrect', 'too_many_requests'),
+    });
+    await press();
+    expect(screen.getByText(COPY.failed)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.password.didntWork)).toBeNull();
+  });
+
+  it('does not hang on "Signing in" when finalize throws', async () => {
+    toPassword();
+    mocks.signIn.status = 'complete';
+    mocks.signIn.finalize.mockRejectedValue(new Error('network'));
+    await press();
+    expect(screen.getByText(COPY.failed)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: COPY.password.submit }),
+    ).not.toHaveAttribute('aria-busy');
+  });
+
+  it('does not carry a typed password to another email after Change', async () => {
+    toPassword();
+    mocks.signIn.password.mockResolvedValue({
+      error: clerkError(422, 'form_password_or_identifier_incorrect'),
+    });
+    await press('first-try-1');
+    fireEvent.click(screen.getByRole('button', { name: COPY.password.change }));
+    fireEvent.change(screen.getByLabelText(COPY.start.emailLabel), {
+      target: { value: 'other@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: COPY.start.continue }));
+    expect(screen.getByLabelText(COPY.password.label)).toHaveValue('');
     expect(screen.queryByText(COPY.password.didntWork)).toBeNull();
   });
 
