@@ -38,6 +38,16 @@ export const REFUSED_PASSWORD_CODES: ReadonlySet<string> = new Set([
   'form_password_untrusted__sign_in',
 ]);
 
+/**
+ * The codes that mean a NEW password has appeared in a breach. The sign-in
+ * set above also holds the `__sign_in` and `untrusted` variants, which are not
+ * the same claim here, so they are not reused.
+ */
+export const BREACHED_NEW_PASSWORD_CODES: ReadonlySet<string> = new Set([
+  'form_password_pwned',
+  'form_password_compromised',
+]);
+
 export type NewPasswordOutcome =
   'breached' | 'weak' | 'tooShort' | 'rateLimited' | 'failed';
 
@@ -49,7 +59,9 @@ export type NewPasswordOutcome =
 export function classifyNewPasswordError(error: unknown): NewPasswordOutcome {
   if (isRateLimited(error)) return 'rateLimited';
   const codes = codesOf(error);
-  if (codes.some((code) => REFUSED_PASSWORD_CODES.has(code))) return 'breached';
+  if (codes.some((code) => BREACHED_NEW_PASSWORD_CODES.has(code))) {
+    return 'breached';
+  }
   if (codes.includes('form_password_not_strong_enough')) return 'weak';
   if (codes.includes('form_password_length_too_short')) return 'tooShort';
   return 'failed';

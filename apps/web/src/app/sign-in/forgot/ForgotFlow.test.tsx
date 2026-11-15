@@ -115,13 +115,10 @@ describe('ForgotFlow, email', () => {
     expect(mocks.signIn.create).not.toHaveBeenCalled();
   });
 
-  it('holds the answer to the 1500 ms floor and shows the same screen whether Clerk threw, returned an error, or sent', async () => {
-    mocks.signIn.create.mockResolvedValue({
-      error: clerkError(422, 'form_identifier_not_found'),
-    });
+  it('holds the answer to the 1500 ms floor', async () => {
     render(<ForgotFlow returnTo="/events" />);
     fireEvent.change(screen.getByLabelText(COPY.start.emailLabel), {
-      target: { value: 'nobody@example.com' },
+      target: { value: 'fan+clerk_test@example.com' },
     });
     fireEvent.click(screen.getByRole('button', { name: COPY.forgot.send }));
     await settle(RESET_FLOOR_MS - 1);
@@ -132,10 +129,34 @@ describe('ForgotFlow, email', () => {
     expect(
       screen.getByRole('heading', { name: COPY.forgot.codeTitle }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(COPY.forgot.codeBody('nobody@example.com')),
-    ).toBeInTheDocument();
   });
+
+  it.each([
+    [
+      'a returned error',
+      () =>
+        mocks.signIn.create.mockResolvedValue({
+          error: clerkError(422, 'form_identifier_not_found'),
+        }),
+    ],
+    [
+      'a thrown error',
+      () => mocks.signIn.create.mockRejectedValue(new Error('not found')),
+    ],
+    ['a send', () => undefined],
+  ])(
+    'shows the same screen and body for %s, never leaking',
+    async (_name, arrange) => {
+      arrange();
+      await toReset('nobody@example.com');
+      expect(
+        screen.getByRole('heading', { name: COPY.forgot.codeTitle }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(COPY.forgot.codeBody('nobody@example.com')),
+      ).toBeInTheDocument();
+    },
+  );
 
   it('says no code is coming on a 429, which is true of every address', async () => {
     mocks.signIn.resetPasswordEmailCode.sendCode.mockResolvedValue({
@@ -228,21 +249,125 @@ describe('ForgotFlow, reset', () => {
     expect(screen.getByLabelText('6-digit code')).toHaveValue('123456');
   });
 
-  it('shows the generic line for a captcha refusal, a 429 or a throw', async () => {
+  it.each([
+    [
+      'a captcha refusal on the password',
+      () =>
+        mocks.signIn.resetPasswordEmailCode.submitPassword.mockResolvedValue({
+          error: clerkError(400, 'captcha_invalid'),
+        }),
+    ],
+    [
+      'a 429 on the password',
+      () =>
+        mocks.signIn.resetPasswordEmailCode.submitPassword.mockResolvedValue({
+          error: clerkError(429, 'form_password_not_strong_enough'),
+        }),
+    ],
+    [
+      'a 429 on the code',
+      () =>
+        mocks.signIn.resetPasswordEmailCode.verifyCode.mockResolvedValue({
+          error: clerkError(429, 'form_code_incorrect'),
+        }),
+    ],
+    [
+      'a throw',
+      () =>
+        mocks.signIn.resetPasswordEmailCode.verifyCode.mockRejectedValue(
+          new Error('network'),
+        ),
+    ],
+  ])(
+    'shows the generic line for %s, never a refusal, and does not hang',
+    async (_name, arrange) => {
+      await toReset();
+      arrange();
+      await save();
+      expect(screen.getByText(COPY.failed)).toBeInTheDocument();
+      expect(screen.queryByText(COPY.forgot.weak)).toBeNull();
+      expect(screen.queryByText(COPY.forgot.codeWrong)).toBeNull();
+      expect(
+        screen.getByRole('button', { name: COPY.forgot.save }),
+      ).not.toHaveAttribute('aria-busy');
+    },
+  );
+
+  it('does not check the code twice when the password is refused and retried', async () => {
     await toReset();
-    mocks.signIn.resetPasswordEmailCode.submitPassword.mockResolvedValue({
-      error: clerkError(400, 'captcha_invalid'),
+    const reset = mocks.signIn.resetPasswordEmailCode;
+    reset.submitPassword.mockResolvedValueOnce({
+      error: clerkError(422, 'form_password_not_strong_enough'),
     });
     await save();
-    expect(screen.getByText(COPY.failed)).toBeInTheDocument();
-    mocks.signIn.resetPasswordEmailCode.verifyCode.mockRejectedValue(
-      new Error('network'),
+    expect(screen.getByText(COPY.forgot.weak)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(COPY.forgot.newLabel), {
+      target: { value: 'A-much-better-passphrase-42' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: COPY.forgot.save }));
+    await settle(RESET_FLOOR_MS);
+    expect(reset.verifyCode).toHaveBeenCalledOnce();
+    expect(reset.submitPassword).toHaveBeenCalledTimes(2);
+  });
+
+  it('checks a changed code again', async () => {
+    await toReset();
+    const reset = mocks.signIn.resetPasswordEmailCode;
+    reset.submitPassword.mockResolvedValueOnce({
+      error: clerkError(422, 'form_password_not_strong_enough'),
+    });
+    await save();
+    fireEvent.change(screen.getByLabelText('6-digit code'), {
+      target: { value: '654321' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: COPY.forgot.save }));
+    await settle(RESET_FLOOR_MS);
+    expect(reset.verifyCode).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers Send a new code, and says it was sent', async () => {
+    await toReset();
+    fireEvent.click(screen.getByRole('button', { name: COPY.forgot.resend }));
+    await settle(RESET_FLOOR_MS);
+    expect(mocks.signIn.resetPasswordEmailCode.sendCode).toHaveBeenCalledTimes(
+      2,
+    );
+    expect(screen.getByText(COPY.forgot.sent)).toBeInTheDocument();
+  });
+
+  it('clears the old code, password and errors on Back', async () => {
+    await toReset();
+    mocks.signIn.resetPasswordEmailCode.verifyCode.mockResolvedValue({
+      error: clerkError(422, 'form_code_incorrect'),
+    });
+    await save();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.click(screen.getByRole('button', { name: COPY.forgot.send }));
+    await settle(RESET_FLOOR_MS);
+    expect(screen.queryByText(COPY.forgot.codeWrong)).toBeNull();
+    expect(screen.getByLabelText('6-digit code')).toHaveValue('');
+    expect(screen.getByLabelText(COPY.forgot.newLabel)).toHaveValue('');
+  });
+
+  it('goes on at once on Continue and cancels the beat', async () => {
+    await toReset();
+    mocks.signIn.status = 'complete';
+    mocks.signIn.finalize.mockImplementation(
+      async (args: {
+        navigate: (ctx: {
+          session: null;
+          decorateUrl: (to: string) => string;
+        }) => Promise<void>;
+      }) => {
+        await args.navigate({ session: null, decorateUrl: (to) => to });
+        return { error: null };
+      },
     );
     await save();
-    expect(screen.getByText(COPY.failed)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: COPY.forgot.save }),
-    ).not.toHaveAttribute('aria-busy');
+    fireEvent.click(screen.getByRole('button', { name: COPY.forgot.doneLink }));
+    expect(mocks.replace).toHaveBeenCalledWith('/events/42');
+    await settle(2000);
+    expect(mocks.replace).toHaveBeenCalledOnce();
   });
 
   it('has the README attributes: new-password and one-time-code', async () => {

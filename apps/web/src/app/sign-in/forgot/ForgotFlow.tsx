@@ -10,7 +10,7 @@ import {
   PasswordField,
 } from '@/components/auth/flow/AuthField';
 import { AuthHeading, AuthPage } from '@/components/auth/flow/AuthPage';
-import { PrimaryButton } from '@/components/auth/flow/AuthButtons';
+import { LinkButton, PrimaryButton } from '@/components/auth/flow/AuthButtons';
 import { CodeBoxes } from '@/components/auth/flow/CodeBoxes';
 import {
   classifyNewPasswordError,
@@ -25,6 +25,7 @@ const COPY = SIGN_IN_COPY;
 
 type Screen = 'email' | 'reset' | 'done';
 type Line =
+  | 'sent'
   | 'codeWrong'
   | 'codeExpired'
   | 'tooShort'
@@ -57,7 +58,12 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
   const [password, setPassword] = useState('');
   const [line, setLine] = useState<Line>(null);
   const [busy, setBusy] = useState(false);
+  // Once Clerk has accepted the code it does not take it again, so a retry
+  // after a refused password goes straight to the password.
+  const [codeVerified, setCodeVerified] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
+  const doneUrl = useRef(returnTo);
+  const doneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (!clerk.loaded) return <AuthLoadingState />;
 
@@ -76,6 +82,20 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
     setEmailInvalid(false);
     setBusy(true);
     setLine(null);
+    const { limited } = await sendCode(address);
+    if (limited) {
+      // True of every address, so it can be said: no code is coming.
+      setLine('failed');
+    } else {
+      setCode('');
+      setCodeVerified(false);
+      setScreen('reset');
+    }
+    setBusy(false);
+  }
+
+  // Two Clerk calls, whatever Clerk answers; only a 429 is reported.
+  async function sendCode(address: string): Promise<{ limited: boolean }> {
     const since = Date.now();
     let limited = false;
     try {
@@ -86,13 +106,33 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
       // The same screen either way.
     }
     await held(since, RESET_FLOOR_MS);
-    if (limited) {
-      // True of every address, so it can be said: no code is coming.
-      setLine('failed');
-    } else {
-      setScreen('reset');
-    }
+    return { limited };
+  }
+
+  async function onResend() {
+    if (busy) return;
+    setBusy(true);
+    setLine(null);
+    const { limited } = await sendCode(email);
+    setCode('');
+    setCodeVerified(false);
+    setLine(limited ? 'failed' : 'sent');
     setBusy(false);
+  }
+
+  function backToEmail() {
+    setLine(null);
+    setCode('');
+    setPassword('');
+    setCodeVerified(false);
+    setScreen('email');
+  }
+
+  function goOn() {
+    if (doneTimer.current) clearTimeout(doneTimer.current);
+    const url = doneUrl.current;
+    if (url.startsWith('http')) window.location.assign(url);
+    else router.replace(url);
   }
 
   async function finish() {
@@ -105,11 +145,10 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
           return;
         }
         setScreen('done');
-        const url = decorateUrl(returnTo);
-        setTimeout(() => {
-          if (url.startsWith('http')) window.location.assign(url);
-          else router.replace(url);
-        }, DONE_MS);
+        // Kept so the Continue button goes the same decorated way, and a click
+        // cancels the beat's timer rather than racing it.
+        doneUrl.current = decorateUrl(returnTo);
+        doneTimer.current = setTimeout(goOn, DONE_MS);
       },
     });
     if (error) setLine('failed');
@@ -126,16 +165,21 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
     setLine(null);
     const since = Date.now();
     try {
-      const verified = await signIn.resetPasswordEmailCode.verifyCode({ code });
-      if (verified.error) {
-        await held(since, RESET_FLOOR_MS);
-        if (isRateLimited(verified.error)) setLine('failed');
-        else if (codesOf(verified.error).includes('verification_expired'))
-          setLine('codeExpired');
-        else if (codesOf(verified.error).length > 0) setLine('codeWrong');
-        else setLine('failed');
-        setBusy(false);
-        return;
+      if (!codeVerified) {
+        const verified = await signIn.resetPasswordEmailCode.verifyCode({
+          code,
+        });
+        if (verified.error) {
+          await held(since, RESET_FLOOR_MS);
+          if (isRateLimited(verified.error)) setLine('failed');
+          else if (codesOf(verified.error).includes('verification_expired'))
+            setLine('codeExpired');
+          else if (codesOf(verified.error).length > 0) setLine('codeWrong');
+          else setLine('failed');
+          setBusy(false);
+          return;
+        }
+        setCodeVerified(true);
       }
       const saved = await signIn.resetPasswordEmailCode.submitPassword({
         password,
@@ -151,6 +195,7 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
         setLine('failed');
       }
     } catch {
+      await held(since, RESET_FLOOR_MS);
       setLine('failed');
     }
     setBusy(false);
@@ -160,12 +205,9 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
     return (
       <AuthPage>
         <AuthHeading title={COPY.forgot.doneTitle} sub={COPY.forgot.doneBody} />
-        <Link
-          href={returnTo}
-          className="inline-flex min-h-11 items-center text-sm font-bold text-signal"
-        >
+        <LinkButton className="justify-start" onClick={goOn}>
           {COPY.forgot.doneLink}
-        </Link>
+        </LinkButton>
       </AuthPage>
     );
   }
@@ -186,7 +228,7 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
             ? COPY.forgot.breached
             : undefined;
     return (
-      <AuthPage onBack={() => setScreen('email')}>
+      <AuthPage onBack={backToEmail}>
         <AuthHeading
           title={COPY.forgot.codeTitle}
           sub={COPY.forgot.codeBody(email)}
@@ -194,7 +236,11 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
         <form noValidate onSubmit={onSave} className="flex flex-col gap-4">
           <CodeBoxes
             value={code}
-            onChange={setCode}
+            onChange={(next) => {
+              setCode(next);
+              // A different code has to be checked again.
+              setCodeVerified(false);
+            }}
             error={codeError}
             disabled={busy}
           />
@@ -207,11 +253,16 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
             hint={COPY.forgot.rule}
             error={passwordError}
           />
-          {line === 'failed' ? (
-            <div aria-live="polite">
+          <div aria-live="polite">
+            {line === 'sent' ? (
+              <p className="m-0 text-[13px] text-fg-muted">
+                {COPY.forgot.sent}
+              </p>
+            ) : null}
+            {line === 'failed' ? (
               <AuthErrorLine>{SIGN_IN_COPY.failed}</AuthErrorLine>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
           <PrimaryButton
             busy={busy}
             busyLabel={COPY.forgot.busy}
@@ -220,6 +271,9 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
             {COPY.forgot.save}
           </PrimaryButton>
         </form>
+        <LinkButton onClick={onResend} disabled={busy}>
+          {COPY.forgot.resend}
+        </LinkButton>
       </AuthPage>
     );
   }
@@ -247,7 +301,7 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
             <AuthErrorLine>{SIGN_IN_COPY.failed}</AuthErrorLine>
           </div>
         ) : null}
-        <PrimaryButton busy={busy} busyLabel={COPY.forgot.busy}>
+        <PrimaryButton busy={busy} busyLabel={COPY.forgot.sending}>
           {COPY.forgot.send}
         </PrimaryButton>
       </form>

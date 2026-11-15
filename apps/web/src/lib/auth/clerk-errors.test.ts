@@ -119,5 +119,11 @@ describe('classifyNewPasswordError', () => {
       'failed',
     );
     expect(classifyNewPasswordError(new Error('boom'))).toBe('failed');
+    // The sign-in "untrusted" variant is not a breach claim about a new password.
+    expect(
+      classifyNewPasswordError(
+        clerkError(422, 'form_password_untrusted__sign_in'),
+      ),
+    ).toBe('failed');
   });
 });
