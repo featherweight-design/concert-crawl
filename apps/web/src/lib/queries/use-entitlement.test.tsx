@@ -172,16 +172,55 @@ describe('useEntitlement', () => {
     expect(result.current.surface).toBeNull();
   });
 
-  it('fails closed with the logged-out surface when signed in but no token resolves', async () => {
+  // The app is free: a signed-in fan is never shown the signed-out surface
+  // (paywalls, sign-in prompts) because their own /v1/users/me read failed.
+  it('stays active when signed in but no token resolves', async () => {
     signedIn = true;
     mockGetToken.mockResolvedValue(null);
     const { result } = renderHook(() => useEntitlement('concert-history'), {
       wrapper: withProvider(),
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.active).toBe(false);
-    expect(result.current.surface).toBe('tier-picker-on-tap');
+    expect(result.current.active).toBe(true);
+    expect(result.current.surface).toBe('visible-active');
     expect(mockFetchMe).not.toHaveBeenCalled();
+  });
+
+  it('stays active on every live gate when signed in and /v1/users/me fails', async () => {
+    signedIn = true;
+    mockFetchMe.mockRejectedValue(new Error('500'));
+    mockFlagsResult = {
+      data: { ...featureFlagDefaults(), crews: true },
+      isPending: false,
+    };
+    for (const feature of [
+      'concert-history',
+      'calendar-export',
+      'following',
+      'alerts',
+      'price-drop-alerts',
+      'crews',
+      'watching',
+    ] as const) {
+      const { result, unmount } = renderHook(() => useEntitlement(feature), {
+        wrapper: withProvider(),
+      });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.active).toBe(true);
+      expect(result.current.surface).toBe('visible-active');
+      unmount();
+    }
+    expect(mockFetchMe).toHaveBeenCalled();
+  });
+
+  it('is active when signed in and /v1/users/me succeeds', async () => {
+    setProfilePlan(planState('free'));
+    const { result } = renderHook(() => useEntitlement('calendar-export'), {
+      wrapper: withProvider(),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.active).toBe(true);
+    expect(result.current.surface).toBe('visible-active');
   });
 });
 
