@@ -1,3 +1,13 @@
+## [1.504.1](https://github.com/featherweight-design/concert-crawl/compare/v1.504.0...v1.504.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** require how the admin knows when marking a show sold out ([75cfd68](https://github.com/featherweight-design/concert-crawl/commit/75cfd6826c7b4b25e72dddb071ceef5755177ee6))
+* **crawler:** keep a manual landing off the unique index and the lineup clear ([ce0c2ec](https://github.com/featherweight-design/concert-crawl/commit/ce0c2ec04ee7449a61e4b7496cab25d6dbfeb0e2))
+* **crawler:** land a listing on the night's one show added by hand ([bdcfabb](https://github.com/featherweight-design/concert-crawl/commit/bdcfabb420d482b6ac46fea009358579c736cef9))
+* **crawler:** land on the manual show only when the bills share an act ([b261564](https://github.com/featherweight-design/concert-crawl/commit/b261564acaf0c572f43d7acf8f0f162c1edb918f)), closes [#1343](https://github.com/featherweight-design/concert-crawl/issues/1343)
+
 # [1.504.0](https://github.com/featherweight-design/concert-crawl/compare/v1.503.0...v1.504.0) (2026-11-15)
 
 
