@@ -18,14 +18,38 @@ import { SignedOutOverlay } from './SignedOutOverlay';
  * never navigates, so what the admin was editing stays where it was; nothing
  * is queued, they press Save again once back.
  */
+const ALIVE_FOR_MS = 30_000;
+
 export const AdminSessionGuard = () => {
   const { isLoaded, isSignedIn, getToken } = useAuth();
-  const { openSignIn } = useClerk();
+  const { openSignIn, addListener } = useClerk();
   const [ended, setEnded] = useState(false);
   const wasSignedIn = useRef(false);
   const probing = useRef(false);
+  // When a probe last found the session alive: a page that keeps getting a
+  // 401 for a role problem must not mint a fresh token on every response.
+  const lastAlive = useRef(0);
+  const endedRef = useRef(false);
+  endedRef.current = ended;
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
+
+  // A 401 can raise the overlay while Clerk still calls the session signed in
+  // (a stale one), so signing in again changes nothing `isSignedIn` shows.
+  // Clerk tells us when its state changes; if a token comes back, we are back.
+  useEffect(
+    () =>
+      addListener(() => {
+        if (!endedRef.current) return;
+        getTokenRef
+          .current()
+          .then((token) => {
+            if (token !== null) setEnded(false);
+          })
+          .catch(() => undefined);
+      }),
+    [addListener],
+  );
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -40,12 +64,15 @@ export const AdminSessionGuard = () => {
   useEffect(
     () =>
       onApiUnauthorized(() => {
-        if (probing.current) return;
+        if (probing.current || Date.now() - lastAlive.current < ALIVE_FOR_MS) {
+          return;
+        }
         probing.current = true;
         getTokenRef
           .current({ skipCache: true })
           .then((token) => {
             if (token === null) setEnded(true);
+            else lastAlive.current = Date.now();
           })
           // A failed refresh is the network, not the session: the offline
           // banner covers it, and a sign-in prompt would not help.

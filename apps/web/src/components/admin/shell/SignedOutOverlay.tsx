@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef } from 'react';
+import { useId, useRef, useState } from 'react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { useDialogKeyboard } from '@/components/admin/primitives/useDialogKeyboard';
 
@@ -20,7 +20,13 @@ export const SignedOutOverlay = ({ onSignIn }: { onSignIn: () => void }) => {
   const titleId = useId();
   const bodyId = useId();
   // Focus lands on the button and stays inside the card; Escape does nothing.
-  useDialogKeyboard(panelRef, () => undefined, { dismissible: false });
+  // Once "Sign in again" opens Clerk's modal (a portal outside this card) the
+  // containment steps aside, or it would drag Tab back out of the sign-in form.
+  const [signingIn, setSigningIn] = useState(false);
+  useDialogKeyboard(panelRef, () => undefined, {
+    dismissible: false,
+    enabled: !signingIn,
+  });
 
   return (
     <div
@@ -81,7 +87,10 @@ export const SignedOutOverlay = ({ onSignIn }: { onSignIn: () => void }) => {
         </p>
         <button
           type="button"
-          onClick={onSignIn}
+          onClick={() => {
+            setSigningIn(true);
+            onSignIn();
+          }}
           style={{
             width: '100%',
             height: 42,

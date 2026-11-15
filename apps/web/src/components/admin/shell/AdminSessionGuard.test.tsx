@@ -19,11 +19,19 @@ const clerk = vi.hoisted(() => ({
     getToken: vi.fn(),
   },
   openSignIn: vi.fn(),
+  // Clerk's state-change listener: the test fires it to mimic a sign-in.
+  listeners: new Set<() => void>(),
 }));
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => clerk.auth,
-  useClerk: () => ({ openSignIn: clerk.openSignIn }),
+  useClerk: () => ({
+    openSignIn: clerk.openSignIn,
+    addListener: (listener: () => void) => {
+      clerk.listeners.add(listener);
+      return () => clerk.listeners.delete(listener);
+    },
+  }),
 }));
 
 const overlay = () => screen.queryByTestId('admin-signed-out-overlay');
@@ -103,6 +111,28 @@ describe('AdminSessionGuard', () => {
         .catch(() => undefined);
     });
     await waitFor(() => expect(overlay()).toBeInTheDocument());
+  });
+
+  it('clears an overlay a 401 raised on a still-signed-in session once Clerk reports a token again', async () => {
+    clerk.auth.getToken = vi.fn().mockResolvedValue(null);
+    render(<AdminSessionGuard />);
+    await answer401();
+    await waitFor(() => expect(overlay()).toBeInTheDocument());
+    // The admin signs in again in Clerk's modal: isSignedIn never changed.
+    clerk.auth.getToken = vi.fn().mockResolvedValue('fresh-token');
+    await act(async () => {
+      for (const listener of clerk.listeners) listener();
+    });
+    await waitFor(() => expect(overlay()).toBeNull());
+  });
+
+  it('asks Clerk for a fresh token once for a burst of 401s, not once per response', async () => {
+    render(<AdminSessionGuard />);
+    await answer401();
+    await waitFor(() => expect(clerk.auth.getToken).toHaveBeenCalledTimes(1));
+    await answer401();
+    await answer401();
+    expect(clerk.auth.getToken).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a 401 with a live token to the page: a role problem, not a session end', async () => {

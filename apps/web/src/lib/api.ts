@@ -162,7 +162,15 @@ export function onApiUnauthorized(listener: UnauthorizedListener): () => void {
 
 function reportUnauthorized(res: Response): void {
   if (res.status !== 401) return;
-  for (const listener of unauthorizedListeners) listener();
+  for (const listener of unauthorizedListeners) {
+    // One listener's failure must not stop the others, or the caller's own
+    // handling of the response.
+    try {
+      listener();
+    } catch {
+      // Nothing to do: a listener is a notification, not part of the request.
+    }
+  }
 }
 
 /**
