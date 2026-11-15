@@ -87,6 +87,23 @@ describe('FollowButton', () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 
+  it('carries a pending follow through sign-in when it knows the artist', () => {
+    const { getByRole } = render(
+      <FollowButton
+        name="Wax Harbour"
+        slug="wax-harbour"
+        following={false}
+        signedOut
+        onToggle={() => undefined}
+        onLockedTap={() => undefined}
+      />,
+    );
+    fireEvent.click(getByRole('button'));
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/artists/wax-harbour?intent=follow%3Awax-harbour&label=Wax+Harbour')}`,
+    );
+  });
+
   it('carries the current path through as the return target', () => {
     const { getByRole } = render(
       <FollowButton

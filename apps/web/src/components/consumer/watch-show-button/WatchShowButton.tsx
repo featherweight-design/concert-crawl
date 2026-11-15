@@ -157,7 +157,7 @@ export function WatchShowButton({
     // and nothing happened at all. Route to sign-in instead — Watching is
     // free, it just needs an account to save to.
     if (!isSignedIn) {
-      goToSignIn();
+      goToSignIn({ intent: { action: 'watch', eventId }, label: artist });
       return;
     }
     // Snapshot the pre-toggle state so a stale-cache read on the effect side

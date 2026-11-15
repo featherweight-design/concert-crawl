@@ -42,6 +42,33 @@ describe('loadIntentSubject', () => {
     );
   });
 
+  it('names an artist a pending Follow is for, and counts the upcoming dates', async () => {
+    mocks.get.mockResolvedValue({
+      artist: { name: ' TOKiMONSTA ', slug: 'tokimonsta' },
+      shows: [{}, {}],
+    });
+    expect(
+      await loadIntentSubject('/artists/tokimonsta?intent=follow:tokimonsta'),
+    ).toEqual({ kind: 'artist', name: 'TOKiMONSTA', dates: 2 });
+    expect(mocks.get).toHaveBeenCalledWith(
+      '/v1/artists/tokimonsta',
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    // The Follow is for a different artist than the page.
+    ['/artists/tokimonsta?intent=follow:other-artist'],
+    // A Watch on an artist page promises nothing about the artist.
+    [`/artists/tokimonsta?intent=watch:${ID}`],
+    // A Follow on a show page.
+    [`/events/${ID}?intent=follow:tokimonsta`],
+    ['/artists/tokimonsta?intent=follow:Bad%20Slug'],
+  ])('is generic, and asks nobody, for %s', async (path) => {
+    expect(await loadIntentSubject(path)).toEqual({ kind: 'generic' });
+    expect(mocks.get).not.toHaveBeenCalled();
+  });
+
   it('gives a slow lookup a deadline, so the page never waits on it', async () => {
     mocks.get.mockResolvedValue(detail);
     await loadIntentSubject(watch());

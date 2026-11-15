@@ -1094,12 +1094,13 @@ export const CONSUMER_COPY = {
   },
 
   // ── Post-signup return seam ─────────────────────────────────────
-  // The strip that explains an action replayed while the visitor was signing up.
-  // "Kept", never "Saved" — there is no Saved concept in this product.
+  // The toast that confirms an action replayed while the visitor was signing
+  // up (design_handoff_custom_auth COPY.md `int.watchToast`; the follow line is
+  // its sibling). DRAFT until copy-review.
   returnSeam: {
-    heading: (artist: string) => `Now watching ${artist}.`,
-    subline: 'Kept while you were signing up',
-    viewLink: 'View',
+    watching: (show: string) => `You’re watching ${show}.`,
+    following: (artist: string) => `You’re following ${artist}.`,
+    myShows: 'My shows',
   },
 
   // ── Who else is watching ────────────────────────────────────────

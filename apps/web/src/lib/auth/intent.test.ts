@@ -19,11 +19,31 @@ describe('intent codec (#794)', () => {
     ).toEqual({ action: 'watch', eventId: ID });
   });
 
+  it('round-trips a follow intent, by the artist slug', () => {
+    expect(
+      decodeIntent(
+        encodeIntent({ action: 'follow', artistSlug: 'neal-francis' }),
+      ),
+    ).toEqual({ action: 'follow', artistSlug: 'neal-francis' });
+    expect(encodeIntent({ action: 'follow', artistSlug: 'a1' })).toBe(
+      'follow:a1',
+    );
+  });
+
   it.each([
     ['null', null],
     ['undefined', undefined],
     ['empty', ''],
     ['action only', 'watch'],
+    ['follow with no artist', 'follow:'],
+    // A slug is lowercase words and digits: nothing that could reach a path.
+    ['follow with a path', 'follow:../admin'],
+    ['follow with a slash', 'follow:a/b'],
+    ['follow with capitals', 'follow:Neal-Francis'],
+    ['follow with a space', 'follow:neal francis'],
+    ['follow with a leading dash', 'follow:-neal'],
+    ['a UUID is not a slug for follow', `follow:${ID.toUpperCase()}`],
+    ['a slug is not an event for watch', 'watch:neal-francis'],
     ['non-uuid id', 'watch:not-a-uuid'],
     ['unknown action', `delete:${ID}`],
     ['extra separator', `watch:${ID}:extra`],

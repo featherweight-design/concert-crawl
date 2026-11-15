@@ -117,6 +117,7 @@ export const ArtistPageContent = ({
 
   const followProps = {
     name: artist.name,
+    slug: artist.slug,
     following,
     signedOut,
     locked,
