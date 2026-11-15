@@ -4,6 +4,11 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FEEDBACK_DRAFT_KEY } from '@/lib/feedback-draft';
+import {
+  FEEDBACK_SCREENSHOT_TYPES,
+  MAX_FEEDBACK_SCREENSHOT_BYTES,
+} from '@concert-crawl/types';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 beforeEach(() => {
   localStorage.clear();
@@ -239,5 +244,59 @@ describe('FeedbackModal — Save and come back persists draft (#830)', () => {
 
     setItemMock.mockRestore();
     fetchMock.mockRestore();
+  });
+});
+
+// ── The screenshot picker takes only what the API keeps ────────────────────
+
+describe('FeedbackModal — screenshot picker', () => {
+  const fileInput = (): HTMLInputElement => {
+    const input = document.querySelector('input[type="file"]');
+    if (!(input instanceof HTMLInputElement)) throw new Error('no file input');
+    return input;
+  };
+  const pick = (file: File) =>
+    fireEvent.change(fileInput(), { target: { files: [file] } });
+  const sizedFile = (bytes: number, type: string): File => {
+    const file = new File(['x'], 'shot', { type });
+    Object.defineProperty(file, 'size', { value: bytes });
+    return file;
+  };
+
+  it('offers exactly the allowed types', () => {
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    expect(fileInput().accept).toBe(FEEDBACK_SCREENSHOT_TYPES.join(','));
+  });
+
+  it('refuses a type the API would drop, and says so', () => {
+    const readSpy = vi.spyOn(FileReader.prototype, 'readAsDataURL');
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    pick(sizedFile(1_000, 'image/svg+xml'));
+    expect(screen.getByRole('alert').textContent).toBe(
+      CONSUMER_COPY.feedback.modal.errors.screenshotWrongType,
+    );
+    expect(readSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a file too big for the API, and says so', () => {
+    const readSpy = vi.spyOn(FileReader.prototype, 'readAsDataURL');
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    pick(sizedFile(MAX_FEEDBACK_SCREENSHOT_BYTES + 1, 'image/png'));
+    expect(screen.getByRole('alert').textContent).toBe(
+      CONSUMER_COPY.feedback.modal.errors.screenshotTooBig,
+    );
+    expect(readSpy).not.toHaveBeenCalled();
+  });
+
+  it('reads an allowed file and clears the earlier error', () => {
+    const readSpy = vi
+      .spyOn(FileReader.prototype, 'readAsDataURL')
+      .mockImplementation(() => undefined);
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    pick(sizedFile(1_000, 'image/heic'));
+    expect(screen.getByRole('alert')).toBeTruthy();
+    pick(sizedFile(MAX_FEEDBACK_SCREENSHOT_BYTES, 'image/gif'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(readSpy).toHaveBeenCalledTimes(1);
   });
 });
