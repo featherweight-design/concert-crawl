@@ -48,6 +48,7 @@ const submission = (
   avatarSecondColor: null,
   backedBy: 2,
   state: 'waiting',
+  held: true,
   ticketUrl: null,
   ...patch,
 });

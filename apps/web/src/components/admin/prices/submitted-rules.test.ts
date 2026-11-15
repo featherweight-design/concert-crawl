@@ -4,7 +4,30 @@ import {
   isRejectionReason,
   isSubmissionState,
   priceRange,
+  stateWords,
 } from './submitted-rules';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+
+// Hugh's prod report: a 1-fan price read "Waiting for you" though nothing
+// held it for the admin.
+describe('stateWords', () => {
+  const STATES = ADMIN_COPY.pricesSubmitted.states;
+  it('reads Waiting for you only for a held price', () => {
+    expect(stateWords({ state: 'waiting', held: true }, STATES)).toBe(
+      'Waiting for you',
+    );
+    expect(stateWords({ state: 'waiting', held: false }, STATES)).toBe(
+      'Needs another fan',
+    );
+  });
+
+  it('leaves every other state as it was, held or not', () => {
+    expect(stateWords({ state: 'published', held: false }, STATES)).toBe(
+      'Published',
+    );
+    expect(stateWords({ state: 'stale', held: true }, STATES)).toBe('Stale');
+  });
+});
 
 describe('priceRange', () => {
   it('draws whole dollars without cents and a range with its top', () => {

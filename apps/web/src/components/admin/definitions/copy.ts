@@ -4051,6 +4051,9 @@ export const ADMIN_COPY = {
     // The state as plain text on a desktop; the phone draws pills.
     states: {
       waiting: 'Waiting for you',
+      // Waiting, but below the confirms it needs, so not held for you yet
+      // (undrawn; Hugh's prod report). Approve still publishes it.
+      waitingForFan: 'Needs another fan',
       published: 'Published',
       'price-check': 'In Needs you',
       'not-used': 'Not used',
@@ -4059,6 +4062,7 @@ export const ADMIN_COPY = {
     // 4d#8: the phone's pills read the desktop's words.
     phoneStates: {
       waiting: 'Waiting for you',
+      waitingForFan: 'Needs another fan',
       published: 'Published',
       'price-check': 'Price check',
       'not-used': 'Not used',

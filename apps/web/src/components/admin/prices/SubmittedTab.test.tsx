@@ -68,6 +68,7 @@ const row = (overrides: Partial<SubmittedRow>): SubmittedRow => ({
   avatarSecondColor: null,
   backedBy: 2,
   state: 'published',
+  held: true,
   ticketUrl: null,
   ...overrides,
 });

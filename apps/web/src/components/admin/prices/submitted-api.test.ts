@@ -47,3 +47,14 @@ describe('submitted prices avatar pair', () => {
     );
   });
 });
+
+describe('submitted prices held flag', () => {
+  it('reads held from the API, and an older API without it as held', async () => {
+    const { rows } = await listWith([
+      apiRow({ held: true }),
+      apiRow({ id: 's-2', held: false }),
+      apiRow({ id: 's-3' }),
+    ]);
+    expect(rows.map((row) => row.held)).toEqual([true, false, true]);
+  });
+});
