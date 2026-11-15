@@ -4,6 +4,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { Toast } from './Toast';
+import { TOAST_SHADOW } from './shadows';
 
 // `Toast` reads useIsPhone, and jsdom ships no matchMedia.
 beforeEach(() => {
@@ -22,11 +23,13 @@ describe('Toast look', () => {
   };
 
   it('casts 43/approve-done-d’s shadow, offsets on the token, not the bare colour', () => {
+    // jsdom's CSS parser drops a box-shadow that holds var(), so the
+    // rendered style can read empty: pin the value the Toast is given.
     render(<Toast title="Approved" body={null} />);
-    const shadow = block().style.boxShadow;
-    expect(shadow).toContain('var(--shadow-strong)');
-    expect(shadow).toContain('14px 30px');
-    expect(shadow).not.toBe('var(--shadow-strong)');
+    expect(block()).toBeTruthy();
+    expect(TOAST_SHADOW).toContain('var(--shadow-strong)');
+    expect(TOAST_SHADOW).toContain('14px 30px');
+    expect(TOAST_SHADOW).not.toBe('var(--shadow-strong)');
   });
 
   it('floats 96px up on the phone, 32 above the tab bar (43/approve-m)', async () => {

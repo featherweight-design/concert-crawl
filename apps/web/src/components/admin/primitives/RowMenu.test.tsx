@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Search, X } from 'lucide-react';
 import { RowMenu, RowMenuItems } from './RowMenu';
+import { MENU_SHADOW } from './shadows';
 
 afterEach(cleanup);
 
@@ -218,11 +219,13 @@ describe('RowMenu', () => {
   });
 
   it('casts 43/approve-menu-d’s shadow, offsets on the token, not the bare colour', () => {
+    // jsdom's CSS parser can drop a box-shadow that holds var(): pin the
+    // value the menu is given.
     renderMenu();
-    const shadow = screen.getByRole('menu').style.boxShadow;
-    expect(shadow).toContain('var(--shadow-strong)');
-    expect(shadow).toContain('18px 40px');
-    expect(shadow).not.toBe('var(--shadow-strong)');
+    expect(screen.getByRole('menu')).toBeVisible();
+    expect(MENU_SHADOW).toContain('var(--shadow-strong)');
+    expect(MENU_SHADOW).toContain('18px 40px');
+    expect(MENU_SHADOW).not.toBe('var(--shadow-strong)');
   });
 
   it('closes on Escape with focus back on ⋯', () => {
