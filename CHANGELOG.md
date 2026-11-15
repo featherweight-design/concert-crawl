@@ -1,3 +1,18 @@
+# [1.500.0](https://github.com/featherweight-design/concert-crawl/compare/v1.499.0...v1.500.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **crawler:** never let progress writes hold up a crawl ([4464ff6](https://github.com/featherweight-design/concert-crawl/commit/4464ff6e218ac787d29c8fa6b5a4adc97d1486f7))
+* **db:** lock, scope and isolate the event_artists rebuild ([7f2b4db](https://github.com/featherweight-design/concert-crawl/commit/7f2b4db763cce0a8fa6862b3dd6026507c3b3071))
+
+
+### Features
+
+* **crawler:** rebuild event_artists wherever the bill is written ([d1294ad](https://github.com/featherweight-design/concert-crawl/commit/d1294ad229ea8c69d41b3f6019635eb3081f3271))
+* **crawler:** report a triggered re-crawl's page progress ([4238b78](https://github.com/featherweight-design/concert-crawl/commit/4238b78dcda335b39333eed506621c2eb4eab9e4))
+* **db:** add syncEventArtists and the event_artists backfill ([7213965](https://github.com/featherweight-design/concert-crawl/commit/7213965ad19a29fad1c3b3d030fc1d19d43ea5df))
+
 # [1.499.0](https://github.com/featherweight-design/concert-crawl/compare/v1.498.0...v1.499.0) (2026-11-15)
 
 
