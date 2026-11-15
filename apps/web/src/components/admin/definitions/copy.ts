@@ -4867,6 +4867,64 @@ export const ADMIN_COPY = {
     },
     none: '—',
   },
+  // E5-b Delete…, on a show added by hand only (plan 4b#10). The ⋯ line is
+  // `06/event-menu`'s; no board draws the dialog (🔸), so it follows
+  // `04/delete-venue`, and its strings are drafts for copy-review. The two
+  // refusals name no other action: Hide is held.
+  eventDelete: {
+    menu: 'Delete…',
+    menuHint: 'Only for shows added by mistake',
+    title: (title: string) => `Delete ${title}?`,
+    body: 'Only for a show added by mistake. Deleting removes the show and its lineup. This can’t be undone.',
+    field: 'Type the show’s title to confirm',
+    confirm: 'Delete show',
+    // Rule 10 through `states.saveFailed`, shown inside the dialog.
+    failed: {
+      what: (title: string) => title,
+      saved: 'It is still listed.',
+    },
+    // DELETE's 409 `not_manual`.
+    notManual:
+      'Can’t delete: the crawl found this show, so it would add it back.',
+    // DELETE's 409 `has_dependents`: "Can't delete: it has 3 Watchers and
+    // 1 Submitted price." Zero counts drop out.
+    hasDependents: (counts: {
+      watchers: number;
+      concerts: number;
+      submittedPrices: number;
+      redirects: number;
+    }) => {
+      const plural = (count: number, one: string, many: string) =>
+        `${count.toLocaleString('en-US')} ${count === 1 ? one : many}`;
+      const parts = [
+        counts.watchers > 0 && plural(counts.watchers, 'Watcher', 'Watchers'),
+        counts.concerts > 0 && plural(counts.concerts, 'Concert', 'Concerts'),
+        counts.submittedPrices > 0 &&
+          plural(counts.submittedPrices, 'Submitted price', 'Submitted prices'),
+        counts.redirects > 0 &&
+          `${plural(counts.redirects, 'merged listing', 'merged listings')} pointing here`,
+      ].filter((part): part is string => typeof part === 'string');
+      if (parts.length === 0)
+        return 'Can’t delete: other records still point at this show.';
+      const last = parts.pop();
+      const list =
+        parts.length === 0 ? last : `${parts.join(', ')} and ${last}`;
+      return `Can’t delete: it has ${list}.`;
+    },
+    // The Review page's bulk Delete, after it ran: "Deleted 3 shows. Skipped
+    // 2: 1 crawled, 1 with Watchers, Concerts, Submitted prices or merges."
+    bulk: {
+      deleted: (count: number) =>
+        count === 0 ? 'Nothing deleted.' : `Deleted ${showCount(count)}.`,
+      skipped: (count: number, reasons: string[]) =>
+        `Skipped ${count.toLocaleString('en-US')}: ${reasons.join(', ')}.`,
+      notManual: (count: number) => `${count.toLocaleString('en-US')} crawled`,
+      hasDependents: (count: number) =>
+        `${count.toLocaleString('en-US')} with Watchers, Concerts, Submitted prices or merges`,
+      missing: (count: number) =>
+        `${showCount(count)} ${count === 1 ? 'was' : 'were'} already gone.`,
+    },
+  },
   // 4b-3 Add a show by hand (`06/add-a-show-by-hand`, addendum 3
   // `11/add-a-show-lineup-d`, addendum 5 `04/add-show-errors-d`). Strings the
   // boards don't draw are drafts for copy-review. The form's own strings

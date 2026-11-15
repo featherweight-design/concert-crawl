@@ -13,6 +13,7 @@ import {
   type GetToken,
 } from '../../invite-codes/codes-api';
 import { resolveVenueCheckUrl } from '@/lib/admin/missing';
+import { deleteEvent } from '../event-delete';
 import {
   apiParams,
   isEventListStatus,
@@ -209,6 +210,11 @@ export const eventsListApi = (getToken: GetToken) => ({
       body: { hiddenFromConsumer: true },
     });
   },
+  /**
+   * Delete…, from a manual row's ⋯. Through `apiClient`, so a 409 refusal
+   * reaches the dialog with its body (the counts).
+   */
+  remove: (id: string): Promise<void> => deleteEvent(getToken, id),
 });
 
 export type EventsListApi = ReturnType<typeof eventsListApi>;

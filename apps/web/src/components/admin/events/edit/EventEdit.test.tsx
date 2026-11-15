@@ -24,11 +24,13 @@ vi.mock('@clerk/nextjs', () => ({
 const patch = vi.fn();
 const post = vi.fn();
 const put = vi.fn();
+const del = vi.fn();
 vi.mock('@/lib/api', () => ({
   apiClient: {
     patch: (...args: unknown[]) => patch(...args),
     post: (...args: unknown[]) => post(...args),
     put: (...args: unknown[]) => put(...args),
+    delete: (...args: unknown[]) => del(...args),
   },
   // The lineup's artist search (add-show-api); no test types into it.
   adminFetch: vi.fn(),
@@ -36,6 +38,11 @@ vi.mock('@/lib/api', () => ({
     constructor(
       public status: number,
       message: string,
+      public code?: string,
+      public zodIssues?: unknown,
+      public reason?: string,
+      public field?: string,
+      public body?: unknown,
     ) {
       super(message);
     }
@@ -79,6 +86,7 @@ const DETAIL: EventDetail = {
   tourName: null,
   soldOutRecord: null,
   lineup: [],
+  manual: false,
 };
 
 // `useIsPhone` reads matchMedia, which jsdom does not ship.
@@ -95,6 +103,7 @@ beforeEach(() => {
   patch.mockReset();
   post.mockReset();
   put.mockReset();
+  del.mockReset();
   push.mockReset();
   refresh.mockReset();
 });
@@ -208,6 +217,83 @@ describe('EventEdit', () => {
     fireEvent.click(screen.getByTestId('event-edit-menu'));
     fireEvent.click(screen.getByTestId('event-edit-menu-merge'));
     expect(screen.getByTestId('merge-dialog')).toBeInTheDocument();
+  });
+
+  describe('Delete… (E5-b)', () => {
+    const DELETE = ADMIN_COPY.eventDelete;
+    const MANUAL: EventDetail = { ...DETAIL, manual: true };
+
+    const openAndConfirm = () => {
+      fireEvent.click(screen.getByTestId('event-edit-menu'));
+      fireEvent.click(screen.getByTestId('event-edit-menu-delete'));
+      fireEvent.change(screen.getByLabelText(DELETE.field), {
+        target: { value: DETAIL.title },
+      });
+      fireEvent.click(
+        screen.getByRole('button', { name: new RegExp(DELETE.confirm) }),
+      );
+    };
+
+    it('is not offered on a crawled show', () => {
+      render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+      fireEvent.click(screen.getByTestId('event-edit-menu'));
+      expect(screen.queryByTestId('event-edit-menu-delete')).toBeNull();
+    });
+
+    it.each([false, true])(
+      'DELETEs a manual show and goes back to the Events list (phone: %s)',
+      async (phone) => {
+        setPhone(phone);
+        del.mockResolvedValue(undefined);
+        render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+        openAndConfirm();
+        await waitFor(() => {
+          expect(push).toHaveBeenCalledWith('/admin/events');
+        });
+        expect(del).toHaveBeenCalledWith(
+          `/v1/admin/events/${DETAIL.id}`,
+          'token',
+        );
+      },
+    );
+
+    it('says why on has_dependents and stays on the page', async () => {
+      del.mockRejectedValue(
+        new ApiError(
+          409,
+          'has_dependents',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          {
+            success: false,
+            error: 'has_dependents',
+            counts: {
+              watchers: 0,
+              concerts: 0,
+              submittedPrices: 2,
+              redirects: 0,
+            },
+          },
+        ),
+      );
+      render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+      openAndConfirm();
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Can’t delete: it has 2 Submitted prices.',
+      );
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it('says why on not_manual', async () => {
+      del.mockRejectedValue(new ApiError(409, 'not_manual'));
+      render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+      openAndConfirm();
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        DELETE.notManual,
+      );
+    });
   });
 
   it('stacks on the phone with the short venue link and Doors after Show', () => {

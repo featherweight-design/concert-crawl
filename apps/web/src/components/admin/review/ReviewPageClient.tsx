@@ -10,6 +10,7 @@ import { useInvalidateReviewQueries } from '@/lib/queries/use-admin-review';
 import { AdminReviewMobile } from './AdminReviewMobile';
 import { ReviewTabs } from './ReviewTabs';
 import { editEventHref } from '@/lib/admin/edit-event-link';
+import { bulkDeleteResultOf } from '@/components/admin/events/event-delete';
 import {
   isReviewTabKey,
   resolveReviewTab,
@@ -201,12 +202,15 @@ export const ReviewPageClient = ({ decisions }: ReviewPageClientProps) => {
     bulkDelete: async (ids: string[]) => {
       const token = await getToken();
       if (!token) throw new ApiError(401, 'Unauthorized');
-      await apiClient.post('/v1/admin/events/bulk/delete', token, {
-        ids,
-        confirmation: 'DELETE',
-      });
+      const data = await apiClient.post<unknown>(
+        '/v1/admin/events/bulk/delete',
+        token,
+        { ids, confirmation: 'DELETE' },
+      );
       void invalidate.eventFlags();
       void invalidate.counts();
+      // What was deleted and what the guard skipped, for the summary.
+      return bulkDeleteResultOf(data);
     },
   };
 

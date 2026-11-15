@@ -77,6 +77,42 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+describe('ReviewPageClient bulk Delete', () => {
+  it('returns the bulk response, read, for the summary', async () => {
+    post.mockResolvedValue({
+      count: 2,
+      deletedIds: ['evt-1', 'evt-2'],
+      skipped: [
+        {
+          id: 'evt-3',
+          reason: 'has_dependents',
+          counts: {
+            watchers: 1,
+            concerts: 0,
+            submittedPrices: 0,
+            redirects: 0,
+          },
+        },
+      ],
+      missing: ['evt-4'],
+    });
+    render(<ReviewPageClient decisions={0} />);
+    const api = captured.api;
+    if (api === null) throw new Error('no api captured');
+    await expect(
+      api.bulkDelete(['evt-1', 'evt-2', 'evt-3', 'evt-4']),
+    ).resolves.toEqual({
+      count: 2,
+      skipped: [{ id: 'evt-3', reason: 'has_dependents' }],
+      missing: ['evt-4'],
+    });
+    expect(post).toHaveBeenCalledWith('/v1/admin/events/bulk/delete', 'token', {
+      ids: ['evt-1', 'evt-2', 'evt-3', 'evt-4'],
+      confirmation: 'DELETE',
+    });
+  });
+});
+
 describe('ReviewPageClient Mark sold out', () => {
   // The mark's `.default('other')` goes in a follow-up (expand/contract):
   // Review must already send its method, or that follow-up breaks it.

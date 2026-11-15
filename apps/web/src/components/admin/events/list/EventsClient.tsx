@@ -738,6 +738,11 @@ export const EventsClient = () => {
           await api.hide(row.id);
           await load();
         }}
+        // A refusal throws to the dialog, which says why; a delete reloads.
+        onDelete={async (row) => {
+          await api.remove(row.id);
+          await load();
+        }}
       />
       {footer(page)}
     </div>

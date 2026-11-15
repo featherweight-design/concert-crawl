@@ -18,6 +18,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { ConfirmDialog, useIsPhone } from '@/components/admin/primitives';
 import { gradientBorder } from '@/components/admin/artists/artist-styles';
 import { hideVenue, removeVenue, tryDeleteVenue } from '@/lib/actions/venues';
+import { foldName } from '@/components/admin/fold-name';
 
 const COPY = ADMIN_COPY.venueConfirms;
 const FAILED = ADMIN_COPY.states.saveFailed;
@@ -211,19 +212,6 @@ const NoteField = ({
     </div>
   );
 };
-
-/**
- * Folds what a keyboard or autocorrect changes without meaning to: Unicode
- * forms (NFKC), curly quotes to straight, runs of whitespace, and case.
- */
-const foldName = (text: string): string =>
-  text
-    .normalize('NFKC')
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
 
 const named = (typed: string, venue: VenueWithCrawlHealth): boolean =>
   foldName(typed) === foldName(venue.name);

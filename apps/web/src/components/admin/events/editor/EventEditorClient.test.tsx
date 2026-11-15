@@ -33,12 +33,19 @@ vi.mock('@/lib/api', () => ({
     constructor(
       public readonly status: number,
       message: string,
+      public readonly code?: string,
+      public readonly zodIssues?: unknown,
+      public readonly reason?: string,
+      public readonly field?: string,
+      public readonly body?: unknown,
     ) {
       super(message);
     }
   },
 }));
 
+import { ApiError } from '@/lib/api';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { EventEditorClient, type EditorEvent } from './EventEditorClient';
 
 const SAMPLE: EditorEvent = {
@@ -297,6 +304,59 @@ describe('EventEditorClient', () => {
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith('/admin/events');
     });
+  });
+
+  it('says a crawled show can’t be deleted, not the raw not_manual code', async () => {
+    mockApiDelete.mockRejectedValueOnce(new ApiError(409, 'not_manual'));
+    render(<EventEditorClient event={SAMPLE} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete event…' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Delete event' }),
+    );
+    expect(
+      await screen.findByText(ADMIN_COPY.eventDelete.notManual),
+    ).toBeTruthy();
+    expect(screen.queryByText('not_manual')).toBeNull();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('names the counts on has_dependents', async () => {
+    const counts = {
+      watchers: 3,
+      concerts: 0,
+      submittedPrices: 1,
+      redirects: 0,
+    };
+    mockApiDelete.mockRejectedValueOnce(
+      new ApiError(
+        409,
+        'has_dependents',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          success: false,
+          error: 'has_dependents',
+          counts,
+        },
+      ),
+    );
+    render(<EventEditorClient event={SAMPLE} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete event…' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Delete event' }),
+    );
+    expect(
+      await screen.findByText(
+        'Can’t delete: it has 3 Watchers and 1 Submitted price.',
+      ),
+    ).toBeTruthy();
+    expect(ADMIN_COPY.eventDelete.hasDependents(counts)).toBe(
+      'Can’t delete: it has 3 Watchers and 1 Submitted price.',
+    );
   });
 
   it('Cancel on the danger confirm closes the modal without an API call', async () => {

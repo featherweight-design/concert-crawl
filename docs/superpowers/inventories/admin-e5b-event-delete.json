@@ -1,0 +1,75 @@
+{
+  "feature": "Admin E5-b: Delete… on a manual show (Events row ⋯ and Event edit's ⋯) and its confirm",
+  "note": "Read-only: opens the ⋯ and the Delete dialog but never presses Delete show. CONTACT_SHEET_ROLE=admin. Boards: design/design_handoff_admin_redesign 06-events-artists-prices/event-menu (the ⋯ line); no board draws the event Delete dialog (🔸), it follows 04-venues/delete-venue. NEEDS a manual scratch show (added by hand, no Watchers, Concerts or Submitted prices): none is known, so replace MANUAL_SHOW_ID and MANUAL_SHOW_TITLE before running. The phone has no row ⋯ (cards are links), so the phone rows walk Event edit only. By hand: the refused lines (a manual show with a Watcher; a crawled show through the legacy editor) and the Review page's bulk Delete summary, all of which delete or need seeded dependents.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "row-menu-manual",
+      "label": "Events list, desktop: a manual row's ⋯ open, Delete… last in danger",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "goto": "/admin/events?q=MANUAL_SHOW_TITLE",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-row-menu\"]"
+        },
+        { "settle": 1500 },
+        { "click": "[data-testid=\"event-row-menu\"]" },
+        { "wait": "[data-testid=\"event-row-menu-delete\"]" },
+        { "settle": 500 }
+      ]
+    },
+    {
+      "id": "row-delete-confirm",
+      "label": "Events list, desktop: Delete dialog open, title not typed, Delete show held",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "goto": "/admin/events?q=MANUAL_SHOW_TITLE",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-row-menu\"]"
+        },
+        { "settle": 1500 },
+        { "click": "[data-testid=\"event-row-menu\"]" },
+        { "click": "[data-testid=\"event-row-menu-delete\"]" },
+        { "wait": "[role=\"dialog\"]" },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "edit-menu-manual",
+      "label": "Event edit: the ⋯ open on a manual show, Delete… last in danger",
+      "steps": [
+        {
+          "goto": "/admin/events/MANUAL_SHOW_ID/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 1500 },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "wait": "[data-testid=\"event-edit-menu-delete\"]" },
+        { "settle": 400 }
+      ]
+    },
+    {
+      "id": "edit-delete-confirm",
+      "label": "Event edit: Delete dialog open (sheet on the phone), Delete show held",
+      "steps": [
+        {
+          "goto": "/admin/events/MANUAL_SHOW_ID/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 1500 },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "click": "[data-testid=\"event-edit-menu-delete\"]" },
+        { "wait": "[role=\"dialog\"]" },
+        { "settle": 800 }
+      ]
+    }
+  ]
+}

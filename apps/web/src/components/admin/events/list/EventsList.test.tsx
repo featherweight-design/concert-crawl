@@ -12,7 +12,10 @@ import {
 } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
+import { ApiError } from '@/lib/api';
+
 const HIDE = ADMIN_COPY.eventEdit.hide;
+const DELETE = ADMIN_COPY.eventDelete;
 import type { EventListRow } from './events-api';
 
 vi.mock('next/navigation', () => ({
@@ -301,6 +304,126 @@ describe('EventsList on desktop', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
+
+  it('offers Delete… on a manual row only', () => {
+    const onDelete = vi.fn(async () => undefined);
+    render(
+      <EventsList
+        when="upcoming"
+        rows={[row({}), row({ id: 'evt-2', title: 'By hand', manual: true })]}
+        onDelete={onDelete}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('Clipse & J.I.D') }),
+    );
+    expect(
+      screen.queryByRole('menuitem', { name: new RegExp(DELETE.menu) }),
+    ).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('By hand') }),
+    );
+    expect(
+      screen.getByRole('menuitem', { name: new RegExp(DELETE.menu) }),
+    ).toBeInTheDocument();
+  });
+
+  it('deletes through the dialog once the title is typed, and goes back to the ⋯', async () => {
+    const onDelete = vi.fn(async () => undefined);
+    render(
+      <EventsList
+        when="upcoming"
+        rows={[row({ title: 'By hand', manual: true })]}
+        onDelete={onDelete}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menu.label('By hand') }),
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: new RegExp(DELETE.menu) }),
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent(DELETE.title('By hand'));
+    const confirm = within(dialog).getByRole('button', {
+      name: new RegExp(DELETE.confirm),
+    });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText(DELETE.field), {
+      target: { value: 'by hand' },
+    });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(onDelete).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'evt-1' }),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(
+      screen.getByRole('button', { name: COPY.menu.label('By hand') }),
+    ).toHaveFocus();
+  });
+
+  it.each([
+    [new ApiError(409, 'not_manual'), DELETE.notManual],
+    [
+      new ApiError(
+        409,
+        'has_dependents',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          success: false,
+          error: 'has_dependents',
+          counts: {
+            watchers: 1,
+            concerts: 2,
+            submittedPrices: 0,
+            redirects: 1,
+          },
+        },
+      ),
+      'Can’t delete: it has 1 Watcher, 2 Concerts and 1 merged listing pointing here.',
+    ],
+  ])(
+    'says why a refused delete was refused and holds the confirm',
+    async (err, line) => {
+      const onDelete = vi.fn(async () => {
+        throw err;
+      });
+      render(
+        <EventsList
+          when="upcoming"
+          rows={[row({ title: 'By hand', manual: true })]}
+          onDelete={onDelete}
+        />,
+      );
+      fireEvent.click(
+        screen.getByRole('button', { name: COPY.menu.label('By hand') }),
+      );
+      fireEvent.click(
+        screen.getByRole('menuitem', { name: new RegExp(DELETE.menu) }),
+      );
+      const dialog = screen.getByRole('dialog');
+      fireEvent.change(within(dialog).getByLabelText(DELETE.field), {
+        target: { value: 'By hand' },
+      });
+      fireEvent.click(
+        within(dialog).getByRole('button', {
+          name: new RegExp(DELETE.confirm),
+        }),
+      );
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(line);
+      expect(
+        within(dialog).getByRole('button', {
+          name: new RegExp(DELETE.confirm),
+        }),
+      ).toBeDisabled();
+    },
+  );
 
   it('draws no Hide line without onHide', () => {
     render(<EventsList when="upcoming" rows={[row({})]} />);
