@@ -58,9 +58,8 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
   const tile = tileParts(show.iso);
   // Tonight is the night the doors matter (the board's "Doors 7:00 PM"); a
   // later show reads its show time, and so does tonight without a doors time.
-  const doors =
-    tonight && show.doorsTime !== null ? formatShowTime(show.doorsTime) : '';
-  const whenLabel = doors === '' ? row.timeLabel : COPY.doors(doors);
+  const doors = tonight ? formatShowTime(show.doorsTime) : null;
+  const whenLabel = doors === null ? row.timeLabel : COPY.doors(doors);
 
   const imIn = () => {
     toggle.mutate(
