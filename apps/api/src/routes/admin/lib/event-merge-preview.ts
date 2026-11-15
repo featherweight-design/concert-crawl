@@ -26,6 +26,7 @@ import {
   adminMergeFill,
   priceSubmissions,
   userEvents,
+  userProfiles,
   venues,
 } from '@concert-crawl/db';
 import type { MergeFillField } from '@concert-crawl/db/event-merge-fill';
@@ -59,6 +60,14 @@ type EventRow = typeof events.$inferSelect;
 /** Where a listing came from: added by an admin, or by the crawl. */
 const sourceOf = (manual: boolean) =>
   manual ? ('manual' as const) : ('crawled' as const);
+
+/**
+ * Who added a hand-added listing, as the admin who did it is known on People
+ * (`user_profiles.handle`). Null for a crawled row (no `created_by`), and for
+ * an admin with no handle, which the UI words "added by hand".
+ */
+const addedByOf = (handle: string | null | undefined) =>
+  handle ? { handle } : null;
 
 /** The two rows are one show by the crawl's night rule (or a 12-hour misread). */
 const oneNight = (
@@ -97,9 +106,11 @@ export const loadMergeCandidates = async (id: string) => {
       manual: events.manual,
       hidden: events.hiddenFromConsumer,
       canonicalArtist: events.canonicalArtist,
+      handle: userProfiles.handle,
       watchers: watchingCountOf(),
     })
     .from(events)
+    .leftJoin(userProfiles, eq(userProfiles.userId, events.createdBy))
     .where(
       and(
         eq(events.venueId, self.venueId),
@@ -112,9 +123,10 @@ export const loadMergeCandidates = async (id: string) => {
     .orderBy(asc(events.id));
 
   return rows
-    .map(({ canonicalArtist, ...row }) => ({
+    .map(({ canonicalArtist, handle, ...row }) => ({
       ...row,
       source: sourceOf(row.manual),
+      addedBy: addedByOf(handle),
       likely: oneNight(self, { ...row, canonicalArtist }),
     }))
     .sort(
@@ -198,6 +210,23 @@ const buildPreview = async (kept: EventRow, other: EventRow, move: boolean) => {
             .from(venues)
             .where(inArray(venues.id, venueIds))
         ).map((venue) => [venue.id, venue.name]),
+  );
+  // Who added each row (one read for both), by `created_by`.
+  const creatorIds = [kept.createdBy, other.createdBy].filter(
+    (creator): creator is string => creator !== null,
+  );
+  const handles = new Map(
+    creatorIds.length === 0
+      ? []
+      : (
+          await db
+            .select({
+              userId: userProfiles.userId,
+              handle: userProfiles.handle,
+            })
+            .from(userProfiles)
+            .where(inArray(userProfiles.userId, creatorIds))
+        ).map((profile) => [profile.userId, profile.handle]),
   );
   const watchers = byEvent(
     await db
@@ -300,6 +329,9 @@ const buildPreview = async (kept: EventRow, other: EventRow, move: boolean) => {
       source: sourceOf(row.manual),
       manual: row.manual,
       createdBy: row.createdBy,
+      addedBy: addedByOf(
+        row.createdBy === null ? null : handles.get(row.createdBy),
+      ),
       hidden: row.hiddenFromConsumer,
       status: row.status,
       lineup: await readLineup(db, row),
