@@ -267,6 +267,61 @@ export const ShareSheet = ({
       eyebrow={COPY.sheetTitle}
       eyebrowTone="subtle"
       shareFrame
+      // The actions are the sheet's main action: pinned under the scrolling
+      // preview and shape picker (addendum 6 item 15).
+      footer={
+        <>
+          {canSystemShare(caps) && (
+            <button
+              type="button"
+              onClick={onSystemShare}
+              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-[15px] font-bold text-fg-on-accent"
+              style={{
+                background: SIGNAL_TO_ACCENT_ROW,
+                boxShadow:
+                  '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
+              }}
+            >
+              <Share2 size={16} strokeWidth={2.25} aria-hidden="true" />
+              {COPY.destinations.systemShare}
+            </button>
+          )}
+          <div className="mt-2 flex gap-2">
+            <a
+              href={imageUrl}
+              download={fileName}
+              onClick={() => {
+                track('share_destination_selected', {
+                  eventId: event.id,
+                  destination: 'save-image',
+                });
+              }}
+              className={GHOST_PILL}
+            >
+              {COPY.destinations.saveImage}
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                void onCopyLink();
+              }}
+              className={GHOST_PILL}
+            >
+              {COPY.destinations.copyLink}
+            </button>
+          </div>
+
+          {/* Polite rather than assertive: a copy confirmation should not
+              interrupt whatever the user is already reading. Not drawn on the
+              boards; kept from the pre-B+ sheet. */}
+          <p
+            aria-live="polite"
+            className="m-0 mt-2 min-h-4 text-xs text-fg-muted"
+          >
+            {status}
+          </p>
+        </>
+      }
     >
       {/* Grabber: decorative, phone only. The sheet closes by its ×, Escape,
           the backdrop or a drag, all of which BottomSheet owns. */}
@@ -383,56 +438,6 @@ export const ShareSheet = ({
             })}
           </div>
         </fieldset>
-
-        {canSystemShare(caps) && (
-          <button
-            type="button"
-            onClick={onSystemShare}
-            className="mt-3.5 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-[15px] font-bold text-fg-on-accent"
-            style={{
-              background: SIGNAL_TO_ACCENT_ROW,
-              boxShadow:
-                '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
-            }}
-          >
-            <Share2 size={16} strokeWidth={2.25} aria-hidden="true" />
-            {COPY.destinations.systemShare}
-          </button>
-        )}
-        <div className="mt-2 flex gap-2">
-          <a
-            href={imageUrl}
-            download={fileName}
-            onClick={() => {
-              track('share_destination_selected', {
-                eventId: event.id,
-                destination: 'save-image',
-              });
-            }}
-            className={GHOST_PILL}
-          >
-            {COPY.destinations.saveImage}
-          </a>
-          <button
-            type="button"
-            onClick={() => {
-              void onCopyLink();
-            }}
-            className={GHOST_PILL}
-          >
-            {COPY.destinations.copyLink}
-          </button>
-        </div>
-
-        {/* Polite rather than assertive: a copy confirmation should not
-            interrupt whatever the user is already reading. Not drawn on the
-            boards; kept from the pre-B+ sheet. */}
-        <p
-          aria-live="polite"
-          className="m-0 mt-2 min-h-4 text-xs text-fg-muted"
-        >
-          {status}
-        </p>
       </div>
     </BottomSheet>
   );

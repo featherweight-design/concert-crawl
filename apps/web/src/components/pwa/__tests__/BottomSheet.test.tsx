@@ -212,16 +212,63 @@ describe('BottomSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('raises the fill and the phone height cap only on request', () => {
+  it('raises the fill only on request', () => {
     render(
-      <BottomSheet open onClose={vi.fn()} title="test" edgeFromSm raised tall>
+      <BottomSheet open onClose={vi.fn()} title="test" edgeFromSm raised>
         <button>inside</button>
       </BottomSheet>,
     );
     const sheet = screen.getByRole('dialog').className;
     expect(sheet).toContain('[--sheet-bg:var(--surface-2)]');
     expect(sheet).toContain('lg:[--sheet-bg:var(--bg-elevated)]');
-    expect(sheet).toContain('max-h-[calc(100dvh-40px)]');
+  });
+
+  it('stops every sheet 24px below the top of the phone and scrolls the rest inside it', () => {
+    render(
+      <BottomSheet open onClose={vi.fn()} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const sheet = screen.getByRole('dialog').className;
+    expect(sheet).toContain('max-h-[calc(100dvh-24px)]');
+    expect(sheet).toContain('lg:max-h-[85vh]');
+    expect(sheet).toContain('overflow-y-auto');
+  });
+
+  it('pins a footer under a scrolling body when one is given', () => {
+    render(
+      <BottomSheet
+        open
+        onClose={vi.fn()}
+        title="test"
+        inset="phone-tight"
+        footer={<button>main action</button>}
+      >
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const sheet = screen.getByRole('dialog').className;
+    expect(sheet).toContain('overflow-hidden');
+    expect(sheet).not.toContain('overflow-y-auto');
+    const body = screen.getByTestId('sheet-body');
+    expect(body.className).toContain('overflow-y-auto');
+    expect(body.textContent).toBe('inside');
+    const footer = screen.getByTestId('sheet-footer');
+    expect(footer.textContent).toBe('main action');
+    expect(footer.className).toContain('bg-surface-2');
+    expect(footer.className).toContain('border-t');
+    expect(footer.className).toContain('env(safe-area-inset-bottom)');
+    expect(screen.queryByTestId('modal-fade')).toBeNull();
+  });
+
+  it('keeps one scrolling sheet, with no footer region, when no footer is given', () => {
+    render(
+      <BottomSheet open onClose={vi.fn()} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    expect(screen.queryByTestId('sheet-footer')).toBeNull();
+    expect(screen.queryByTestId('sheet-body')).toBeNull();
   });
 
   it('closes when the scrim is clicked', () => {
