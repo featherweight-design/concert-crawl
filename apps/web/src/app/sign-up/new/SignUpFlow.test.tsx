@@ -601,7 +601,10 @@ describe('SignUpFlow, Google', () => {
     tick();
     fireEvent.click(google());
     await act(async () => {});
-    expect(google()).toHaveAttribute('aria-busy', 'true');
+    // Busy, the button reads "Opening Google…".
+    expect(
+      screen.getByRole('button', { name: FLOW.google.busy }),
+    ).toHaveAttribute('aria-busy', 'true');
     await act(async () => {
       window.dispatchEvent(
         Object.assign(new Event('pageshow'), { persisted: true }),
