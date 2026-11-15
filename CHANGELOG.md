@@ -1,3 +1,18 @@
+# [1.522.0](https://github.com/featherweight-design/concert-crawl/compare/v1.521.0...v1.522.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** build Event edit's venue picker and status pills to the boards ([6b50e7c](https://github.com/featherweight-design/concert-crawl/commit/6b50e7c7421b042b6cc5365941f3abb5f908d248))
+* **web:** read a venue move after its Save's PATCH, and keep a move that landed ([b587878](https://github.com/featherweight-design/concert-crawl/commit/b5878782d8ae4d2608c2f5c418a141d98dbfa230))
+
+
+### Features
+
+* **web:** draw the Moved pill and line on admin Event edit ([bf8fc43](https://github.com/featherweight-design/concert-crawl/commit/bf8fc434d7895bf33be6712de558b311d9757c5e))
+* **web:** give VenuePicker Event edit's trigger and a shared venue loader ([7f3358e](https://github.com/featherweight-design/concert-crawl/commit/7f3358e8492eccfbc174f87c85bcc13fd07e0086))
+* **web:** make a show's venue editable on admin Event edit ([33d5f6a](https://github.com/featherweight-design/concert-crawl/commit/33d5f6af3858d51caddca8557cb613dac9bc9bff))
+
 # [1.521.0](https://github.com/featherweight-design/concert-crawl/compare/v1.520.1...v1.521.0) (2026-11-15)
 
 
