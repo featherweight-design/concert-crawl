@@ -14,7 +14,9 @@ const detail = {
   venue: { name: 'Marquis' },
 };
 
-beforeEach(() => mocks.get.mockReset());
+beforeEach(() => {
+  mocks.get.mockReset();
+});
 
 describe('showEyebrow', () => {
   it('reads "Fri, Nov 14 · Marquis" from a calendar day, in no time zone', () => {

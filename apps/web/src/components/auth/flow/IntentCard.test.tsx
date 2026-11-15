@@ -6,7 +6,9 @@ import { AUTH_FLOW_COPY } from './definitions/copy';
 import { IntentCard, intentText } from './IntentCard';
 
 const COPY = AUTH_FLOW_COPY.intent;
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+});
 
 const show = {
   kind: 'show',
