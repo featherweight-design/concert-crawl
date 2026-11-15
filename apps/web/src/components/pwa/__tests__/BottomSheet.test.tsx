@@ -261,6 +261,22 @@ describe('BottomSheet', () => {
     expect(screen.queryByTestId('modal-fade')).toBeNull();
   });
 
+  it('leaves a pinned sheet to lay out its own footer', () => {
+    render(
+      <BottomSheet
+        open
+        onClose={vi.fn()}
+        title="test"
+        pinned
+        footer={<button>main action</button>}
+      >
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    expect(screen.queryByTestId('sheet-footer')).toBeNull();
+    expect(screen.queryByTestId('sheet-body')).toBeNull();
+  });
+
   it('keeps one scrolling sheet, with no footer region, when no footer is given', () => {
     render(
       <BottomSheet open onClose={vi.fn()} title="test">
