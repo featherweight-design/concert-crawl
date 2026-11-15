@@ -42,21 +42,24 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
   const [flags, setFlags] = useState<AdminFeatureFlag[]>(initial);
   const [pending, setPending] = useState<FeatureFlagKey | null>(null);
   const [asking, setAsking] = useState<PendingEveryone | null>(null);
-  const [verifying, setVerifying] = useState<AdminFeatureFlag | null>(null);
+  // The flag whose Mark verified ask is open, by key: the ask reads the live
+  // row, not a copy taken when it opened.
+  const [verifyingKey, setVerifyingKey] = useState<FeatureFlagKey | null>(null);
   const [error, setError] = useState<{
     key: FeatureFlagKey;
     message: string;
   } | null>(null);
 
-  // One save: gets a token, runs the call, swaps the flag's row for the answer
-  // and closes any dialog. Every failure closes the dialog too: the error
-  // renders in the row underneath the overlay, so leaving it open hides the
-  // only explanation the admin gets.
+  // One save at a time: gets a token, runs the call and swaps the flag's row
+  // for the answer. The Everyone ask closes on a failure (the error renders in
+  // the row underneath, so leaving it open would hide it); the Mark verified
+  // ask stays open and shows the error itself, so the ticks and note survive.
   const mutate = async (
     flag: AdminFeatureFlag,
     failure: string,
     run: (token: string) => Promise<AdminFeatureFlag>,
   ) => {
+    if (pending !== null) return;
     setPending(flag.key);
     setError(null);
     try {
@@ -69,6 +72,7 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
       setFlags((prev) =>
         prev.map((row) => (row.key === updated.key ? updated : row)),
       );
+      setVerifyingKey(null);
     } catch (err) {
       console.error('[admin] feature flag save failed', flag.key, err);
       // A 409 is the production lock: the flag is not verified here yet.
@@ -82,7 +86,6 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
     } finally {
       setPending(null);
       setAsking(null);
-      setVerifying(null);
     }
   };
 
@@ -98,7 +101,7 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
   const markVerified = (
     flag: AdminFeatureFlag,
     note: string,
-    checks: Record<string, boolean>,
+    checks: Record<CheckKey, boolean>,
   ) =>
     mutate(flag, COPY.markVerified.error, (token) =>
       apiClient.post<AdminFeatureFlag>(
@@ -126,6 +129,8 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
     }
     void moveFlag(flag, stage);
   };
+
+  const verifying = flags.find((row) => row.key === verifyingKey) ?? null;
 
   return (
     <Panel padding={0}>
@@ -160,7 +165,9 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
             flag={flag}
             error={error?.key === flag.key ? error.message : null}
             onPick={(stage) => pick(flag, stage)}
-            onMarkVerified={() => setVerifying(flag)}
+            onMarkVerified={() => {
+              if (pending === null) setVerifyingKey(flag.key);
+            }}
             onUndoVerified={() => void undoVerified(flag)}
             saving={pending === flag.key}
           />
@@ -171,9 +178,10 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
         <MarkVerifiedAsk
           flag={verifying}
           pending={pending === verifying.key}
+          error={error?.key === verifying.key ? error.message : null}
           onCancel={() => {
             if (pending !== null) return;
-            setVerifying(null);
+            setVerifyingKey(null);
           }}
           onConfirm={(note, checks) =>
             void markVerified(verifying, note, checks)
@@ -200,7 +208,8 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
 const LINK_BUTTON: CSSProperties = {
   background: 'none',
   border: 'none',
-  padding: 0,
+  // A larger hit area than the 12px text: the link is the only way back.
+  padding: '8px 6px',
   fontSize: 12,
   fontWeight: 600,
   color: 'var(--signal)',
@@ -600,6 +609,8 @@ type CheckKey = (typeof CHECK_KEYS)[number];
 interface MarkVerifiedAskProps {
   flag: AdminFeatureFlag;
   pending: boolean;
+  /** A failed save, shown here because the row behind the overlay is hidden. */
+  error: string | null;
   onCancel: () => void;
   onConfirm: (note: string, checks: Record<CheckKey, boolean>) => void;
 }
@@ -610,6 +621,7 @@ interface MarkVerifiedAskProps {
 const MarkVerifiedAsk = ({
   flag,
   pending,
+  error,
   onCancel,
   onConfirm,
 }: MarkVerifiedAskProps) => {
@@ -692,6 +704,7 @@ const MarkVerifiedAsk = ({
           disabled={pending}
           placeholder={ask.notePlaceholder}
           data-testid="verify-note"
+          aria-describedby={`verify-note-help-${flag.key}`}
           onChange={(evt) => setNote(evt.target.value)}
           style={{
             display: 'block',
@@ -706,9 +719,20 @@ const MarkVerifiedAsk = ({
           }}
         />
       </label>
-      <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+      <div
+        id={`verify-note-help-${flag.key}`}
+        style={{ marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}
+      >
         {ask.noteHelp}
       </div>
+      {error && (
+        <div
+          role="alert"
+          style={{ marginTop: 12, fontSize: 12.5, color: 'var(--danger)' }}
+        >
+          {error}
+        </div>
+      )}
     </AskDialog>
   );
 };

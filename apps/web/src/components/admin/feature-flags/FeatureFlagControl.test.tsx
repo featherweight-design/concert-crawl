@@ -350,7 +350,7 @@ describe('FeatureFlagControl Mark verified (staging)', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('says so and closes the ask when the mark fails', async () => {
+  it('keeps the ask open, with its ticks, and says so when the mark fails', async () => {
     post.mockRejectedValue(new Error('boom'));
     render(<FeatureFlagControl initial={[flag({ stage: 'me' })]} />);
     fireEvent.click(screen.getByTestId('flag-mark-verified-crews'));
@@ -359,11 +359,42 @@ describe('FeatureFlagControl Mark verified (staging)', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: 'Mark verified' }));
     await waitFor(() =>
-      expect(
-        screen.getByText(/Could not update the verified mark/),
-      ).toBeVisible(),
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /Could not update the verified mark/,
+      ),
     );
-    expect(screen.queryByRole('dialog')).toBeNull();
+    // Still open, nothing to redo.
+    expect(screen.getByRole('dialog')).toBeVisible();
+    expect(screen.getByTestId('verify-check-triedAsMe')).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Mark verified' })).toBeEnabled();
+  });
+
+  it('ignores a second save while one is in flight', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    post.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    del.mockResolvedValue(flag({ stage: 'me' }));
+    render(
+      <FeatureFlagControl
+        initial={[
+          flag({ stage: 'me' }),
+          flag({
+            key: 'spotify-sync',
+            label: 'Spotify sync',
+            stage: 'me',
+            verifiedAt: '2026-09-07T00:00:00.000Z',
+          }),
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('flag-mark-verified-crews'));
+    for (const key of ['triedAsMe', 'checkedOnPhone', 'checkedFlagOff']) {
+      fireEvent.click(screen.getByTestId(`verify-check-${key}`));
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Mark verified' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByTestId('flag-undo-verified-spotify-sync'));
+    expect(del).not.toHaveBeenCalled();
+    finish(flag({ stage: 'me', verifiedAt: '2026-09-07T00:00:00.000Z' }));
   });
 
   it('undoes the mark with the Undo link', async () => {
