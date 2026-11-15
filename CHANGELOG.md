@@ -1,3 +1,21 @@
+# [1.492.0](https://github.com/featherweight-design/concert-crawl/compare/v1.491.0...v1.492.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **crawler:** guard the block notice and name the platform ([43fe77f](https://github.com/featherweight-design/concert-crawl/commit/43fe77f778a34a5809fe5f9290f77f62cd13354e))
+* **crawler:** notify admin on the first 403 or 429 ([69c0dec](https://github.com/featherweight-design/concert-crawl/commit/69c0decef437038acd3a9b4accded34883622d37))
+* **web:** address the signed-out overlay review ([d367e7a](https://github.com/featherweight-design/concert-crawl/commit/d367e7af8a45e8e21e6a2122cd21580d2c378286))
+* **web:** drop the fan-told line from the approve toast ([cca6ee8](https://github.com/featherweight-design/concert-crawl/commit/cca6ee8a5e3db19b719f97d28785bea8b82b9985))
+* **web:** match the approve boards' stroke, gap and sheet title ([90570e5](https://github.com/featherweight-design/concert-crawl/commit/90570e507b09c47ac3fe8ef102e360c3ea899097))
+* **web:** settle the approve races, focus and refusals ([bd2884c](https://github.com/featherweight-design/concert-crawl/commit/bd2884ce3e55f52be5eee79d8046c03f933a3ee1))
+
+
+### Features
+
+* **web:** approve one waiting submitted price in place ([7df47d1](https://github.com/featherweight-design/concert-crawl/commit/7df47d18b09f4bb1bf5a78061516b4e3431ec6af))
+* **web:** the admin shell shows a signed-out overlay when the session ends ([0185e4f](https://github.com/featherweight-design/concert-crawl/commit/0185e4f760ac84bf71fac38cacac40b3813e2f18))
+
 # [1.491.0](https://github.com/featherweight-design/concert-crawl/compare/v1.490.0...v1.491.0) (2026-11-15)
 
 
