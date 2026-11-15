@@ -667,8 +667,10 @@ export interface CrawlBatch {
    */
   crawlAll: boolean;
   /**
-   * The by-hand batch was a test re-crawl of a paused venue: every run it
-   * made is a trial run (crawl_runs.trial). False for every nightly.
+   * The by-hand batch was a test re-crawl of a paused venue: every trigger
+   * in it is a trial, read from its run once that lands (crawl_runs.trial),
+   * else from the trigger (crawl_triggers.trial). A test re-crawl never
+   * shares a batch with a plain one. False for every nightly.
    */
   trial: boolean;
   /** The venue of a one-venue by-hand batch ("Re-crawl · Ball Arena"), else null. */

@@ -90,15 +90,14 @@ export const appendBatches = (
  */
 export const batchLabel = (batch: BatchRow): string => {
   if (batch.kind === 'nightly') return COPY.nightly;
+  const [oneVenue, venues] = batch.trial
+    ? [COPY.trialVenue, COPY.trialVenues]
+    : [COPY.recrawlVenue, COPY.recrawlVenues];
   const what = batch.crawlAll
     ? COPY.crawlAll
-    : batch.trial
-      ? batch.venueName !== null
-        ? COPY.trialVenue(batch.venueName)
-        : COPY.trialVenues(batch.venueCount)
-      : batch.venueName !== null
-        ? COPY.recrawlVenue(batch.venueName)
-        : COPY.recrawlVenues(batch.venueCount);
+    : batch.venueName !== null
+      ? oneVenue(batch.venueName)
+      : venues(batch.venueCount);
   return batch.actorHandle === null
     ? what
     : COPY.parts([what, COPY.by(batch.actorHandle)]);
