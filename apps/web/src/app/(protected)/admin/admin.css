@@ -275,6 +275,13 @@
   outline-offset: -2px;
 }
 
+/* Add a show's text inputs: the drawn placeholder colour
+   (`06/add-a-show-by-hand`), which inline styles can't express. */
+.admin-add-show-input::placeholder {
+  color: var(--fg-subtle);
+  opacity: 1;
+}
+
 /* The shell's pre-mount rail: matches MOBILE_BREAKPOINT in shell/nav.ts. */
 @media (max-width: 720px) {
   .admin-shell-rail-placeholder {

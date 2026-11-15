@@ -4742,6 +4742,35 @@ export const ADMIN_COPY = {
     },
     none: '—',
   },
+  // 4b-3 Add a show by hand (`06/add-a-show-by-hand`, addendum 3
+  // `11/add-a-show-lineup-d`, addendum 5 `04/add-show-errors-d`). Strings the
+  // boards don't draw are drafts for copy-review. The form's own strings
+  // join this object with the form (E3 PR C3).
+  addShow: {
+    venuePlaceholder: 'Pick a venue',
+    venuePicker: {
+      title: 'Venue',
+      search: (count: number) =>
+        `Search ${count.toLocaleString('en-US')} venues`,
+      noMatch: 'No venues match',
+      loadFailed: 'Couldn’t load venues.',
+      tryAgain: 'Try again',
+    },
+    lineupField: {
+      add: 'Add an artist',
+      hint: 'The first is the headliner. Drag to reorder. Each name is matched on Artists.',
+      // No drag on the phone: the arrow moves an act up the bill.
+      hintPhone:
+        'The first is the headliner. Use the arrow to move an act up. Each name is matched on Artists.',
+      headliner: 'Headliner',
+      support: 'Support',
+      chipLabel: (name: string, role: string) => `${name}, ${role}`,
+      remove: (name: string) => `Remove ${name}`,
+      moveEarlier: (name: string) => `Move ${name} up the bill`,
+      suggestions: 'Matching artists',
+      addTyped: (name: string) => `Add “${name}” as typed`,
+    },
+  },
   panel: { close: 'Close' },
   confirm: { cancel: 'Cancel' },
   states: {
