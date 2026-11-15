@@ -38,15 +38,19 @@ import {
   db,
   eventReports,
   events,
-  MERGE_BILL_COLUMNS,
-  type MergeFillField,
   mergeEventRows,
-  mergeFillsFrom,
-  mergeFillWritesBill,
   priceSubmissions,
   syncEventArtists,
   userEvents,
 } from '@concert-crawl/db';
+// The pure fill rule on its own subpath, which a mock of the db barrel does
+// not replace.
+import {
+  MERGE_BILL_COLUMNS,
+  type MergeFillField,
+  mergeFillsFrom,
+  mergeFillWritesBill,
+} from '@concert-crawl/db/event-merge-fill';
 import {
   isTwelveHourMisread,
   sameNight,
@@ -215,8 +219,11 @@ type EventRow = typeof events.$inferSelect;
 /**
  * What the survivor takes from the rows folded into it: the shared fill rule
  * (`mergeFillsFrom` in @concert-crawl/db), the one the admin merge applies.
+ * A function, not an alias: an alias reads the import when this module loads,
+ * which breaks every suite that mocks the db package without it.
  */
-const fillsFrom = mergeFillsFrom;
+const fillsFrom: typeof mergeFillsFrom = (survivor, donors) =>
+  mergeFillsFrom(survivor, donors);
 
 export async function mergeDuplicateNights(
   options: MergeDuplicateNightsOptions,
