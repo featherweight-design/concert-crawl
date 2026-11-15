@@ -23,6 +23,8 @@ const show = (
   eventId: 'e1',
   iso: '2026-03-06',
   showTime: '21:00:00',
+  doorsTime: null,
+  status: 'upcoming',
   title: 'TOKiMONSTA',
   artist: 'TOKiMONSTA',
   imageUrl: null,

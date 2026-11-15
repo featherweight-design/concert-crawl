@@ -32,6 +32,8 @@ const show = (overrides: Partial<CrewShow> = {}): CrewShow => ({
   eventId: 'e1',
   iso: '2099-03-06',
   showTime: '20:00:00',
+  doorsTime: null,
+  status: 'upcoming',
   title: 'Marian Hill',
   artist: 'Marian Hill',
   imageUrl: null,
@@ -124,6 +126,49 @@ describe('CrewUpcoming', () => {
     render(<CrewUpcoming shows={[show()]} viewerId="me" />);
     const link = screen.getByRole('link', { name: 'Marian Hill' });
     expect(link).toHaveAccessibleDescription(/Bluebird.*1 GOING · YOU/);
+  });
+
+  it('draws the POSTPONED chip and keeps the date tile and the time', () => {
+    render(
+      <CrewUpcoming shows={[show({ status: 'postponed' })]} viewerId="me" />,
+    );
+    const row = screen.getByTestId('crew-coming-up-row');
+    expect(row).toHaveTextContent('Postponed');
+    expect(screen.getByTestId('crew-coming-up-tile')).toHaveTextContent('MAR');
+    expect(row).toHaveTextContent('8:00 PM');
+  });
+
+  it('draws no chip on a show that is on', () => {
+    render(<CrewUpcoming shows={[show()]} viewerId="me" />);
+    expect(screen.getByTestId('crew-coming-up-row')).not.toHaveTextContent(
+      'Postponed',
+    );
+  });
+
+  it('says Doors on a show tonight, and only tonight', () => {
+    const { rerender } = render(
+      <CrewUpcoming
+        shows={[show({ iso: todayMt(), doorsTime: '19:00:00' })]}
+        viewerId="me"
+      />,
+    );
+    expect(screen.getByTestId('crew-coming-up-row')).toHaveTextContent(
+      'Doors 7:00 PM',
+    );
+    // A later night reads its show time, doors or not.
+    rerender(
+      <CrewUpcoming shows={[show({ doorsTime: '19:00:00' })]} viewerId="me" />,
+    );
+    const row = screen.getByTestId('crew-coming-up-row');
+    expect(row).toHaveTextContent('8:00 PM');
+    expect(row).not.toHaveTextContent('Doors');
+  });
+
+  it('reads the show time tonight when the event has no doors time', () => {
+    render(<CrewUpcoming shows={[show({ iso: todayMt() })]} viewerId="me" />);
+    const row = screen.getByTestId('crew-coming-up-row');
+    expect(row).toHaveTextContent('8:00 PM');
+    expect(row).not.toHaveTextContent('Doors');
   });
 
   it('swaps the tile for TONIGHT on the night itself', () => {

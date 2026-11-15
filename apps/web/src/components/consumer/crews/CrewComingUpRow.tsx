@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import type { CrewShow } from '@concert-crawl/types';
 
 import { fromCrewShow } from '@/components/consumer/event-row';
+import { StatusChip } from '@/components/consumer/StatusChip';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { formatShowTime } from '@/components/consumer/definitions/lib';
 import { EventImage } from '@/components/consumer/event-image';
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
 import { MemberDot } from './MemberCluster';
@@ -53,6 +56,11 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
   const summary = summariseGoing(show, viewerId, COPY.you);
   const tonight = isTonight(show.iso);
   const tile = tileParts(show.iso);
+  // Tonight is the night the doors matter (the board's "Doors 7:00 PM"); a
+  // later show reads its show time, and so does tonight without a doors time.
+  const doors =
+    tonight && show.doorsTime !== null ? formatShowTime(show.doorsTime) : '';
+  const whenLabel = doors === '' ? row.timeLabel : COPY.doors(doors);
 
   const imIn = () => {
     toggle.mutate(
@@ -184,7 +192,7 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             color: 'var(--fg-muted)',
           }}
         >
-          {[row.timeLabel, row.venueName]
+          {[whenLabel, row.venueName]
             .filter((part): part is string => !!part)
             .join(' · ')}
         </p>
@@ -226,6 +234,16 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             {goingLine(show.goingCount, summary, COPY.going)}
           </span>
         </div>
+        {show.status === 'postponed' && (
+          // The board keeps the date tile and the time: a postponed crew plan
+          // still has its surviving date. Only the chip says it moved.
+          <div style={{ marginTop: 6 }}>
+            <StatusChip
+              status="postponed"
+              label={CONSUMER_COPY.postponedLabel}
+            />
+          </div>
+        )}
         {toggle.isError && (
           <p
             role="alert"
