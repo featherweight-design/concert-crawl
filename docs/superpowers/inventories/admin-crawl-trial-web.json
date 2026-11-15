@@ -1,6 +1,6 @@
 {
   "feature": "Admin R3 · Try a test re-crawl of a paused venue",
-  "note": "Board: design_handoff_admin_redesign/addendum-3/boards/03-venues/venue-menu-states ('AUTO-PAUSED OR BLOCKED': Resume's hint 'Auto-paused after 3 failures. Try a re-crawl first.'). The Try a re-crawl row, the queued notice and the Test re-crawl run labels are undrawn 🔸 (orchestrator fork ruling). CONTACT_SHEET_ROLE=admin. Uses the scratch branch's paused venues (Sheet Paused Venue, CF Fixture Failing Hall); the POST is answered by a route fixture so no trial is queued. By hand: a real trial on staging, and its Test re-crawl run line.",
+  "note": "Board: design_handoff_admin_redesign/addendum-3/boards/03-venues/venue-menu-states ('AUTO-PAUSED OR BLOCKED': Resume's hint 'Auto-paused after 3 failures. Try a re-crawl first.'). The Try a re-crawl row, the queued notice and the Test re-crawl run labels are undrawn 🔸 (orchestrator fork ruling). CONTACT_SHEET_ROLE=admin. Uses the scratch branch's paused venues (Sheet Paused Venue, CF Fixture Failing Hall); the trial is posted by a server action (no browser fixture can answer it), so the sheet never presses the row: the queued notice and each refusal are pinned by VenueMenu.test.tsx and VenueHeader.test.tsx, and nothing is written to the scratch branch. By hand: a real trial on staging, and its Test re-crawl run line.",
   "widths": [
     { "label": "phone", "width": 390, "height": 844, "touch": true },
     { "label": "desktop", "width": 1300, "height": 900 }
@@ -34,25 +34,6 @@
           "settle": 2500
         },
         { "click": "[data-testid=\"venue-menu\"]", "settle": 800 }
-      ]
-    },
-    {
-      "id": "trial-queued",
-      "label": "Try a re-crawl picked: the queued notice",
-      "steps": [
-        {
-          "route": "**/v1/admin/crawl/*",
-          "status": 202,
-          "body": { "success": true, "data": { "triggerId": "fx-trigger" } }
-        },
-        {
-          "goto": "/admin/venues",
-          "wait": "text=Sheet Paused Venue",
-          "settle": 1500
-        },
-        { "clickRole": "link", "name": "Sheet Paused Venue", "settle": 2500 },
-        { "click": "[data-testid=\"venue-menu\"]", "settle": 800 },
-        { "clickRole": "menuitem", "name": "^Try a re-crawl", "settle": 2000 }
       ]
     }
   ]
