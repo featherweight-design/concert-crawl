@@ -1,0 +1,110 @@
+{
+  "feature": "Admin 4b E4-c · Merge duplicates (panel and phone screen)",
+  "note": "Plan 4b rows E4. CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/merge-duplicates (desktop panel), phone-addendum gap-1-merge-duplicates/* (merge-pick, -pick-loading, -nothing-found, -compare, -compare-320, -keep-second-320, -loading, -merging, -failed), 06/event-menu (the ⋯ line). Opened from Event edit's ⋯ (the Events row ⋯ opens the same panel and is covered by its unit test; phone cards have no ⋯). Local seed needs, each a real id from the scratch DB: CC_MERGE_A (a crawled show with a price and Watchers), CC_MERGE_B (a hand-added show at the same venue on the same date, created_by an admin with a handle), CC_MERGE_LONE (a show with no other listing at its venue that day), CC_MERGE_CROSS_TERM (a title word of a show at another venue, found by search). Read-only: no row presses Merge into the …, the failed row stubs the POST with a 500. By hand: the Merging… spinner and the pinned footer on a real phone (the stub answers at once), KEEP tap feel, arrow keys between the two cards.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "merge-pick",
+      "label": "Merge with another listing…: the pick step (this listing, the likely duplicate, search)",
+      "steps": [
+        {
+          "goto": "/admin/events/${CC_MERGE_A}/edit",
+          "wait": "[data-testid=\"event-edit\"]",
+          "settle": 600
+        },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "click": "[data-testid=\"event-edit-menu-merge\"]" },
+        { "wait": "[data-testid=\"merge-pick-row\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "merge-nothing-found",
+      "label": "The pick step with no other listing that day",
+      "steps": [
+        {
+          "goto": "/admin/events/${CC_MERGE_LONE}/edit",
+          "wait": "[data-testid=\"event-edit\"]",
+          "settle": 600
+        },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "click": "[data-testid=\"event-edit-menu-merge\"]" },
+        { "wait": "[data-testid=\"merge-pick-nothing\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "merge-compare",
+      "label": "Compare: keep the first (the gradient border, KEEP, the summary, Merge into the first)",
+      "steps": [
+        {
+          "goto": "/admin/events/${CC_MERGE_A}/edit",
+          "wait": "[data-testid=\"event-edit\"]",
+          "settle": 600
+        },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "click": "[data-testid=\"event-edit-menu-merge\"]" },
+        { "click": "[data-testid=\"merge-pick-row\"]" },
+        { "wait": "[data-testid=\"merge-summary\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "merge-keep-second",
+      "label": "Compare after tapping the second card: KEEP moves, the summary names the price and the next crawl",
+      "steps": [
+        {
+          "goto": "/admin/events/${CC_MERGE_A}/edit",
+          "wait": "[data-testid=\"event-edit\"]",
+          "settle": 600
+        },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "click": "[data-testid=\"event-edit-menu-merge\"]" },
+        { "click": "[data-testid=\"merge-pick-row\"]" },
+        { "wait": "[data-testid=\"merge-summary\"]" },
+        { "click": "[data-testid=\"merge-card-second\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "merge-cross-venue",
+      "label": "Compare across venue or day (A3): Venue and Day rows lead each card, no shared header",
+      "steps": [
+        {
+          "goto": "/admin/events/${CC_MERGE_A}/edit",
+          "wait": "[data-testid=\"event-edit\"]",
+          "settle": 600
+        },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "click": "[data-testid=\"event-edit-menu-merge\"]" },
+        { "wait": "[data-testid=\"merge-pick-row\"]" },
+        { "fill": "input[type=\"search\"]", "text": "${CC_MERGE_CROSS_TERM}" },
+        { "wait": "[data-testid=\"merge-pick-row\"] >> nth=1", "settle": 400 },
+        { "click": "[data-testid=\"merge-pick-row\"] >> nth=-1" },
+        { "wait": "[data-testid=\"merge-summary\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "merge-failed",
+      "label": "Merge refused: the snap-back, Couldn't merge, nothing moved, Try again",
+      "steps": [
+        {
+          "route": "**/v1/admin/events/*/merge",
+          "status": 500,
+          "body": { "success": false, "error": "boom" }
+        },
+        {
+          "goto": "/admin/events/${CC_MERGE_A}/edit",
+          "wait": "[data-testid=\"event-edit\"]",
+          "settle": 600
+        },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "click": "[data-testid=\"event-edit-menu-merge\"]" },
+        { "click": "[data-testid=\"merge-pick-row\"]" },
+        { "wait": "[data-testid=\"merge-summary\"]" },
+        { "clickRole": "button", "name": "Merge into the first" },
+        { "wait": "text=Couldn’t merge", "settle": 600 }
+      ]
+    }
+  ]
+}
