@@ -267,7 +267,10 @@ const fillsFrom = (
       // The rows name different artists (listed for the admin's review): a
       // donor's names may belong to another show, so the bill is not unioned,
       // only filled where the survivor has none, from one donor, as before.
-      const donor = donors.find((row) => row.headliners !== null);
+      // A donor hidden from consumers gives no names, as in the union.
+      const donor = donors.find(
+        (row) => row.headliners !== null && row.hiddenFromConsumer !== true,
+      );
       if (donor) {
         fields.push('headliners');
         for (const field of BILL_FILL) {
@@ -507,45 +510,78 @@ export async function mergeDuplicateNights(
         }
         unwritten = values;
         if (fields.length > 0 && current) {
-          // A bill fill re-checks the lineup lock at write time, as Repair
-          // does: an admin may save the lineup after the re-read above. It
-          // also requires the bill to still be the one the fill was computed
-          // from, so a crawl that wrote the bill since is not overwritten.
-          const sameBillAs = (
-            column: typeof events.headliners | typeof events.supportingArtists,
-            value: string[] | null,
-          ) => (value === null ? isNull(column) : eq(column, value));
-          const written = await db
-            .update(events)
-            .set({ ...values, updatedAt: new Date() })
-            .where(
-              fillsBill(fields)
-                ? and(
-                    eq(events.id, survivor.id),
-                    isNull(events.lineupEditedAt),
-                    sameBillAs(events.headliners, current.headliners),
-                    sameBillAs(
-                      events.supportingArtists,
-                      current.supportingArtists,
-                    ),
-                  )
-                : eq(events.id, survivor.id),
-            )
-            .returning({ id: events.id });
-          if (written.length === 0) {
-            throw new Error(
-              'lineup saved or bill rewritten during the fill; nothing written',
-            );
+          // The bill is written on its own, guarded, so a bill that changed
+          // under the fill drops only the bill: the other fills (time, image,
+          // prices, links) are still the survivor's to take, and the donors
+          // they came from are already gone.
+          const billKeys = new Set<string>(BILL_FILL);
+          const billValues: Partial<EventRow> = {};
+          const otherValues: Partial<EventRow> = {};
+          for (const [key, value] of Object.entries(values)) {
+            Object.assign(billKeys.has(key) ? billValues : otherValues, {
+              [key]: value,
+            });
           }
-          await db.insert(auditLog).values({
-            actorId: CLEANUP_ACTOR,
-            action: 'event.fill_from_merge',
-            targetId: survivor.id,
-            metadata: {
-              fromIds: losers.map((loser) => loser.id),
-              fields: Object.keys(values),
-            },
-          });
+          const writtenKeys: string[] = [];
+          let billError: string | undefined;
+          if (Object.keys(otherValues).length > 0) {
+            const written = await db
+              .update(events)
+              .set({ ...otherValues, updatedAt: new Date() })
+              .where(eq(events.id, survivor.id))
+              .returning({ id: events.id });
+            if (written.length === 0) {
+              throw new Error('survivor gone during the fill; nothing written');
+            }
+            writtenKeys.push(...Object.keys(otherValues));
+            unwritten = billValues;
+          }
+          if (fillsBill(fields)) {
+            // A bill fill re-checks the lineup lock at write time, as Repair
+            // does: an admin may save the lineup after the re-read above. It
+            // also requires the bill to still be the one the fill was
+            // computed from, so a crawl that wrote the bill since is not
+            // overwritten.
+            const sameBillAs = (
+              column:
+                typeof events.headliners | typeof events.supportingArtists,
+              value: string[] | null,
+            ) => (value === null ? isNull(column) : eq(column, value));
+            const written = await db
+              .update(events)
+              .set({ ...billValues, updatedAt: new Date() })
+              .where(
+                and(
+                  eq(events.id, survivor.id),
+                  isNull(events.lineupEditedAt),
+                  sameBillAs(events.headliners, current.headliners),
+                  sameBillAs(
+                    events.supportingArtists,
+                    current.supportingArtists,
+                  ),
+                ),
+              )
+              .returning({ id: events.id });
+            if (written.length === 0) {
+              billError =
+                'lineup saved or bill rewritten during the fill; bill not written';
+            } else {
+              writtenKeys.push(...Object.keys(billValues));
+            }
+          }
+          unwritten = billError === undefined ? {} : billValues;
+          if (writtenKeys.length > 0) {
+            await db.insert(auditLog).values({
+              actorId: CLEANUP_ACTOR,
+              action: 'event.fill_from_merge',
+              targetId: survivor.id,
+              metadata: {
+                fromIds: losers.map((loser) => loser.id),
+                fields: writtenKeys,
+              },
+            });
+          }
+          if (billError !== undefined) throw new Error(billError);
         }
       } catch (err) {
         plan.fillError = `${err instanceof Error ? err.message : String(err)}; unwritten values: ${JSON.stringify(unwritten)}`;

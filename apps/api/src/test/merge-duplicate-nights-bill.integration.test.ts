@@ -211,6 +211,67 @@ describe('mergeDuplicateNights keeps the donor-only names on the bill', () => {
     });
   });
 
+  it('fills no NULL bill from a hidden donor naming a different artist, but takes its other fills', async () => {
+    const { venueId, kept } = await seedNight(
+      {
+        headliners: null,
+        canonicalHeadliners: null,
+        supportingArtists: null,
+        canonicalSupporting: null,
+        imageUrl: null,
+      },
+      {
+        artist: 'Beck.',
+        canonicalArtist: 'beck.',
+        hiddenFromConsumer: true,
+        headliners: ['Beck'],
+        canonicalHeadliners: ['beck'],
+        supportingArtists: ['Late Add'],
+        canonicalSupporting: ['late add'],
+        imageUrl: 'https://example.com/beck.jpg',
+      },
+    );
+
+    const result = await mergeDuplicateNights({ dryRun: false });
+
+    expect(result.merged).toBe(1);
+    expect(result.groups[0]?.fillError).toBeUndefined();
+    expect(result.groups[0]?.fills).not.toContain('headliners');
+    expect(await billOf(venueId)).toMatchObject({
+      id: kept.id,
+      headliners: null,
+      canonicalHeadliners: null,
+      supportingArtists: null,
+      canonicalSupporting: null,
+      imageUrl: 'https://example.com/beck.jpg',
+    });
+  });
+
+  it('writes the other fills when the bill does not change', async () => {
+    const { venueId, kept } = await seedNight(
+      { imageUrl: null },
+      {
+        headliners: ['Beck'],
+        canonicalHeadliners: ['beck'],
+        supportingArtists: ['Opener'],
+        canonicalSupporting: ['opener'],
+        imageUrl: 'https://example.com/beck.jpg',
+      },
+    );
+
+    const result = await mergeDuplicateNights({ dryRun: false });
+
+    expect(result.merged).toBe(1);
+    expect(result.groups[0]?.fillError).toBeUndefined();
+    expect(result.groups[0]?.fills).toEqual(['imageUrl']);
+    expect(await billOf(venueId)).toMatchObject({
+      id: kept.id,
+      headliners: ['Beck'],
+      supportingArtists: ['Opener'],
+      imageUrl: 'https://example.com/beck.jpg',
+    });
+  });
+
   it('reports only the supports in a dry run when only supports are added', async () => {
     await seedNight(
       {},
