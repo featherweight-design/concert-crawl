@@ -1,0 +1,50 @@
+{
+  "feature": "Admin · Activity log search and the Sub-admin line (addendum 6 #37, PR C)",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/37-activity-log/log-day-picker-d (Search the log, 240 wide, left of the chips), log-m and log-filter-sheet-m (full width above the stepper), log-filter-menus (\"Sub-admin · none today\"). CONTACT_SHEET_ROLE=admin. Read-only: typing a search and opening Anyone only read. By hand: an Anyone row for a real sub-admin needs one on the scratch branch.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "log-search-idle",
+      "label": "Search the log idle: 240 left of the chips (desktop), full width above the stepper (phone)",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "input[aria-label='Search the log']",
+          "settle": 4000
+        }
+      ]
+    },
+    {
+      "id": "log-search-typed",
+      "label": "A search typed: the log, dots and counts narrowed to it",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "input[aria-label='Search the log']",
+          "settle": 3000
+        },
+        {
+          "fill": "input[aria-label='Search the log']",
+          "text": "paused",
+          "settle": 3000
+        }
+      ]
+    },
+    {
+      "id": "log-anyone-roles",
+      "label": "Anyone open: You first, a sub-admin marked Sub-admin",
+      "steps": [
+        {
+          "goto": "/admin/operations?tab=log",
+          "wait": "[data-testid='activity-log-anyone-chip']",
+          "settle": 3000
+        },
+        { "click": "[data-testid='activity-log-anyone-chip']", "settle": 2500 }
+      ]
+    }
+  ]
+}
