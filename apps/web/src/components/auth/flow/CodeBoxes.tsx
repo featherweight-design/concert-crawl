@@ -10,7 +10,7 @@ const LENGTH = 6;
 interface CodeBoxesProps {
   value: string;
   onChange: (value: string) => void;
-  error?: string;
+  error?: string | undefined;
   disabled?: boolean;
 }
 
