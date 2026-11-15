@@ -948,13 +948,136 @@ describe('EventEdit lineup', () => {
       '/admin/artists',
     );
     expect(chipFor('Opener').tagName).toBe('SPAN');
-    // Both headliners stay headliners; no role tag is drawn.
+    // Both headliners stay headliners, and the match is said, not only
+    // tinted; no role tag is drawn.
     expect(chipFor('Co Headliner')).toHaveAttribute(
       'aria-label',
-      ADMIN_COPY.addShow.lineupField.chipLabel('Co Headliner', 'Headliner'),
+      COPY.show.lineupNewTab(
+        COPY.show.lineupChip('Co Headliner', 'Headliner', 'matched'),
+      ),
+    );
+    expect(chipFor('The Man is Dead')).toHaveAttribute(
+      'aria-label',
+      COPY.show.lineupNewTab(
+        COPY.show.lineupChip('The Man is Dead', 'Support', 'unsure'),
+      ),
+    );
+    expect(chipFor('Opener')).toHaveAttribute(
+      'aria-label',
+      COPY.show.lineupChip('Opener', 'Support', 'typed'),
     );
     expect(screen.queryByText('Headliner')).toBeNull();
+    // Desktop draws no × or arrow on a chip.
+    expect(chips().some((chip) => chip.querySelector('button'))).toBe(false);
     expect(screen.getByText(COPY.show.lineupHint)).toBeInTheDocument();
+  });
+
+  it('keeps a headliner that does not lead the bill when another act changes', async () => {
+    put.mockResolvedValue({});
+    const [first, second, third, fourth] = BILL.lineup;
+    if (!first || !second || !third || !fourth) throw new Error('fixture');
+    render(
+      <EventEdit
+        detail={{ ...BILL, lineup: [first, third, second, fourth] }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.keyDown(chipFor('Opener'), { key: 'Delete' });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() => expect(put).toHaveBeenCalledTimes(1));
+    expect(put.mock.calls[0]?.[2]).toEqual({
+      lineup: [SAVED_BILL[0], SAVED_BILL[2], SAVED_BILL[1]],
+    });
+  });
+
+  it('sends a PUT for a reorder alone, the moved act keeping its role', async () => {
+    put.mockResolvedValue({});
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    fireEvent.keyDown(chipFor('Co Headliner'), {
+      key: 'ArrowRight',
+      altKey: true,
+    });
+    // Focus follows the chip to its new place.
+    expect(chipFor('Co Headliner')).toHaveFocus();
+    expect(chips()[2]).toBe(chipFor('Co Headliner'));
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() => expect(put).toHaveBeenCalledTimes(1));
+    expect(put.mock.calls[0]?.[2]).toEqual({
+      lineup: [
+        SAVED_BILL[0],
+        SAVED_BILL[2],
+        SAVED_BILL[1],
+        { name: 'Opener', role: 'support' },
+      ],
+    });
+    expect(patch).not.toHaveBeenCalled();
+  });
+
+  it('heads the bill with an act moved to the front', async () => {
+    put.mockResolvedValue({});
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    fireEvent.keyDown(chipFor('The Man is Dead'), {
+      key: 'ArrowLeft',
+      altKey: true,
+    });
+    fireEvent.keyDown(chipFor('The Man is Dead'), {
+      key: 'ArrowLeft',
+      altKey: true,
+    });
+    fireEvent.keyDown(chipFor('The Man is Dead'), {
+      key: 'ArrowLeft',
+      altKey: true,
+    });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() => expect(put).toHaveBeenCalledTimes(1));
+    expect(put.mock.calls[0]?.[2]).toEqual({
+      lineup: [
+        { ...SAVED_BILL[2], role: 'headliner' },
+        SAVED_BILL[0],
+        SAVED_BILL[1],
+        { name: 'Opener', role: 'support' },
+      ],
+    });
+  });
+
+  it('moves focus to the next chip after Delete, and to Add an artist after the last', () => {
+    render(
+      <EventEdit
+        detail={{ ...BILL, lineup: BILL.lineup.slice(2) }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.keyDown(chipFor('The Man is Dead'), { key: 'Delete' });
+    expect(chipFor('Opener')).toHaveFocus();
+    fireEvent.keyDown(chipFor('Opener'), { key: 'Delete' });
+    expect(screen.getByLabelText(COPY.show.lineup)).toHaveFocus();
+  });
+
+  it('draws the phone chip’s arrow and × on the phone', () => {
+    setPhone(true);
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    const lineupCopy = ADMIN_COPY.addShow.lineupField;
+    fireEvent.click(
+      screen.getByRole('button', { name: lineupCopy.remove('Opener') }),
+    );
+    expect(chips()).toHaveLength(3);
+    // The first act has no arrow: it already heads the bill.
+    expect(
+      screen.queryByRole('button', {
+        name: lineupCopy.moveEarlier('Six Foot Blonde'),
+      }),
+    ).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: lineupCopy.moveEarlier('Co Headliner'),
+      }),
+    );
+    expect(chips()[0]?.textContent).toBe('Co Headliner');
+    expect(
+      screen.getByRole('link', {
+        name: COPY.show.lineupNewTab('The Man is Dead'),
+      }),
+    ).toHaveAttribute('href', '/admin/artists');
   });
 
   it('saves an edit with one PUT, roles kept, and nothing else', async () => {
@@ -987,10 +1110,37 @@ describe('EventEdit lineup', () => {
     render(<EventEdit detail={BILL} today="2026-11-13" />);
     fireEvent.keyDown(chipFor('Opener'), { key: 'Delete' });
     fireEvent.click(screen.getByTestId('event-edit-save'));
-    expect(
-      await screen.findByText(new RegExp(COPY.saveFailed.savedLineup)),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('save-failed')).toHaveTextContent(
+      COPY.saveFailed.savedLineup,
+    );
     await waitFor(() => expect(chips()).toHaveLength(4));
+  });
+
+  it('PUTs after the PATCH, and when only the PUT fails keeps what saved and names it', async () => {
+    const order: string[] = [];
+    patch.mockImplementation(async () => {
+      order.push('patch');
+      return {};
+    });
+    put.mockImplementation(async () => {
+      order.push('put');
+      throw new Error('500');
+    });
+    render(<EventEdit detail={BILL} today="2026-11-13" />);
+    fireEvent.change(titleInput(), { target: { value: 'New title' } });
+    fireEvent.keyDown(chipFor('Opener'), { key: 'Delete' });
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    const toast = await screen.findByTestId('save-failed');
+    expect(order).toEqual(['patch', 'put']);
+    expect(toast).toHaveTextContent(
+      `${COPY.saveFailed.savedFields(COPY.saveFailed.fieldNames.title)} ${COPY.saveFailed.savedLineup}`,
+    );
+    expect(toast).not.toHaveTextContent('Nothing changed');
+    // Only the lineup snaps back; the title keeps what saved.
+    await waitFor(() => expect(chips()).toHaveLength(4));
+    expect(titleInput()).toHaveValue('New title');
+    // The PATCH landed, so the page re-reads what is saved.
+    expect(refresh).toHaveBeenCalled();
   });
 
   it('keeps Save off for an emptied bill', () => {

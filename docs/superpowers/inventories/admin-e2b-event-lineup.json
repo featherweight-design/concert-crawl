@@ -1,6 +1,6 @@
 {
   "feature": "Admin E2-B: Event edit lineup chips (matched, unsure, typed) and Add an artist",
-  "note": "Boards: design_handoff_admin_redesign/boards/06-events-artists-prices/event-edit (desktop) and event-edit-mobile (phone); B+ addendum 5 04/past-show-d for the same field on a played show. CONTACT_SHEET_ROLE=admin. Read-only: types into Add an artist but never presses Save. The editor reads GET /v1/admin/events/:id on the SERVER, so the chips come from the scratch Neon fixture Violet Grohl (6cacabc9-...), as in admin-4b-2d-pickers. For all three tints in one cell, give that show a bill with a matched artist, an artist whose match_status is 'ambiguous' (amber) and a name with no artist row (neutral). By hand: Delete on a focused chip removes it, Alt+arrow moves it, and a failed Save (stop the API) snaps the bill back with 'The lineup is as it was.'",
+  "note": "Boards: design_handoff_admin_redesign/boards/06-events-artists-prices/event-edit (desktop) and event-edit-mobile (phone; the phone chips carry Add a show's arrow and x by orchestrator ruling); B+ addendum 5 04/past-show-d for the same field on a played show. CONTACT_SHEET_ROLE=admin. Read-only: types into Add an artist but never presses Save; no scratch-DB writes. Each row stubs GET /v1/admin/events/:id with a bill of a matched headliner, an unsure support (match_status ambiguous) and a typed name with no artist. CAVEAT, as admin-a7-tour-name-sold-out notes: the editor reads that GET on the SERVER (page.tsx apiClient.get), which a browser `route` cannot answer, so the cells show the fixture event's real bill unless the shooter serves this payload to the server render. The artist search (`/v1/admin/artists?...`) runs in the browser, so its stub does apply. By hand: Delete on a focused chip removes it, Alt+arrow moves it, and a failed Save (stop the API) snaps the bill back with 'The lineup is as it was.'",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 760, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -9,8 +9,70 @@
   "rows": [
     {
       "id": "lineup-at-rest",
-      "label": "Lineup on the Show card: 24px chips tinted by match, the helper line",
+      "label": "Lineup on the Show card: 24px chips tinted cyan (matched), amber (unsure) and neutral (typed), the helper line",
       "steps": [
+        {
+          "route": "**/v1/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "6cacabc9-f48c-4828-905a-fe99df63282f",
+              "title": "Six Foot Blonde w/ The Man is Dead",
+              "artist": "Six Foot Blonde",
+              "date": "2026-12-04",
+              "doorsTime": "18:00:00",
+              "showTime": "19:00:00",
+              "venueName": "Larimer Lounge",
+              "venueSlug": "larimer-lounge",
+              "listStatus": "available",
+              "hiddenFromConsumer": false,
+              "hiddenReason": null,
+              "watchingCount": 4,
+              "wentCount": 0,
+              "isSoldOut": false,
+              "ticketPriceMin": "15.00",
+              "ticketPriceMax": null,
+              "submittedPriceCount": 0,
+              "priceRetrievedAt": null,
+              "ticketUrl": null,
+              "mySubmission": null,
+              "extractionStrategy": "structured_data",
+              "createdAt": "2026-10-01T18:00:00.000Z",
+              "lastSeenAt": "2026-11-14T09:00:00.000Z",
+              "delistedAt": null,
+              "eventUrl": null,
+              "sourceUrl": "https://larimerlounge.com/calendar",
+              "tourName": null,
+              "soldOutRecord": null,
+              "lineup": [
+                {
+                  "name": "Six Foot Blonde",
+                  "role": "headliner",
+                  "position": 0,
+                  "artistId": "00000000-0000-4000-8000-0000000e2b01",
+                  "slug": "six-foot-blonde",
+                  "unsure": false
+                },
+                {
+                  "name": "The Man is Dead",
+                  "role": "support",
+                  "position": 0,
+                  "artistId": "00000000-0000-4000-8000-0000000e2b02",
+                  "slug": "the-man-is-dead",
+                  "unsure": true
+                },
+                {
+                  "name": "Local Openers",
+                  "role": "support",
+                  "position": 1,
+                  "artistId": null,
+                  "slug": null,
+                  "unsure": false
+                }
+              ]
+            }
+          }
+        },
         {
           "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
           "expectStatus": 200,
@@ -21,14 +83,32 @@
     },
     {
       "id": "lineup-add-artist",
-      "label": "Add an artist: typing lists matching artists, a pick adds a chip unsaved",
+      "label": "Add an artist: typing lists matching artists, the typed name last",
       "steps": [
+        {
+          "route": "**/v1/admin/artists?**",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "id": "00000000-0000-4000-8000-0000000e2b03",
+                "name": "The Velveteers",
+                "matchStatus": "matched"
+              },
+              {
+                "id": "00000000-0000-4000-8000-0000000e2b04",
+                "name": "The Velvet Hours",
+                "matchStatus": "ambiguous"
+              }
+            ]
+          }
+        },
         {
           "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
           "expectStatus": 200,
           "wait": "[data-testid=\"event-edit\"]"
         },
-        { "fill": "#event-edit-lineup", "text": "the" },
+        { "fill": "#event-edit-lineup", "text": "The Velv" },
         { "settle": 1500 }
       ]
     }

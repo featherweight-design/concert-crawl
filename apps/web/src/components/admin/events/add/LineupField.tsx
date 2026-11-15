@@ -18,7 +18,9 @@ import { POPOVER } from '../edit/pickers';
 import type { ArtistSuggestion } from './add-show-api';
 import {
   addAct,
+  addActWithRole,
   moveAct,
+  moveActKeepingRoles,
   removeAct,
   rolesOf,
   type Act,
@@ -55,6 +57,15 @@ const BARE: CSSProperties = {
   cursor: 'pointer',
 };
 
+/** A new tab, so following a chip's name never drops unsaved edits. */
+const NEW_TAB: { target: string; rel: string } = {
+  target: '_blank',
+  rel: 'noopener noreferrer',
+};
+
+/** `focusAt`'s mark for Add an artist, once the last chip is removed. */
+const FOCUS_INPUT = -1;
+
 /** Event edit's chip tint: cyan matched, amber unsure, none for a typed name. */
 const toneOf = (act: Act): string | null => {
   if (act.artistId === undefined) return null;
@@ -83,9 +94,10 @@ const hrefOf = (act: Act): string | null => {
  *
  * `variant="edit"` is Event edit's (`06/event-edit`, `06/event-edit-mobile`):
  * 24px chips tinted by match with a 14px avatar dot, each a link to its
- * artist, and no role tag or ×. Undrawn there, so kept from Add a show
+ * artist, and no role tag or ×. Undrawn on desktop, so kept from Add a show
  * without their marks: Delete on a focused chip removes it, and drag or
- * Alt+arrow reorders it.
+ * Alt+arrow reorders it, focus following. The phone takes Add a show's drawn
+ * chip controls, the move-up arrow and the × (orchestrator ruling).
  */
 export const LineupField = ({
   id,
@@ -116,6 +128,18 @@ export const LineupField = ({
   const keysId = useId();
   const searchRef = useRef(search);
   searchRef.current = search;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const chipRefs = useRef<(HTMLElement | null)[]>([]);
+  /** Where focus goes once the bill redraws after a keyboard edit. */
+  const focusAt = useRef<number | null>(null);
+
+  useEffect(() => {
+    const at = focusAt.current;
+    if (at === null) return;
+    focusAt.current = null;
+    if (at === FOCUS_INPUT) inputRef.current?.focus();
+    else chipRefs.current[at]?.focus();
+  }, [lineup]);
 
   useEffect(() => {
     const typed = text.trim();
@@ -160,15 +184,21 @@ export const LineupField = ({
       : [{ key: 'typed', label: COPY.addTyped(typed), act: { name: typed } }]),
   ];
 
+  // Event edit's acts carry their roles, so an add or a move never shifts
+  // another act's (`moveActKeepingRoles`).
   const add = (act: Act) => {
-    onChange(addAct(lineup, act));
+    onChange(edit ? addActWithRole(lineup, act) : addAct(lineup, act));
     setText('');
   };
   // `moveAct` returns an off-the-end move unchanged; skipping it here (and a
-  // move onto itself) spares the form a change that changes nothing.
-  const move = (from: number, to: number) => {
+  // move onto itself) spares the form a change that changes nothing. From the
+  // keyboard, focus follows the chip to its new place.
+  const move = (from: number, to: number, refocus = false) => {
     if (from === to || to < 0 || to >= lineup.length) return;
-    onChange(moveAct(lineup, from, to));
+    if (refocus) focusAt.current = to;
+    onChange(
+      edit ? moveActKeepingRoles(lineup, from, to) : moveAct(lineup, from, to),
+    );
   };
   // `addAct` keeps a name off the bill twice, but the bill also arrives as a
   // prop, so the key counts repeats. NUL can't be typed into a name, so a
@@ -205,13 +235,106 @@ export const LineupField = ({
               const tone = toneOf(act);
               const href = hrefOf(act);
               const key = keys[index];
+              const match =
+                tone === null ? 'typed' : act.unsure ? 'unsure' : 'matched';
+              // The tint is colour only, so the name says the match too.
+              const label = EDIT_COPY.lineupChip(act.name, role, match);
+              const chipStyle = {
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                height: 24,
+                padding: '0 9px',
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                color: 'var(--fg)',
+                textDecoration: 'none',
+                // A typed name has no match to tint (undrawn): the neutral
+                // chip of Add a show.
+                background:
+                  tone === null
+                    ? 'var(--surface-2)'
+                    : `color-mix(in srgb, ${tone} 10%, transparent)`,
+                border:
+                  tone === null
+                    ? '1px solid var(--border-strong)'
+                    : `1px solid color-mix(in srgb, ${tone} 30%, transparent)`,
+                opacity: dragging === index ? 0.5 : 1,
+                maxWidth: '100%',
+              } satisfies CSSProperties;
+              const dot = (
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 14,
+                    flex: 'none',
+                    borderRadius: '50%',
+                    background: PHOTO_PLACEHOLDER,
+                  }}
+                />
+              );
+              const name = (
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {act.name}
+                </span>
+              );
+              if (phone) {
+                // Add a show's phone chip (`11/add-a-show-lineup-d`): the
+                // arrow moves it up the bill and the × removes it.
+                return (
+                  <span
+                    key={key}
+                    role="group"
+                    aria-label={label}
+                    data-testid="lineup-chip"
+                    data-tone={match}
+                    style={chipStyle}
+                  >
+                    {index > 0 && (
+                      <button
+                        type="button"
+                        aria-label={COPY.moveEarlier(act.name)}
+                        onClick={() => move(index, index - 1)}
+                        style={BARE}
+                      >
+                        <ChevronLeft size={14} strokeWidth={2} aria-hidden />
+                      </button>
+                    )}
+                    {dot}
+                    {href === null ? (
+                      name
+                    ) : (
+                      <a
+                        href={href}
+                        aria-label={EDIT_COPY.lineupNewTab(act.name)}
+                        style={{ color: 'inherit', textDecoration: 'none' }}
+                        {...NEW_TAB}
+                      >
+                        {name}
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      aria-label={COPY.remove(act.name)}
+                      onClick={() => onChange(removeAct(lineup, index))}
+                      style={BARE}
+                    >
+                      <Cross />
+                    </button>
+                  </span>
+                );
+              }
               const props = {
-                'aria-label': COPY.chipLabel(act.name, role),
+                ref: (el: HTMLElement | null) => {
+                  chipRefs.current[index] = el;
+                },
                 'aria-describedby': keysId,
                 'data-testid': 'lineup-chip',
-                'data-tone':
-                  tone === null ? 'typed' : act.unsure ? 'unsure' : 'matched',
-                draggable: !phone,
+                'data-tone': match,
+                draggable: true,
                 onDragStart: () => setDragging(index),
                 onDragEnd: () => setDragging(null),
                 onDragOver: (evt: DragEvent<Element>) => evt.preventDefault(),
@@ -223,72 +346,42 @@ export const LineupField = ({
                 onKeyDown: (evt: KeyboardEvent<Element>) => {
                   if (evt.key === 'Delete' || evt.key === 'Backspace') {
                     evt.preventDefault();
+                    // Focus goes to the chip that takes its place, else the
+                    // one before, else Add an artist.
+                    focusAt.current =
+                      lineup.length > 1
+                        ? Math.min(index, lineup.length - 2)
+                        : FOCUS_INPUT;
                     onChange(removeAct(lineup, index));
                     return;
                   }
                   if (!evt.altKey) return;
-                  if (evt.key === 'ArrowLeft') move(index, index - 1);
-                  if (evt.key === 'ArrowRight') move(index, index + 1);
+                  if (evt.key === 'ArrowLeft') move(index, index - 1, true);
+                  if (evt.key === 'ArrowRight') move(index, index + 1, true);
                 },
-                style: {
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  height: 24,
-                  padding: '0 9px',
-                  borderRadius: 999,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  color: 'var(--fg)',
-                  textDecoration: 'none',
-                  // A typed name has no match to tint (undrawn): the neutral
-                  // chip of Add a show.
-                  background:
-                    tone === null
-                      ? 'var(--surface-2)'
-                      : `color-mix(in srgb, ${tone} 10%, transparent)`,
-                  border:
-                    tone === null
-                      ? '1px solid var(--border-strong)'
-                      : `1px solid color-mix(in srgb, ${tone} 30%, transparent)`,
-                  opacity: dragging === index ? 0.5 : 1,
-                  maxWidth: '100%',
-                } satisfies CSSProperties,
+                style: chipStyle,
               };
-              const body = (
-                <>
-                  <span
-                    aria-hidden
-                    style={{
-                      width: 14,
-                      height: 14,
-                      flex: 'none',
-                      borderRadius: '50%',
-                      background: PHOTO_PLACEHOLDER,
-                    }}
-                  />
-                  <span
-                    style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}
-                  >
-                    {act.name}
-                  </span>
-                </>
-              );
-              // A new tab, so following a name never drops unsaved edits.
               return href === null ? (
-                <span key={key} role="group" tabIndex={0} {...props}>
-                  {body}
+                <span
+                  key={key}
+                  role="group"
+                  tabIndex={0}
+                  aria-label={label}
+                  {...props}
+                >
+                  {dot}
+                  {name}
                 </span>
               ) : (
                 <a
                   key={key}
                   href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  aria-label={EDIT_COPY.lineupNewTab(label)}
+                  {...NEW_TAB}
                   {...props}
                 >
-                  {body}
+                  {dot}
+                  {name}
                 </a>
               );
             }
@@ -369,6 +462,7 @@ export const LineupField = ({
             );
           })}
           <input
+            ref={inputRef}
             id={id}
             role="combobox"
             aria-expanded={options.length > 0}
@@ -425,7 +519,7 @@ export const LineupField = ({
               fontFamily: 'inherit',
             }}
           />
-          {edit && (
+          {edit && !phone && (
             <span id={keysId} className="sr-only">
               {EDIT_COPY.lineupKeys}
             </span>

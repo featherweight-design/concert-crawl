@@ -57,7 +57,7 @@ import {
   type LineupItem,
 } from './event-detail';
 import { addShowApi } from '../add/add-show-api';
-import { lineupEntries, type Act } from '../add/add-show-rules';
+import { lineupEntries, rolesOf, type Act } from '../add/add-show-rules';
 import { LineupField } from '../add/LineupField';
 
 const COPY = ADMIN_COPY.eventEdit;
@@ -751,13 +751,38 @@ export const EventEdit = ({
   // A failed mark keeps how the admin knew, so Try again, or picking Sold out
   // again, still has their method, link and note.
   useEffect(() => {
-    if (snap.failed !== null) {
+    if (snap.failed === null) return;
+    // The fields' PATCH landed before the lineup's PUT failed: they keep what
+    // saved, and only the lineup (and the sale, never sent) snaps back.
+    if (failedStep === 'lineup') {
       setDraft({
-        ...snap.failed.saved,
-        evidence: snap.failed.attempted.evidence,
+        ...snap.failed.attempted,
+        lineup: snap.failed.saved.lineup,
+        sale: snap.failed.saved.sale,
       });
+      return;
     }
-  }, [snap.failed]);
+    setDraft({
+      ...snap.failed.saved,
+      evidence: snap.failed.attempted.evidence,
+    });
+  }, [snap.failed, failedStep]);
+  /** The fields a Save's PATCH carried, named for the toast. */
+  const savedFieldNames = (attempted: Fields, was: Fields): string[] => {
+    const names = COPY.saveFailed.fieldNames;
+    const changed: [boolean, string][] = [
+      [attempted.title !== was.title, names.title],
+      [tourChanged(attempted, was), names.tourName],
+      [attempted.date !== was.date, names.date],
+      [attempted.doorsTime !== was.doorsTime, names.doorsTime],
+      [attempted.showTime !== was.showTime, names.showTime],
+    ];
+    return changed.flatMap(([did, name]) => (did ? [name] : []));
+  };
+  const partlySaved =
+    snap.failed !== null && failedStep === 'lineup'
+      ? savedFieldNames(snap.failed.attempted, snap.failed.saved)
+      : [];
   const count = changedCount(draft, snap.value);
   // A new Sold out asks how the admin knows (`06/sold-out-mark-d`) and
   // confirms before it tells the Watching (`06/sold-out-confirm-d`).
@@ -765,13 +790,15 @@ export const EventEdit = ({
   const [confirmingSoldOut, setConfirmingSoldOut] = useState(false);
   // The API refuses an empty title, so Save waits for one; a new Sold out
   // waits for its method (and a link, if any, that is http(s)).
-  // A changed bill needs an act (the API's `headliner_required`); a crawled
-  // show saved with none can still save its other fields.
-  const lineupEmpty =
-    draft.lineup.length === 0 && lineupChanged(draft, snap.value);
+  // A changed bill needs a headliner (the API's `headliner_required`): roles
+  // stay as saved, so removing the only one waits for an act moved to the
+  // front. A crawled show saved with none can still save its other fields.
+  const lineupInvalid =
+    lineupChanged(draft, snap.value) &&
+    !rolesOf(draft.lineup).includes('headliner');
   const valid =
     draft.title.trim() !== '' &&
-    !lineupEmpty &&
+    !lineupInvalid &&
     (!marking || evidenceReady(draft.evidence));
   const saveDraft = () => snap.save({ ...draft, title: draft.title.trim() });
   const tourDirty = tourChanged(draft, snap.value);
@@ -867,7 +894,7 @@ export const EventEdit = ({
           onChange={(lineup) => setDraft({ ...draft, lineup })}
           search={searchArtists}
           phone={phone}
-          invalid={lineupEmpty}
+          invalid={lineupInvalid}
         />
       </Field>
       <ReadOnlyField
@@ -1082,7 +1109,22 @@ export const EventEdit = ({
           onDismiss={snap.dismiss}
         />
       )}
-      {snap.failed !== null && refusal === null && (
+      {snap.failed !== null && refusal === null && partlySaved.length > 0 && (
+        // What saved, then the lineup that didn't: "Nothing changed" would
+        // be untrue.
+        <SaveFailedToast
+          what={COPY.saveFailed.what}
+          body={`${COPY.saveFailed.savedFields(
+            new Intl.ListFormat('en', { type: 'conjunction' }).format(
+              partlySaved,
+            ),
+          )} ${COPY.saveFailed.savedLineup}`}
+          onRetry={() => void snap.retry()}
+          retrying={snap.saving}
+          onDismiss={snap.dismiss}
+        />
+      )}
+      {snap.failed !== null && refusal === null && partlySaved.length === 0 && (
         <SaveFailedToast
           what={COPY.saveFailed.what}
           saved={

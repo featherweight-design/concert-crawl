@@ -44,18 +44,13 @@ export interface Act {
 }
 
 /**
- * Each act's role, in bill order. Headliners lead the bill: the first act is
- * always one, and an act marked headliner stays one while every act before
- * it is a headliner too. With no roles set (Add a show) that is the first
- * act headlining and the rest supporting.
+ * Each act's role, in bill order: its stored role, else by position (Add a
+ * show sets none, so its first act headlines and the rest support).
  */
-export const rolesOf = (lineup: readonly Act[]): ActRole[] => {
-  let leading = true;
-  return lineup.map((act, index) => {
-    leading = leading && (index === 0 || act.role === 'headliner');
-    return leading ? 'headliner' : 'support';
-  });
-};
+export const rolesOf = (lineup: readonly Act[]): ActRole[] =>
+  lineup.map(
+    (act, index) => act.role ?? (index === 0 ? 'headliner' : 'support'),
+  );
 
 /** The bill as the API's `lineupEntrySchema` takes it. */
 export const lineupEntries = (
@@ -241,3 +236,34 @@ export const moveAct = (
   next.splice(to, 0, moved);
   return next;
 };
+
+/**
+ * Event edit's move: only the moved act's role can change. Moved to the very
+ * front it headlines ("the first is the headliner"); anywhere else it keeps
+ * the role it had. Every other act keeps its own, pinned before the move so
+ * a positional fallback never shifts it.
+ */
+export const moveActKeepingRoles = (
+  lineup: readonly Act[],
+  from: number,
+  to: number,
+): Act[] => {
+  const roles = rolesOf(lineup);
+  const pinned = lineup.map((act, index) => ({
+    ...act,
+    role: roles[index] ?? 'support',
+  }));
+  const next = moveAct(pinned, from, to);
+  const front = next[0];
+  if (to === 0 && from > 0 && from < lineup.length && front !== undefined) {
+    next[0] = { ...front, role: 'headliner' };
+  }
+  return next;
+};
+
+/** Event edit's add: the act gets its role now, so later moves never shift it. */
+export const addActWithRole = (lineup: readonly Act[], act: Act): Act[] =>
+  addAct(lineup, {
+    ...act,
+    role: lineup.length === 0 ? 'headliner' : 'support',
+  });
