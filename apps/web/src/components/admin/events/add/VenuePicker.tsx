@@ -283,6 +283,8 @@ export const VenuePicker = ({
         aria-expanded={shown}
         aria-controls={shown ? listId : undefined}
         aria-busy={venues === null || undefined}
+        // A button takes no aria-invalid (jsx-a11y, as DateField's trigger);
+        // the error line, tied by aria-describedby, names it.
         aria-describedby={describedBy}
         onClick={() => {
           if (list !== null) setOpen(!open);

@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -43,6 +44,8 @@ const DUPLICATE_DEBOUNCE_MS = 400;
 
 const fieldId = (field: AddShowField) => `add-show-${field}`;
 const errorId = (field: AddShowField) => `add-show-${field}-error`;
+/** The 409 warning's Open it, where focus lands on an exact duplicate. */
+const OPEN_EXISTING_ID = 'add-show-open-existing';
 
 const Field = ({
   field,
@@ -120,13 +123,35 @@ export const AddShow = ({
   const [submitted, setSubmitted] = useState(false);
   const [serverErrors, setServerErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
-  // `failed`: a save that may succeed on a retry. `refused`: the API refused
-  // the body with nothing the form can pin on a field, so a retry would only
-  // be refused again; the toast offers none, and editing a field clears it.
-  const [failure, setFailure] = useState<'failed' | 'refused' | null>(null);
+  // `failed`: nothing was added; a retry may succeed. `maybe`: a timed-out
+  // POST may have committed and no single new show was found; the retry's
+  // 409 opens one that did land. `refused`: the API refused the body with
+  // nothing the form can pin on a field, so a retry would only be refused
+  // again; the toast offers none, and editing a field clears it.
+  const [failure, setFailure] = useState<'failed' | 'maybe' | 'refused' | null>(
+    null,
+  );
   const [venues, setVenues] = useState<PickVenue[] | 'failed' | null>(null);
   const [duplicates, setDuplicates] = useState<DuplicateShow[]>([]);
   const [exactId, setExactId] = useState<string | null>(null);
+
+  // A reply that lands after the form closed must not navigate or set state.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  // A second press before the first re-render sends no second POST.
+  const savingRef = useRef(false);
+  // The element to focus once a refused save re-enables the form.
+  const focusAfterSave = useRef<string | null>(null);
+  useEffect(() => {
+    if (saving || focusAfterSave.current === null) return;
+    document.getElementById(focusAfterSave.current)?.focus();
+    focusAfterSave.current = null;
+  }, [saving]);
 
   const loadVenues = useCallback(() => {
     setVenues(null);
@@ -137,19 +162,28 @@ export const AddShow = ({
   }, [api]);
   useEffect(loadVenues, [loadVenues]);
 
-  // The warning follows venue, date and title as they're typed.
+  // The warning follows venue, date and title as they're typed. A new venue
+  // or date is another night, so its warning clears at once; a title edit
+  // keeps the last warning until the next check lands, so it never flickers.
   const { venueId, date, title } = draft;
   useEffect(() => {
     setDuplicates([]);
+  }, [venueId, date]);
+  useEffect(() => {
     if (venueId === '' || date === '') return undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => {
       api
         .duplicates({ venueId, date, title: title.trim() }, controller.signal)
         .then(
-          setDuplicates,
-          // A warning only: a failed check shows none.
-          () => setDuplicates([]),
+          (rows) => {
+            if (!controller.signal.aborted) setDuplicates(rows);
+          },
+          () => {
+            // A newer keystroke's abort keeps the last warning; a failed
+            // check shows none, as it's a warning only.
+            if (!controller.signal.aborted) setDuplicates([]);
+          },
         );
     }, DUPLICATE_DEBOUNCE_MS);
     return () => {
@@ -212,46 +246,80 @@ export const AddShow = ({
     onClose();
   };
 
+  /** The one new show a timed-out POST may have saved, or null. */
+  const findAfterTimeout = async (
+    body: ReturnType<typeof toBody>,
+    before: ReadonlySet<string> | null,
+  ): Promise<string | null> => {
+    // No before-read: an older twin can't be told apart, so don't guess.
+    if (before === null) return null;
+    try {
+      return await api.findCreated(body, before);
+    } catch (err) {
+      console.error('[admin add show] finding a timed-out show failed', err);
+      return null;
+    }
+  };
+
   const save = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setFailure(null);
     const body = toBody(draft);
+    let next: typeof failure = null;
     try {
       // Read first, so a timed-out create can tell its own show from an
-      // older twin that night (add-show-api `create`).
-      const before = await api.manualIdsBefore(body);
+      // older twin that night (add-show-api `create`). A failed read never
+      // blocks the save: it only rules out finding the show after a timeout.
+      let before: ReadonlySet<string> | null = null;
+      try {
+        before = await api.manualIdsBefore(body);
+      } catch (err) {
+        console.error('[admin add show] reading the night failed', err);
+      }
+      if (!mounted.current) return;
       const result = await api.create(body);
+      if (!mounted.current) return;
       if (result.kind === 'created') {
         leave(editEventHref(result.id));
         return;
       }
       if (result.kind === 'timeout') {
         // The POST may still have saved it: open the one new show, if found.
-        const found = await api.findCreated(body, before);
+        const found = await findAfterTimeout(body, before);
+        if (!mounted.current) return;
         if (found !== null) {
           leave(editEventHref(found));
           return;
         }
-        // None or several: Save failed. If it did land, the retry's 409
-        // opens it through the duplicate warning.
+        // None, several, or no way to tell: it may have been added. If it
+        // did land, the retry's 409 opens it through the duplicate warning.
         console.error('[admin add show] create timed out, no show found');
-        setFailure('failed');
+        next = 'maybe';
       } else if (result.kind === 'duplicate') {
         setExactId(result.existingId);
+        focusAfterSave.current = OPEN_EXISTING_ID;
       } else {
-        const next: FieldErrors = {};
+        const refused: FieldErrors = {};
         for (const issue of result.issues)
-          if (isAddShowField(issue.field)) next[issue.field] ??= issue.code;
-        setServerErrors(next);
-        if (Object.keys(next).length === 0) {
+          if (isAddShowField(issue.field)) refused[issue.field] ??= issue.code;
+        setServerErrors(refused);
+        const first = ADD_SHOW_FIELDS.find((field) => refused[field]);
+        if (first) focusAfterSave.current = fieldId(first);
+        else {
           console.error('[admin add show] create refused', result.issues);
-          setFailure('refused');
+          next = 'refused';
         }
       }
     } catch (err) {
+      if (!mounted.current) return;
       console.error('[admin add show] create failed', err);
-      setFailure('failed');
+      next = 'failed';
+    } finally {
+      savingRef.current = false;
     }
+    setFailure(next);
     setSaving(false);
   };
 
@@ -269,8 +337,13 @@ export const AddShow = ({
     ? venues.find((venue) => venue.id === venueId)?.name
     : undefined;
   const [likeliest] = duplicates;
-  const openIt = (id: string) => (
-    <button type="button" onClick={() => leave(editEventHref(id))} style={LINK}>
+  const openIt = (id: string, buttonId?: string) => (
+    <button
+      type="button"
+      id={buttonId}
+      onClick={() => leave(editEventHref(id))}
+      style={LINK}
+    >
       {COPY.duplicate.open}
     </button>
   );
@@ -301,7 +374,7 @@ export const AddShow = ({
         {exactId !== null ? (
           <>
             {COPY.duplicate.exact}
-            {openIt(exactId)}
+            {openIt(exactId, OPEN_EXISTING_ID)}
             {COPY.duplicate.exactTail}
           </>
         ) : likeliest && venueName ? (
@@ -362,11 +435,34 @@ export const AddShow = ({
     </Field>
   );
 
+  // After Add show, the first error is announced: the inline lines alone
+  // are silent to a screen reader.
+  const firstShown = ADD_SHOW_FIELDS.find((field) => shown[field]);
+  const announced = submitted && firstShown ? errorOf(firstShown) : '';
+
   const form = (
-    <div
+    <fieldset
       data-testid="add-show"
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+      // Read-only mid-save: what was sent is what's on screen.
+      disabled={saving}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        minWidth: 0,
+        margin: 0,
+        padding: 0,
+        border: 'none',
+      }}
     >
+      <div
+        data-testid="add-show-announcer"
+        role="status"
+        aria-live="polite"
+        className="sr-only"
+      >
+        {announced}
+      </div>
       <Field field="title" label={COPY.titleField} error={errorOf('title')}>
         <input
           id={fieldId('title')}
@@ -450,7 +546,7 @@ export const AddShow = ({
       <p style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-muted)' }}>
         {COPY.priceNote}
       </p>
-    </div>
+    </fieldset>
   );
 
   const buttonHeight = phone ? 46 : 40;
@@ -477,9 +573,11 @@ export const AddShow = ({
             body={
               failure === 'refused'
                 ? COPY.saveFailed.refused
-                : COPY.saveFailed.body
+                : failure === 'maybe'
+                  ? COPY.saveFailed.maybe
+                  : COPY.saveFailed.body
             }
-            {...(failure === 'failed' && { onRetry: () => void save() })}
+            {...(failure !== 'refused' && { onRetry: () => void save() })}
             retrying={saving}
             {...(phone && {
               padding: '12px',

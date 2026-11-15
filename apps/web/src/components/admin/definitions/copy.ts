@@ -4850,6 +4850,10 @@ export const ADMIN_COPY = {
       // Undrawn, a draft for copy-review: a 400 the form can't pin on a
       // field, so the toast offers no Try again.
       refused: 'Nothing was added. Check the form, then add it again.',
+      // Undrawn, a draft for copy-review: a save that timed out may still
+      // have landed, and no single new show was found.
+      maybe:
+        'It may have been added. Check the venue’s shows before adding it again.',
     },
     // One line per API field code (`ADD_SHOW_ERROR_CODES`).
     errors: {
