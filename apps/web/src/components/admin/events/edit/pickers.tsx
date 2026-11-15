@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -84,8 +85,8 @@ const usePopover = () => {
 /**
  * A month arrow. The board draws bare 14px chevrons 28px apart, 6px in from
  * the edge; 26px-wide buttons 2px apart put each icon's centre exactly there
- * while keeping a press target, and the negative block margin keeps the
- * header row the height of its 14px label.
+ * while keeping a press target. The negative block margin stops the 24px
+ * button growing the row, whose height comes from the label's line box.
  */
 const ARROW: CSSProperties = {
   display: 'grid',
@@ -386,10 +387,25 @@ export const parseTime = (text: string): string | null => {
 };
 
 /** Half hours from 10:00 AM to 11:30 PM, the list under the time field. */
+const FIRST_SLOT = 600;
+const SLOT_MINUTES = 30;
 const HALF_HOURS = Array.from({ length: 28 }, (_, i) => {
-  const minutes = 600 + i * 30;
+  const minutes = FIRST_SLOT + i * SLOT_MINUTES;
   return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
 });
+
+/**
+ * The listed half hour nearest an `HH:MM` time, so an off-grid one (7:15 PM,
+ * 9:00 AM, 11:45 PM) still opens the list near it.
+ */
+const nearestSlot = (time: string): string => {
+  const [hours, minutes] = time.split(':').map(Number);
+  const index = Math.round(
+    ((hours ?? 0) * 60 + (minutes ?? 0) - FIRST_SLOT) / SLOT_MINUTES,
+  );
+  const last = HALF_HOURS.length - 1;
+  return HALF_HOURS[Math.min(last, Math.max(0, index))] ?? HALF_HOURS[0] ?? '';
+};
 
 /**
  * A time field (`04/time-picker-d`): on desktop a popover with a text field
@@ -420,21 +436,25 @@ export const TimeField = ({
   // Typed text that isn't a time says so, rather than doing nothing.
   const invalid = text.trim() !== '' && parseTime(text) === null;
   const listRef = useRef<HTMLDivElement>(null);
-  const chosenRef = useRef<HTMLButtonElement>(null);
-  // The list opens on the chosen half hour, centred where it can be
-  // (`04/time-picker-d` draws 6:00 PM between 5:30 and 8:30), instead of
-  // always at 10:00 AM. Only the list scrolls, never the page or the dialog
-  // around it (which `scrollIntoView` would), and it jumps rather than
-  // animates. With no time chosen it stays at the top.
-  useEffect(() => {
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  // The half hour the list opens on: the chosen one, or the nearest to an
+  // off-grid time (which still shows no check).
+  const anchor = current === null ? null : nearestSlot(current);
+  // `04/time-picker-d` is a still, so where the list opens is undrawn. Our
+  // resolution: centre the anchor, clamped to the list's ends, rather than
+  // always opening at 10:00 AM. Only the list scrolls, never the page or the
+  // dialog around it (which `scrollIntoView` would), and it jumps rather than
+  // animates. With no time it stays at the top. A layout effect, so the list
+  // never paints at the top first.
+  useLayoutEffect(() => {
     if (!open) return undefined;
     const list = listRef.current;
-    const option = chosenRef.current;
+    const option = anchorRef.current;
     if (list === null || option === null) return undefined;
-    list.scrollTop = Math.max(
-      0,
-      option.offsetTop - (list.clientHeight - option.offsetHeight) / 2,
-    );
+    const centred =
+      option.offsetTop - (list.clientHeight - option.offsetHeight) / 2;
+    const bottom = Math.max(0, list.scrollHeight - list.clientHeight);
+    list.scrollTop = Math.min(bottom, Math.max(0, centred));
     return undefined;
   }, [open]);
 
@@ -529,7 +549,7 @@ export const TimeField = ({
               return (
                 <button
                   key={slot}
-                  ref={chosen ? chosenRef : undefined}
+                  ref={slot === anchor ? anchorRef : undefined}
                   type="button"
                   role="option"
                   aria-selected={chosen}

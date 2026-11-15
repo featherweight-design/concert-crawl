@@ -138,13 +138,33 @@ describe('TimeField on desktop', () => {
 
   describe('where the list opens', () => {
     // jsdom lays nothing out, so every offset reads 0. Stand in the drawn
-    // geometry: 34px options 4px apart in a 240px window. Before the fix
-    // nothing ever set the list's scrollTop, so it stayed 0 (10:00 AM at the
-    // top) whatever the value, and the first assertion fails.
+    // geometry: 28 options 34px tall, 4px apart, in a 240px window. Before
+    // the fix nothing ever set the list's scrollTop, so it stayed 0 (10:00 AM
+    // at the top) whatever the value, and the centring, off-grid and bottom
+    // assertions fail. jsdom doesn't clamp scrollTop either, so the bottom
+    // case proves the code clamps it.
     const ROW = 34;
     const STEP = ROW + 4;
     const WINDOW = 240;
+    const SLOTS = 28;
+    const SCROLL_HEIGHT = SLOTS * STEP - 4;
+    const BOTTOM = SCROLL_HEIGHT - WINDOW;
     afterEach(() => vi.restoreAllMocks());
+    /** Renders with `value`, opens the list, and returns it. */
+    const openAt = (value: string) => {
+      render(
+        <TimeField
+          id="t"
+          value={value}
+          onChange={vi.fn()}
+          phone={false}
+          placeholder="—"
+          label="Show"
+        />,
+      );
+      fireEvent.click(screen.getByRole('button'));
+      return screen.getByRole('listbox');
+    };
     const layOut = () => {
       vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(
         function offsetTop(this: HTMLElement) {
@@ -163,24 +183,57 @@ describe('TimeField on desktop', () => {
           return this.getAttribute('role') === 'listbox' ? WINDOW : 0;
         },
       );
+      vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(
+        function scrollHeight(this: Element) {
+          return this.getAttribute('role') === 'listbox' ? SCROLL_HEIGHT : 0;
+        },
+      );
     };
+
+    it('centres the nearest half hour to an off-grid time, with no check', () => {
+      layOut();
+      // 7:15 PM rounds to 7:30 PM (index 19).
+      expect(openAt('19:15:00').scrollTop).toBe(19 * STEP - (WINDOW - ROW) / 2);
+      expect(
+        screen.queryByRole('option', { selected: true }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens an off-grid time past the last slot at the bottom', () => {
+      layOut();
+      // 11:45 PM is past 11:30 PM, the last slot.
+      expect(openAt('23:45').scrollTop).toBe(BOTTOM);
+      expect(
+        screen.queryByRole('option', { selected: true }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens an off-grid time before the first slot at the top', () => {
+      layOut();
+      expect(openAt('09:00').scrollTop).toBe(0);
+    });
+
+    it('clamps at the top for the first slots', () => {
+      layOut();
+      expect(openAt('10:00').scrollTop).toBe(0);
+      cleanup();
+      expect(openAt('10:30').scrollTop).toBe(0);
+    });
+
+    it('clamps at the bottom for the last slot', () => {
+      layOut();
+      // Centring 11:30 PM (index 27) would ask for 923, past the 820 end.
+      expect(27 * STEP - (WINDOW - ROW) / 2).toBeGreaterThan(BOTTOM);
+      expect(openAt('23:30').scrollTop).toBe(BOTTOM);
+      expect(
+        screen.getByRole('option', { name: '11:30 PM', selected: true }),
+      ).toBeInTheDocument();
+    });
 
     it('centres the chosen half hour', () => {
       layOut();
-      render(
-        <TimeField
-          id="t"
-          value="19:30:00"
-          onChange={vi.fn()}
-          phone={false}
-          placeholder="—"
-          label="Show"
-        />,
-      );
-      fireEvent.click(screen.getByRole('button', { name: '7:30 PM' }));
       // 7:30 PM is the 20th half hour from 10:00 AM (index 19).
-      const expected = 19 * STEP - (WINDOW - ROW) / 2;
-      expect(screen.getByRole('listbox').scrollTop).toBe(expected);
+      expect(openAt('19:30:00').scrollTop).toBe(19 * STEP - (WINDOW - ROW) / 2);
     });
 
     it('stays at the top with no time chosen', () => {
