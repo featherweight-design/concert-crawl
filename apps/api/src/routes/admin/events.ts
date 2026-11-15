@@ -1398,27 +1398,21 @@ eventsAdminRouter.post(
     const { ids } = ctx.req.valid('json');
     const actor = getAuthUser(ctx);
 
+    // One audit row per call, written in the same transaction, even when
+    // every row was refused: the request and its refusals are on record.
     const result = await db.transaction(async (tx) => {
       const outcome = await deleteManualEvents(tx, ids);
-      if (outcome.deleted.length > 0) {
-        await tx.insert(auditLog).values(
-          outcome.deleted.map((row) => ({
-            actorId: actor.userId,
-            action: 'event.bulk_delete',
-            targetId: row.id,
-            metadata: {
-              title: row.title,
-              venueId: row.venueId,
-              venueName: row.venueName,
-              date: row.date,
-              wasVerified: row.wasVerified,
-              // The batch's refusals, so any one audit row tells the whole
-              // story of the request.
-              skipped: outcome.skipped,
-            },
-          })),
-        );
-      }
+      await tx.insert(auditLog).values({
+        actorId: actor.userId,
+        action: 'event.bulk_delete',
+        targetId: null,
+        metadata: {
+          deletedIds: outcome.deleted.map((row) => row.id),
+          // Title, venue and date of each deleted show.
+          deleted: outcome.deleted,
+          skipped: outcome.skipped,
+        },
+      });
       return outcome;
     });
 

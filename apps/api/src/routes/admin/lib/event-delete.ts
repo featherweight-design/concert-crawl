@@ -6,7 +6,8 @@
 //   would come back on the next crawl with fresh ids and nobody on it, so it
 //   is refused `not_manual`; Hide is the tool for those.
 // - Only a row nobody depends on. Watchers (`user_events` with status
-//   `watching`), Submitted prices (`price_submissions`, any status) and
+//   `watching`), Concerts (`user_events` with status `going` or
+//   `attending_at` set), Submitted prices (`price_submissions`, any status) and
 //   incoming `event_redirects` (a merged-away listing that now resolves here)
 //   all cascade on delete, so any of them refuses `has_dependents` with the
 //   counts.
@@ -17,7 +18,7 @@
 // KEY SHARE lock on the event, which waits on ours, so nothing can attach
 // between the count and the delete.
 
-import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import {
   eventRedirects,
   events,
@@ -29,6 +30,7 @@ import type { DbTransaction } from '../../../lib/db-executor.js';
 
 export interface EventDependentCounts {
   watchers: number;
+  concerts: number;
   submittedPrices: number;
   redirects: number;
 }
@@ -106,6 +108,28 @@ export const deleteManualEvents = async (
             )
             .groupBy(userEvents.eventId),
         );
+  // Concerts as the app reads them: the fan's Concerts (routes/history.ts)
+  // is `attending_at` set, whatever the status, and the admin went count
+  // (event-counts.ts) is status `going`. A row that is both Watching and a
+  // Concert counts in both.
+  const concerts =
+    manualIds.length === 0
+      ? none
+      : countsById(
+          await tx
+            .select({ eventId: userEvents.eventId, total: count() })
+            .from(userEvents)
+            .where(
+              and(
+                inArray(userEvents.eventId, manualIds),
+                or(
+                  eq(userEvents.status, 'going'),
+                  isNotNull(userEvents.attendingAt),
+                ),
+              ),
+            )
+            .groupBy(userEvents.eventId),
+        );
   const submittedPrices =
     manualIds.length === 0
       ? none
@@ -136,10 +160,11 @@ export const deleteManualEvents = async (
     }
     const counts: EventDependentCounts = {
       watchers: watchers.get(row.id) ?? 0,
+      concerts: concerts.get(row.id) ?? 0,
       submittedPrices: submittedPrices.get(row.id) ?? 0,
       redirects: redirects.get(row.id) ?? 0,
     };
-    if (counts.watchers + counts.submittedPrices + counts.redirects > 0) {
+    if (Object.values(counts).some((total) => total > 0)) {
       skipped.push({ id: row.id, reason: 'has_dependents', counts });
       continue;
     }
