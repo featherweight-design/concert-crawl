@@ -1,3 +1,23 @@
+# [1.521.0](https://github.com/featherweight-design/concert-crawl/compare/v1.520.1...v1.521.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** count Moved only when the show left another venue ([f4e1507](https://github.com/featherweight-design/concert-crawl/commit/f4e1507ece59065e8ff254f33c4195dfce5f1e19))
+* **web:** carry the follow through sign-in from the search row and the follow shelf ([b22f15b](https://github.com/featherweight-design/concert-crawl/commit/b22f15b2e0b64d4dfb95a1880366d308114ae3c0))
+* **web:** drop the tier picker from the follow shelf, search, my shows and the artist page ([f1c0d56](https://github.com/featherweight-design/concert-crawl/commit/f1c0d56a76993efd67dc48bdc967307bfe02f519))
+* **web:** keep cancelled rows out of merge search and settle refused and timed-out merges ([9cbb147](https://github.com/featherweight-design/concert-crawl/commit/9cbb147ad2e350af80e328a6ec061fbaf9788d9e))
+* **web:** keep follow taps inert until clerk answers on search, the artist page and the shelf ([32a1e95](https://github.com/featherweight-design/concert-crawl/commit/32a1e9596c4b657e98c0bfe881fdac209f3dfb2b))
+* **web:** return a signed-out follow to the artist page so the replay runs ([ca32ea7](https://github.com/featherweight-design/concert-crawl/commit/ca32ea761b640b9e0f634dfec0f98b0aaae80226))
+* **web:** style the merge pick list's search field ([3d03010](https://github.com/featherweight-design/concert-crawl/commit/3d030104b3e38bd815c38ea142c388b3e93e28ce))
+* **web:** sync the artist follow after the sign-in refresh and guard the return slug ([86a8538](https://github.com/featherweight-design/concert-crawl/commit/86a8538330aec323c05f2b35d5980b26b7221ab9))
+
+
+### Features
+
+* **api:** return where and when a show moved on admin event GET-one ([6f4395c](https://github.com/featherweight-design/concert-crawl/commit/6f4395c0a1394bb2b05182b4f30731784290857c))
+* **web:** merge duplicates panel, from Event edit and the Events row ([fe5d50d](https://github.com/featherweight-design/concert-crawl/commit/fe5d50d58f419997425295e15c4e1fdb2923590e))
+
 ## [1.520.1](https://github.com/featherweight-design/concert-crawl/compare/v1.520.0...v1.520.1) (2026-11-15)
 
 
