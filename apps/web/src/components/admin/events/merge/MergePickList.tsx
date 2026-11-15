@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { inputStyle } from '@/components/admin/venues/source/source-parts';
 import { mergeDateTile, mergeDay } from './merge-rules';
 
 const COPY = ADMIN_COPY.eventEdit.merge;
@@ -216,7 +217,7 @@ export function MergePickList({
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder={COPY.searchLabel}
           aria-label={COPY.searchLabel}
-          className="admin-add-show-input"
+          style={inputStyle(false)}
         />
         {searching && (
           <div role="status" style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
