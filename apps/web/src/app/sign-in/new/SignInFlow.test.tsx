@@ -101,14 +101,16 @@ async function press(password = 'Quartz-Ember-42!') {
 }
 
 describe('SignInFlow, start', () => {
-  it('shows the title and email field, with the invite-code link and no Google button', () => {
+  it('shows the title, Google and the email field, with the invite-code link', () => {
     render(<SignInFlow returnTo="/events/42" />);
     expect(
       screen.getByRole('heading', { name: COPY.start.title }),
     ).toBeInTheDocument();
     const email = screen.getByLabelText(COPY.start.emailLabel);
     expect(email).toHaveAttribute('autocomplete', 'username');
-    expect(screen.queryByText(/google/i)).toBeNull();
+    expect(
+      screen.getByRole('button', { name: AUTH_FLOW_COPY.google.label }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: COPY.start.footBetaLink }),
     ).toHaveAttribute('href', '/auth/code?redirect_url=%2Fevents%2F42');
