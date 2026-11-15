@@ -316,6 +316,13 @@ export interface LineupItem {
   /** The artist the name matches on Artists, or null while none does. */
   artistId: string | null;
   slug: string | null;
+  /**
+   * The matched artist is one Artists calls Unsure (`match_status` is
+   * `ambiguous`, the rule `toCheckKind` uses on the To check tab), so Event
+   * edit tints its chip amber. False for a name with no artist: `artistId`
+   * null already says that, and there is no match on Artists to open.
+   */
+  unsure: boolean;
 }
 
 /**
@@ -353,6 +360,7 @@ export const readLineup = async (
             id: artists.id,
             slug: artists.slug,
             canonicalName: artists.canonicalName,
+            matchStatus: artists.matchStatus,
           })
           .from(artists)
           .where(inArray(artists.canonicalName, canonicals));
@@ -368,6 +376,7 @@ export const readLineup = async (
       position,
       artistId: artist?.id ?? null,
       slug: artist?.slug ?? null,
+      unsure: artist?.matchStatus === 'ambiguous',
     };
   });
 };

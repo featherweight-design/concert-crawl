@@ -53,6 +53,7 @@ const lineupItemSchema = z.object({
   position: z.number(),
   artistId: z.string().nullable(),
   slug: z.string().nullable(),
+  unsure: z.boolean(),
 });
 
 const detailBodySchema = z.object({
@@ -195,6 +196,7 @@ describe('POST /v1/admin/events', () => {
         position: 0,
         artistId: kaleo.id,
         slug: kaleo.slug,
+        unsure: false,
       },
       {
         name: 'The Band of Heathens',
@@ -202,6 +204,7 @@ describe('POST /v1/admin/events', () => {
         position: 1,
         artistId: null,
         slug: null,
+        unsure: false,
       },
     ]);
 
@@ -556,6 +559,38 @@ describe('GET /v1/admin/events/:id lineup', () => {
       ['Real Act', 'headliner'],
       ['́', 'headliner'],
       ['Real Act', 'support'],
+    ]);
+  });
+
+  it('flags an act Artists calls Unsure, and only that one', async () => {
+    const venue = await seedVenue();
+    const matched = await seedArtist({
+      name: 'Sure Thing',
+      matchStatus: 'matched',
+    });
+    const unsure = await seedArtist({
+      name: 'Maybe Band',
+      matchStatus: 'ambiguous',
+    });
+    const event = await seedEvent(venue.id, {
+      date: dayOffset(10),
+      headliners: ['Sure Thing'],
+      canonicalHeadliners: ['sure thing'],
+      supportingArtists: ['Maybe Band', 'Typed Name'],
+      canonicalSupporting: ['maybe band', 'typed name'],
+    });
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      headers: HEADERS,
+    });
+    expect(res.status).toBe(200);
+    const { lineup } = detailBodySchema.parse(await res.json()).data;
+    expect(
+      lineup.map(({ name, artistId, unsure: flag }) => [name, artistId, flag]),
+    ).toEqual([
+      ['Sure Thing', matched.id, false],
+      ['Maybe Band', unsure.id, true],
+      // A typed name with no artist row: no link and nothing to open.
+      ['Typed Name', null, false],
     ]);
   });
 });
