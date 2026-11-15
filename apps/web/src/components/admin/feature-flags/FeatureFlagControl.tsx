@@ -697,9 +697,10 @@ const MarkVerifiedAsk = ({
         }}
       >
         {ask.noteLabel}
-        <input
-          type="text"
+        {/* A textarea so the drawn placeholder wraps at 320 instead of clipping. */}
+        <textarea
           value={note}
+          rows={2}
           maxLength={500}
           disabled={pending}
           placeholder={ask.notePlaceholder}
@@ -712,6 +713,9 @@ const MarkVerifiedAsk = ({
             marginTop: 6,
             padding: '8px 10px',
             fontSize: 13,
+            fontFamily: 'inherit',
+            lineHeight: 1.4,
+            resize: 'none',
             color: 'var(--fg)',
             background: 'var(--surface-2)',
             border: '1px solid var(--border)',
