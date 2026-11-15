@@ -1,3 +1,10 @@
+## [1.510.1](https://github.com/featherweight-design/concert-crawl/compare/v1.510.0...v1.510.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** keep signed-in fans entitled when /v1/users/me fails ([438388f](https://github.com/featherweight-design/concert-crawl/commit/438388f996c01e51d6bc1d6efe3f4784261e28fb))
+
 # [1.510.0](https://github.com/featherweight-design/concert-crawl/compare/v1.509.0...v1.510.0) (2026-11-15)
 
 
