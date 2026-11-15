@@ -23,6 +23,8 @@ export interface EventDetail {
   /** `HH:MM:SS`, venue-local; `null` when the venue lists none. */
   doorsTime: string | null;
   showTime: string | null;
+  /** The venue the Venue picker starts on; `null` when the show has none. */
+  venueId: string | null;
   venueName: string | null;
   venueSlug: string | null;
   status: EventListStatus;
@@ -239,6 +241,10 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
   // (a save would then clear it).
   const tourName = value['tourName'];
   if (!isTextOrNull(tourName)) return null;
+  // Saved through the Venue picker, so a drift fails rather than reading as
+  // none. Absent reads as none, which leaves the venue read only.
+  const venueId = value['venueId'] ?? null;
+  if (!isTextOrNull(venueId)) return null;
   const lineup = lineupSchema.safeParse(value['lineup']);
   if (!lineup.success) return null;
   const priceMin = priceText(value['ticketPriceMin']);
@@ -256,6 +262,7 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     date: value['date'],
     doorsTime: value['doorsTime'],
     showTime: value['showTime'],
+    venueId,
     venueName: value['venueName'],
     venueSlug: value['venueSlug'],
     status: value['listStatus'],

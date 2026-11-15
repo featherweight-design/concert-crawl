@@ -36,6 +36,7 @@ const PAYLOAD = {
   date: '2026-11-14',
   doorsTime: '18:00:00',
   showTime: '19:00:00',
+  venueId: 'ven-larimer',
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
   listStatus: 'available',
@@ -88,6 +89,7 @@ describe('eventDetailFrom', () => {
       date: '2026-11-14',
       doorsTime: '18:00:00',
       showTime: '19:00:00',
+      venueId: 'ven-larimer',
       venueName: 'Larimer Lounge',
       venueSlug: 'larimer-lounge',
       status: 'available',
@@ -117,6 +119,13 @@ describe('eventDetailFrom', () => {
       lineup: PAYLOAD.lineup,
       manual: false,
     });
+  });
+
+  it('reads an absent venue id as none and refuses a malformed one', () => {
+    expect(
+      eventDetailFrom({ ...PAYLOAD, venueId: undefined })?.venueId,
+    ).toBeNull();
+    expect(eventDetailFrom({ ...PAYLOAD, venueId: 7 })).toBeNull();
   });
 
   it('reads manual, and an absent or malformed one as not manual', () => {

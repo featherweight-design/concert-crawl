@@ -4717,6 +4717,34 @@ export const ADMIN_COPY = {
       },
       lineupNewTab: (label: string) => `${label}, opens in a new tab`,
     },
+    // E2-D: the Venue field's picker (`06/event-edit`, addendum 5
+    // `04/venue-picker-d`). Undrawn except the Moved line, which is
+    // `06/event-edit`'s; drafts for copy-review.
+    venue: {
+      // A crawled show still to come: the API refuses the move.
+      crawledLocked:
+        'Set by the crawl. If the show moves, the crawl updates it when the venue changes its listing.',
+      // POST /venue's 409 `duplicate_show`, then a link to the other show.
+      duplicate: 'That venue already lists this show on the same night.',
+      openIt: 'Open it',
+      // POST /venue's 409 `crawled_show`, a race with the crawl.
+      crawled:
+        'A crawled show’s venue can’t change here. The crawl updates it from the venue’s listing.',
+      // POST /venue's 400 `venue_not_found`.
+      notFound: 'That venue isn’t available any more. Pick another.',
+      // The confirm before a move that tells the Watching.
+      confirmTitle: (show: string, venue: string) =>
+        `Move ${show} to ${venue}?`,
+      confirmBody: (watching: number, venue: string) =>
+        `The ${watching.toLocaleString('en-US')} Watching are told it moved to ${venue}.`,
+      confirmFoot: 'The old venue’s next crawl won’t add it back.',
+      confirm: 'Move show',
+      // `06/event-edit`: "Moved to <b>Globe Hall</b> · Watchers were told on
+      // Nov 11." Split around the bold venue.
+      movedLead: 'Moved to ',
+      movedTold: (date: string) => ` · Watchers were told on ${date}.`,
+      movedQuiet: '.',
+    },
     crawl: {
       title: 'From the crawl',
       source: 'Source',
@@ -4926,8 +4954,10 @@ export const ADMIN_COPY = {
         `It’s still on ${date}, at the times it had.`,
       // Undrawn: a lineup that didn't save, as the title's line.
       savedLineup: 'The lineup is as it was.',
-      // Undrawn: the fields saved and then the lineup failed. `fields` is a
-      // list of `fieldNames`, e.g. "title and date".
+      // Undrawn: a venue move that didn't save, as the lineup's line.
+      savedVenue: (venue: string) => `The venue is still ${venue}.`,
+      // Undrawn: the fields saved and then the lineup (or venue) failed.
+      // `fields` is a list of `fieldNames`, e.g. "title and date".
       savedFields: (fields: string) => `The ${fields} saved.`,
       fieldNames: {
         title: 'title',
@@ -4935,6 +4965,7 @@ export const ADMIN_COPY = {
         date: 'date',
         doorsTime: 'doors time',
         showTime: 'show time',
+        lineup: 'lineup',
       },
     },
     none: '—',

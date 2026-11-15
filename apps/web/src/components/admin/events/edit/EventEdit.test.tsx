@@ -9,6 +9,8 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import type * as AddShowApi from '../add/add-show-api';
+import type { GetToken } from '../../invite-codes/codes-api';
 import type { EventDetail } from './event-detail';
 
 const push = vi.fn();
@@ -54,6 +56,24 @@ vi.mock('../merge/MergePanel', () => ({
     <div data-testid="merge-panel" data-current={current.id} />
   ),
 }));
+// The Venue picker's list (Add a show's loader); the artist search stays real.
+const LARIMER = 'ven-larimer';
+const GLOBE = 'ven-globe';
+const VENUES = [
+  { id: LARIMER, name: 'Larimer Lounge', slug: 'larimer-lounge', active: true },
+  { id: GLOBE, name: 'Globe Hall', slug: 'globe-hall', active: true },
+];
+const venues = vi.fn(async () => VENUES);
+vi.mock('../add/add-show-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof AddShowApi>();
+  return {
+    ...actual,
+    addShowApi: (getToken: GetToken) => ({
+      ...actual.addShowApi(getToken),
+      venues: () => venues(),
+    }),
+  };
+});
 
 import { EventEdit } from './EventEdit';
 
@@ -66,6 +86,7 @@ const DETAIL: EventDetail = {
   date: '2026-11-14',
   doorsTime: '18:00:00',
   showTime: '19:00:00',
+  venueId: LARIMER,
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
   status: 'available',
@@ -108,6 +129,7 @@ beforeEach(() => {
   del.mockReset();
   push.mockReset();
   refresh.mockReset();
+  venues.mockClear();
 });
 afterEach(cleanup);
 
@@ -121,6 +143,16 @@ const markSoldOut = () => {
   fireEvent.click(screen.getByLabelText(SOLD.methods.venue_site));
   fireEvent.click(screen.getByTestId('event-edit-save'));
   fireEvent.click(screen.getByRole('button', { name: SOLD.confirm }));
+};
+
+/** Once the venues are in, opens the Venue picker and picks `name`. */
+const pickVenue = async (name: string) => {
+  const trigger = screen.getByLabelText(COPY.show.venue);
+  await waitFor(() => {
+    expect(trigger).not.toHaveAttribute('aria-busy');
+  });
+  fireEvent.click(trigger);
+  fireEvent.click(screen.getByRole('option', { name }));
 };
 
 describe('EventEdit', () => {
@@ -141,6 +173,15 @@ describe('EventEdit', () => {
       'Larimer Lounge',
     );
     expect(screen.getByLabelText(COPY.show.venue)).toHaveAttribute('readonly');
+    // A crawled show still to come: the crawl owns its venue, and says so.
+    expect(screen.getByTestId('event-edit-venue-hint')).toHaveTextContent(
+      COPY.venue.crawledLocked,
+    );
+    expect(screen.getByLabelText(COPY.show.venue)).toHaveAttribute(
+      'aria-describedby',
+      'event-edit-venue-hint',
+    );
+    expect(venues).not.toHaveBeenCalled();
     // Date and times open their pickers (`04/date-picker-d`, `time-picker-d`).
     expect(screen.getByLabelText(COPY.show.date)).toHaveTextContent(
       'Sat, Nov 14, 2026',
@@ -642,8 +683,11 @@ describe('EventEdit past show (B+ addendum 6 item 36)', () => {
     // The Save bar waits for a change.
     expect(screen.queryByTestId('event-edit-save-bar')).toBeNull();
     expect(titleInput()).not.toHaveAttribute('readonly');
-    // Venue stays read-only until the 4b venue work.
-    expect(screen.getByLabelText(COPY.show.venue)).toHaveAttribute('readonly');
+    // A played show's venue takes a correction through the picker (E2-D).
+    expect(screen.getByLabelText(COPY.show.venue)).toHaveAttribute(
+      'aria-haspopup',
+      'listbox',
+    );
     fireEvent.change(titleInput(), { target: { value: 'Six Foot Blonde' } });
     fireEvent.click(screen.getByLabelText(COPY.show.doors));
     fireEvent.click(screen.getByRole('option', { name: '7:30 PM' }));
@@ -1186,6 +1230,39 @@ describe('EventEdit lineup', () => {
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 
+  it('PUTs before the venue moves, and names the lineup as saved when the move fails', async () => {
+    const order: string[] = [];
+    put.mockImplementation(async () => {
+      order.push('put');
+      return {};
+    });
+    post.mockImplementation(async (path: string) => {
+      order.push(path);
+      throw new Error('500');
+    });
+    render(
+      <EventEdit
+        detail={{ ...BILL, manual: true, watchingCount: 0 }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.keyDown(chipFor('Opener'), { key: 'Delete' });
+    await pickVenue('Globe Hall');
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    const toast = await screen.findByTestId('save-failed');
+    expect(order).toEqual(['put', '/v1/admin/events/evt-1/venue']);
+    expect(toast).toHaveTextContent(
+      `${COPY.saveFailed.savedFields(COPY.saveFailed.fieldNames.lineup)} ${COPY.saveFailed.savedVenue('Larimer Lounge')}`,
+    );
+    // The bill keeps what saved; only the venue snaps back.
+    expect(chips()).toHaveLength(3);
+    await waitFor(() =>
+      expect(screen.getByLabelText(COPY.show.venue)).toHaveTextContent(
+        'Larimer Lounge',
+      ),
+    );
+  });
+
   it('sends no PUT when the lineup is unchanged', async () => {
     patch.mockResolvedValue({});
     render(<EventEdit detail={BILL} today="2026-11-13" />);
@@ -1522,5 +1599,283 @@ describe('EventEdit sold-out evidence', () => {
     expect(screen.queryByTestId('sold-out-form')).toBeNull();
     // Clearing it needs no evidence and asks nothing here.
     expect(screen.getByTestId('event-edit-save')).toBeEnabled();
+  });
+});
+
+describe('EventEdit venue (E2-D)', () => {
+  const VENUE = COPY.venue;
+  const VENUE_PATH = '/v1/admin/events/evt-1/venue';
+  /** Added by hand, still to come: the Moved flow. Nobody Watching. */
+  const MANUAL: EventDetail = { ...DETAIL, manual: true, watchingCount: 0 };
+  const MOVED = { outcome: 'moved', watchersNotified: 0, event: {} };
+  const venueField = () => screen.getByLabelText(COPY.show.venue);
+  const save = () => fireEvent.click(screen.getByTestId('event-edit-save'));
+
+  it('picks a new venue on a show added by hand, counts it, and moves it', async () => {
+    post.mockResolvedValue(MOVED);
+    render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+    expect(venueField()).not.toHaveAttribute('readonly');
+    expect(screen.queryByTestId('event-edit-venue-hint')).toBeNull();
+    expect(venueField()).toHaveTextContent('Larimer Lounge');
+    await pickVenue('Globe Hall');
+    expect(venueField()).toHaveTextContent('Globe Hall');
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    save();
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith(VENUE_PATH, 'token', {
+        venueId: GLOBE,
+      });
+    });
+    // Nobody Watching: no confirm, and only the venue's write.
+    expect(
+      screen.queryByText(VENUE.confirmTitle(DETAIL.artist, 'Globe Hall')),
+    ).toBeNull();
+    expect(patch).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(refresh).toHaveBeenCalled();
+    });
+    expect(await screen.findByTestId('event-edit-moved')).toHaveTextContent(
+      `${VENUE.movedLead}Globe Hall${VENUE.movedQuiet}`,
+    );
+  });
+
+  it('corrects a played show’s venue, crawled or not, with no confirm', async () => {
+    post.mockResolvedValue({ ...MOVED, outcome: 'corrected' });
+    render(<EventEdit detail={DETAIL} today="2026-11-20" />);
+    await pickVenue('Globe Hall');
+    save();
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith(VENUE_PATH, 'token', {
+        venueId: GLOBE,
+      });
+    });
+    expect(screen.queryByRole('button', { name: VENUE.confirm })).toBeNull();
+    // A correction tells nobody, so no Moved line.
+    expect(screen.queryByTestId('event-edit-moved')).toBeNull();
+  });
+
+  it('reads a crawled show still to come only, and a postponed crawled one too', () => {
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'postponed' }}
+        today="2026-11-20"
+      />,
+    );
+    expect(venueField()).toHaveAttribute('readonly');
+    expect(screen.getByTestId('event-edit-venue-hint')).toHaveTextContent(
+      VENUE.crawledLocked,
+    );
+  });
+
+  it('saves the fields, then the lineup, then the venue, then the sale', async () => {
+    const order: string[] = [];
+    patch.mockImplementation(async () => {
+      order.push('patch');
+      return {};
+    });
+    put.mockImplementation(async () => {
+      order.push('put');
+      return {};
+    });
+    post.mockImplementation(async (path: string) => {
+      order.push(path);
+      return path === VENUE_PATH ? MOVED : {};
+    });
+    render(
+      <EventEdit
+        detail={{
+          ...MANUAL,
+          status: 'soldout',
+          isSoldOut: true,
+          lineup: [
+            {
+              name: 'Six Foot Blonde',
+              role: 'headliner',
+              position: 0,
+              artistId: 'art-1',
+              slug: 'six-foot-blonde',
+              unsure: false,
+            },
+            {
+              name: 'Opener',
+              role: 'support',
+              position: 0,
+              artistId: null,
+              slug: null,
+              unsure: false,
+            },
+          ],
+        }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.change(titleInput(), { target: { value: 'New title' } });
+    const opener = screen
+      .getAllByTestId('lineup-chip')
+      .find((chip) => chip.textContent === 'Opener');
+    if (!opener) throw new Error('no Opener chip');
+    fireEvent.keyDown(opener, { key: 'Delete' });
+    await pickVenue('Globe Hall');
+    fireEvent.click(screen.getByTestId('status-pill-available'));
+    expect(screen.getByText(COPY.saveBar.unsaved(4))).toBeInTheDocument();
+    save();
+    await waitFor(() => {
+      expect(order).toEqual([
+        'patch',
+        'put',
+        VENUE_PATH,
+        '/v1/admin/events/evt-1/available',
+      ]);
+    });
+  });
+
+  it('sends no venue write when the venue is unchanged', async () => {
+    patch.mockResolvedValue({});
+    render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+    // Picked away and back: nothing to save for the venue.
+    await pickVenue('Globe Hall');
+    await pickVenue('Larimer Lounge');
+    fireEvent.change(titleInput(), { target: { value: 'New title' } });
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    save();
+    await waitFor(() => {
+      expect(patch).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(refresh).toHaveBeenCalled();
+    });
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('confirms a move that tells the Watching; Cancel saves nothing', async () => {
+    post.mockResolvedValue({ ...MOVED, watchersNotified: 4 });
+    render(
+      <EventEdit detail={{ ...MANUAL, watchingCount: 4 }} today="2026-11-13" />,
+    );
+    await pickVenue('Globe Hall');
+    save();
+    expect(
+      screen.getByText(VENUE.confirmTitle(DETAIL.artist, 'Globe Hall')),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(VENUE.confirmBody(4, 'Globe Hall')),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.confirm.cancel }),
+    );
+    expect(screen.queryByRole('button', { name: VENUE.confirm })).toBeNull();
+    expect(post).not.toHaveBeenCalled();
+    expect(patch).not.toHaveBeenCalled();
+    // Still drafted: Save asks again, and Move show moves it.
+    save();
+    fireEvent.click(screen.getByRole('button', { name: VENUE.confirm }));
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith(VENUE_PATH, 'token', {
+        venueId: GLOBE,
+      });
+    });
+    const note = await screen.findByTestId('event-edit-moved');
+    expect(note).toHaveTextContent(/Moved to Globe Hall/);
+    expect(note).toHaveTextContent(/Watchers were told on/);
+  });
+
+  it('asks nothing for a cancelled show, whose move tells nobody', async () => {
+    post.mockResolvedValue(MOVED);
+    render(
+      <EventEdit
+        detail={{ ...MANUAL, status: 'cancelled', watchingCount: 4 }}
+        today="2026-11-13"
+      />,
+    );
+    await pickVenue('Globe Hall');
+    save();
+    await waitFor(() => {
+      expect(post).toHaveBeenCalled();
+    });
+    expect(screen.queryByRole('button', { name: VENUE.confirm })).toBeNull();
+  });
+
+  it('keeps the fields that saved when the move fails after the PATCH', async () => {
+    patch.mockResolvedValue({});
+    post.mockRejectedValue(new Error('500'));
+    render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+    fireEvent.change(titleInput(), { target: { value: 'New title' } });
+    await pickVenue('Globe Hall');
+    save();
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(
+      `${COPY.saveFailed.savedFields(COPY.saveFailed.fieldNames.title)} ${COPY.saveFailed.savedVenue('Larimer Lounge')}`,
+    );
+    expect(toast).not.toHaveTextContent('Nothing changed');
+    expect(
+      screen.getByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    ).toBeInTheDocument();
+    // The title keeps what saved; the venue snaps back.
+    expect(titleInput()).toHaveValue('New title');
+    await waitFor(() => {
+      expect(venueField()).toHaveTextContent('Larimer Lounge');
+    });
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('says the venue is unchanged when only the move fails', async () => {
+    post.mockRejectedValue(new Error('500'));
+    render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+    await pickVenue('Globe Hall');
+    save();
+    expect(
+      await screen.findByText(
+        new RegExp(COPY.saveFailed.savedVenue('Larimer Lounge')),
+      ),
+    ).toBeInTheDocument();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('links to the other listing on duplicate_show, with no Try again', async () => {
+    post.mockRejectedValue(
+      new ApiError(
+        409,
+        'duplicate_show',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { success: false, error: 'duplicate_show', existingId: 'evt-9' },
+      ),
+    );
+    render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+    await pickVenue('Globe Hall');
+    save();
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(VENUE.duplicate);
+    expect(screen.getByRole('link', { name: VENUE.openIt })).toHaveAttribute(
+      'href',
+      '/admin/events/evt-9/edit',
+    );
+    expect(
+      screen.queryByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    ).toBeNull();
+  });
+
+  it.each([
+    [new ApiError(409, 'crawled_show'), VENUE.crawled],
+    [new ApiError(400, 'venue_not_found'), VENUE.notFound],
+  ])('says why a refused move was refused (%s)', async (err, message) => {
+    post.mockRejectedValue(err);
+    render(<EventEdit detail={MANUAL} today="2026-11-13" />);
+    await pickVenue('Globe Hall');
+    save();
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(message);
+    expect(screen.queryByRole('link', { name: VENUE.openIt })).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    ).toBeNull();
   });
 });
