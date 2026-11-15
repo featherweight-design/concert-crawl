@@ -32,6 +32,10 @@ const REQUIRED_TOKENS = [
   'shadow-strong',
   // Derived by contrast in `withDerived`, not hand-listed.
   'toast-action',
+  // Item 38: defaulted from signal / warning / danger in `withDerived`.
+  'trust-community',
+  'trust-boxoffice',
+  'trust-resale',
 ] as const;
 
 const ALL_THEME_NAMES: ThemeName[] = [
@@ -45,6 +49,46 @@ const ALL_THEME_NAMES: ThemeName[] = [
   'cedar',
   'gloss',
 ];
+
+// `tone` at 8% over `ground`, both `#RRGGBB`: the trust pill's fill.
+const tintOver = (tone: string, ground: string): string => {
+  const channel = (hex: string, at: number) =>
+    parseInt(hex.slice(1 + at * 2, 3 + at * 2), 16);
+  const mixed = [0, 1, 2].map((at) =>
+    Math.round(channel(tone, at) * 0.08 + channel(ground, at) * 0.92)
+      .toString(16)
+      .padStart(2, '0'),
+  );
+  return `#${mixed.join('')}`;
+};
+
+describe('trust tones (item 38)', () => {
+  it('keeps signal, warning and danger in the five themes that do not change', () => {
+    for (const name of [
+      'electric',
+      'jade',
+      'pulse',
+      'bluenote',
+      'drip',
+    ] as const) {
+      expect(THEMES[name]['trust-community']).toBe(THEMES[name].signal);
+      expect(THEMES[name]['trust-boxoffice']).toBe(THEMES[name].warning);
+      expect(THEMES[name]['trust-resale']).toBe(THEMES[name].danger);
+    }
+  });
+
+  it('draws the board values for Forge, Cedar, Gloss and Light', () => {
+    expect(THEMES.forge['trust-community']).toBe('#8FB3D9');
+    expect(THEMES.cedar['trust-community']).toBe('#8CC7E8');
+    expect(THEMES.gloss['trust-community']).toBe('#A9B4FF');
+    expect(THEMES.light['trust-community']).toBe('#006A85');
+    expect(THEMES.light['trust-boxoffice']).toBe('#8F5500');
+    expect(THEMES.light['trust-resale']).toBe('#B3243A');
+    // Resale and Box office keep their defaults in the three dark themes.
+    expect(THEMES.forge['trust-resale']).toBe(THEMES.forge.danger);
+    expect(THEMES.cedar['trust-boxoffice']).toBe(THEMES.cedar.warning);
+  });
+});
 
 describe('THEMES', () => {
   it('exports all nine themes', () => {
@@ -73,6 +117,25 @@ describe('THEMES', () => {
         for (const [token, value] of Object.entries(THEMES[name])) {
           expect(typeof value, `--${token} is not a string`).toBe('string');
           expect(value.length, `--${token} is empty`).toBeGreaterThan(0);
+        }
+      });
+
+      // Item 38: every trust pill reads at AA small text on its own 8% tint
+      // over `--surface-1`, and a theme that names no trust colour keeps
+      // `--signal`, `--warning` and `--danger`.
+      it('draws every trust tone at AA on its own 8% tint over surface-1', () => {
+        const tokens = THEMES[name];
+        const ground = tokens['surface-1'] ?? '';
+        for (const key of [
+          'trust-community',
+          'trust-boxoffice',
+          'trust-resale',
+        ] as const) {
+          const tone = tokens[key] ?? '';
+          expect(
+            contrastRatio(tone, tintOver(tone, ground)),
+            `--${key} ${tone} on ${name} surface-1`,
+          ).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
         }
       });
 
