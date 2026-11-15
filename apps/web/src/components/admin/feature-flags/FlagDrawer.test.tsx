@@ -285,6 +285,19 @@ describe('the flag drawer', () => {
     finish(flag({ people: [person('sam')] }));
   });
 
+  it('lets only one of two clicks in the same tick through', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    del.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    const drawer = openDrawer(
+      flag({ people: [person('theo.wav'), person('sam')] }),
+    );
+    // Both fire before React re-renders, so only a ref can tell them apart.
+    fireEvent.click(within(drawer).getByTestId('flag-person-remove-theo.wav'));
+    fireEvent.click(within(drawer).getByTestId('flag-person-remove-sam'));
+    await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+    finish(flag({ people: [person('sam')] }));
+  });
+
   it('does not close on a press that began inside the panel', () => {
     const drawer = openDrawer(flag());
     // A text selection dragged from the panel out onto the scrim.
@@ -426,13 +439,16 @@ describe('adding a person', () => {
     expect(screen.getByTestId('flag-people-add-u-anaya')).toBeVisible();
   });
 
-  it('drops the old rows while a new search is pending', async () => {
+  it('keeps the old rows, but cannot add from them, while a new search is pending', async () => {
     await search(flag({ stage: 'beta' }));
     get.mockImplementation(() => new Promise(() => undefined));
     fireEvent.change(screen.getByTestId('flag-people-query'), {
       target: { value: 'ana' },
     });
-    expect(screen.queryByTestId('flag-people-result-u-ana')).toBeNull();
+    // Still drawn, so the list does not flash empty on every keystroke...
+    expect(screen.getByTestId('flag-people-result-u-anaya')).toBeVisible();
+    // ...but they belong to the old query, so Add waits for the new answer.
+    expect(screen.getByTestId('flag-people-add-u-anaya')).toBeDisabled();
   });
 
   it('goes back to the panel', async () => {
