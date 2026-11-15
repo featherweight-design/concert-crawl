@@ -98,7 +98,9 @@ beforeEach(() => {
   mocks.replace.mockReset();
   mocks.captureException.mockReset();
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+});
 
 describe('SsoCallback', () => {
   it('shows "Signing you in" while it decides', async () => {
