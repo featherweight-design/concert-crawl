@@ -1659,6 +1659,8 @@ describe('EventEdit venue (E2-D)', () => {
       />,
     );
     expect(venueField()).toHaveAttribute('readonly');
+    // As tall as the picker it stands in for (`06/event-edit`).
+    expect(venueField().style.height).toBe('38px');
     expect(screen.getByTestId('event-edit-venue-hint')).toHaveTextContent(
       VENUE.crawledLocked,
     );

@@ -53,6 +53,9 @@ export const usePickVenues = (
  */
 const EDIT_TRIGGER: CSSProperties = { padding: '0 10px' };
 
+/** Event edit's desktop list before a search (`04/venue-picker-d`). */
+const EDIT_LIST_ROWS = 5;
+
 /** Hidden venues last, muted (addendum 5 item 4); otherwise by name. */
 const ordered = (venues: readonly PickVenue[], query: string): PickVenue[] => {
   const needle = query.trim().toLocaleLowerCase('en-US');
@@ -89,15 +92,26 @@ const VenueList = ({
   value,
   phone,
   onPick,
+  limit,
 }: {
   id: string;
   venues: PickVenue[];
   value: string;
   phone: boolean;
   onPick: (id: string) => void;
+  /**
+   * Rows shown before a search (`04/venue-picker-d` on Event edit draws 5),
+   * then a line saying how many more a search finds. Unset shows them all.
+   */
+  limit?: number | undefined;
 }) => {
   const [query, setQuery] = useState('');
-  const rows = ordered(venues, query);
+  const matches = ordered(venues, query);
+  // A search always looks through every venue; only the empty list is cut.
+  const cut =
+    limit !== undefined && query.trim() === '' && matches.length > limit;
+  const rows = cut ? matches.slice(0, limit) : matches;
+  const others = matches.length - rows.length;
   const [active, setActive] = useState(() =>
     Math.max(
       0,
@@ -110,7 +124,9 @@ const VenueList = ({
   return (
     <div
       id={id}
-      style={{ display: 'flex', flexDirection: 'column', gap: phone ? 12 : 6 }}
+      // `04/venue-picker-d` draws 14px from the search box to the first row;
+      // the sheet (`04/venue-picker-m`) 12px.
+      style={{ display: 'flex', flexDirection: 'column', gap: phone ? 12 : 14 }}
     >
       <label style={SEARCH}>
         <Search
@@ -188,8 +204,9 @@ const VenueList = ({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            // `04/venue-picker-d` spaces the desktop rows 4px apart.
-            gap: phone ? 0 : 4,
+            // `04/venue-picker-d` spaces the desktop rows 4px apart, the
+            // sheet's `04/venue-picker-m` 12px.
+            gap: phone ? 12 : 4,
             maxHeight: phone ? undefined : 220,
             overflowY: 'auto',
           }}
@@ -227,7 +244,14 @@ const VenueList = ({
                   opacity: venue.active ? 1 : 0.7,
                 }}
               >
-                <VenueTile slug={venue.slug} name={venue.name} size={24} />
+                {/* The boards' row tile: a 1px edge, 6px corners. */}
+                <VenueTile
+                  slug={venue.slug}
+                  name={venue.name}
+                  size={24}
+                  cornerRadius={6}
+                  edgeWeight={1}
+                />
                 <span style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
                   {venue.name}
                 </span>
@@ -244,6 +268,21 @@ const VenueList = ({
           })}
         </div>
       )}
+      {cut && (
+        <div
+          data-testid="venue-list-more"
+          style={{
+            // The board puts it 4px under the last row, as the rows are
+            // spaced: the column's 14px gap less 10.
+            marginTop: -10,
+            padding: '8px 10px 4px',
+            fontSize: 12,
+            color: 'var(--fg-subtle)',
+          }}
+        >
+          {ADMIN_COPY.eventEdit.venue.typeToFind(others)}
+        </div>
+      )}
     </div>
   );
 };
@@ -251,8 +290,9 @@ const VenueList = ({
 /**
  * Add a show's Venue field (`06/add-a-show-by-hand`: a 20px tile, no chevron)
  * over the shared venue list (`04/venue-picker-d`, a sheet on the phone,
- * `04/venue-picker-m`). `variant="edit"` is Event edit's trigger
- * (`06/event-edit`: a 22px tile and a chevron); the list is the same.
+ * `04/venue-picker-m`). `variant="edit"` is Event edit's: on desktop a 22px
+ * tile and a chevron (`06/event-edit`) over a 5-row list with a "Type to
+ * find" line; on the phone plain text (`06/event-edit-mobile`).
  *
  * `venues` is null while loading and 'failed' after a failed load; the list
  * opens only once it is an array, so a press while loading opens nothing.
@@ -289,6 +329,10 @@ export const VenuePicker = ({
 }) => {
   const { open, setOpen, close, ref, trigger } = usePopover();
   const edit = variant === 'edit';
+  // Event edit's desktop trigger draws a tile and a chevron; its phone one
+  // (`06/event-edit-mobile`, `04/venue-picker-m`) is plain text.
+  const editDesktop = edit && !phone;
+  const plainText = edit && phone;
   const list = Array.isArray(venues) ? venues : null;
   // Never an empty shell: the list shows only once the venues are in.
   const shown = open && list !== null;
@@ -341,7 +385,7 @@ export const VenuePicker = ({
         }}
         style={{
           ...inputStyle(invalid),
-          ...(edit && EDIT_TRIGGER),
+          ...(editDesktop && EDIT_TRIGGER),
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -351,7 +395,7 @@ export const VenuePicker = ({
       >
         {picked ? (
           <>
-            {edit ? (
+            {plainText ? null : editDesktop ? (
               // The board's 22px tile: 6px corners, a 1px edge.
               <VenueTile
                 slug={picked.slug}
@@ -379,7 +423,7 @@ export const VenuePicker = ({
             {ADMIN_COPY.addShow.venuePlaceholder}
           </span>
         )}
-        {edit && (
+        {editDesktop && (
           <>
             <span style={{ flex: 1 }} />
             {/* The board's 13px chevron, stroke 1.8 in a 16 box: 2.7 in
@@ -415,6 +459,8 @@ export const VenuePicker = ({
             value={value}
             phone={false}
             onPick={pick}
+            // `04/venue-picker-d` on Event edit: 5 rows, then the count left.
+            limit={edit ? EDIT_LIST_ROWS : undefined}
           />
         </div>
       )}

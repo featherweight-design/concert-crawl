@@ -207,12 +207,18 @@ const ReadOnlyField = ({
   label,
   value,
   hint,
+  height = 40,
 }: {
   id: string;
   label: string;
   value: string;
   /** Why it can't change, tied to the field for screen readers. */
   hint?: string;
+  /**
+   * 38 for the venue, as its picker (`06/event-edit`); 40 for Original
+   * date, level with the Doors and Show pickers beside it.
+   */
+  height?: number;
 }) => (
   <Field label={label} htmlFor={id}>
     <input
@@ -220,7 +226,7 @@ const ReadOnlyField = ({
       readOnly
       value={value}
       aria-describedby={hint === undefined ? undefined : `${id}-hint`}
-      style={{ ...inputStyle(false), height: 40, color: 'var(--fg-muted)' }}
+      style={{ ...inputStyle(false), height, color: 'var(--fg-muted)' }}
     />
     {hint !== undefined && (
       <div id={`${id}-hint`} data-testid={`${id}-hint`} style={HINT}>
@@ -1053,6 +1059,7 @@ export const EventEdit = ({
           id="event-edit-venue"
           label={COPY.show.venue}
           value={venue}
+          height={38}
           // A crawled show still to come: say why it reads only.
           {...(detail.venueId !== null && {
             hint: COPY.venue.crawledLocked,
