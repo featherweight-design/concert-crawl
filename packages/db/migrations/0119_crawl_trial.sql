@@ -2,10 +2,10 @@
 --
 -- An admin can try one crawl of a crawl-paused venue without resuming it. That
 -- run must not move the venue's pause state: it never counts toward, or
--- resets, the consecutive-failure streak, never auto-pauses, never flags the
--- venue blocked, and never sends the auto-pause email or notification. The
--- readers that judge a venue by its runs (failure streaks, triage, Needs you)
--- skip it.
+-- resets, the consecutive-failure streak, never auto-pauses, and never sends
+-- the auto-pause email or notification. The readers that judge a venue by its
+-- runs (failure streaks, triage, Needs you) skip it. It is a real crawl, unlike
+-- `crawl_triggers.mode` 'test' (0116), which tries a draft venue's config.
 --
 -- `crawl_triggers.trial` marks the queued request; `crawl_runs.trial` marks
 -- the run it produced, so readers can tell a trial from a real crawl.

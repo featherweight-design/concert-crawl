@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   doublePrecision,
   integer,
@@ -64,6 +65,9 @@ export const crawlRuns = pgTable('crawl_runs', {
   // means "no reading": zero-event, skipped, failed and robots-blocked runs,
   // plus every row that predates migration 0061.
   furthestEventDate: date('furthest_event_date'),
+  // A test re-crawl of a crawl-paused venue (migration 0119): readers that
+  // judge a venue by its runs (failure streaks, triage, Needs you) skip it.
+  trial: boolean('trial').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
