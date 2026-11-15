@@ -33,6 +33,8 @@ const run = {
   status: 'success',
   reason: null,
   createdAt: '2026-11-11T10:02:00.000Z',
+  // The API sends it (#660); the schemas read it, default false.
+  trial: false,
 };
 // The Runs tab's row reads more of the run than Overview does.
 const fullRun = {
