@@ -191,6 +191,8 @@ export const CREWS_COPY = {
     going: 'GOING',
     you: 'YOU',
     imIn: "I'm in",
+    // The time line on a show tonight: "Doors 7:00 PM · Bluebird Theater".
+    doors: (time: string) => `Doors ${time}`,
     imInAria: (artist: string) => `I'm in for ${artist}`,
     // Not drawn: a failed yes says so, in the crews' own failure wording, and
     // leaves the button to try again.
