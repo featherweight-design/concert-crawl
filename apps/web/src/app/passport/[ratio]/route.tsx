@@ -4,9 +4,12 @@ import {
   PASSPORT_PRINT_MODE,
   PASSPORT_PRINT_SCALE,
 } from '@/components/consumer/passport/definitions/modes';
-import type { UserProfileResponse } from '@concert-crawl/types';
+import type {
+  HistoryResponse,
+  UserProfileResponse,
+} from '@concert-crawl/types';
 import { auth } from '@/lib/auth';
-import { fetchHistory, type HistoryFetchResult } from '@/lib/history';
+import { fetchHistory } from '@/lib/history';
 import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts';
 import {
   isPassportRatio,
@@ -80,7 +83,7 @@ export const GET = async (
   }
 
   let profile: UserProfileResponse;
-  let history: HistoryFetchResult;
+  let history: HistoryResponse;
   try {
     [profile, history] = await Promise.all([
       fetchMe(token),
@@ -89,12 +92,6 @@ export const GET = async (
   } catch (err) {
     console.error('[passport card] data fetch failed', { err });
     return problem(502, 'passport data unavailable');
-  }
-
-  // A 403 from /v1/history is the entitlement gate, not a failure: no card is
-  // drawn from a history the viewer can't read.
-  if (history.locked) {
-    return problem(403, 'concert history unavailable');
   }
 
   const { tokens } = resolvePassportTheme({
@@ -114,7 +111,7 @@ export const GET = async (
     <PassportCard
       mode={PASSPORT_PRINT_MODE}
       scale={PASSPORT_PRINT_SCALE}
-      shows={toAttendedShows(history.data?.past ?? [])}
+      shows={toAttendedShows(history.past)}
       tokens={tokens}
       handle={profile.handle}
       year={passportYear()}

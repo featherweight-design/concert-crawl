@@ -1,7 +1,8 @@
 'use client';
 
-// The /history route body (#70) — the three-state switch from
-// design_handoff_concert_history/history-routes.jsx:242-298.
+// The /history route body (#70), from
+// design_handoff_concert_history/history-routes.jsx:242-298: empty or
+// populated. The handoff's third, locked state went with going free.
 //
 // Mobile and desktop are ONE component. The handoff draws <HistoryRoute> and
 // <HistoryRouteDesktop> separately for canvas storyboarding; the real difference
@@ -30,12 +31,10 @@ import {
 import { ShareSheet } from '@/components/consumer/share/ShareSheet';
 import { toPosterEvent } from '@/lib/share/poster-event';
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
-import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { useHistory } from '@/lib/queries/use-history';
 import { HistoryHeader } from './HistoryHeader';
 import { HistoryItem } from './HistoryItem';
 import { HistoryEmpty } from './HistoryEmpty';
-import { HistoryLocked } from './HistoryLocked';
 import { createPortal } from 'react-dom';
 import { AddShowRow } from './AddShowRow';
 import { AddShowSheet } from './AddShowSheet';
@@ -48,11 +47,9 @@ import { HISTORY_COPY } from './definitions/copy';
 const SECTION_COPY = HISTORY_COPY.sections;
 
 interface HistoryContentProps {
-  // null when the server's fetch came back 403 — see `locked`.
-  initialData: HistoryResponse | null;
-  // The server's belt-and-braces verdict from the /v1/history 403.
-  locked: boolean;
-  scaRegion: boolean;
+  // The server's payload. Every signed-in plan reads history, so there is no
+  // locked state to stand in for it.
+  initialData: HistoryResponse;
 }
 
 // The column and the sub-tab bar are the My shows layout's (MyShowsShell), so
@@ -171,20 +168,9 @@ const AttendanceSection = ({
   </section>
 );
 
-export const HistoryContent = ({
-  initialData,
-  locked,
-  scaRegion,
-}: HistoryContentProps) => {
+export const HistoryContent = ({ initialData }: HistoryContentProps) => {
   const [addOpen, setAddOpen] = useState(false);
-  const { isLoading, active } = useEntitlement('concert-history');
-  // Only poll the API when the client agrees the plan can read history —
-  // otherwise the query just re-earns the 403 the server already reported.
-  const clientEntitled = !isLoading && active;
-  const { data } = useHistory({
-    initialData,
-    enabled: !locked && clientEntitled,
-  });
+  const { data } = useHistory({ initialData });
   const history = data ?? initialData;
 
   const { user } = useUser();
@@ -256,24 +242,6 @@ export const HistoryContent = ({
               }),
       onShare: () => setSharing(show),
     });
-
-  // Server 403 wins outright; the client hook is what decides for a plan the
-  // server hasn't rejected (e.g. a stale token that downgraded mid-session).
-  const isLocked = locked || (!isLoading && !active);
-
-  if (isLocked) {
-    return (
-      <Shell>
-        <HistoryLocked scaRegion={scaRegion} />
-      </Shell>
-    );
-  }
-
-  // Hold the layout while the plan resolves rather than flashing empty at a
-  // Supporter whose rows are already in `initialData`.
-  if (history === null) {
-    return <Shell>{null}</Shell>;
-  }
 
   // Portaled to the body: the rail is sticky from lg, which makes it its own
   // stacking context, and the page's rows would paint over a sheet mounted

@@ -4,5 +4,5 @@ import { CrewsContent } from '@/components/consumer/crews';
 // header and the row geometry are identical either side of the resolve and
 // nothing shifts.
 export default function CrewsLoading() {
-  return <CrewsContent initialCrews={[]} scaRegion={false} loading />;
+  return <CrewsContent initialCrews={[]} loading />;
 }

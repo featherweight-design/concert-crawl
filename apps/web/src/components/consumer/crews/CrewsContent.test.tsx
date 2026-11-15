@@ -3,7 +3,7 @@
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import type { CrewSummary, PlanState } from '@concert-crawl/types';
+import type { CrewSummary } from '@concert-crawl/types';
 
 const refresh = vi.fn();
 const push = vi.fn();
@@ -19,14 +19,6 @@ const entitlement = {
 };
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement,
-}));
-const planQuery: { data: PlanState | undefined } = { data: undefined };
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => planQuery,
-}));
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
-    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }));
 vi.mock('./CreateCrewSheet', () => ({
   CreateCrewSheet: ({
@@ -68,7 +60,6 @@ beforeEach(() => {
   entitlement.isLoading = false;
   entitlement.active = true;
   entitlement.surface = 'visible-active';
-  planQuery.data = undefined;
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -96,7 +87,6 @@ describe('CrewsContent states (#1226)', () => {
     render(
       <CrewsContent
         initialCrews={[crew(), crew({ id: 'c2', name: 'Fridays' })]}
-        scaRegion={false}
       />,
     );
     expect(screen.getByText('Thursdays')).toBeInTheDocument();
@@ -106,9 +96,7 @@ describe('CrewsContent states (#1226)', () => {
 
   // B+: the three steps sit under a lone crew and go once there are two.
   it('shows How crews work with exactly one crew, and not with two', () => {
-    const { unmount } = render(
-      <CrewsContent initialCrews={[crew()]} scaRegion={false} />,
-    );
+    const { unmount } = render(<CrewsContent initialCrews={[crew()]} />);
     expect(
       screen.getByRole('heading', { name: CREWS_COPY.howItWorks.eyebrow }),
     ).toBeInTheDocument();
@@ -120,7 +108,6 @@ describe('CrewsContent states (#1226)', () => {
     render(
       <CrewsContent
         initialCrews={[crew(), crew({ id: 'c2', name: 'Fridays' })]}
-        scaRegion={false}
       />,
     );
     expect(
@@ -128,16 +115,16 @@ describe('CrewsContent states (#1226)', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows the empty state and a gated create affordance when there are none', () => {
-    render(<CrewsContent initialCrews={[]} scaRegion={false} />);
+  it('shows the empty state and a create affordance when there are none', () => {
+    render(<CrewsContent initialCrews={[]} />);
     expect(screen.getByText(CREWS_COPY.empty.title)).toBeInTheDocument();
     // One in the header, one under the empty state, and both are the same
-    // gated component (Z7) rather than two separately-gated buttons.
+    // component (Z7) rather than two separately-wired buttons.
     expect(screen.getAllByText(CREWS_COPY.list.create)).toHaveLength(2);
   });
 
   it('paints the error state with a real retry button and no create control', () => {
-    render(<CrewsContent initialCrews={null} scaRegion={false} />);
+    render(<CrewsContent initialCrews={null} />);
     const retry = screen.getByRole('button', { name: CREWS_COPY.net.retry });
     expect(retry.tagName).toBe('BUTTON');
     expect(screen.queryByText(CREWS_COPY.list.create)).not.toBeInTheDocument();
@@ -146,7 +133,7 @@ describe('CrewsContent states (#1226)', () => {
   });
 
   it('announces the loading state and hides the create control', () => {
-    render(<CrewsContent initialCrews={[]} scaRegion={false} loading />);
+    render(<CrewsContent initialCrews={[]} loading />);
     expect(screen.getByText(CREWS_COPY.net.loading)).toBeInTheDocument();
     expect(screen.queryByText(CREWS_COPY.list.create)).not.toBeInTheDocument();
   });
@@ -154,65 +141,35 @@ describe('CrewsContent states (#1226)', () => {
 
 describe('CrewsContent create gating (#1226)', () => {
   it('opens the create sheet directly when the feature is active', () => {
-    render(<CrewsContent initialCrews={[crew()]} scaRegion={false} />);
+    render(<CrewsContent initialCrews={[crew()]} />);
     fireEvent.click(screen.getByText(CREWS_COPY.list.create));
     expect(screen.getByTestId('create-sheet')).toBeInTheDocument();
   });
 
-  it('opens the gate instead when the feature is not active', () => {
+  // Starting a crew is free: a signed-in fan whose plan fetch failed (the hook
+  // says inactive) still gets the create sheet, never a paywall.
+  it('opens the create sheet for a signed-in fan the hook calls inactive', () => {
     entitlement.active = false;
-    entitlement.surface = 'paywall';
-    render(<CrewsContent initialCrews={[crew()]} scaRegion={false} />);
-    fireEvent.click(screen.getByText(CREWS_COPY.list.create));
-    expect(screen.getByText(CREWS_COPY.gate.title)).toBeInTheDocument();
-    expect(screen.queryByTestId('create-sheet')).not.toBeInTheDocument();
+    entitlement.surface = 'paywall-on-tap';
+    render(<CrewsContent initialCrews={[crew()]} />);
+    // No "paid feature" suffix on the name: the exact label is the whole name.
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.list.create }),
+    );
+    expect(screen.getByTestId('create-sheet')).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('routes tier-picker-on-tap straight to sign-in', () => {
     entitlement.active = false;
     entitlement.surface = 'tier-picker-on-tap';
-    render(<CrewsContent initialCrews={[crew()]} scaRegion={false} />);
+    render(<CrewsContent initialCrews={[crew()]} />);
     fireEvent.click(screen.getByText(CREWS_COPY.list.create));
     expect(push).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith(
       `/sign-in?redirect_url=${encodeURIComponent('/crews')}`,
     );
-    expect(screen.queryByTestId('tier-picker')).not.toBeInTheDocument();
-  });
-});
-
-describe('CrewsContent lapsed-plan copy (#1226)', () => {
-  // `status` is null until a subscription row has ever existed. Keying the
-  // lapsed line off `plan === 'free'` instead told every first-time viewer
-  // that starting a crew needs the tier "again".
-  const plan = (status: PlanState['status']): PlanState => ({
-    plan: 'free',
-    onTrial: false,
-    trialEndsAt: null,
-    status,
-    cancelAtPeriodEnd: false,
-    currentPeriodEnd: null,
-    roleComped: false,
-  });
-
-  const openGate = () => {
-    entitlement.active = false;
-    entitlement.surface = 'paywall';
-    render(<CrewsContent initialCrews={[crew()]} scaRegion={false} />);
-    fireEvent.click(screen.getByText(CREWS_COPY.list.create));
-  };
-
-  it('omits the lapsed line for someone who never subscribed', () => {
-    planQuery.data = plan(null);
-    openGate();
-    expect(screen.getByText(CREWS_COPY.gate.title)).toBeInTheDocument();
-    expect(screen.queryByText(/needs .* again/)).not.toBeInTheDocument();
-  });
-
-  it('shows the lapsed line once a subscription has existed', () => {
-    planQuery.data = plan('cancelled');
-    openGate();
-    expect(screen.getByText(/needs .* again/)).toBeInTheDocument();
+    expect(screen.queryByTestId('create-sheet')).not.toBeInTheDocument();
   });
 });
 
@@ -220,12 +177,12 @@ describe('CrewsContent server-data sync (#1226)', () => {
   // The list used to seed useState from initialCrews and never look again, so
   // the error state's retry refetched successfully and still painted "no crews".
   it('picks up crews that arrive after the first render', () => {
-    const view = render(<CrewsContent initialCrews={null} scaRegion={false} />);
+    const view = render(<CrewsContent initialCrews={null} />);
     expect(
       screen.getByRole('button', { name: CREWS_COPY.net.retry }),
     ).toBeInTheDocument();
 
-    view.rerender(<CrewsContent initialCrews={[crew()]} scaRegion={false} />);
+    view.rerender(<CrewsContent initialCrews={[crew()]} />);
     expect(screen.getByText('Thursdays')).toBeInTheDocument();
     expect(screen.queryByText(CREWS_COPY.empty.title)).not.toBeInTheDocument();
   });
@@ -233,7 +190,7 @@ describe('CrewsContent server-data sync (#1226)', () => {
   // The sheet closes and a row appears; without this the whole mutation is
   // silent to a screen reader.
   it('announces a newly created crew in a live region', () => {
-    render(<CrewsContent initialCrews={[]} scaRegion={false} />);
+    render(<CrewsContent initialCrews={[]} />);
     fireEvent.click(screen.getAllByText(CREWS_COPY.list.create)[0]!);
     fireEvent.click(screen.getByTestId('create-sheet'));
     const live = screen.getByText(CREWS_COPY.list.created('Mondays'));
@@ -243,7 +200,7 @@ describe('CrewsContent server-data sync (#1226)', () => {
   // Join, leave, delete and handoff all navigate; creating one was the only
   // path that left you looking at the list you just added to.
   it('lands on the new crew rather than the list', () => {
-    render(<CrewsContent initialCrews={[]} scaRegion={false} />);
+    render(<CrewsContent initialCrews={[]} />);
     fireEvent.click(screen.getAllByText(CREWS_COPY.list.create)[0]!);
     fireEvent.click(screen.getByTestId('create-sheet'));
     expect(push).toHaveBeenCalledWith('/crews/new');
@@ -253,11 +210,11 @@ describe('CrewsContent server-data sync (#1226)', () => {
   });
 
   it('drops an optimistic row once the server returns the same crew', () => {
-    const view = render(<CrewsContent initialCrews={[]} scaRegion={false} />);
+    const view = render(<CrewsContent initialCrews={[]} />);
     fireEvent.click(screen.getAllByText(CREWS_COPY.list.create)[0]!);
     expect(screen.getByTestId('create-sheet')).toBeInTheDocument();
 
-    view.rerender(<CrewsContent initialCrews={[crew()]} scaRegion={false} />);
+    view.rerender(<CrewsContent initialCrews={[crew()]} />);
     expect(screen.getAllByText('Thursdays')).toHaveLength(1);
   });
 });

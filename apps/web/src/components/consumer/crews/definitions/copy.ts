@@ -343,19 +343,6 @@ export const CREWS_COPY = {
     unnamed: (count: number) => `${count} from your crews going`,
   },
 
-  // Tier name and price both come from unlockTierFor('crews'), never a literal.
-  gate: {
-    eyebrow: (tierName: string) => tierName.toUpperCase(),
-    title: 'Starting one is the paid part.',
-    body: 'Joining one is free, forever. Nobody hits a paywall on your invite link.',
-    cta: (tierName: string) => `Pick ${tierName}`,
-    ctaFallback: 'See the plans',
-    lapsed: (tierName: string) =>
-      `Your crews all still work. Starting another one needs ${tierName} again.`,
-    comparison: (tierName: string, priceText: string) =>
-      `${tierName} · ${priceText}`,
-  },
-
   net: {
     loading: 'ROUNDING UP YOUR PEOPLE…',
     errEyebrow: 'NO SIGNAL',
@@ -375,10 +362,6 @@ export const CREWS_COPY = {
   a11y: {
     // The patch itself is decorative; the row's accessible name is the crew.
     memberNoHandle: 'Crew member without a handle',
-    // Appended to the button's own label, so it must not restate it:
-    // the accessible name reads "Start a crew, locked". It names the state,
-    // never a price: nothing here is paid.
-    gatedCreate: 'locked',
     // Names the landing's main region: the page has no app chrome, so nothing
     // else places a screen-reader user on it.
     inviteLanding: 'Crew invite',

@@ -12,6 +12,9 @@ import {
 import type { HistoryResponse, HistoryShow } from '@concert-crawl/types';
 import type { EntitlementResult } from '@/lib/queries/use-entitlement';
 
+// The page no longer asks about the plan. The hook stays mocked so a test can
+// make it say no, the way it does for a signed-in fan whose plan fetch failed,
+// and prove the page draws regardless.
 const entitlement: { current: EntitlementResult } = {
   current: { isLoading: false, active: true, surface: 'visible-active' },
 };
@@ -59,15 +62,6 @@ vi.mock('@/components/consumer/share/ShareSheet', () => ({
 
 vi.mock('@/lib/history', () => ({
   downloadHistoryIcs: () => Promise.resolve(),
-}));
-
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: undefined }),
-}));
-
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="tier-picker" /> : null,
 }));
 
 vi.mock('./AddShowRow', () => ({
@@ -146,61 +140,35 @@ afterEach(() => {
 });
 
 describe('HistoryContent', () => {
-  it('renders the takeover when the server reported the 403 lock', () => {
+  // Concerts is free: a signed-in fan whose plan fetch failed still gets their
+  // nights, never a paywall.
+  it('renders the list even when the entitlement hook says no', () => {
     entitlement.current = {
       isLoading: false,
       active: false,
       surface: 'paywall-on-tap',
     };
-    render(<HistoryContent initialData={null} locked scaRegion={false} />);
+    render(<HistoryContent initialData={RESPONSE} />);
 
-    expect(
-      screen.getByRole('heading', { name: HISTORY_COPY.locked.headline }),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Artist a')).toBeInTheDocument();
   });
 
-  it('renders the takeover when the client plan lost the entitlement', () => {
-    // Stale token that downgraded mid-session: the server said nothing, the
-    // hook says no.
-    entitlement.current = {
-      isLoading: false,
-      active: false,
-      surface: 'paywall-on-tap',
-    };
-    render(
-      <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
-    );
-
-    expect(
-      screen.getByRole('heading', { name: HISTORY_COPY.locked.headline }),
-    ).toBeInTheDocument();
-  });
-
-  it('renders the empty state for an entitled user with no nights', () => {
-    render(
-      <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
-    );
+  it('renders the empty state for a fan with no nights', () => {
+    render(<HistoryContent initialData={EMPTY} />);
 
     expect(screen.getByText(HISTORY_COPY.empty.headline)).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: HISTORY_COPY.locked.headline }),
-    ).not.toBeInTheDocument();
   });
 
   // Not drawn: a reader with no nights is the one most likely to add one.
   it('offers the Add row under the empty state', () => {
-    render(
-      <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
-    );
+    render(<HistoryContent initialData={EMPTY} />);
     expect(screen.getByTestId('add-show-row')).toBeInTheDocument();
   });
 
   // The rail is sticky from lg, so it is its own stacking context: a sheet left
   // inside it is painted under the page's rows.
   it('opens the Add sheet on the body, outside the page', () => {
-    const { container } = render(
-      <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
-    );
+    const { container } = render(<HistoryContent initialData={EMPTY} />);
     expect(screen.queryByTestId('add-sheet')).toBeNull();
     fireEvent.click(screen.getByTestId('add-show-row'));
     const sheet = screen.getByTestId('add-sheet');
@@ -210,9 +178,7 @@ describe('HistoryContent', () => {
 
   // B+ rule 4: the empty state shows unearned dashed venue stamps.
   it('draws dashed venue stamps above the empty state', () => {
-    render(
-      <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
-    );
+    render(<HistoryContent initialData={EMPTY} />);
 
     // The dashed card and the CONCERTS eyebrow (`bp-s-empty_concerts_m`).
     expect(screen.getByTestId('my-shows-empty-card').className).toContain(
@@ -234,13 +200,7 @@ describe('HistoryContent', () => {
   it('renders the populated list from initialData without a flash of empty', () => {
     // No client fetch has resolved yet — the server payload alone must render
     // the rows rather than the "nothing behind you" state.
-    render(
-      <HistoryContent
-        initialData={RESPONSE}
-        locked={false}
-        scaRegion={false}
-      />,
-    );
+    render(<HistoryContent initialData={RESPONSE} />);
 
     expect(
       screen.queryByText(HISTORY_COPY.empty.headline),
@@ -251,30 +211,15 @@ describe('HistoryContent', () => {
 
   it('prefers the refetched payload over the server seed once it lands', () => {
     query.data = { ...RESPONSE, past: [show('cc', `${year}-05-14`)] };
-    render(
-      <HistoryContent
-        initialData={RESPONSE}
-        locked={false}
-        scaRegion={false}
-      />,
-    );
+    render(<HistoryContent initialData={RESPONSE} />);
 
     expect(screen.getByText('Artist cc')).toBeInTheDocument();
     expect(screen.queryByText('Artist a')).not.toBeInTheDocument();
   });
 
-  it('holds the layout while the plan is still resolving', () => {
-    entitlement.current = { isLoading: true, active: false, surface: null };
-    render(
-      <HistoryContent initialData={null} locked={false} scaRegion={false} />,
-    );
+  it('draws no sub-tab bar of its own', () => {
+    render(<HistoryContent initialData={EMPTY} />);
 
-    expect(
-      screen.queryByText(HISTORY_COPY.empty.headline),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: HISTORY_COPY.locked.headline }),
-    ).not.toBeInTheDocument();
     // The sub-tabs belong to the My shows layout, so the page draws no second
     // bar of its own. That the layout's bar stays mounted while this content
     // resolves and across tab switches is pinned in MyShowsShell.test.tsx
@@ -285,13 +230,7 @@ describe('HistoryContent', () => {
   });
 
   it('groups the rows into reverse-chronological month buckets', () => {
-    render(
-      <HistoryContent
-        initialData={RESPONSE}
-        locked={false}
-        scaRegion={false}
-      />,
-    );
+    render(<HistoryContent initialData={RESPONSE} />);
 
     expect(screen.getByText('May')).toBeInTheDocument();
     expect(screen.getByText('March')).toBeInTheDocument();
@@ -299,13 +238,7 @@ describe('HistoryContent', () => {
 
   it('stacks the rail above the list on mobile and sticks it at lg', () => {
     // One component, one media query — not a second desktop tree.
-    const { container } = render(
-      <HistoryContent
-        initialData={RESPONSE}
-        locked={false}
-        scaRegion={false}
-      />,
-    );
+    const { container } = render(<HistoryContent initialData={RESPONSE} />);
 
     const rail = screen.getByTestId('history-rail');
     expect(rail.className).toContain('mb-4');
@@ -329,8 +262,6 @@ describe('HistoryContent', () => {
     render(
       <HistoryContent
         initialData={{ ...RESPONSE, upcoming: [show('up', `${year}-12-20`)] }}
-        locked={false}
-        scaRegion={false}
       />,
     );
 
@@ -349,8 +280,6 @@ describe('HistoryContent', () => {
     render(
       <HistoryContent
         initialData={{ ...RESPONSE, upcoming: [show('up', `${year}-12-20`)] }}
-        locked={false}
-        scaRegion={false}
       />,
     );
 
@@ -370,13 +299,7 @@ describe('HistoryContent', () => {
   });
 
   it('names each empty half rather than hiding it, while the other has rows', () => {
-    render(
-      <HistoryContent
-        initialData={RESPONSE}
-        locked={false}
-        scaRegion={false}
-      />,
-    );
+    render(<HistoryContent initialData={RESPONSE} />);
 
     // Nothing upcoming, but Past is populated, so this is a gap in a full
     // screen — the whole-surface empty state must stay away.
@@ -394,8 +317,6 @@ describe('HistoryContent', () => {
     render(
       <HistoryContent
         initialData={{ ...EMPTY, upcoming: [show('up', `${year}-12-20`)] }}
-        locked={false}
-        scaRegion={false}
       />,
     );
 
@@ -405,13 +326,7 @@ describe('HistoryContent', () => {
   });
 
   it('mounts the calendar row and the Passport teaser in the rail', () => {
-    render(
-      <HistoryContent
-        initialData={RESPONSE}
-        locked={false}
-        scaRegion={false}
-      />,
-    );
+    render(<HistoryContent initialData={RESPONSE} />);
 
     const rail = screen.getByTestId('history-rail');
     expect(rail).toHaveTextContent(HISTORY_COPY.calendar.label);
@@ -424,8 +339,6 @@ describe('HistoryContent: taking a night out', () => {
     render(
       <HistoryContent
         initialData={{ ...RESPONSE, upcoming: [show('up', `${year}-12-20`)] }}
-        locked={false}
-        scaRegion={false}
       />,
     );
 

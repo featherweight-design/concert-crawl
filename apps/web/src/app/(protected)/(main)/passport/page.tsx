@@ -1,9 +1,7 @@
-import { headers } from 'next/headers';
 import { apiClient } from '@/lib/api';
 import { auth } from '@/lib/auth';
 import { fetchHistory } from '@/lib/history';
 import { fetchMe } from '@/lib/users';
-import { isScaRegion } from '@/lib/sca-region';
 import { passportYear } from '@/lib/passport/passport-request';
 import { DENVER_TIME_ZONE, localDateString } from '@/lib/time';
 import { PassportContent } from '@/components/consumer/passport/PassportContent';
@@ -47,7 +45,7 @@ export default async function PassportPage() {
   // would put extra round trips in front of the first paint for nothing. The
   // venue list is the only optional one: if it fails, the booklet still draws
   // and Venues collected stays out rather than claiming "0 of 0".
-  const [{ data, locked }, profile, venues] = await Promise.all([
+  const [history, profile, venues] = await Promise.all([
     fetchHistory(token),
     fetchMe(token),
     apiClient.get<unknown>('/v1/venues', token).catch((error: unknown) => {
@@ -58,13 +56,10 @@ export default async function PassportPage() {
     }),
   ]);
 
-  const requestHeaders = await headers();
-  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'));
-
   return (
     <PassportContent
-      past={data?.past ?? []}
-      upcoming={data?.upcoming ?? []}
+      past={history.past}
+      upcoming={history.upcoming}
       activeVenues={toActiveVenues(venues)}
       identity={{
         handle: profile.handle,
@@ -74,8 +69,6 @@ export default async function PassportPage() {
         joined: profile.joined,
       }}
       today={localDateString(DENVER_TIME_ZONE)}
-      locked={locked}
-      scaRegion={scaRegion}
     />
   );
 }

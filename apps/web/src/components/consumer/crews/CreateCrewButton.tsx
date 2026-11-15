@@ -2,84 +2,46 @@
 
 // The ONE create-a-crew affordance. Both places that offer it — the list
 // header and the empty state — mount this component rather than each wiring
-// its own entitlement check, because two copies of a paywall is how one of
-// them ends up ungated.
+// its own sign-in check, so the two can never disagree.
+//
+// Starting a crew is free for every signed-in fan. A signed-out viewer is sent
+// to sign in; everyone else gets the create sheet.
 
 import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import { useState } from 'react';
-import type { PlanState, CrewSummary } from '@concert-crawl/types';
+import type { CrewSummary } from '@concert-crawl/types';
 
 import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { usePlanState } from '@/lib/queries/use-plan-state';
-import { unlockTierFor } from '@/lib/unlock-tier';
-import { ModalShell } from '@/components/consumer/modal-shell';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { CreateCrewSheet } from './CreateCrewSheet';
 import { CREW_GRADIENT } from './lib/styles';
 import { CREWS_COPY } from './definitions/copy';
 
 const COPY = CREWS_COPY;
 
-// Mirrors derivePlanState's logged-out shape, as HistoryLocked and
-// EventDetailCtaBlock do: the picker needs a full PlanState and a logged-out
-// viewer has none.
-const LOGGED_OUT_PLAN_STATE: PlanState = {
-  plan: 'logged-out',
-  onTrial: false,
-  trialEndsAt: null,
-  status: null,
-  cancelAtPeriodEnd: false,
-  currentPeriodEnd: null,
-  roleComped: false,
-};
-
 interface CreateCrewButtonProps {
   /** `header` is the trailing-edge pill; `empty` is the empty state's CTA. */
   variant: 'header' | 'empty';
-  scaRegion: boolean;
   onCreated: (crew: CrewSummary) => void;
 }
 
 export const CreateCrewButton = ({
   variant,
-  scaRegion,
   onCreated,
 }: CreateCrewButtonProps) => {
-  const { isLoading, active, surface } = useEntitlement('crews');
-  const { data: planState } = usePlanState();
+  const { isLoading, surface } = useEntitlement('crews');
   const [createOpen, setCreateOpen] = useState(false);
-  const [gateOpen, setGateOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const goToSignIn = useSignInRedirect();
 
-  const tier = unlockTierFor('crews');
-  // A plan that once paid and no longer does keeps its crews; only starting
-  // another one is gated. Saying so is the difference between a paywall and a
-  // false alarm about work they already did. `status` is null until a
-  // subscription row has ever existed, so it — not `plan === 'free'` — is what
-  // separates a lapsed subscriber from someone who never paid; the lapsed copy
-  // says "again", which is a lie to a first-time viewer.
-  const lapsed = (planState?.status ?? null) !== null;
-
-  // Never flash a locked treatment while the plan is still resolving.
-  const gated = !isLoading && !active;
-
-  const openPicker = () => {
-    setGateOpen(false);
-    setPickerOpen(true);
-  };
+  // The matrix's logged-out cell: the tap is a sign-in, not a sheet.
+  const signedOut = surface === 'tier-picker-on-tap';
 
   const onTap = () => {
     if (isLoading) return;
-    if (active) {
-      setCreateOpen(true);
-      return;
-    }
-    if (surface === 'tier-picker-on-tap') {
+    if (signedOut) {
       goToSignIn();
       return;
     }
-    setGateOpen(true);
+    setCreateOpen(true);
   };
 
   const isHeader = variant === 'header';
@@ -90,20 +52,16 @@ export const CreateCrewButton = ({
         type="button"
         onClick={onTap}
         disabled={isLoading}
-        aria-haspopup={surface === 'tier-picker-on-tap' ? undefined : 'dialog'}
-        aria-expanded={
-          surface === 'tier-picker-on-tap'
-            ? undefined
-            : createOpen || gateOpen || pickerOpen
-        }
+        aria-haspopup={signedOut ? undefined : 'dialog'}
+        aria-expanded={signedOut ? undefined : createOpen}
         className="flex cursor-pointer items-center justify-center gap-1.5 disabled:cursor-default"
         style={{
           minHeight: 44,
           padding: isHeader ? '0 18px' : '0 20px',
           borderRadius: 999,
-          background: gated ? 'transparent' : CREW_GRADIENT,
-          color: gated ? 'var(--fg)' : 'var(--fg-on-accent)',
-          border: gated ? '1px solid var(--border-strong)' : 'none',
+          background: CREW_GRADIENT,
+          color: 'var(--fg-on-accent)',
+          border: 'none',
           fontFamily: 'var(--font-ui)',
           fontSize: isHeader ? 14 : 13.5,
           fontWeight: 700,
@@ -114,128 +72,9 @@ export const CreateCrewButton = ({
       >
         {/* B+ draws "+ Start a crew"; the glyph is decoration, so the
             accessible name stays the label. */}
-        {!gated && <span aria-hidden="true">{COPY.glyphs.add}</span>}
+        <span aria-hidden="true">{COPY.glyphs.add}</span>
         {COPY.list.create}
-        {gated && (
-          // The star is the whole visual difference between the gated and
-          // ungated button, so it has to reach a screen reader too. It goes in
-          // the accessible NAME rather than aria-description, which Safari and
-          // Firefox still ignore.
-          <span className="sr-only">{COPY.a11y.gatedCreate}</span>
-        )}
-        {gated && (
-          <span
-            aria-hidden="true"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              letterSpacing: '0.1em',
-              color: 'var(--signal)',
-            }}
-          >
-            ★
-          </span>
-        )}
       </button>
-
-      <ModalShell
-        open={gateOpen}
-        onClose={() => setGateOpen(false)}
-        ariaLabel={COPY.gate.title}
-        sheetHeight="short"
-        desktopWidth={520}
-      >
-        <div className="flex flex-col gap-3.5 pb-2">
-          {tier !== null && (
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: '0.16em',
-                color: 'var(--accent)',
-              }}
-            >
-              {COPY.gate.eyebrow(tier.name)}
-            </span>
-          )}
-          <h2
-            style={{
-              margin: 0,
-              fontFamily: 'var(--font-ui)',
-              fontSize: 19,
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              color: 'var(--fg)',
-            }}
-          >
-            {COPY.gate.title}
-          </h2>
-          <p
-            style={{
-              margin: 0,
-              fontFamily: 'var(--font-ui)',
-              fontSize: 13.5,
-              lineHeight: 1.5,
-              color: 'var(--fg-muted)',
-            }}
-          >
-            {COPY.gate.body}
-          </p>
-          {lapsed && tier !== null && (
-            <p
-              style={{
-                margin: 0,
-                fontFamily: 'var(--font-ui)',
-                fontSize: 13,
-                lineHeight: 1.5,
-                color: 'var(--fg-muted)',
-              }}
-            >
-              {COPY.gate.lapsed(tier.name)}
-            </p>
-          )}
-          {tier !== null && (
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              {COPY.gate.comparison(
-                tier.name,
-                `${tier.priceText} ${tier.priceUnit}`,
-              )}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={openPicker}
-            className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg"
-            style={{
-              background: 'var(--signal)',
-              color: 'var(--fg-on-accent)',
-              border: 'none',
-              fontFamily: 'var(--font-ui)',
-              fontSize: 13.5,
-              fontWeight: 700,
-            }}
-          >
-            {tier === null ? COPY.gate.ctaFallback : COPY.gate.cta(tier.name)}
-          </button>
-        </div>
-      </ModalShell>
-
-      <TierPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        planState={planState ?? LOGGED_OUT_PLAN_STATE}
-        scaRegion={scaRegion}
-        entry="paywall"
-      />
 
       <CreateCrewSheet
         open={createOpen}

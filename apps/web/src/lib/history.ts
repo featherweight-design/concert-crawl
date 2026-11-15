@@ -4,8 +4,7 @@ import { HISTORY_COPY } from '@/components/consumer/history/definitions/copy';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
-// The API brands the entitlement 403 with this code so the client can route it
-// into the locked takeover instead of an error surface.
+// The API brands the entitlement 403 with this code.
 export const ENTITLEMENT_REQUIRED_CODE = 'entitlement_required';
 
 export const isEntitlementError = (error: unknown): boolean =>
@@ -13,21 +12,12 @@ export const isEntitlementError = (error: unknown): boolean =>
   error.status === 403 &&
   error.code === ENTITLEMENT_REQUIRED_CODE;
 
-// `locked` is the belt-and-braces server verdict: a Free user hitting /history
-// directly gets a 403, which is NOT a failure — it's the state the page paints.
-// Anything else is a real failure and is left to the caller to surface (the page
-// renders the empty state, and the client query retries).
-export interface HistoryFetchResult {
-  data: HistoryResponse | null;
-  locked: boolean;
-}
-
-export async function fetchHistory(token: string): Promise<HistoryFetchResult> {
+// Every signed-in plan reads history, so any error here, a 403 included, is a
+// real failure and is left to the caller to surface.
+export async function fetchHistory(token: string): Promise<HistoryResponse> {
   try {
-    const data = await apiClient.get<HistoryResponse>('/v1/history', token);
-    return { data, locked: false };
+    return await apiClient.get<HistoryResponse>('/v1/history', token);
   } catch (error) {
-    if (isEntitlementError(error)) return { data: null, locked: true };
     // Logged here rather than only at the caller: this runs during the server
     // render, where a rethrow becomes a generic error boundary that keeps no
     // trace of which request actually failed.

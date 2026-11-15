@@ -545,8 +545,7 @@
 .my-shows-tab:focus-visible,
 .history-item:focus-visible,
 .history-calendar-row:focus-visible,
-.history-passport-teaser:focus-visible,
-.history-locked-cta:focus-visible {
+.history-passport-teaser:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
