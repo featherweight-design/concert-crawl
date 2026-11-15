@@ -9,7 +9,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { adminFetch } from '@/lib/api';
+import { adminFetch, apiClient } from '@/lib/api';
 import { AdminSessionGuard } from './AdminSessionGuard';
 
 const clerk = vi.hoisted(() => ({
@@ -80,6 +80,29 @@ describe('AdminSessionGuard', () => {
     await answer401();
     await waitFor(() => expect(overlay()).toBeInTheDocument());
     expect(clerk.auth.getToken).toHaveBeenCalledWith({ skipCache: true });
+  });
+
+  it('shows it for a 401 through apiClient too, the path nearly every admin page uses', async () => {
+    clerk.auth.getToken = vi.fn().mockResolvedValue(null);
+    render(<AdminSessionGuard />);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({ success: false, error: 'Unauthorized' }),
+          {
+            status: 401,
+            headers: { 'content-type': 'application/json' },
+          },
+        ),
+      ),
+    );
+    await act(async () => {
+      await apiClient
+        .get('/v1/admin/venues', 'stale-token')
+        .catch(() => undefined);
+    });
+    await waitFor(() => expect(overlay()).toBeInTheDocument());
   });
 
   it('leaves a 401 with a live token to the page: a role problem, not a session end', async () => {
