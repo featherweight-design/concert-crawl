@@ -293,17 +293,15 @@ describe('BillFollowBlock — ONE paywall, ONE tap (ED-05)', () => {
     },
   );
 
-  // Signed in, but the plan fetch settled empty: useEntitlement fails closed
-  // with the logged-out surface, and that still locks as one unit.
-  it('locks as one unit when the plan fails closed for a signed-in viewer', () => {
+  // Signed in, but the plan fetch settled empty: the app is free, so
+  // useEntitlement treats the viewer as the free plan (free-app close-out W4),
+  // and the bill stays open row by row with no gate.
+  it('stays open row by row when the plan fetch fails for a signed-in viewer', () => {
     planState.current = null;
     render(<BillFollowBlock artists={BILL} scaRegion={false} />);
 
-    expect(followButtons()).toHaveLength(0);
-    expect(screen.getByTestId('bill-follow-all')).toHaveAttribute(
-      'aria-haspopup',
-      'dialog',
-    );
+    expect(followButtons()).toHaveLength(3);
+    expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
   });
 
   // The signed-out mirror recruits: every row routes to sign-in on its own, so
