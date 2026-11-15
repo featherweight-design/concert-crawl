@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues';
+import { adminFetch } from '@/lib/api';
 import { AdminButton } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
@@ -124,7 +125,7 @@ export function AddVenueModal({
     setRobotsState('checking');
     try {
       const parsed = new URL(url);
-      const res = await fetch(
+      const res = await adminFetch(
         `/api/admin/robots-check?url=${encodeURIComponent(parsed.href)}`,
       );
       if (res.ok) {

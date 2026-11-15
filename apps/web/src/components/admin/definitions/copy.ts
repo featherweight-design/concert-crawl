@@ -4534,5 +4534,14 @@ export const ADMIN_COPY = {
       body: 'It may have moved or been deleted.',
       back: 'Back to Health',
     },
+    // `07/signed-out`. The board's body promises unsaved changes are "kept until
+    // you're back"; that holds only because "Sign in again" opens Clerk's modal
+    // over the page instead of navigating, so the line says what stays
+    // (copy-review: TIGHTEN).
+    signedOut: {
+      title: 'You were signed out',
+      body: 'Your session ended. What you were editing stays on this page.',
+      signIn: 'Sign in again',
+    },
   },
 } as const;

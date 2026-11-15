@@ -16,6 +16,9 @@ vi.mock('@/lib/api', () => ({
   apiClient: {
     get: (...args: unknown[]) => mockGet(...args),
   },
+  // The dialog's same-origin POST goes through adminFetch; here it is plain
+  // fetch, which these tests stub on the global.
+  adminFetch: (...args: Parameters<typeof fetch>) => fetch(...args),
 }));
 
 vi.mock('@clerk/nextjs', () => ({

@@ -15,6 +15,8 @@ import {
   type Role,
 } from '@concert-crawl/types';
 
+import { adminFetch } from '@/lib/api';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const BASE = '/v1/admin/invite-codes';
 /** How long a call may hang before it fails into Couldn't load or the toast. */
@@ -221,7 +223,7 @@ export const callEnvelope = async (
   const hasBody = init.body !== undefined;
   // A hung request must not trap the admin in a pending confirm.
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await adminFetch(`${API_BASE}${path}`, {
     method: init.method ?? 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
