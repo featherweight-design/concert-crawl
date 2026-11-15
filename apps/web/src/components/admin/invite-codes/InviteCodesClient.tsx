@@ -116,14 +116,30 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   const [copyNote, setCopyNote] = useState<string | null>(null);
   // One revoke or reactivate at a time; a double click must not post twice.
   const ending = useRef(false);
+  // A request that answers after the tab has gone must not set state: under
+  // jsdom teardown that throws "window is not defined" as an unhandled
+  // rejection and fails whichever test shard it lands in.
+  const isUnmounted = useRef(false);
+  const copyNoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const now = new Date();
+
+  useEffect(() => {
+    isUnmounted.current = false;
+    return () => {
+      isUnmounted.current = true;
+      if (copyNoteTimer.current !== null) clearTimeout(copyNoteTimer.current);
+    };
+  }, []);
 
   const load = useCallback(async () => {
     setLoadFailed(false);
     try {
       // Newest first, as the board lists them.
-      setCodes((await api.list()).reverse());
+      const listed = (await api.list()).reverse();
+      if (isUnmounted.current) return;
+      setCodes(listed);
     } catch {
+      if (isUnmounted.current) return;
       setLoadFailed(true);
     }
   }, [api]);
@@ -132,7 +148,9 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     void load();
     api
       .peopleTotal()
-      .then(setPeople)
+      .then((total) => {
+        if (!isUnmounted.current) setPeople(total);
+      })
       // The People count is a nicety; the tab still links without it.
       .catch(() => undefined);
   }, [api, load]);
@@ -145,7 +163,8 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   const copyLink = (code: ListedInviteCode) => {
     const note = (text: string) => {
       setCopyNote(text);
-      setTimeout(() => setCopyNote(null), 2000);
+      if (copyNoteTimer.current !== null) clearTimeout(copyNoteTimer.current);
+      copyNoteTimer.current = setTimeout(() => setCopyNote(null), 2000);
     };
     // `/i/<CODE>` is the typed short link; the proxy sends either case on.
     const write = navigator.clipboard?.writeText(`${origin}/i/${code.code}`);
