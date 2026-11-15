@@ -22,6 +22,15 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push }) }));
 
 const getToken = vi.fn(async () => 'tok');
 vi.mock('@clerk/nextjs', () => ({ useAuth: () => ({ getToken }) }));
+// The Coming up rows carry "I'm in", which sends Yes, going through a query
+// mutation; this test is about the page's order and tabs, not that mutation.
+vi.mock('@/lib/queries/use-attending-toggle', () => ({
+  useAttendingToggle: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+  }),
+}));
 
 const leaveCrew = vi.fn(async () => undefined);
 const rerollPatch = vi.fn(async () => ({
