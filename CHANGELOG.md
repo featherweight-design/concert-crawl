@@ -1,3 +1,16 @@
+# [1.514.0](https://github.com/featherweight-design/concert-crawl/compare/v1.513.0...v1.514.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** follow only the artist whose page this is, and wait for the session ([5d3cafd](https://github.com/featherweight-design/concert-crawl/commit/5d3cafd6dc73196be423b5971e16e9b2800b9ff2))
+
+
+### Features
+
+* **web:** add the pending Watch and Follow sheet inventory ([ecf0121](https://github.com/featherweight-design/concert-crawl/commit/ecf01218fbd80f66f3c44e980a651ab6b37017e3))
+* **web:** carry a Watch or Follow through sign-in, do it on arrival, and confirm it in a toast ([fb89d46](https://github.com/featherweight-design/concert-crawl/commit/fb89d469054f5979f9be41612598b986eb1a4c77))
+
 # [1.513.0](https://github.com/featherweight-design/concert-crawl/compare/v1.512.1...v1.513.0) (2026-11-15)
 
 
