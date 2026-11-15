@@ -13,6 +13,7 @@ import {
   canonicalizeSupporting,
 } from '@concert-crawl/types';
 import { canonicalizeTitle } from '@concert-crawl/crawler-core/canonical-title';
+import { deriveTicketLinks } from '@concert-crawl/crawler-core/ticket-links';
 import { idSchema } from '../../../lib/id-schema.js';
 import { httpUrl } from '../../../lib/url-schema.js';
 import { todayInDenver } from '../../../lib/time.js';
@@ -29,6 +30,7 @@ import { todayInDenver } from '../../../lib/time.js';
 
 export const ADD_SHOW_ERROR_CODES = [
   'title_required',
+  'title_too_long',
   'venue_required',
   'venue_not_found',
   'date_required',
@@ -38,6 +40,8 @@ export const ADD_SHOW_ERROR_CODES = [
   'ticket_url_invalid',
   'headliner_required',
   'lineup_name_required',
+  'lineup_name_too_long',
+  'lineup_name_invalid',
   'lineup_role_invalid',
   'lineup_too_long',
   'artist_not_found',
@@ -59,6 +63,8 @@ const fieldIssue = (
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+const TITLE_MAX = 300;
+const NAME_MAX = 200;
 const LINEUP_MAX = 50;
 // `EVENT_ARTIST_ROLES`, spelled out: a schema built at import time must not
 // read a runtime value from `@concert-crawl/db`, which route unit tests mock.
@@ -69,6 +75,19 @@ const LINEUP_ROLES = [
 ] as const satisfies readonly EventArtistRole[];
 const TICKET_URL_MAX = 2048;
 const ticketUrlSchema = httpUrl(TICKET_URL_MAX);
+
+/**
+ * A real calendar day as YYYY-MM-DD. The shape alone lets 2026-02-30 through,
+ * which Postgres then refuses with a 500; a round trip through Date does not.
+ */
+export const isCalendarDate = (value: string): boolean => {
+  if (!DATE_REGEX.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+};
 
 /** `HH:MM` and `HH:MM:SS` compare as the same time. */
 const timeKey = (value: string): string => value.padEnd(8, ':00');
@@ -82,14 +101,18 @@ const timeField = z
 /**
  * One act on the bill. `artistId` is set when the admin picked an artist from
  * Artists; without it the name is kept as typed and links once an artist by
- * that name exists.
+ * that name exists. A name the crawl's canonicaliser reduces to nothing (only
+ * combining marks, say) is refused: it could never be the show's key or link.
  */
 export const lineupEntrySchema = z.object({
   name: z
     .string({ error: 'lineup_name_required' })
     .trim()
     .min(1, { error: 'lineup_name_required' })
-    .max(200, { error: 'lineup_name_required' }),
+    .max(NAME_MAX, { error: 'lineup_name_too_long' })
+    .refine((name) => canonicalizeArtist(name) !== '', {
+      error: 'lineup_name_invalid',
+    }),
   role: z.enum(LINEUP_ROLES, { error: 'lineup_role_invalid' }),
   artistId: idSchema.optional(),
 });
@@ -113,12 +136,17 @@ export const createEventSchema = z
       .string({ error: 'title_required' })
       .trim()
       .min(1, { error: 'title_required' })
-      .max(300, { error: 'title_required' }),
-    date: z
-      .string({ error: 'date_required' })
-      .regex(DATE_REGEX, { error: 'date_required' })
-      // Read per request: the Denver day turns over while the API runs.
-      .refine((value) => value >= todayInDenver(), { error: 'date_past' }),
+      .max(TITLE_MAX, { error: 'title_too_long' }),
+    // One code per date: a blank, malformed or impossible date is only
+    // `date_required`; `date_past` is checked on a real date alone. The day
+    // is read per request, since the Denver day turns over while the API runs.
+    date: z.string({ error: 'date_required' }).superRefine((value, ctx) => {
+      if (!isCalendarDate(value)) {
+        ctx.addIssue({ code: 'custom', message: 'date_required' });
+      } else if (value < todayInDenver()) {
+        ctx.addIssue({ code: 'custom', message: 'date_past' });
+      }
+    }),
     doorsTime: timeField,
     showTime: timeField,
     // Blank means no link. A link goes through httpUrl(), the one guard
@@ -131,9 +159,7 @@ export const createEventSchema = z
       .transform((value) => (value ? value : null))
       .refine(
         (value) => value === null || ticketUrlSchema.safeParse(value).success,
-        {
-          error: 'ticket_url_invalid',
-        },
+        { error: 'ticket_url_invalid' },
       ),
     lineup: lineupSchema,
   })
@@ -155,8 +181,8 @@ export type CreateEventBody = z.infer<typeof createEventSchema>;
 
 export const duplicateQuerySchema = z.object({
   venueId: idSchema,
-  date: z.string().regex(DATE_REGEX, 'date must be YYYY-MM-DD'),
-  title: z.string().trim().max(300).optional(),
+  date: z.string().refine(isCalendarDate, { error: 'date_required' }),
+  title: z.string().trim().max(TITLE_MAX).optional(),
 });
 
 /** The four artist arrays, written together as the crawl writes them. */
@@ -169,16 +195,22 @@ export interface Bill {
 
 type Executor = Parameters<typeof syncEventArtists>[0];
 
+/** A lineup entry after a picked artist's stored name replaced the typed one. */
+interface ResolvedEntry {
+  name: string;
+  role: EventArtistRole;
+}
+
 /**
  * Resolve the lineup's picked artists to their stored names, so a picked
  * artist always links (its name canonicalises to its own row). Returns the
- * names in entry order, or the issues for ids that match no artist.
+ * lineup both the bill and the crawl key are built from, or the issues for
+ * ids that match no artist.
  */
-const resolveLineupNames = async (
+const resolveLineup = async (
   executor: Executor,
   lineup: readonly LineupEntry[],
-  pathPrefix: (string | number)[],
-): Promise<{ names: string[] } | { issues: FieldIssue[] }> => {
+): Promise<{ lineup: ResolvedEntry[] } | { issues: FieldIssue[] }> => {
   const ids = [
     ...new Set(
       lineup.flatMap((entry) =>
@@ -195,36 +227,37 @@ const resolveLineupNames = async (
     for (const artist of found) nameById.set(artist.id, artist.name);
   }
   const issues: FieldIssue[] = [];
-  const names = lineup.map((entry, index) => {
-    if (entry.artistId === undefined) return entry.name;
-    const stored = nameById.get(entry.artistId);
-    if (stored === undefined) {
-      issues.push(
-        fieldIssue([...pathPrefix, index, 'artistId'], 'artist_not_found'),
-      );
-      return entry.name;
+  const resolved = lineup.map((entry, index): ResolvedEntry => {
+    if (entry.artistId === undefined) {
+      return { name: entry.name, role: entry.role };
     }
-    return stored;
+    const stored = nameById.get(entry.artistId);
+    if (stored === undefined || canonicalizeArtist(stored) === '') {
+      issues.push(
+        fieldIssue(['lineup', index, 'artistId'], 'artist_not_found'),
+      );
+      return { name: entry.name, role: entry.role };
+    }
+    return { name: stored, role: entry.role };
   });
-  return issues.length > 0 ? { issues } : { names };
+  return issues.length > 0 ? { issues } : { lineup: resolved };
 };
 
 /**
  * The arrays for a lineup, headliners then supports, each in the order given.
  * A name billed twice keeps its first headliner place (an act on the bill
  * twice is one act), and no name is ever dropped for having no artist row.
- * The canonical pair goes through the crawl's own canonicaliser.
+ * The canonical pair goes through the crawl's own canonicaliser. Every name
+ * here canonicalises to something (the schema refuses one that doesn't).
  */
-export const billFromLineup = (
-  lineup: readonly { name: string; role: EventArtistRole }[],
-): Bill => {
+export const billFromLineup = (lineup: readonly ResolvedEntry[]): Bill => {
   const seen = new Set<string>();
   const pick = (role: EventArtistRole): string[] =>
     lineup
       .filter((entry) => entry.role === role)
       .map((entry) => entry.name)
       .filter((name) => {
-        const key = canonicalizeArtist(name) || name.toLowerCase();
+        const key = canonicalizeArtist(name);
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -239,6 +272,62 @@ export const billFromLineup = (
   };
 };
 
+/** The partial unique key the crawl upserts on, for one show. */
+export interface CrawlKey {
+  venueId: string;
+  date: string;
+  canonicalArtist: string;
+  showTime: string | null;
+}
+
+/**
+ * The one builder of a manual show's `artist` and crawl key, so the insert and
+ * the 409's key-holder lookup can never disagree. `artist` is the first
+ * headliner, and its key the crawl's own `canonicalizeArtist(artist)`, as a
+ * crawled row's is.
+ */
+const crawlIdentity = (
+  body: CreateEventBody,
+  bill: Bill,
+): { artist: string; key: CrawlKey } => {
+  const artist = bill.headliners[0];
+  // The schema requires a headliner whose name canonicalises to something,
+  // and billFromLineup always keeps the first one.
+  if (artist === undefined) throw new Error('crawlIdentity: no headliner');
+  return {
+    artist,
+    key: {
+      venueId: body.venueId,
+      date: body.date,
+      canonicalArtist: canonicalizeArtist(artist),
+      showTime: body.showTime ?? null,
+    },
+  };
+};
+
+/** The upcoming row holding a crawl key, or null. */
+const findKeyHolder = async (
+  executor: Executor,
+  key: CrawlKey,
+): Promise<string | null> => {
+  const [row] = await executor
+    .select({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        eq(events.venueId, key.venueId),
+        eq(events.date, key.date),
+        eq(events.status, 'upcoming'),
+        eq(events.canonicalArtist, key.canonicalArtist),
+        key.showTime === null
+          ? sql`${events.showTime} IS NULL`
+          : sql`${events.showTime} = ${key.showTime}::time`,
+      ),
+    )
+    .limit(1);
+  return row?.id ?? null;
+};
+
 /** One act in the detail payload's lineup. */
 export interface LineupItem {
   name: string;
@@ -250,59 +339,49 @@ export interface LineupItem {
 }
 
 /**
- * An event's lineup read off its arrays, in the order and with the positions
- * `syncEventArtists` gives `event_artists` (headliners first, a name billed
- * twice once, NULL `canonical_headliners` meaning no headliners). Each name is
- * matched on Artists by canonical name, as the sync matches it, so a show
- * hidden from fans (which has no `event_artists` rows) still shows its links.
+ * An event's lineup as stored: every name in the display arrays, headliners
+ * then supports, none left out (a lineup save sends back what this shows, so
+ * a name missing here would be erased). The canonical arrays are never shown:
+ * they are lowercased match keys, not names. Each name is matched on Artists
+ * by canonical name, as `syncEventArtists` matches it, so a show hidden from
+ * fans (which has no `event_artists` rows) still shows its links.
  */
 export const readLineup = async (
   executor: Executor,
-  row: {
-    headliners: string[] | null;
-    supportingArtists: string[] | null;
-    canonicalHeadliners: string[] | null;
-    canonicalSupporting: string[] | null;
-  },
+  row: { headliners: string[] | null; supportingArtists: string[] | null },
 ): Promise<LineupItem[]> => {
-  const headlinerNames =
-    row.canonicalHeadliners === null
-      ? []
-      : (row.headliners ?? row.canonicalHeadliners);
-  const supportNames = row.supportingArtists ?? row.canonicalSupporting ?? [];
-  const slots: { name: string; canonical: string; role: EventArtistRole }[] =
-    [];
-  const seen = new Set<string>();
-  const add = (names: readonly string[], role: EventArtistRole): void => {
-    for (const name of names) {
-      const canonical = canonicalizeArtist(name);
-      if (canonical === '' || seen.has(canonical)) continue;
-      seen.add(canonical);
-      slots.push({ name, canonical, role });
-    }
-  };
-  add(headlinerNames, 'headliner');
-  add(supportNames, 'support');
+  const slots = [
+    ...(row.headliners ?? []).map((name) => ({
+      name,
+      role: 'headliner' as const,
+    })),
+    ...(row.supportingArtists ?? []).map((name) => ({
+      name,
+      role: 'support' as const,
+    })),
+  ].map((slot) => ({ ...slot, canonical: canonicalizeArtist(slot.name) }));
   if (slots.length === 0) return [];
 
-  const matched = await executor
-    .select({
-      id: artists.id,
-      slug: artists.slug,
-      canonicalName: artists.canonicalName,
-    })
-    .from(artists)
-    .where(
-      inArray(
-        artists.canonicalName,
-        slots.map((slot) => slot.canonical),
-      ),
-    );
+  const canonicals = [
+    ...new Set(slots.map((slot) => slot.canonical).filter(Boolean)),
+  ];
+  const matched =
+    canonicals.length === 0
+      ? []
+      : await executor
+          .select({
+            id: artists.id,
+            slug: artists.slug,
+            canonicalName: artists.canonicalName,
+          })
+          .from(artists)
+          .where(inArray(artists.canonicalName, canonicals));
   const byCanonical = new Map(
     matched.map((artist) => [artist.canonicalName, artist]),
   );
   return slots.map((slot, position) => {
-    const artist = byCanonical.get(slot.canonical);
+    const artist =
+      slot.canonical === '' ? undefined : byCanonical.get(slot.canonical);
     return {
       name: slot.name,
       role: slot.role,
@@ -314,99 +393,102 @@ export const readLineup = async (
 };
 
 export type CreateResult =
-  { kind: 'created'; id: string } | { kind: 'invalid'; issues: FieldIssue[] };
+  | { kind: 'created'; id: string }
+  | { kind: 'duplicate'; existingId: string }
+  | { kind: 'invalid'; issues: FieldIssue[] };
+
+// A key holder that vanishes between the conflict and the lookup (deleted or
+// cancelled by a concurrent request) frees the key, so the insert is retried.
+const KEY_ATTEMPTS = 3;
 
 /**
- * Insert a show added by hand and link its lineup, in one transaction. The
+ * Insert a show added by hand and link its lineup, in one transaction with
+ * the venue row share-locked (so it cannot be deleted under the insert). The
  * row takes the crawl's own key (venue, date, canonical headliner, show time),
  * so a later crawl that lists the show lands on this row instead of adding a
- * second one. A crawled show already on that exact key makes the insert fail
- * on `events_venue_date_canonical_artist_showtime_idx`; the caller answers it.
+ * second one. When an upcoming row already holds that exact key, nothing is
+ * inserted and the holder's id comes back for the 409.
  */
 export const createManualEvent = async (
   body: CreateEventBody,
   actorId: string,
-): Promise<CreateResult> => {
-  const [venue] = await db
-    .select({ id: venues.id })
-    .from(venues)
-    .where(eq(venues.id, body.venueId))
-    .limit(1);
-  if (!venue) {
-    return {
-      kind: 'invalid',
-      issues: [fieldIssue(['venueId'], 'venue_not_found')],
-    };
-  }
-
-  return db.transaction(async (tx) => {
-    const resolved = await resolveLineupNames(tx, body.lineup, ['lineup']);
-    if ('issues' in resolved)
-      return { kind: 'invalid', issues: resolved.issues };
-    const bill = billFromLineup(
-      body.lineup.map((entry, index) => ({
-        name: resolved.names[index] ?? entry.name,
-        role: entry.role,
-      })),
-    );
-    // The refine guarantees a headliner; the title stands in only if every
-    // headliner name canonicalised away.
-    const artist = bill.headliners[0] ?? body.title;
-    const now = new Date();
-    const [inserted] = await tx
-      .insert(events)
-      .values({
-        venueId: body.venueId,
-        title: body.title,
-        artist,
-        canonicalArtist:
-          canonicalizeArtist(artist) || canonicalizeTitle(body.title),
-        canonicalTitle: canonicalizeTitle(body.title),
-        date: body.date,
-        doorsTime: body.doorsTime ?? null,
-        showTime: body.showTime ?? null,
-        ticketUrl: body.ticketUrl,
-        ...bill,
-        status: 'upcoming',
-        verified: true,
-        manual: true,
-        createdBy: actorId,
-        lineupEditedAt: now,
-        lastSeenAt: now,
+): Promise<CreateResult> =>
+  db.transaction(async (tx): Promise<CreateResult> => {
+    const [venue] = await tx
+      .select({
+        websiteUrl: venues.websiteUrl,
+        ticketVendor: venues.ticketVendor,
       })
-      .returning({ id: events.id });
-    if (!inserted) throw new Error('createManualEvent: insert returned no row');
-    await syncEventArtists(tx, [inserted.id]);
-    return { kind: 'created', id: inserted.id };
-  });
-};
+      .from(venues)
+      .where(eq(venues.id, body.venueId))
+      .for('share');
+    if (!venue) {
+      return {
+        kind: 'invalid',
+        issues: [fieldIssue(['venueId'], 'venue_not_found')],
+      };
+    }
+    const resolved = await resolveLineup(tx, body.lineup);
+    if ('issues' in resolved) {
+      return { kind: 'invalid', issues: resolved.issues };
+    }
+    const bill = billFromLineup(resolved.lineup);
+    const { artist, key } = crawlIdentity(body, bill);
+    const now = new Date();
 
-/** The upcoming row holding a show's crawl key, for a 409's `existingId`. */
-export const findKeyHolder = async (
-  body: CreateEventBody,
-): Promise<string | null> => {
-  const headliner =
-    body.lineup.find((entry) => entry.role === 'headliner')?.name ?? body.title;
-  const [row] = await db
-    .select({ id: events.id })
-    .from(events)
-    .where(
-      and(
-        eq(events.venueId, body.venueId),
-        eq(events.date, body.date),
-        eq(events.status, 'upcoming'),
-        eq(events.canonicalArtist, canonicalizeArtist(headliner)),
-        body.showTime
-          ? sql`${events.showTime} = ${body.showTime}::time`
-          : sql`${events.showTime} IS NULL`,
-      ),
-    )
-    .limit(1);
-  return row?.id ?? null;
-};
+    for (let attempt = 0; attempt < KEY_ATTEMPTS; attempt += 1) {
+      const [inserted] = await tx
+        .insert(events)
+        .values({
+          venueId: body.venueId,
+          title: body.title,
+          artist,
+          canonicalArtist: key.canonicalArtist,
+          canonicalTitle: canonicalizeTitle(body.title),
+          date: body.date,
+          doorsTime: body.doorsTime ?? null,
+          showTime: key.showTime,
+          ticketUrl: body.ticketUrl,
+          // The same links a crawled row with this URL gets.
+          ticketLinks: deriveTicketLinks(body.ticketUrl, venue),
+          ...bill,
+          status: 'upcoming',
+          verified: true,
+          manual: true,
+          createdBy: actorId,
+          lineupEditedAt: now,
+          lastSeenAt: now,
+        })
+        // The crawl's conflict target: the partial unique index on
+        // (venue_id, date, canonical_artist, show_time) WHERE upcoming.
+        .onConflictDoNothing({
+          target: [
+            events.venueId,
+            events.date,
+            events.canonicalArtist,
+            events.showTime,
+          ],
+          where: eq(events.status, 'upcoming'),
+        })
+        .returning({ id: events.id });
+      if (inserted) {
+        await syncEventArtists(tx, [inserted.id]);
+        return { kind: 'created', id: inserted.id };
+      }
+      const existingId = await findKeyHolder(tx, key);
+      if (existingId !== null) return { kind: 'duplicate', existingId };
+    }
+    throw new Error('createManualEvent: crawl key stayed contended');
+  });
+
+/** A lineup as the audit records it. */
+export interface BillNames {
+  headliners: string[] | null;
+  supportingArtists: string[] | null;
+}
 
 export type LineupSaveResult =
-  | { kind: 'saved'; lineup: Bill }
+  | { kind: 'saved'; before: BillNames; after: BillNames }
   | { kind: 'not_found' }
   | { kind: 'invalid'; issues: FieldIssue[] };
 
@@ -422,29 +504,35 @@ export const saveLineup = async (
   id: string,
   lineup: readonly LineupEntry[],
 ): Promise<LineupSaveResult> =>
-  db.transaction(async (tx) => {
+  db.transaction(async (tx): Promise<LineupSaveResult> => {
     const [row] = await tx
-      .select({ id: events.id })
+      .select({
+        headliners: events.headliners,
+        supportingArtists: events.supportingArtists,
+      })
       .from(events)
       .where(eq(events.id, id))
       .for('update');
     if (!row) return { kind: 'not_found' };
-    const resolved = await resolveLineupNames(tx, lineup, ['lineup']);
-    if ('issues' in resolved)
+    const resolved = await resolveLineup(tx, lineup);
+    if ('issues' in resolved) {
       return { kind: 'invalid', issues: resolved.issues };
-    const bill = billFromLineup(
-      lineup.map((entry, index) => ({
-        name: resolved.names[index] ?? entry.name,
-        role: entry.role,
-      })),
-    );
+    }
+    const bill = billFromLineup(resolved.lineup);
     const now = new Date();
     await tx
       .update(events)
       .set({ ...bill, lineupEditedAt: now, updatedAt: now })
       .where(eq(events.id, id));
     await syncEventArtists(tx, [id]);
-    return { kind: 'saved', lineup: bill };
+    return {
+      kind: 'saved',
+      before: row,
+      after: {
+        headliners: bill.headliners,
+        supportingArtists: bill.supportingArtists,
+      },
+    };
   });
 
 /** A show already at the venue that night, for the amber "Open it" warning. */

@@ -221,6 +221,12 @@ describe('POST /v1/admin/events', () => {
       showTime: '20:00:00',
       ticketUrl: 'https://www.axs.com/events/kaleo',
     });
+    // The links a crawled row with this URL gets.
+    expect(row.ticketLinks).toHaveLength(1);
+    expect(row.ticketLinks?.[0]).toMatchObject({
+      kind: 'primary',
+      url: 'https://www.axs.com/events/kaleo',
+    });
     expect(row.canonicalSupporting).toHaveLength(1);
     expect(await linkedRows(data.id)).toEqual([
       { artistId: kaleo.id, role: 'headliner', position: 0 },
@@ -244,6 +250,7 @@ describe('POST /v1/admin/events', () => {
     expect(row.headliners).toEqual(['Phoebe Bridgers']);
     expect(row.supportingArtists).toEqual([]);
     expect(row.ticketUrl).toBeNull();
+    expect(row.ticketLinks).toBeNull();
     expect(await linkedRows(data.id)).toEqual([
       { artistId: phoebe.id, role: 'headliner', position: 0 },
     ]);
@@ -336,6 +343,28 @@ describe('POST /v1/admin/events', () => {
     expect(await auditRows('event.create')).toEqual([]);
   });
 
+  it('finds the key holder under a picked artist’s stored name, not the typed one', async () => {
+    const venue = await seedVenue();
+    const phoebe = await seedArtist({ name: 'Phoebe Bridgers' });
+    const crawled = await seedEvent(venue.id, {
+      artist: 'Phoebe Bridgers',
+      canonicalArtist: 'phoebe bridgers',
+      date: dayOffset(20),
+      showTime: '20:00',
+    });
+
+    const res = await post({
+      ...validBody(venue.id),
+      lineup: [{ name: 'phoebe', role: 'headliner', artistId: phoebe.id }],
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: 'duplicate_show',
+      existingId: crawled.id,
+    });
+  });
+
   it('adds only one of two identical shows sent at once', async () => {
     const venue = await seedVenue();
     const statuses = (
@@ -360,6 +389,28 @@ describe('POST /v1/admin/events', () => {
         label: 'no title',
         patch: () => ({ title: '  ' }),
         code: 'title:title_required',
+      },
+      {
+        label: 'an over-long title',
+        patch: () => ({ title: 'x'.repeat(301) }),
+        code: 'title:title_too_long',
+      },
+      {
+        label: 'an impossible date',
+        patch: () => ({ date: `${Number(dayOffset(400).slice(0, 4))}-02-30` }),
+        code: 'date:date_required',
+      },
+      {
+        label: 'an over-long name',
+        patch: () => ({
+          lineup: [{ name: 'x'.repeat(201), role: 'headliner' }],
+        }),
+        code: 'lineup.0.name:lineup_name_too_long',
+      },
+      {
+        label: 'a headliner the canonicaliser empties',
+        patch: () => ({ lineup: [{ name: '́', role: 'headliner' }] }),
+        code: 'lineup.0.name:lineup_name_invalid',
       },
       {
         label: 'no venue',
@@ -439,6 +490,64 @@ describe('POST /v1/admin/events', () => {
       expect(await testDb.select({ id: events.id }).from(events)).toEqual([]);
       expect(await auditRows('event.create')).toEqual([]);
     });
+
+    it.each(['', '12/04/2030', '2030-13-01'])(
+      'reports only date_required for the date %j',
+      async (date) => {
+        const venue = await seedVenue();
+        const res = await post({ ...validBody(venue.id), date });
+        expect(await issueCodes(res)).toEqual(['date:date_required']);
+      },
+    );
+
+    it('refuses an impossible date on the duplicate warning with a 400, not a 500', async () => {
+      const venue = await seedVenue();
+      const res = await app.request(
+        `/v1/admin/events/duplicate?venueId=${venue.id}&date=2030-02-30`,
+        { headers: HEADERS },
+      );
+      expect(await issueCodes(res)).toEqual(['date:date_required']);
+    });
+  });
+});
+
+describe('GET /v1/admin/events/:id lineup', () => {
+  const getLineup = async (id: string) => {
+    const res = await app.request(`/v1/admin/events/${id}`, {
+      headers: HEADERS,
+    });
+    expect(res.status).toBe(200);
+    return detailBodySchema
+      .parse(await res.json())
+      .data.lineup.map(({ name, role }) => [name, role]);
+  };
+
+  it('shows stored headliners when the ladder never ruled, and no lowercase canonical supports', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: dayOffset(10),
+      headliners: ['Act One'],
+      canonicalHeadliners: null,
+      supportingArtists: null,
+      canonicalSupporting: ['some opener'],
+    });
+    expect(await getLineup(event.id)).toEqual([['Act One', 'headliner']]);
+  });
+
+  it('never leaves out a stored name, even one the canonicaliser empties', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: dayOffset(10),
+      headliners: ['Real Act', '́'],
+      canonicalHeadliners: ['real act'],
+      supportingArtists: ['Real Act'],
+      canonicalSupporting: ['real act'],
+    });
+    expect(await getLineup(event.id)).toEqual([
+      ['Real Act', 'headliner'],
+      ['́', 'headliner'],
+      ['Real Act', 'support'],
+    ]);
   });
 });
 
@@ -492,8 +601,14 @@ describe('PUT /v1/admin/events/:id/lineup', () => {
       actorId: ADMIN_USER_ID,
       targetId: crawled.id,
       metadata: {
-        headliners: ['New Headliner'],
-        supportingArtists: ['Nobody Yet', 'Known Opener'],
+        before: {
+          headliners: ['Old Headliner'],
+          supportingArtists: ['Old Opener'],
+        },
+        after: {
+          headliners: ['New Headliner'],
+          supportingArtists: ['Nobody Yet', 'Known Opener'],
+        },
       },
     });
   });

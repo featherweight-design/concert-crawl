@@ -79,7 +79,6 @@ import {
   createManualEvent,
   duplicateQuerySchema,
   findDuplicates,
-  findKeyHolder,
   lineupBodySchema,
   readLineup,
   saveLineup,
@@ -719,21 +718,16 @@ eventsAdminRouter.post(
     const body = ctx.req.valid('json');
     const actor = getAuthUser(ctx);
 
-    let result: Awaited<ReturnType<typeof createManualEvent>>;
-    try {
-      result = await createManualEvent(body, actor.userId);
-    } catch (err) {
-      if (isUniqueViolationOn(err, EVENT_NIGHT_UNIQUE_INDEX)) {
-        return ctx.json(
-          {
-            success: false,
-            error: 'duplicate_show',
-            existingId: await findKeyHolder(body),
-          } as const,
-          409,
-        );
-      }
-      throw err;
+    const result = await createManualEvent(body, actor.userId);
+    if (result.kind === 'duplicate') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'duplicate_show',
+          existingId: result.existingId,
+        } as const,
+        409,
+      );
     }
     if (result.kind === 'invalid') {
       return zodIssuesResponse(ctx, result.issues);
@@ -779,10 +773,7 @@ eventsAdminRouter.put(
     ctx.set('auditAction', 'event.lineup.update');
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', actor.userId);
-    ctx.set('auditMeta', {
-      headliners: result.lineup.headliners,
-      supportingArtists: result.lineup.supportingArtists,
-    });
+    ctx.set('auditMeta', { before: result.before, after: result.after });
     return ctx.json({ success: true, data: detail } as const);
   },
 );
@@ -859,8 +850,6 @@ async function loadEventDetail(id: string, actorId: string) {
       bill: {
         headliners: events.headliners,
         supportingArtists: events.supportingArtists,
-        canonicalHeadliners: events.canonicalHeadliners,
-        canonicalSupporting: events.canonicalSupporting,
       },
       submittedPriceCount: sql<number>`(${db
         .select({ total: count() })
