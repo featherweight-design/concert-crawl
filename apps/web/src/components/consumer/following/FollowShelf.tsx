@@ -145,9 +145,18 @@ export const FollowShelf = ({
   // Clerk has answered there is nothing else to wait on.
   const resolving = isSignedIn === undefined;
 
-  // A signed-out tap goes to sign-in; an unresolved one does nothing.
-  const onGatedTap = () => {
-    if (signedOut) goToSignIn();
+  // A signed-out tap goes to sign-in, carrying the follow so it is replayed on
+  // arrival (as `FollowButton` does); an unresolved one does nothing.
+  const onGatedTap = (artist: ShelfArtist) => {
+    if (!signedOut) return;
+    goToSignIn(
+      artist.slug !== null
+        ? {
+            intent: { action: 'follow', artistSlug: artist.slug },
+            label: artist.name,
+          }
+        : undefined,
+    );
   };
 
   // See all turns on the My artists filter in Browse (addendum 2, item 20),
@@ -212,7 +221,7 @@ export const FollowShelf = ({
               starter={mode === 'zero'}
               resolving={resolving}
               signedOut={signedOut}
-              onGatedTap={onGatedTap}
+              onGatedTap={() => onGatedTap(artist)}
             />
           ))}
         </ul>

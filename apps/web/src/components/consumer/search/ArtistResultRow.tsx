@@ -161,6 +161,7 @@ export const ArtistResultRow = ({
       </button>
       <FollowButton
         name={artist.name}
+        slug={artist.slug}
         following={follow.following}
         signedOut={signedOut}
         size={size}
