@@ -53,11 +53,12 @@ export const pillOf = (status: EventDetail['status']): Pill | null =>
     ? status
     : null;
 
+/** `06/event-edit`'s status pills: 32px, 12px sides. */
 const PILL: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  height: 34,
-  padding: '0 14px',
+  height: 32,
+  padding: '0 12px',
   borderRadius: 999,
   fontSize: 13,
   fontWeight: 600,
@@ -128,7 +129,9 @@ const Pills = ({
                 : {
                     color: 'var(--fg-muted)',
                     border: '1px solid var(--border)',
-                    background: 'transparent',
+                    // The board's rgba(14,18,38,.6): `--bg-elevated` at 60%.
+                    background:
+                      'color-mix(in srgb, var(--bg-elevated) 60%, transparent)',
                     ...(disabled && { opacity: 0.5 }),
                   }),
             }}

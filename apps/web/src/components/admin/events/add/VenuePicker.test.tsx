@@ -284,10 +284,101 @@ describe('VenuePicker variants', () => {
     expect(trigger().lastElementChild).toBe(chevron);
   });
 
-  it('draws the chevron on the placeholder too, and on the phone', () => {
-    renderIt({ variant: 'edit', phone: true });
+  it('draws the chevron on the placeholder too', () => {
+    renderIt({ variant: 'edit' });
     expect(trigger()).toHaveTextContent(ADMIN_COPY.addShow.venuePlaceholder);
     expect(screen.getByTestId('venue-picker-chevron')).toBeInTheDocument();
+  });
+
+  it('draws Event edit’s phone trigger as plain text: 12px padding, no tile or chevron', () => {
+    renderIt({ value: MISSION, variant: 'edit', phone: true });
+    expect(trigger()).toHaveTextContent('Mission Ballroom');
+    expect(trigger().style.padding).toBe('0px 12px');
+    expect(tile()).toBeNull();
+    expect(screen.queryByTestId('venue-picker-chevron')).toBeNull();
+  });
+
+  it('keeps Add a show’s tile on the phone', () => {
+    renderIt({ value: MISSION, phone: true });
+    expect(tile()).toHaveAttribute('width', '20');
+  });
+
+  it('draws the list rows’ 24px tiles with a 1px edge and 6px corners', () => {
+    renderIt();
+    fireEvent.click(trigger());
+    const option = screen.getByRole('option', { name: /Mission Ballroom/ });
+    expect(option.querySelector('svg[data-venue-tile]')).toHaveAttribute(
+      'width',
+      '24',
+    );
+    // In the tile's 96 viewBox at 24px: 1px is 4 units, 6px is 24.
+    const edge = option.querySelector('svg[data-venue-tile] rect');
+    expect(edge).toHaveAttribute('stroke-width', '4');
+    expect(edge).toHaveAttribute('rx', '24');
+  });
+
+  describe('the list’s length', () => {
+    const MANY: PickVenue[] = [
+      'Bluebird Theater',
+      'Cervantes',
+      'Fillmore',
+      'Gothic Theatre',
+      'Globe Hall',
+      'Larimer Lounge',
+      'Marquis',
+      'Ogden Theatre',
+    ].map((name, index) => ({
+      id: `v-${index}`,
+      name,
+      slug: `slug-${index}`,
+      active: true,
+    }));
+
+    it('shows 5 rows on Event edit, then how many a search finds', () => {
+      renderIt({ venues: MANY, variant: 'edit' });
+      fireEvent.click(trigger());
+      expect(names()).toEqual([
+        'Bluebird Theater',
+        'Cervantes',
+        'Fillmore',
+        'Globe Hall',
+        'Gothic Theatre',
+      ]);
+      expect(screen.getByTestId('venue-list-more')).toHaveTextContent(
+        ADMIN_COPY.eventEdit.venue.typeToFind(3),
+      );
+      // A search looks through every venue, with no footer.
+      fireEvent.change(screen.getByTestId('venue-search'), {
+        target: { value: 'theat' },
+      });
+      expect(names()).toEqual([
+        'Bluebird Theater',
+        'Gothic Theatre',
+        'Ogden Theatre',
+      ]);
+      expect(screen.queryByTestId('venue-list-more')).toBeNull();
+    });
+
+    it('keeps Add a show’s list whole, with no footer', () => {
+      renderIt({ venues: MANY });
+      fireEvent.click(trigger());
+      expect(names()).toHaveLength(8);
+      expect(screen.queryByTestId('venue-list-more')).toBeNull();
+    });
+
+    it('keeps Event edit’s phone sheet whole', () => {
+      renderIt({ venues: MANY, variant: 'edit', phone: true });
+      fireEvent.click(trigger());
+      expect(names()).toHaveLength(8);
+      expect(screen.queryByTestId('venue-list-more')).toBeNull();
+    });
+
+    it('draws no footer when 5 or fewer venues exist', () => {
+      renderIt({ venues: MANY.slice(0, 5), variant: 'edit' });
+      fireEvent.click(trigger());
+      expect(names()).toHaveLength(5);
+      expect(screen.queryByTestId('venue-list-more')).toBeNull();
+    });
   });
 
   it('draws the known venue while the list loads', () => {

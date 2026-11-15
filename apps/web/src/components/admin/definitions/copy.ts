@@ -4731,6 +4731,10 @@ export const ADMIN_COPY = {
         'Can’t move: the crawl found this show. It follows the venue’s listing.',
       // POST /venue's 400 `venue_not_found`.
       notFound: 'That venue isn’t available any more. Pick another.',
+      // `04/venue-picker-d`: under the list's first 5 rows; `others` is how
+      // many venues it leaves out.
+      typeToFind: (others: number) =>
+        `Type to find the other ${others.toLocaleString('en-US')}…`,
       // The confirm before a move that tells its Watchers. The venue is in
       // the title, so the body leaves it out.
       confirmTitle: (show: string, venue: string) =>
