@@ -1,0 +1,21 @@
+-- Test re-crawl on a paused venue (Hugh's ruling, 2026-11-14).
+--
+-- An admin can try one crawl of a crawl-paused venue without resuming it. That
+-- run must not move the venue's pause state: it never counts toward, or
+-- resets, the consecutive-failure streak, never auto-pauses, never flags the
+-- venue blocked, and never sends the auto-pause email or notification. The
+-- readers that judge a venue by its runs (failure streaks, triage, Needs you)
+-- skip it.
+--
+-- `crawl_triggers.trial` marks the queued request; `crawl_runs.trial` marks
+-- the run it produced, so readers can tell a trial from a real crawl.
+--
+-- Expand-only: two boolean NOT NULL DEFAULT false columns. Postgres 11+ adds
+-- a constant default without a table rewrite, and every existing row reads
+-- false, which is what it was. Read only by code that ships after this.
+--
+-- Down:
+--   ALTER TABLE crawl_runs DROP COLUMN IF EXISTS trial;
+--   ALTER TABLE crawl_triggers DROP COLUMN IF EXISTS trial;
+ALTER TABLE "crawl_triggers" ADD COLUMN IF NOT EXISTS "trial" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "crawl_runs" ADD COLUMN IF NOT EXISTS "trial" boolean DEFAULT false NOT NULL;
