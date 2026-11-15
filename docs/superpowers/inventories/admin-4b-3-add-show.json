@@ -22,6 +22,7 @@
     },
     {
       "id": "add-show-duplicate",
+      "widths": ["desktop"],
       "label": "Add a show with a show already that night (desktop)",
       "steps": [
         {
@@ -45,6 +46,7 @@
     },
     {
       "id": "add-show-duplicate-phone",
+      "widths": ["phone-320", "phone"],
       "label": "Add a show with a show already that night (phone)",
       "steps": [
         {
