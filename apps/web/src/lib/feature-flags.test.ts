@@ -37,8 +37,13 @@ describe('server-side getFeatureFlags', () => {
   // The hole this closes: a flag at Me or Beta is on for some people only, so
   // a server-side read that does not forward the viewer's auth hands them the
   // signed-out map and a 404 on a page they should see.
-  it('forwards the signed-in viewer token and never lets Next share the answer', async () => {
+  it('forwards the signed-in viewer token for a flag not on for everyone, and never lets Next share the answer', async () => {
     session.current = { userId: 'user_beta', token: 'tok_beta' };
+    get.mockResolvedValue({
+      'spotify-sync': false,
+      crews: false,
+      'release-notes': true,
+    });
     authedGet.mockResolvedValue({
       'spotify-sync': false,
       crews: true,
@@ -49,7 +54,32 @@ describe('server-side getFeatureFlags', () => {
     expect(authedGet).toHaveBeenCalledWith('/v1/flags', 'tok_beta', {
       cache: 'no-store',
     });
-    expect(get).not.toHaveBeenCalled();
+  });
+
+  // The perf guard: a flag that is on for everyone, or any signed-out visitor,
+  // costs the one cached read it always did. No per-viewer request.
+  it('does not ask per viewer when the flag is on for everyone', async () => {
+    session.current = { userId: 'user_any', token: 'tok_any' };
+    get.mockResolvedValue({
+      'spotify-sync': false,
+      crews: false,
+      'release-notes': true,
+    });
+    expect(await isFeatureEnabled('release-notes')).toBe(true);
+    expect(authedGet).not.toHaveBeenCalled();
+  });
+
+  it('gives a Me or Beta user the full map from getFeatureFlags', async () => {
+    session.current = { userId: 'user_beta', token: 'tok_beta' };
+    authedGet.mockResolvedValue({
+      'spotify-sync': false,
+      crews: true,
+      'release-notes': true,
+    });
+    expect((await getFeatureFlags()).crews).toBe(true);
+    expect(authedGet).toHaveBeenCalledWith('/v1/flags', 'tok_beta', {
+      cache: 'no-store',
+    });
   });
 
   it('reads the signed-out map for a visitor, cached 30s as before', async () => {
