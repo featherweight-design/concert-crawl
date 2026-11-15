@@ -41,12 +41,15 @@ import {
   db,
   eventReports,
   events,
+  findUpcomingKeyHolder,
+  moveEventVenue,
   notifications,
   priceRetrievalLog,
   priceSubmissions,
   userEvents,
   venues,
 } from '@concert-crawl/db';
+import { deriveTicketLinks } from '@concert-crawl/crawler-core/ticket-links';
 import {
   fanoutWatchNotification,
   WATCH_CATEGORY_FROM_REPORT_STATUS,
@@ -94,6 +97,15 @@ import {
 } from './lib/event-create.js';
 
 const eventIdSchema = z.object({ id: idSchema });
+
+// POST /:id/venue. The code matches Add a show's venue field. Lowercased as
+// `idSchema` does: the same-venue no-op compares ids in code, so a mixed-case
+// copy of the current venue's id must still read as the same venue.
+const venueMoveBodySchema = z.object({
+  venueId: z
+    .guid({ error: 'venue_required' })
+    .transform((id) => id.toLowerCase()),
+});
 
 const MISSING_DATA_FLAGS = [
   'no-price',
@@ -770,6 +782,113 @@ eventsAdminRouter.put(
     return ctx.json({ success: true, data: detail } as const);
   },
 );
+
+// POST /v1/admin/events/:id/venue — change a show's venue (admin E2-C). Its own
+// route rather than a PATCH field: a venue change writes a crawl redirect,
+// can collide on the crawl key, tells Watchers through the relocation copy and
+// audits under its own keys, none of which the field-by-field PATCH does.
+// The rules live in moveEventVenue (@concert-crawl/db):
+//   - a show still to come (or postponed) is the Moved flow: the old crawl key
+//     goes on a 'moved' redirect so the old venue's next crawl drops the
+//     listing instead of inserting it again, Watchers hear the new room
+//     (unless the show is cancelled), audit `event.venue.move`;
+//   - a played show is a silent correction, audit `event.venue.correct`;
+//   - the same venue changes nothing (`outcome: 'unchanged'`, no audit);
+//   - an unknown or removed venue is 400 `venue_not_found`, as Add a show;
+//   - an upcoming show whose key is held at the new venue is 409
+//     `duplicate_show` with `existingId`, and nothing changes.
+eventsAdminRouter.post(
+  '/:id/venue',
+  zValidator('param', eventIdSchema, validationHook),
+  zValidator('json', venueMoveBodySchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const { venueId } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
+
+    let result: Awaited<ReturnType<typeof moveEventVenue>>;
+    try {
+      result = await moveEventVenue({
+        eventId: id,
+        venueId,
+        actorId: actor.userId,
+        today: todayInDenver,
+        deriveTicketLinks,
+      });
+    } catch (err) {
+      // A row that took the key after the pre-check: the update failed on the
+      // unique index and the transaction rolled back.
+      if (!isUniqueViolationOn(err, EVENT_NIGHT_UNIQUE_INDEX)) throw err;
+      const existingId = await keyHolderAt(id, venueId);
+      return ctx.json(
+        { success: false, error: 'duplicate_show', existingId } as const,
+        409,
+      );
+    }
+
+    switch (result.kind) {
+      case 'not_found':
+        return ctx.json({ success: false, error: 'Not found' } as const, 404);
+      case 'venue_not_found':
+        return zodIssuesResponse(ctx, [
+          { code: 'custom', path: ['venueId'], message: 'venue_not_found' },
+        ]);
+      case 'duplicate':
+        return ctx.json(
+          {
+            success: false,
+            error: 'duplicate_show',
+            existingId: result.existingId,
+          } as const,
+          409,
+        );
+      case 'unchanged':
+      case 'moved':
+      case 'corrected':
+        break;
+    }
+
+    // After commit: the fan-out is best-effort and never throws. The event
+    // keeps its id, so every Watcher of it is someone for whom the room
+    // changed. The committed updated_at names this move (#1311).
+    let watchersNotified = 0;
+    if (result.kind === 'moved' && result.notifyWatchers) {
+      const sent = await fanoutWatchNotification(
+        { db, notifications, userEvents, events, venues },
+        {
+          eventId: id,
+          category: 'watch.postponed',
+          transition: `venue:${result.updatedAt.toISOString()}`,
+          relocated: { fromVenueName: result.before.venueName },
+        },
+      );
+      watchersNotified = sent.watchersNotified;
+    }
+
+    const detail = await loadEventDetail(id, actor.userId);
+    return ctx.json({
+      success: true,
+      data: { outcome: result.kind, watchersNotified, event: detail },
+    } as const);
+  },
+);
+
+/** Who holds this event's crawl key at `venueId`, for a 409 found late. */
+async function keyHolderAt(
+  eventId: string,
+  venueId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({
+      date: events.date,
+      canonicalArtist: events.canonicalArtist,
+      showTime: events.showTime,
+    })
+    .from(events)
+    .where(eq(events.id, eventId));
+  if (!row) return null;
+  return findUpcomingKeyHolder(db, { venueId, ...row }, eventId);
+}
 
 // GET /v1/admin/events/:id — single event for the admin editor surface.
 // The list endpoint's projection plus the editor-only fields (the admin's
