@@ -1,3 +1,20 @@
+# [1.495.0](https://github.com/featherweight-design/concert-crawl/compare/v1.494.0...v1.495.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **admin:** count failed email sends on Health ([d20a60e](https://github.com/featherweight-design/concert-crawl/commit/d20a60ea1db16226950e7f4a48d104b9bbb92478))
+* **api:** hold one trial per venue through its run and settle the trial gate ([5902794](https://github.com/featherweight-design/concert-crawl/commit/5902794452cccc136b7d349072f7b97b54b7a831))
+* **web:** address the Feedback item review and design verify ([01dea59](https://github.com/featherweight-design/concert-crawl/commit/01dea59e0386efe61ac063f1520a2227a0761756))
+* **web:** draw a feedback item's screenshot only when it's an image we accept ([233b6ad](https://github.com/featherweight-design/concert-crawl/commit/233b6ad8261ae4d9497f86af6b72a1b9c486541c))
+
+
+### Features
+
+* **api:** add GET /v1/admin/feedback/:id ([71f9771](https://github.com/featherweight-design/concert-crawl/commit/71f9771112c88a483a8ea4049e7fd112c2bb7faa))
+* **api:** queue a test re-crawl of a paused venue, and keep trial runs out of its health ([409c47e](https://github.com/featherweight-design/concert-crawl/commit/409c47ee1c5dc8cd9fffa579e06f7e644e1da96b))
+* **web:** open a feedback item in the side panel, or as a page on the phone ([f3b23d7](https://github.com/featherweight-design/concert-crawl/commit/f3b23d76b42e941907fc4e706bdbb0037899f48c))
+
 # [1.494.0](https://github.com/featherweight-design/concert-crawl/compare/v1.493.0...v1.494.0) (2026-11-15)
 
 
