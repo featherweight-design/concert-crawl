@@ -150,16 +150,20 @@ export const pausedStateLine = (
   }
   const date = shortDate(venue.crawlPausedAt);
   const name = venue.crawlPausedByName ?? null;
-  const why = reasonText(
-    venue.crawlPauseReason,
-    venue.crawlPauseNote,
-    PAUSE_LINE.reasons,
-  );
+  const why = pauseReasonText(venue);
   if (name !== null) return PAUSE_LINE.pausedBy(name, date, why);
   return why === null
     ? PAUSE_LINE.pausedSince(date)
     : PAUSE_LINE.pausedSinceBecause(date, why);
 };
+
+/**
+ * The pause's reason as its paused line says it ("off-season" in "Paused by
+ * @hugh, Oct 28: off-season."), so a line that repeats it reads the same.
+ * Null with no reason: an auto-pause, or a pause from before reasons.
+ */
+export const pauseReasonText = (venue: PausedVenue): string | null =>
+  reasonText(venue.crawlPauseReason, venue.crawlPauseNote, PAUSE_LINE.reasons);
 
 /**
  * The form a body was sent from, to reopen the panel on a refused one. With

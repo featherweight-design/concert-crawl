@@ -279,13 +279,12 @@ export const latestRunLine = (
 
 /**
  * "Paused: {reason}" (row 5); the Other reason shows its note. The venue
- * page's header chip says it the same way (one `VenueStatus` everywhere).
+ * page's header chip says it the same way (one `VenueStatus` everywhere). A
+ * hidden venue's pause says it too (`A6/22/hidden-venue-menu`).
  */
 export const crawlingLabel = (venue: Venue): string | undefined => {
   const chips = deriveVenueStatusChips(venue);
-  if (chips.onSite === 'hidden' || chips.crawling !== 'paused') {
-    return undefined;
-  }
+  if (chips.crawling !== 'paused') return undefined;
   const reason = venue.crawlPauseReason;
   if (reason === 'other') {
     const note = venue.crawlPauseNote?.trim();
