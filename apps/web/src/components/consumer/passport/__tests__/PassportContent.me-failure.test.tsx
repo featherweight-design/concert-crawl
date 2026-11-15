@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 // W5 regression: the real useEntitlement, a signed-in fan, and a failed
-// /v1/users/me. The app is free, so /passport must never swap in the
-// HistoryLocked paywall for a signed-in fan.
+// /v1/users/me. The app is free and /passport has no paywall, so a failed
+// plan fetch must still draw the booklet for a signed-in fan.
 
 import '@testing-library/jest-dom';
 import React from 'react';
@@ -12,7 +12,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { featureFlagDefaults } from '@concert-crawl/entitlements';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { HISTORY_COPY } from '@/components/consumer/history/definitions/copy';
 import { planStateQueryKey } from '@/lib/queries/use-plan-state';
 import { ThemeProvider } from '@/theme';
 import { PassportContent } from '../PassportContent';
@@ -82,7 +81,7 @@ const PAST: HistoryShow[] = [
 ];
 
 describe('PassportContent, signed in with /v1/users/me failing', () => {
-  it('draws the booklet, not the HistoryLocked paywall', async () => {
+  it('draws the booklet', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -100,8 +99,6 @@ describe('PassportContent, signed in with /v1/users/me failing', () => {
               year: 2026,
             }}
             today="2026-11-11"
-            locked={false}
-            scaRegion={false}
           />
         </ThemeProvider>
       </QueryClientProvider>,
@@ -113,9 +110,6 @@ describe('PassportContent, signed in with /v1/users/me failing', () => {
       ).toBe('error'),
     );
 
-    expect(
-      screen.queryByRole('heading', { name: HISTORY_COPY.locked.headline }),
-    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('region', { name: CONSUMER_COPY.passport.bookletLabel }),
     ).toBeInTheDocument();

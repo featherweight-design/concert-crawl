@@ -20,6 +20,13 @@ const entitlement = {
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement,
 }));
+const session: { isSignedIn: boolean | undefined } = { isSignedIn: true };
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({
+    isSignedIn: session.isSignedIn,
+    getToken: () => Promise.resolve('tok'),
+  }),
+}));
 vi.mock('./CreateCrewSheet', () => ({
   CreateCrewSheet: ({
     open,
@@ -60,6 +67,7 @@ beforeEach(() => {
   entitlement.isLoading = false;
   entitlement.active = true;
   entitlement.surface = 'visible-active';
+  session.isSignedIn = true;
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -160,9 +168,19 @@ describe('CrewsContent create gating (#1226)', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it('routes tier-picker-on-tap straight to sign-in', () => {
+  // The session decides sign-in, not the entitlement surface: a signed-in fan
+  // whose plan resolved to the logged-out cell still gets the sheet.
+  it('opens the create sheet for a signed-in fan even on tier-picker-on-tap', () => {
     entitlement.active = false;
     entitlement.surface = 'tier-picker-on-tap';
+    render(<CrewsContent initialCrews={[crew()]} />);
+    fireEvent.click(screen.getByText(CREWS_COPY.list.create));
+    expect(screen.getByTestId('create-sheet')).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('sends a signed-out viewer to sign-in, whatever the surface says', () => {
+    session.isSignedIn = false;
     render(<CrewsContent initialCrews={[crew()]} />);
     fireEvent.click(screen.getByText(CREWS_COPY.list.create));
     expect(push).toHaveBeenCalledTimes(1);
@@ -170,6 +188,14 @@ describe('CrewsContent create gating (#1226)', () => {
       `/sign-in?redirect_url=${encodeURIComponent('/crews')}`,
     );
     expect(screen.queryByTestId('create-sheet')).not.toBeInTheDocument();
+  });
+
+  // Flagged off, the route 404s; the affordance must not render either.
+  it('renders no create affordance when crews is hidden', () => {
+    entitlement.active = false;
+    entitlement.surface = 'hidden';
+    render(<CrewsContent initialCrews={[crew()]} />);
+    expect(screen.queryByText(CREWS_COPY.list.create)).not.toBeInTheDocument();
   });
 });
 

@@ -5,10 +5,8 @@
 // "Crew" is the noun. Never "group", "squad", "circle", "friends list", and
 // never a synonym for Watching: a crew is people, Watching is shows.
 //
-// The gate block is NOT lifted from the design handoff. Its tier names were
-// illustrative; the shipped strings interpolate the tier the entitlements
-// matrix actually resolves, so a repriced or renamed tier can never leave a
-// stale name on a paywall.
+// There is no paywall copy here: crews are free for every signed-in fan, so
+// the design handoff's gate strings were never shipped.
 
 import { CREW_INVITE_TTL_DAYS, CREW_MEMBER_CAP } from '@concert-crawl/types';
 

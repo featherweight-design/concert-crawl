@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 // W5 regression: the real useEntitlement, a signed-in fan, and a failed
-// /v1/users/me. The app is free, so /history must never swap in the
-// HistoryLocked paywall for a signed-in fan.
+// /v1/users/me. The app is free and /history has no paywall, so a failed
+// plan fetch must still draw Concerts for a signed-in fan.
 
 import '@testing-library/jest-dom';
 import React from 'react';
@@ -79,14 +79,14 @@ import { HISTORY_COPY } from './definitions/copy';
 afterEach(cleanup);
 
 describe('HistoryContent, signed in with /v1/users/me failing', () => {
-  it('does not render the HistoryLocked paywall', async () => {
+  it('draws Concerts', async () => {
     mockFetchMe.mockRejectedValue(new Error('500'));
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
     render(
       <QueryClientProvider client={queryClient}>
-        <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />
+        <HistoryContent initialData={EMPTY} />
       </QueryClientProvider>,
     );
 
@@ -96,9 +96,6 @@ describe('HistoryContent, signed in with /v1/users/me failing', () => {
       ).toBe('error'),
     );
 
-    expect(
-      screen.queryByRole('heading', { name: HISTORY_COPY.locked.headline }),
-    ).not.toBeInTheDocument();
     expect(screen.getByText(HISTORY_COPY.empty.headline)).toBeInTheDocument();
   });
 });
