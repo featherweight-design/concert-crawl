@@ -22,9 +22,38 @@ import { FeedbackView } from './FeedbackView';
 // One stable getToken, so the load effect never re-runs per render.
 const auth = vi.hoisted(() => ({ getToken: async () => 'token' }));
 vi.mock('@clerk/nextjs', () => ({ useAuth: () => auth }));
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+// `?item=` opens an item: `replace` writes the search, which re-renders.
+const nav = vi.hoisted(() => {
+  let search = '';
+  const subs = new Set<() => void>();
+  return {
+    get: () => search,
+    set: (next: string) => {
+      search = next;
+      subs.forEach((fn) => fn());
+    },
+    subscribe: (fn: () => void) => {
+      subs.add(fn);
+      return () => {
+        subs.delete(fn);
+      };
+    },
+  };
+});
+vi.mock('next/navigation', async () => {
+  const { useSyncExternalStore } = await import('react');
+  const router = {
+    push: vi.fn(),
+    refresh: vi.fn(),
+    replace: (href: string) =>
+      nav.set(new URL(href, 'https://admin.test').search),
+  };
+  return {
+    useRouter: () => router,
+    useSearchParams: () =>
+      new URLSearchParams(useSyncExternalStore(nav.subscribe, nav.get)),
+  };
+});
 
 const COPY = ADMIN_COPY.feedback;
 
@@ -74,6 +103,7 @@ const listCalls = () =>
     .filter((url) => url.pathname === '/v1/admin/feedback');
 
 beforeEach(() => {
+  nav.set('');
   mockMatchMedia(false);
   list = () => json({ success: true, data: [item()] });
   fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -291,9 +321,7 @@ describe('FeedbackView (07/feedback)', () => {
     render(<FeedbackView />);
     fireEvent.click(await screen.findByTestId('feedback-row'));
     fireEvent.click(
-      await screen.findByRole('button', {
-        name: COPY.expanded.actions.resolve,
-      }),
+      await screen.findByRole('button', { name: COPY.item.markDone }),
     );
     fireEvent.click(await chip('ideas'));
     await waitFor(() =>

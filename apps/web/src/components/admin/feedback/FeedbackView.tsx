@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Inbox, Search } from 'lucide-react';
 import type {
   AdminFeedbackCounts,
@@ -19,7 +19,7 @@ import {
 } from '@/components/admin/events/list/FilterPicker';
 import { adminFetch } from '@/lib/api';
 import { FeedbackRow, type FeedbackItem } from './FeedbackRow';
-import { FeedbackExpanded } from './FeedbackExpanded';
+import { FeedbackItemView, type ItemFailure } from './FeedbackItemView';
 import { FeedbackSkeleton } from './FeedbackSkeleton';
 import {
   KIND_CHIPS,
@@ -33,7 +33,11 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const COPY = ADMIN_COPY.feedback;
+const FAILED = COPY.item.failed;
 const SEARCH_DEBOUNCE_MS = 300;
+const LIST_HREF = '/admin/operations';
+const itemHref = (id: string) =>
+  `${LIST_HREF}?tab=feedback&item=${encodeURIComponent(id)}`;
 const SEARCH_MAX = 200;
 
 /** What the inbox counts, for the tab label drawn outside it. */
@@ -57,7 +61,7 @@ const chipCount = (chip: FeedbackChip, counts: AdminFeedbackCounts) =>
  * `07/feedback`: the feedback list, drawn inside Operations under its title
  * and tabs, so it has no heading of its own (the page keeps one h1). The
  * chips pick To read, a kind inside it, or Done; Done adds a search. A row
- * opens today's inline detail (4b replaces it with the item screen).
+ * opens the item (4b) at `?tab=feedback&item=<id>`, as Needs you's `?item=`.
  * `onCounts` reports the unread count once loaded, for the tab's badge.
  */
 export const FeedbackView = ({
@@ -74,7 +78,10 @@ export const FeedbackView = ({
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [pending, setPending] = useState(true);
   const [failed, setFailed] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // The open item lives in the URL, so a reload or a shared link reopens it.
+  const openId = useSearchParams().get('item');
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<ItemFailure | null>(null);
   const latestLoad = useRef(0);
 
   const authed = useCallback(
@@ -154,12 +161,17 @@ export const FeedbackView = ({
     if (unread !== undefined) onCounts?.({ unread });
   }, [unread, onCounts]);
 
+  // Opening or closing an item replaces the URL, as Needs you's `?item=` does.
+  const select = (id: string | null) => {
+    setFailure(null);
+    router.replace(id ? itemHref(id) : LIST_HREF, { scroll: false });
+  };
+
   const onChip = (next: FeedbackChip) => {
-    setExpandedId(null);
+    if (openId) select(null);
     setChip(next);
   };
 
-  // The inline detail's writes, kept as they were until 4b replaces it.
   const patch = async (id: string, body: Record<string, string>) => {
     const res = await authed(`/v1/admin/feedback/${id}`, {
       method: 'PATCH',
@@ -169,18 +181,43 @@ export const FeedbackView = ({
   };
 
   // A status move can take the item out of this view and changes the counts,
-  // so the list re-reads either way, keeping what it shows until then.
+  // so the list re-reads either way, keeping what it shows until then. Done
+  // closes the item, as an answer closes a Needs you panel; a refusal keeps
+  // it open with Try again.
   const onStatusChange = (id: string, status: AdminFeedbackStatus) => {
+    setBusy(true);
+    setFailure(null);
+    const toDone = status === 'resolved';
     void patch(id, { status })
-      .catch(() => undefined)
+      .then(() => select(null))
+      .catch(() =>
+        setFailure({
+          title: toDone ? FAILED.markDone : FAILED.reopen,
+          saved: toDone ? FAILED.stillToRead : FAILED.stillDone,
+          retry: () => onStatusChange(id, status),
+        }),
+      )
       .finally(() => {
+        setBusy(false);
         void loadRef.current(true);
         router.refresh();
       });
   };
-  // Notes show at once; a refused save re-reads, so the row shows what stuck.
+  // The note shows at once; a refused save says so and re-reads, so the item
+  // shows what stuck.
   const onNotesChange = (id: string, adminNotes: string) => {
-    void patch(id, { adminNotes }).catch(() => loadRef.current(true));
+    void patch(id, { adminNotes })
+      .then(() =>
+        setFailure((prev) => (prev?.title === FAILED.note ? null : prev)),
+      )
+      .catch(() => {
+        setFailure({
+          title: FAILED.note,
+          saved: FAILED.noteKept,
+          retry: () => onNotesChange(id, adminNotes),
+        });
+        void loadRef.current(true);
+      });
     setLoaded(
       (prev) =>
         prev && {
@@ -198,6 +235,8 @@ export const FeedbackView = ({
   if (!loaded) return <FeedbackSkeleton />;
 
   const { items, counts } = loaded;
+  // An `?item=` no longer in this view (done elsewhere, another chip) opens nothing.
+  const openItem = items.find((item) => item.id === openId) ?? null;
   const isDone = chip === 'done';
   const chips: FeedbackChip[] = isDone
     ? ['to_read', 'done']
@@ -313,27 +352,30 @@ export const FeedbackView = ({
           }}
         >
           {items.map((item, idx) => (
-            <div key={item.id}>
-              <FeedbackRow
-                item={item}
-                isExpanded={expandedId === item.id}
-                onToggle={(id) =>
-                  setExpandedId((prev) => (prev === id ? null : id))
-                }
-                isDone={isDone}
-                isPhone={isPhone}
-                isFirst={idx === 0}
-              />
-              {expandedId === item.id && (
-                <FeedbackExpanded
-                  item={item}
-                  onStatusChange={onStatusChange}
-                  onNotesChange={onNotesChange}
-                />
-              )}
-            </div>
+            <FeedbackRow
+              key={item.id}
+              item={item}
+              onOpen={select}
+              isDone={isDone}
+              isPhone={isPhone}
+              isFirst={idx === 0}
+            />
           ))}
         </div>
+      )}
+      {openItem && (
+        <FeedbackItemView
+          item={openItem}
+          isPhone={isPhone}
+          busy={busy}
+          failure={failure}
+          onDismissFailure={() => setFailure(null)}
+          onClose={() => select(null)}
+          onMarkDone={() => onStatusChange(openItem.id, 'resolved')}
+          // Back to To read: `read`, since it has been read.
+          onReopen={() => onStatusChange(openItem.id, 'read')}
+          onNotes={(notes) => onNotesChange(openItem.id, notes)}
+        />
       )}
       {isDone && !pending && items.length > 0 && (
         <p style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-muted)' }}>

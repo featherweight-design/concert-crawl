@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { KindLabel } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import type { AdminFeedbackItem, FeedbackCategory } from '@concert-crawl/types';
+import type { AdminFeedbackItem } from '@concert-crawl/types';
 import {
   doneLine,
   firstLine,
@@ -14,10 +14,6 @@ import {
 } from './feedback-list-rules';
 
 export type FeedbackItem = AdminFeedbackItem;
-
-/** Readable category names: the GitHub issue title uses it. */
-export const CATEGORY_LABEL: Record<FeedbackCategory, string> =
-  ADMIN_COPY.feedback.row.categoryLabel;
 
 const COPY = ADMIN_COPY.feedback.row;
 
@@ -31,8 +27,8 @@ const sideStyle: CSSProperties = {
 
 interface FeedbackRowProps {
   item: FeedbackItem;
-  isExpanded: boolean;
-  onToggle: (id: string) => void;
+  /** Opens the item: the side panel, or the page on the phone. */
+  onOpen: (id: string) => void;
   /** Done's rows say who finished them on the right. */
   isDone: boolean;
   isPhone: boolean;
@@ -43,12 +39,11 @@ interface FeedbackRowProps {
  * One row of `07/feedback`: the kind, a pink dot while unread, the message's
  * first line, and who sent it when. Desktop adds a right side (Done's "Done
  * by", nothing under To read) and a chevron; the phone draws neither. It
- * opens today's inline detail, which 4b replaces.
+ * opens the item (4b).
  */
 export function FeedbackRow({
   item,
-  isExpanded,
-  onToggle,
+  onOpen,
   isDone,
   isPhone,
   isFirst,
@@ -60,13 +55,13 @@ export function FeedbackRow({
     <button
       type="button"
       data-testid="feedback-row"
-      onClick={() => onToggle(item.id)}
-      aria-expanded={isExpanded}
+      onClick={() => onOpen(item.id)}
+      aria-haspopup="dialog"
       // The "Expand feedback" stem is what the ui-audit harness clicks.
       // The label replaces the row's text, so it carries what the dot and the
       // Done side say too.
       aria-label={[
-        `${isExpanded ? COPY.collapseLabel : COPY.expandLabel} ${meta}`,
+        `${COPY.expandLabel} ${meta}`,
         item.status === 'unread' ? COPY.unread : null,
         title,
         isDone ? doneLine(item) : null,
