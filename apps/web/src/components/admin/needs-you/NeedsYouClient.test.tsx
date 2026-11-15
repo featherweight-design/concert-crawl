@@ -225,6 +225,31 @@ describe('NeedsYouClient', () => {
     );
   });
 
+  it('answering the last card keeps its Undo line instead of All clear', async () => {
+    const [first] = ITEMS as unknown[];
+    const base = globalThis.fetch as unknown as (
+      url: string,
+      init?: { method?: string; body?: string },
+    ) => Promise<Response>;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+        if (url.endsWith('/needs-you/count'))
+          return json({ ...COUNT, decisions: 1 });
+        if (!url.endsWith('/answer')) return json([first]);
+        return base(url, init);
+      }),
+    );
+    render(<NeedsYouClient item={null} />);
+    const card = (await screen.findAllByTestId('needs-you-item'))[0];
+    fireEvent.click(
+      within(card as HTMLElement).getByRole('button', { name: 'Still on' }),
+    );
+    const line = await screen.findByTestId('needs-you-answered');
+    expect(screen.queryByTestId('needs-you-all-clear')).toBeNull();
+    expect(within(line).getByRole('button', { name: 'Undo' })).toBeEnabled();
+  });
+
   it('asks before an answer that tells fans, and leaves no Undo', async () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');
