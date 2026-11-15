@@ -44,6 +44,17 @@ export interface PlatformFetchResult {
   meta?: Record<string, unknown>;
 }
 
+/**
+ * Told after each page a crawl fetches: `done` pages so far, out of `total`
+ * when the crawl knows how many it will fetch (null until then). A triggered
+ * re-crawl uses it to show the admin "Page 2 of 4". crawl.ts hands fetchers a
+ * wrapper that never rejects, so a fetcher may simply await it.
+ */
+export type PageProgressCallback = (
+  done: number,
+  total: number | null,
+) => void | Promise<void>;
+
 export interface PlatformFetchOptions {
   /** Per-domain pacing between this adapter's sequential requests. */
   crawlDelayMs: number;
@@ -92,6 +103,11 @@ export interface PlatformFetchOptions {
   maxRedirects?: number;
   /** Collects a record of each page this fetch requests. */
   fetchLog?: FetchLog;
+  /**
+   * Told after each page the adapter fetches (see PageProgressCallback).
+   * The crawl sets it; the admin probe never does.
+   */
+  onPageProgress?: PageProgressCallback;
 }
 
 /**

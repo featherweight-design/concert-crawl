@@ -17,6 +17,7 @@ import {
   readLlmBudgetStatus,
   type CrossVenueCandidate,
   type LlmBudgetStatus,
+  type PageProgressCallback,
   type VenueRunOutcome,
 } from '@concert-crawl/crawler-core';
 import { runPricePipeline } from '@concert-crawl/price-pipeline';
@@ -316,6 +317,64 @@ async function claimPendingTriggers(): Promise<ClaimedTrigger[]> {
     });
 }
 
+// The least time between two progress writes for one trigger, except the
+// final page's, which always lands so the count ends where the crawl did.
+const PROGRESS_WRITE_INTERVAL_MS = 2000;
+
+/**
+ * The page-progress callback for one claimed trigger: writes "page N of M"
+ * onto its crawl_triggers row so the admin can watch a re-crawl. It also
+ * bumps updated_at, which the stale-processing reaper reads, so a long crawl
+ * that is still reporting is never reaped as dead. Writes only while the row
+ * is 'processing', at most once per page and once per 2 s, and never throws:
+ * a failed write is a warning and the crawl carries on.
+ */
+export function createTriggerProgressWriter(
+  triggerId: string,
+): PageProgressCallback {
+  let lastWriteAt: number | null = null;
+  let lastDone: number | null = null;
+  let lastTotal: number | null = null;
+  return async (done, total) => {
+    const pagesTotal = total === null ? null : Math.max(0, total);
+    const pagesDone = pagesTotal === null ? done : Math.min(done, pagesTotal);
+    if (pagesDone === lastDone && pagesTotal === lastTotal) return;
+    const isFinal = pagesTotal !== null && pagesDone >= pagesTotal;
+    const now = Date.now();
+    if (
+      !isFinal &&
+      lastWriteAt !== null &&
+      now - lastWriteAt < PROGRESS_WRITE_INTERVAL_MS
+    ) {
+      return;
+    }
+    lastWriteAt = now;
+    lastDone = pagesDone;
+    lastTotal = pagesTotal;
+    try {
+      await db
+        .update(crawlTriggers)
+        .set({
+          pagesDone,
+          pagesTotal,
+          progressAt: new Date(now),
+          updatedAt: new Date(now),
+        })
+        .where(
+          and(
+            eq(crawlTriggers.id, triggerId),
+            eq(crawlTriggers.status, 'processing'),
+          ),
+        );
+    } catch (err) {
+      logger.warn(
+        { err, triggerId, pagesDone, pagesTotal },
+        'Trigger progress write failed — crawl continues',
+      );
+    }
+  };
+}
+
 // Crawl one claimed trigger and record its outcome. Never throws: a failure
 // marks this trigger failed and the drain moves on to the next one. Returns the
 // number of new events the crawl inserted.
@@ -335,6 +394,7 @@ async function processTrigger(
       trigger.force,
       llmBudget,
       trigger.trial,
+      createTriggerProgressWriter(trigger.id),
     );
     if (crawlRun.status === 'failed') {
       const message = crawlRun.errorMessage ?? 'Crawl failed';

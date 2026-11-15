@@ -355,6 +355,9 @@ async function detailPageFetch(
   const listingHtml = await deadline.run('listing', (timeoutMs, budget) =>
     fetchText(listingUrl, opts, timeoutMs, budget, opts.fetchLog),
   );
+  // The listing is page 1. How many detail pages follow is known only once
+  // its links have cleared robots.txt, so the total waits until then.
+  await opts.onPageProgress?.(1, null);
   const candidates = extractCandidateUrls(listingHtml, listingUrl);
   if (candidates.length === 0) {
     throw new CalendarNotFoundError(
@@ -421,6 +424,12 @@ async function detailPageFetch(
   const events: NormalizedEvent[] = [];
   let pagesWithoutEvents = 0;
   let failedPageCount = 0;
+  // Listing plus every detail page. A detail page that fails and is skipped
+  // still counts as read, so the count reaches the total.
+  const pagesTotal = 1 + detailUrls.length;
+  let pagesDone = 1;
+  // Now the total is known; with no detail page to read, this is the last.
+  await opts.onPageProgress?.(pagesDone, pagesTotal);
 
   for (const detailUrl of detailUrls) {
     // Every detail page is a request to the venue's own domain, so the
@@ -474,8 +483,12 @@ async function detailPageFetch(
         { venueId: venue.id, detailUrl, failedPageCount, err },
         'detail-page: skipping a detail page that failed to fetch',
       );
+      pagesDone++;
+      await opts.onPageProgress?.(pagesDone, pagesTotal);
       continue;
     }
+    pagesDone++;
+    await opts.onPageProgress?.(pagesDone, pagesTotal);
 
     // A page with no Event JSON-LD is simply not an event page. On a generic
     // link crawl that is expected (an about page, a FAQ), so it is counted,
