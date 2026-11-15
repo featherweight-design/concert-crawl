@@ -45,6 +45,7 @@ const submission = (id: string, title: string): SubmittedRow => ({
   backedBy: 2,
   state: 'waiting',
   forYou: true,
+  showOthers: 0,
   ticketUrl: null,
 });
 

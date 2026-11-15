@@ -10,7 +10,6 @@ import {
   MoreHorizontal,
   Search,
   Tag,
-  Users,
   X,
 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -64,7 +63,8 @@ type RowStatus = 'approving' | 'failed';
 
 /**
  * The one toast the tab shows at a time, tagged with the list (filter,
- * search, fan) it was raised under: it shows only while that list is on screen.
+ * search, fan or show) it was raised under: it shows only while that list is on
+ * screen.
  */
 type Notice = { key: string } & (
   | { kind: 'approved'; price: string; show: string }
@@ -76,7 +76,11 @@ const listKeyOf = (
   filter: StateFilter,
   search: string,
   fan: string | null,
-): string => JSON.stringify([filter, search, fan]);
+  eventId: string | null,
+): string => JSON.stringify([filter, search, fan, eventId]);
+
+/** The show the list is narrowed to ("Other prices", 43). */
+type ShowFilter = { eventId: string; title: string };
 
 const withoutKey = <T,>(
   record: Record<string, T>,
@@ -237,9 +241,12 @@ export const SubmittedTab = ({
   const [notice, setNotice] = useState<Notice | null>(null);
   const [menuRow, setMenuRow] = useState<string | null>(null);
   const [sheetRow, setSheetRow] = useState<SubmittedRow | null>(null);
-  // "This fan's other prices" (4d#12): the list narrowed to one fan on the
-  // whole handle, shown as a chip rather than typed into the search box.
+  // One fan's prices (`?handle=` from the person page, 4d#12) on the whole
+  // handle, or one show's ("Other prices", 43): each shown as a chip rather
+  // than typed into the search box. Never both: setting one clears the other.
   const [fan, setFan] = useState<string | null>(initialFan);
+  const [show, setShow] = useState<ShowFilter | null>(null);
+  const eventId = show?.eventId ?? null;
   // A link to `?handle=` while the tab is mounted changes the prop, not the
   // mount (as PricesClient does for `?tab=`).
   useEffect(() => {
@@ -251,19 +258,24 @@ export const SubmittedTab = ({
     setFilter('all');
     setTyped('');
     setSearch('');
+    setShow(null);
     setFan(initialFan);
   }, [initialFan]);
-  // Whose prices `counts` were counted over, so the chip never shows another
-  // load's figure.
-  const [countsFan, setCountsFan] = useState<string | null>(null);
+  // Which fan or show `counts` were counted over, so a chip never shows
+  // another load's figure.
+  const narrowKey = JSON.stringify([fan, eventId]);
+  const [countsKey, setCountsKey] = useState<string | null>(null);
 
-  // The search waits for a pause in typing. A typed search replaces the fan
-  // filter at the same moment, so the swap is one reload, not two.
+  // The search waits for a pause in typing. A typed search replaces the fan or
+  // show filter at the same moment, so the swap is one reload, not two.
   useEffect(() => {
     const timer = setTimeout(() => {
       const next = typed.trim();
       setSearch(next);
-      if (next !== '') setFan(null);
+      if (next !== '') {
+        setFan(null);
+        setShow(null);
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [typed]);
@@ -279,14 +291,14 @@ export const SubmittedTab = ({
       setMore('idle');
       try {
         const [list, nextCounts] = await Promise.all([
-          api.list(filter, search, 0, PAGE, fan),
-          api.counts(search, fan),
+          api.list(filter, search, 0, PAGE, fan, eventId),
+          api.counts(search, fan, eventId),
         ]);
         if (mine !== latest.current) return;
         setRows(list.rows);
         setTotal(list.total);
         setCounts(nextCounts);
-        setCountsFan(fan);
+        setCountsKey(JSON.stringify([fan, eventId]));
         // A fresh list drops a failed Approve's tint; one in flight keeps its.
         const stillWaiting = list.rows.some(
           (row) => row.id === keepFailed && row.state === 'waiting',
@@ -310,7 +322,7 @@ export const SubmittedTab = ({
         }
       }
     },
-    [api, filter, search, fan],
+    [api, filter, search, fan, eventId],
   );
 
   useEffect(() => {
@@ -318,7 +330,8 @@ export const SubmittedTab = ({
   }, [load]);
 
   // The current list's load, for an Approve that settles after the filter,
-  // search or fan moved on: its own render's `load` would fetch the old list.
+  // search, fan or show moved on: its own render's `load` would fetch the old
+  // list.
   const loadRef = useRef(load);
   useEffect(() => {
     loadRef.current = load;
@@ -326,8 +339,8 @@ export const SubmittedTab = ({
   const reload = (keepFailed: string | null = null) =>
     void loadRef.current(keepFailed);
 
-  const listKey = listKeyOf(filter, search, fan);
-  // Another filter, search or fan is another list: its toast goes with it.
+  const listKey = listKeyOf(filter, search, fan, eventId);
+  // Another filter, search, fan or show is another list: its toast goes with it.
   useEffect(() => {
     setNotice(null);
   }, [listKey]);
@@ -418,7 +431,14 @@ export const SubmittedTab = ({
     const mine = latest.current;
     setMore('loading');
     try {
-      const list = await api.list(filter, search, rows.length, PAGE, fan);
+      const list = await api.list(
+        filter,
+        search,
+        rows.length,
+        PAGE,
+        fan,
+        eventId,
+      );
       if (mine !== latest.current) return;
       // From the rows as they are now, so an Approve that landed meanwhile
       // keeps its Published.
@@ -470,7 +490,7 @@ export const SubmittedTab = ({
 
   /**
    * The row's actions in `43/approve-menu-d`'s order: Approve first for a
-   * waiting price, then the show, the ticket, the fan's other prices, Edit
+   * waiting price, then the show, the ticket, the show's other prices, Edit
    * price and Reject…. The phone's sheet words two hints shorter.
    */
   const menuItems = (row: SubmittedRow, phone = false): RowMenuItem[] => {
@@ -511,19 +531,20 @@ export const SubmittedTab = ({
         },
       },
     );
-    // Already filtered to this fan: the item would do nothing.
-    if (row.handle !== null && row.handle !== fan) {
-      const handle = row.handle;
+    // The show's other prices, only when it has some and the list is not
+    // already narrowed to it (the item would do nothing).
+    if (row.showOthers > 0 && row.eventId !== eventId) {
       items.push({
-        key: 'fan',
-        icon: Users,
+        key: 'others',
+        icon: Tag,
         label: COPY.menu.otherPrices.label,
-        hint: COPY.menu.otherPrices.hint(handle),
+        hint: COPY.menu.otherPrices.hint(row.showOthers),
         onSelect: () => {
           setFilter('all');
           setTyped('');
           setSearch('');
-          setFan(handle);
+          setFan(null);
+          setShow({ eventId: row.eventId, title: showName(row) });
         },
       });
     }
@@ -722,16 +743,27 @@ export const SubmittedTab = ({
     </label>
   );
 
-  // The fan filter (4d#12): the handle and how many prices it holds, in the
-  // active chip style, with its own clear button.
-  const fanChip = fan !== null && (
+  // The fan filter (4d#12) or the show filter (43 Other prices): the handle or
+  // the show and how many prices it holds, in the active chip style, with its
+  // own clear button.
+  const narrowChip = ({
+    testId,
+    text,
+    clearLabel,
+    onClear,
+  }: {
+    testId: 'fan-filter' | 'show-filter';
+    text: string;
+    clearLabel: string;
+    onClear: () => void;
+  }) => (
     <span
-      data-testid="fan-filter"
+      data-testid={testId}
       style={{
         ...chipStyle(true),
         cursor: 'default',
         paddingRight: 6,
-        // Never wider than its row: a long handle truncates, the count and
+        // Never wider than its row: a long name truncates, the count and
         // the clear button stay.
         maxWidth: '100%',
         minWidth: 0,
@@ -741,20 +773,22 @@ export const SubmittedTab = ({
     >
       <span style={{ display: 'flex', minWidth: 0, whiteSpace: 'pre' }}>
         <span
-          data-testid="fan-filter-handle"
+          data-testid={
+            testId === 'fan-filter' ? 'fan-filter-handle' : 'show-filter-title'
+          }
           style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
         >
-          {COPY.fanHandle(fan)}
+          {text}
         </span>
-        {/* The fan's total over every state, once counted for this fan. */}
-        {countsFan === fan && counts !== null && (
-          <span style={{ flex: 'none' }}>{COPY.fanCount(counts.all)}</span>
+        {/* The total over every state, once counted for this fan or show. */}
+        {countsKey === narrowKey && counts !== null && (
+          <span style={{ flex: 'none' }}>{COPY.narrowCount(counts.all)}</span>
         )}
       </span>
       <button
         type="button"
-        aria-label={COPY.clearFan}
-        onClick={() => setFan(null)}
+        aria-label={clearLabel}
+        onClick={onClear}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -773,6 +807,22 @@ export const SubmittedTab = ({
       </button>
     </span>
   );
+  // At most one of the two is set.
+  const filterChip =
+    fan !== null
+      ? narrowChip({
+          testId: 'fan-filter',
+          text: COPY.fanHandle(fan),
+          clearLabel: COPY.clearFan,
+          onClear: () => setFan(null),
+        })
+      : show !== null &&
+        narrowChip({
+          testId: 'show-filter',
+          text: show.title,
+          clearLabel: COPY.clearShow,
+          onClear: () => setShow(null),
+        });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -835,7 +885,7 @@ export const SubmittedTab = ({
               </button>
             ))}
           </div>
-          {fanChip}
+          {filterChip}
         </div>
       ) : (
         <div
@@ -867,7 +917,7 @@ export const SubmittedTab = ({
               </button>
             ))}
           </div>
-          {fanChip}
+          {filterChip}
           <span style={{ flex: 1 }} />
           {searchBox}
         </div>

@@ -386,6 +386,7 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
 // whole handle. Not the free-text `search`, whose substring match on the handle
 // would make "al" also list alice, hal and sally. The shared
 // `handleQuerySchema` ignores a leading "@" and lowercases.
+// "Other prices" (43 approve menu): one show's prices, on its event id.
 
 const submissionsQuerySchema = z.object({
   count: z
@@ -404,6 +405,7 @@ const submissionsQuerySchema = z.object({
   // fan's handle (a leading "@" is ignored).
   search: z.string().trim().min(1).max(100).optional(),
   handle: handleQuerySchema,
+  eventId: idSchema.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -411,7 +413,31 @@ const submissionsQuerySchema = z.object({
 const stateCountsQuerySchema = z.object({
   search: z.string().trim().min(1).max(100).optional(),
   handle: handleQuerySchema,
+  eventId: idSchema.optional(),
 });
+
+/**
+ * The other prices on this row's show: every price on the same event but this
+ * one, contest counter rows left out (the list never shows them). The
+ * (event_id, user_id, created_at) index covers the lookup.
+ */
+const showOthersCount = (): SQL<number> => {
+  const sibling = alias(priceSubmissions, 'sibling');
+  return sql<number>`(${db
+    .select({ total: count() })
+    .from(sibling)
+    .where(
+      and(
+        eq(sibling.eventId, priceSubmissions.eventId),
+        ne(sibling.id, priceSubmissions.id),
+        isNull(sibling.disputedSubmissionId),
+      ),
+    )})::int`;
+};
+
+/** One show's prices (no join needed). */
+const eventClauseOf = (eventId: string | undefined): SQL | undefined =>
+  eventId === undefined ? undefined : eq(priceSubmissions.eventId, eventId);
 
 /** A price with a pending counter (an open Price check) filed against it. */
 // A function, not a constant: the query is built per request, so importing this
@@ -510,6 +536,7 @@ pricesAdminRouter.get(
       state,
       search,
       handle,
+      eventId,
       limit,
       offset,
     } = ctx.req.valid('query');
@@ -534,6 +561,7 @@ pricesAdminRouter.get(
       statusClause,
       searchClause,
       handleClauseOf(handle),
+      eventClauseOf(eventId),
       isNull(priceSubmissions.disputedSubmissionId),
     );
 
@@ -556,6 +584,8 @@ pricesAdminRouter.get(
         // waiting price without it still waits on fans or the window.
         forYou: sql<boolean>`COALESCE(${forAdminClause(today)}, false)`,
         priceCheck: hasOpenPriceCheck(),
+        // The other prices on this show, for the row menu's "Other prices".
+        showOthers: showOthersCount(),
         priceMin: priceSubmissions.priceMin,
         priceMax: priceSubmissions.priceMax,
         status: priceSubmissions.status,
@@ -625,7 +655,7 @@ pricesAdminRouter.get(
 // filter as the list (no contest counter rows), so Waiting + Published + Price
 // check never exceeds All (the rest are "Not used" and stale rows, under All
 // only). With `search` the chips count the matches, so they agree with the list;
-// with `handle` they count that one fan's prices.
+// with `handle` they count that one fan's prices, with `eventId` that one show's.
 pricesAdminRouter.get(
   '/submissions/state-counts',
   zValidator('query', stateCountsQuerySchema, (result, ctx) => {
@@ -634,7 +664,7 @@ pricesAdminRouter.get(
     }
   }),
   async (ctx) => {
-    const { search, handle } = ctx.req.valid('query');
+    const { search, handle, eventId } = ctx.req.valid('query');
     const today = denverDate(new Date());
     const countBase = db
       .select({
@@ -644,7 +674,10 @@ pricesAdminRouter.get(
         priceCheck: sql<number>`(count(*) FILTER (WHERE ${stateClause('price-check', today)}))::int`,
       })
       .from(priceSubmissions);
-    const base = isNull(priceSubmissions.disputedSubmissionId);
+    const base = and(
+      isNull(priceSubmissions.disputedSubmissionId),
+      eventClauseOf(eventId),
+    );
     const [row] =
       search === undefined && handle === undefined
         ? await countBase.where(base)
