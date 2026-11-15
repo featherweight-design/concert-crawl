@@ -16,7 +16,11 @@
  * folded into it, after they are gone, in coherent groups taken from one row
  * each (a price range and its source never come from two listings). The bill is
  * a union instead: every act a folded row names that the survivor lacks joins
- * it, unless an admin saved the survivor's lineup.
+ * it, unless an admin saved the survivor's lineup, the survivor's bill is the
+ * closed "nobody billed" `[]`, or the rows name different artists (then the
+ * bill is only filled where the survivor's is NULL). The union holds until the
+ * survivor's own source is re-crawled and the crawl writes its own reading of
+ * the bill; it stops the permanent loss of a name only a folded row carried.
  *
  * Each folded row is its own transaction (the merge core's), and the fill is a
  * separate step after them, so a night can be partly applied: the plan is
@@ -47,7 +51,11 @@ import {
 } from '@concert-crawl/types';
 import { reportFailure } from '@concert-crawl/logger';
 import { alignToNights } from './lib/align-nights.js';
-import { unionBill } from './lib/union-bill.js';
+import {
+  type BillField,
+  changedBillFields,
+  unionBill,
+} from './lib/union-bill.js';
 
 export const CLEANUP_ACTOR = 'system:duplicate-night-cleanup';
 
@@ -70,9 +78,20 @@ const FILL_GROUPS = [
 /**
  * The bill is not a fill: the donors' names are unioned into the survivor's
  * (`unionBill`), since a name only a donor carries would otherwise be lost with
- * it. Reported as `headliners`, the bill's first column.
+ * it. Reported as whichever display array(s) it changes.
  */
-type FillField = (typeof FILL_GROUPS)[number][number] | 'headliners';
+type FillField = (typeof FILL_GROUPS)[number][number] | BillField;
+
+const BILL_FILL = [
+  'headliners',
+  'canonicalHeadliners',
+  'supportingArtists',
+  'canonicalSupporting',
+] as const satisfies readonly (keyof typeof events.$inferSelect)[];
+
+/** Whether a fill writes the bill (so the write re-checks the lineup). */
+const fillsBill = (fields: readonly FillField[]): boolean =>
+  fields.includes('headliners') || fields.includes('supportingArtists');
 
 export interface NightRow {
   id: string;
@@ -235,10 +254,28 @@ const fillsFrom = (
   // Admin 4a: a lineup an admin saved never takes a donor's names, even where
   // it is empty (an admin may have cleared the supports).
   if (survivor.lineupEditedAt === null) {
-    const bill = unionBill(survivor, donors);
-    if (bill !== null) {
-      fields.push('headliners');
-      Object.assign(values, bill);
+    const oneArtist = donors.every(
+      (donor) => donor.canonicalArtist === survivor.canonicalArtist,
+    );
+    if (oneArtist) {
+      const bill = unionBill(survivor, donors);
+      if (bill !== null) {
+        fields.push(...changedBillFields(survivor, bill));
+        Object.assign(values, bill);
+      }
+    } else if (survivor.headliners === null) {
+      // The rows name different artists (listed for the admin's review): a
+      // donor's names may belong to another show, so the bill is not unioned,
+      // only filled where the survivor has none, from one donor, as before.
+      const donor = donors.find((row) => row.headliners !== null);
+      if (donor) {
+        fields.push('headliners');
+        for (const field of BILL_FILL) {
+          if (survivor[field] === null && donor[field] !== null) {
+            Object.assign(values, { [field]: donor[field] });
+          }
+        }
+      }
     }
   }
   for (const group of FILL_GROUPS) {
@@ -469,21 +506,36 @@ export async function mergeDuplicateNights(
           fields.push('showTime');
         }
         unwritten = values;
-        if (fields.length > 0) {
+        if (fields.length > 0 && current) {
           // A bill fill re-checks the lineup lock at write time, as Repair
-          // does: an admin may save the lineup after the re-read above.
-          const fillsBill = fields.includes('headliners');
+          // does: an admin may save the lineup after the re-read above. It
+          // also requires the bill to still be the one the fill was computed
+          // from, so a crawl that wrote the bill since is not overwritten.
+          const sameBillAs = (
+            column: typeof events.headliners | typeof events.supportingArtists,
+            value: string[] | null,
+          ) => (value === null ? isNull(column) : eq(column, value));
           const written = await db
             .update(events)
             .set({ ...values, updatedAt: new Date() })
             .where(
-              fillsBill
-                ? and(eq(events.id, survivor.id), isNull(events.lineupEditedAt))
+              fillsBill(fields)
+                ? and(
+                    eq(events.id, survivor.id),
+                    isNull(events.lineupEditedAt),
+                    sameBillAs(events.headliners, current.headliners),
+                    sameBillAs(
+                      events.supportingArtists,
+                      current.supportingArtists,
+                    ),
+                  )
                 : eq(events.id, survivor.id),
             )
             .returning({ id: events.id });
           if (written.length === 0) {
-            throw new Error('lineup saved during the fill; nothing written');
+            throw new Error(
+              'lineup saved or bill rewritten during the fill; nothing written',
+            );
           }
           await db.insert(auditLog).values({
             actorId: CLEANUP_ACTOR,

@@ -5,9 +5,16 @@
  * support the ticketing page leaves off, or the other way round. Taking the
  * keeper's bill as it stands (or a donor's only when the keeper has none) loses
  * every name that exists on a donor alone, and the donor row is deleted by the
- * fold, so the name is gone for good. This unions the donors' names into the
- * keeper's bill instead.
+ * fold. Once the donor's source stops listing those names, no crawl brings them
+ * back. This unions the donors' names into the keeper's bill instead. The union
+ * holds until the keeper's own source is re-crawled and the crawl writes its own
+ * reading of the bill (its billOwned/billChanged path); what it stops is the
+ * permanent loss of a name only the deleted donor carried.
  *
+ * - A keeper whose headliners are an empty array (not NULL) has a deliberate
+ *   "nobody billed" ruling (a tribute or cover night, a non-concert verdict):
+ *   that bill is closed, and neither array takes a donor's names.
+ * - A donor hidden from consumers (`hiddenFromConsumer`) gives no names.
  * - The keeper's names come first, in its own order and roles; each donor's new
  *   names follow in donor order. All donors' headliners are taken before any
  *   donor's supports, so an act one listing headlines is not demoted to support
@@ -38,6 +45,12 @@ export interface Bill {
 
 type BillNames = Pick<Bill, 'headliners' | 'supportingArtists'>;
 
+/** A folded row's bill, and whether it is hidden from consumers. */
+export type DonorBill = BillNames & { hiddenFromConsumer?: boolean };
+
+/** The bill's display arrays, as the fill reports them. */
+export type BillField = 'headliners' | 'supportingArtists';
+
 const sameArray = (
   left: readonly string[] | null,
   right: readonly string[] | null,
@@ -53,8 +66,13 @@ const sameArray = (
  */
 export const unionBill = (
   keeper: Bill,
-  donors: readonly BillNames[],
+  allDonors: readonly DonorBill[],
 ): Bill | null => {
+  // `[]` headliners is a ruling that nobody is billed, not a gap to fill.
+  if (keeper.headliners !== null && keeper.headliners.length === 0) {
+    return null;
+  }
+  const donors = allDonors.filter((donor) => donor.hiddenFromConsumer !== true);
   const seen = new Set<string>();
   const remember = (name: string): void => {
     seen.add(canonicalizeArtist(name));
@@ -102,4 +120,17 @@ export const unionBill = (
         ? null
         : canonicalizeSupporting(supportingArtists),
   };
+};
+
+/** Which of the bill's display arrays `next` changes from `keeper`'s. */
+export const changedBillFields = (
+  keeper: BillNames,
+  next: BillNames,
+): BillField[] => {
+  const fields: BillField[] = [];
+  if (!sameArray(keeper.headliners, next.headliners)) fields.push('headliners');
+  if (!sameArray(keeper.supportingArtists, next.supportingArtists)) {
+    fields.push('supportingArtists');
+  }
+  return fields;
 };
