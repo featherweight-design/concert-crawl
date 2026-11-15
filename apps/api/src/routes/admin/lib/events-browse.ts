@@ -79,7 +79,10 @@ export type EventListQuery = z.infer<typeof eventListQuerySchema>;
  * (the venue move route's redirect, or a confirmed-move merge's) and its old
  * crawl key names a venue other than the one the show is at now. So a
  * date-only move at the same venue does not count, nor a key a move back
- * cleared. The list status (as EXISTS) and the admin detail's `moved.at` (as
+ * cleared. A show with no venue now, or a move whose old venue key is null
+ * (the show had already lost its venue row when it moved), reads not Moved:
+ * there is no pair of venues to tell apart. The list status (as EXISTS) and
+ * the admin detail's `moved.at` (as
  * MAX) both read these rows.
  */
 export const movedRedirectWhere = () =>
