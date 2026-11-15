@@ -11,8 +11,7 @@ interface IntentText {
 
 /**
  * What the card says for each subject. `null` for the generic subject: it has
- * no card, and the page keeps its own title (the board's "Sign in to keep
- * going" is only the page's own heading when nothing more is known).
+ * no card, and the page keeps its own title.
  */
 export function intentText(subject: IntentSubject): IntentText | null {
   switch (subject.kind) {
@@ -21,15 +20,6 @@ export function intentText(subject: IntentSubject): IntentText | null {
         eyebrow: subject.eyebrow,
         title: COPY.watch(subject.title),
         sub: COPY.watchSub,
-      };
-    case 'artist':
-      return {
-        eyebrow:
-          subject.dates > 0
-            ? COPY.artistEyebrow(subject.dates)
-            : COPY.artistEyebrowNone,
-        title: COPY.follow(subject.name),
-        sub: COPY.followSub,
       };
     case 'page':
       return {
@@ -44,19 +34,22 @@ export function intentText(subject: IntentSubject): IntentText | null {
 
 /**
  * The block that says what the visitor was about to do, above the form. On the
- * sign-in page it stands in for the page's title (an h1); on sign-up it sits
- * over the form's own title (an h2).
+ * sign-in page it stands in for the page's title, so it is the page's h1. On
+ * sign-up it sits above the form's own h1 ("Make your account"), so its title
+ * is styled the same but is not a heading: a second heading above the first
+ * would put the page's outline out of order.
  */
 export function IntentCard({
   subject,
-  level,
+  asTitle,
 }: {
   subject: IntentSubject;
-  level: 1 | 2;
+  /** True when the card replaces the page's h1. */
+  asTitle: boolean;
 }) {
   const text = intentText(subject);
   if (!text) return null;
-  const Title = level === 1 ? 'h1' : 'h2';
+  const Title = asTitle ? 'h1' : 'p';
   return (
     <div className="flex flex-col gap-2" data-intent={subject.kind}>
       {text.eyebrow ? (
