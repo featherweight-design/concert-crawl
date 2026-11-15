@@ -8,29 +8,15 @@ import {
   PendingTrustPill,
 } from '@/components/consumer/glyphs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { formatAge, priceText } from './price-check-format';
 import type { PriceCheckViewerAction, Tier } from '@concert-crawl/types';
 
 const copy = CONSUMER_COPY.disputedPriceCard;
 
 // ── Helper ────────────────────────────────────────────────────────
 
-// The strip draws the age bare ("3h", more-st-disputes_board); the line under
-// the headline keeps "ago".
-export const formatAge = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins}m`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h`;
-  return `${Math.floor(diffHours / 24)}d`;
-};
-
+// The line under the headline keeps "ago"; the strip draws the age bare.
 const formatTimeAgo = (isoDate: string): string => `${formatAge(isoDate)} ago`;
-
-export const priceText = (floor: number, ceiling?: number | null): string =>
-  ceiling != null
-    ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
-    : `$${Math.round(floor)}`;
 
 // A signal-to-accent hairline: the card's own ground sits on the padding box
 // and the gradient shows through the transparent 1px border (the same trick

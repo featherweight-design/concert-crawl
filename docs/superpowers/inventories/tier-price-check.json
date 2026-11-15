@@ -1,0 +1,37 @@
+{
+  "feature": "Addendum 6 item 20 · a price check on one tier (board 20/tier-price-check)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/boards/20-tier-price-check/tier-price-check.html. Needs CC_EVENT_ID: an upcoming event with two tiers (GA headline, VIP) and a pending price update on ONE tier. Run twice: once with the update on VIP (only the VIP row changes; the headline card stays live) and once on GA (the whole card takes the band, VIP stays live inside it). The audit account is neither the price's submitter nor the updater, so the 'any fan' footer (Submit an update) is the one photographed. The after-review outcome on a non-headline tier is held: the API names an outcome for the primary price only. Signed in as the audit user. Electric and Light.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": { "cc-theme": "electric" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": { "cc-theme": "light" },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    { "label": "short", "width": 320, "height": 568, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "tier-check",
+      "label": "Event page: a price check on one tier of two",
+      "fullPage": true,
+      "steps": [
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 3000 },
+        {
+          "wait": "[data-testid=\"tier-check-row\"], [data-testid=\"disputed-price-card\"]",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}

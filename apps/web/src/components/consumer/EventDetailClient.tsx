@@ -1422,6 +1422,7 @@ export function EventDetailPriceBlock({
               : 'community'
           : null;
         const counter = block.counterSubmission;
+        const withdrawId = counter?.viewerCounterId ?? null;
         return {
           tier: block.tier,
           vendor: altHeadline?.vendor ?? 'Community',
@@ -1447,11 +1448,8 @@ export function EventDetailPriceBlock({
                   eventId: event.id,
                   tierValue: block.tier,
                   signedOut: priceGateSignedOut,
-                  ...(counter.viewerCounterId !== null
-                    ? {
-                        onWithdraw: () =>
-                          handleWithdrawUpdate(counter.viewerCounterId!),
-                      }
+                  ...(withdrawId !== null
+                    ? { onWithdraw: () => handleWithdrawUpdate(withdrawId) }
                     : {}),
                   onUpdateSuccess: () => router.refresh(),
                 },
