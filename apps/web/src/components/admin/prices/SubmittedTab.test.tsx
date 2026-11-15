@@ -33,10 +33,21 @@ const list =
       offset: number,
       limit: number,
       handle: string | null,
+      eventId?: string,
     ) => Promise<{ rows: SubmittedRow[]; total: number }>
   >();
 const counts =
-  vi.fn<(search: string, handle: string | null) => Promise<StateCounts>>();
+  vi.fn<
+    (
+      search: string,
+      handle: string | null,
+      eventId?: string,
+    ) => Promise<StateCounts>
+  >();
+// The show filter's `eventId` reaches the mocks only when set, so a call
+// without one reads as it did before the show filter.
+const withShow = (eventId: string | null): [] | [string] =>
+  eventId === null ? [] : [eventId];
 const approve = vi.fn<(id: string) => Promise<void>>();
 
 /**
@@ -68,9 +79,13 @@ vi.mock('./submitted-api', () => ({
       offset: number,
       limit: number,
       handle: string | null = null,
-    ) => list(filter, search, offset, limit, handle),
-    counts: (search: string, handle: string | null = null) =>
-      counts(search, handle),
+      eventId: string | null = null,
+    ) => list(filter, search, offset, limit, handle, ...withShow(eventId)),
+    counts: (
+      search: string,
+      handle: string | null = null,
+      eventId: string | null = null,
+    ) => counts(search, handle, ...withShow(eventId)),
     editPrice: vi.fn(() => Promise.resolve()),
     approve: (id: string) => approve(id),
     reject: vi.fn(() => Promise.resolve()),
@@ -95,6 +110,7 @@ const row = (overrides: Partial<SubmittedRow>): SubmittedRow => ({
   backedBy: 2,
   state: 'published',
   forYou: true,
+  showOthers: 0,
   ticketUrl: null,
   ...overrides,
 });
@@ -103,6 +119,7 @@ const ROWS: SubmittedRow[] = [
   row({
     id: 'sub-1',
     handle: 'dlo',
+    showOthers: 2,
     avatarColor: 'accent',
     avatarSecondColor: 'success',
   }),
@@ -295,12 +312,32 @@ describe('SubmittedTab on a desktop', () => {
     fireEvent.click(triggers[index]!);
   };
 
-  const pickFan = () =>
+  const pickOthers = () =>
     fireEvent.click(
       screen.getByRole('menuitem', {
         name: new RegExp(COPY.menu.otherPrices.label),
       }),
     );
+
+  it('offers Other prices 4th, with how many the show has, only when it has some (43/approve-menu-d)', async () => {
+    render(<SubmittedTab />);
+    await openMenu(0);
+    const items = screen.getAllByRole('menuitem');
+    // Open show, Open ticket, Other prices, Edit price (a published price).
+    expect(items[2]).toHaveTextContent(COPY.menu.otherPrices.label);
+    expect(items[2]).toHaveTextContent(COPY.menu.otherPrices.hint(2));
+    expect(items[2]).toHaveTextContent('2 for this show');
+    expect(items[3]).toHaveTextContent(COPY.menu.editPrice.label);
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    // No other prices on that show: no item.
+    await openMenu(1);
+    expect(
+      screen.queryByRole('menuitem', {
+        name: new RegExp(COPY.menu.otherPrices.label),
+      }),
+    ).toBeNull();
+  });
 
   it('opens already filtered to the fan from ?handle= (A3/12 person menu)', async () => {
     counts.mockResolvedValue({
@@ -314,7 +351,7 @@ describe('SubmittedTab on a desktop', () => {
 
     await waitFor(() =>
       expect(screen.getByTestId('fan-filter')).toHaveTextContent(
-        `${COPY.fanHandle('dlo')}${COPY.fanCount(4)}`,
+        `${COPY.fanHandle('dlo')}${COPY.narrowCount(4)}`,
       ),
     );
     // The very first load is the fan's: never the unfiltered list first.
@@ -354,14 +391,14 @@ describe('SubmittedTab on a desktop', () => {
     );
   });
 
-  it("filters to the fan's exact handle, counts the fan only once counted, and × clears it (4d#12)", async () => {
+  it("filters to the show's prices, counts the show only once counted, and × clears it (43)", async () => {
     render(<SubmittedTab />);
     await openMenu(0);
 
-    // Hold the fan's counts so the chip can be seen before they land.
+    // Hold the show's counts so the chip can be seen before they land.
     let release: (value: StateCounts) => void = () => undefined;
-    counts.mockImplementation((_search, handle) =>
-      handle === 'dlo'
+    counts.mockImplementation((_search, _handle, eventId) =>
+      eventId === 'evt-1'
         ? new Promise<StateCounts>((resolve) => {
             release = resolve;
           })
@@ -374,38 +411,47 @@ describe('SubmittedTab on a desktop', () => {
     );
     // The list total (narrowed by the state chip) is not the chip's figure.
     list.mockResolvedValue({ rows: [ROWS[0]!], total: 7 });
-    pickFan();
+    pickOthers();
 
     await waitFor(() =>
-      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'dlo'),
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, null, 'evt-1'),
     );
-    expect(counts).toHaveBeenLastCalledWith('', 'dlo');
-    const chip = await screen.findByTestId('fan-filter');
-    // No stale figure while the fan's counts are in flight.
-    expect(chip).toHaveTextContent(/^@dlo$/);
+    expect(counts).toHaveBeenLastCalledWith('', null, 'evt-1');
+    const chip = await screen.findByTestId('show-filter');
+    // No stale figure while the show's counts are in flight.
+    expect(chip).toHaveTextContent(/^Vince Staples$/);
 
-    release({ all: 5, waiting: 2, published: 3, priceCheck: 0 });
+    release({ all: 3, waiting: 1, published: 2, priceCheck: 0 });
     await waitFor(() =>
-      expect(screen.getByTestId('fan-filter')).toHaveTextContent(
-        `${COPY.fanHandle('dlo')}${COPY.fanCount(5)}`,
+      expect(screen.getByTestId('show-filter')).toHaveTextContent(
+        `Vince Staples${COPY.narrowCount(3)}`,
       ),
     );
-    expect(screen.getByTestId('fan-filter')).toHaveTextContent('@dlo · 5');
-    // A long handle truncates inside the chip, never past its row; the
-    // count sits outside the truncating part, so it stays.
-    const chipStyle = screen.getByTestId('fan-filter').style;
+    // A long title truncates inside the chip, never past its row; the count
+    // sits outside the truncating part, so it stays.
+    const chipStyle = screen.getByTestId('show-filter').style;
     expect(chipStyle.maxWidth).toBe('100%');
     expect(chipStyle.minWidth).toBe('0px');
-    const handle = screen.getByTestId('fan-filter-handle');
-    expect(handle.style.textOverflow).toBe('ellipsis');
-    expect(handle.style.overflow).toBe('hidden');
-    expect(handle).toHaveTextContent(/^@dlo$/);
+    const title = screen.getByTestId('show-filter-title');
+    expect(title.style.textOverflow).toBe('ellipsis');
+    expect(title.style.overflow).toBe('hidden');
+    expect(title).toHaveTextContent(/^Vince Staples$/);
     // The typed search stays empty while the chip holds the filter.
     expect(screen.getByRole('searchbox', { name: COPY.search })).toHaveValue(
       '',
     );
 
     list.mockResolvedValue({ rows: ROWS, total: 2 });
+    fireEvent.click(screen.getByRole('button', { name: COPY.clearShow }));
+    expect(screen.queryByTestId('show-filter')).toBeNull();
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, null),
+    );
+  });
+
+  it('clears the fan filter from its ×', async () => {
+    render(<SubmittedTab initialFan="dlo" />);
+    await screen.findByTestId('fan-filter');
     fireEvent.click(screen.getByRole('button', { name: COPY.clearFan }));
     expect(screen.queryByTestId('fan-filter')).toBeNull();
     await waitFor(() =>
@@ -413,10 +459,30 @@ describe('SubmittedTab on a desktop', () => {
     );
   });
 
-  it('a typed search replaces the fan filter after the debounce, in one reload', async () => {
+  it('a typed search replaces the show filter after the debounce, in one reload', async () => {
     render(<SubmittedTab />);
     await openMenu(0);
-    pickFan();
+    pickOthers();
+    await screen.findByTestId('show-filter');
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, null, 'evt-1'),
+    );
+    const before = list.mock.calls.length;
+
+    fireEvent.change(screen.getByRole('searchbox', { name: COPY.search }), {
+      target: { value: 'vince' },
+    });
+    // Not before the pause in typing: no unfiltered load in between.
+    expect(screen.getByTestId('show-filter')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('show-filter')).toBeNull());
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', 'vince', 0, 50, null),
+    );
+    expect(list.mock.calls.length).toBe(before + 1);
+  });
+
+  it('a typed search replaces the fan filter after the debounce, in one reload', async () => {
+    render(<SubmittedTab initialFan="dlo" />);
     await screen.findByTestId('fan-filter');
     await waitFor(() =>
       expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'dlo'),
@@ -426,7 +492,6 @@ describe('SubmittedTab on a desktop', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: COPY.search }), {
       target: { value: 'vince' },
     });
-    // Not before the pause in typing: no unfiltered load in between.
     expect(screen.getByTestId('fan-filter')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByTestId('fan-filter')).toBeNull());
     await waitFor(() =>
@@ -435,13 +500,33 @@ describe('SubmittedTab on a desktop', () => {
     expect(list.mock.calls.length).toBe(before + 1);
   });
 
-  it("hides This fan's other prices on that fan's own rows", async () => {
+  it('keeps the fan and show filters exclusive: picking one clears the other', async () => {
+    const { rerender } = render(<SubmittedTab initialFan="dlo" />);
+    await screen.findByTestId('fan-filter');
+    await openMenu(0);
+    pickOthers();
+    expect(await screen.findByTestId('show-filter')).toBeInTheDocument();
+    expect(screen.queryByTestId('fan-filter')).toBeNull();
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, null, 'evt-1'),
+    );
+
+    // A ?handle= link while the show is filtered swaps to the fan.
+    rerender(<SubmittedTab initialFan="sam" />);
+    expect(await screen.findByTestId('fan-filter')).toHaveTextContent(/^@sam/);
+    expect(screen.queryByTestId('show-filter')).toBeNull();
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'sam'),
+    );
+  });
+
+  it("hides Other prices on that show's own rows", async () => {
     render(<SubmittedTab />);
     await openMenu(0);
-    pickFan();
-    await screen.findByTestId('fan-filter');
+    pickOthers();
+    await screen.findByTestId('show-filter');
     await waitFor(() =>
-      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'dlo'),
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, null, 'evt-1'),
     );
     await openMenu(0);
     expect(
@@ -490,7 +575,8 @@ describe('SubmittedTab on a desktop', () => {
     const items = screen.getAllByRole('menuitem');
     expect(items[0]).toHaveTextContent(COPY.menu.approve.label);
     expect(items[0]).toHaveTextContent(COPY.menu.approve.hint('$50–$450', 2));
-    // Then Open show, Open ticket, Edit price, Reject… (no fan: no handle).
+    // Then Open show, Open ticket, Edit price, Reject… (no other prices on
+    // the show: no Other prices).
     expect(items).toHaveLength(5);
     expect(items[1]).toHaveTextContent(COPY.menu.openShow.label);
     expect(items[1]).toHaveTextContent('Marian Hill · Fillmore');

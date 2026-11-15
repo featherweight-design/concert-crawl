@@ -61,6 +61,51 @@ describe('submitted prices forYou flag', () => {
   });
 });
 
+describe('submitted prices showOthers', () => {
+  it("reads the show's other prices, and an older API without them as none", async () => {
+    const { rows } = await listWith([
+      apiRow({ showOthers: 2 }),
+      apiRow({ id: 's-2', showOthers: 0 }),
+      apiRow({ id: 's-3' }),
+      apiRow({ id: 's-4', showOthers: 'many' }),
+    ]);
+    expect(rows.map((row) => row.showOthers)).toEqual([2, 0, 0, 0]);
+  });
+});
+
+describe('the show filter', () => {
+  const stubFetch = (data: unknown) => {
+    const fetch = vi.fn(async (_url: string, _init?: RequestInit) =>
+      Response.json({ success: true, data }),
+    );
+    vi.stubGlobal('fetch', fetch);
+    return fetch;
+  };
+
+  it('sends eventId on the list only when set', async () => {
+    const fetch = stubFetch({ rows: [], total: 0 });
+    const api = submittedApi(async () => 'token');
+    await api.list('all', '', 0, 20, null, 'e-1');
+    await api.list('all', '', 0, 20);
+    expect(fetch.mock.calls[0]![0]).toMatch(/&eventId=e-1&/);
+    expect(fetch.mock.calls[1]![0]).not.toMatch(/eventId/);
+  });
+
+  it('sends eventId on the counts only when set', async () => {
+    const fetch = stubFetch({
+      all: 2,
+      waiting: 1,
+      published: 1,
+      priceCheck: 0,
+    });
+    const api = submittedApi(async () => 'token');
+    await api.counts('', null, 'e-1');
+    await api.counts('');
+    expect(fetch.mock.calls[0]![0]).toMatch(/state-counts\?eventId=e-1$/);
+    expect(fetch.mock.calls[1]![0]).toMatch(/state-counts$/);
+  });
+});
+
 describe('approve', () => {
   it('POSTs to the price’s approve route with no body', async () => {
     const fetch = vi.fn(async (_url: string, _init?: RequestInit) =>

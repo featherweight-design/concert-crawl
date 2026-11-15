@@ -1912,6 +1912,8 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     backedBy: number;
     state: string;
     eventTitle: string | null;
+    eventId: string;
+    showOthers: number;
   };
   const list = async (query = ''): Promise<Row[]> => {
     const res = await app.request(
@@ -2196,6 +2198,50 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     expect(
       ((await res.json()) as { data: Record<string, number> }).data,
     ).toEqual({ all: 2, waiting: 1, published: 1, priceCheck: 0 });
+  });
+
+  // 43 "Other prices": how many other prices the row's show has, never the row
+  // itself and never a Price check's counter row.
+  it("counts each row's other prices on the same show, without itself or counters", async () => {
+    const { waiting, published, checked, rejected } = await seedTab();
+    const byId = new Map((await list()).map((row) => [row.id, row.showOthers]));
+    // Vince Staples has the waiting and the rejected price: one other each.
+    expect(byId.get(waiting.id)).toBe(1);
+    expect(byId.get(rejected.id)).toBe(1);
+    expect(byId.get(published.id)).toBe(0);
+    // Big Thief's only other row is the counter, which does not count.
+    expect(byId.get(checked.id)).toBe(0);
+  });
+
+  it("filters the list and the chip counts to one show's prices", async () => {
+    const { waiting, rejected } = await seedTab();
+    const [row] = await list(`&search=vince`);
+    const eventId = row?.eventId;
+    expect(eventId).toBeDefined();
+    const ids = (await list(`&eventId=${eventId}`)).map((one) => one.id).sort();
+    expect(ids).toEqual([waiting.id, rejected.id].sort());
+
+    const res = await app.request(
+      `/v1/admin/prices/submissions/state-counts?eventId=${eventId}`,
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(200);
+    expect(
+      ((await res.json()) as { data: Record<string, number> }).data,
+    ).toEqual({ all: 2, waiting: 1, published: 0, priceCheck: 0 });
+  });
+
+  it('refuses an eventId that is not an id', async () => {
+    const res = await app.request(
+      '/v1/admin/prices/submissions?state=all&eventId=nope',
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(422);
+    const counts = await app.request(
+      '/v1/admin/prices/submissions/state-counts?eventId=nope',
+      { headers: ADMIN_HEADERS },
+    );
+    expect(counts.status).toBe(422);
   });
 
   it('refuses status and state together instead of choosing one', async () => {

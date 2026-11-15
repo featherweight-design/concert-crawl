@@ -43,6 +43,8 @@ export interface SubmittedRow {
    * waits on fans or the window.
    */
   forYou: boolean;
+  /** The other prices on this show (the row menu's Other prices). */
+  showOthers: number;
   ticketUrl: string | null;
 }
 
@@ -86,26 +88,36 @@ const rowFrom = (value: unknown): SubmittedRow | null => {
     state: value['state'],
     // An older API sends no `forYou`: it read every waiting price as yours.
     forYou: typeof value['forYou'] === 'boolean' ? value['forYou'] : true,
+    // An older API sends no `showOthers`: the menu then offers no Other prices.
+    showOthers: isCount(value['showOthers']) ? value['showOthers'] : 0,
     ticketUrl: value['ticketUrl'],
   };
 };
 
-/** `&search=…&handle=…`, each only when set. */
-const narrowing = (search: string, handle: string | null): string =>
-  `${search === '' ? '' : `&search=${encodeURIComponent(search)}`}${handle === null ? '' : `&handle=${encodeURIComponent(handle)}`}`;
+/** `&search=…&handle=…&eventId=…`, each only when set. */
+const narrowing = (
+  search: string,
+  handle: string | null,
+  eventId: string | null,
+): string =>
+  `${search === '' ? '' : `&search=${encodeURIComponent(search)}`}${handle === null ? '' : `&handle=${encodeURIComponent(handle)}`}${eventId === null ? '' : `&eventId=${encodeURIComponent(eventId)}`}`;
 
 export const submittedApi = (getToken: GetToken) => ({
-  /** `handle` narrows to one fan's prices on the whole handle (4d#12). */
+  /**
+   * `handle` narrows to one fan's prices on the whole handle (4d#12), and
+   * `eventId` to one show's prices (43 Other prices).
+   */
   list: async (
     filter: StateFilter,
     search: string,
     offset: number,
     limit: number,
     handle: string | null = null,
+    eventId: string | null = null,
   ): Promise<{ rows: SubmittedRow[]; total: number }> => {
     const data = await call(
       getToken,
-      `/v1/admin/prices/submissions?count=true&state=${filter}${narrowing(search, handle)}&limit=${limit}&offset=${offset}`,
+      `/v1/admin/prices/submissions?count=true&state=${filter}${narrowing(search, handle, eventId)}&limit=${limit}&offset=${offset}`,
     );
     if (!isRecord(data) || !Array.isArray(data['rows'])) {
       throw new Error('submissions');
@@ -123,8 +135,9 @@ export const submittedApi = (getToken: GetToken) => ({
   counts: async (
     search: string,
     handle: string | null = null,
+    eventId: string | null = null,
   ): Promise<StateCounts> => {
-    const params = narrowing(search, handle);
+    const params = narrowing(search, handle, eventId);
     const data = await call(
       getToken,
       `/v1/admin/prices/submissions/state-counts${params === '' ? '' : `?${params.slice(1)}`}`,

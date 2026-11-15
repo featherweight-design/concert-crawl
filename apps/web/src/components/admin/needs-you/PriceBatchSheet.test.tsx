@@ -49,6 +49,7 @@ const submission = (
   backedBy: 2,
   state: 'waiting',
   forYou: true,
+  showOthers: 0,
   ticketUrl: null,
   ...patch,
 });

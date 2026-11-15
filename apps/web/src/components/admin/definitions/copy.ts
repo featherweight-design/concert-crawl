@@ -4034,8 +4034,10 @@ export const ADMIN_COPY = {
     // The fan chip ("@handle · N") in two parts, so a long handle can
     // truncate while the count stays.
     fanHandle: (handle: string) => `@${handle}`,
-    fanCount: (count: number) => ` · ${count}`,
+    // The fan or show chip's total.
+    narrowCount: (count: number) => ` · ${count}`,
     clearFan: 'Clear the fan filter',
+    clearShow: 'Clear the show filter',
     listLabel: 'Submitted prices',
     columns: {
       show: 'Show',
@@ -4091,11 +4093,11 @@ export const ADMIN_COPY = {
       },
       // The hint is the ticket page's host ("axs.com"); this when there is none.
       openTicket: { label: 'Open ticket', noTicket: 'No ticket page' },
-      // Still the fan's other prices: the board's per-show count needs a
-      // ruling and an API field first.
+      // The other prices on the row's show; the hint is how many ("1 for this
+      // show" reads as well as "2 for this show").
       otherPrices: {
-        label: 'This fan’s other prices',
-        hint: (handle: string) => `Filter to @${handle}`,
+        label: 'Other prices',
+        hint: (count: number) => `${count} for this show`,
       },
       editPrice: {
         label: 'Edit price',
