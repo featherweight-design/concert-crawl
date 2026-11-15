@@ -379,8 +379,10 @@ export const mergeEventRows = async ({
       .values({ sourceId, targetId, reason, ...sourceKey })
       .onConflictDoUpdate({
         target: eventRedirects.sourceId,
-        // A re-merge is a new redirect: its time is now, so the admin's
-        // Moved reads it and the crawl's latest-wins order sees it last.
+        // Defensive: the source row is deleted below, so its id should not
+        // come back. Should a source id ever recur, the rewritten redirect is
+        // a new one and takes the merge's time, so the admin's Moved reads it
+        // and the crawl's latest-wins order sees it last.
         set: { targetId, reason, ...sourceKey, createdAt: sql`now()` },
       });
 

@@ -587,6 +587,13 @@ describe('GET /v1/admin/events/:id — moved', () => {
 
     const res = await moveVenue(show.id, to.id);
     expect(okBodySchema.parse(await res.json()).data.outcome).toBe('corrected');
+    // A correction writes no redirect, so nothing can read it as a move.
+    expect(
+      await testDb
+        .select()
+        .from(eventRedirects)
+        .where(eq(eventRedirects.reason, 'moved')),
+    ).toEqual([]);
 
     const detail = await getDetail(show.id);
     expect(detail.listStatus).toBe('played');
@@ -719,5 +726,58 @@ describe('GET /v1/admin/events/:id — moved', () => {
     expect(detail.listStatus).toBe('moved');
     expect(await listedStatus(target.id)).toBe('moved');
     expect(detail.moved).toEqual({ toVenueName: 'Globe Hall', at: movedAt });
+  });
+
+  /** The merge the Needs-you move answers make: a confirmed relocation. */
+  const confirmMove = (sourceId: string, targetId: string) =>
+    app.request(`/v1/admin/events/${sourceId}/merge`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({
+        targetId,
+        notifyWatchers: true,
+        relocation: true,
+      }),
+    });
+
+  it('a confirmed-move merge across venues reads Moved, to the kept show’s venue', async () => {
+    const { from, to } = await seedRooms();
+    const oldListing = await seedEvent(from.id, {
+      artist: 'Relocated Act',
+      date: dayOffset(12),
+    });
+    const kept = await seedEvent(to.id, {
+      artist: 'Relocated Act',
+      date: dayOffset(12),
+    });
+
+    expect((await confirmMove(oldListing.id, kept.id)).status).toBe(200);
+
+    const detail = await getDetail(kept.id);
+    expect(detail.listStatus).toBe('moved');
+    expect(await listedStatus(kept.id)).toBe('moved');
+    expect(detail.moved).toEqual({
+      toVenueName: 'Globe Hall',
+      at: await latestMovedAt(kept.id),
+    });
+  });
+
+  it('a confirmed-move merge at the same venue on a new date is not Moved', async () => {
+    const { from } = await seedRooms();
+    const oldListing = await seedEvent(from.id, {
+      artist: 'Rescheduled Act',
+      date: dayOffset(10),
+    });
+    const kept = await seedEvent(from.id, {
+      artist: 'Rescheduled Act',
+      date: dayOffset(12),
+    });
+
+    expect((await confirmMove(oldListing.id, kept.id)).status).toBe(200);
+
+    const detail = await getDetail(kept.id);
+    expect(detail.listStatus).toBe('available');
+    expect(await listedStatus(kept.id)).toBe('available');
+    expect(detail.moved).toBeNull();
   });
 });
