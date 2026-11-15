@@ -73,6 +73,50 @@ describe('CodeBoxes', () => {
     expect(onValue).toHaveBeenLastCalledWith('123456');
   });
 
+  it('takes focus back, cleared, when it unlocks after a wrong code', () => {
+    const { rerender } = render(
+      <CodeBoxes value="123456" onChange={() => {}} />,
+    );
+    const input = screen.getByLabelText(COPY.code.label);
+    input.focus();
+    expect(input).toHaveFocus();
+    // The press locks the boxes; a browser drops focus from a disabled input.
+    rerender(<CodeBoxes value="123456" onChange={() => {}} disabled />);
+    input.blur();
+    expect(input).not.toHaveFocus();
+    rerender(<CodeBoxes value="" onChange={() => {}} error="Wrong." />);
+    expect(screen.getByLabelText(COPY.code.label)).toHaveFocus();
+  });
+
+  it('does not take focus when the visitor was not in the boxes', () => {
+    const { rerender } = render(
+      <CodeBoxes value="123456" onChange={() => {}} disabled />,
+    );
+    rerender(<CodeBoxes value="" onChange={() => {}} />);
+    expect(screen.getByLabelText(COPY.code.label)).not.toHaveFocus();
+  });
+
+  it('does not take focus when the visitor left the boxes themselves', () => {
+    const { rerender } = render(<CodeBoxes value="123" onChange={() => {}} />);
+    const input = screen.getByLabelText(COPY.code.label);
+    input.focus();
+    input.blur();
+    rerender(<CodeBoxes value="123" onChange={() => {}} disabled />);
+    rerender(<CodeBoxes value="" onChange={() => {}} />);
+    expect(screen.getByLabelText(COPY.code.label)).not.toHaveFocus();
+  });
+
+  it('keeps what was typed when it unlocks after a right code', () => {
+    const { rerender } = render(
+      <CodeBoxes value="123456" onChange={() => {}} />,
+    );
+    screen.getByLabelText(COPY.code.label).focus();
+    rerender(<CodeBoxes value="123456" onChange={() => {}} disabled />);
+    screen.getByLabelText(COPY.code.label).blur();
+    rerender(<CodeBoxes value="123456" onChange={() => {}} />);
+    expect(screen.getByLabelText(COPY.code.label)).not.toHaveFocus();
+  });
+
   it('marks all six invalid with the message', () => {
     render(<CodeBoxes value="123456" onChange={() => {}} error="Wrong." />);
     expect(screen.getByLabelText(COPY.code.label)).toHaveAttribute(

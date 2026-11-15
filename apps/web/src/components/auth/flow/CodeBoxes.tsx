@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import { AUTH_FLOW_COPY } from './definitions/copy';
 import { AuthErrorLine } from './AuthField';
 
@@ -27,6 +27,18 @@ export function CodeBoxes({
 }: CodeBoxesProps) {
   const id = useId();
   const [focused, setFocused] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  // Disabling a focused input drops focus to the page. When the screen unlocks
+  // with the boxes cleared (a wrong code), focus goes back to the first box, so
+  // a keyboard or screen-reader visitor can type again without finding it.
+  const hadFocus = useRef(false);
+  const wasDisabled = useRef(disabled);
+  useEffect(() => {
+    if (wasDisabled.current && !disabled && hadFocus.current && value === '') {
+      input.current?.focus();
+    }
+    wasDisabled.current = disabled;
+  }, [disabled, value]);
   const active = Math.min(value.length, LENGTH - 1);
   const invalid = Boolean(error);
   return (
@@ -39,13 +51,21 @@ export function CodeBoxes({
       </label>
       <div className="relative">
         <input
+          ref={input}
           id={id}
           value={value}
           onChange={(evt) =>
             onChange(evt.target.value.replace(/\D/g, '').slice(0, LENGTH))
           }
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => {
+            hadFocus.current = true;
+            setFocused(true);
+          }}
+          onBlur={(evt) => {
+            // A blur caused by disabling is not the visitor leaving.
+            if (!evt.currentTarget.disabled) hadFocus.current = false;
+            setFocused(false);
+          }}
           // The boxes show the next empty one, so the real caret stays at the
           // end: a tap or arrow key cannot leave it editing a digit that is
           // not the highlighted one.
