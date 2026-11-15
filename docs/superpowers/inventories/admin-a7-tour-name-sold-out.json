@@ -1,0 +1,343 @@
+{
+  "feature": "Admin · Event edit, Tour name and sold-out evidence (B+ addendum 7 items 5 and 6)",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-7/boards/05-tour-name/tour-name-d, tour-name-m, tour-name-states; 06-sold-out-evidence/sold-out-mark-d, -mark-m, -confirm-d, -confirm-m, -live-d, -live-m, sold-out-states. Route: /admin/events/<id>/edit (the bare /admin/events/<id> redirects there). CONTACT_SHEET_ROLE=admin. Read-only: opens the confirm, never presses Mark sold out. The editor reads GET /v1/admin/events/:id on the SERVER (the page's apiClient.get), so the browser-side `route` fixtures below record the payload each row needs (with and without soldOutRecord) but cannot answer that read: the cells come from four scratch rows named by env vars. A7_EVENT_EMPTY: an upcoming show on sale, no tour name, Watched. A7_EVENT_TOUR: the same with tour_name 'Jubilee Tour'. A7_EVENT_FAN: sold out by a promoted fan report from a fan with a handle, a link, a note and two event_report_confirms rows. A7_EVENT_ADMIN: sold out by POST /v1/admin/events/:id/sold-out as an admin with a user_roles admin row, method venue_site and a link, no note. By hand: an older mark with nothing recorded (None recorded, No note recorded) is covered by SoldOutEvidence.test.tsx; a failed mark (stop the API, then Mark sold out) shows the page's Couldn't change.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "tour-name-empty",
+      "label": "Tour name, empty: the None placeholder and the hint (05/tour-name-states)",
+      "steps": [
+        {
+          "route": "**/v1/admin/events/${A7_EVENT_EMPTY}",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "00000000-0000-4000-8000-0000000007a1",
+              "title": "Japanese Breakfast",
+              "artist": "Japanese Breakfast",
+              "date": "2026-11-21",
+              "doorsTime": "19:00:00",
+              "showTime": "20:00:00",
+              "venueName": "Mission Ballroom",
+              "venueSlug": "mission-ballroom",
+              "listStatus": "available",
+              "hiddenFromConsumer": false,
+              "hiddenReason": null,
+              "watchingCount": 6,
+              "wentCount": 0,
+              "isSoldOut": false,
+              "ticketPriceMin": "45.00",
+              "ticketPriceMax": "65.00",
+              "submittedPriceCount": 0,
+              "priceRetrievedAt": null,
+              "ticketUrl": null,
+              "mySubmission": null,
+              "extractionStrategy": "structured_data",
+              "createdAt": "2026-09-18T18:00:00.000Z",
+              "lastSeenAt": "2026-11-13T10:00:00.000Z",
+              "delistedAt": null,
+              "eventUrl": null,
+              "sourceUrl": "https://www.missionballroom.com/events",
+              "tourName": null,
+              "soldOutRecord": null
+            }
+          }
+        },
+        {
+          "goto": "/admin/events/${A7_EVENT_EMPTY}/edit",
+          "expectStatus": 200,
+          "wait": "#event-edit-tour-name",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "tour-name-filled",
+      "label": "Tour name, filled, and changed (the dot, 1 unsaved change); the phone header shows it above the title (05/tour-name-d, -m)",
+      "steps": [
+        {
+          "route": "**/v1/admin/events/${A7_EVENT_TOUR}",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "00000000-0000-4000-8000-0000000007a2",
+              "title": "Japanese Breakfast",
+              "artist": "Japanese Breakfast",
+              "date": "2026-11-21",
+              "doorsTime": "19:00:00",
+              "showTime": "20:00:00",
+              "venueName": "Mission Ballroom",
+              "venueSlug": "mission-ballroom",
+              "listStatus": "available",
+              "hiddenFromConsumer": false,
+              "hiddenReason": null,
+              "watchingCount": 6,
+              "wentCount": 0,
+              "isSoldOut": false,
+              "ticketPriceMin": "45.00",
+              "ticketPriceMax": "65.00",
+              "submittedPriceCount": 0,
+              "priceRetrievedAt": null,
+              "ticketUrl": null,
+              "mySubmission": null,
+              "extractionStrategy": "structured_data",
+              "createdAt": "2026-09-18T18:00:00.000Z",
+              "lastSeenAt": "2026-11-13T10:00:00.000Z",
+              "delistedAt": null,
+              "eventUrl": null,
+              "sourceUrl": "https://www.missionballroom.com/events",
+              "tourName": "Jubilee Tour",
+              "soldOutRecord": null
+            }
+          }
+        },
+        {
+          "goto": "/admin/events/${A7_EVENT_TOUR}/edit",
+          "expectStatus": 200,
+          "wait": "#event-edit-tour-name",
+          "settle": 1500
+        },
+        { "fill": "#event-edit-tour-name", "text": "Jubilee Tour, Part 2" },
+        {
+          "wait": "[data-testid=\"event-edit-tour-name-dot\"]",
+          "settle": 400
+        }
+      ]
+    },
+    {
+      "id": "sold-out-mark",
+      "label": "Sold out picked: the evidence form, Venue website picked (06/sold-out-mark-d, -m)",
+      "steps": [
+        {
+          "route": "**/v1/admin/events/${A7_EVENT_EMPTY}",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "00000000-0000-4000-8000-0000000007a1",
+              "title": "Japanese Breakfast",
+              "artist": "Japanese Breakfast",
+              "date": "2026-11-21",
+              "doorsTime": "19:00:00",
+              "showTime": "20:00:00",
+              "venueName": "Mission Ballroom",
+              "venueSlug": "mission-ballroom",
+              "listStatus": "available",
+              "hiddenFromConsumer": false,
+              "hiddenReason": null,
+              "watchingCount": 6,
+              "wentCount": 0,
+              "isSoldOut": false,
+              "ticketPriceMin": "45.00",
+              "ticketPriceMax": "65.00",
+              "submittedPriceCount": 0,
+              "priceRetrievedAt": null,
+              "ticketUrl": null,
+              "mySubmission": null,
+              "extractionStrategy": "structured_data",
+              "createdAt": "2026-09-18T18:00:00.000Z",
+              "lastSeenAt": "2026-11-13T10:00:00.000Z",
+              "delistedAt": null,
+              "eventUrl": null,
+              "sourceUrl": "https://www.missionballroom.com/events",
+              "tourName": "Jubilee Tour",
+              "soldOutRecord": null
+            }
+          }
+        },
+        {
+          "goto": "/admin/events/${A7_EVENT_EMPTY}/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]",
+          "settle": 1500
+        },
+        { "click": "[data-testid=\"status-pill-soldout\"]" },
+        { "wait": "[data-testid=\"sold-out-form\"]" },
+        { "click": "[data-testid=\"sold-out-method-venue_site\"]" },
+        { "settle": 400 }
+      ]
+    },
+    {
+      "id": "sold-out-confirm",
+      "label": "Save asks first: dialog on desktop, sheet on the phone (06/sold-out-confirm-d, -m)",
+      "steps": [
+        {
+          "route": "**/v1/admin/events/${A7_EVENT_EMPTY}",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "00000000-0000-4000-8000-0000000007a1",
+              "title": "Japanese Breakfast",
+              "artist": "Japanese Breakfast",
+              "date": "2026-11-21",
+              "doorsTime": "19:00:00",
+              "showTime": "20:00:00",
+              "venueName": "Mission Ballroom",
+              "venueSlug": "mission-ballroom",
+              "listStatus": "available",
+              "hiddenFromConsumer": false,
+              "hiddenReason": null,
+              "watchingCount": 6,
+              "wentCount": 0,
+              "isSoldOut": false,
+              "ticketPriceMin": "45.00",
+              "ticketPriceMax": "65.00",
+              "submittedPriceCount": 0,
+              "priceRetrievedAt": null,
+              "ticketUrl": null,
+              "mySubmission": null,
+              "extractionStrategy": "structured_data",
+              "createdAt": "2026-09-18T18:00:00.000Z",
+              "lastSeenAt": "2026-11-13T10:00:00.000Z",
+              "delistedAt": null,
+              "eventUrl": null,
+              "sourceUrl": "https://www.missionballroom.com/events",
+              "tourName": "Jubilee Tour",
+              "soldOutRecord": null
+            }
+          }
+        },
+        {
+          "goto": "/admin/events/${A7_EVENT_EMPTY}/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]",
+          "settle": 1500
+        },
+        { "click": "[data-testid=\"status-pill-soldout\"]" },
+        { "wait": "[data-testid=\"sold-out-form\"]" },
+        { "click": "[data-testid=\"sold-out-method-venue_site\"]" },
+        {
+          "fill": "#sold-out-url",
+          "text": "https://www.missionballroom.com/events/jbrekkie"
+        },
+        { "click": "[data-testid=\"event-edit-save\"]" },
+        { "wait": "[role=\"dialog\"]", "settle": 500 }
+      ]
+    },
+    {
+      "id": "sold-out-live-fan",
+      "label": "Live Sold out from a fan: who, the quote, How they knew, Source, Reported, Made live · 2 fans confirmed (06/sold-out-live-d, -m)",
+      "steps": [
+        {
+          "route": "**/v1/admin/events/${A7_EVENT_FAN}",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "00000000-0000-4000-8000-0000000007a3",
+              "title": "Japanese Breakfast",
+              "artist": "Japanese Breakfast",
+              "date": "2026-11-21",
+              "doorsTime": "19:00:00",
+              "showTime": "20:00:00",
+              "venueName": "Mission Ballroom",
+              "venueSlug": "mission-ballroom",
+              "listStatus": "soldout",
+              "hiddenFromConsumer": false,
+              "hiddenReason": null,
+              "watchingCount": 6,
+              "wentCount": 0,
+              "isSoldOut": true,
+              "ticketPriceMin": "45.00",
+              "ticketPriceMax": "65.00",
+              "submittedPriceCount": 0,
+              "priceRetrievedAt": null,
+              "ticketUrl": null,
+              "mySubmission": null,
+              "extractionStrategy": "structured_data",
+              "createdAt": "2026-09-18T18:00:00.000Z",
+              "lastSeenAt": "2026-11-13T10:00:00.000Z",
+              "delistedAt": null,
+              "eventUrl": null,
+              "sourceUrl": "https://www.missionballroom.com/events",
+              "tourName": "Jubilee Tour",
+              "soldOutRecord": {
+                "reporter": {
+                  "handle": "mira.k",
+                  "avatarColor": "signal",
+                  "avatarSecondColor": "accent",
+                  "kind": "fan"
+                },
+                "evidenceMethod": "bought_myself",
+                "evidenceUrl": "https://axs.com/events/52114",
+                "note": "Friday GA gone; pit waitlist still open.",
+                "reportedAt": "2026-11-10T02:15:00.000Z",
+                "madeLiveAt": "2026-11-10T04:02:00.000Z",
+                "confirmsCount": 2
+              }
+            }
+          }
+        },
+        {
+          "goto": "/admin/events/${A7_EVENT_FAN}/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"sold-out-record\"][data-reporter=\"fan\"]",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "sold-out-live-admin",
+      "label": "Live Sold out by an admin: Admin, How you knew, Source, Marked, No note recorded (06/sold-out-states)",
+      "steps": [
+        {
+          "route": "**/v1/admin/events/${A7_EVENT_ADMIN}",
+          "body": {
+            "success": true,
+            "data": {
+              "id": "00000000-0000-4000-8000-0000000007a4",
+              "title": "Japanese Breakfast",
+              "artist": "Japanese Breakfast",
+              "date": "2026-11-21",
+              "doorsTime": "19:00:00",
+              "showTime": "20:00:00",
+              "venueName": "Mission Ballroom",
+              "venueSlug": "mission-ballroom",
+              "listStatus": "soldout",
+              "hiddenFromConsumer": false,
+              "hiddenReason": null,
+              "watchingCount": 6,
+              "wentCount": 0,
+              "isSoldOut": true,
+              "ticketPriceMin": "45.00",
+              "ticketPriceMax": "65.00",
+              "submittedPriceCount": 0,
+              "priceRetrievedAt": null,
+              "ticketUrl": null,
+              "mySubmission": null,
+              "extractionStrategy": "structured_data",
+              "createdAt": "2026-09-18T18:00:00.000Z",
+              "lastSeenAt": "2026-11-13T10:00:00.000Z",
+              "delistedAt": null,
+              "eventUrl": null,
+              "sourceUrl": "https://www.missionballroom.com/events",
+              "tourName": null,
+              "soldOutRecord": {
+                "reporter": {
+                  "handle": "hugh",
+                  "avatarColor": null,
+                  "avatarSecondColor": null,
+                  "kind": "admin"
+                },
+                "evidenceMethod": "venue_site",
+                "evidenceUrl": "https://www.missionballroom.com/events/jbrekkie",
+                "note": null,
+                "reportedAt": "2026-11-12T17:30:00.000Z",
+                "madeLiveAt": "2026-11-12T17:30:00.000Z",
+                "confirmsCount": 0
+              }
+            }
+          }
+        },
+        {
+          "goto": "/admin/events/${A7_EVENT_ADMIN}/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"sold-out-record\"][data-reporter=\"admin\"]",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}
