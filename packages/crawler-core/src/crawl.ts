@@ -1604,7 +1604,8 @@ export async function crawlVenue(
       // under its new key.
       //
       // A listing with no same-night row lands on the date's one show added
-      // by hand when the times agree (`manualLandingTarget`): the upsert then
+      // by hand when the two bills share an act and the times agree
+      // (`manualLandingTarget`): the upsert then
       // updates that row under the protections a manual row already has
       // (`listingOwned`, `billOwned`), `manual` stays true, and its lineup is
       // rebuilt like any upserted row's.
