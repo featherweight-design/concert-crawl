@@ -564,5 +564,21 @@ describe('admin feedback (integration)', () => {
       expect(row?.resolvedBy).toBe('huey');
       expect(await res.json()).toEqual({ success: true, data: row });
     });
+
+    it('sanitises a stored foreign screenshot like the list does', async () => {
+      setAuth('admin');
+      const id = await seedFeedback('unread', 'bug', {
+        metadata: {
+          screenshot: 'https://tracker.example/pixel.png',
+          screenshotDataUrl: 'javascript:alert(1)',
+          device: 'iPhone',
+        },
+      });
+      const res = await getOne(id);
+      const body = (await res.json()) as {
+        data: { metadata: Record<string, unknown> | null };
+      };
+      expect(body.data.metadata).toEqual({ device: 'iPhone' });
+    });
   });
 });
