@@ -479,7 +479,11 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
     );
     expect(screen.getByText('$25')).toBeDefined();
-    expect(screen.queryByRole('link', { name: /ticketmaster/i })).toBeNull();
+    // Neither the vendor-named link nor any other ticket link: the card is the
+    // whole price region (the page's own Get Tickets button is elsewhere).
+    expect(
+      screen.queryByRole('link', { name: /ticketmaster|tickets|buy/i }),
+    ).toBeNull();
   });
 
   it('priceByTier with resale-only headlines → MultiTierLiveCard kind=resale + FaceValueCard', () => {
