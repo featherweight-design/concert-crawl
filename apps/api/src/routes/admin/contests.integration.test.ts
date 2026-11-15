@@ -804,12 +804,17 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
           status: 'archived',
           priceMin: '65.00',
           priceMax: '495.00',
+          corroborationCount: 2,
+          note: null,
         },
         challengerAfter: {
           status: 'corroborated',
           priceMin: '45.00',
           priceMax: null,
+          corroborationCount: 1,
+          note: 'fees in',
         },
+        told: ['parent', 'challenger'],
       },
     });
 
@@ -845,21 +850,22 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
     });
   });
 
-  it('tells one submitter once, and reads an old entry with no ids as unknown', async () => {
+  it('reads older entries as unknown, never from live rows, and skips malformed ids', async () => {
     setAdminAuth();
-    const venue = await seedVenue({ name: 'Same Hall', slug: 'same-hall' });
+    const venue = await seedVenue({ name: 'Old Hall', slug: 'old-hall' });
     const event = await seedEvent(venue.id, {
       date: '2027-06-04',
-      title: 'Same Fan Show',
-      artist: 'Same Artist',
+      title: 'Old Show',
+      artist: 'Old Artist',
     });
-    const listed = await seedPriceSubmission(event.id, 'user_same', {
+    // An admin with a profile but no avatar picked.
+    await seedUserProfile('admin_contest_test', { handle: 'hugh' });
+    const listed = await seedPriceSubmission(event.id, 'user_old', {
       status: 'corroborated',
+      corroborationCount: 4,
+      note: 'live note',
     });
-    const check = await seedPriceSubmission(event.id, 'user_same', {
-      priceMin: '50.00',
-      status: 'archived',
-    });
+    // Ids but no snapshot: written before this change.
     await testDb.insert(auditLog).values({
       actorId: 'admin_contest_test',
       action: 'contest.resolve',
@@ -868,8 +874,8 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
       metadata: {
         resolution: 'parent_wins',
         parentId: listed.id,
-        challengerId: check.id,
-        eventId: event.id,
+        challengerId: 'legacy-not-a-uuid',
+        eventId: 'legacy-event',
         parentAfter: { status: 'corroborated', priceMin: '35.00' },
         challengerAfter: { status: 'archived', priceMin: '50.00' },
       },
@@ -885,14 +891,24 @@ describe('GET /v1/admin/contests/prices/resolved', () => {
     const res = await app.request('/v1/admin/contests/prices/resolved', {
       headers: ADMIN_HEADERS,
     });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       data: { items: Array<Record<string, unknown>> };
     };
     expect(body.data.items[0]).toMatchObject({
-      told: ['parent'],
+      told: null,
       note: null,
-      ticketUrl: null,
-      parent: { submittedBy: null, priceMax: null },
+      eventTitle: null,
+      decidedBy: 'hugh',
+      decidedByAvatar: null,
+      parent: {
+        id: listed.id,
+        priceMin: '35.00',
+        priceMax: null,
+        corroborationCount: null,
+        note: null,
+      },
+      challenger: { id: 'legacy-not-a-uuid', submittedBy: null },
     });
     expect(body.data.items[1]).toMatchObject({
       told: null,
@@ -1490,6 +1506,63 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       },
     );
     expect([401, 403]).toContain(nonAdminRes.status);
+  });
+
+  it('records each side as decided and who it told, and the resolved list reads them back (23a)', async () => {
+    setAdminAuth();
+    await seedUserProfile('admin_contest_test', {
+      handle: 'hugh',
+      avatarColor: 'signal',
+    });
+    const { parent, counter, submitter, challenger } = await seedContest();
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'AXS shows the new price after the openers.',
+        }),
+      },
+    );
+    expect(res.status).toBe(200);
+
+    // Later changes to the rows don't rewrite the decision.
+    await testDb
+      .update(priceSubmissions)
+      .set({ corroborationCount: 9, note: 'edited later' })
+      .where(eq(priceSubmissions.id, counter.id));
+
+    const list = await app.request('/v1/admin/contests/prices/resolved', {
+      headers: ADMIN_HEADERS,
+    });
+    const body = (await list.json()) as { data: { items: unknown[] } };
+    expect(body.data.items[0]).toMatchObject({
+      answer: 'used',
+      note: 'AXS shows the new price after the openers.',
+      decidedBy: 'hugh',
+      decidedByAvatar: { color: 'signal', secondColor: null },
+      told: ['parent', 'challenger'],
+      parent: {
+        id: parent.id,
+        priceMin: '40.00',
+        priceMax: '40.00',
+        submittedBy: submitter.handle,
+        note: 'Original observation',
+      },
+      challenger: {
+        id: counter.id,
+        priceMin: '55.00',
+        priceMax: '55.00',
+        submittedBy: challenger.handle,
+        corroborationCount: expect.any(Number),
+        note: 'New AXS price after openers added',
+      },
+    });
+    expect(body.data.items[0]).not.toMatchObject({
+      challenger: { corroborationCount: 9 },
+    });
   });
 
   it('rejects invalid uuid path param with 400', async () => {
