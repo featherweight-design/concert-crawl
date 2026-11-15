@@ -1,3 +1,22 @@
+# [1.515.0](https://github.com/featherweight-design/concert-crawl/compare/v1.514.0...v1.515.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** a long handle wraps in the flag history ([d041e03](https://github.com/featherweight-design/concert-crawl/commit/d041e03a42db531fd26ba3ddb02b03cad83592e8))
+* **web:** give Artist search's phone page the gradient and pinned footer ([86b935d](https://github.com/featherweight-design/concert-crawl/commit/86b935df8dc32dd5aecff9248981be46c045d51e))
+* **web:** head the bill with the front act when the only headliner goes ([33c0ceb](https://github.com/featherweight-design/concert-crawl/commit/33c0ceb3dcf59044bfce8a44bb32cf508af12bf5))
+* **web:** keep lineup roles and saved fields through Event edit's save ([ecb7ab7](https://github.com/featherweight-design/concert-crawl/commit/ecb7ab727a94c7a77cca0d1f0e7334ec5c28331a))
+* **web:** keep the form page flush at the bottom with no footer ([d20bc8e](https://github.com/featherweight-design/concert-crawl/commit/d20bc8ea1bbe1c82b50fb6f1c68c5d7e862836b1))
+* **web:** one people change at a time, errors in the add view, focus and reload fixes ([adfe20e](https://github.com/featherweight-design/concert-crawl/commit/adfe20ef496e3e7a0cbff143477d4ffa641fa87b))
+
+
+### Features
+
+* **web:** a flag drawer with named people and history ([a707355](https://github.com/featherweight-design/concert-crawl/commit/a707355d6fab5f94938d41329b56c6ee2a05b0af))
+* **web:** draw the phone venue sign at about 140pt, as addendum 5 rules ([9ac70c5](https://github.com/featherweight-design/concert-crawl/commit/9ac70c53fe89e41de11f5c6ba204dea9dc259e72))
+* **web:** edit an event's lineup as tinted chips on Event edit ([d5786f0](https://github.com/featherweight-design/concert-crawl/commit/d5786f04d822a101c4bcfaee1a3bf657786febb7))
+
 # [1.514.0](https://github.com/featherweight-design/concert-crawl/compare/v1.513.0...v1.514.0) (2026-11-15)
 
 
