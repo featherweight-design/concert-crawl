@@ -1,3 +1,20 @@
+# [1.486.0](https://github.com/featherweight-design/concert-crawl/compare/v1.485.0...v1.486.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** approve one waiting price on its own route, leaving the PATCH as it was ([c001c8a](https://github.com/featherweight-design/concert-crawl/commit/c001c8a098b8b6b4041ce5a295b10d9519d48589))
+* **api:** change only a waiting price's status ([e244821](https://github.com/featherweight-design/concert-crawl/commit/e2448213d756e0f164b3b3280effd22bedc789bd)), closes [#43](https://github.com/featherweight-design/concert-crawl/issues/43)
+* **web:** address the auth foundations code review ([dcf796f](https://github.com/featherweight-design/concert-crawl/commit/dcf796feefa404a65fc28abbbc14bf12db1e3413))
+* **web:** address the auth foundations review ([832a1ce](https://github.com/featherweight-design/concert-crawl/commit/832a1ce6d49e40f183299f7673a46f71227e5f0a))
+* **web:** click the consent link in the parts sheet ([4c04cda](https://github.com/featherweight-design/concert-crawl/commit/4c04cdaae4ca1261417e458616ab6d18be16c2a4))
+
+
+### Features
+
+* **web:** add the custom auth foundations ([3bc3624](https://github.com/featherweight-design/concert-crawl/commit/3bc362460b0b3d9095fb57f677bb97d4ccd76b9d))
+* **web:** add the parts inventory and the 404 test for the auth preview ([84ca2b3](https://github.com/featherweight-design/concert-crawl/commit/84ca2b39f502871c262397eb294f56155c67e875))
+
 # [1.485.0](https://github.com/featherweight-design/concert-crawl/compare/v1.484.1...v1.485.0) (2026-11-15)
 
 
