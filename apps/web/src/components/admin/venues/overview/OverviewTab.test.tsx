@@ -272,18 +272,21 @@ describe('OverviewTab — Last 14 runs', () => {
       id: 'c',
       status: 'skipped',
       reason: 'page_unchanged',
+      trial: false,
       createdAt: '2026-11-11T10:02:00.000Z',
     },
     {
       id: 'b',
       status: 'failed',
       reason: 'timeout',
+      trial: false,
       createdAt: '2026-11-10T10:02:00.000Z',
     },
     {
       id: 'a',
       status: 'success',
       reason: null,
+      trial: false,
       createdAt: '2026-11-09T10:02:00.000Z',
     },
   ];

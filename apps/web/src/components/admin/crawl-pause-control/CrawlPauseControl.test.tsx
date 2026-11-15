@@ -150,7 +150,7 @@ describe('CrawlPauseControl', () => {
     expect(alert.textContent).toBe(refusal);
   });
 
-  it('reads an auto-pause without the held re-crawl hint', () => {
+  it('reads an auto-pause without the re-crawl hint, as it offers none', () => {
     render(
       <CrawlPauseControl
         venue={venue({

@@ -112,6 +112,8 @@ export const VenueHeader = ({
   const isPhone = useIsPhone();
   const form = isPhone ? 'phone' : 'desktop';
   const [failure, setFailure] = useState<VenueMenuFailure | null>(null);
+  // The ⋯ menu's queued test re-crawl, read as Re-crawl's settled notices are.
+  const [menuNotice, setMenuNotice] = useState<string | null>(null);
   // While any menu change runs, the toast's Try again holds rather than
   // swallowing a press.
   const [menuBusy, setMenuBusy] = useState(false);
@@ -268,6 +270,7 @@ export const VenueHeader = ({
           <VenueMenu
             venue={venue}
             onFailure={setFailure}
+            onNotice={setMenuNotice}
             onBusy={setMenuBusy}
             triggerStyle={{
               ...BUTTON,
@@ -299,6 +302,12 @@ export const VenueHeader = ({
       )}
       {notice !== undefined && (
         <RecrawlNotice text={notice} onDismiss={recrawl.dismiss} />
+      )}
+      {menuNotice !== null && (
+        <RecrawlNotice
+          text={menuNotice}
+          onDismiss={() => setMenuNotice(null)}
+        />
       )}
     </div>
   );

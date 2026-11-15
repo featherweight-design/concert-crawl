@@ -14,6 +14,7 @@ import {
   pauseCrawling,
   resumeCrawling,
   setVenueFeatured,
+  trialCrawlVenue,
   type VenueChangeOutcome,
 } from '@/lib/actions/venues';
 import { PausePanel } from './PausePanel';
@@ -47,11 +48,14 @@ export const VenueMenu = ({
   venue,
   triggerStyle,
   onFailure,
+  onNotice,
   onBusy,
 }: {
   venue: VenueWithCrawlHealth;
   triggerStyle?: CSSProperties;
   onFailure: (failure: VenueMenuFailure | null) => void;
+  /** A settled line with nothing to retry: a queued test re-crawl. */
+  onNotice?: (notice: string | null) => void;
   /** Whether a change is in flight, so the header's Try again can hold. */
   onBusy?: (busy: boolean) => void;
 }) => {
@@ -142,6 +146,36 @@ export const VenueMenu = ({
       }
     });
 
+  // Try a re-crawl, confirmed as Re-crawl's settled outcomes are: a notice
+  // with Dismiss, since Try again would only queue a second trial. A refusal
+  // (one queued already, blocked, not paused) says which, with no Try again;
+  // any other failure offers one, as the menu's other changes do.
+  const trial = (): boolean =>
+    guarded(async () => {
+      const what = COPY.failed.recrawl(venue.name);
+      try {
+        const outcome = await trialCrawlVenue(venue.id);
+        router.refresh();
+        if (outcome.ok) {
+          onFailure(null);
+          onNotice?.(COPY.notice.trialQueued);
+          return;
+        }
+        console.warn('VenueMenu: trial refused', { code: outcome.code });
+        onNotice?.(null);
+        onFailure({
+          what,
+          saved: COPY.failed.trialRefused[outcome.code],
+          retrying: false,
+          retry: null,
+        });
+      } catch (err: unknown) {
+        console.warn('VenueMenu: trial failed', { venueId: venue.id, err });
+        onNotice?.(null);
+        onFailure(failure(what, COPY.failed.trialSaved, trial));
+      }
+    });
+
   // As the old `CrawlPauseControl`: a refused date stays in the panel; any
   // other failure closes it with a toast whose Try again reopens a refusal.
   const pause = async (body: CrawlPauseRequest): Promise<string | null> => {
@@ -183,6 +217,7 @@ export const VenueMenu = ({
           COPY.failed.resume(venue.name),
           COPY.failed.resumeSaved,
         ),
+      trial,
       flagship: () =>
         attempt(
           async () => {

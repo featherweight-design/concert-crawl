@@ -9,6 +9,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   NEEDS_YOU_KIND_LABEL,
   barKind,
+  hasTrialBar,
   isUnchanged,
   legendKinds,
   offSinceLine,
@@ -204,6 +205,23 @@ describe('runBars', () => {
     expect(runBars([run()])).toHaveLength(1);
     expect(runBars([])).toEqual([]);
   });
+
+  it('marks a test re-crawl, keeping its kind, and the legend says so', () => {
+    const bars = runBars([
+      { ...run({ id: 'trial', status: 'failed' }), trial: true },
+      run({ id: 'own' }),
+    ]);
+    expect(bars[1]).toEqual({
+      id: 'trial',
+      kind: 'failed',
+      trial: true,
+      label: 'Nov 11: Test re-crawl, Failed',
+    });
+    expect(bars[0]?.trial).toBe(false);
+    expect(bars[0]?.label).toBe('Nov 11: Shows found');
+    expect(hasTrialBar(bars)).toBe(true);
+    expect(hasTrialBar(runBars([run()]))).toBe(false);
+  });
 });
 
 describe('legendKinds', () => {
@@ -283,9 +301,25 @@ describe('the Overview’s boundary checks', () => {
         id: 'r',
         status: 'skipped',
         reason: null,
+        trial: false,
         createdAt: '2026-11-11T10:02:00.000Z',
       },
     ]);
+  });
+
+  it('keeps a run’s trial flag, false when an older API sends none', () => {
+    const base = {
+      id: 'r',
+      status: 'success',
+      reason: null,
+      createdAt: '2026-11-11T10:02:00.000Z',
+    };
+    expect(
+      parseOverviewRuns([
+        { ...base, trial: true },
+        { ...base, id: 'old' },
+      ])?.map((row) => row.trial),
+    ).toEqual([true, false]);
   });
 
   it('refuses a body that isn’t the list', () => {
@@ -319,6 +353,7 @@ describe('the Overview’s boundary checks', () => {
         id: 'r',
         status: 'success',
         reason: null,
+        trial: false,
         createdAt: '2026-11-11T10:02:00.000Z',
       },
     ]);

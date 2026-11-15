@@ -76,6 +76,7 @@ const row = (overrides: Partial<RunRow> = {}): RunRow => ({
   durationMs: 230000,
   llmCostUsd: 0.15,
   errorMessage: null,
+  trial: false,
   createdAt: '2026-11-10T10:01:00.000Z',
   ...overrides,
 });

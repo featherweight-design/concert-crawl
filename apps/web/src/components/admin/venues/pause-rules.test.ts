@@ -110,6 +110,14 @@ describe('pause rules', () => {
     });
     // The crawler's auto-pause writes no reason and no pauser.
     expect(pausedStateLine(paused({}))).toBe('Auto-paused after 3 failures.');
+    // Known not blocked, the menu offers Try a re-crawl, so the line says so.
+    expect(pausedStateLine(paused({ blockedAt: null }))).toBe(
+      'Auto-paused after 3 failures. Try a re-crawl first.',
+    );
+    // Blocked: a trial is refused, so the line stops at the failures.
+    expect(pausedStateLine(paused({ blockedAt: '2026-10-29T15:00:00Z' }))).toBe(
+      'Auto-paused after 3 failures.',
+    );
     // A hand pause on a failing venue, by an admin since deleted: still theirs.
     expect(
       pausedStateLine(

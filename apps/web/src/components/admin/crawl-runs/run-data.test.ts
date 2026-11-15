@@ -13,6 +13,13 @@ const raw = {
   createdAt: '2026-11-10T10:01:00.000Z',
 };
 
+describe('parseRunRows: a test re-crawl', () => {
+  it('keeps the trial flag, and reads an older API’s missing one as false', () => {
+    const rows = parseRunRows([{ ...raw, trial: true }, raw]);
+    expect(rows?.map((row) => row.trial)).toEqual([true, false]);
+  });
+});
+
 describe('parseRunRows: the reader', () => {
   it('keeps the run’s extraction strategy', () => {
     expect(

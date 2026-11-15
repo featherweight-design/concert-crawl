@@ -25,7 +25,9 @@ const mockResume = vi.fn();
 const mockFeatured = vi.fn();
 const mockActivate = vi.fn();
 const mockPause = vi.fn();
+const mockTrial = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
+  trialCrawlVenue: (...args: unknown[]) => mockTrial(...args),
   activateVenue: (...args: unknown[]) => mockActivate(...args),
   hideVenue: (...args: unknown[]) => mockHide(...args),
   pauseCrawling: (...args: unknown[]) => mockPause(...args),
@@ -168,6 +170,7 @@ beforeEach(() => {
     mockFeatured,
     mockActivate,
     mockPause,
+    mockTrial,
     onFailure,
   ])
     mock.mockReset();
@@ -196,17 +199,18 @@ describe('VenueMenu — rows per state', () => {
     expect(rows()[1]).toBe(`${MENU.removeFlagship}|${MENU.removeFlagshipHint}`);
   });
 
-  it('paused: Resume with who paused it and why', () => {
+  it('paused: Resume with who paused it and why, then Try a re-crawl', () => {
     openMenu(buildVenue(PAUSED));
     expect(rows()).toEqual([
       `${MENU.resume}|Paused by @hugh, Oct 28: waiting on permission.`,
+      `${MENU.tryRecrawl}|${MENU.tryRecrawlHint}`,
       `${MENU.makeFlagship}|${MENU.makeFlagshipHint}`,
       `${MENU.hide}|${MENU.hideHint(235)}`,
       `${MENU.takeDown}|${MENU.takeDownHint}`,
     ]);
   });
 
-  it('auto-paused: Resume says why, Hide drops the count', () => {
+  it('auto-paused: Resume says why and to try a re-crawl, which follows; Hide drops the count', () => {
     openMenu(
       buildVenue({
         crawlPausedAt: '2026-10-28T18:00:00.000Z',
@@ -214,7 +218,8 @@ describe('VenueMenu — rows per state', () => {
       }),
     );
     expect(rows()).toEqual([
-      `${MENU.resume}|Auto-paused after 3 failures.`,
+      `${MENU.resume}|Auto-paused after 3 failures. Try a re-crawl first.`,
+      `${MENU.tryRecrawl}|${MENU.tryRecrawlHint}`,
       `${MENU.makeFlagship}|${MENU.makeFlagshipHint}`,
       `${MENU.hide}|${MENU.hideHint(null)}`,
       `${MENU.takeDown}|${MENU.takeDownHint}`,
@@ -234,12 +239,30 @@ describe('VenueMenu — rows per state', () => {
     expect(rows()[0]).toBe(
       `${MENU.resume}|Paused by @hugh, Oct 28: waiting on permission.`,
     );
-    expect(rows()[2]).toBe(`${MENU.hide}|${MENU.hideHint(235)}`);
+    expect(rows()[3]).toBe(`${MENU.hide}|${MENU.hideHint(235)}`);
   });
 
-  it('blocked while paused shares the auto-paused menu', () => {
+  it('blocked while paused shares the auto-paused menu, with no Try a re-crawl', () => {
     openMenu(buildVenue({ ...PAUSED, blockedAt: '2026-10-28T18:00:00.000Z' }));
     expect(rows()[2]).toBe(`${MENU.hide}|${MENU.hideHint(null)}`);
+    expect(screen.queryByTestId('venue-menu-trial')).toBeNull();
+  });
+
+  it('auto-paused and blocked: Resume drops the re-crawl hint, and no row offers one', () => {
+    openMenu(
+      buildVenue({
+        crawlPausedAt: '2026-10-28T18:00:00.000Z',
+        consecutiveFailures: 3,
+        blockedAt: '2026-10-28T18:00:00.000Z',
+      }),
+    );
+    expect(rows()[0]).toBe(`${MENU.resume}|Auto-paused after 3 failures.`);
+    expect(screen.queryByTestId('venue-menu-trial')).toBeNull();
+  });
+
+  it('crawling offers no Try a re-crawl', () => {
+    openMenu(buildVenue());
+    expect(screen.queryByTestId('venue-menu-trial')).toBeNull();
   });
 
   it('hidden: Show on site with who hid it, Pause, Delete, Take down', () => {
@@ -720,5 +743,80 @@ describe('VenueMenu — immediate changes', () => {
       screen.getByRole('button', { name: CONFIRMS.hide.confirm }),
     );
     await waitFor(() => expect(onFailure).toHaveBeenLastCalledWith(null));
+  });
+});
+
+describe('VenueMenu — Try a re-crawl', () => {
+  const onNotice = vi.fn<(notice: string | null) => void>();
+  const openPaused = () => {
+    render(
+      <VenueMenu
+        venue={buildVenue(PAUSED)}
+        onFailure={onFailure}
+        onNotice={onNotice}
+      />,
+    );
+    fireEvent.click(trigger());
+  };
+
+  beforeEach(() => onNotice.mockReset());
+
+  it('queues a trial, refreshes and confirms with a notice', async () => {
+    mockTrial.mockResolvedValue({ ok: true });
+    openPaused();
+    fireEvent.click(row('trial'));
+    expect(mockTrial).toHaveBeenCalledWith('venue-1');
+    await waitFor(() =>
+      expect(onNotice).toHaveBeenLastCalledWith(COPY.notice.trialQueued),
+    );
+    expect(mockRefresh).toHaveBeenCalled();
+    expect(onFailure).toHaveBeenLastCalledWith(null);
+  });
+
+  it.each([
+    ['trial_pending', 'A test re-crawl is already queued.'],
+    [
+      'blocked',
+      'It’s blocked, so a test re-crawl can’t run. Clear the block first.',
+    ],
+    ['not_paused', 'Its crawl isn’t paused any more. Use Re-crawl.'],
+  ] as const)(
+    'a 409 %s says why in the toast, with no Try again',
+    async (code, saved) => {
+      mockTrial.mockResolvedValue({ ok: false, code });
+      openPaused();
+      fireEvent.click(row('trial'));
+      await waitFor(() =>
+        expect(onFailure).toHaveBeenLastCalledWith({
+          what: COPY.failed.recrawl('Ball Arena'),
+          saved,
+          retrying: false,
+          retry: null,
+        }),
+      );
+      expect(onNotice).toHaveBeenLastCalledWith(null);
+    },
+  );
+
+  it('any other failure offers Try again, which sends the trial again', async () => {
+    mockTrial.mockRejectedValueOnce(new Error('boom'));
+    openPaused();
+    fireEvent.click(row('trial'));
+    await waitFor(() =>
+      expect(onFailure).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          what: COPY.failed.recrawl('Ball Arena'),
+          saved: COPY.failed.trialSaved,
+        }),
+      ),
+    );
+    const failed = onFailure.mock.lastCall?.[0];
+    if (!failed?.retry) throw new Error('no Try again offered');
+    mockTrial.mockResolvedValue({ ok: true });
+    failed.retry();
+    expect(mockTrial).toHaveBeenCalledTimes(2);
+    await waitFor(() =>
+      expect(onNotice).toHaveBeenLastCalledWith(COPY.notice.trialQueued),
+    );
   });
 });

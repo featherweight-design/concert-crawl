@@ -522,6 +522,16 @@ export const ADMIN_COPY = {
     failed: {
       recrawl: (venue: string) => `crawling for ${venue}`,
       recrawlSaved: 'The re-crawl didn’t start.',
+      // The ⋯ menu's Try a re-crawl (undrawn): the toast's second line per
+      // 409 code from `POST /v1/admin/crawl/:id` with `{ trial: true }`, and
+      // `trialSaved` for any other failure.
+      trialSaved: 'The test re-crawl didn’t start.',
+      trialRefused: {
+        trial_pending: 'A test re-crawl is already queued.',
+        blocked:
+          'It’s blocked, so a test re-crawl can’t run. Clear the block first.',
+        not_paused: 'Its crawl isn’t paused any more. Use Re-crawl.',
+      },
       // The ⋯ menu's changes that run at once.
       flagship: 'the flagship',
       flagshipSaved: 'Venues is in the same order.',
@@ -539,6 +549,10 @@ export const ADMIN_COPY = {
       // A hidden venue's shows are already off the site.
       pauseHintHidden: 'Stops crawling. Pick a reason.',
       resume: 'Resume crawling',
+      // Undrawn: a paused, unblocked venue's test re-crawl. It runs once and
+      // never moves the pause or the failure streak.
+      tryRecrawl: 'Try a re-crawl',
+      tryRecrawlHint: 'One test run. It stays paused.',
       makeFlagship: 'Make flagship',
       makeFlagshipHint: 'Shows it first on Venues.',
       removeFlagship: 'Remove flagship',
@@ -579,6 +593,8 @@ export const ADMIN_COPY = {
       unknown:
         'The re-crawl was queued, but we couldn’t read its progress. See Crawl history.',
       stalled: 'Still queued. See Crawl history.',
+      // Try a re-crawl went through. Its run reads "Test re-crawl" in Runs.
+      trialQueued: 'Test re-crawl queued. Its run shows in Runs.',
       dismiss: 'Dismiss',
     },
     // The crawl summary the old header card carried, kept under the new
@@ -632,6 +648,10 @@ export const ADMIN_COPY = {
         paused: 'Paused or not crawled',
       },
       bar: (date: string, kind: string) => `${date}: ${kind}`,
+      // A test re-crawl's bar, drawn faded (undrawn), and its legend entry.
+      trialBar: (date: string, kind: string) =>
+        `${date}: Test re-crawl, ${kind}`,
+      trial: 'Test re-crawl',
     },
     shows: {
       title: 'Shows',
@@ -977,6 +997,9 @@ export const ADMIN_COPY = {
       'platform:detail-page': 'detail pages',
     },
     unchangedSince: (date: string) => `Page unchanged since ${date}`,
+    // A test re-crawl of a paused venue leads its line:
+    // "Test re-crawl · 106 shows · 2 new".
+    trial: (line: string) => `Test re-crawl · ${line}`,
     // "230 s"; a run with no recorded duration reads the dash.
     duration: (seconds: number) => `${seconds.toLocaleString('en-US')} s`,
     noDuration: '—',
@@ -1256,8 +1279,8 @@ export const ADMIN_COPY = {
           'Stops every crawl of this venue, manual runs included. Its shows stay published.',
         pausedSince: (date: string) => `Paused since ${date}.`,
         // Menu line pattern (`A3/03/venue-menu-states`): "Paused by @hugh,
-        // Oct 28: waiting on permission." The auto-pause's "Try a re-crawl
-        // first." is HOLD (§4.1).
+        // Oct 28: waiting on permission." The auto-pause's line carries "Try
+        // a re-crawl first." while the menu offers one (not blocked).
         pausedBy: (name: string, date: string, reason: string | null) =>
           reason
             ? `Paused by ${name}, ${date}: ${reason}.`
@@ -1266,6 +1289,8 @@ export const ADMIN_COPY = {
         pausedSinceBecause: (date: string, reason: string) =>
           `Paused since ${date}: ${reason}.`,
         autoPaused: 'Auto-paused after 3 failures.',
+        autoPausedTryRecrawl:
+          'Auto-paused after 3 failures. Try a re-crawl first.',
         reasons: {
           waiting_on_permission: 'waiting on permission',
           site_broken_or_moved: 'site is broken or moved',

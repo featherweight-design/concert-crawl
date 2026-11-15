@@ -32,6 +32,12 @@ const NEEDS_YOU_KINDS = [
 ] as const satisfies readonly NeedsYouKind[];
 
 /**
+ * A run row's `trial`: a test re-crawl of a paused venue. An API from before
+ * trials sends none, so absent reads as false.
+ */
+export const trialField = z.boolean().optional().default(false);
+
+/**
  * `GET /v1/admin/crawl/runs?venueId=&limit=`, newest first. The page asks
  * once for the Runs tab's first page too; Last 14 runs reads the newest 14.
  */
@@ -40,6 +46,7 @@ const runSchema = z.object({
   status: z.enum(RUN_STATUSES),
   // A reason this build doesn't know yet reads as none, not a failed card.
   reason: z.enum(RUN_REASONS).nullable().catch(null),
+  trial: trialField,
   createdAt: z.string(),
 });
 export type OverviewRun = z.infer<typeof runSchema>;
