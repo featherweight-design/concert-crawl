@@ -74,6 +74,17 @@ export const flagForEntitlement = (
 /** What the public endpoint returns. Labels and descriptions are withheld. */
 export type FeatureFlagView = Record<FeatureFlagKey, boolean>;
 
+/** One named person on a flag, as the admin list draws them. */
+export interface AdminFlagPerson {
+  userId: string;
+  /** Null for an account with no profile row (deleted). */
+  handle: string | null;
+  /** The Clerk role, or null when it could not be read. */
+  role: string | null;
+  isTest: boolean;
+  addedAt: string;
+}
+
 /** What the admin endpoint returns: the registry prose plus current state. */
 export interface AdminFeatureFlag {
   key: FeatureFlagKey;
@@ -90,8 +101,15 @@ export interface AdminFeatureFlag {
   verifiedAt?: string | null;
   verifiedBy?: string | null;
   verifiedNote?: string | null;
-  /** The named people, as Clerk user ids. */
-  people?: string[];
+  /** The named people, with what the admin list draws for each. */
+  people?: AdminFlagPerson[];
+  /** The handle of whoever last verified, or the former-admin fallback. */
+  verifiedByHandle?: string | null;
+  /**
+   * Who sees the flag at Beta: the Beta role plus the named people (and the
+   * Me owner), test accounts left out. Null when the role list could not be read.
+   */
+  betaCount?: number | null;
   /** Which environment this admin is, from the API's own marker. */
   environment?: 'staging' | 'production';
   /** Production keeps the flag locked until it is verified there. */
