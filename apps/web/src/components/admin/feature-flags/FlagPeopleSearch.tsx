@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { ChevronLeft, Search } from 'lucide-react';
 import type { AdminFeatureFlag } from '@concert-crawl/entitlements';
 import { apiClient } from '@/lib/api';
-import { PersonAvatar } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { mention, roleLabel } from './flag-drawer-format';
+import { PersonRow } from './PersonRow';
 import { stageOf } from './StageLadder';
 
 const DRAWER = ADMIN_COPY.featureFlags.drawer;
@@ -47,8 +47,15 @@ export const FlagPeopleSearch = ({
   onAdd,
 }: FlagPeopleSearchProps) => {
   const { getToken } = useAuth();
+  // Held in a ref so the search depends on the query alone: a new token
+  // function must not restart it or wipe the rows.
+  const tokenRef = useRef(getToken);
+  tokenRef.current = getToken;
   const [query, setQuery] = useState('');
   const [found, setFound] = useState<FoundPerson[] | null>(null);
+  // True from the keystroke until its answer lands: the rows still on screen
+  // belong to an older query, so they stay but cannot be added.
+  const [searching, setSearching] = useState(false);
   const [failed, setFailed] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
   const stage = stageOf(flag);
@@ -56,20 +63,18 @@ export const FlagPeopleSearch = ({
 
   useEffect(() => {
     const term = query.trim();
+    setFailed(false);
     if (term === '') {
       setFound(null);
-      setFailed(false);
+      setSearching(false);
       return;
     }
-    // The rows for the old query are not the answer to this one: drop them
-    // while the new search is pending, so none can be added by mistake.
-    setFound(null);
-    setFailed(false);
+    setSearching(true);
     let cancelled = false;
     const timer = setTimeout(() => {
       const load = async () => {
         try {
-          const token = await getToken();
+          const token = await tokenRef.current();
           if (!token) throw new Error('no session token');
           const answer = await apiClient.get<PeopleAnswer>(
             `/v1/admin/people?search=${encodeURIComponent(term)}&test=include&limit=8`,
@@ -77,10 +82,11 @@ export const FlagPeopleSearch = ({
           );
           if (cancelled) return;
           setFound(answer.people);
-          setFailed(false);
         } catch (err) {
           console.error('[admin] flag people search failed', err);
           if (!cancelled) setFailed(true);
+        } finally {
+          if (!cancelled) setSearching(false);
         }
       };
       void load();
@@ -89,7 +95,7 @@ export const FlagPeopleSearch = ({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, getToken]);
+  }, [query]);
 
   // The same rule the API applies: the owner and named people see a flag at Me
   // and at Beta, the Beta role also at Beta, and everyone at Everyone. An admin
@@ -189,6 +195,7 @@ export const FlagPeopleSearch = ({
         </div>
       ) : found !== null ? (
         <ul
+          aria-busy={searching}
           style={{
             listStyle: 'none',
             margin: 0,
@@ -196,6 +203,8 @@ export const FlagPeopleSearch = ({
             borderRadius: 12,
             border: '1px solid var(--border-strong)',
             background: 'var(--bg-elevated)',
+            // Rows for an older query: still there, visibly not current.
+            opacity: searching ? 0.55 : 1,
           }}
         >
           {found.map((person) => {
@@ -209,61 +218,36 @@ export const FlagPeopleSearch = ({
               .filter((part) => part !== null)
               .join(' · ');
             return (
-              <li
+              <PersonRow
                 key={person.id}
-                data-testid={`flag-people-result-${person.id}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '8px 10px',
-                  borderRadius: 9,
-                }}
-              >
-                <PersonAvatar
-                  initialOf={person.handle}
-                  avatarColor={null}
-                  avatarSecondColor={null}
-                  size={28}
-                  initialSize={11}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 13.5,
-                      fontWeight: 700,
-                      color: 'var(--fg)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {mention(person.handle)}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-                    {meta}
-                  </div>
-                </div>
-                {!sees && (
-                  <button
-                    type="button"
-                    disabled={adding !== null || busy}
-                    aria-label={DRAWER.addAriaLabel(mention(person.handle))}
-                    data-testid={`flag-people-add-${person.id}`}
-                    onClick={() => void add(person)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: '8px 6px',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: 'var(--signal)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {DRAWER.add}
-                  </button>
-                )}
-              </li>
+                userId={person.id}
+                handle={person.handle}
+                meta={meta}
+                testId={`flag-people-result-${person.id}`}
+                style={{ padding: '8px 10px', borderRadius: 9 }}
+                trailing={
+                  !sees && (
+                    <button
+                      type="button"
+                      disabled={adding !== null || busy || searching}
+                      aria-label={DRAWER.addAriaLabel(mention(person.handle))}
+                      data-testid={`flag-people-add-${person.id}`}
+                      onClick={() => void add(person)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '8px 6px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: 'var(--signal)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {DRAWER.add}
+                    </button>
+                  )
+                }
+              />
             );
           })}
         </ul>

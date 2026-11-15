@@ -5,14 +5,11 @@ import { useAuth } from '@clerk/nextjs';
 import { Check, Plus, Search, X } from 'lucide-react';
 import type { AdminFeatureFlag } from '@concert-crawl/entitlements';
 import { apiClient } from '@/lib/api';
-import {
-  AdminButton,
-  PersonAvatar,
-  useDialogKeyboard,
-} from '@/components/admin/primitives';
+import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { FlagHistory } from './FlagHistory';
 import { FlagPeopleSearch } from './FlagPeopleSearch';
+import { PersonRow } from './PersonRow';
 import { StageLadder, stageOf, type Stage } from './StageLadder';
 import { mention, roleLabel, shortDate } from './flag-drawer-format';
 
@@ -72,8 +69,14 @@ export const FlagDrawer = ({
   );
 
   // Switching views unmounts the control that had focus: put it back in the
-  // panel. The search view focuses its own field.
+  // panel. The search view focuses its own field, and the first render is left
+  // to the dialog hook, which focuses the first control itself.
+  const firstView = useRef(true);
   useEffect(() => {
+    if (firstView.current) {
+      firstView.current = false;
+      return;
+    }
     if (view === 'panel') panelRef.current?.focus();
   }, [view]);
 
@@ -87,18 +90,23 @@ export const FlagDrawer = ({
   const people = flag.people ?? [];
   const betaCount = flag.betaCount ?? null;
 
+  // The toast goes after a few seconds, but not while a failed Undo is on
+  // screen: that one is waiting to be tried again.
   useEffect(() => {
-    if (removed === null) return;
+    if (removed === null || error !== null) return;
     const timer = setTimeout(() => setRemoved(null), TOAST_MS);
     return () => clearTimeout(timer);
-  }, [removed]);
+  }, [removed, error]);
 
   // One people change at a time: a second click while one is in flight is
-  // ignored, so a slower answer cannot overwrite a newer one.
+  // ignored, so a slower answer cannot overwrite a newer one. A ref is read so
+  // two clicks in the same tick cannot both get through before a re-render.
+  const inFlight = useRef(false);
   const changePeople = async (
     run: (token: string) => Promise<AdminFeatureFlag>,
   ): Promise<boolean> => {
-    if (busy) return false;
+    if (inFlight.current) return false;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -112,6 +120,7 @@ export const FlagDrawer = ({
       setError(DRAWER.peopleError);
       return false;
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -281,7 +290,15 @@ export const FlagDrawer = ({
               <span style={SECTION_LABEL}>
                 {onStaging ? DRAWER.whoSeesStaging : DRAWER.whoSeesProduction}
               </span>
-              <StageLadder flag={flag} onPick={onPick} scope="drawer" />
+              <StageLadder
+                flag={flag}
+                onPick={(next) => {
+                  // A people error belongs to a flag state that may have moved.
+                  setError(null);
+                  onPick(next);
+                }}
+                scope="drawer"
+              />
               {/* "Beta is N people." only says something at Beta, and the named
                   people are only worth introducing when there are some. */}
               {(people.length > 0 ||
@@ -319,67 +336,39 @@ export const FlagDrawer = ({
                       .filter((part) => part !== null)
                       .join(' · ');
                     return (
-                      <li
+                      <PersonRow
                         key={person.userId}
-                        data-testid={`flag-person-${person.userId}`}
+                        userId={person.userId}
+                        handle={person.handle}
+                        meta={meta}
+                        testId={`flag-person-${person.userId}`}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
                           padding: '8px 0',
                           borderTop: '1px solid var(--border)',
                         }}
-                      >
-                        <PersonAvatar
-                          initialOf={person.handle}
-                          avatarColor={null}
-                          avatarSecondColor={null}
-                          size={28}
-                          initialSize={11}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
+                        trailing={
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              void remove(person.userId, person.handle)
+                            }
+                            aria-label={DRAWER.removeAriaLabel(
+                              mention(person.handle),
+                            )}
+                            data-testid={`flag-person-remove-${person.userId}`}
                             style={{
-                              fontSize: 13.5,
-                              fontWeight: 700,
-                              color: 'var(--fg)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              background: 'none',
+                              border: 'none',
+                              padding: 8,
+                              color: 'var(--fg-subtle)',
+                              cursor: 'pointer',
                             }}
                           >
-                            {mention(person.handle)}
-                          </div>
-                          <div
-                            style={{
-                              marginTop: 2,
-                              fontSize: 12,
-                              color: 'var(--fg-muted)',
-                            }}
-                          >
-                            {meta}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            void remove(person.userId, person.handle)
-                          }
-                          aria-label={DRAWER.removeAriaLabel(
-                            mention(person.handle),
-                          )}
-                          data-testid={`flag-person-remove-${person.userId}`}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            padding: 8,
-                            color: 'var(--fg-subtle)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <X size={14} aria-hidden="true" />
-                        </button>
-                      </li>
+                            <X size={14} aria-hidden="true" />
+                          </button>
+                        }
+                      />
                     );
                   })}
                 </ul>
@@ -522,6 +511,7 @@ export const FlagDrawer = ({
             <span style={{ flex: 1 }}>{DRAWER.removed(removed.handle)}</span>
             <button
               type="button"
+              disabled={busy}
               onClick={() => void undoRemove()}
               style={{
                 background: 'none',
