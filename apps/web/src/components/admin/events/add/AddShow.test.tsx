@@ -77,12 +77,29 @@ const renderIt = (phone = false) =>
   render(<AddShow phone={phone} onClose={onClose} />);
 const addShowButton = () => screen.getByRole('button', { name: COPY.submit });
 
+/**
+ * Opens the venue list. VenuePicker opens nothing while the venues load
+ * (`aria-busy` on its trigger), so this waits for the load first.
+ */
+const openVenues = async () => {
+  const trigger = screen.getByLabelText(COPY.venue);
+  await waitFor(() => expect(trigger).not.toHaveAttribute('aria-busy'));
+  fireEvent.click(trigger);
+};
+
+/**
+ * A field's own error line, by the id its control's aria-describedby names.
+ * Not `getByText`: the polite announcer repeats the first error.
+ */
+const fieldError = (field: string) =>
+  document.getElementById(`add-show-${field}-error`);
+
 /** Fills a valid form: title, venue, today's date and one act. */
 const fill = async () => {
   fireEvent.change(screen.getByLabelText(COPY.titleField), {
     target: { value: 'Kaleo' },
   });
-  fireEvent.click(screen.getByLabelText(COPY.venue));
+  await openVenues();
   fireEvent.click(
     await screen.findByRole('option', { name: /Mission Ballroom/ }),
   );
@@ -146,13 +163,17 @@ describe('AddShow', () => {
     renderIt();
     expect(screen.queryByText(COPY.errors.title_required)).toBeNull();
     fireEvent.click(addShowButton());
-    for (const code of [
-      'title_required',
-      'venue_required',
-      'date_required',
-      'headliner_required',
+    for (const [field, code] of [
+      ['title', 'title_required'],
+      ['venueId', 'venue_required'],
+      ['date', 'date_required'],
+      ['lineup', 'headliner_required'],
     ] as const)
-      expect(screen.getByText(COPY.errors[code])).toBeInTheDocument();
+      expect(fieldError(field)).toHaveTextContent(COPY.errors[code]);
+    // The announcer reads the first one out.
+    expect(screen.getByTestId('add-show-announcer')).toHaveTextContent(
+      COPY.errors.title_required,
+    );
     expect(addShowButton()).toBeDisabled();
     expect(create).not.toHaveBeenCalled();
     await fill();
@@ -164,14 +185,14 @@ describe('AddShow', () => {
     const link = screen.getByLabelText(COPY.ticket);
     fireEvent.change(link, { target: { value: 'axs.com/kaleo' } });
     fireEvent.blur(link);
-    expect(
-      screen.getByText(COPY.errors.ticket_url_invalid),
-    ).toBeInTheDocument();
+    expect(fieldError('ticketUrl')).toHaveTextContent(
+      COPY.errors.ticket_url_invalid,
+    );
   });
 
   it('lists hidden venues last', async () => {
     renderIt();
-    fireEvent.click(screen.getByLabelText(COPY.venue));
+    await openVenues();
     const options = await screen.findAllByRole('option');
     expect(options.map((option) => option.textContent)).toEqual([
       'Mission Ballroom',
@@ -501,7 +522,9 @@ describe('AddShow', () => {
     renderIt();
     await fill();
     fireEvent.click(addShowButton());
-    expect(await screen.findByText(COPY.errors.date_past)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(fieldError('date')).toHaveTextContent(COPY.errors.date_past),
+    );
     expect(push).not.toHaveBeenCalled();
     // Focus moves to the refused field, and the error is announced.
     await waitFor(() => expect(screen.getByLabelText(COPY.date)).toHaveFocus());
