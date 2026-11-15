@@ -1,0 +1,61 @@
+{
+  "feature": "Admin item 18 · Source Advanced: Reader chips, Back to Automatic, the Advanced card",
+  "note": "Boards: design_handoff_bplus_redesign/addendum-6/boards/18-source-reader (source-advanced-d, -m, -states, source-forced-d). CONTACT_SHEET_ROLE=admin. Read-only on scratch: the sheet opens Advanced but never saves. The Page loading forced chip is ⏸ until crawl_mode_source (0123). Venues are whatever scratch holds: an automatic venue (Larimer Lounge), a ticketing-feed venue (Ball Arena) and a fixture venue (CF Fixture New Room).",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "advanced-closed",
+      "label": "Source tab, Advanced closed (Larimer Lounge)",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=Larimer Lounge",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "Larimer Lounge", "settle": 2500 },
+        { "clickRole": "tab", "name": "Source", "settle": 1500 }
+      ]
+    },
+    {
+      "id": "advanced-open",
+      "label": "Source tab, Advanced open (Larimer Lounge)",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=Larimer Lounge",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "Larimer Lounge", "settle": 2500 },
+        { "clickRole": "tab", "name": "Source", "settle": 1500 },
+        { "clickRole": "button", "name": "^Advanced", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "feed-open",
+      "label": "Ticketing-feed venue, Advanced open (Ball Arena)",
+      "steps": [
+        { "goto": "/admin/venues", "wait": "text=Ball Arena", "settle": 1500 },
+        { "clickRole": "link", "name": "Ball Arena", "settle": 2500 },
+        { "clickRole": "tab", "name": "Source", "settle": 1500 },
+        { "clickRole": "button", "name": "^Advanced", "settle": 1200 }
+      ]
+    },
+    {
+      "id": "fixture-open",
+      "label": "Fixture venue, Advanced open (CF Fixture New Room)",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "text=CF Fixture New Room",
+          "settle": 1500
+        },
+        { "clickRole": "link", "name": "CF Fixture New Room", "settle": 2500 },
+        { "clickRole": "tab", "name": "Source", "settle": 1500 },
+        { "clickRole": "button", "name": "^Advanced", "settle": 1200 }
+      ]
+    }
+  ]
+}
