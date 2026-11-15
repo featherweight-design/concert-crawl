@@ -311,11 +311,70 @@ describe('a host form’s field look (Add a show)', () => {
     expect(date).toHaveStyle({ height: '38px' });
     expect(date.getAttribute('style')).toContain('var(--danger)');
     expect(date).toHaveAttribute('aria-describedby', 'd-error');
-    // A button takes no aria-invalid; the OS input does.
-    expect(date).not.toHaveAttribute('aria-invalid');
     expect(time).toHaveStyle({ height: '38px' });
+    expect(time.getAttribute('style')).toContain('var(--danger)');
     expect(time).toHaveAttribute('aria-invalid', 'true');
     expect(time).toHaveAttribute('aria-describedby', 't-error');
+  });
+
+  it('marks the phone’s native date input invalid, and not when valid', () => {
+    const { rerender } = render(
+      <DateField
+        id="d"
+        value=""
+        onChange={vi.fn()}
+        today="2026-11-12"
+        phone
+        withYear={false}
+        invalid
+        describedBy="d-error"
+      />,
+    );
+    const date = () => {
+      const field = document.getElementById('d');
+      if (field === null) throw new Error('field');
+      return field;
+    };
+    expect(date()).toHaveAttribute('type', 'date');
+    expect(date()).toHaveAttribute('aria-invalid', 'true');
+    expect(date()).toHaveAttribute('aria-describedby', 'd-error');
+    rerender(
+      <DateField
+        id="d"
+        value=""
+        onChange={vi.fn()}
+        today="2026-11-12"
+        phone
+        withYear={false}
+      />,
+    );
+    expect(date()).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('draws the desktop field’s danger border only when invalid', () => {
+    const props = {
+      id: 'd',
+      value: '',
+      onChange: vi.fn(),
+      today: '2026-11-12',
+      phone: false,
+      withYear: false,
+    };
+    const { rerender } = render(<DateField {...props} invalid />);
+    const date = () => {
+      const field = document.getElementById('d');
+      if (field === null) throw new Error('field');
+      return field;
+    };
+    // A button takes no aria-invalid: the border and the error line say it.
+    expect(date().tagName).toBe('BUTTON');
+    expect(date().getAttribute('style')).toContain('var(--danger)');
+    rerender(<DateField {...props} />);
+    expect(date().getAttribute('style')).not.toContain('var(--danger)');
+    // `invalid` outranks Postponed's amber highlight.
+    rerender(<DateField {...props} highlight invalid />);
+    expect(date().getAttribute('style')).toContain('var(--danger)');
+    expect(date().getAttribute('style')).not.toContain('var(--warning)');
   });
 
   it('keeps Event edit’s 40px field with no error state by default', () => {

@@ -118,35 +118,121 @@ describe('VenuePicker', () => {
     expect(screen.queryByTestId('venue-picker')).toBeNull();
   });
 
-  it('works from the keyboard: focus in the search, native options, Escape back to the field', () => {
+  it('ties the open list to the field with aria-controls', () => {
+    renderIt();
+    expect(trigger()).not.toHaveAttribute('aria-controls');
+    fireEvent.click(trigger());
+    expect(trigger()).toHaveAttribute('aria-expanded', 'true');
+    const controlled = trigger().getAttribute('aria-controls');
+    expect(controlled).not.toBeNull();
+    expect(document.getElementById(controlled ?? '')).toContainElement(
+      screen.getByRole('listbox'),
+    );
+  });
+
+  it('works as a listbox from the search: arrows, Home, End, Enter', () => {
+    const { onChange } = renderIt();
+    trigger().focus();
+    fireEvent.click(trigger());
+    const search = screen.getByRole('combobox');
+    expect(search).toHaveFocus();
+    const listbox = screen.getByRole('listbox');
+    expect(search).toHaveAttribute('aria-controls', listbox.id);
+    const activeName = () =>
+      document.getElementById(
+        search.getAttribute('aria-activedescendant') ?? '',
+      )?.textContent;
+    // With nothing chosen the first option is active.
+    expect(activeName()).toBe('Bluebird Theater');
+    fireEvent.keyDown(search, { key: 'ArrowDown' });
+    expect(activeName()).toBe('Mission Ballroom');
+    fireEvent.keyDown(search, { key: 'End' });
+    expect(activeName()).toBe('Aardvark Hall');
+    // The ends hold rather than wrap.
+    fireEvent.keyDown(search, { key: 'ArrowDown' });
+    expect(activeName()).toBe('Aardvark Hall');
+    fireEvent.keyDown(search, { key: 'Home' });
+    expect(activeName()).toBe('Bluebird Theater');
+    fireEvent.keyDown(search, { key: 'ArrowUp' });
+    expect(activeName()).toBe('Bluebird Theater');
+    fireEvent.keyDown(search, { key: 'ArrowDown' });
+    fireEvent.keyDown(search, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith(MISSION);
+    expect(screen.queryByTestId('venue-picker')).toBeNull();
+    expect(trigger()).toHaveFocus();
+  });
+
+  it('opens on the chosen venue, and a search moves to its first match', () => {
+    const { onChange } = renderIt({ value: 'v-hidden' });
+    fireEvent.click(trigger());
+    const search = screen.getByRole('combobox');
+    expect(
+      document.getElementById(
+        search.getAttribute('aria-activedescendant') ?? '',
+      ),
+    ).toHaveTextContent('Aardvark Hall');
+    fireEvent.change(search, { target: { value: 'mission' } });
+    fireEvent.keyDown(search, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith(MISSION);
+  });
+
+  it('keeps a hidden venue pickable', () => {
+    const { onChange } = renderIt();
+    fireEvent.click(trigger());
+    fireEvent.click(screen.getByRole('option', { name: /Aardvark Hall/ }));
+    expect(onChange).toHaveBeenCalledWith('v-hidden');
+  });
+
+  it('closes on Escape and hands focus back to the field', () => {
     renderIt();
     trigger().focus();
     fireEvent.click(trigger());
-    expect(trigger()).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByTestId('venue-search')).toHaveFocus();
-    // Native buttons, so Tab reaches each and Enter or Space picks it.
-    for (const option of screen.getAllByRole('option'))
-      expect(option.tagName).toBe('BUTTON');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('venue-picker')).toBeNull();
     expect(trigger()).toHaveFocus();
   });
 
-  it('shows the load-failed line with Try again, and opens no list', () => {
+  it('shows the load-failed line with Try again, and opens nothing', () => {
     const { onRetry } = renderIt({ venues: 'failed' });
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent(COPY.loadFailed);
     fireEvent.click(within(alert).getByRole('button', { name: COPY.tryAgain }));
     expect(onRetry).toHaveBeenCalled();
     fireEvent.click(trigger());
-    expect(screen.queryByRole('option')).toBeNull();
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('venue-picker')).toBeNull();
+    expect(screen.queryByTestId('admin-sheet')).toBeNull();
   });
 
-  it('draws nothing to pick while the venues load', () => {
+  it('opens nothing while the venues load, on desktop or the phone', () => {
     renderIt({ venues: null });
+    expect(trigger()).toHaveAttribute('aria-busy', 'true');
     fireEvent.click(trigger());
-    expect(screen.queryByTestId('venue-search')).toBeNull();
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('venue-picker')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
+    cleanup();
+    renderIt({ venues: null, phone: true });
+    fireEvent.click(trigger());
+    expect(screen.queryByTestId('admin-sheet')).toBeNull();
+  });
+
+  it('opens once the retried load lands', () => {
+    const props = {
+      id: 'venue',
+      value: '',
+      onChange: vi.fn(),
+      onRetry: vi.fn(),
+      phone: false,
+      invalid: false,
+    };
+    const { rerender } = render(<VenuePicker {...props} venues="failed" />);
+    // The parent's side of the contract: null on retry, then the array.
+    rerender(<VenuePicker {...props} venues={null} />);
+    expect(screen.queryByRole('alert')).toBeNull();
+    rerender(<VenuePicker {...props} venues={VENUES} />);
+    fireEvent.click(trigger());
+    expect(screen.getAllByRole('option')).toHaveLength(VENUES.length);
   });
 
   it('carries the error state and its line', () => {

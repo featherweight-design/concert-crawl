@@ -75,16 +75,22 @@ export const LineupField = ({
   useEffect(() => {
     const typed = text.trim();
     setActive(-1);
-    if (typed === '') {
-      setSuggestions([]);
-      return undefined;
-    }
+    // An older query's artists never show beside newer text.
+    setSuggestions([]);
+    if (typed === '') return undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => {
       searchRef.current(typed, controller.signal).then(
-        (found) => setSuggestions(found),
+        (found) => {
+          // A reply for a query since replaced: dropped, never shown.
+          if (controller.signal.aborted) return;
+          setSuggestions(found);
+        },
         // A failed search only means no suggestions: Enter still adds the name.
-        () => setSuggestions([]),
+        () => {
+          if (controller.signal.aborted) return;
+          setSuggestions([]);
+        },
       );
     }, SEARCH_DEBOUNCE_MS);
     return () => {
@@ -109,19 +115,20 @@ export const LineupField = ({
     onChange(addAct(lineup, act));
     setText('');
   };
-  // `moveAct` returns an off-the-end move unchanged; skipping it here spares
-  // the form a change that changes nothing (Alt+Left on the headliner).
+  // `moveAct` returns an off-the-end move unchanged; skipping it here (and a
+  // move onto itself) spares the form a change that changes nothing.
   const move = (from: number, to: number) => {
-    if (to < 0 || to >= lineup.length) return;
+    if (from === to || to < 0 || to >= lineup.length) return;
     onChange(moveAct(lineup, from, to));
   };
   // `addAct` keeps a name off the bill twice, but the bill also arrives as a
-  // prop, so the key counts repeats rather than trusting the name alone.
+  // prop, so the key counts repeats. NUL can't be typed into a name, so a
+  // name can never pass for another name's repeat.
   const seen = new Map<string, number>();
   const keys = lineup.map((act) => {
     const count = seen.get(act.name) ?? 0;
     seen.set(act.name, count + 1);
-    return count === 0 ? act.name : `${act.name}#${count}`;
+    return `${act.name}\u0000${count}`;
   });
 
   return (
@@ -223,8 +230,17 @@ export const LineupField = ({
             id={id}
             role="combobox"
             aria-expanded={options.length > 0}
-            aria-controls={listId}
+            aria-controls={options.length > 0 ? listId : undefined}
             aria-autocomplete="list"
+            // The end of the bill: an act dropped here goes last.
+            onDragOver={(evt) => {
+              if (dragging !== null) evt.preventDefault();
+            }}
+            onDrop={(evt) => {
+              evt.preventDefault();
+              if (dragging !== null) move(dragging, lineup.length - 1);
+              setDragging(null);
+            }}
             aria-activedescendant={
               active >= 0 ? `${listId}-${active}` : undefined
             }
