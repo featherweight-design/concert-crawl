@@ -76,7 +76,7 @@ describe('FeatureFlagControl (the ladder)', () => {
     expect(screen.getByText('Never changed')).toBeVisible();
     for (const rung of ['off', 'me', 'beta', 'everyone']) {
       expect(step(rung)).toHaveAttribute(
-        'aria-checked',
+        'aria-pressed',
         rung === 'beta' ? 'true' : 'false',
       );
     }
@@ -93,7 +93,7 @@ describe('FeatureFlagControl (the ladder)', () => {
       updatedBy: null,
     };
     render(<FeatureFlagControl initial={[legacy]} />);
-    expect(step('everyone')).toHaveAttribute('aria-checked', 'true');
+    expect(step('everyone')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('labels the timestamp on a flag that has been changed', () => {
@@ -120,7 +120,7 @@ describe('FeatureFlagControl (the ladder)', () => {
     render(<FeatureFlagControl initial={[flag()]} />);
     fireEvent.click(step('me'));
     await waitFor(() =>
-      expect(step('me')).toHaveAttribute('aria-checked', 'true'),
+      expect(step('me')).toHaveAttribute('aria-pressed', 'true'),
     );
     expect(patch).toHaveBeenCalledWith('/v1/admin/feature-flags/crews', 'tok', {
       stage: 'me',
@@ -140,7 +140,7 @@ describe('FeatureFlagControl (the ladder)', () => {
     await waitFor(() =>
       expect(screen.getByText(/Could not save the flag/)).toBeVisible(),
     );
-    expect(step('off')).toHaveAttribute('aria-checked', 'true');
+    expect(step('off')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows the verified chip, or says it is not verified', () => {
@@ -236,7 +236,7 @@ describe('FeatureFlagControl in production', () => {
     fireEvent.click(step('everyone'));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(patch).not.toHaveBeenCalled();
-    expect(step('beta')).toHaveAttribute('aria-checked', 'true');
+    expect(step('beta')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('does not ask on staging', async () => {
