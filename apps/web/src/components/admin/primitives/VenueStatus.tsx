@@ -128,13 +128,12 @@ export const VenueStatus = ({
 }) => {
   const chips = deriveVenueStatusChips(venue);
   const onSite = ON_SITE[chips.onSite];
-  // A hidden venue isn't crawled (ruling 13), so its chip says so, unless its
-  // crawl is paused: then the pause chip, since the pause holds once it's
-  // shown (`A6/22/hidden-venue-menu`).
+  // A hidden venue isn't crawled (ruling 13), so its chip says so, unless
+  // something else would stop the crawl once it's shown: then the same chip a
+  // live venue gets (blocked, robots.txt, a pause), in the same precedence, so
+  // the chip and the ⋯ menu agree (`A6/22/hidden-venue-menu`).
   const hiddenUnpaused =
-    chips.onSite === 'hidden' &&
-    chips.crawling !== 'paused' &&
-    chips.crawling !== 'auto_paused';
+    chips.onSite === 'hidden' && chips.crawling === 'crawling';
   const crawling = hiddenUnpaused
     ? NOT_CRAWLED
     : inList && chips.crawling === 'auto_paused'

@@ -68,6 +68,27 @@ describe('VenueStatus', () => {
     expect(chip).toHaveAttribute('data-tone', 'var(--warning)');
   });
 
+  // A hidden venue's crawl chip follows a live venue's precedence, so it
+  // agrees with the ⋯ menu (`A6/22/hidden-venue-menu`).
+  it.each([
+    ['blocked', { blockedAt: '2026-11-01T00:00:00Z' }, 'Blocked'],
+    ['robots-disallowed', { robotsTxtAllowed: false }, 'Paused: robots.txt'],
+    [
+      'paused and blocked',
+      {
+        blockedAt: '2026-11-01T00:00:00Z',
+        crawlPausedAt: '2026-10-28T00:00:00Z',
+        crawlPauseReason: 'other' as const,
+      },
+      'Blocked',
+    ],
+  ])('gives a hidden %s venue its crawl chip', (_name, over, label) => {
+    render(<VenueStatus venue={{ ...venue, active: false, ...over }} />);
+    expect(screen.getByTestId('venue-status-crawling')).toHaveTextContent(
+      label,
+    );
+  });
+
   it('names an auto-pause on a hidden venue', () => {
     render(
       <VenueStatus

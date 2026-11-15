@@ -15,6 +15,7 @@ import type { RowMenuItem } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { isAutoPause } from '@/lib/admin/venue-status';
 import {
+  crawlsOnceShown,
   pauseReasonText,
   pausedStateLine,
   reasonText,
@@ -115,6 +116,9 @@ const itemsFor = (
   // shown, so a hidden venue's hints say so. Resume is the board's refresh
   // arrows, not a play triangle.
   const pausedLine = pausedStateLine(venue, canTryRecrawl(venue)) ?? '';
+  // Only promise a crawl the nightly run would actually make: a blocked,
+  // robots-disallowed or unverified venue stays uncrawled once shown.
+  const willCrawl = crawlsOnceShown(venue);
   const crawl: RowMenuItem =
     venue.crawlPausedAt === null
       ? {
@@ -128,9 +132,10 @@ const itemsFor = (
           key: 'resume',
           icon: RefreshCw,
           label: COPY.menu.resume,
-          hint: venue.active
-            ? pausedLine
-            : COPY.menu.resumeHintHidden(pausedLine),
+          hint:
+            venue.active || !willCrawl
+              ? pausedLine
+              : COPY.menu.resumeHintHidden(pausedLine),
           onSelect: act.resume,
         };
 
@@ -181,12 +186,16 @@ const itemsFor = (
             key: 'show',
             icon: Eye,
             label: COPY.menu.show,
-            hint: COPY.menu.showHint(
-              line,
-              venue.crawlPausedAt === null
-                ? COPY.menu.showCrawlResumes
-                : COPY.menu.showCrawlStaysPaused(pauseReasonText(venue)),
-            ),
+            // 🔸 Undrawn: a venue that won't crawl once shown (blocked,
+            // robots-disallowed, unverified) gets its hidden line alone.
+            hint: !willCrawl
+              ? line
+              : COPY.menu.showHint(
+                  line,
+                  venue.crawlPausedAt === null
+                    ? COPY.menu.showCrawlResumes
+                    : COPY.menu.showCrawlStaysPaused(pauseReasonText(venue)),
+                ),
             onSelect: act.show,
           },
           crawl,

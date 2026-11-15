@@ -182,6 +182,16 @@ describe('venue list rules', () => {
       ),
     ).toBe('Paused: off-season');
     expect(crawlingLabel(venue('I', { active: false }))).toBe(undefined);
+    // Blocked wins over the pause, as the chip says it.
+    expect(
+      crawlingLabel(
+        venue('J', {
+          active: false,
+          crawlPausedAt: PAUSED,
+          blockedAt: PAUSED,
+        }),
+      ),
+    ).toBe(undefined);
   });
 
   it('filters paused, hidden and disallowed apart', () => {

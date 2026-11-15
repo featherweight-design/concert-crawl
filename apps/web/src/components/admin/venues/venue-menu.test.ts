@@ -214,6 +214,36 @@ describe('venueMenuItems: a hidden venue keeps Pause and Resume (A6/22/hidden-ve
     );
   });
 
+  // 🔸 Undrawn: the nightly crawl skips a blocked, robots-disallowed or
+  // unverified venue, so its menu promises no crawl once shown.
+  const BLOCKED_AT = '2026-11-01T00:00:00.000Z';
+  const WONT_CRAWL = {
+    blocked: { blockedAt: BLOCKED_AT },
+    'robots-disallowed': { robotsTxtAllowed: false },
+    unverified: { verified: false },
+  } as const;
+
+  it.each(Object.entries(WONT_CRAWL))(
+    'hidden and %s: Show gives the hidden line alone',
+    (_name, over) => {
+      expect(hints({ hiddenByName: '@hugh', ...over })[0]).toBe(
+        'Show on site|Hidden by @hugh, Nov 2.',
+      );
+    },
+  );
+
+  it.each(Object.entries(WONT_CRAWL))(
+    'hidden, paused and %s: Show and Resume promise no crawl',
+    (_name, over) => {
+      expect(
+        hints({ hiddenByName: '@hugh', ...OFF_SEASON, ...over }).slice(0, 2),
+      ).toEqual([
+        'Show on site|Hidden by @hugh, Nov 2.',
+        'Resume crawling|Paused by @hugh, Oct 28: off-season.',
+      ]);
+    },
+  );
+
   it('a live paused venue’s Resume keeps its line alone', () => {
     const items = venueMenuItems(venue({ active: true, ...OFF_SEASON }), ACT);
     expect(items[0]?.hint).toBe('Paused by @hugh, Oct 28: off-season.');
