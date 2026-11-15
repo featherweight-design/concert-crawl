@@ -208,6 +208,19 @@ export const RowMenu = ({
     wasOpen.current = isOpen;
     onOpenChangeRef.current?.(isOpen);
   }, [isOpen]);
+  // A row that unmounts with its menu open still hears it close, so the
+  // parent doesn't keep the row tinted.
+  useEffect(
+    () => () => {
+      if (wasOpen.current) onOpenChangeRef.current?.(false);
+    },
+    [],
+  );
+  // The ⋯ going busy while its menu is open closes the menu, so no item
+  // can be picked mid-request.
+  useEffect(() => {
+    if (disabled) setOpen(null);
+  }, [disabled]);
 
   // Opening moves focus into the menu, on its first item.
   useEffect(() => {
