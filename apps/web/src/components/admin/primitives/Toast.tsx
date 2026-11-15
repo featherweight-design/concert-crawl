@@ -4,25 +4,24 @@ import { SIDEBAR_WIDTH } from '@/components/admin/shell/content-pane';
 import { useIsPhone } from './useIsPhone';
 
 /**
- * The bottom toast (`07/role-changed-with-undo`, `12/signed-out-everywhere-d`,
- * `07/test-email-sent`): centred under the page on desktop, above the tab bar
- * on the phone.
+ * Where a bottom toast sits: centred under the content column on desktop,
+ * above the tab bar on the phone, `width` wide (the full row on the phone).
+ * Toast uses it, and so does a `SaveFailedToast` that floats in the same
+ * place (`43/approve-failed-d`).
  */
-export const Toast = ({
-  title,
-  body,
-  action,
-  testId = 'admin-toast',
+export const ToastDock = ({
+  children,
+  role,
+  testId,
 }: {
-  title: string;
-  body: string | null;
-  action?: ReactNode;
+  children: ReactNode;
+  role?: 'status';
   testId?: string;
 }) => {
   const isPhone = useIsPhone();
   return (
     <div
-      role="status"
+      {...(role !== undefined && { role })}
       data-testid={testId}
       style={{
         position: 'fixed',
@@ -40,52 +39,77 @@ export const Toast = ({
       <div
         style={{
           width: isPhone ? '100%' : 420,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '12px 14px',
-          borderRadius: 12,
-          background: 'var(--bg-elevated)',
-          border:
-            '1px solid color-mix(in srgb, var(--success) 45%, transparent)',
-          boxShadow: 'var(--shadow-strong)',
           pointerEvents: 'auto',
         }}
       >
-        <Check
-          size={16}
-          strokeWidth={2.2}
-          color="var(--success)"
-          aria-hidden
-          style={{ flex: 'none' }}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* A long unbroken handle ("@<50 chars> is now Beta") wraps inside
-              the toast instead of running off a phone's edge (as #260). */}
-          <div
-            style={{
-              fontSize: 13.5,
-              fontWeight: 700,
-              overflowWrap: 'anywhere',
-            }}
-          >
-            {title}
-          </div>
-          {body && (
-            <div
-              style={{
-                fontSize: 12.5,
-                color: 'var(--fg-muted)',
-                marginTop: 2,
-                overflowWrap: 'anywhere',
-              }}
-            >
-              {body}
-            </div>
-          )}
-        </div>
-        {action}
+        {children}
       </div>
     </div>
   );
 };
+
+/**
+ * The bottom toast (`07/role-changed-with-undo`, `12/signed-out-everywhere-d`,
+ * `07/test-email-sent`): centred under the page on desktop, above the tab bar
+ * on the phone.
+ */
+export const Toast = ({
+  title,
+  body,
+  action,
+  testId = 'admin-toast',
+}: {
+  title: string;
+  body: string | null;
+  action?: ReactNode;
+  testId?: string;
+}) => (
+  <ToastDock role="status" testId={testId}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 14px',
+        borderRadius: 12,
+        background: 'var(--bg-elevated)',
+        border: '1px solid color-mix(in srgb, var(--success) 45%, transparent)',
+        boxShadow: 'var(--shadow-strong)',
+      }}
+    >
+      <Check
+        size={16}
+        strokeWidth={2.2}
+        color="var(--success)"
+        aria-hidden
+        style={{ flex: 'none' }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* A long unbroken handle ("@<50 chars> is now Beta") wraps inside
+              the toast instead of running off a phone's edge (as #260). */}
+        <div
+          style={{
+            fontSize: 13.5,
+            fontWeight: 700,
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {title}
+        </div>
+        {body && (
+          <div
+            style={{
+              fontSize: 12.5,
+              color: 'var(--fg-muted)',
+              marginTop: 2,
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {body}
+          </div>
+        )}
+      </div>
+      {action}
+    </div>
+  </ToastDock>
+);

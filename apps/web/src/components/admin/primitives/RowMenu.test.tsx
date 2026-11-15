@@ -91,6 +91,66 @@ describe('RowMenu', () => {
     );
   });
 
+  it('draws a success item in the success colour, label and icon (43/approve-menu-d)', () => {
+    render(
+      <RowMenu
+        label="Price actions"
+        items={[
+          {
+            key: 'approve',
+            icon: Search,
+            label: 'Approve',
+            hint: 'Publishes $44 to fans now.',
+            success: true,
+            onSelect: vi.fn(),
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Price actions' }));
+    const item = screen.getByRole('menuitem', { name: /Approve/ });
+    const [tile, text] = Array.from(item.querySelectorAll(':scope > span'));
+    const label = text?.querySelector('span');
+    expect(tile instanceof HTMLElement && tile.style.color).toBe(
+      'var(--success)',
+    );
+    expect(label instanceof HTMLElement && label.style.color).toBe(
+      'var(--success)',
+    );
+  });
+
+  it("can't be opened while disabled, and reports opening and closing", () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <RowMenu
+        label="Price actions"
+        disabled
+        onOpenChange={onOpenChange}
+        items={[
+          { key: 'a', icon: Search, label: 'A', hint: 'a', onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Price actions' });
+    expect(trigger).toBeDisabled();
+    fireEvent.click(trigger);
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    rerender(
+      <RowMenu
+        label="Price actions"
+        onOpenChange={onOpenChange}
+        items={[
+          { key: 'a', icon: Search, label: 'A', hint: 'a', onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    fireEvent.click(trigger);
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
   it('closes on Escape with focus back on ⋯', () => {
     renderMenu();
     fireEvent.keyDown(window, { key: 'Escape' });

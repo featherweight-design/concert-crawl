@@ -43,7 +43,7 @@ export type { PageSkeletonProps } from './PageSkeleton';
 export { EmptyState } from './EmptyState';
 export { CouldntLoad, CouldntLoadPage } from './CouldntLoad';
 export { SaveFailedToast } from './SaveFailedToast';
-export { Toast } from './Toast';
+export { Toast, ToastDock } from './Toast';
 export { PinnedSaveBar } from './PinnedSaveBar';
 export type { PinnedSaveBarLook, PinnedSaveBarProps } from './PinnedSaveBar';
 export { useSnapBack } from './useSnapBack';
@@ -56,7 +56,7 @@ export {
 } from './useIsPhone';
 export { Spinner } from './Spinner';
 export { useContentBox } from './useContentBox';
-export { RowMenu } from './RowMenu';
+export { RowMenu, RowMenuItems } from './RowMenu';
 export { AdminTabs } from './AdminTabs';
 export type { AdminTab, AdminTabsProps } from './AdminTabs';
 export type { RowMenuItem } from './RowMenu';

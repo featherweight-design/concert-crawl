@@ -9,6 +9,8 @@ export interface RowMenuItem {
   label: string;
   hint: string;
   danger?: boolean;
+  /** A go-ahead item, drawn in success (Submitted prices' Approve, `43/approve-menu-d`). */
+  success?: boolean;
   /** A reversible but loud item, drawn in warning (the venue's Hide from site…). */
   warning?: boolean;
   /** A quieter item, drawn in the muted colour (Artists' Not an artist…). */
@@ -26,19 +28,128 @@ export interface RowMenuItem {
 const itemTone = (item: RowMenuItem): string =>
   item.danger
     ? 'var(--danger)'
-    : item.warning
-      ? 'var(--warning)'
-      : item.muted
-        ? 'var(--fg-muted)'
-        : 'var(--signal)';
+    : item.success
+      ? 'var(--success)'
+      : item.warning
+        ? 'var(--warning)'
+        : item.muted
+          ? 'var(--fg-muted)'
+          : 'var(--signal)';
 
 /** The label's ink: a coloured item says its colour, the rest read as text. */
 const labelTone = (item: RowMenuItem): string =>
-  item.danger || item.warning
+  item.danger || item.success || item.warning
     ? itemTone(item)
     : item.muted
       ? 'var(--fg-muted)'
       : 'var(--fg)';
+
+/**
+ * The menu's items as drawn: the icon tile, the label and the hint, with a
+ * divider above a `divided` one. RowMenu renders them as menu items; a phone
+ * sheet (`43/approve-sheet-m`) renders the same list as plain buttons.
+ */
+export const RowMenuItems = ({
+  items,
+  onPick,
+  asMenu = false,
+  testId,
+}: {
+  items: readonly RowMenuItem[];
+  /** Runs for an enabled item; the caller closes its menu or sheet. */
+  onPick: (item: RowMenuItem) => void;
+  /** Menu items in a `role="menu"`, roved with the arrow keys. */
+  asMenu?: boolean;
+  /** Marks each item as `testId-<key>`. */
+  testId?: string;
+}) => (
+  <>
+    {items.map((item) => {
+      const Icon = item.icon;
+      return (
+        <div key={item.key}>
+          {item.divided && (
+            <div
+              role="separator"
+              style={{
+                height: 1,
+                background: 'var(--border)',
+                margin: '6px 8px',
+              }}
+            />
+          )}
+          <button
+            type="button"
+            {...(asMenu && { role: 'menuitem', tabIndex: -1 })}
+            data-testid={
+              testId === undefined ? undefined : `${testId}-${item.key}`
+            }
+            // aria-disabled, not disabled: a disabled button can't
+            // hold focus, so a click on it would drop focus out of
+            // the menu.
+            aria-disabled={item.disabled || undefined}
+            onClick={(evt) => {
+              evt.stopPropagation();
+              if (item.disabled) return;
+              onPick(item);
+            }}
+            style={{
+              display: 'flex',
+              gap: 12,
+              width: '100%',
+              padding: '9px 12px',
+              borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              cursor: item.disabled ? 'not-allowed' : 'pointer',
+              opacity: item.disabled ? 0.55 : 1,
+              textAlign: 'left',
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 28,
+                height: 28,
+                flex: 'none',
+                borderRadius: 8,
+                background: 'var(--surface-2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: itemTone(item),
+              }}
+            >
+              <Icon size={14} strokeWidth={1.7} />
+            </span>
+            <span>
+              <span
+                style={{
+                  display: 'block',
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  color: labelTone(item),
+                }}
+              >
+                {item.label}
+              </span>
+              <span
+                style={{
+                  display: 'block',
+                  fontSize: 12,
+                  color: 'var(--fg-muted)',
+                  marginTop: 2,
+                }}
+              >
+                {item.hint}
+              </span>
+            </span>
+          </button>
+        </div>
+      );
+    })}
+  </>
+);
 
 /**
  * A row's ⋯ menu (`07/code-row-menu`, `11/artist-row-menu`): the drawn icon
@@ -53,8 +164,14 @@ export const RowMenu = ({
   testId,
   iconSize = 16,
   iconStrokeWidth,
+  disabled = false,
+  onOpenChange,
 }: {
   label: string;
+  /** The ⋯ can't be pressed: its row is mid-request (`43/approve-busy-d`). */
+  disabled?: boolean;
+  /** Told when the menu opens or closes, so a row can tint while it's open. */
+  onOpenChange?: (open: boolean) => void;
   /** Marks the ⋯ as `testId` and each item as `testId-<key>`. */
   testId?: string;
   items: readonly RowMenuItem[];
@@ -79,6 +196,18 @@ export const RowMenu = ({
     Array.from(
       menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
     );
+
+  // The latest callback, so a new function each render doesn't re-fire it.
+  const onOpenChangeRef = useRef(onOpenChange);
+  useEffect(() => {
+    onOpenChangeRef.current = onOpenChange;
+  }, [onOpenChange]);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current === isOpen) return;
+    wasOpen.current = isOpen;
+    onOpenChangeRef.current?.(isOpen);
+  }, [isOpen]);
 
   // Opening moves focus into the menu, on its first item.
   useEffect(() => {
@@ -151,6 +280,7 @@ export const RowMenu = ({
         data-testid={testId}
         aria-haspopup="menu"
         aria-expanded={isOpen}
+        disabled={disabled}
         onClick={(evt) => {
           evt.stopPropagation();
           const rect = evt.currentTarget.getBoundingClientRect();
@@ -169,7 +299,7 @@ export const RowMenu = ({
         style={{
           border: 'none',
           background: open ? 'var(--surface-2)' : 'transparent',
-          cursor: 'pointer',
+          cursor: disabled ? 'not-allowed' : 'pointer',
           // 16px icon + 2px each side = the drawn 20px column, so the
           // trigger never widens the table past its card.
           padding: 2,
@@ -226,95 +356,18 @@ export const RowMenu = ({
             boxShadow: 'var(--shadow-strong)',
           }}
         >
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.key}>
-                {item.divided && (
-                  <div
-                    role="separator"
-                    style={{
-                      height: 1,
-                      background: 'var(--border)',
-                      margin: '6px 8px',
-                    }}
-                  />
-                )}
-                <button
-                  type="button"
-                  role="menuitem"
-                  data-testid={
-                    testId === undefined ? undefined : `${testId}-${item.key}`
-                  }
-                  tabIndex={-1}
-                  // aria-disabled, not disabled: a disabled button can't
-                  // hold focus, so a click on it would drop focus out of
-                  // the menu.
-                  aria-disabled={item.disabled || undefined}
-                  onClick={(evt) => {
-                    evt.stopPropagation();
-                    if (item.disabled) return;
-                    // Focus goes back to ⋯ first, so a dialog the item opens
-                    // restores focus there rather than to the page.
-                    triggerRef.current?.focus({ preventScroll: true });
-                    setOpen(null);
-                    item.onSelect();
-                  }}
-                  style={{
-                    display: 'flex',
-                    gap: 12,
-                    width: '100%',
-                    padding: '9px 12px',
-                    borderRadius: 10,
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: item.disabled ? 'not-allowed' : 'pointer',
-                    opacity: item.disabled ? 0.55 : 1,
-                    textAlign: 'left',
-                  }}
-                >
-                  <span
-                    aria-hidden
-                    style={{
-                      width: 28,
-                      height: 28,
-                      flex: 'none',
-                      borderRadius: 8,
-                      background: 'var(--surface-2)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: itemTone(item),
-                    }}
-                  >
-                    <Icon size={14} strokeWidth={1.7} />
-                  </span>
-                  <span>
-                    <span
-                      style={{
-                        display: 'block',
-                        fontSize: 13.5,
-                        fontWeight: 600,
-                        color: labelTone(item),
-                      }}
-                    >
-                      {item.label}
-                    </span>
-                    <span
-                      style={{
-                        display: 'block',
-                        fontSize: 12,
-                        color: 'var(--fg-muted)',
-                        marginTop: 2,
-                      }}
-                    >
-                      {item.hint}
-                    </span>
-                  </span>
-                </button>
-              </div>
-            );
-          })}
+          <RowMenuItems
+            items={items}
+            asMenu
+            {...(testId !== undefined && { testId })}
+            onPick={(item) => {
+              // Focus goes back to ⋯ first, so a dialog the item opens
+              // restores focus there rather than to the page.
+              triggerRef.current?.focus({ preventScroll: true });
+              setOpen(null);
+              item.onSelect();
+            }}
+          />
         </div>
       )}
     </div>
