@@ -16,12 +16,13 @@ export const setFeatureFlag = async (
   enabled: boolean,
 ): Promise<void> => {
   const now = new Date();
+  const stage = enabled ? 'everyone' : 'off';
   await testDb
     .insert(featureFlags)
-    .values({ key, enabled, updatedBy: 'test', updatedAt: now })
+    .values({ key, enabled, stage, updatedBy: 'test', updatedAt: now })
     .onConflictDoUpdate({
       target: featureFlags.key,
-      set: { enabled, updatedAt: now, updatedBy: 'test' },
+      set: { enabled, stage, updatedAt: now, updatedBy: 'test' },
     });
   clearFeatureFlagCache();
 };
