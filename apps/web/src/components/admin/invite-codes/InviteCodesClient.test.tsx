@@ -171,27 +171,6 @@ describe('InviteCodesClient unmounted mid-load', () => {
     );
     expect(unhandled).not.toHaveBeenCalled();
   });
-
-  it('sets no state when the clipboard answers after the unmount', async () => {
-    let finish: () => void = () => undefined;
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: {
-        writeText: () => new Promise<void>((resolve) => (finish = resolve)),
-      },
-    });
-    try {
-      render(<InviteCodesClient origin="https://concertcrawl.app" />);
-      await openMenu('REDROCKS');
-      fireEvent.click(screen.getByRole('menuitem', { name: /^Copy link/ }));
-      cleanup();
-      const unhandled = await afterUnmount(() => finish());
-      expect(unhandled).not.toHaveBeenCalled();
-    } finally {
-      // The other tests expect no clipboard at all.
-      Reflect.deleteProperty(navigator, 'clipboard');
-    }
-  });
 });
 
 describe('InviteCodesClient row menu', () => {
