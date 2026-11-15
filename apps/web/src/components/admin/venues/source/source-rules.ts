@@ -165,7 +165,7 @@ export const draftOf = (columns: SourceColumns): SourceDraft => {
  * read-only chip, and Back to Automatic leaves them alone. VenuePilot is an
  * API provider with no reader to show, so it has none.
  */
-export type ReaderLock =
+type ReaderLock =
   { kind: 'feed'; seller: 'aeg' | 'livenation' } | { kind: 'manual' };
 
 export const readerLockOf = (
@@ -191,8 +191,21 @@ const readerLabelOf = (draft: SourceDraft, lock: ReaderLock | null): string => {
 };
 
 /**
+ * A closed-Advanced chip: `forced` is a pick set by hand (amber, counts
+ * toward "Set by hand"); `lock` is a reader the tab shows but never sets
+ * (neutral, never "Set by hand").
+ */
+export interface AdvancedChip {
+  kind: 'forced' | 'lock';
+  text: string;
+}
+
+/**
  * Advanced, closed (`18/source-forced-d`): an amber chip for a Reader that
- * isn't Automatic. Wait until and Wait for are never chips; they have no
+ * isn't Automatic, and one for a Wait for selector (🔸 undrawn: the board
+ * draws Wait for as never a chip, but a selector is a hand pick, so "All
+ * automatic" would be untrue). A feed's or a stored `manual`'s reader is a
+ * neutral lock chip (🔸 undrawn). Wait until is never a chip; it has no
  * Automatic.
  *
  * Page loading is never a chip, and never counts as set by hand: the crawler
@@ -202,37 +215,47 @@ const readerLabelOf = (draft: SourceDraft, lock: ReaderLock | null): string => {
  * ⏸ item 18 follow-up: the Page loading forced chip waits for
  * crawl_mode_source (0123).
  */
-export const forcedChipsOf = (
+export const closedChipsOf = (
   draft: SourceDraft,
   saved: SourceColumns,
-): string[] => {
+): AdvancedChip[] => {
+  const chips: AdvancedChip[] = [];
   const lock = readerLockOf(draft, saved);
-  const readerForced =
-    lock !== null || (draft.mode === 'page' && draft.reader !== 'auto');
-  return readerForced
-    ? [COPY.advanced.forced.reader(readerLabelOf(draft, lock))]
-    : [];
+  if (lock !== null) {
+    chips.push({
+      kind: 'lock',
+      text: COPY.advanced.forced.reader(readerLabelOf(draft, lock)),
+    });
+  } else if (draft.mode === 'page' && draft.reader !== 'auto') {
+    chips.push({
+      kind: 'forced',
+      text: COPY.advanced.forced.reader(readerLabelOf(draft, null)),
+    });
+  }
+  const waitFor = draft.waitFor.trim();
+  if (waitFor !== '') {
+    chips.push({ kind: 'forced', text: COPY.advanced.forced.waitFor(waitFor) });
+  }
+  return chips;
 };
 
 /**
  * Whether Back to Automatic has anything to clear: a forced Reader only (a
- * lock never counts, and Page loading isn't known to be forced; see
- * `forcedChipsOf`).
+ * lock never counts, Wait for is left alone, and Page loading isn't known to
+ * be forced; see `closedChipsOf`).
  */
 export const canGoBackToAutomatic = (draft: SourceDraft): boolean =>
   draft.mode === 'page' && draft.reader !== 'auto';
 
 /**
- * Back to Automatic (`18/source-advanced-states`): Reader to Automatic, as an
- * unsaved edit. On save, a forced JSON-LD, Haiku or Detail pages reader is a
- * null strategy and platform. Page loading stays as stored, never sent (see
- * `forcedChipsOf`), as do Wait until and Wait for; a feed's platform and a
- * stored `manual` are locks and stay too.
+ * Back to Automatic (`18/source-advanced-states`), as a patch: Reader to
+ * Automatic, an unsaved edit. On save, a forced JSON-LD, Haiku or Detail
+ * pages reader is a null strategy and platform. Page loading stays as
+ * stored, never sent (see `closedChipsOf`), as do Wait until and Wait for; a
+ * feed's platform and a stored `manual` are locks and stay too.
  */
-export const backToAutomatic = (draft: SourceDraft): SourceDraft => ({
-  ...draft,
-  reader: draft.mode === 'page' ? 'auto' : draft.reader,
-});
+export const backToAutomatic = (draft: SourceDraft): Partial<SourceDraft> =>
+  draft.mode === 'page' ? { reader: 'auto' } : {};
 
 const ADVANCED_KEYS = [
   'crawlMode',
@@ -241,16 +264,19 @@ const ADVANCED_KEYS = [
   'waitFor',
 ] as const satisfies ReadonlyArray<keyof SourceDraft>;
 
-/** How many Advanced settings differ from the saved draft. */
+/**
+ * How many Advanced settings differ from the saved draft. The reader counts
+ * only on the calendar page, where it is shown and written.
+ */
 export const advancedUnsavedCount = (
   draft: SourceDraft,
   saved: SourceDraft,
 ): number =>
-  ADVANCED_KEYS.filter((key) =>
-    key === 'waitFor'
-      ? draft.waitFor.trim() !== saved.waitFor.trim()
-      : draft[key] !== saved[key],
-  ).length;
+  ADVANCED_KEYS.filter((key) => {
+    if (key === 'waitFor') return draft.waitFor.trim() !== saved.waitFor.trim();
+    if (key === 'reader' && draft.mode !== 'page') return false;
+    return draft[key] !== saved[key];
+  }).length;
 
 const DRAFT_KEYS = [
   'mode',
@@ -301,7 +327,8 @@ export const feedIdForSeller = (
  *
  * - Calendar page: no API provider, and the reader. `extraction_strategy`
  *   stays as saved (a stored `manual` included) until the reader changes;
- *   then it is the reader's (null is the cascade). Detail pages sets
+ *   then it is the reader's (null is the cascade, though Automatic leaves a
+ *   stored `manual` as saved). Detail pages sets
  *   `platform = 'detail-page'` with no venue ID and, like the old Platform
  *   select, leaves the strategy alone; any other reader clears the platform.
  * - Ticketing feed: no extraction strategy; VenuePilot sets `api_provider`
@@ -315,6 +342,11 @@ const strategyOf = (
   saved: SourceColumns,
 ): SourceColumns['extractionStrategy'] => {
   if (reader === readerOf(saved) || reader === 'detail-page') {
+    return saved.extractionStrategy;
+  }
+  // A stored `manual` is a lock: Automatic (Back to Automatic off Detail
+  // pages included) leaves it as saved, never null.
+  if (reader === 'auto' && isStoredManual(saved)) {
     return saved.extractionStrategy;
   }
   return reader === 'auto' ? null : reader;

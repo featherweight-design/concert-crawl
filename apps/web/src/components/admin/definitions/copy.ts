@@ -789,6 +789,8 @@ export const ADMIN_COPY = {
       setByHand: 'Set by hand',
       forced: {
         reader: (value: string) => `Reader: ${value}`,
+        // 🔸 undrawn: a Wait for selector is a hand pick too.
+        waitFor: (selector: string) => `Wait for: ${selector}`,
       },
       backToAutomatic: 'Back to Automatic',
       // Under the closed row once Advanced holds an unsaved edit.
@@ -842,9 +844,8 @@ export const ADMIN_COPY = {
         },
         // Under a read-only reader: an AEG or Live Nation feed, or manual.
         lockedHints: {
-          feed: (seller: string) =>
-            `Set by the ${seller} feed. Back to Automatic leaves it as it is.`,
-          manual: 'Set to manual entry. Back to Automatic leaves it as it is.',
+          feed: (seller: string) => `Set by the ${seller} feed.`,
+          manual: 'Set to manual entry.',
         },
       },
     },

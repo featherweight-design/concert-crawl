@@ -208,12 +208,11 @@ describe('SourceTab — How we read it', () => {
     fireEvent.click(
       screen.getByRole('button', { name: new RegExp(COPY.advanced.label) }),
     );
-    expect(screen.getByTestId('source-reader-locked').textContent).toBe(
-      'Manual entry',
-    );
     expect(
-      screen.getByText(COPY.advanced.reader.lockedHints.manual),
-    ).toBeTruthy();
+      screen.getByRole('group', { name: COPY.advanced.reader.label })
+        .textContent,
+    ).toBe('Manual entry');
+    expect(screen.getByText('Set to manual entry.')).toBeTruthy();
     expect(
       screen.queryByRole('radiogroup', { name: COPY.advanced.reader.label }),
     ).toBeNull();
@@ -483,8 +482,27 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
     expect(within(toggle()).getByText(COPY.advanced.setByHand)).toBeTruthy();
     expect(screen.queryByText(COPY.advanced.collapsedLine)).toBeNull();
     // Page loading is never a chip: the crawler stores crawl_mode itself.
-    expect(chips()).toEqual(['Reader: Haiku only']);
+    // Wait for is a hand pick, so it is one.
+    expect(chips()).toEqual(['Reader: Haiku only', 'Wait for: .event-list']);
     expect(backButton()).toBeTruthy();
+  });
+
+  it('closed chips are a group named by Advanced', () => {
+    render(<SourceTab venue={forced} />);
+    const group = screen.getByRole('group', { name: COPY.advanced.label });
+    expect(group).toBe(screen.getByTestId('source-advanced-forced'));
+  });
+
+  it('a Wait for selector alone is set by hand, with no Back to Automatic', () => {
+    render(
+      <SourceTab
+        venue={{ ...venue, crawlMode: null, crawlWaitForSelector: '.ev' }}
+      />,
+    );
+    expect(screen.queryByText(COPY.advanced.collapsedLine)).toBeNull();
+    expect(within(toggle()).getByText(COPY.advanced.setByHand)).toBeTruthy();
+    expect(chips()).toEqual([COPY.advanced.forced.waitFor('.ev')]);
+    expect(backButton()).toBeNull();
   });
 
   it.each(['browser', 'http'] as const)(
@@ -504,8 +522,10 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
     const backToAutomatic = backButton();
     if (backToAutomatic === null) throw new Error('Expected Back to Automatic');
     fireEvent.click(backToAutomatic);
-    expect(screen.getByText(COPY.advanced.collapsedLine)).toBeTruthy();
-    expect(screen.queryByTestId('source-advanced-forced')).toBeNull();
+    // Wait for is left alone, so it is still set by hand.
+    expect(screen.queryByText(COPY.advanced.collapsedLine)).toBeNull();
+    expect(within(toggle()).getByText(COPY.advanced.setByHand)).toBeTruthy();
+    expect(chips()).toEqual(['Wait for: .event-list']);
     expect(backButton()).toBeNull();
     expect(screen.getByText('1 unsaved change')).toBeTruthy();
     expect(document.activeElement).toBe(toggle());
@@ -549,6 +569,27 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
     });
   });
 
+  it('Back to Automatic on a manual venue on Detail pages keeps its manual', async () => {
+    render(
+      <SourceTab
+        venue={{
+          ...venue,
+          crawlMode: null,
+          platform: 'detail-page',
+          extractionStrategy: 'manual',
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByText(COPY.advanced.backToAutomatic));
+    clickSave();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    // Regression: never extractionStrategy, which would wipe the manual.
+    expect(Object.fromEntries(sentFormData().entries())).toEqual({
+      platform: '',
+      platformVenueId: '',
+    });
+  });
+
   it.each([
     [{ platform: 'aeg', platformVenueId: '89' }, 'AEG'],
     [{ platform: 'livenation', platformVenueId: 'K1' }, 'Live Nation'],
@@ -561,12 +602,14 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
       expect(chips()).toEqual([`Reader: ${seller}`]);
       expect(backButton()).toBeNull();
       fireEvent.click(toggle());
+      const locked = screen.getByRole('group', {
+        name: COPY.advanced.reader.label,
+      });
+      expect(locked.textContent).toBe(seller);
       expect(screen.getByTestId('source-reader-locked').textContent).toBe(
         seller,
       );
-      expect(
-        screen.getByText(COPY.advanced.reader.lockedHints.feed(seller)),
-      ).toBeTruthy();
+      expect(screen.getByText(`Set by the ${seller} feed.`)).toBeTruthy();
       expect(
         screen.queryByRole('radiogroup', { name: COPY.advanced.reader.label }),
       ).toBeNull();
@@ -586,15 +629,45 @@ describe('SourceTab — Advanced, Automatic and set by hand (item 18)', () => {
     );
     expect(chips()).toEqual(['Reader: AEG']);
     expect(backButton()).toBeNull();
+    // A lock is not set by hand, and not all automatic either.
+    expect(screen.queryByText(COPY.advanced.setByHand)).toBeNull();
+    expect(screen.queryByText(COPY.advanced.collapsedLine)).toBeNull();
+    const chip = screen.getByText('Reader: AEG');
+    expect(chip.getAttribute('data-kind')).toBe('lock');
+    expect(chip.style.color).not.toContain('--warning');
   });
 
-  it('a manual venue chips its reader as Manual entry', () => {
+  it('a manual venue chips its reader as Manual entry, not set by hand', () => {
     render(
       <SourceTab
         venue={{ ...venue, crawlMode: null, extractionStrategy: 'manual' }}
       />,
     );
     expect(chips()).toEqual(['Reader: Manual entry']);
+    expect(backButton()).toBeNull();
+    expect(screen.queryByText(COPY.advanced.setByHand)).toBeNull();
+    expect(screen.getByText('Reader: Manual entry').style.color).not.toContain(
+      '--warning',
+    );
+  });
+
+  it('a feed with a Wait for selector is set by hand for the selector only', () => {
+    render(
+      <SourceTab
+        venue={{
+          ...venue,
+          crawlMode: null,
+          platform: 'aeg',
+          platformVenueId: '89',
+          crawlWaitForSelector: '.ev',
+        }}
+      />,
+    );
+    expect(within(toggle()).getByText(COPY.advanced.setByHand)).toBeTruthy();
+    expect(chips()).toEqual(['Reader: AEG', 'Wait for: .ev']);
+    expect(screen.getByText('Wait for: .ev').getAttribute('data-kind')).toBe(
+      'forced',
+    );
     expect(backButton()).toBeNull();
   });
 

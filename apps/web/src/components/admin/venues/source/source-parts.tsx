@@ -61,6 +61,17 @@ export const forcedChip: CSSProperties = {
   whiteSpace: 'nowrap',
   lineHeight: 1,
 };
+/**
+ * A reader the tab shows but never sets (a feed's, a stored `manual`): the
+ * forced chip's shape in the neutral tokens, since nobody set it by hand.
+ * 🔸 undrawn.
+ */
+export const lockedChip: CSSProperties = {
+  ...forcedChip,
+  background: 'var(--surface-2)',
+  border: '1px solid var(--border)',
+  color: 'var(--fg-muted)',
+};
 /** A text-only action, such as Back to Automatic (12.5 semibold signal). */
 export const linkButton: CSSProperties = {
   padding: 0,

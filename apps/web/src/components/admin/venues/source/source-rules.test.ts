@@ -10,11 +10,11 @@ import {
   backToAutomatic,
   canGoBackToAutomatic,
   changedColumns,
+  closedChipsOf,
   columnsOf,
   crawlModeOf,
   dirtyColumns,
   draftOf,
-  forcedChipsOf,
   isStoredManual,
   paceLine,
   pageLoadingOf,
@@ -515,9 +515,15 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
   };
   const manual: SourceColumns = { ...auto, extractionStrategy: 'manual' };
 
+  /** The draft after Back to Automatic's patch. */
+  const afterBack = (draft: SourceDraft): SourceDraft => ({
+    ...draft,
+    ...backToAutomatic(draft),
+  });
+
   /** What Back to Automatic then Save sends, as the PATCH body. */
   const backToAutomaticBody = (saved: SourceColumns) => {
-    const next = backToAutomatic(draftOf(saved));
+    const next = afterBack(draftOf(saved));
     const body = buildUpdateVenueBody(
       sourceFormData(columnsOf(next, saved), dirtyColumns(next, saved)),
     );
@@ -540,32 +546,60 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     expect(readerLockOf(draftOf(columns), columns)).toEqual(lock);
   });
 
+  const forced = (text: string) => ({ kind: 'forced', text });
+  const locked = (text: string) => ({ kind: 'lock', text });
+
   it.each([
     ['all automatic', auto, []],
     // The crawler stores crawl_mode itself, so it is never a chip (until 0123).
     ['Plain fetch', base, []],
     ['Full browser', { ...auto, crawlMode: 'browser' }, []],
+    // Wait until has no Automatic, so it is never a chip.
+    ['Wait until load', { ...auto, crawlWaitUntil: 'load' }, []],
     [
       'JSON-LD only',
       { ...auto, extractionStrategy: 'structured_data' },
-      ['Reader: JSON-LD only'],
+      [forced('Reader: JSON-LD only')],
     ],
     [
       'Full browser and Haiku only',
       { ...auto, crawlMode: 'browser', extractionStrategy: 'llm' },
-      ['Reader: Haiku only'],
+      [forced('Reader: Haiku only')],
     ],
     [
       'Detail pages',
       { ...auto, platform: 'detail-page' },
-      ['Reader: Detail pages'],
+      [forced('Reader: Detail pages')],
     ],
-    ['AEG', aeg, ['Reader: AEG']],
-    ['Live Nation', liveNation, ['Reader: Live Nation']],
-    ['manual', manual, ['Reader: Manual entry']],
+    [
+      'a Wait for selector',
+      { ...auto, crawlWaitForSelector: '.event-list' },
+      [forced('Wait for: .event-list')],
+    ],
+    [
+      'Haiku only and a Wait for selector',
+      { ...auto, extractionStrategy: 'llm', crawlWaitForSelector: '.ev' },
+      [forced('Reader: Haiku only'), forced('Wait for: .ev')],
+    ],
+    ['AEG', aeg, [locked('Reader: AEG')]],
+    ['Live Nation', liveNation, [locked('Reader: Live Nation')]],
+    ['manual', manual, [locked('Reader: Manual entry')]],
+    [
+      'AEG with a Wait for selector',
+      { ...aeg, crawlWaitForSelector: '.ev' },
+      [locked('Reader: AEG'), forced('Wait for: .ev')],
+    ],
     ['VenuePilot', venuePilot, []],
   ] as const)('chips %s as %j', (_name, columns, chips) => {
-    expect(forcedChipsOf(draftOf(columns), columns)).toEqual(chips);
+    expect(closedChipsOf(draftOf(columns), columns)).toEqual(chips);
+  });
+
+  it('a Wait for selector alone offers no Back to Automatic', () => {
+    expect(
+      canGoBackToAutomatic(
+        draftOf({ ...auto, crawlWaitForSelector: '.event-list' }),
+      ),
+    ).toBe(false);
   });
 
   it('offers Back to Automatic only with something it can clear', () => {
@@ -601,9 +635,13 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
       crawlWaitUntil: 'load',
       crawlWaitForSelector: '.event-list',
     };
-    const next = backToAutomatic(draftOf(saved));
-    expect(next).toEqual({ ...draftOf(saved), reader: 'auto' });
-    expect(forcedChipsOf(next, saved)).toEqual([]);
+    // A patch of the reader alone, never the whole draft.
+    expect(backToAutomatic(draftOf(saved))).toEqual({ reader: 'auto' });
+    const next = afterBack(draftOf(saved));
+    // Wait for is left alone, so it stays a chip.
+    expect(closedChipsOf(next, saved)).toEqual([
+      forced('Wait for: .event-list'),
+    ]);
     // Regression: never crawlMode, which the crawler may have stored itself.
     expect(backToAutomaticBody(saved)).toEqual({ extractionStrategy: null });
   });
@@ -640,7 +678,8 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     ['Live Nation', liveNation],
   ] as const)('Back to Automatic leaves the %s feed alone', (_name, feed) => {
     const saved: SourceColumns = { ...feed, crawlMode: 'browser' };
-    const next = columnsOf(backToAutomatic(draftOf(saved)), saved);
+    expect(backToAutomatic(draftOf(saved))).toEqual({});
+    const next = columnsOf(afterBack(draftOf(saved)), saved);
     expect(next.platform).toBe(saved.platform);
     expect(next.platformVenueId).toBe(saved.platformVenueId);
     expect(backToAutomaticBody(saved)).toEqual({});
@@ -649,16 +688,29 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
 
   it('Back to Automatic leaves a stored manual alone', () => {
     const saved: SourceColumns = { ...manual, crawlMode: 'http' };
-    expect(
-      columnsOf(backToAutomatic(draftOf(saved)), saved).extractionStrategy,
-    ).toBe('manual');
+    expect(columnsOf(afterBack(draftOf(saved)), saved).extractionStrategy).toBe(
+      'manual',
+    );
     expect(backToAutomaticBody(saved)).toEqual({});
+  });
+
+  it('Back to Automatic on a manual venue on Detail pages keeps its manual', () => {
+    const saved: SourceColumns = { ...manual, platform: 'detail-page' };
+    expect(canGoBackToAutomatic(draftOf(saved))).toBe(true);
+    expect(columnsOf(afterBack(draftOf(saved)), saved).extractionStrategy).toBe(
+      'manual',
+    );
+    // Only the platform goes; regression: never extractionStrategy: null.
+    expect(backToAutomaticBody(saved)).toEqual({
+      platform: null,
+      platformVenueId: null,
+    });
   });
 
   it('counts the unsaved Advanced settings', () => {
     const saved = draftOf({ ...auto, extractionStrategy: 'structured_data' });
     expect(advancedUnsavedCount(saved, saved)).toBe(0);
-    expect(advancedUnsavedCount(backToAutomatic(saved), saved)).toBe(1);
+    expect(advancedUnsavedCount(afterBack(saved), saved)).toBe(1);
     expect(
       advancedUnsavedCount(
         { ...saved, crawlMode: 'browser', waitUntil: 'load', waitFor: '.ev' },
@@ -667,6 +719,13 @@ describe('Advanced: Automatic and set by hand (item 18)', () => {
     ).toBe(3);
     // A selector that only gains spaces is not an edit.
     expect(advancedUnsavedCount({ ...saved, waitFor: '  ' }, saved)).toBe(0);
+    // A feed shows no reader picker, so a leftover reader is not counted.
+    expect(
+      advancedUnsavedCount(
+        { ...saved, mode: 'feed', seller: 'aeg', feedId: '89', reader: 'auto' },
+        saved,
+      ),
+    ).toBe(0);
     // The calendar page is not an Advanced setting.
     expect(
       advancedUnsavedCount(
