@@ -152,8 +152,11 @@ const mergeResult = (
   if (result.ok === 'target_not_found') {
     return fail(404, 'Target event not found');
   }
-  // Not reached: these answers merge without the admin rules (adminRules).
-  if (result.ok === 'past_mismatch') return fail(409, 'not_mergeable');
+  // `past_mismatch` is not reached: these answers are relocations, which
+  // merge without the admin rules. `time_taken` is the fill's, so neither.
+  if (result.ok === 'past_mismatch' || result.ok === 'time_taken') {
+    return fail(409, 'not_mergeable');
+  }
   return {
     ok: true,
     params: { toEventId: targetId },
@@ -182,6 +185,7 @@ export const moved = define({
         targetId: params.toEventId,
         actorId,
         notifyWatchers: true,
+        relocation: true,
         suggestion: null,
       }),
       params.toEventId,
@@ -201,6 +205,7 @@ export const moveTo = define({
         targetId: item.moveTo.eventId,
         actorId,
         notifyWatchers: true,
+        relocation: true,
         suggestion: null,
       }),
       item.moveTo.eventId,

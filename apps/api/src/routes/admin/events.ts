@@ -60,7 +60,7 @@ import {
 } from './lib/missing-events.js';
 import { idSchema } from '../../lib/id-schema.js';
 import { eventPatchSchema, updateEvent } from './lib/event-update.js';
-import { mergeEvents } from './lib/event-merge.js';
+import { EVENT_NIGHT_UNIQUE_INDEX, mergeEvents } from './lib/event-merge.js';
 import { deleteManualEvents } from './lib/event-delete.js';
 import { containsPattern } from '../../lib/escape-like.js';
 import { setHiddenFromConsumer, verifyEvent } from './lib/event-actions.js';
@@ -94,11 +94,6 @@ import {
 } from './lib/event-create.js';
 
 const eventIdSchema = z.object({ id: idSchema });
-
-// The partial unique index on (venue_id, date, canonical_artist, show_time)
-// WHERE status = 'upcoming' (migration 0057) that the crawler upserts on.
-const EVENT_NIGHT_UNIQUE_INDEX =
-  'events_venue_date_canonical_artist_showtime_idx';
 
 const MISSING_DATA_FLAGS = [
   'no-price',
@@ -1443,19 +1438,25 @@ eventsAdminRouter.get(
   },
 );
 
-// GET /v1/admin/events/:id/merge-preview?other= — the merge panel's compare
-// step (admin 4b E4): keeping `:id` and merging `other` into it, each
-// listing's counts, the Watchers after (each person once), the kept price,
-// and the blank fields the merge fills from `other`. 409 `not_mergeable`
-// with the reason the POST would refuse it for (`same_id`, `past_mismatch`).
+// GET /v1/admin/events/:id/merge-preview?source=[&move=true] — the merge
+// panel's compare step (admin 4b E4): keeping `:id` and merging `source` into
+// it (POST /:source/merge { targetId: :id }), each listing's counts, the
+// Watchers after (each person once), the kept price, and the blank fields the
+// merge fills from `source` (and those it skips). 409 `not_mergeable` with
+// the reason the POST would refuse it for (`same_id`, `past_mismatch`).
 eventsAdminRouter.get(
   '/:id/merge-preview',
   zValidator('param', eventIdSchema, validationHook),
   zValidator('query', mergePreviewQuerySchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
-    const { other } = ctx.req.valid('query');
-    const result = await loadMergePreview(id, other, todayInDenver());
+    const { source, move } = ctx.req.valid('query');
+    const result = await loadMergePreview({
+      keptId: id,
+      sourceId: source,
+      today: todayInDenver(),
+      move,
+    });
     if (result.ok === 'not_found') {
       return ctx.json(
         {
@@ -1463,7 +1464,7 @@ eventsAdminRouter.get(
           error:
             result.which === 'event'
               ? 'Event not found'
-              : 'Other event not found',
+              : 'Source event not found',
         } as const,
         404,
       );
@@ -1506,6 +1507,12 @@ const mergeSchema = z.object({
   suggestion: z
     .object({ reason: z.union([z.literal('date'), z.literal('venue')]) })
     .nullish(),
+  /**
+   * A confirmed relocation: the source is the old listing of a show that
+   * moved. Skips the admin merge's rules (the blank-field fill and the past
+   * rule; lib/event-merge.ts). The de-duplication merge leaves it off.
+   */
+  relocation: z.boolean().optional().default(false),
 });
 
 // POST /v1/admin/events/:id/merge — fold a source event into a target event,
@@ -1530,7 +1537,8 @@ eventsAdminRouter.post(
   }),
   async (ctx) => {
     const { id: sourceId } = ctx.req.valid('param');
-    const { targetId, notifyWatchers, suggestion } = ctx.req.valid('json');
+    const { targetId, notifyWatchers, suggestion, relocation } =
+      ctx.req.valid('json');
     const actor = getAuthUser(ctx);
 
     if (sourceId === targetId) {
@@ -1544,15 +1552,15 @@ eventsAdminRouter.post(
     // the other row and refuses a past row with a non-past one (409
     // `not_mergeable`, reason `past_mismatch`). Venue and night are NOT
     // checked: A3 merges across venue or day, and a relocation is exactly
-    // such a pair. A confirmed move (`notifyWatchers`) is the relocation
-    // path, which merges as the Needs-you move answers do, without them.
+    // such a pair. Only `relocation: true` skips the rules, as the Needs-you
+    // move answers do; `notifyWatchers` alone does not.
     const result = await mergeEvents({
       sourceId,
       targetId,
       actorId: actor.userId,
       notifyWatchers,
       suggestion,
-      adminRules: !notifyWatchers,
+      relocation,
     });
     if (result.ok === 'source_not_found') {
       return ctx.json({ success: false, error: 'Source event not found' }, 404);
@@ -1560,21 +1568,21 @@ eventsAdminRouter.post(
     if (result.ok === 'target_not_found') {
       return ctx.json({ success: false, error: 'Target event not found' }, 404);
     }
-    if (result.ok === 'past_mismatch') {
+    if (result.ok === 'past_mismatch' || result.ok === 'time_taken') {
       return ctx.json(
         {
           success: false,
           error: 'not_mergeable',
-          reason: 'past_mismatch',
+          reason: result.ok,
         } as const,
         409,
       );
     }
-    const { referencesMoved, filled } = result;
+    const { referencesMoved, filled, skipped } = result;
 
     return ctx.json({
       success: true,
-      data: { mergedInto: targetId, referencesMoved, filled },
+      data: { mergedInto: targetId, referencesMoved, filled, skipped },
     });
   },
 );

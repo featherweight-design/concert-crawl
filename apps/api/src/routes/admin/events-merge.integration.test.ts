@@ -215,11 +215,14 @@ describe('GET /v1/admin/events/:id/merge-preview', () => {
       resolution: 'rejected',
     });
 
-    const res = await get(`${kept.id}/merge-preview?other=${other.id}`);
+    const res = await get(`${kept.id}/merge-preview?source=${other.id}`);
 
     expect(res.status).toBe(200);
     const { data } = (await res.json()) as {
       data: {
+        keptId: string;
+        sourceId: string;
+        skipped: string[];
         kept: Record<string, unknown>;
         other: Record<string, unknown>;
         sameVenue: boolean;
@@ -265,25 +268,72 @@ describe('GET /v1/admin/events/:id/merge-preview', () => {
       ]),
     );
     expect(data.fills).not.toContain('description');
+    expect(data.skipped).toEqual([]);
+    expect(data).toMatchObject({ keptId: kept.id, sourceId: other.id });
   });
 
-  it('reports a merge across venues instead of refusing it (A3)', async () => {
+  it("reports a merge across venues, without the other venue's links (A3)", async () => {
     const kept = await seedEvent((await venueNamed('a3-one')).id, {
       date: futureDate(5),
     });
     const other = await seedEvent((await venueNamed('a3-two')).id, {
       date: futureDate(6),
+      ticketUrl: 'https://tickets.example.com/two',
+      eventUrl: 'https://two.example.com/show',
+      ticketPriceMin: '20',
     });
 
-    const res = await get(`${kept.id}/merge-preview?other=${other.id}`);
+    const res = await get(`${kept.id}/merge-preview?source=${other.id}`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { fills: string[]; skipped: string[] };
+    };
+    expect(body).toMatchObject({
+      data: { sameVenue: false, sameDay: false, sameNight: false },
+    });
+    expect(body.data.fills).toContain('ticketPriceMin');
+    expect(body.data.fills).not.toContain('ticketUrl');
+    expect(body.data.skipped).toEqual(
+      expect.arrayContaining(['ticketUrl', 'eventUrl']),
+    );
+  });
+
+  it('previews a move: no past rule, nothing filled', async () => {
+    const venue = await venueNamed('move-venue');
+    const past = await seedEvent(venue.id, {
+      artist: 'Moved',
+      date: futureDate(-3),
+      ticketUrl: 'https://tickets.example.com/old',
+    });
+    const upcoming = await seedEvent(venue.id, {
+      artist: 'Moved',
+      date: futureDate(9),
+    });
+
+    const res = await get(
+      `${upcoming.id}/merge-preview?source=${past.id}&move=true`,
+    );
 
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({
-      data: { sameVenue: false, sameDay: false, sameNight: false },
+      data: { move: true, fills: [], skipped: [] },
     });
   });
 
-  it('409s the same id and a past row with an upcoming one, 404s a missing other, 400s a bad query', async () => {
+  it('refuses a mixed-case copy of the same id as same_id', async () => {
+    const venue = await venueNamed('case-venue');
+    const event = await seedEvent(venue.id, { date: futureDate(3) });
+
+    const res = await get(
+      `${event.id}/merge-preview?source=${event.id.toUpperCase()}`,
+    );
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ reason: 'same_id' });
+  });
+
+  it('409s the same id and a past row with an upcoming one, 404s a missing source, 400s a bad query', async () => {
     const venue = await venueNamed('refuse-venue');
     const upcoming = await seedEvent(venue.id, { date: futureDate(3) });
     const past = await seedEvent(venue.id, {
@@ -291,7 +341,9 @@ describe('GET /v1/admin/events/:id/merge-preview', () => {
       date: futureDate(-3),
     });
 
-    const same = await get(`${upcoming.id}/merge-preview?other=${upcoming.id}`);
+    const same = await get(
+      `${upcoming.id}/merge-preview?source=${upcoming.id}`,
+    );
     expect(same.status).toBe(409);
     expect(await same.json()).toEqual({
       success: false,
@@ -299,17 +351,20 @@ describe('GET /v1/admin/events/:id/merge-preview', () => {
       reason: 'same_id',
     });
 
-    const mixed = await get(`${upcoming.id}/merge-preview?other=${past.id}`);
+    const mixed = await get(`${upcoming.id}/merge-preview?source=${past.id}`);
     expect(mixed.status).toBe(409);
     expect(await mixed.json()).toMatchObject({ reason: 'past_mismatch' });
 
     const missing = await get(
-      `${upcoming.id}/merge-preview?other=00000000-0000-4000-8000-0000000000ee`,
+      `${upcoming.id}/merge-preview?source=00000000-0000-4000-8000-0000000000ee`,
     );
     expect(missing.status).toBe(404);
+    expect(await missing.json()).toMatchObject({
+      error: 'Source event not found',
+    });
 
     expect((await get(`${upcoming.id}/merge-preview`)).status).toBe(400);
-    expect((await get(`${upcoming.id}/merge-preview?other=nope`)).status).toBe(
+    expect((await get(`${upcoming.id}/merge-preview?source=nope`)).status).toBe(
       400,
     );
   });
@@ -419,6 +474,117 @@ describe('POST /v1/admin/events/:id/merge — E4 rules', () => {
     });
 
     expect((await merge(first.id, second.id)).status).toBe(200);
+  });
+
+  // Review: filling the kept row's time would give it the night key a third
+  // upcoming row holds, breaking the unique index (a 500 before).
+  it('skips the time fill when another upcoming row holds that night, and fills the rest', async () => {
+    const venue = await venueNamed('time-taken');
+    const date = futureDate(12);
+    const kept = await seedEvent(venue.id, {
+      artist: 'Rossi',
+      date,
+      manual: true,
+    });
+    // "Rossi." is the same night; its time would give the kept row the key
+    // ('rossi', 20:00) the third row already holds.
+    const source = await seedEvent(venue.id, {
+      artist: 'Rossi.',
+      date,
+      showTime: '20:00:00',
+      ticketUrl: 'https://tickets.example.com/rossi',
+    });
+    await seedEvent(venue.id, {
+      artist: 'Rossi',
+      title: 'Rossi late listing',
+      date,
+      showTime: '20:00:00',
+    });
+
+    const preview = await get(`${kept.id}/merge-preview?source=${source.id}`);
+    const previewBody = (await preview.json()) as {
+      data: { fills: string[]; skipped: string[] };
+    };
+    expect(previewBody.data.fills).not.toContain('showTime');
+    expect(previewBody.data.fills).toContain('ticketUrl');
+    expect(previewBody.data.skipped).toEqual(['showTime']);
+
+    const res = await merge(source.id, kept.id);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { filled: string[]; skipped: string[] };
+    };
+    expect(body.data.filled).toContain('ticketUrl');
+    expect(body.data.filled).not.toContain('showTime');
+    expect(body.data.skipped).toEqual(['showTime']);
+    expect(await rowOf(kept.id)).toMatchObject({
+      showTime: null,
+      ticketUrl: 'https://tickets.example.com/rossi',
+    });
+    expect(await rowOf(source.id)).toBeUndefined();
+  });
+
+  it("does not fill the other venue's links across venues", async () => {
+    const kept = await seedEvent((await venueNamed('links-one')).id, {
+      date: futureDate(8),
+    });
+    const source = await seedEvent((await venueNamed('links-two')).id, {
+      date: futureDate(8),
+      ticketUrl: 'https://tickets.example.com/two',
+      eventUrl: 'https://two.example.com/show',
+      ticketPriceMin: '20',
+    });
+
+    const res = await merge(source.id, kept.id);
+
+    expect(res.status).toBe(200);
+    expect(await rowOf(kept.id)).toMatchObject({
+      ticketUrl: null,
+      eventUrl: null,
+      ticketPriceMin: '20.00',
+    });
+  });
+
+  it('refuses a mixed-case copy of the same id with 422, deleting nothing', async () => {
+    const venue = await venueNamed('case-post');
+    const event = await seedEvent(venue.id, { date: futureDate(4) });
+
+    const res = await merge(event.id, event.id.toUpperCase());
+
+    expect(res.status).toBe(422);
+    expect(await rowOf(event.id)).toBeDefined();
+  });
+
+  it('applies the rules to a notifying merge unless it says relocation', async () => {
+    const venue = await venueNamed('relocation-venue');
+    const past = await seedEvent(venue.id, {
+      artist: 'Moved',
+      date: futureDate(-4),
+      ticketUrl: 'https://tickets.example.com/old',
+    });
+    const upcoming = await seedEvent(venue.id, {
+      artist: 'Moved',
+      date: futureDate(14),
+    });
+    const post = (body: Record<string, unknown>) =>
+      app.request(`/v1/admin/events/${past.id}/merge`, {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ targetId: upcoming.id, ...body }),
+      });
+
+    const notifying = await post({ notifyWatchers: true });
+    expect(notifying.status).toBe(409);
+    expect(await notifying.json()).toMatchObject({ reason: 'past_mismatch' });
+    expect(await rowOf(past.id)).toBeDefined();
+
+    const relocation = await post({ notifyWatchers: true, relocation: true });
+    expect(relocation.status).toBe(200);
+    expect(await relocation.json()).toMatchObject({
+      data: { filled: [], skipped: [] },
+    });
+    expect(await rowOf(upcoming.id)).toMatchObject({ ticketUrl: null });
   });
 
   // Row locks: both rows FOR UPDATE in id order. Before, only the source was
