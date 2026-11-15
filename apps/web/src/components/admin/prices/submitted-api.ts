@@ -176,7 +176,8 @@ export const submittedApi = (getToken: GetToken) => ({
   /**
    * Publish a waiting price (`POST .../:id/approve`, no body). Refused with a
    * 409 when it is no longer waiting (`not_waiting`) or sits in a Price check
-   * (`price_check`), and a 404 when it is gone: `refusedStatus` reads either.
+   * (`price_check`), and a 404 when it is gone: `refusedStatus` reads the
+   * status and `refusedCode` the 409's code.
    */
   approve: async (id: string): Promise<void> => {
     await call(getToken, `/v1/admin/prices/submissions/${id}/approve`, {

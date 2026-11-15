@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -10,6 +11,7 @@ import {
   within,
 } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { call } from '../invite-codes/codes-api';
 import type { StateCounts, SubmittedRow } from './submitted-api';
 import type { StateFilter } from './submitted-rules';
 
@@ -36,12 +38,28 @@ const list =
 const counts =
   vi.fn<(search: string, handle: string | null) => Promise<StateCounts>>();
 const approve = vi.fn<(id: string) => Promise<void>>();
-// The API's refusal, as `refusedStatus` reads it: "status 409" is a 409.
-vi.mock('../invite-codes/codes-api', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  refusedStatus: (err: unknown) =>
-    err instanceof Error && err.message === 'status 409' ? 409 : null,
-}));
+
+/**
+ * The error a real `call` throws when the API answers `status` with `body`,
+ * so the tab reads it through the real `refusedStatus` and `refusedCode`.
+ */
+const refusal = async (
+  status: number,
+  body: Record<string, unknown> = { success: false },
+): Promise<unknown> => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => Response.json(body, { status })),
+  );
+  try {
+    return await call(getToken, '/refused').then(
+      () => new Error('not refused'),
+      (err: unknown) => err,
+    );
+  } finally {
+    vi.unstubAllGlobals();
+  }
+};
 vi.mock('./submitted-api', () => ({
   submittedApi: () => ({
     list: (
@@ -200,9 +218,13 @@ describe('SubmittedTab on a phone', () => {
     const button = within(items[1]!).getByTestId('approve-button');
     expect(button).toHaveTextContent(COPY.approve.approving);
     expect(button).toHaveAttribute('aria-disabled', 'true');
-    expect(
-      within(items[1]!).getByRole('button', { name: COPY.menu.label }),
-    ).toBeDisabled();
+    // aria-disabled, not disabled, so it keeps focus; a tap opens nothing.
+    const more = within(items[1]!).getByRole('button', {
+      name: COPY.menu.label,
+    });
+    expect(more).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(more);
+    expect(screen.queryByRole('dialog')).toBeNull();
     // A second tap sends nothing more.
     fireEvent.click(button);
     expect(approve).toHaveBeenCalledTimes(1);
@@ -493,8 +515,8 @@ describe('SubmittedTab on a desktop', () => {
     pickApprove();
     expect(stateOf(1)).toHaveTextContent(COPY.approve.approving);
     const triggers = screen.getAllByRole('button', { name: COPY.menu.label });
-    expect(triggers[1]).toBeDisabled();
-    expect(triggers[0]).toBeEnabled();
+    expect(triggers[1]).toHaveAttribute('aria-disabled', 'true');
+    expect(triggers[0]).not.toHaveAttribute('aria-disabled');
     const row = screen.getAllByRole('listitem')[1]!;
     expect(row).toHaveAttribute('aria-busy', 'true');
     expect(row.style.background).toBe('var(--surface-2)');
@@ -543,7 +565,7 @@ describe('SubmittedTab on a desktop', () => {
   });
 
   it("says Didn't approve on a failure, and Try again sends it again (43/approve-failed-d)", async () => {
-    approve.mockRejectedValueOnce(new Error('status 500'));
+    approve.mockRejectedValueOnce(await refusal(500));
     render(<SubmittedTab />);
     await openMenu(1);
     pickApprove();
@@ -566,7 +588,9 @@ describe('SubmittedTab on a desktop', () => {
   });
 
   it('reloads the list when the price is no longer waiting (409), with no Try again', async () => {
-    approve.mockRejectedValueOnce(new Error('status 409'));
+    approve.mockRejectedValueOnce(
+      await refusal(409, { success: false, code: 'not_waiting' }),
+    );
     render(<SubmittedTab />);
     await openMenu(1);
     const loads = list.mock.calls.length;
@@ -577,6 +601,93 @@ describe('SubmittedTab on a desktop', () => {
     expect(within(toast).queryByRole('button')).toBeNull();
     await waitFor(() => expect(list.mock.calls.length).toBe(loads + 1));
     expect(stateOf(1)).not.toHaveTextContent(COPY.approve.didntApprove);
+  });
+
+  it('says the price waits in its Price check on a 409 price_check', async () => {
+    approve.mockRejectedValueOnce(
+      await refusal(409, { success: false, code: 'price_check' }),
+    );
+    render(<SubmittedTab />);
+    await openMenu(1);
+    const loads = list.mock.calls.length;
+    pickApprove();
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(COPY.approve.priceCheckBody);
+    expect(toast).not.toHaveTextContent(COPY.approve.notWaitingBody);
+    expect(within(toast).queryByRole('button')).toBeNull();
+    await waitFor(() => expect(list.mock.calls.length).toBe(loads + 1));
+  });
+
+  it('reads a 404 as no longer waiting, and reloads', async () => {
+    approve.mockRejectedValueOnce(
+      await refusal(404, { success: false, error: 'Submission not found' }),
+    );
+    render(<SubmittedTab />);
+    await openMenu(1);
+    const loads = list.mock.calls.length;
+    pickApprove();
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(COPY.approve.notWaitingBody);
+    expect(within(toast).queryByRole('button')).toBeNull();
+    await waitFor(() => expect(list.mock.calls.length).toBe(loads + 1));
+  });
+
+  it('reloads after a 5xx, which may have published it, and keeps Try again on a still-waiting row', async () => {
+    approve.mockRejectedValueOnce(await refusal(503));
+    render(<SubmittedTab />);
+    await openMenu(1);
+    const loads = list.mock.calls.length;
+    pickApprove();
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(COPY.approve.failedBody);
+    await waitFor(() => expect(list.mock.calls.length).toBe(loads + 1));
+    expect(stateOf(1)).toHaveTextContent(COPY.approve.didntApprove);
+    expect(
+      within(toast).getByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('drops the toast when the filter changed mid-approve, and loads the new list again', async () => {
+    let settle: () => void = () => {};
+    approve.mockReturnValueOnce(
+      new Promise<void>((done) => {
+        settle = done;
+      }),
+    );
+    render(<SubmittedTab />);
+    const group = await screen.findByRole('group', {
+      name: COPY.filtersLabel,
+    });
+    await openMenu(1);
+    pickApprove();
+    fireEvent.click(
+      await within(group).findByRole('button', { name: 'Published 43' }),
+    );
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('published', '', 0, 50, null),
+    );
+    const loads = list.mock.calls.length;
+    await act(async () => {
+      settle();
+      await Promise.resolve();
+    });
+    // The load during the request may predate it: the new list loads again.
+    await waitFor(() => expect(list.mock.calls.length).toBe(loads + 1));
+    expect(list).toHaveBeenLastCalledWith('published', '', 0, 50, null);
+    expect(screen.queryByTestId('approve-toast')).toBeNull();
+  });
+
+  it('keeps focus on the ⋯ after Approve is picked, resting it with aria-disabled', async () => {
+    approve.mockReturnValue(new Promise(() => {}));
+    render(<SubmittedTab />);
+    await openMenu(1);
+    pickApprove();
+    const trigger = screen.getAllByRole('button', { name: COPY.menu.label })[1];
+    expect(trigger).toHaveAttribute('aria-disabled', 'true');
+    expect(trigger).not.toBeDisabled();
+    expect(document.activeElement).toBe(trigger);
   });
 
   it('widens the STATE column to 150 for Published by you', async () => {

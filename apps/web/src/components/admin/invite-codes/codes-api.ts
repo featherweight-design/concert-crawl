@@ -142,6 +142,8 @@ class ShapeError extends Error {
     message: string,
     /** The HTTP status when the API refused, so a caller can tell a 403 or 404. */
     public readonly status: number | null = null,
+    /** The refusal's machine `code` (a 409's `not_waiting`), when it sent one. */
+    public readonly code: string | null = null,
   ) {
     super(message);
   }
@@ -150,6 +152,10 @@ class ShapeError extends Error {
 /** The status a failed `call` was refused with, or null when there wasn't one. */
 export const refusedStatus = (err: unknown): number | null =>
   err instanceof ShapeError ? err.status : null;
+
+/** The `code` a failed `call`'s refusal carried, or null when it had none. */
+export const refusedCode = (err: unknown): string | null =>
+  err instanceof ShapeError ? err.code : null;
 
 /** A taken custom code: the 409 carries a free suggestion (`12/code-taken-d`). */
 export class CodeTakenError extends Error {
@@ -241,7 +247,11 @@ export const callEnvelope = async (
     throw new CodeTakenError(body['code'], body['suggestion']);
   }
   if (!res.ok || !isRecord(body) || body['success'] !== true) {
-    throw new ShapeError(`status ${res.status}`, res.status);
+    throw new ShapeError(
+      `status ${res.status}`,
+      res.status,
+      !res.ok && isRecord(body) && isText(body['code']) ? body['code'] : null,
+    );
   }
   return body;
 };

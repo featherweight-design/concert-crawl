@@ -293,9 +293,12 @@ export const RowMenu = ({
         data-testid={testId}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        disabled={disabled}
+        // aria-disabled, not disabled: a natively disabled ⋯ drops the focus
+        // handed back to it after a pick, so it rests and ignores presses.
+        aria-disabled={disabled || undefined}
         onClick={(evt) => {
           evt.stopPropagation();
+          if (disabled) return;
           const rect = evt.currentTarget.getBoundingClientRect();
           // The menu's height from its drawn rows (9+28+9px each, plus the
           // divider and padding), so it opens upward near the bottom.

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { refusedStatus } from '../invite-codes/codes-api';
+import { refusedCode, refusedStatus } from '../invite-codes/codes-api';
 import { submittedApi } from './submitted-api';
 
 afterEach(() => {
@@ -85,5 +85,34 @@ describe('approve', () => {
       .approve('s-1')
       .catch((caught: unknown) => caught);
     expect(refusedStatus(err)).toBe(409);
+    expect(refusedCode(err)).toBe('not_waiting');
+  });
+
+  it('carries a 409 price_check code through to refusedCode', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({ success: false, code: 'price_check' }, { status: 409 }),
+      ),
+    );
+    const err = await submittedApi(async () => 'token')
+      .approve('s-1')
+      .catch((caught: unknown) => caught);
+    expect(refusedStatus(err)).toBe(409);
+    expect(refusedCode(err)).toBe('price_check');
+  });
+
+  it('reads no code from a 404 without one', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({ success: false, error: 'gone' }, { status: 404 }),
+      ),
+    );
+    const err = await submittedApi(async () => 'token')
+      .approve('s-1')
+      .catch((caught: unknown) => caught);
+    expect(refusedStatus(err)).toBe(404);
+    expect(refusedCode(err)).toBeNull();
   });
 });
