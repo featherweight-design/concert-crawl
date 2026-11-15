@@ -1,0 +1,28 @@
+{
+  "feature": "Admin item 22 · Hidden venue ⋯ menu and chips (run with CF Fixture Old Room hidden, or hidden and paused)",
+  "note": "Board: design_handoff_bplus_redesign/addendum-6/boards/22-hidden-venue-menu. CONTACT_SHEET_ROLE=admin. Run under the orchestrator's scratch lock: CF Fixture Old Room is hidden (and, for the second run, paused 'off-season') by a guarded script, shot, then restored exactly to its snapshot. Never left changed.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "hidden-venue-menu",
+      "label": "Hidden venue ⋯ menu (CF Fixture Old Room)",
+      "steps": [
+        { "goto": "/admin/venues", "wait": "text=Hidden", "settle": 1500 },
+        { "clickRole": "button", "name": "^Hidden", "settle": 1500 },
+        { "clickRole": "link", "name": "CF Fixture Old Room", "settle": 2500 },
+        { "click": "[data-testid=\"venue-menu\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "hidden-list-chips",
+      "label": "Venues list, Hidden filter: the chips",
+      "steps": [
+        { "goto": "/admin/venues", "wait": "text=Hidden", "settle": 1500 },
+        { "clickRole": "button", "name": "^Hidden", "settle": 1500 }
+      ]
+    }
+  ]
+}
