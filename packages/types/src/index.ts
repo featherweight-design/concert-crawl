@@ -1515,7 +1515,7 @@ export type SubmissionDisplayStatus =
   | 'closed';
 
 /** The two stored statuses that read as `closed`, so the page can say why. */
-export type SubmissionClosedReason = 'stale' | 'archived';
+export type SubmissionClosedReason = 'stale' | 'archived' | 'rejected';
 
 /**
  * The one definition of how a stored submission status reads to the user
@@ -1542,7 +1542,16 @@ export const submissionDisplayStatus = (
 export const submissionClosedReason = (
   dbStatus: string,
 ): SubmissionClosedReason | undefined =>
-  dbStatus === 'stale' || dbStatus === 'archived' ? dbStatus : undefined;
+  dbStatus === 'stale' || dbStatus === 'archived' || dbStatus === 'rejected'
+    ? dbStatus
+    : undefined;
+
+/**
+ * How an admin's Reject price marks the row it archives: `archived_reason`
+ * starts with this, then the reason code (and `|note`). Written by the admin
+ * reject route; read by `fanStoredStatus`.
+ */
+export const REJECTION_REASON_PREFIX = 'rejected:';
 
 /**
  * The archive reason an admin's Edit price writes on the corroborated fan
@@ -1554,15 +1563,19 @@ export const REPLACED_BY_ADMIN_REASON = 'replaced by admin';
 /**
  * The stored status a fan's own list reads a submission as. A price an admin
  * replaced reads as it did before, corroborated (it was, when they sent it),
- * so the replacement tells them nothing; every other row reads as stored.
+ * so the replacement tells them nothing. A price an admin rejected reads as
+ * `rejected`, which closes with its own line: "A newer price replaced it"
+ * would be false when nothing replaced it. Every other row reads as stored.
  */
 export const fanStoredStatus = (
   dbStatus: string,
   archivedReason: string | null,
-): string =>
-  dbStatus === 'archived' && archivedReason === REPLACED_BY_ADMIN_REASON
-    ? 'corroborated'
-    : dbStatus;
+): string => {
+  if (dbStatus !== 'archived' || archivedReason === null) return dbStatus;
+  if (archivedReason === REPLACED_BY_ADMIN_REASON) return 'corroborated';
+  if (archivedReason.startsWith(REJECTION_REASON_PREFIX)) return 'rejected';
+  return dbStatus;
+};
 
 /**
  * What every surface that shows a submitted-price count reads: the menu (live),

@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db, priceSubmissions } from '@concert-crawl/db';
+import { REJECTION_REASON_PREFIX } from '@concert-crawl/types';
 
 export const REJECTION_REASONS = [
   'wrong-show',
@@ -11,7 +12,8 @@ export const REJECTION_REASONS = [
 
 export type RejectionReason = (typeof REJECTION_REASONS)[number];
 
-const PREFIX = 'rejected:';
+// Shared with `fanStoredStatus`, which reads a rejection off the same prefix.
+const PREFIX = REJECTION_REASON_PREFIX;
 
 /**
  * A rejection is `status = 'archived'` with the reason encoded in

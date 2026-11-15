@@ -100,7 +100,10 @@ import {
   userBilling,
   userProfiles,
 } from '@concert-crawl/db';
-import { tallySubmissionCounts } from '@concert-crawl/types';
+import {
+  REPLACED_BY_ADMIN_REASON,
+  tallySubmissionCounts,
+} from '@concert-crawl/types';
 import type {
   SubmissionCounts,
   SubmissionDisplayStatus,
@@ -780,6 +783,51 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
         (row) => (row.status === 'closed') === (row.closedReason !== undefined),
       ),
     ).toBe(true);
+  });
+
+  it('tells a fan the truth about each kind of archived price', async () => {
+    setAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    const seed = (archivedReason: string | null, priceMin: string) =>
+      seedPriceSubmission(event.id, 'user_test123', {
+        status: 'archived',
+        archivedReason,
+        priceMin,
+      });
+    await seed('rejected:wrong-show|admin-only note', '10');
+    await seed(REPLACED_BY_ADMIN_REASON, '20');
+    await seed(null, '30');
+
+    const res = await app.request('/v1/users/me/submissions', {
+      headers: { Authorization: 'Bearer test' },
+    });
+    const body = (await res.json()) as {
+      data: Array<{
+        priceMin: string;
+        status: SubmissionDisplayStatus;
+        closedReason?: string;
+      }>;
+    };
+    // The list sends prices in cents.
+    const byPrice = new Map(
+      body.data.map((row) => [Number(row.priceMin) / 100, row] as const),
+    );
+    // Rejected: closed, with its own reason, and nothing of the admin's note.
+    expect(byPrice.get(10)).toMatchObject({
+      status: 'closed',
+      closedReason: 'rejected',
+    });
+    expect(JSON.stringify(body)).not.toContain('admin-only note');
+    // Replaced by an admin's Edit price: still reads as confirmed.
+    expect(byPrice.get(20)?.status).toBe('confirmed');
+    expect(byPrice.get(20)?.closedReason).toBeUndefined();
+    // Any other archive: a newer price replaced it.
+    expect(byPrice.get(30)).toMatchObject({
+      status: 'closed',
+      closedReason: 'archived',
+    });
   });
 });
 
