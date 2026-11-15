@@ -15,16 +15,17 @@ export function VenueHero({ slug, name }: VenueHeroProps) {
   return (
     <div className="relative h-[380px] w-full shrink-0 lg:h-[340px]">
       {glyphKey !== null ? (
-        // Measured from `02-mobile/bp-m-venue_m.jpg`, the venue page's own
-        // board: on a 390 phone the glyph's 24-unit grid is ~218pt wide, so
-        // the svg (28 units across) is 254. (`hero-m-redrocks` drew it smaller;
-        // the page's board wins.) From lg the desktop board (`bp-venue.jpg` / `hero-venue.jpg`) draws the
+        // Addendum 5 item 11 ruled the phone size: about 140pt, as
+        // `screens/10-venue-art/hero-m-redrocks` draws it (the sign spans about
+        // 137pt of a 390 phone), so the glyph's 24-unit grid is 140 and the svg
+        // (28 units across) is 163. This replaces the ~218pt grid measured from
+        // the older `02-mobile/bp-m-venue_m.jpg`. From lg the desktop board (`bp-venue.jpg` / `hero-venue.jpg`) draws the
         // sign about a quarter larger than the 168 grid it used to get, so the
         // grid is 210 (245 svg) and the halo discs, which are in glyph units,
         // grow with it.
         <VenueNeonArt
           glyphKey={glyphKey}
-          glyphSize={254}
+          glyphSize={163}
           glyphSizeSm={245}
           align="endFromSm"
         />

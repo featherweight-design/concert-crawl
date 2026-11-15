@@ -24,14 +24,15 @@ describe('VenueHero', () => {
     ).not.toBeNull();
   });
 
-  it('draws the desktop sign about a quarter larger than before', () => {
+  it('draws the phone sign at about 140pt (addendum 5 item 11) and the desktop sign larger', () => {
     const { container } = render(
       <VenueHero slug="the-church-nightclub" name="The Church Nightclub" />,
     );
     const glyph = container.querySelector(
       'svg[data-venue-glyph="church"]',
     ) as SVGElement;
-    expect(glyph.style.getPropertyValue('--vn-size')).toBe('254px');
+    // The svg is 28 glyph units across, so a 140pt grid is a 163pt svg.
+    expect(glyph.style.getPropertyValue('--vn-size')).toBe('163px');
     expect(glyph.style.getPropertyValue('--vn-size-sm')).toBe('245px');
   });
 
