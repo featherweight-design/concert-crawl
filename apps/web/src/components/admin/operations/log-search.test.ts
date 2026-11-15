@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { AUDIT_ACTION_KEYS } from '@concert-crawl/types';
-import { actionsMatching, MAX_SEARCH_ACTIONS } from './log-search';
+import {
+  actionsMatching,
+  MAX_SEARCH_ACTIONS,
+  SEARCH_MAX_LENGTH,
+} from './log-search';
 
 describe('actionsMatching (Search the log)', () => {
   it('matches nothing for a blank search', () => {
@@ -47,6 +51,10 @@ describe('actionsMatching (Search the log)', () => {
     expect(keys.length).toBeLessThanOrEqual(MAX_SEARCH_ACTIONS);
     for (const key of keys) expect(AUDIT_ACTION_KEYS).toContain(key);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('caps the search at the API limit', () => {
+    expect(SEARCH_MAX_LENGTH).toBe(100);
   });
 
   it('matches nothing for words no sentence has', () => {

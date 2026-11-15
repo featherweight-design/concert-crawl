@@ -52,6 +52,9 @@ const isVariantKey = (key: string): key is VariantKey =>
 const isActionKey = (key: string): key is AuditActionKey =>
   AUDIT_ACTION_KEYS.some((known) => known === key);
 
+/** The API's cap on `search`; past it the read is a 400. */
+export const SEARCH_MAX_LENGTH = 100;
+
 /** The API's cap on `actions` (`GET /v1/admin/audit-log`). */
 export const MAX_SEARCH_ACTIONS = 200;
 

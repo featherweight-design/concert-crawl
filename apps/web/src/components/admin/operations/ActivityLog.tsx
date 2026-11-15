@@ -28,15 +28,13 @@ import {
   type LogQuery,
 } from './activity-api';
 import { AnyoneFilter, AnyPageFilter, SearchField } from './LogFilterMenus';
-
-/** How long typing pauses before "Search the log" reads. */
-const SEARCH_PAUSE_MS = 300;
 import {
   DayStepper,
   PhoneDayStepper,
   dayChipLabel,
   shortDay,
 } from './DayPicker';
+import { SEARCH_MAX_LENGTH } from './log-search';
 import {
   AREA_LABELS,
   actorLabel,
@@ -44,6 +42,9 @@ import {
   sentenceFor,
 } from './activity-sentences';
 import { ActivityLogRowsSkeleton } from './ActivityLogSkeleton';
+
+/** How long typing pauses before "Search the log" reads. */
+const SEARCH_PAUSE_MS = 300;
 
 const COPY = ADMIN_COPY.operations.log;
 
@@ -468,15 +469,20 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
     return () => ctrl.abort();
   }, [getToken, day, area, search]);
 
+  // The query the shown rows were read with: Load more pages that one, never
+  // a filter or search changed in the render before the next read starts.
+  const shownQuery = useRef<LogQuery | null>(null);
   const load = useCallback(async () => {
     current.current?.abort();
     const mine = new AbortController();
     current.current = mine;
+    const of = query(day);
+    shownQuery.current = of;
     setFailed(false);
     setShown(null);
     setMoreState('idle');
     try {
-      const page = await readLogPage(getToken, query(day), null, mine.signal);
+      const page = await readLogPage(getToken, of, null, mine.signal);
       if (mine !== current.current) return;
       setShown(page);
     } catch {
@@ -497,11 +503,12 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   const loadMore = async () => {
     const from = shown?.nextCursor;
     const mine = current.current;
-    if (!from || !mine || moreBusy.current) return;
+    const of = shownQuery.current;
+    if (!from || !mine || !of || moreBusy.current) return;
     moreBusy.current = true;
     setMoreState('loading');
     try {
-      const page = await readLogPage(getToken, query(day), from, mine.signal);
+      const page = await readLogPage(getToken, of, from, mine.signal);
       if (mine !== current.current) return;
       // A failed page keeps the rows already shown; Load more says so.
       setShown((was) =>
@@ -563,6 +570,7 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
       value={typed}
       onChange={setTyped}
       label={COPY.search}
+      maxLength={SEARCH_MAX_LENGTH}
       style={isPhone ? { width: '100%' } : { width: 240, flex: 'none' }}
     />
   );

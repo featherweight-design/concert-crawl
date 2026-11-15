@@ -20,7 +20,7 @@ import {
   isTextOrNull,
   type GetToken,
 } from '../invite-codes/codes-api';
-import { actionsMatching } from './log-search';
+import { actionsMatching, SEARCH_MAX_LENGTH } from './log-search';
 
 /** One page of a day: past it, Load more (README §37: past 50 changes). */
 export const LOG_PAGE_SIZE = 50;
@@ -45,9 +45,10 @@ export type LogFilters = Pick<LogQuery, 'actorHandle' | 'area' | 'search'>;
 const setFilters = (params: URLSearchParams, filters: LogFilters) => {
   if (filters.actorHandle) params.set('actorHandle', filters.actorHandle);
   if (filters.area) params.set('area', filters.area);
-  if (filters.search) {
-    params.set('search', filters.search);
-    const actions = actionsMatching(filters.search);
+  const search = filters.search?.trim().slice(0, SEARCH_MAX_LENGTH);
+  if (search) {
+    params.set('search', search);
+    const actions = actionsMatching(search);
     if (actions.length > 0) params.set('actions', actions.join(','));
   }
 };

@@ -427,10 +427,41 @@ describe('Activity log', () => {
       ).not.toBeInTheDocument();
     });
 
+    it('says the list failed when a person comes back with an unknown role', async () => {
+      fetchMock.mockImplementation(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = new URL(String(input));
+          if (url.pathname === '/v1/admin/audit-log/actors')
+            return json({
+              success: true,
+              data: [
+                {
+                  handle: 'hugh',
+                  avatarColor: null,
+                  avatarSecondColor: null,
+                  count: 1,
+                  you: true,
+                  role: 'owner',
+                },
+              ],
+            });
+          if (url.pathname === '/v1/admin/audit-log') return logPage(url, init);
+          return json({ success: true, data: [] });
+        },
+      );
+      renderLog();
+      await screen.findByTestId('activity-log-table');
+      fireEvent.click(screen.getByTestId('activity-log-anyone-chip'));
+      const menu = await screen.findByTestId('activity-log-anyone');
+      expect(await within(menu).findByRole('alert')).toBeInTheDocument();
+    });
+
     it('searches the log once typing pauses, with the matched sentences, beside the other filters', async () => {
       renderLog();
       await screen.findByTestId('activity-log-table');
       const field = screen.getByRole('searchbox', { name: COPY.log.search });
+      // The API takes at most 100 characters.
+      expect(field).toHaveAttribute('maxlength', '100');
       fireEvent.change(field, { target: { value: '  blocking ' } });
       await waitFor(() =>
         expect(logCalls().at(-1)?.searchParams.get('search')).toBe('blocking'),
