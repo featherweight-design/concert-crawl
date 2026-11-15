@@ -83,11 +83,16 @@ describe('FeatureFlagControl (the ladder)', () => {
   });
 
   it('reads the old boolean when a payload has no stage', () => {
-    render(
-      <FeatureFlagControl
-        initial={[flag({ stage: undefined, enabled: true })]}
-      />,
-    );
+    // An older payload: the ladder fields are simply absent.
+    const legacy: AdminFeatureFlag = {
+      key: 'crews',
+      label: 'Crews',
+      description: 'The Crews tab and crew pages.',
+      enabled: true,
+      updatedAt: null,
+      updatedBy: null,
+    };
+    render(<FeatureFlagControl initial={[legacy]} />);
     expect(step('everyone')).toHaveAttribute('aria-checked', 'true');
   });
 
