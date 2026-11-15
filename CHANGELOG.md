@@ -1,3 +1,19 @@
+# [1.498.0](https://github.com/featherweight-design/concert-crawl/compare/v1.497.0...v1.498.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** a postponed row never says doors and reads postponed to a screen reader ([5987b94](https://github.com/featherweight-design/concert-crawl/commit/5987b94db284feb922c00000a269c53b9bb839e7))
+* **web:** scope the feedback item read to its opening and keep the param on transient failures ([5e4bc9a](https://github.com/featherweight-design/concert-crawl/commit/5e4bc9a3566f53029ffd9ea5ae76f01e31e9a9dc))
+* **web:** the doors time is null-safe on the Coming up row ([dbd3b37](https://github.com/featherweight-design/concert-crawl/commit/dbd3b376c1a7d863413bc20f3c0a78a1ee2628b8))
+
+
+### Features
+
+* **api:** crew shows carry their status and doors time ([c2df016](https://github.com/featherweight-design/concert-crawl/commit/c2df0162a82763ba260ec2bfc4aaaf3d65837488))
+* **web:** open a feedback ?item= outside the loaded list by reading it alone ([756d4b6](https://github.com/featherweight-design/concert-crawl/commit/756d4b6be345a0f5b8beb4732a18fe29a0d7de1f))
+* **web:** the Coming up row draws the postponed chip and the doors time ([7509322](https://github.com/featherweight-design/concert-crawl/commit/75093229f373639253d9c6de7ba1ef0d10b85b9f))
+
 # [1.497.0](https://github.com/featherweight-design/concert-crawl/compare/v1.496.0...v1.497.0) (2026-11-15)
 
 
