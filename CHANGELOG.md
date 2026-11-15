@@ -1,3 +1,19 @@
+# [1.518.0](https://github.com/featherweight-design/concert-crawl/compare/v1.517.0...v1.518.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** address the event delete review ([7e8005c](https://github.com/featherweight-design/concert-crawl/commit/7e8005c81af01ea56aa1392475f02837107a0c0f))
+* **web:** drop the tier picker and locked states from Going, onboarding and follow surfaces ([1d1b147](https://github.com/featherweight-design/concert-crawl/commit/1d1b1472f712eaa5ee3f4ba2161ebcd0c4beea07))
+* **web:** keep a stale focus target and an unreadable bulk reply quiet ([2f07773](https://github.com/featherweight-design/concert-crawl/commit/2f077737d4ed719cd4e2c92140fdc0f2a4d1f079))
+* **web:** require a handler for a locked follow button and match entitlement cells by name ([db1729d](https://github.com/featherweight-design/concert-crawl/commit/db1729de0bc40723e5a0f08a0cd641f243025163))
+
+
+### Features
+
+* **api:** name who added a listing in the merge reads ([d86d070](https://github.com/featherweight-design/concert-crawl/commit/d86d070eb282f8535d7dcd45043e4f132b190a3f))
+* **web:** delete a manual show from the Events and Event edit menus ([c5ac2a1](https://github.com/featherweight-design/concert-crawl/commit/c5ac2a18594136c23a5cdbfcc5c1569eee7aa3bc))
+
 # [1.517.0](https://github.com/featherweight-design/concert-crawl/compare/v1.516.0...v1.517.0) (2026-11-15)
 
 
