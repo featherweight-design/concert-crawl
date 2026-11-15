@@ -37,6 +37,7 @@ import {
   resolveCrawlDelayMs,
 } from './lib/robots.js';
 import { alignToNights } from './lib/align-nights.js';
+import { crawledLineupAction } from './lib/crawled-lineup-action.js';
 import { sendCrawlFailureEmail } from './lib/email.js';
 import { checkEventCountDrop } from './lib/event-count-alert.js';
 import { checkEventCeiling } from './lib/event-ceiling-alert.js';
@@ -2157,7 +2158,8 @@ export async function crawlVenue(
       // locked bill (manual, or `lineup_edited_at`) was not rewritten by the
       // upsert, so its rebuild reproduces the admin's lineup. A listing that
       // is not a concert (the predicate projectArtists uses) has its rows
-      // cleared instead, whatever its stored arrays say.
+      // cleared instead, whatever its stored arrays say, except a locked bill
+      // the extractor's verdict alone would clear (`crawledLineupAction`).
       const createdNames = new Set(createdArtists);
       const syncIds: string[] = [];
       const clearIds: string[] = [];
@@ -2168,16 +2170,19 @@ export async function crawlVenue(
         const stored = existingMap.get(key);
         const id = upsertedId ?? stored?.id;
         if (id === undefined) continue;
-        if (!isConcertListing(evt)) clearIds.push(id);
-        else if (upsertedId !== undefined) syncIds.push(id);
-        else if (
-          stored !== undefined &&
-          plannedLineup(stored).some((slot) =>
-            createdNames.has(slot.canonicalName),
-          )
-        ) {
-          syncIds.push(id);
-        }
+        const action = crawledLineupAction({
+          readNotConcert: evt.isConcert === false,
+          hidden: hiddenKeys.has(key),
+          billLocked: billLockedKeys.has(key),
+          upserted: upsertedId !== undefined,
+          namesCreatedArtist: () =>
+            stored !== undefined &&
+            plannedLineup(stored).some((slot) =>
+              createdNames.has(slot.canonicalName),
+            ),
+        });
+        if (action === 'clear') clearIds.push(id);
+        else if (action === 'sync') syncIds.push(id);
       }
       await syncCrawledLineups(venueId, syncIds, clearIds);
     }
