@@ -1,3 +1,16 @@
+# [1.517.0](https://github.com/featherweight-design/concert-crawl/compare/v1.516.0...v1.517.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **api:** address the E4-a merge review ([9fa723f](https://github.com/featherweight-design/concert-crawl/commit/9fa723feeedd3077045dc8bcc32fa99a9ed818eb))
+* **db:** give the merge fill rule a subpath so db mocks don't break suite load ([fab043e](https://github.com/featherweight-design/concert-crawl/commit/fab043ec8b47281e33909abfd7add1d65c76755a))
+
+
+### Features
+
+* **api:** admin merge candidates and preview; merge fills blanks under both-row locks ([366b226](https://github.com/featherweight-design/concert-crawl/commit/366b226fbead8ae138e3d06b49f060bbc71313a5))
+
 # [1.516.0](https://github.com/featherweight-design/concert-crawl/compare/v1.515.0...v1.516.0) (2026-11-15)
 
 
