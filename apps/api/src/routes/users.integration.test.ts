@@ -822,6 +822,13 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
       status: 'corroborated',
       disputedSubmissionId: won.id,
     });
+    // An orphan update the resolution settled: nothing checked it in turn.
+    await seedPriceSubmission(event.id, 'user_test123', {
+      status: 'archived',
+      archivedReason: `Superseded by contest resolution ${parent.id}`,
+      disputedSubmissionId: parent.id,
+      priceMin: '60',
+    });
 
     const res = await app.request('/v1/users/me/submissions', {
       headers: { Authorization: 'Bearer test' },
@@ -861,7 +868,12 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
       status: 'closed',
       closedReason: 'archived',
     });
-    expect(body.data).toHaveLength(5);
+    // An orphan update the resolution settled: not used.
+    expect(byPrice.get(60)).toMatchObject({
+      status: 'closed',
+      closedReason: 'not_used',
+    });
+    expect(body.data).toHaveLength(6);
 
     // The counts on /me read the same rows the same way.
     const meRes = await app.request('/v1/users/me', {
@@ -871,11 +883,11 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
       data: { submissionCounts: SubmissionCounts };
     };
     expect(me.data.submissionCounts).toEqual({
-      total: 5,
+      total: 6,
       live: 1,
       pending: 0,
       priceChecks: 0,
-      closed: 4,
+      closed: 5,
     });
   });
 });
