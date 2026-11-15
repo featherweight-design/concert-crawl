@@ -58,7 +58,9 @@ export const AdminCardRow = ({
       borderTop: '1px solid var(--border)',
     }}
   >
-    <span style={{ color: 'var(--fg-muted)' }}>{label}</span>
-    <span style={{ textAlign: 'right' }}>{children}</span>
+    {/* The label keeps its width; a long value wraps instead (at 320 a
+        link squeezed "Source" into "Sourc e"). */}
+    <span style={{ color: 'var(--fg-muted)', flex: 'none' }}>{label}</span>
+    <span style={{ textAlign: 'right', minWidth: 0 }}>{children}</span>
   </div>
 );
