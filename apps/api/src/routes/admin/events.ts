@@ -70,10 +70,18 @@ import {
   hiddenReasonSql,
   listAdminEvents,
 } from './lib/events-browse.js';
-import { watchingCountOf, wentCountOf } from './lib/event-counts.js';
+import {
+  submittedPriceWhere,
+  watchingCountOf,
+  wentCountOf,
+} from './lib/event-counts.js';
+import {
+  loadMergeCandidates,
+  loadMergePreview,
+  mergePreviewQuerySchema,
+} from './lib/event-merge-preview.js';
 import { loadSoldOutRecord } from './lib/sold-out-record.js';
 import { todayInDenver } from '../../lib/time.js';
-import { currentPriceCondition } from '../../lib/price-check.js';
 import { isUniqueViolationOn } from '../../lib/pg-errors.js';
 import {
   createEventSchema,
@@ -202,17 +210,6 @@ const viewClauses = (view: EventsListView): SQL[] => {
 };
 
 export const eventsAdminRouter = new Hono<AdminVariables>();
-
-/**
- * A Submitted price that stands on a show: awaiting review, or setting the
- * displayed price (`currentPriceCondition`, which keeps a price under an
- * open Price check). Never a counter filed against another price.
- */
-const submittedPriceWhere = () =>
-  and(
-    isNull(priceSubmissions.disputedSubmissionId),
-    or(eq(priceSubmissions.status, 'pending'), currentPriceCondition()),
-  );
 
 // GET /v1/admin/events/list — the admin Events page (4b-1): Upcoming or Past,
 // search, venue and status filters, No price and Hidden, with the chip and
@@ -1430,6 +1427,61 @@ eventsAdminRouter.post(
   },
 );
 
+// GET /v1/admin/events/:id/merge-candidates — the merge panel's pick list
+// (admin 4b E4): the other live listings at this venue on this date,
+// likeliest first. Read only; see lib/event-merge-preview.ts.
+eventsAdminRouter.get(
+  '/:id/merge-candidates',
+  zValidator('param', eventIdSchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const candidates = await loadMergeCandidates(id);
+    if (candidates === null) {
+      return ctx.json({ success: false, error: 'Not found' } as const, 404);
+    }
+    return ctx.json({ success: true, data: { candidates } } as const);
+  },
+);
+
+// GET /v1/admin/events/:id/merge-preview?other= — the merge panel's compare
+// step (admin 4b E4): keeping `:id` and merging `other` into it, each
+// listing's counts, the Watchers after (each person once), the kept price,
+// and the blank fields the merge fills from `other`. 409 `not_mergeable`
+// with the reason the POST would refuse it for (`same_id`, `past_mismatch`).
+eventsAdminRouter.get(
+  '/:id/merge-preview',
+  zValidator('param', eventIdSchema, validationHook),
+  zValidator('query', mergePreviewQuerySchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const { other } = ctx.req.valid('query');
+    const result = await loadMergePreview(id, other, todayInDenver());
+    if (result.ok === 'not_found') {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            result.which === 'event'
+              ? 'Event not found'
+              : 'Other event not found',
+        } as const,
+        404,
+      );
+    }
+    if (result.ok === 'not_mergeable') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'not_mergeable',
+          reason: result.reason,
+        } as const,
+        409,
+      );
+    }
+    return ctx.json({ success: true, data: result.data } as const);
+  },
+);
+
 const mergeSchema = z.object({
   targetId: idSchema,
   /**
@@ -1488,12 +1540,19 @@ eventsAdminRouter.post(
       );
     }
 
+    // Admin 4b E4: the admin's merge fills the kept row's blank fields from
+    // the other row and refuses a past row with a non-past one (409
+    // `not_mergeable`, reason `past_mismatch`). Venue and night are NOT
+    // checked: A3 merges across venue or day, and a relocation is exactly
+    // such a pair. A confirmed move (`notifyWatchers`) is the relocation
+    // path, which merges as the Needs-you move answers do, without them.
     const result = await mergeEvents({
       sourceId,
       targetId,
       actorId: actor.userId,
       notifyWatchers,
       suggestion,
+      adminRules: !notifyWatchers,
     });
     if (result.ok === 'source_not_found') {
       return ctx.json({ success: false, error: 'Source event not found' }, 404);
@@ -1501,11 +1560,21 @@ eventsAdminRouter.post(
     if (result.ok === 'target_not_found') {
       return ctx.json({ success: false, error: 'Target event not found' }, 404);
     }
-    const referencesMoved = result.referencesMoved;
+    if (result.ok === 'past_mismatch') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'not_mergeable',
+          reason: 'past_mismatch',
+        } as const,
+        409,
+      );
+    }
+    const { referencesMoved, filled } = result;
 
     return ctx.json({
       success: true,
-      data: { mergedInto: targetId, referencesMoved },
+      data: { mergedInto: targetId, referencesMoved, filled },
     });
   },
 );

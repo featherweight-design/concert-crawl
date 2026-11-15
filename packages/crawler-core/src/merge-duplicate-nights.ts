@@ -38,7 +38,11 @@ import {
   db,
   eventReports,
   events,
+  MERGE_BILL_COLUMNS,
+  type MergeFillField,
   mergeEventRows,
+  mergeFillsFrom,
+  mergeFillWritesBill,
   priceSubmissions,
   syncEventArtists,
   userEvents,
@@ -51,47 +55,14 @@ import {
 } from '@concert-crawl/types';
 import { reportFailure } from '@concert-crawl/logger';
 import { alignToNights } from './lib/align-nights.js';
-import {
-  type BillField,
-  changedBillFields,
-  unionBill,
-} from './lib/union-bill.js';
 
 export const CLEANUP_ACTOR = 'system:duplicate-night-cleanup';
 
 /**
- * Columns the survivor takes from a folded row when it has none of its own. A
- * group is taken from ONE row (the first that holds the group's first column),
- * so related values stay a pair: a price range and its source, a ticket link and
- * its typed links, the bill and its canonical forms.
+ * The fill rule (which blank columns the survivor takes, and the bill union)
+ * lives in @concert-crawl/db (`mergeFillsFrom`), shared with the admin merge.
  */
-const FILL_GROUPS = [
-  ['showTime', 'doorsTime'],
-  ['ticketUrl', 'ticketLinks'],
-  ['eventUrl'],
-  ['imageUrl'],
-  ['description'],
-  ['tourName'],
-  ['genre'],
-  ['ticketPriceMin', 'ticketPriceMax', 'priceSource'],
-] as const satisfies readonly (readonly (keyof typeof events.$inferSelect)[])[];
-/**
- * The bill is not a fill: the donors' names are unioned into the survivor's
- * (`unionBill`), since a name only a donor carries would otherwise be lost with
- * it. Reported as whichever display array(s) it changes.
- */
-type FillField = (typeof FILL_GROUPS)[number][number] | BillField;
-
-const BILL_FILL = [
-  'headliners',
-  'canonicalHeadliners',
-  'supportingArtists',
-  'canonicalSupporting',
-] as const satisfies readonly (keyof typeof events.$inferSelect)[];
-
-/** Whether a fill writes the bill (so the write re-checks the lineup). */
-const fillsBill = (fields: readonly FillField[]): boolean =>
-  fields.includes('headliners') || fields.includes('supportingArtists');
+type FillField = MergeFillField;
 
 export interface NightRow {
   id: string;
@@ -242,59 +213,10 @@ const countBy = async (
 type EventRow = typeof events.$inferSelect;
 
 /**
- * What the survivor takes from the rows folded into it: every empty column's
- * group from one donor, and every donor-only name on the bill.
+ * What the survivor takes from the rows folded into it: the shared fill rule
+ * (`mergeFillsFrom` in @concert-crawl/db), the one the admin merge applies.
  */
-const fillsFrom = (
-  survivor: EventRow,
-  donors: readonly EventRow[],
-): { fields: FillField[]; values: Partial<EventRow> } => {
-  const fields: FillField[] = [];
-  const values: Partial<EventRow> = {};
-  // Admin 4a: a lineup an admin saved never takes a donor's names, even where
-  // it is empty (an admin may have cleared the supports).
-  if (survivor.lineupEditedAt === null) {
-    const oneArtist = donors.every(
-      (donor) => donor.canonicalArtist === survivor.canonicalArtist,
-    );
-    if (oneArtist) {
-      const bill = unionBill(survivor, donors);
-      if (bill !== null) {
-        fields.push(...changedBillFields(survivor, bill));
-        Object.assign(values, bill);
-      }
-    } else if (survivor.headliners === null) {
-      // The rows name different artists (listed for the admin's review): a
-      // donor's names may belong to another show, so the bill is not unioned,
-      // only filled where the survivor has none, from one donor, as before.
-      // A donor hidden from consumers gives no names, as in the union.
-      const donor = donors.find(
-        (row) => row.headliners !== null && row.hiddenFromConsumer !== true,
-      );
-      if (donor) {
-        fields.push('headliners');
-        for (const field of BILL_FILL) {
-          if (survivor[field] === null && donor[field] !== null) {
-            Object.assign(values, { [field]: donor[field] });
-          }
-        }
-      }
-    }
-  }
-  for (const group of FILL_GROUPS) {
-    const anchor = group[0];
-    if (survivor[anchor] !== null) continue;
-    const donor = donors.find((row) => row[anchor] != null);
-    if (!donor) continue;
-    fields.push(anchor);
-    for (const field of group) {
-      if (survivor[field] === null && donor[field] != null) {
-        Object.assign(values, { [field]: donor[field] });
-      }
-    }
-  }
-  return { fields, values };
-};
+const fillsFrom = mergeFillsFrom;
 
 export async function mergeDuplicateNights(
   options: MergeDuplicateNightsOptions,
@@ -514,7 +436,7 @@ export async function mergeDuplicateNights(
           // under the fill drops only the bill: the other fills (time, image,
           // prices, links) are still the survivor's to take, and the donors
           // they came from are already gone.
-          const billKeys = new Set<string>(BILL_FILL);
+          const billKeys = new Set<string>(MERGE_BILL_COLUMNS);
           const billValues: Partial<EventRow> = {};
           const otherValues: Partial<EventRow> = {};
           for (const [key, value] of Object.entries(values)) {
@@ -536,7 +458,7 @@ export async function mergeDuplicateNights(
             writtenKeys.push(...Object.keys(otherValues));
             unwritten = billValues;
           }
-          if (fillsBill(fields)) {
+          if (mergeFillWritesBill(fields)) {
             // A bill fill re-checks the lineup lock at write time, as Repair
             // does: an admin may save the lineup after the re-read above. It
             // also requires the bill to still be the one the fill was

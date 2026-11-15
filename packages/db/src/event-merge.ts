@@ -11,6 +11,12 @@ import {
   userEventDismissals,
   userEvents,
 } from './schema/index.js';
+import {
+  type MergeFillField,
+  mergeFillsFrom,
+  mergeFillWritesBill,
+} from './event-merge-fill.js';
+import { syncEventArtists } from './event-artists-sync.js';
 
 export interface MergeEventRowsInput {
   sourceId: string;
@@ -20,12 +26,47 @@ export interface MergeEventRowsInput {
   suggestion: { reason: 'date' | 'venue' } | null | undefined;
   /** Whether the caller fans out a watch notification afterwards (audit only). */
   notifyWatchers: boolean;
+  /**
+   * Fill the target's blank columns from the source (`mergeFillsFrom`, the
+   * duplicate-night cleanup's rule), in this transaction, after the source is
+   * gone. The admin merge sets it; the cleanup fills on its own afterwards,
+   * from every folded row at once.
+   */
+  fillBlanks?: boolean;
+  /**
+   * Today in Denver (`YYYY-MM-DD`). When given, a past row merges only with
+   * another past row: one past and one not is refused `past_mismatch`, judged
+   * under the row locks.
+   */
+  today?: string;
 }
 
 export interface MergeEventRowsResult {
   counts: Record<string, number>;
   /** People who were watching the row that is gone, read before anything moved. */
   movedWatcherIds: string[];
+  /** The fill's fields (`MergeFillField`) written onto the target; [] when none. */
+  filled: MergeFillField[];
+}
+
+export type EventMergeRefusal =
+  'source_not_found' | 'target_not_found' | 'past_mismatch';
+
+/**
+ * A merge refused under the row locks. Thrown inside the transaction, so
+ * nothing is written. Missing rows mean a concurrent merge or delete won.
+ */
+export class EventMergeRefusedError extends Error {
+  constructor(readonly reason: EventMergeRefusal) {
+    super(
+      reason === 'source_not_found'
+        ? 'Source event disappeared mid-merge'
+        : reason === 'target_not_found'
+          ? 'Target event disappeared mid-merge'
+          : 'One row is past and the other is not',
+    );
+    this.name = 'EventMergeRefusedError';
+  }
 }
 
 /**
@@ -45,23 +86,48 @@ export const mergeEventRows = async ({
   actorId,
   suggestion,
   notifyWatchers,
+  fillBlanks = false,
+  today,
 }: MergeEventRowsInput): Promise<MergeEventRowsResult> => {
   // A row merged into itself would delete the survivor, and its redirect with it.
   if (sourceId === targetId) {
     throw new Error('Cannot merge an event into itself');
   }
   return db.transaction(async (tx) => {
-    // The whole source row, locked: its crawl key goes on the redirect (so
-    // the crawl keeps updating the target instead of re-inserting the
-    // duplicate) and the full row goes in the audit, since the row itself is
-    // deleted below. Missing here means a concurrent merge or delete won.
-    const [sourceRow] = await tx
-      .select()
-      .from(events)
-      .where(eq(events.id, sourceId))
-      .for('update');
-    if (!sourceRow) {
-      throw new Error('Source event disappeared mid-merge');
+    // BOTH rows, locked FOR UPDATE, one statement each in id order. Lock
+    // order is events in id order, then user_events (the moves below), the
+    // same order the admin delete guard takes (routes/admin/lib/
+    // event-delete.ts), so:
+    // - two merges of one pair in opposite directions queue on the lower id
+    //   instead of deadlocking; the second then finds its source gone;
+    // - a merge into a manual row a delete holds waits for it, then finds
+    //   the row gone (refused `target_not_found`) or merges into it.
+    // The duplicate-night cleanup calls this per folded row, so it takes the
+    // same order.
+    //
+    // The source's crawl key goes on the redirect (so the crawl keeps
+    // updating the target instead of re-inserting the duplicate) and its
+    // full row goes in the audit, since the row itself is deleted below.
+    const locked = new Map<string, typeof events.$inferSelect>();
+    for (const id of [sourceId, targetId].sort()) {
+      const [row] = await tx
+        .select()
+        .from(events)
+        .where(eq(events.id, id))
+        .for('update');
+      if (row) locked.set(id, row);
+    }
+    const sourceRow = locked.get(sourceId);
+    const targetRow = locked.get(targetId);
+    if (!sourceRow) throw new EventMergeRefusedError('source_not_found');
+    if (!targetRow) throw new EventMergeRefusedError('target_not_found');
+    // Admin 4b (E4): a past show merges only with another past show. Judged
+    // here, under the locks, so a PATCH that moved a date is seen.
+    if (
+      today !== undefined &&
+      sourceRow.date < today !== targetRow.date < today
+    ) {
+      throw new EventMergeRefusedError('past_mismatch');
     }
 
     // Captured BEFORE any row moves: these are the users who were watching
@@ -232,7 +298,27 @@ export const mergeEventRows = async ({
       .where(eq(events.id, sourceId))
       .returning({ id: events.id });
     if (deletedSource.length === 0) {
-      throw new Error('Source event disappeared mid-merge');
+      throw new EventMergeRefusedError('source_not_found');
+    }
+
+    // The fill, with the source gone (so a show time taken from it cannot
+    // collide with it on the night's unique index) and the target still
+    // locked, so the row it was computed from is the row it writes.
+    const fill = fillBlanks
+      ? mergeFillsFrom(targetRow, [sourceRow])
+      : { fields: [], values: {} };
+    if (fill.fields.length > 0) {
+      await tx
+        .update(events)
+        .set({ ...fill.values, updatedAt: new Date() })
+        .where(eq(events.id, targetId));
+    }
+    // A filled bill rebuilds the target's lineup rows in the same
+    // transaction (events stay locked first, then event_artists), so the
+    // merge never commits a bill its `event_artists` rows do not show. The
+    // source's own lineup rows cascaded away with it.
+    if (mergeFillWritesBill(fill.fields)) {
+      await syncEventArtists(tx, [targetId]);
     }
 
     const counts = {
@@ -261,12 +347,14 @@ export const mergeEventRows = async ({
         referencesMoved: counts,
         suggestion: suggestion ?? null,
         notifyWatchers,
+        filled: fill.fields,
       },
     });
 
     return {
       counts,
       movedWatcherIds: movedWatchers.map((row) => row.userId),
+      filled: fill.fields,
     };
   });
 };

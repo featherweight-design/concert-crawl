@@ -1,5 +1,17 @@
-import { and, count, eq, sql } from 'drizzle-orm';
-import { db, events, userEvents } from '@concert-crawl/db';
+import { and, count, eq, isNull, or, sql } from 'drizzle-orm';
+import { db, events, priceSubmissions, userEvents } from '@concert-crawl/db';
+import { currentPriceCondition } from '../../../lib/price-check.js';
+
+/**
+ * A Submitted price that stands on a show: awaiting review, or setting the
+ * displayed price (`currentPriceCondition`, which keeps a price under an
+ * open Price check). Never a counter filed against another price.
+ */
+export const submittedPriceWhere = () =>
+  and(
+    isNull(priceSubmissions.disputedSubmissionId),
+    or(eq(priceSubmissions.status, 'pending'), currentPriceCondition()),
+  );
 
 /**
  * People with a given `user_events` status on the row in scope (a correlated
