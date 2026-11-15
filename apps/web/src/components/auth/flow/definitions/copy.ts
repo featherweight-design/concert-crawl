@@ -63,4 +63,19 @@ export const AUTH_FLOW_COPY = {
     label: (step: number, total: number) => `Step ${step} of ${total}`,
     done: 'Account made',
   },
+  // Arriving with intent (COPY.md "Arriving with intent"). DRAFT until
+  // copy-review. The card says what the visitor pressed and where they land.
+  intent: {
+    watch: (show: string) => `Sign in to watch ${show}`,
+    watchSub: 'We’ll bring you back to the show and add it to Watching.',
+    follow: (artist: string) => `Sign in to follow ${artist}`,
+    followSub: 'We’ll bring you back and follow them for you.',
+    // The eyebrow over an artist: how many Denver dates are coming.
+    artistEyebrow: (dates: number) =>
+      `Artist · ${dates} Denver ${dates === 1 ? 'date' : 'dates'}`,
+    artistEyebrowNone: 'Artist',
+    page: (page: string) => `Sign in to see ${page}`,
+    pageSub: 'It’s only for your account.',
+    pageFallback: 'Sign in to keep going',
+  },
 } as const;

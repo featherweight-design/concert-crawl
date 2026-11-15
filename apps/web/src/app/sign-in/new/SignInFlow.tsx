@@ -20,6 +20,8 @@ import {
   SecondaryButton,
 } from '@/components/auth/flow/AuthButtons';
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal';
+import { IntentCard, intentText } from '@/components/auth/flow/IntentCard';
+import type { IntentSubject } from '@/lib/auth/intent-subject';
 import { ssoCallbackUrl, type GoogleNotice } from '@/lib/auth/sso';
 import { CodeBoxes } from '@/components/auth/flow/CodeBoxes';
 import { AUTH_FLOW_COPY } from '@/components/auth/flow/definitions/copy';
@@ -57,10 +59,13 @@ const isEmailShape = (value: string): boolean =>
 export function SignInFlow({
   returnTo,
   google = null,
+  intent = { kind: 'generic' },
 }: {
   returnTo: string;
   /** How a Google attempt ended, from the callback: a note or the refused card. */
   google?: GoogleNotice | null;
+  /** What they were about to do, for the card that replaces the title. */
+  intent?: IntentSubject;
 }) {
   const clerk = useClerk();
   const { signIn } = useSignIn();
@@ -506,11 +511,15 @@ export function SignInFlow({
 
   return (
     <AuthPage>
-      <AuthHeading
-        eyebrow={COPY.start.eyebrow}
-        title={COPY.start.title}
-        sub={COPY.start.body}
-      />
+      {intentText(intent) ? (
+        <IntentCard subject={intent} level={1} />
+      ) : (
+        <AuthHeading
+          eyebrow={COPY.start.eyebrow}
+          title={COPY.start.title}
+          sub={COPY.start.body}
+        />
+      )}
       {google === 'refused' ? (
         <section className="flex flex-col gap-3 rounded-2xl border border-border-strong bg-surface-1 p-4">
           <span className="font-mono text-[10px] font-bold tracking-[0.16em] text-signal uppercase">

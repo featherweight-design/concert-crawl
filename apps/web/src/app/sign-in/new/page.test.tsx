@@ -5,9 +5,13 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(() => {
     throw new Error('NEXT_REDIRECT');
   }),
+  intent: vi.fn(),
 }));
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: mocks.auth }));
+vi.mock('@/lib/auth/intent-subject', () => ({
+  loadIntentSubject: mocks.intent,
+}));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('./SignInFlow', () => ({ SignInFlow: () => null }));
 
@@ -16,6 +20,7 @@ import SignInNewPage from './page';
 beforeEach(() => {
   mocks.auth.mockReset().mockResolvedValue({ userId: null });
   mocks.redirect.mockClear();
+  mocks.intent.mockReset().mockResolvedValue({ kind: 'generic' });
 });
 
 const visit = (redirect_url?: string | string[]) =>
@@ -41,6 +46,21 @@ describe('/sign-in/new', () => {
       const tree = (await visit(bad)) as { props: { returnTo: string } };
       expect(tree.props.returnTo).toBe('/events');
     }
+  });
+
+  it('resolves what they were about to do from the sanitized return path only', async () => {
+    mocks.intent.mockResolvedValue({
+      kind: 'show',
+      title: 'Static Dress',
+      eyebrow: 'x',
+    });
+    const tree = (await visit('/events/42')) as {
+      props: { intent: { kind: string } };
+    };
+    expect(mocks.intent).toHaveBeenCalledWith('/events/42');
+    expect(tree.props.intent.kind).toBe('show');
+    await visit('//evil.com');
+    expect(mocks.intent).toHaveBeenLastCalledWith('/events');
   });
 
   it('passes how a Google attempt ended, and nothing it does not know', async () => {

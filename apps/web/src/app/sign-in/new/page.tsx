@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { sanitizeReturnPath } from '@/lib/auth/intent';
+import { loadIntentSubject } from '@/lib/auth/intent-subject';
 import { parseGoogleNotice } from '@/lib/auth/sso';
 import { SignInFlow } from './SignInFlow';
 
@@ -22,7 +23,12 @@ export default async function SignInNewPage({ searchParams }: SignInNewProps) {
   const returnTo = sanitizeReturnPath(Array.isArray(raw) ? raw[0] : raw);
   const { userId } = await auth();
   if (userId) redirect(returnTo);
+  const intent = await loadIntentSubject(returnTo);
   return (
-    <SignInFlow returnTo={returnTo} google={parseGoogleNotice(params.google)} />
+    <SignInFlow
+      returnTo={returnTo}
+      google={parseGoogleNotice(params.google)}
+      intent={intent}
+    />
   );
 }

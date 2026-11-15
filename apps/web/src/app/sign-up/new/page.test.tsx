@@ -8,9 +8,13 @@ const mocks = vi.hoisted(() => ({
   cookies: vi.fn(),
   publicBrowse: vi.fn(),
   verify: vi.fn(),
+  intent: vi.fn(),
 }));
 
 vi.mock('@clerk/nextjs/server', () => ({ auth: mocks.auth }));
+vi.mock('@/lib/auth/intent-subject', () => ({
+  loadIntentSubject: mocks.intent,
+}));
 vi.mock('next/headers', () => ({ cookies: mocks.cookies }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('@/lib/launch-mode', () => ({
@@ -39,6 +43,7 @@ beforeEach(() => {
   mocks.auth.mockReset().mockResolvedValue({ userId: null });
   mocks.redirect.mockClear();
   mocks.publicBrowse.mockReset().mockReturnValue(false);
+  mocks.intent.mockReset().mockResolvedValue({ kind: 'generic' });
   mocks.verify.mockReset().mockReturnValue({ code: 'BETA-AB12-CD34' });
   mocks.cookies.mockReset().mockResolvedValue({
     get: (name: string) =>
@@ -82,6 +87,15 @@ describe('/sign-up/new', () => {
     expect(props.inviteCode).toBeNull();
     expect(props.legal.beta).toBeNull();
     expect(mocks.cookies).not.toHaveBeenCalled();
+  });
+
+  it('resolves what they were about to do from a safe destination only', async () => {
+    await visit({ redirect_url: '/artists/tokimonsta' });
+    expect(mocks.intent).toHaveBeenLastCalledWith('/artists/tokimonsta');
+    await visit({ redirect_url: 'https://evil.test' });
+    expect(mocks.intent).toHaveBeenLastCalledWith('');
+    await visit();
+    expect(mocks.intent).toHaveBeenLastCalledWith('');
   });
 
   it('carries only a safe destination to "Use a different code"', async () => {
