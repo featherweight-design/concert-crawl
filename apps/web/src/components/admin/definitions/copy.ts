@@ -3412,10 +3412,13 @@ export const ADMIN_COPY = {
       // Undrawn: the Any page sheet, on the Anyone sheet's pattern.
       pageSheet: 'Which page',
       findAdmin: 'Find an admin',
+      // `37/log-day-picker-d`, `37/log-m`: the field left of the chips.
+      search: 'Search the log',
       handle: (handle: string) => `@${handle}`,
-      // A person's line under their handle: "You · 31 today", "8 today".
-      personLine: (line: string, you: boolean) =>
-        you ? `You · ${line}` : line,
+      // A person's line under their handle: "You · 31 today",
+      // "Sub-admin · none today", "8 today".
+      personLine: (line: string, you: boolean, subAdmin: boolean) =>
+        you ? `You · ${line}` : subAdmin ? `Sub-admin · ${line}` : line,
       // An admin's changes on the day shown; Today's board draws "8 today".
       changesOn: (count: number, isToday: boolean) =>
         count === 0

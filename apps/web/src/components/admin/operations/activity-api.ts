@@ -20,6 +20,7 @@ import {
   isTextOrNull,
   type GetToken,
 } from '../invite-codes/codes-api';
+import { actionsMatching } from './log-search';
 
 /** One page of a day: past it, Load more (README §37: past 50 changes). */
 export const LOG_PAGE_SIZE = 50;
@@ -30,7 +31,26 @@ export interface LogQuery {
   until: number;
   actorHandle?: string;
   area?: AuditArea;
+  /** "Search the log", trimmed; left out when blank. */
+  search?: string;
 }
+
+/** The filters every read takes: person, page and search. */
+export type LogFilters = Pick<LogQuery, 'actorHandle' | 'area' | 'search'>;
+
+/**
+ * Sets the person, page and search on a read's params. A search also sends
+ * the action keys whose sentences hold its words, which only the web has.
+ */
+const setFilters = (params: URLSearchParams, filters: LogFilters) => {
+  if (filters.actorHandle) params.set('actorHandle', filters.actorHandle);
+  if (filters.area) params.set('area', filters.area);
+  if (filters.search) {
+    params.set('search', filters.search);
+    const actions = actionsMatching(filters.search);
+    if (actions.length > 0) params.set('actions', actions.join(','));
+  }
+};
 
 const isArea = (value: unknown): value is AuditArea =>
   AUDIT_AREAS.some((area) => area === value);
@@ -87,8 +107,7 @@ export const readLogPage = async (
     until: new Date(query.until).toISOString(),
     limit: String(LOG_PAGE_SIZE),
   });
-  if (query.actorHandle) params.set('actorHandle', query.actorHandle);
-  if (query.area) params.set('area', query.area);
+  setFilters(params, query);
   if (cursor) params.set('cursor', cursor);
   const body = await callEnvelope(
     getToken,
@@ -113,12 +132,11 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 export const readLogDays = async (
   getToken: GetToken,
   month: string,
-  filters: Pick<LogQuery, 'actorHandle' | 'area'>,
+  filters: LogFilters,
   signal?: AbortSignal,
 ): Promise<Set<string>> => {
   const params = new URLSearchParams({ month });
-  if (filters.actorHandle) params.set('actorHandle', filters.actorHandle);
-  if (filters.area) params.set('area', filters.area);
+  setFilters(params, filters);
   const body = await callEnvelope(
     getToken,
     `/v1/admin/audit-log/days?${params}`,
@@ -139,21 +157,24 @@ const isActor = (value: unknown): value is AuditLogActor =>
   isColorOrNull(value['avatarColor']) &&
   isColorOrNull(value['avatarSecondColor']) &&
   typeof value['count'] === 'number' &&
-  typeof value['you'] === 'boolean';
+  typeof value['you'] === 'boolean' &&
+  (value['role'] === 'admin' ||
+    value['role'] === 'sub_admin' ||
+    value['role'] === null);
 
 /**
  * The Anyone menu's people (`37/log-filter-menus`): every admin and
- * sub-admin, with their changes on `day`, you first. Takes the page filter,
- * so a count matches the rows that pick would show.
+ * sub-admin, with their changes on `day`, you first. Takes the page filter
+ * and the search, so a count matches the rows that pick would show.
  */
 export const readLogActors = async (
   getToken: GetToken,
   day: string,
-  area: AuditArea | undefined,
+  filters: Omit<LogFilters, 'actorHandle'>,
   signal?: AbortSignal,
 ): Promise<AuditLogActor[]> => {
   const params = new URLSearchParams({ day });
-  if (area) params.set('area', area);
+  setFilters(params, filters);
   const body = await callEnvelope(
     getToken,
     `/v1/admin/audit-log/actors?${params}`,

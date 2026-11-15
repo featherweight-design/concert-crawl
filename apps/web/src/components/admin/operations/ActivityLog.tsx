@@ -27,7 +27,10 @@ import {
   readLogPage,
   type LogQuery,
 } from './activity-api';
-import { AnyoneFilter, AnyPageFilter } from './LogFilterMenus';
+import { AnyoneFilter, AnyPageFilter, SearchField } from './LogFilterMenus';
+
+/** How long typing pauses before "Search the log" reads. */
+const SEARCH_PAUSE_MS = 300;
 import {
   DayStepper,
   PhoneDayStepper,
@@ -408,6 +411,15 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   // Anyone and Any page (`37/log-filter-menus`): combined with the day.
   const [actor, setActor] = useState<string | null>(null);
   const [area, setArea] = useState<AuditArea | null>(null);
+  // "Search the log": what's typed, and what the reads use once typing
+  // pauses, so each keystroke isn't a read.
+  const [typed, setTyped] = useState('');
+  const [search, setSearch] = useState<string | null>(null);
+  useEffect(() => {
+    const next = typed.trim() === '' ? null : typed.trim();
+    const timer = window.setTimeout(() => setSearch(next), SEARCH_PAUSE_MS);
+    return () => window.clearTimeout(timer);
+  }, [typed]);
 
   // Only the newest read may write, and starting one stops the one before:
   // its controller is the current one until the next read or the unmount.
@@ -420,9 +432,10 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
         until: end,
         ...(actor !== null && { actorHandle: actor }),
         ...(area !== null && { area }),
+        ...(search !== null && { search }),
       };
     },
-    [actor, area],
+    [actor, area, search],
   );
 
   // The Anyone menu's people and their counts, for the day and page shown.
@@ -438,7 +451,10 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
         const next = await readLogActors(
           getToken,
           day,
-          area ?? undefined,
+          {
+            ...(area !== null && { area }),
+            ...(search !== null && { search }),
+          },
           ctrl.signal,
         );
         if (!ctrl.signal.aborted) setActors(next);
@@ -450,7 +466,7 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
       }
     })();
     return () => ctrl.abort();
-  }, [getToken, day, area]);
+  }, [getToken, day, area, search]);
 
   const load = useCallback(async () => {
     current.current?.abort();
@@ -526,8 +542,8 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
     };
   }, [day, today]);
 
-  // The month's dots take the same person and page, so a dot never leads to
-  // an empty day.
+  // The month's dots take the same person, page and search, so a dot never
+  // leads to an empty day.
   const readDays = useCallback(
     (month: string, signal: AbortSignal) =>
       readLogDays(
@@ -536,10 +552,19 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
         {
           ...(actor !== null && { actorHandle: actor }),
           ...(area !== null && { area }),
+          ...(search !== null && { search }),
         },
         signal,
       ),
-    [getToken, actor, area],
+    [getToken, actor, area, search],
+  );
+  const searchField = (
+    <SearchField
+      value={typed}
+      onChange={setTyped}
+      label={COPY.search}
+      style={isPhone ? { width: '100%' } : { width: 240, flex: 'none' }}
+    />
   );
   const filters = (
     <>
@@ -567,8 +592,10 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {isPhone ? (
-        // `37/log-m`: the stepper, then Anyone and Any page, each a sheet.
+        // `37/log-m`: search, the stepper, then Anyone and Any page, each a
+        // sheet.
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {searchField}
           <PhoneDayStepper day={day} today={today} onDay={pickDay} />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {filters}
@@ -576,6 +603,7 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {searchField}
           {filters}
           <span style={{ flex: 1 }} />
           <DayStepper

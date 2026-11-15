@@ -328,6 +328,7 @@ describe('Activity log', () => {
             avatarSecondColor: 'success',
             count: 31,
             you: true,
+            role: 'admin',
           },
           {
             handle: 'jules',
@@ -335,6 +336,7 @@ describe('Activity log', () => {
             avatarSecondColor: null,
             count: 8,
             you: false,
+            role: 'sub_admin',
           },
           ...Array.from({ length: count }, (_, i) => ({
             handle: `staff${i}`,
@@ -342,6 +344,7 @@ describe('Activity log', () => {
             avatarSecondColor: null,
             count: 0,
             you: false,
+            role: i === 0 ? null : 'admin',
           })),
         ],
       });
@@ -370,14 +373,17 @@ describe('Activity log', () => {
       fireEvent.click(screen.getByTestId('activity-log-anyone-chip'));
       const menu = await screen.findByTestId('activity-log-anyone');
       const hugh = await within(menu).findByRole('button', { name: '@hugh' });
-      expect(hugh).toHaveTextContent(COPY.log.personLine('31 today', true));
+      expect(hugh).toHaveTextContent(
+        COPY.log.personLine('31 today', true, false),
+      );
       // The visible count is also the row's description.
       expect(hugh).toHaveAccessibleDescription(
-        COPY.log.personLine('31 today', true),
+        COPY.log.personLine('31 today', true, false),
       );
+      // A sub-admin says so (`37/log-filter-menus`).
       expect(
         within(menu).getByRole('button', { name: '@jules' }),
-      ).toHaveTextContent('8 today');
+      ).toHaveAccessibleDescription('Sub-admin · 8 today');
       expect(menu).toHaveTextContent(COPY.log.anyoneNote);
       // Eight people or fewer: no search.
       expect(within(menu).queryByRole('searchbox')).not.toBeInTheDocument();
@@ -419,6 +425,39 @@ describe('Activity log', () => {
       expect(
         within(menu).queryByRole('button', { name: '@hugh' }),
       ).not.toBeInTheDocument();
+    });
+
+    it('searches the log once typing pauses, with the matched sentences, beside the other filters', async () => {
+      renderLog();
+      await screen.findByTestId('activity-log-table');
+      const field = screen.getByRole('searchbox', { name: COPY.log.search });
+      fireEvent.change(field, { target: { value: '  blocking ' } });
+      await waitFor(() =>
+        expect(logCalls().at(-1)?.searchParams.get('search')).toBe('blocking'),
+      );
+      const params = logCalls().at(-1)?.searchParams;
+      expect(params?.get('actions')).toBe('venue.crawl_blocked');
+      // The day is still the window it was; search narrows within it.
+      expect(params?.has('since')).toBe(true);
+      // The Anyone counts take the search, so a count matches its rows.
+      await waitFor(() =>
+        expect(actorCalls().at(-1)?.searchParams.get('search')).toBe(
+          'blocking',
+        ),
+      );
+
+      // Words no sentence holds still search the rows, with no actions.
+      fireEvent.change(field, { target: { value: 'zzqx' } });
+      await waitFor(() =>
+        expect(logCalls().at(-1)?.searchParams.get('search')).toBe('zzqx'),
+      );
+      expect(logCalls().at(-1)?.searchParams.has('actions')).toBe(false);
+
+      // Cleared, the log reads everything again.
+      fireEvent.change(field, { target: { value: '' } });
+      await waitFor(() =>
+        expect(logCalls().at(-1)?.searchParams.has('search')).toBe(false),
+      );
     });
 
     it("lists the sidebar's pages in its order and filters to one", async () => {
