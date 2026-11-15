@@ -8,6 +8,7 @@ const nav = vi.hoisted(() => ({ refresh: vi.fn() }));
 const toggle = vi.hoisted(() => ({
   mutate: vi.fn(),
   isPending: false,
+  isError: false,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -46,6 +47,7 @@ describe('CrewUpcoming', () => {
   beforeEach(() => {
     toggle.mutate.mockReset();
     toggle.isPending = false;
+    toggle.isError = false;
     nav.refresh.mockReset();
   });
   afterEach(cleanup);
@@ -95,6 +97,33 @@ describe('CrewUpcoming', () => {
     };
     options.onSuccess();
     expect(nav.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so when I'm in fails, and leaves the button to try again", () => {
+    toggle.isError = true;
+    render(
+      <CrewUpcoming
+        shows={[
+          show({
+            goingCount: 1,
+            going: [member('mira', 'mira')],
+          }),
+        ]}
+        viewerId="me"
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "That didn't go through. Try again.",
+    );
+    expect(
+      screen.getByRole('button', { name: /I'm in for Marian Hill/ }),
+    ).toBeEnabled();
+  });
+
+  it('describes the link with the time, venue and who is going', () => {
+    render(<CrewUpcoming shows={[show()]} viewerId="me" />);
+    const link = screen.getByRole('link', { name: 'Marian Hill' });
+    expect(link).toHaveAccessibleDescription(/Bluebird.*1 GOING · YOU/);
   });
 
   it('swaps the tile for TONIGHT on the night itself', () => {

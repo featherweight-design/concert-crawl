@@ -1,5 +1,6 @@
 'use client';
 
+import { useId, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { CrewShow } from '@concert-crawl/types';
@@ -43,6 +44,11 @@ interface CrewComingUpRowProps {
 export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
   const router = useRouter();
   const toggle = useAttendingToggle();
+  // The yes lands on the server read, so the row stays busy until the refreshed
+  // page arrives; a second tap in that gap would send the yes twice.
+  const [refreshing, startRefresh] = useTransition();
+  const metaId = useId();
+  const goingId = useId();
   const row = fromCrewShow(show);
   const summary = summariseGoing(show, viewerId, COPY.you);
   const tonight = isTonight(show.iso);
@@ -51,9 +57,10 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
   const imIn = () => {
     toggle.mutate(
       { eventId: show.eventId, going: true },
-      { onSuccess: () => router.refresh() },
+      { onSuccess: () => startRefresh(() => router.refresh()) },
     );
   };
+  const busy = toggle.isPending || refreshing;
 
   return (
     <div
@@ -148,7 +155,11 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             sits above it as its own control. */}
         <Link
           href={`/events/${show.eventId}`}
-          className="after:absolute after:inset-0 after:content-['']"
+          // The date, venue and who is going describe the link, so a screen
+          // reader hears them with the act's name; the ring is drawn round the
+          // whole card the link opens.
+          aria-describedby={`${metaId} ${goingId}`}
+          className="after:absolute after:inset-0 after:rounded-[16px] after:content-[''] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-[var(--focus)]"
           style={{
             display: 'block',
             overflow: 'hidden',
@@ -163,6 +174,7 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
           {row.headliner}
         </Link>
         <p
+          id={metaId}
           style={{
             margin: 0,
             fontFamily: MONO,
@@ -196,6 +208,7 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             ))}
           </span>
           <span
+            id={goingId}
             data-testid="crew-coming-up-going"
             style={{
               // A long handle gives way with an ellipsis, not past the card.
@@ -213,13 +226,25 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             {goingLine(show.goingCount, summary, COPY.going)}
           </span>
         </div>
+        {toggle.isError && (
+          <p
+            role="alert"
+            style={{
+              margin: '6px 0 0',
+              fontSize: 12,
+              color: 'var(--danger)',
+            }}
+          >
+            {COPY.imInFailed}
+          </p>
+        )}
       </div>
 
       {!summary.youGoing && (
         <button
           type="button"
           onClick={imIn}
-          disabled={toggle.isPending}
+          disabled={busy}
           aria-label={COPY.imInAria(row.headliner)}
           style={{
             position: 'relative',
@@ -231,8 +256,8 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             fontSize: 13,
             fontWeight: 700,
             color: 'var(--signal)',
-            cursor: toggle.isPending ? 'default' : 'pointer',
-            opacity: toggle.isPending ? 0.6 : 1,
+            cursor: busy ? 'default' : 'pointer',
+            opacity: busy ? 0.6 : 1,
           }}
         >
           {COPY.imIn}

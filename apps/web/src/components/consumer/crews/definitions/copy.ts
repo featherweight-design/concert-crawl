@@ -192,6 +192,9 @@ export const CREWS_COPY = {
     you: 'YOU',
     imIn: "I'm in",
     imInAria: (artist: string) => `I'm in for ${artist}`,
+    // Not drawn: a failed yes says so, in the crews' own failure wording, and
+    // leaves the button to try again.
+    imInFailed: "That didn't go through. Try again.",
     nothingTitle: 'Nothing coming up.',
     nothingBody: 'One yes from anyone in the crew puts a show here.',
     findShow: 'Find a show',
@@ -258,8 +261,8 @@ export const CREWS_COPY = {
     crewOfOneTitle: 'Party of one.',
     crewOfOneBody: 'You made a crew. Now the hard part: telling people.',
 
-    // Not 'COMING UP' / 'BEEN THERE': the selected tab renders directly above
-    // and already says both.
+    // Not 'BEEN THERE': the selected tab renders directly above and already
+    // says it.
 
     // Verbatim from crew_been_m. The tab is only this empty at zero nights.
     noPastEyebrow: 'CLEAN SLATE · 0 NIGHTS',
