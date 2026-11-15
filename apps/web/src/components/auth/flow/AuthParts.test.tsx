@@ -106,6 +106,32 @@ describe('CodeBoxes', () => {
     expect(screen.getByLabelText(COPY.code.label)).not.toHaveFocus();
   });
 
+  it('leaves focus on the control the visitor moved to while it was locked', () => {
+    const { rerender } = render(
+      <>
+        <CodeBoxes value="123456" onChange={() => {}} />
+        <button type="button">Elsewhere</button>
+      </>,
+    );
+    const next = screen.getByLabelText(COPY.code.label);
+    next.focus();
+    rerender(
+      <>
+        <CodeBoxes value="123456" onChange={() => {}} disabled />
+        <button type="button">Elsewhere</button>
+      </>,
+    );
+    next.blur();
+    screen.getByRole('button', { name: 'Elsewhere' }).focus();
+    rerender(
+      <>
+        <CodeBoxes value="" onChange={() => {}} />
+        <button type="button">Elsewhere</button>
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Elsewhere' })).toHaveFocus();
+  });
+
   it('keeps what was typed when it unlocks after a right code', () => {
     const { rerender } = render(
       <CodeBoxes value="123456" onChange={() => {}} />,
