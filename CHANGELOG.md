@@ -1,3 +1,15 @@
+# [1.513.0](https://github.com/featherweight-design/concert-crawl/compare/v1.512.1...v1.513.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** address the Add a show form review ([af893d3](https://github.com/featherweight-design/concert-crawl/commit/af893d3f01bb202fcd972ec3e5fbf2f3c29aa258))
+
+
+### Features
+
+* **web:** add the Add a show form and its Events entry points ([a43269d](https://github.com/featherweight-design/concert-crawl/commit/a43269d783a705dcdeb2c3f24289867ba2689372))
+
 ## [1.512.1](https://github.com/featherweight-design/concert-crawl/compare/v1.512.0...v1.512.1) (2026-11-15)
 
 
