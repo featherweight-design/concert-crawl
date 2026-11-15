@@ -1,3 +1,17 @@
+# [1.488.0](https://github.com/featherweight-design/concert-crawl/compare/v1.487.0...v1.488.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **prices:** say Waiting for you only for a price held for the admin ([d890590](https://github.com/featherweight-design/concert-crawl/commit/d8905903f7c2b535a804313a71f9af4f9fd2399b))
+* **prices:** share the Needs you batch's test with Waiting for you ([65d43f1](https://github.com/featherweight-design/concert-crawl/commit/65d43f10fca5acd66d57045a3132d7efa1171e2f))
+* **web:** address the bottom sheet rule review ([ed02aeb](https://github.com/featherweight-design/concert-crawl/commit/ed02aeb9bf7055649ad169383e9ab2a27986262b))
+
+
+### Features
+
+* **web:** the bottom sheets follow the short-phone sheet rule ([1d4086f](https://github.com/featherweight-design/concert-crawl/commit/1d4086fed97658cd2e349a071ceb95ff4f9b8f87))
+
 # [1.487.0](https://github.com/featherweight-design/concert-crawl/compare/v1.486.0...v1.487.0) (2026-11-15)
 
 
