@@ -1,10 +1,8 @@
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import type { CrewSummary } from '@concert-crawl/types';
 import { auth } from '@/lib/auth';
 import { fetchCrews } from '@/lib/crews';
 import { isFeatureEnabled } from '@/lib/feature-flags';
-import { isScaRegion } from '@/lib/sca-region';
 import { CrewsContent } from '@/components/consumer/crews';
 
 export const metadata = { title: 'Crews — Concert Crawl' };
@@ -28,8 +26,5 @@ export default async function CrewsPage() {
     console.error('[crews] list load failed', err);
   }
 
-  const requestHeaders = await headers();
-  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'));
-
-  return <CrewsContent initialCrews={crews} scaRegion={scaRegion} />;
+  return <CrewsContent initialCrews={crews} />;
 }

@@ -84,8 +84,7 @@ export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
               : 'transparent',
           }}
         >
-          {/* No tier chip: a subscriber shouldn't be sold the plan they're on,
-              and HistoryLocked is where an unentitled user meets the price. */}
+          {/* No tier chip: Concerts is free for every signed-in fan. */}
           {/* The label's width is its bold width whichever tab is current: an
               invisible 700 copy shares the grid cell, so moving the weight
               from one tab to another never nudges its neighbours. */}

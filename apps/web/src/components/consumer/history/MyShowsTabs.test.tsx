@@ -104,8 +104,7 @@ describe('MyShowsTabs', () => {
     expect(screen.queryByText('7')).toBeNull();
   });
 
-  // The locked takeover is where an unentitled user meets the price; the tab
-  // itself never names a tier.
+  // Concerts is free, so the tab never names a tier.
   it('carries no tier chip on either tab', () => {
     render(<MyShowsTabs active="history" />);
 

@@ -22,7 +22,6 @@ export type CrewsState = 'ready' | 'loading' | 'empty' | 'error';
 interface CrewsContentProps {
   /** `null` means the server load failed; the page paints the error state. */
   initialCrews: CrewSummary[] | null;
-  scaRegion: boolean;
   /** Only the route-level skeleton passes this; the page itself never does. */
   loading?: boolean;
 }
@@ -93,7 +92,6 @@ const PageHeader = ({
 
 export const CrewsContent = ({
   initialCrews,
-  scaRegion,
   loading = false,
 }: CrewsContentProps) => {
   const router = useRouter();
@@ -140,11 +138,7 @@ export const CrewsContent = ({
       <PageHeader wide={wide}>
         {/* Hidden in loading and error: there is nothing to add to yet. */}
         {(state === 'ready' || state === 'empty') && (
-          <CreateCrewButton
-            variant="header"
-            scaRegion={scaRegion}
-            onCreated={onCreated}
-          />
+          <CreateCrewButton variant="header" onCreated={onCreated} />
         )}
       </PageHeader>
 
@@ -203,7 +197,7 @@ export const CrewsContent = ({
       {state === 'empty' && (
         <div className="flex flex-col items-center gap-3">
           {/* EmptyState's primaryCta is a link; the create affordance is a
-              gated button, so it is mounted beneath rather than passed in. */}
+              button, so it is mounted beneath rather than passed in. */}
           <EmptyState
             state="no-data"
             density="dense"
@@ -212,11 +206,7 @@ export const CrewsContent = ({
             body={COPY.empty.body}
             railLabel={COPY.empty.rail}
           />
-          <CreateCrewButton
-            variant="empty"
-            scaRegion={scaRegion}
-            onCreated={onCreated}
-          />
+          <CreateCrewButton variant="empty" onCreated={onCreated} />
         </div>
       )}
 

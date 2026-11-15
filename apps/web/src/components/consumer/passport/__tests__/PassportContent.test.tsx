@@ -8,6 +8,9 @@ import { PassportContent } from '../PassportContent';
 import { ThemeProvider } from '@/theme';
 import type { HistoryShow } from '@concert-crawl/types';
 
+// The Passport no longer asks about the plan. The hook stays mocked so a test
+// can make it say no, the way it does for a signed-in fan whose plan fetch
+// failed, and prove the page draws regardless.
 const entitlement = vi.hoisted(() => ({
   value: { isLoading: false, active: true },
 }));
@@ -16,19 +19,8 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement.value,
 }));
 
-// The locked state reaches for the plan through Clerk; the upgrade path itself
-// belongs to HistoryLocked's own suite, so here it only has to render.
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: () => Promise.resolve('tok') }),
-}));
-
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: undefined }),
-}));
-
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="tier-picker" /> : null,
 }));
 
 // jsdom implements neither half of the object-URL API. Captured so the stubs
@@ -104,8 +96,6 @@ const renderContent = (props: Partial<Parameters<typeof PassportContent>[0]>) =>
           year: 2026,
         }}
         today="2026-11-11"
-        locked={false}
-        scaRegion={false}
         {...props}
       />
     </ThemeProvider>,
@@ -229,28 +219,17 @@ describe('PassportContent', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  // The server's 403 is the authoritative verdict — a client hook that still
-  // reports `active` must not be able to paint the card behind it.
-  it('locks on the server 403 even when the client thinks it is entitled', () => {
-    renderContent({ locked: true });
-
-    expect(
-      screen.queryByRole('region', { name: COPY.bookletLabel }),
-    ).not.toBeInTheDocument();
-  });
-
-  // The other direction: a token that downgraded mid-session leaves the server
-  // fetch un-403'd while the plan no longer covers the feature.
-  it('locks when the client entitlement has lapsed', () => {
+  // Concerts is free: a signed-in fan whose plan fetch failed still gets their
+  // booklet, never a paywall.
+  it('draws the booklet even when the entitlement hook says no', () => {
     entitlement.value = { isLoading: false, active: false };
     renderContent({});
 
     expect(
-      screen.queryByRole('region', { name: COPY.bookletLabel }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('region', { name: COPY.bookletLabel }),
+    ).toBeInTheDocument();
   });
 
-  // Not a locked state: the plan is fine, the stamp book is simply empty.
   it('shows the empty state rather than a blank card when nothing is attended', () => {
     renderContent({ past: [] });
 
@@ -369,23 +348,11 @@ describe('PassportContent', () => {
     expect(desktopTitle?.parentElement).toHaveClass('hidden', 'lg:block');
   });
 
-  it('asks for no card on a locked or empty Passport', async () => {
+  it('asks for no card on an empty Passport', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    renderContent({ locked: true });
-    cleanup();
     renderContent({ past: [] });
     await waitFor(() => expect(fetchMock).not.toHaveBeenCalled());
     vi.unstubAllGlobals();
-  });
-
-  // A resolving plan must not flash the lock screen at a Supporter.
-  it('does not lock while the entitlement is still resolving', () => {
-    entitlement.value = { isLoading: true, active: false };
-    renderContent({});
-
-    expect(
-      screen.getByRole('region', { name: COPY.bookletLabel }),
-    ).toBeInTheDocument();
   });
 });

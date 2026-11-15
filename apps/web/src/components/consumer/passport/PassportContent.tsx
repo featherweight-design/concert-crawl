@@ -1,16 +1,10 @@
 'use client';
 
 // The /passport route body (#85, booklet B+ B13).
-//
-// The Passport is drawn from Concert History, so it is gated on the same
-// entitlement and locked by the same component — a second lock screen saying
-// the same thing in different words is how two surfaces of one feature start
-// quoting different prices.
 
 import { useEffect, useState } from 'react';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { HistoryLocked } from '@/components/consumer/history/HistoryLocked';
 import { PassportActions } from '@/components/consumer/passport/PassportActions';
 import { PassportBooklet } from '@/components/consumer/passport/PassportBooklet';
 import { PassportEmpty } from '@/components/consumer/passport/PassportEmpty';
@@ -27,7 +21,6 @@ import {
 import { toAttendedShows } from '@/lib/passport/select-shows';
 import { stampDateParts } from '@/lib/passport/stamp';
 import { passportStats } from '@/lib/passport/stats';
-import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { useTheme } from '@/theme';
 
 const COPY = CONSUMER_COPY.passport;
@@ -42,9 +35,6 @@ export interface PassportContentProps {
   identity: PassportIdentity;
   /** Today in Denver, `YYYY-MM-DD`. */
   today: string;
-  /** The server's verdict from the /v1/history 403. */
-  locked: boolean;
-  scaRegion: boolean;
 }
 
 const Shell = ({ children }: { children: React.ReactNode }) => (
@@ -90,10 +80,7 @@ export const PassportContent = ({
   activeVenues,
   identity,
   today,
-  locked,
-  scaRegion,
 }: PassportContentProps) => {
-  const { isLoading, active } = useEntitlement('concert-history');
   const { theme } = useTheme();
 
   // The share card is drawn in the theme the reader can see, which the browser
@@ -107,20 +94,10 @@ export const PassportContent = ({
   }, []);
   const imageUrl = `/passport/square?theme=${encodeURIComponent(theme)}`;
   // One fetch and one share for the top bar's icon and the Share row. Only the
-  // populated page draws either, so a locked or empty Passport never renders
-  // a card nobody sees (or asks for one it is not allowed).
-  const populated = !(locked || (!isLoading && !active)) && past.length > 0;
+  // populated page draws either, so an empty Passport never renders a card
+  // nobody sees.
+  const populated = past.length > 0;
   const share = usePassportShare(mounted && populated ? imageUrl : null);
-
-  // Server 403 wins outright; the client hook decides for a plan the server
-  // hasn't rejected — e.g. a token that downgraded mid-session.
-  if (locked || (!isLoading && !active)) {
-    return (
-      <Shell>
-        <HistoryLocked scaRegion={scaRegion} />
-      </Shell>
-    );
-  }
 
   const queue = upcomingQueue(upcoming, today);
   const upNext = <UpNextStubs queue={queue} today={today} />;

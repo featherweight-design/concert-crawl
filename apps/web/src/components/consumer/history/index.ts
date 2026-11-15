@@ -3,7 +3,6 @@ export { HistoryHeader, historyTilesFor } from './HistoryHeader';
 export { HistoryItem } from './HistoryItem';
 export type { HistoryDensity } from './HistoryItem';
 export { HistoryEmpty } from './HistoryEmpty';
-export { HistoryLocked } from './HistoryLocked';
 export { MyShowsTabs } from './MyShowsTabs';
 export { PassportTeaser } from './PassportTeaser';
 export { SaveCalendarRow } from './SaveCalendarRow';

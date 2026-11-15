@@ -6,12 +6,6 @@
 // (#1357): the entitlement key, the API route and the ICS filename all carry
 // `history`, and renaming the constant to chase the label would touch far more
 // than the words. Only what the customer reads says "Concerts".
-//
-// No tier is named in this file. Which plan unlocks History has already moved
-// once (#1225), so every string that would say "Supporter" instead takes the
-// tier name the caller resolved from unlockTierFor('concert-history'). The
-// `Pick <tier>` CTA shape mirrors TIER_PICKER_COPY.cta.switchTo, and reads
-// correctly for every tier name in TIER_DEFINITIONS.
 
 export const HISTORY_COPY = {
   tabs: {
@@ -81,17 +75,6 @@ export const HISTORY_COPY = {
     headline: 'No nights on the books yet.',
     body: "Tap I'm going! on a show and it lands here, first as a plan, then as a keepsake.",
     cta: "Browse tonight's shows",
-  },
-
-  locked: {
-    headline: 'Keep the nights.',
-    body: "Every show you tap I'm going! lands here, the ones ahead of you and the ones behind. Same artist art, same dates, and you can export the lot to your calendar.",
-    cta: (tierName: string) => `Pick ${tierName}`,
-    // Used only if the matrix somehow exposes no purchasable lane for the
-    // feature — the picker still opens, it just can't promise which plan.
-    ctaFallback: 'See the plans',
-    footer:
-      'Free tier keeps everything else. No paywalls in the way of seeing shows.',
   },
 
   calendar: {

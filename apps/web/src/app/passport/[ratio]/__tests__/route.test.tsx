@@ -69,12 +69,9 @@ describe('GET /passport/[ratio]', () => {
     getTokenMock.mockResolvedValue('test-token');
     fetchMeMock.mockResolvedValue(profile);
     fetchHistoryMock.mockResolvedValue({
-      data: {
-        past: [historyShow(1), historyShow(2)],
-        upcoming: [],
-        stats: {},
-      },
-      locked: false,
+      past: [historyShow(1), historyShow(2)],
+      upcoming: [],
+      stats: {},
     });
   });
 
@@ -128,15 +125,6 @@ describe('GET /passport/[ratio]', () => {
     expect(fetchMeMock).not.toHaveBeenCalled();
   });
 
-  // No card is drawn from a history the viewer can't read.
-  it('403s a locked history rather than rendering an empty passport', async () => {
-    fetchHistoryMock.mockResolvedValue({ data: null, locked: true });
-
-    const response = await call('http://localhost/passport/square', 'square');
-
-    expect(response.status).toBe(403);
-  });
-
   it('502s a data outage rather than throwing behind an <img>', async () => {
     fetchHistoryMock.mockRejectedValue(new Error('upstream down'));
 
@@ -152,8 +140,9 @@ describe('GET /passport/[ratio]', () => {
       // A night still ahead of you is not a stamp: the card is drawn from the
       // past half alone, so this account is empty despite the upcoming row.
       fetchHistoryMock.mockResolvedValue({
-        data: { past: [], upcoming: [historyShow(1)], stats: {} },
-        locked: false,
+        past: [],
+        upcoming: [historyShow(1)],
+        stats: {},
       });
 
       const response = await call('http://localhost/passport/square', 'square');
