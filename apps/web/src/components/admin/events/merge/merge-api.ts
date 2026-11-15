@@ -16,6 +16,9 @@ const REQUEST_TIMEOUT_MS = 20_000;
 
 const sourceSchema = z.enum(['manual', 'crawled']);
 
+/** The admin who added a hand-added listing; null for a crawled row, or an admin with no handle. */
+const addedBySchema = z.object({ handle: z.string() }).nullable();
+
 const candidateSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -24,6 +27,7 @@ const candidateSchema = z.object({
   manual: z.boolean(),
   hidden: z.boolean(),
   source: sourceSchema,
+  addedBy: addedBySchema,
   watchers: z.number(),
   /** One night by the crawl's own rule, so the pick list leads with it. */
   likely: z.boolean(),
@@ -56,6 +60,7 @@ const listingSchema = z.object({
   source: sourceSchema,
   manual: z.boolean(),
   createdBy: z.string().nullable(),
+  addedBy: addedBySchema,
   hidden: z.boolean(),
   status: z.string(),
   lineup: z.array(lineupItemSchema),

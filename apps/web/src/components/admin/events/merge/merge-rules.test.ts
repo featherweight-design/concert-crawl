@@ -20,7 +20,8 @@ describe('mergeDay and mergeDateTile', () => {
 describe('card rows', () => {
   it('words From, Price and Reports', () => {
     expect(fromLabel(CRAWLED)).toBe('the crawl');
-    expect(fromLabel(MANUAL)).toBe('added by hand');
+    expect(fromLabel(MANUAL)).toBe('added by @dlo');
+    expect(fromLabel({ manual: true, addedBy: null })).toBe('added by hand');
     expect(priceLabel(CRAWLED.price)).toBe('$65–$495');
     expect(priceLabel(MANUAL.price)).toBe('no price');
     expect(reportsLabel(CRAWLED.reports)).toBe('none');
@@ -32,11 +33,21 @@ describe('card rows', () => {
 
   it('words a pick row from its venue, source and Watchers', () => {
     expect(
-      pickDetail({ venueName: 'Red Rocks', manual: true, watchers: 3 }),
-    ).toBe('Red Rocks · added by hand · 3 Watching');
-    expect(pickDetail({ venueName: null, manual: false, watchers: 0 })).toBe(
-      'the crawl · 0 Watching',
-    );
+      pickDetail({
+        venueName: 'Red Rocks',
+        manual: true,
+        addedBy: { handle: 'dlo' },
+        watchers: 3,
+      }),
+    ).toBe('Red Rocks · added by @dlo · 3 Watching');
+    expect(
+      pickDetail({
+        venueName: null,
+        manual: false,
+        addedBy: null,
+        watchers: 0,
+      }),
+    ).toBe('the crawl · 0 Watching');
   });
 });
 

@@ -4647,8 +4647,8 @@ export const ADMIN_COPY = {
       },
       sameVenueAndDay: 'Same venue and day on both',
       fromCrawl: 'the crawl',
-      // A2: the board's "added by @handle" needs a handle the API does not
-      // send (`created_by` is the admin's id), so a hand-added row reads this.
+      // A2: "added by @handle"; an admin with no handle reads "added by hand".
+      fromHandle: (handle: string) => `added by @${handle}`,
       fromHand: 'added by hand',
       noLineup: 'none',
       noPrice: 'no price',

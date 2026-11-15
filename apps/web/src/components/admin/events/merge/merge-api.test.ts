@@ -31,6 +31,7 @@ describe('mergeApi.candidates', () => {
       manual: true,
       hidden: false,
       source: 'manual',
+      addedBy: { handle: 'dlo' },
       watchers: 3,
       likely: true,
     };

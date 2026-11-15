@@ -16,7 +16,7 @@ const LIKELY: MergePickRow = {
   id: 'e2',
   title: 'CLIPSE with special guest JID',
   date: '2026-11-12',
-  detail: 'Red Rocks · added by hand · 3 Watching',
+  detail: 'Red Rocks · added by @dlo · 3 Watching',
 };
 
 const renderList = (
