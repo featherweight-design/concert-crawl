@@ -21,11 +21,6 @@
       "import": "./dist/scripts/backfill-artists.js",
       "default": "./dist/scripts/backfill-artists.js"
     },
-    "./scripts/backfill-event-artists": {
-      "types": "./dist/scripts/backfill-event-artists.d.ts",
-      "import": "./dist/scripts/backfill-event-artists.js",
-      "default": "./dist/scripts/backfill-event-artists.js"
-    },
     "./scripts/prune-artists": {
       "types": "./dist/scripts/prune-artists.d.ts",
       "import": "./dist/scripts/prune-artists.js",
@@ -70,7 +65,6 @@
     "db:migrate": "tsx src/migrate.ts",
     "db:seed": "tsx seed.ts",
     "db:backfill-artists": "tsx src/scripts/run-backfill-artists.ts",
-    "db:backfill-event-artists": "tsx src/scripts/run-backfill-event-artists.ts",
     "db:prune-artists": "tsx src/scripts/run-prune-artists.ts",
     "db:repair-artist-names": "tsx src/scripts/run-repair-artist-names.ts",
     "db:lock-artist-names": "tsx src/scripts/run-lock-artist-names.ts",

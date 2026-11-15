@@ -6,7 +6,6 @@ import {
   events,
   syncEventArtists,
 } from '@concert-crawl/db';
-import { backfillEventArtists } from '@concert-crawl/db/scripts/backfill-event-artists';
 import { testDb } from './helpers/db.js';
 import {
   clearTables,
@@ -171,50 +170,5 @@ describe('syncEventArtists integration', () => {
 
     expect(result).toMatchObject({ inserted: 1, unmatched: 2 });
     expect(await lineupOf(event.id)).toEqual([]);
-  });
-});
-
-describe('backfillEventArtists integration', () => {
-  beforeEach(async () => {
-    await clearTables();
-  });
-
-  it('counts on a dry run, fills in batches, then has nothing left to do', async () => {
-    await seedArtist({ name: 'Act One' });
-    await seedArtist({ name: 'Act Two' });
-    const venue = await seedVenue({
-      slug: `backfill-ea-${crypto.randomUUID()}`,
-    });
-    for (const [artist, date] of [
-      ['Act One', '2026-06-01'],
-      ['Act Two', '2026-06-02'],
-      ['Nobody Known', '2026-06-03'],
-    ] as const) {
-      await seedEvent(venue.id, { artist, date });
-    }
-
-    const dry = await backfillEventArtists(testDb, {
-      dryRun: true,
-      batchSize: 2,
-    });
-    expect(dry).toEqual({
-      batches: 2,
-      events: 3,
-      inserted: 2,
-      updated: 0,
-      deleted: 0,
-      unmatched: 1,
-    });
-    expect(await testDb.select().from(eventArtists)).toEqual([]);
-
-    const written = await backfillEventArtists(testDb, {
-      dryRun: false,
-      batchSize: 2,
-    });
-    expect(written).toMatchObject({ inserted: 2, unmatched: 1 });
-    expect(await testDb.select().from(eventArtists)).toHaveLength(2);
-
-    const rerun = await backfillEventArtists(testDb, { dryRun: false });
-    expect(rerun).toMatchObject({ inserted: 0, updated: 0, deleted: 0 });
   });
 });
