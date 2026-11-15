@@ -6,16 +6,21 @@ import {
   READERS,
   READ_MODES,
   SOURCE_COLUMNS,
+  advancedUnsavedCount,
+  backToAutomatic,
+  canGoBackToAutomatic,
   changedColumns,
   columnsOf,
   crawlModeOf,
   dirtyColumns,
   draftOf,
+  forcedChipsOf,
   isStoredManual,
   paceLine,
   pageLoadingOf,
   pristineColumns,
   readModeOf,
+  readerLockOf,
   readerOf,
   robotsStateOf,
   scheduleLine,
@@ -488,6 +493,186 @@ describe('what a Source save sends', () => {
     );
     expect(offBody).toMatchObject({ platform: null, platformVenueId: null });
     expect(offBody.extractionStrategy).toBeUndefined();
+  });
+});
+
+describe('Advanced: Automatic and set by hand (item 18)', () => {
+  const auto: SourceColumns = { ...base, crawlMode: null };
+  const aeg: SourceColumns = {
+    ...auto,
+    platform: 'aeg',
+    platformVenueId: '89',
+  };
+  const liveNation: SourceColumns = {
+    ...auto,
+    platform: 'livenation',
+    platformVenueId: 'K1',
+  };
+  const venuePilot: SourceColumns = {
+    ...auto,
+    apiProvider: 'venuepilot',
+    apiAccountId: '1105',
+  };
+  const manual: SourceColumns = { ...auto, extractionStrategy: 'manual' };
+
+  /** What Back to Automatic then Save sends, as the PATCH body. */
+  const backToAutomaticBody = (saved: SourceColumns) => {
+    const next = backToAutomatic(draftOf(saved));
+    const body = buildUpdateVenueBody(
+      sourceFormData(columnsOf(next, saved), dirtyColumns(next, saved)),
+    );
+    return Object.fromEntries(
+      Object.entries(body).filter(([, value]) => value !== undefined),
+    );
+  };
+
+  it.each([
+    ['Automatic', auto, null],
+    ['JSON-LD only', { ...auto, extractionStrategy: 'structured_data' }, null],
+    ['Haiku only', { ...auto, extractionStrategy: 'llm' }, null],
+    ['Detail pages', { ...auto, platform: 'detail-page' }, null],
+    ['VenuePilot', venuePilot, null],
+    ['AEG', aeg, { kind: 'feed', seller: 'aeg' }],
+    ['Live Nation', liveNation, { kind: 'feed', seller: 'livenation' }],
+    ['manual', manual, { kind: 'manual' }],
+    ['manual on Detail pages', { ...manual, platform: 'detail-page' }, null],
+  ] as const)('locks the reader of %s as %j', (_name, columns, lock) => {
+    expect(readerLockOf(draftOf(columns), columns)).toEqual(lock);
+  });
+
+  it.each([
+    ['all automatic', auto, []],
+    ['Plain fetch', base, ['Page loading: Plain fetch']],
+    [
+      'JSON-LD only',
+      { ...auto, extractionStrategy: 'structured_data' },
+      ['Reader: JSON-LD only'],
+    ],
+    [
+      'Full browser and Haiku only',
+      { ...auto, crawlMode: 'browser', extractionStrategy: 'llm' },
+      ['Page loading: Full browser', 'Reader: Haiku only'],
+    ],
+    [
+      'Detail pages',
+      { ...auto, platform: 'detail-page' },
+      ['Reader: Detail pages'],
+    ],
+    ['AEG', aeg, ['Reader: AEG']],
+    ['Live Nation', liveNation, ['Reader: Live Nation']],
+    ['manual', manual, ['Reader: Manual entry']],
+    ['VenuePilot', venuePilot, []],
+  ] as const)('chips %s as %j', (_name, columns, chips) => {
+    expect(forcedChipsOf(draftOf(columns), columns)).toEqual(chips);
+  });
+
+  it('offers Back to Automatic only with something it can clear', () => {
+    expect(canGoBackToAutomatic(draftOf(auto))).toBe(false);
+    expect(canGoBackToAutomatic(draftOf(aeg))).toBe(false);
+    expect(canGoBackToAutomatic(draftOf(liveNation))).toBe(false);
+    expect(canGoBackToAutomatic(draftOf(manual))).toBe(false);
+    expect(canGoBackToAutomatic(draftOf(base))).toBe(true);
+    expect(
+      canGoBackToAutomatic(draftOf({ ...aeg, crawlMode: 'browser' })),
+    ).toBe(true);
+    for (const strategy of ['structured_data', 'llm'] as const) {
+      expect(
+        canGoBackToAutomatic(
+          draftOf({ ...auto, extractionStrategy: strategy }),
+        ),
+      ).toBe(true);
+    }
+    expect(
+      canGoBackToAutomatic(draftOf({ ...auto, platform: 'detail-page' })),
+    ).toBe(true);
+  });
+
+  it('sets Page loading and Reader to Automatic, and leaves the waits', () => {
+    const saved: SourceColumns = {
+      ...auto,
+      crawlMode: 'browser',
+      extractionStrategy: 'llm',
+      crawlWaitUntil: 'load',
+      crawlWaitForSelector: '.event-list',
+    };
+    const next = backToAutomatic(draftOf(saved));
+    expect(next).toEqual({
+      ...draftOf(saved),
+      crawlMode: null,
+      reader: 'auto',
+    });
+    expect(forcedChipsOf(next, saved)).toEqual([]);
+    expect(backToAutomaticBody(saved)).toEqual({
+      crawlMode: null,
+      extractionStrategy: null,
+    });
+  });
+
+  it.each([
+    [
+      'JSON-LD only',
+      { ...auto, extractionStrategy: 'structured_data' },
+      { extractionStrategy: null },
+    ],
+    [
+      'Haiku only',
+      { ...auto, extractionStrategy: 'llm' },
+      { extractionStrategy: null },
+    ],
+    [
+      'Detail pages',
+      { ...auto, platform: 'detail-page' },
+      { platform: null, platformVenueId: null },
+    ],
+    [
+      'Detail pages over a stored Haiku',
+      { ...auto, platform: 'detail-page', extractionStrategy: 'llm' },
+      { extractionStrategy: null, platform: null, platformVenueId: null },
+    ],
+    ['Plain fetch', base, { crawlMode: null }],
+  ] as const)('Back to Automatic on %s sends %j', (_name, saved, body) => {
+    expect(backToAutomaticBody(saved)).toEqual(body);
+  });
+
+  it.each([
+    ['AEG', aeg],
+    ['Live Nation', liveNation],
+  ] as const)('Back to Automatic leaves the %s feed alone', (_name, feed) => {
+    const saved: SourceColumns = { ...feed, crawlMode: 'browser' };
+    const next = columnsOf(backToAutomatic(draftOf(saved)), saved);
+    expect(next.platform).toBe(saved.platform);
+    expect(next.platformVenueId).toBe(saved.platformVenueId);
+    expect(backToAutomaticBody(saved)).toEqual({ crawlMode: null });
+    expect(backToAutomaticBody(feed)).toEqual({});
+  });
+
+  it('Back to Automatic leaves a stored manual alone', () => {
+    const saved: SourceColumns = { ...manual, crawlMode: 'http' };
+    expect(
+      columnsOf(backToAutomatic(draftOf(saved)), saved).extractionStrategy,
+    ).toBe('manual');
+    expect(backToAutomaticBody(saved)).toEqual({ crawlMode: null });
+  });
+
+  it('counts the unsaved Advanced settings', () => {
+    const saved = draftOf({ ...auto, extractionStrategy: 'structured_data' });
+    expect(advancedUnsavedCount(saved, saved)).toBe(0);
+    expect(advancedUnsavedCount(backToAutomatic(saved), saved)).toBe(1);
+    expect(
+      advancedUnsavedCount(
+        { ...saved, crawlMode: 'browser', waitUntil: 'load', waitFor: '.ev' },
+        saved,
+      ),
+    ).toBe(3);
+    // A selector that only gains spaces is not an edit.
+    expect(advancedUnsavedCount({ ...saved, waitFor: '  ' }, saved)).toBe(0);
+    // The calendar page is not an Advanced setting.
+    expect(
+      advancedUnsavedCount(
+        { ...saved, websiteUrl: 'https://x.example' },
+        saved,
+      ),
+    ).toBe(0);
   });
 });
 

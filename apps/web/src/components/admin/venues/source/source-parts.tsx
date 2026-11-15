@@ -41,6 +41,38 @@ export const advancedHint: CSSProperties = {
   marginTop: 0,
   lineHeight: 1.4,
 };
+/**
+ * A setting forced by hand, as an amber chip (`18/source-forced-d`): 24 tall,
+ * radius 7, 12px semibold in `--warning` on a 10% tint with a 35% border.
+ */
+export const forcedChip: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  height: 24,
+  boxSizing: 'border-box',
+  padding: '0 9px',
+  borderRadius: 7,
+  background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+  border: '1px solid color-mix(in srgb, var(--warning) 35%, transparent)',
+  fontSize: 12,
+  fontWeight: 600,
+  color: 'var(--warning)',
+  whiteSpace: 'nowrap',
+  lineHeight: 1,
+};
+/** A text-only action, such as Back to Automatic (12.5 semibold signal). */
+export const linkButton: CSSProperties = {
+  padding: 0,
+  background: 'none',
+  border: 'none',
+  fontFamily: 'inherit',
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: 'var(--signal)',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+};
 export const errorStyle: CSSProperties = {
   fontSize: 12,
   color: 'var(--danger)',
@@ -67,6 +99,8 @@ export const Card = ({
   testId,
   warning = false,
   headingRef,
+  actions,
+  id,
   children,
 }: {
   title: string;
@@ -75,28 +109,12 @@ export const Card = ({
   warning?: boolean;
   /** Makes the title a focus target (tabIndex -1), for focus after a save. */
   headingRef?: Ref<HTMLHeadingElement>;
+  /** Links at the header's right end (`18/source-advanced-d`). */
+  actions?: ReactNode;
+  id?: string;
   children: ReactNode;
-}) => (
-  <section
-    data-testid={testId}
-    aria-label={title}
-    style={{
-      borderRadius: 14,
-      border: `1px solid ${
-        warning
-          ? 'color-mix(in srgb, var(--warning) 45%, transparent)'
-          : 'var(--border)'
-      }`,
-      background: warning
-        ? 'color-mix(in srgb, var(--warning) 5%, var(--bg-elevated))'
-        : 'var(--bg-elevated)',
-      padding: phone ? 14 : '16px 18px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-      minWidth: 0,
-    }}
-  >
+}) => {
+  const heading = (
     <h2
       ref={headingRef}
       {...(headingRef === undefined ? {} : { tabIndex: -1 })}
@@ -104,9 +122,42 @@ export const Card = ({
     >
       {title}
     </h2>
-    {children}
-  </section>
-);
+  );
+  return (
+    <section
+      id={id}
+      data-testid={testId}
+      aria-label={title}
+      style={{
+        borderRadius: 14,
+        border: `1px solid ${
+          warning
+            ? 'color-mix(in srgb, var(--warning) 45%, transparent)'
+            : 'var(--border)'
+        }`,
+        background: warning
+          ? 'color-mix(in srgb, var(--warning) 5%, var(--bg-elevated))'
+          : 'var(--bg-elevated)',
+        padding: phone ? 14 : '16px 18px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        minWidth: 0,
+      }}
+    >
+      {actions === undefined ? (
+        heading
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {heading}
+          <span style={{ flex: 1 }} />
+          {actions}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+};
 
 /** A read-only row: label left, value right, a rule above. */
 export const Row = ({

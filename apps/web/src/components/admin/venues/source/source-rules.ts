@@ -59,10 +59,8 @@ export const isFeedSeller = (value: unknown): value is FeedSeller =>
 /**
  * The Advanced reader (ruling c); `auto` is the cascade. `detail-page` is the
  * `platform = 'detail-page'` way of reading the calendar page (#1295), not an
- * extraction strategy, and moving off it clears the platform.
- *
- * ⏸ removal waits on Design item 18: the board draws no reader selector, but
- * it is the only way to clear a forced strategy or detail-page today.
+ * extraction strategy, and moving off it clears the platform. Drawn by
+ * `18/source-advanced-d` (Hugh's ruling 18: the selector stays).
  */
 export type Reader = 'auto' | 'structured_data' | 'llm' | 'detail-page';
 export const READERS: readonly Reader[] = [
@@ -73,11 +71,8 @@ export const READERS: readonly Reader[] = [
 ];
 
 /**
- * Advanced page loading; `auto` is `crawl_mode = null`.
- *
- * ⏸ pending Design item 18: the board draws two segments (Plain fetch, Full
- * browser), but main offers Automatic today, so it stays as a third segment
- * in the drawn control (coordinator ruling) and a save can set it back.
+ * Advanced page loading; `auto` is `crawl_mode = null` (`18/source-advanced-d`
+ * draws Automatic · Plain fetch · Full browser).
  */
 export type PageLoading = 'auto' | NonNullable<Venue['crawlMode']>;
 export const PAGE_LOADINGS: readonly PageLoading[] = [
@@ -162,6 +157,100 @@ export const draftOf = (columns: SourceColumns): SourceDraft => {
     waitFor: columns.crawlWaitForSelector ?? '',
   };
 };
+
+/**
+ * A reader this tab shows but never sets (READINESS addendum 6, eng
+ * clarification 1): an AEG or Live Nation feed reads its own data, and a
+ * stored `manual` stays as saved. Both reuse the drawn Reader row as a
+ * read-only chip, and Back to Automatic leaves them alone. VenuePilot is an
+ * API provider with no reader to show, so it has none.
+ */
+export type ReaderLock =
+  { kind: 'feed'; seller: 'aeg' | 'livenation' } | { kind: 'manual' };
+
+export const readerLockOf = (
+  draft: SourceDraft,
+  saved: SourceColumns,
+): ReaderLock | null => {
+  if (draft.mode === 'feed') {
+    return draft.seller === 'aeg' || draft.seller === 'livenation'
+      ? { kind: 'feed', seller: draft.seller }
+      : null;
+  }
+  // A manual venue on Detail pages reads as Detail pages, which it does.
+  return isStoredManual(saved) && readerOf(saved) === 'auto'
+    ? { kind: 'manual' }
+    : null;
+};
+
+/** The reader's name, for a chip: a lock's, or the pick's. */
+const readerLabelOf = (draft: SourceDraft, lock: ReaderLock | null): string => {
+  if (lock?.kind === 'feed') return COPY.read.seller.names[lock.seller];
+  if (lock?.kind === 'manual') return COPY.advanced.reader.manual;
+  return COPY.advanced.reader[draft.reader];
+};
+
+/**
+ * Advanced, closed (`18/source-forced-d`): one amber chip per setting that
+ * isn't Automatic, Page loading first. Wait until and Wait for are never
+ * chips; they have no Automatic.
+ */
+export const forcedChipsOf = (
+  draft: SourceDraft,
+  saved: SourceColumns,
+): string[] => {
+  const chips: string[] = [];
+  if (draft.crawlMode !== null) {
+    chips.push(
+      COPY.advanced.forced.pageLoading(
+        COPY.advanced.pageLoading[draft.crawlMode],
+      ),
+    );
+  }
+  const lock = readerLockOf(draft, saved);
+  const readerForced =
+    lock !== null || (draft.mode === 'page' && draft.reader !== 'auto');
+  if (readerForced) {
+    chips.push(COPY.advanced.forced.reader(readerLabelOf(draft, lock)));
+  }
+  return chips;
+};
+
+/** Whether Back to Automatic has anything to clear (a lock never counts). */
+export const canGoBackToAutomatic = (draft: SourceDraft): boolean =>
+  draft.crawlMode !== null ||
+  (draft.mode === 'page' && draft.reader !== 'auto');
+
+/**
+ * Back to Automatic (`18/source-advanced-states`): Page loading and Reader to
+ * Automatic, as an unsaved edit. On save that is `crawl_mode = null` and, for
+ * a forced JSON-LD, Haiku or Detail pages reader, a null strategy and
+ * platform. Wait until and Wait for stay; a feed's platform and a stored
+ * `manual` are locks and stay too.
+ */
+export const backToAutomatic = (draft: SourceDraft): SourceDraft => ({
+  ...draft,
+  crawlMode: null,
+  reader: draft.mode === 'page' ? 'auto' : draft.reader,
+});
+
+const ADVANCED_KEYS = [
+  'crawlMode',
+  'reader',
+  'waitUntil',
+  'waitFor',
+] as const satisfies ReadonlyArray<keyof SourceDraft>;
+
+/** How many Advanced settings differ from the saved draft. */
+export const advancedUnsavedCount = (
+  draft: SourceDraft,
+  saved: SourceDraft,
+): number =>
+  ADVANCED_KEYS.filter((key) =>
+    key === 'waitFor'
+      ? draft.waitFor.trim() !== saved.waitFor.trim()
+      : draft[key] !== saved[key],
+  ).length;
 
 const DRAFT_KEYS = [
   'mode',
