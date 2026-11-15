@@ -420,23 +420,32 @@ describe('an ?item= outside the loaded list', () => {
           call.method === 'GET' &&
           call.url.pathname === `/v1/admin/feedback/${id}`,
       );
-  let one: () => Promise<Response>;
+  const patchCalls = () =>
+    fetchMock.mock.calls
+      .filter(([, init]) => init?.method === 'PATCH')
+      .map(([input, init]) => ({
+        path: new URL(String(input)).pathname,
+        body: String(init?.body),
+      }));
+  const done = (id: string, message = 'A done one') =>
+    json({
+      success: true,
+      data: item({
+        id,
+        status: 'resolved',
+        message,
+        resolvedAt: '2026-11-09T18:00:00Z',
+      }),
+    });
+  let one: (id: string) => Promise<Response>;
   beforeEach(() => {
-    one = async () =>
-      json({
-        success: true,
-        data: item({
-          id: 'f9',
-          status: 'resolved',
-          message: 'A done one',
-          resolvedAt: '2026-11-09T18:00:00Z',
-        }),
-      });
+    one = async (id) => done(id);
     fetchMock.mockImplementation(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = new URL(String(input));
-        if (url.pathname === '/v1/admin/feedback/f9' && !init?.method)
-          return one();
+        const id = url.pathname.replace('/v1/admin/feedback/', '');
+        if (id !== url.pathname && id !== 'counts' && !init?.method)
+          return one(id);
         if (init?.method === 'PATCH') return json({ success: true });
         if (url.pathname === '/v1/admin/feedback/counts')
           return json({ success: true, data: COUNTS });
@@ -445,7 +454,7 @@ describe('an ?item= outside the loaded list', () => {
     );
   });
 
-  it('reads the one item, opens it, and reads it only once', async () => {
+  it('reads the one item and opens it with a single read', async () => {
     nav.set('?tab=feedback&item=f9');
     render(<FeedbackView />);
     expect(await screen.findByTestId('feedback-item')).toBeInTheDocument();
@@ -484,5 +493,78 @@ describe('an ?item= outside the loaded list', () => {
     });
     expect(screen.queryByTestId('feedback-item')).toBeNull();
     expect(nav.get()).toBe('?tab=feedback');
+  });
+
+  it('marks a fetched unread item read with exactly one PATCH', async () => {
+    one = async (id) =>
+      json({ success: true, data: item({ id, status: 'unread' }) });
+    nav.set('?tab=feedback&item=f9');
+    render(<FeedbackView />);
+    await screen.findByTestId('feedback-item');
+    await waitFor(() => expect(patchCalls()).toHaveLength(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(patchCalls()).toEqual([
+      {
+        path: '/v1/admin/feedback/f9',
+        body: JSON.stringify({ status: 'read' }),
+      },
+    ]);
+  });
+
+  it('reads and opens the same id again after a close', async () => {
+    nav.set('?tab=feedback&item=f9');
+    render(<FeedbackView />);
+    await screen.findByTestId('feedback-item');
+    act(() => nav.set('?tab=feedback'));
+    await waitFor(() =>
+      expect(screen.queryByTestId('feedback-item')).toBeNull(),
+    );
+    act(() => nav.set('?tab=feedback&item=f9'));
+    expect(await screen.findByTestId('feedback-item')).toBeInTheDocument();
+    expect(oneCalls('f9')).toHaveLength(2);
+  });
+
+  it('shows only B when B is asked for while A is in flight', async () => {
+    let answerA: (res: Response) => void = () => undefined;
+    one = (id) =>
+      id === 'fa'
+        ? new Promise<Response>((resolve) => {
+            answerA = resolve;
+          })
+        : Promise.resolve(done(id, 'Item B'));
+    nav.set('?tab=feedback&item=fa');
+    render(<FeedbackView />);
+    await waitFor(() => expect(oneCalls('fa')).toHaveLength(1));
+    act(() => nav.set('?tab=feedback&item=fb'));
+    expect(await screen.findByTestId('feedback-item-quote')).toHaveTextContent(
+      'Item B',
+    );
+    await act(async () => {
+      answerA(done('fa', 'Item A'));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.getByTestId('feedback-item-quote')).toHaveTextContent(
+      'Item B',
+    );
+    expect(nav.get()).toContain('item=fb');
+  });
+
+  it('keeps the param on a 500 and reads again on a retry', async () => {
+    one = async () => json({ success: false }, 500);
+    nav.set('?tab=feedback&item=f9');
+    render(<FeedbackView />);
+    await waitFor(() => expect(oneCalls('f9')).toHaveLength(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(nav.get()).toContain('item=f9');
+    expect(screen.queryByTestId('feedback-item')).toBeNull();
+    one = async (id) => done(id);
+    act(() => nav.set('?tab=feedback'));
+    act(() => nav.set('?tab=feedback&item=f9'));
+    expect(await screen.findByTestId('feedback-item')).toBeInTheDocument();
+    expect(oneCalls('f9')).toHaveLength(2);
   });
 });

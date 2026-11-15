@@ -202,28 +202,42 @@ export const FeedbackView = ({
   );
 
   // An `?item=` not in this view (a Done item on To read, another chip) is
-  // read on its own, once per id, and held open. A 404 or a bad body opens
-  // nothing and clears the param; a result for an item no longer asked for
-  // is dropped.
-  const fetchedIds = useRef(new Set<string>());
+  // read on its own, once per opening, and held open. A 404 or a bad body
+  // opens nothing and clears the param; any other failure keeps the param, so
+  // reopening or a reload tries again. A result for an item no longer asked
+  // for is dropped.
+  const fetchedFor = useRef<string | null>(null);
   const listHasOpen = loaded?.items.some((item) => item.id === openId) ?? false;
   const heldId = held?.id ?? null;
+  // A held item belongs to its opening: back-nav or a link elsewhere drops it.
   useEffect(() => {
+    if (heldId !== null && heldId !== openId) setHeld(null);
+  }, [heldId, openId]);
+  useEffect(() => {
+    if (fetchedFor.current !== openId) fetchedFor.current = null;
     if (!openId || !loaded || pending || listHasOpen || heldId === openId) {
       return;
     }
-    if (fetchedIds.current.has(openId)) return;
-    fetchedIds.current.add(openId);
+    if (fetchedFor.current === openId) return;
+    fetchedFor.current = openId;
     const id = openId;
-    void readJson(`/v1/admin/feedback/${encodeURIComponent(id)}`)
-      .then(parseFeedbackItem)
-      .catch(() => null)
-      .then((found) => {
-        if (!mounted.current || openIdRef.current !== id) return;
-        if (found) setHeld(found);
-        else router.replace(LIST_HREF, { scroll: false });
+    const current = () => mounted.current && openIdRef.current === id;
+    const gone = () => {
+      if (current()) router.replace(LIST_HREF, { scroll: false });
+    };
+    void authed(`/v1/admin/feedback/${encodeURIComponent(id)}`)
+      .then(async (res) => {
+        if (res.status === 404) return gone();
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const found = parseFeedbackItem(await res.json().catch(() => null));
+        if (!found) return gone();
+        if (current()) setHeld(found);
+      })
+      .catch(() => {
+        // Not a verdict on the item: keep the param and allow a retry.
+        if (fetchedFor.current === id) fetchedFor.current = null;
       });
-  }, [openId, loaded, pending, listHasOpen, heldId, readJson, router]);
+  }, [openId, loaded, pending, listHasOpen, heldId, authed, router]);
 
   // A reopened item is held open after it leaves Done.
   const openItem =
