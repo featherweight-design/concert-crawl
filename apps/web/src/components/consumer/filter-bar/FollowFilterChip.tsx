@@ -2,28 +2,25 @@
 
 // "My artists" browse scope chip (native following, PR 4). Four states:
 //
-//   off     entitled, has follows, scope not applied
-//   on      entitled, scope applied — the switch on; tap again to clear
-//   locked  not entitled — dashed border + locked switch, tap opens the picker
-//   absent  entitled with zero follows — renders nothing at all
+//   off     signed in, has follows, scope not applied
+//   on      signed in, scope applied — the switch on; tap again to clear
+//   locked  signed out — dashed border + locked switch, tap goes to sign-in
+//   absent  signed in with zero follows — renders nothing at all
 //
-// ⚠️ Precedence is ENTITLEMENT FIRST, THEN COUNT (Gate 1, decision D1). A free
-// user with zero follows is `locked`, not `absent`: the chip is how they learn
-// the feature exists, and hiding it would make the paywall unreachable from
-// browse. `absent` is only ever the entitled-with-nothing-to-filter case.
+// Following is on every plan, so the only thing that locks the chip is having
+// no account. A signed-out visitor sees it whatever the count: the chip is how
+// they learn the feature exists. `absent` is only ever the signed-in-with-
+// nothing-to-filter case.
 //
-// Like TasteFilterChip, this renders NOTHING until the entitlement resolves —
-// a paying user must never see a locked treatment flash. `locked` carries no
-// aria-disabled: the control is fully operable, it just opens plans instead of
-// filtering (#794's identical-pixels rule means the gate is told in the
-// aria-describedby sentence, not in the visible label).
+// Like TasteFilterChip, this renders NOTHING until the session resolves, so a
+// signed-in fan never sees the locked treatment flash. `locked` carries no
+// aria-disabled: the control is fully operable, it just goes to sign-in
+// instead of filtering (#794's identical-pixels rule means the gate is told in
+// the aria-describedby sentence, not in the visible label).
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId } from 'react';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { usePlanState } from '@/lib/queries/use-plan-state';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { SegmentDivider } from './ChipDivider';
@@ -50,9 +47,9 @@ interface FollowFilterChipProps {
    * would delete the chip out from under someone who follows fifty artists.
    */
   followCount: number | null;
-  // Server-resolved SCA-region boolean, forwarded to the tier picker's
-  // checkout legal block (monetization spec §1.7).
-  scaRegion: boolean;
+  /** Unread since the tier picker left this chip; the scaRegion removal
+   *  takes it off the filter bar's call sites. */
+  scaRegion?: boolean;
   /**
    * `chip` is the phone row's switch pill (B+ B6b). `segment` is the desktop bar's first
    * segment (B+ B6a): a switch with a MY ARTISTS eyebrow over its state. Both
@@ -72,7 +69,6 @@ export const FollowFilterChip = ({
   active,
   onToggle,
   followCount,
-  scaRegion,
   variant = 'chip',
   ownsEffects = true,
 }: FollowFilterChipProps) => {
@@ -80,27 +76,28 @@ export const FollowFilterChip = ({
   // The bar renders both variants (CSS shows one per width), so the gate
   // sentence each points at needs its own id.
   const gateId = useId();
+  // Read only to tell signed out from signed in: the matrix answers
+  // `tier-picker-on-tap` for a visitor with no account, and every signed-in
+  // plan carries following.
   const { isLoading, surface } = useEntitlement('following');
-  const { data: planState } = usePlanState();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const goToSignIn = useSignInRedirect();
 
   const resolved = !isLoading && surface !== null;
-  const usable = resolved && surface === 'visible-active';
+  const usable = resolved && surface !== 'tier-picker-on-tap';
 
-  // Entitlement lapsed (downgrade, session change) with filterFollowing=1 still
-  // in the URL: the locked chip can't toggle it off and Clear all excludes
-  // scopes, so release the param rather than strand the user on a list the API
-  // will answer with a 403. Only the owning instance releases it.
+  // Signed out with filterFollowing=1 still in the URL: the locked chip can't
+  // toggle it off and Clear all excludes scopes, so release the param rather
+  // than strand the visitor on a list the API will not scope for them. Only
+  // the owning instance releases it.
   useEffect(() => {
     if (ownsEffects && resolved && !usable && active) onToggle(false);
   }, [ownsEffects, resolved, usable, active, onToggle]);
 
-  // Hold rendering while the plan resolves — no locked flash.
+  // Hold rendering while the session resolves — no locked flash.
   if (!resolved) return null;
 
   if (usable) {
-    // `absent`: entitled, nothing followed, nothing to scope to. Guarded on
+    // `absent`: signed in, nothing followed, nothing to scope to. Guarded on
     // `!active` so a stale filterFollowing=1 URL can still be cleared — hiding
     // the chip mid-scope would strand the viewer on an unclearable empty list.
     if (followCount === 0 && !active) return null;
@@ -155,27 +152,11 @@ export const FollowFilterChip = ({
     );
   }
 
+  // Locked is signed out, so the tap goes to sign-in and back here.
   const onLockedTap = () => {
-    // Logged out goes to sign-in; a locked signed-in viewer lands on the picker.
-    // Following has no intermediate upsell sheet of its own, and inventing one
-    // here would put a second explanation of the same gate on the same screen
-    // as the artist page's.
-    if (surface === 'tier-picker-on-tap') {
-      goToSignIn();
-      return;
-    }
-    setPickerOpen(true);
+    goToSignIn();
   };
 
-  const picker = (
-    <TierPickerSheet
-      open={pickerOpen}
-      onClose={() => setPickerOpen(false)}
-      planState={planState ?? LOGGED_OUT_PLAN_STATE}
-      scaRegion={scaRegion}
-      entry="paywall"
-    />
-  );
   const gate = (
     <span id={gateId} className="sr-only">
       {FOLLOWING_COPY.chipGate}
@@ -203,7 +184,6 @@ export const FollowFilterChip = ({
         </button>
         {gate}
         <SegmentDivider />
-        {picker}
       </>
     );
   }
@@ -223,7 +203,6 @@ export const FollowFilterChip = ({
         {FOLLOWING_COPY.chip}
       </button>
       {gate}
-      {picker}
     </>
   );
 };

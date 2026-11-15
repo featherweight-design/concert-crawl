@@ -5,11 +5,6 @@
 // ⚠️ Nothing in this file may promise that following an artist puts their
 // shows in your Watching. Watching is the show you are on; following is the
 // act. Auto-watch is a separate preference nobody standing here has set.
-//
-// The gate sentence is NOT redefined here — it is `FOLLOWING_COPY.followGate`,
-// reused verbatim. A second copy of the same sentence is somewhere for drift
-// to hide, and the gate is the one line that must read identically wherever
-// the paywall is met.
 
 export const BILL_FOLLOW_COPY = {
   // Names the section without repeating "artists", which the count line

@@ -18,9 +18,6 @@ import { SkipRail, type SkipMode } from './SkipRail';
 import { useOnboardingSuggestions } from './lib/use-pick-suggestions';
 import { useArtistSearch } from '@/components/consumer/artist-picker/lib/use-artist-search';
 import { useArtistPicksCommit } from './lib/use-artist-picks-commit';
-import { usePlanState } from '@/lib/queries/use-plan-state';
-import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import type { ArtistSearchState } from '@/components/consumer/artist-picker/lib/use-artist-search';
 import {
   ARTIST_PICKS_KEY,
@@ -192,11 +189,8 @@ export interface OnboardingShellProps {
   pendingTier?: string | null | undefined;
   /** Genre bucket labels, SSR-fetched. Empty is survivable: the step says so. */
   genres?: string[] | undefined;
-  /**
-   * Server-derived from `x-vercel-ip-country`. Threaded because this shell can
-   * open `TierPickerSheet`, and a missing value is invisible until a European
-   * card reaches 3D Secure.
-   */
+  /** Unread since the tier picker left the tour; the scaRegion removal takes
+   *  it off the onboarding page's call site. */
   scaRegion?: boolean | undefined;
 }
 
@@ -207,7 +201,6 @@ export function OnboardingShell({
   entry = 'default',
   pendingTier = null,
   genres = [],
-  scaRegion = false,
 }: OnboardingShellProps = {}) {
   const [index, setIndex] = useState(0);
   const router = useRouter();
@@ -423,29 +416,21 @@ export function OnboardingShell({
     pickedArtists,
   ]);
 
-  const { data: planState } = usePlanState();
-  const following = useEntitlement('following');
-  // Never render locked while the plan is still resolving — an entitled user
-  // would watch their own CTA change wording under them.
-  const followLocked = !following.isLoading && !following.active;
+  // Following is on every plan, so the commit always reads as the write it is.
   const picksCommit = useArtistPicksCommit(advance);
 
   const pickCount = pickedArtists.size;
   const primaryLabel = onArtistsStep
     ? pickCount === 0
       ? pickCopy.skip
-      : followLocked
-        ? pickCopy.commitLocked(pickCount)
-        : pickCopy.commit(pickCount)
+      : pickCopy.commit(pickCount)
     : isLast
       ? nav.finishButton(finishLabel)
       : nav.nextButton;
   const primaryNote = onArtistsStep
     ? pickCount === 0
       ? pickCopy.subNone
-      : followLocked
-        ? pickCopy.subLocked
-        : pickCopy.subSelected
+      : pickCopy.subSelected
     : isLast
       ? nav.finishFootnote(finishLabel)
       : null;
@@ -462,7 +447,7 @@ export function OnboardingShell({
       return;
     }
     // The only step whose CTA writes anything. `commit` advances itself once
-    // the write settles, or holds the step and opens the picker on a 403.
+    // the write settles, whether or not it succeeded.
     if (onArtistsStep) {
       picksCommit.commit(Array.from(pickedArtists));
       return;
@@ -702,26 +687,6 @@ export function OnboardingShell({
           stepProps={stepProps}
         />
       </div>
-
-      {/* Follow is Premium, so the only paywalled thing in the tour is the
-          COMMIT. The picker keeps the selection behind it; closing it re-reads
-          the plan and retries the write if the upgrade landed.
-
-          Held back until the plan is actually known rather than falling back to
-          the signed-out shape. The tour is post-auth, so "logged out" is a
-          claim we can be sure is false — it would offer the wrong ladder and
-          bill the analytics event to a visitor who does not exist. `pickerOpen`
-          survives the wait, so a 403 raised mid-load still opens the sheet the
-          moment the real plan lands. */}
-      {planState !== undefined && (
-        <TierPickerSheet
-          open={picksCommit.pickerOpen}
-          onClose={picksCommit.closePicker}
-          planState={planState}
-          scaRegion={scaRegion}
-          entry="follow"
-        />
-      )}
     </>
   );
 }

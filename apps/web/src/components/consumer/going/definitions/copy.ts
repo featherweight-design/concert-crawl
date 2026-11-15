@@ -50,16 +50,6 @@ export const GOING_COPY = {
     yes: 'Yes, going',
     dismiss: 'Dismiss',
   },
-  locked: {
-    // Same label as `default` on purpose: the locked control is an invitation,
-    // so it has to read as the thing you would get, not as a different thing.
-    //
-    // Everything is free, so the only way to land here is a signed-in fan
-    // whose account didn't load. The line says that honestly; the tip beside
-    // it does the teaching.
-    aria: "I'm going! Couldn't load your account.",
-    line: "Couldn't load your account. Try again.",
-  },
   // Taking a past night back out (edit-concerts handoff, COPY.md "Remove
   // confirm").
   remove: {

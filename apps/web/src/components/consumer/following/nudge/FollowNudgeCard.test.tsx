@@ -38,11 +38,6 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="tier-picker" /> : null,
-}));
-
 const { apiPost, apiDelete } = vi.hoisted(() => ({
   apiPost: vi.fn(),
   apiDelete: vi.fn(),
@@ -60,9 +55,9 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: planState.current, isPending: false }),
 }));
 
-// Going free (2026-10-29) left no signed-in plan the matrix denies following,
-// so the locked branch is driven by forcing the hook's answer. It is kept for
-// a future re-gate; with `regate.surface` null the real hook answers.
+// Going free (2026-10-29) left no signed-in plan the matrix denies following.
+// The card no longer reads the entitlement at all; forcing a denied answer
+// here proves that, because the old card locked its CTA on exactly this.
 const regate = vi.hoisted(() => ({
   surface: null as EntitlementCell | null,
 }));
@@ -218,41 +213,30 @@ describe('FollowNudgeCard', () => {
     },
   );
 
-  // Step 1: "Free tier still sees it, with the lock on the CTA." The card is
-  // the pitch, so withholding it from the tier being pitched to is backwards.
-  it('shows a denied viewer the same card with the lock on the CTA', () => {
-    regate.surface = 'paywall-on-tap';
-    render(
-      <FollowNudgeCard
-        target={TARGET}
-        variant="inline"
-        scaRegion={false}
-        onAnswer={vi.fn()}
-      />,
-    );
-    expect(
-      screen.getByText(FOLLOW_NUDGE_COPY.title(TARGET.artist)),
-    ).toBeInTheDocument();
-    // Locked keeps idle's accessible name; the gate sentence carries the truth.
-    const cta = followButton();
-    expect(cta.querySelector('[data-glyph="lock"]')).not.toBeNull();
-    expect(screen.getByText(FOLLOWING_COPY.followGate)).toBeInTheDocument();
-  });
+  // The card used to draw a lock on the CTA and open the tier picker for any
+  // plan the matrix denied. Following is on every plan now, so the CTA is the
+  // live follow whatever the plan reads as.
+  it.each(['paywall-on-tap', 'tier-picker-on-tap'] as const)(
+    'follows on tap for a viewer whose plan reads %s, with no lock',
+    async (surface) => {
+      regate.surface = surface;
+      render(
+        <FollowNudgeCard target={TARGET} variant="inline" onAnswer={vi.fn()} />,
+      );
+      const cta = followButton();
+      expect(cta.querySelector('[data-glyph="lock"]')).toBeNull();
+      expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
 
-  it('opens the tier picker on a locked tap and writes nothing', () => {
-    regate.surface = 'paywall-on-tap';
-    render(
-      <FollowNudgeCard
-        target={TARGET}
-        variant="inline"
-        scaRegion={false}
-        onAnswer={vi.fn()}
-      />,
-    );
-    fireEvent.click(followButton());
-    expect(screen.getByTestId('tier-picker')).toBeInTheDocument();
-    expect(apiPost).not.toHaveBeenCalled();
-  });
+      fireEvent.click(cta);
+      await waitFor(() =>
+        expect(apiPost).toHaveBeenCalledWith(
+          `/v1/artists/${TARGET.artistSlug}/follow`,
+          'token',
+          {},
+        ),
+      );
+    },
+  );
 
   // The floating variant is the same card in a fixed shell, so the copy claim
   // is made once and only the extra affordance is asserted separately.

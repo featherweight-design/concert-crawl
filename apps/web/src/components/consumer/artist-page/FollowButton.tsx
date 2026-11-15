@@ -61,13 +61,10 @@ export interface FollowButtonProps {
    */
   onToggle: () => void;
   /**
-   * Locked activation — opens the parent's TierPickerSheet. Required, not
-   * optional: `locked` is a runtime boolean, so a missing handler would make a
-   * focusable control that looks live and does nothing on the one surface
-   * where the upgrade gets offered. The upcoming search, bill-block and shelf
-   * call sites are why this is a type error rather than a convention.
+   * Locked activation. Only read while `locked` is true; a call site that
+   * never passes `locked` (following is on every plan) omits it.
    */
-  onLockedTap: () => void;
+  onLockedTap?: () => void;
 }
 
 /**
@@ -132,7 +129,7 @@ export const FollowButton = ({
       return;
     }
     if (locked) {
-      onLockedTap();
+      onLockedTap?.();
       return;
     }
     onToggle();
