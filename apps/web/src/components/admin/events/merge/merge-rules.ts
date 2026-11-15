@@ -4,7 +4,7 @@
  * the sentence a destructive button hangs on is tested, not eyeballed.
  */
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { formatPrice } from '../list/events-rules';
+import { adminPriceRange } from '@/lib/admin/price-format';
 import type { MergeListing, MergePreview } from './merge-api';
 
 const COPY = ADMIN_COPY.eventEdit.merge;
@@ -52,7 +52,7 @@ export const fromLabel = (
 
 /** The price a card shows, or "no price". */
 export const priceLabel = (price: MergeListing['price']): string =>
-  formatPrice(price.min, price.max) ?? COPY.noPrice;
+  adminPriceRange(price.min, price.max) ?? COPY.noPrice;
 
 /** "none", or the open reports by kind: "1 sold-out report, 2 cancelled reports". */
 export const reportsLabel = (reports: MergeListing['reports']): string => {
@@ -89,8 +89,8 @@ export const buildMergeSummary = (
   keep: KeepSide,
 ): string => {
   const { kept, other, after } = preview;
-  const afterPrice = formatPrice(after.price.min, after.price.max);
-  const keptPrice = formatPrice(kept.price.min, kept.price.max);
+  const afterPrice = adminPriceRange(after.price.min, after.price.max);
+  const keptPrice = adminPriceRange(kept.price.min, kept.price.max);
   const reportTotal = kept.reports.total + other.reports.total;
 
   const parts = [COPY.watchingCount(after.watchers)];

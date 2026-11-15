@@ -3,7 +3,6 @@ import {
   backedPill,
   isRejectionReason,
   isSubmissionState,
-  priceRange,
   stateWords,
   ticketHost,
 } from './submitted-rules';
@@ -27,25 +26,6 @@ describe('stateWords', () => {
       'Published',
     );
     expect(stateWords({ state: 'stale', forYou: true }, STATES)).toBe('Stale');
-  });
-});
-
-describe('priceRange', () => {
-  it('draws whole dollars without cents and a range with its top', () => {
-    expect(priceRange('44.00', '44.00')).toBe('$44');
-    expect(priceRange('35.00', '65.00')).toBe('$35–$65');
-    expect(priceRange('44.50', '44.50')).toBe('$44.50');
-  });
-
-  it('draws a price with no top end with a plus, the one form the boards use', () => {
-    expect(priceRange('45.00', null)).toBe('$45+');
-    expect(priceRange('45.50', null)).toBe('$45.50+');
-    expect(priceRange('0.00', null)).toBe('$0');
-  });
-
-  it('draws one price when the top is not above the bottom', () => {
-    expect(priceRange('45.00', '45.00')).toBe('$45');
-    expect(priceRange('45.00', '40.00')).toBe('$45');
   });
 });
 

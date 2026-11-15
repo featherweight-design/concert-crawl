@@ -28,7 +28,7 @@ import {
   PHONE_PAGE,
   ResolvedChecksPhone,
 } from './ResolvedChecksPhone';
-import { dollars, priceRange } from './submitted-rules';
+import { adminDollars, adminSubmittedRange } from '@/lib/admin/price-format';
 
 const COPY = ADMIN_COPY.pricesChecks;
 // The phone's full-width row (`06/price-checks-mobile`): Add a price's words.
@@ -137,7 +137,7 @@ const Side = ({
         marginTop: 4,
       }}
     >
-      {priceRange(side.priceMin, side.priceMax)}
+      {adminSubmittedRange(side.priceMin, side.priceMax)}
     </div>
     <div
       style={{
@@ -346,14 +346,16 @@ export const PriceChecksTab = () => {
               >
                 {open.map((check) => {
                   const busy = busyIds.has(check.contestId);
-                  const listed = priceRange(
-                    check.listed.priceMin,
-                    check.listed.priceMax,
-                  );
-                  const asked = priceRange(
-                    check.check.priceMin,
-                    check.check.priceMax,
-                  );
+                  const listed =
+                    adminSubmittedRange(
+                      check.listed.priceMin,
+                      check.listed.priceMax,
+                    ) ?? '';
+                  const asked =
+                    adminSubmittedRange(
+                      check.check.priceMin,
+                      check.check.priceMax,
+                    ) ?? '';
                   return (
                     <li
                       key={check.contestId}
@@ -646,7 +648,7 @@ export const PriceChecksTab = () => {
                   <div style={{ flex: 1 }}>
                     <AnswerPill
                       answer={row.answer}
-                      price={row.price === null ? '' : dollars(row.price)}
+                      price={adminDollars(row.price) ?? ''}
                     />
                   </div>
                   <div

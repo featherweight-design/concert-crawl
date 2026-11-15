@@ -24,7 +24,6 @@ import {
   mountainStamp,
   nextCrawlWhen,
   pagePathOf,
-  priceRangeOf,
   snoozeDayLabel,
   statusPhrase,
   todayStamp,
@@ -312,13 +311,6 @@ describe('countAfterRemoval', () => {
 });
 
 describe('price and bug helpers', () => {
-  it('writes a price range as the board does', () => {
-    expect(priceRangeOf('29.00', '64.00')).toBe('$29–$64');
-    expect(priceRangeOf('45.00', null)).toBe('$45+');
-    expect(priceRangeOf('45.00', '45.00')).toBe('$45');
-    expect(priceRangeOf(null, null)).toBeNull();
-  });
-
   it('sends the fixed reason with a price answer only', () => {
     expect(defaultParams('use_checked_price')).toEqual({
       reason: 'Decided from Needs you',

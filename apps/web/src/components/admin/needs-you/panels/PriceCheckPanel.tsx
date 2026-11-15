@@ -2,13 +2,8 @@
 
 import { ExternalLink } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import {
-  priceDay,
-  priceRangeOf,
-  todayStamp,
-  whenChipOf,
-  whenWord,
-} from '../needs-you-rules';
+import { adminSubmittedRange } from '@/lib/admin/price-format';
+import { priceDay, todayStamp, whenChipOf, whenWord } from '../needs-you-rules';
 import type { PanelProps } from './panel-props';
 import {
   AnswerButtons,
@@ -93,8 +88,12 @@ const PriceCard = ({
 export const PriceCheckPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
   const facts = row.priceFacts;
   const chip = whenChipOf(row.fanDate, today);
-  const listed = facts ? priceRangeOf(facts.listed, facts.listedMax) : null;
-  const checked = facts ? priceRangeOf(facts.checked, facts.checkedMax) : null;
+  const listed = facts
+    ? adminSubmittedRange(facts.listed, facts.listedMax)
+    : null;
+  const checked = facts
+    ? adminSubmittedRange(facts.checked, facts.checkedMax)
+    : null;
   const listedDay = priceDay(facts?.listedAt ?? null);
   const chipText = [chip?.text.split(' · ')[0], row.venueName]
     .filter((part) => part)

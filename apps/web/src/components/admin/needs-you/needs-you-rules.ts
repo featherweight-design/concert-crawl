@@ -15,6 +15,7 @@ import {
   runOutcome,
   runOutcomeKey,
 } from '@/components/admin/venues/overview/overview-rules';
+import { adminDollars, adminSubmittedRange } from '@/lib/admin/price-format';
 import type { AnswerParams, QueueRow, RunLine } from './needs-you-api';
 
 const COPY = ADMIN_COPY.needsYou;
@@ -157,7 +158,10 @@ export const metaTime = (
 /** A price check's card meta ends with what is listed now: "listed $29–$64". */
 const listedMetaOf = (row: QueueRow): string | null => {
   if (row.kind !== 'price-check' || !row.priceFacts) return null;
-  const range = priceRangeOf(row.priceFacts.listed, row.priceFacts.listedMax);
+  const range = adminSubmittedRange(
+    row.priceFacts.listed,
+    row.priceFacts.listedMax,
+  );
   return range === null ? null : COPY.listedMeta(range);
 };
 
@@ -238,11 +242,11 @@ export const whatOf = (row: QueueRow): string => {
       return what.eventLowConfidence(evidenceValue(row, 'Confidence'));
     case 'price-check':
       return what.priceCheck(
-        priceRangeOf(
+        adminSubmittedRange(
           row.priceFacts?.listed ?? null,
           row.priceFacts?.listedMax ?? null,
         ) ?? evidenceValue(row, 'Listed price'),
-        priceRangeOf(
+        adminSubmittedRange(
           row.priceFacts?.checked ?? null,
           row.priceFacts?.checkedMax ?? null,
         ) ?? evidenceValue(row, 'Checked price'),
@@ -271,7 +275,7 @@ export const cardLabelOf = (
   )
     return COPY.approveAllCount(row.submissionIds.length);
   if (row.kind !== 'price-check') return answer.label;
-  const price = priceText(
+  const price = adminDollars(
     answer.slug === 'use_checked_price'
       ? (row.priceFacts?.checked ?? null)
       : answer.slug === 'keep_listed_price'
@@ -529,25 +533,6 @@ export const statusPhrase = (status: string): string =>
   STATUS_NAMES[status] ?? `HTTP ${status}`;
 
 /** The panel's title, as the board draws it for each of the four kinds. */
-/** "$29", "$45.50": a price from the API's numeric string, or null. */
-export const priceText = (value: string | null): string | null => {
-  const amount = Number(value);
-  if (value === null || !Number.isFinite(amount)) return null;
-  return Number.isInteger(amount) ? `$${amount}` : `$${amount.toFixed(2)}`;
-};
-
-/** "$29–$64", "$44", or "$45+" for a price with no top end. */
-export const priceRangeOf = (
-  min: string | null,
-  max: string | null,
-): string | null => {
-  const low = priceText(min);
-  if (low === null) return null;
-  const high = priceText(max);
-  if (high === null) return `${low}+`;
-  return high === low ? low : `${low}–${high}`;
-};
-
 /** A ticket tier as the board writes it: "GA", "VIP". */
 export const tierWord = (tier: string | null): string | null =>
   tier ? tier.replace(/_/g, ' ').toUpperCase() : null;
@@ -638,7 +623,7 @@ export const panelTitleOf = (row: QueueRow): string => {
     case 'price-check': {
       const facts = row.priceFacts;
       const price = facts
-        ? priceRangeOf(facts.checked, facts.checkedMax)
+        ? adminSubmittedRange(facts.checked, facts.checkedMax)
         : null;
       if (!facts || price === null) return row.title;
       return facts.checkedMax === null

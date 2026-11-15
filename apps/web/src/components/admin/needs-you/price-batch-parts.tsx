@@ -6,7 +6,7 @@ import { useAuth } from '@clerk/nextjs';
 import { Check } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton } from '@/components/admin/primitives';
-import { priceRange } from '@/components/admin/prices/submitted-rules';
+import { adminSubmittedRange } from '@/lib/admin/price-format';
 import {
   submittedApi,
   type SubmittedRow,
@@ -310,7 +310,7 @@ export const PriceBatchList = ({
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      {priceRange(entry.priceMin, entry.priceMax)}
+                      {adminSubmittedRange(entry.priceMin, entry.priceMax)}
                     </span>
                     <span
                       style={{
