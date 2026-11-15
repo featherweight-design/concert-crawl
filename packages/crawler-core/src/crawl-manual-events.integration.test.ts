@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { eq, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import type { Browser } from 'playwright';
 import {
   artists,
   auditLog,
   db,
+  eventArtists,
   eventRedirects,
   events,
   mergeEventRows,
@@ -671,5 +672,143 @@ describe('crawlVenue — a merged-away listing (admin 4a, READINESS A1)', () => 
     expect(relisted.id).not.toBe(gone.id);
     expect(relisted.status).toBe('upcoming');
     expect((await rowFor('Kept Row')).status).toBe('cancelled');
+  });
+});
+
+// Admin 4a-2: every writer of the bill rebuilds `event_artists` from it.
+async function lineupOf(eventId: string) {
+  return db
+    .select({
+      canonicalName: artists.canonicalName,
+      role: eventArtists.role,
+      position: eventArtists.position,
+    })
+    .from(eventArtists)
+    .innerJoin(artists, eq(artists.id, eventArtists.artistId))
+    .where(eq(eventArtists.eventId, eventId))
+    .orderBy(asc(eventArtists.position));
+}
+
+describe('event_artists from the crawl and the cleanup (admin 4a-2)', () => {
+  it('a crawl writes the lineup rows of the show it lists, headliner first', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(22);
+
+    mockExtraction([
+      makeEvent('Lineup Band', date, {
+        observedPerformers: ['Lineup Band'],
+        observedSupportingArtists: ['A Opener', 'B Opener'],
+      }),
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
+
+    const row = await rowFor('Lineup Band');
+    expect(await lineupOf(row.id)).toEqual([
+      { canonicalName: 'lineup band', role: 'headliner', position: 0 },
+      { canonicalName: 'a opener', role: 'support', position: 1 },
+      { canonicalName: 'b opener', role: 'support', position: 2 },
+    ]);
+  });
+
+  it('a re-crawl keeps the lineup rows of a lineup an admin saved', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(22);
+
+    mockExtraction([
+      makeEvent('Saved Rows', date, {
+        observedPerformers: ['Saved Rows'],
+        observedSupportingArtists: ['Venue Opener'],
+      }),
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
+    await db.insert(artists).values({
+      name: 'Admin Opener',
+      canonicalName: 'admin opener',
+      slug: 'admin-opener',
+    });
+    await db
+      .update(events)
+      .set({
+        supportingArtists: ['Admin Opener'],
+        canonicalSupporting: ['admin opener'],
+        lineupEditedAt: new Date(),
+      })
+      .where(eq(events.artist, 'Saved Rows'));
+
+    // A title change moves the source hash, so the row reaches the upsert.
+    mockExtraction(
+      [
+        makeEvent('Saved Rows', date, {
+          title: 'Saved Rows (Late)',
+          rawTitle: 'Saved Rows (Late)',
+          observedPerformers: ['Saved Rows'],
+          observedSupportingArtists: ['Venue Opener'],
+        }),
+      ],
+      `${HTML_BASE}<!-- 2 -->`,
+    );
+    await crawlVenue(venue.id, mockBrowser);
+
+    const row = await rowFor('Saved Rows');
+    expect(await lineupOf(row.id)).toEqual([
+      { canonicalName: 'saved rows', role: 'headliner', position: 0 },
+      { canonicalName: 'admin opener', role: 'support', position: 1 },
+    ]);
+  });
+
+  it('the duplicate-night cleanup writes the lineup rows of a bill it fills', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(22);
+    await db.insert(artists).values([
+      { name: 'Fill Act', canonicalName: 'fill act', slug: 'fill-act' },
+      {
+        name: 'Fill Opener',
+        canonicalName: 'fill opener',
+        slug: 'fill-opener',
+      },
+    ]);
+    const [survivor, donor] = await db
+      .insert(events)
+      .values([
+        {
+          venueId: venue.id,
+          title: 'Fill Act',
+          artist: 'Fill Act',
+          canonicalArtist: 'fill act',
+          canonicalTitle: 'fill act',
+          date,
+          showTime: '20:00',
+          // The ladder never ruled on this row: an empty bill to fill.
+          headliners: null,
+          canonicalHeadliners: null,
+        },
+        {
+          venueId: venue.id,
+          title: 'Fill Act',
+          artist: 'Fill Act',
+          canonicalArtist: 'fill act',
+          canonicalTitle: 'fill act',
+          date,
+          showTime: null,
+          headliners: ['Fill Act'],
+          canonicalHeadliners: ['fill act'],
+          supportingArtists: ['Fill Opener'],
+          canonicalSupporting: ['fill opener'],
+        },
+      ])
+      .returning({ id: events.id });
+    if (!survivor || !donor) throw new Error('insert returned no rows');
+
+    await mergeDuplicateNights({ dryRun: false });
+
+    const rows = await db
+      .select({ id: events.id, headliners: events.headliners })
+      .from(events)
+      .where(eq(events.venueId, venue.id));
+    expect(rows).toEqual([{ id: survivor.id, headliners: ['Fill Act'] }]);
+    expect(await lineupOf(survivor.id)).toEqual([
+      { canonicalName: 'fill act', role: 'headliner', position: 0 },
+      { canonicalName: 'fill opener', role: 'support', position: 1 },
+    ]);
   });
 });
