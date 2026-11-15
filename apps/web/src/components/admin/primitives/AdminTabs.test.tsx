@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { AdminTabs } from './AdminTabs';
@@ -113,6 +113,39 @@ describe('AdminTabs', () => {
     render(<Harness variant="segments" />);
     expect(screen.getByTestId('tabs').style.overflowX).toBe('');
     expect(tab('One').style.flex).toContain('1');
+  });
+
+  it('rerenders across tab, phone and variant without a style-conflict warning', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const tabs = (
+      value: Key,
+      variant: 'underline' | 'segments',
+      phone: boolean,
+    ) => (
+      <AdminTabs
+        tabs={TABS}
+        value={value}
+        onChange={() => {}}
+        label="Sections"
+        tabId={(key) => `tab-${key}`}
+        panelId={(key) => `panel-${key}`}
+        variant={variant}
+        phone={phone}
+      />
+    );
+    try {
+      const { rerender } = render(tabs('one', 'underline', false));
+      rerender(tabs('two', 'underline', false));
+      rerender(tabs('two', 'underline', true));
+      rerender(tabs('three', 'segments', true));
+      rerender(tabs('one', 'underline', false));
+      expect(errors).not.toHaveBeenCalled();
+      // The look holds: the selected underline tab keeps its 2px rule.
+      expect(tab('One').style.borderBottom).toBe('2px solid var(--signal)');
+      expect(tab('One').style.borderTop).toContain('none');
+    } finally {
+      errors.mockRestore();
+    }
   });
 
   it('segments keep side padding, so a shrink-to-fit strip never runs labels together', () => {

@@ -6,6 +6,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { useContentBox } from './useContentBox';
 import { useDialogKeyboard } from './useDialogKeyboard';
 import { useIsNarrowDesktop } from './useIsPhone';
+import { PANEL_SHADOW } from './shadows';
 
 export interface SidePanelProps {
   onClose: () => void;
@@ -196,7 +197,7 @@ const OverlayPanel = ({
           top: 0,
           right: 0,
           bottom: 0,
-          boxShadow: 'var(--shadow-strong)',
+          boxShadow: PANEL_SHADOW,
         }}
       >
         <PanelBody {...props} dismissible={dismissible} titleId={titleId} />

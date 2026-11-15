@@ -217,6 +217,14 @@ describe('RowMenu', () => {
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
 
+  it('casts 43/approve-menu-d’s shadow, offsets on the token, not the bare colour', () => {
+    renderMenu();
+    const shadow = screen.getByRole('menu').style.boxShadow;
+    expect(shadow).toContain('var(--shadow-strong)');
+    expect(shadow).toContain('18px 40px');
+    expect(shadow).not.toBe('var(--shadow-strong)');
+  });
+
   it('closes on Escape with focus back on ⋯', () => {
     renderMenu();
     fireEvent.keyDown(window, { key: 'Escape' });

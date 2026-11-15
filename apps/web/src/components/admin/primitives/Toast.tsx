@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Check } from 'lucide-react';
 import { SIDEBAR_WIDTH } from '@/components/admin/shell/content-pane';
 import { useIsPhone } from './useIsPhone';
+import { TOAST_SHADOW } from './shadows';
 
 /**
  * Where a bottom toast sits: centred under the content column on desktop,
@@ -30,7 +31,8 @@ export const ToastDock = ({
         // (left:232px;right:0), not the viewport; the phone keeps 16 sides.
         left: isPhone ? 16 : SIDEBAR_WIDTH,
         right: isPhone ? 16 : 0,
-        bottom: isPhone ? 'calc(76px + env(safe-area-inset-bottom))' : 24,
+        // `43/approve-m` floats it at bottom:96px, 32 above the 64px tab bar.
+        bottom: isPhone ? 'calc(96px + env(safe-area-inset-bottom))' : 24,
         display: 'flex',
         justifyContent: 'center',
         pointerEvents: 'none',
@@ -74,7 +76,7 @@ export const Toast = ({
         borderRadius: 12,
         background: 'var(--bg-elevated)',
         border: '1px solid color-mix(in srgb, var(--success) 45%, transparent)',
-        boxShadow: 'var(--shadow-strong)',
+        boxShadow: TOAST_SHADOW,
       }}
     >
       <Check

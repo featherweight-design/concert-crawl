@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { MoreHorizontal, type LucideIcon } from 'lucide-react';
+import { MENU_SHADOW } from './shadows';
 
 export interface RowMenuItem {
   key: string;
@@ -369,7 +370,7 @@ export const RowMenu = ({
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border-strong)',
             borderRadius: 14,
-            boxShadow: 'var(--shadow-strong)',
+            boxShadow: MENU_SHADOW,
           }}
         >
           <RowMenuItems

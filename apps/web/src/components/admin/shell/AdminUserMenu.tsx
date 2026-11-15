@@ -9,6 +9,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { adminEnvironment } from '@/lib/admin/environment';
 import { THEME_META } from '@/theme/themes';
 import { TRUNCATE } from '@/components/admin/primitives/utils';
+import { MENU_SHADOW } from '@/components/admin/primitives/shadows';
 import { useAdminTheme } from './AdminThemeProvider';
 import {
   AdminAvatar,
@@ -99,7 +100,8 @@ const UserMenuRows = ({ variant }: { variant: 'desktop' | 'phone' }) => {
         border: '1px solid var(--border-strong)',
         background: 'var(--bg-elevated)',
         padding: 6,
-        boxShadow: variant === 'desktop' ? 'var(--shadow-strong)' : 'none',
+        // `07/user-menu-desktop` draws 0 18px 40px; `-mobile` draws none.
+        boxShadow: variant === 'desktop' ? MENU_SHADOW : 'none',
       }}
     >
       <Link href="/events" style={rowStyle}>
