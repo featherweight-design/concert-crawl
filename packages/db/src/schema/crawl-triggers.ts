@@ -33,6 +33,10 @@ export const crawlTriggers = pgTable('crawl_triggers', {
   // whose listings haven't changed. Default false keeps normal + scheduled
   // crawls on the cost-saving skip path.
   force: boolean('force').notNull().default(false),
+  // A test re-crawl of a crawl-paused venue (migration 0119): a real crawl
+  // whose run never moves the venue's pause or failure streak. Not `mode`
+  // 'test', which tries a draft venue's config and keeps nothing.
+  trial: boolean('trial').notNull().default(false),
   mode: crawlTriggerModeEnum('mode').notNull().default('crawl'),
   crawlRunId: uuid('crawl_run_id'),
   triggeredBy: text('triggered_by'),
