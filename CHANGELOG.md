@@ -1,3 +1,18 @@
+# [1.504.0](https://github.com/featherweight-design/concert-crawl/compare/v1.503.0...v1.504.0) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** address the sign-up verify review ([722f7c8](https://github.com/featherweight-design/concert-crawl/commit/722f7c84c6ec28be41bfdc700048d7a97338a8e4))
+* **web:** keep a stored manual on Back to Automatic, chip Wait for, neutral locks ([29a5553](https://github.com/featherweight-design/concert-crawl/commit/29a55536307f09ce142d6788416c92be0bab9d72))
+* **web:** treat Page loading as not forced until crawl_mode_source ([169f4b0](https://github.com/featherweight-design/concert-crawl/commit/169f4b00020dec95f4651efc85c0bba48cd8f38a))
+
+
+### Features
+
+* **web:** add the sign-up verify and done screens ([2c319d9](https://github.com/featherweight-design/concert-crawl/commit/2c319d98440b9489ae94296fce9071b9a77adb30))
+* **web:** show what Source Advanced sets by hand, with Back to Automatic ([a30c88a](https://github.com/featherweight-design/concert-crawl/commit/a30c88a55a202b8e4517c53526e8a7fdabc971f5))
+
 # [1.503.0](https://github.com/featherweight-design/concert-crawl/compare/v1.502.0...v1.503.0) (2026-11-15)
 
 
