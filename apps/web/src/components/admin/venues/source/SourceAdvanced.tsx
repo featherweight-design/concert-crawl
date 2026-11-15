@@ -2,8 +2,9 @@
 
 /**
  * The Source tab's Advanced section (`18/*`): page loading, reader, wait until
- * and wait for. Closed, it says "All automatic" or chips each setting forced
- * by hand, with Back to Automatic. Open, desktop draws it as its own card
+ * and wait for. Closed, it says "All automatic", or chips each setting forced
+ * by hand (amber, under "Set by hand") and each locked reader (neutral), with
+ * Back to Automatic for a forced Reader. Open, desktop draws it as its own card
  * under the two columns (`SourceAdvancedCard`); the phone stacks the controls
  * in How we read it.
  */
@@ -23,14 +24,15 @@ import {
   forcedChip,
   inputStyle,
   linkButton,
+  lockedChip,
 } from './source-parts';
 import {
   PAGE_LOADINGS,
   READERS,
   advancedUnsavedCount,
   canGoBackToAutomatic,
+  closedChipsOf,
   crawlModeOf,
-  forcedChipsOf,
   pageLoadingOf,
   readerLockOf,
   sellerName,
@@ -43,7 +45,7 @@ const COPY = ADMIN_COPY.venueSource;
 const ADVANCED = COPY.advanced;
 
 /** The controls' id, for the toggle's `aria-controls`. */
-export const advancedIdOf = (ids: string) => `${ids}-advanced`;
+const advancedIdOf = (ids: string) => `${ids}-advanced`;
 
 const BackToAutomatic = ({
   saving,
@@ -100,9 +102,11 @@ const AdvancedControls = ({
   const reader =
     lock !== null ? (
       <div style={cell(false)}>
-        <span style={advancedLabel}>{ADVANCED.reader.label}</span>
-        <div>
-          <span data-testid="source-reader-locked" style={forcedChip}>
+        <span id={`${ids}-reader-label`} style={advancedLabel}>
+          {ADVANCED.reader.label}
+        </span>
+        <div role="group" aria-labelledby={`${ids}-reader-label`}>
+          <span data-testid="source-reader-locked" style={lockedChip}>
             {lock.kind === 'feed'
               ? sellerName(lock.seller)
               : ADVANCED.reader.manual}
@@ -253,10 +257,12 @@ export const SourceAdvanced = ({
   /** Focus lands here after Hide or Back to Automatic. */
   toggleRef: Ref<HTMLButtonElement>;
 }) => {
-  const chips = open ? [] : forcedChipsOf(draft, saved);
-  const forced = chips.length > 0;
+  const chips = open ? [] : closedChipsOf(draft, saved);
+  // "Set by hand" only for a hand pick; a lock alone shows just its chip.
+  const forced = chips.some((chip) => chip.kind === 'forced');
   const showBack = !open && canGoBackToAutomatic(draft);
   const unsaved = open ? 0 : advancedUnsavedCount(draft, savedDraft);
+  const labelId = `${ids}-advanced-label`;
   // Closed: "All automatic", or "Set by hand" over the chips. Open: desktop
   // points at the card below; the phone's controls follow directly.
   const line = open
@@ -265,7 +271,9 @@ export const SourceAdvanced = ({
       : ADVANCED.openBelow
     : forced
       ? ADVANCED.setByHand
-      : ADVANCED.collapsedLine;
+      : chips.length === 0
+        ? ADVANCED.collapsedLine
+        : null;
   // The phone stacks the line under the label, beside the chevron.
   const stacked = phone && line !== null;
   const Chevron = open ? ChevronDown : ChevronRight;
@@ -327,7 +335,7 @@ export const SourceAdvanced = ({
                     }
               }
             >
-              <span style={{ fontSize: 14, fontWeight: 600 }}>
+              <span id={labelId} style={{ fontSize: 14, fontWeight: 600 }}>
                 {ADVANCED.label}
               </span>
               {line !== null && (
@@ -349,8 +357,10 @@ export const SourceAdvanced = ({
             <BackToAutomatic saving={saving} onClick={onBackToAutomatic} />
           )}
         </div>
-        {forced && (
+        {chips.length > 0 && (
           <div
+            role="group"
+            aria-labelledby={labelId}
             data-testid="source-advanced-forced"
             style={{
               display: 'flex',
@@ -360,8 +370,12 @@ export const SourceAdvanced = ({
             }}
           >
             {chips.map((chip) => (
-              <span key={chip} style={forcedChip}>
-                {chip}
+              <span
+                key={chip.text}
+                data-kind={chip.kind}
+                style={chip.kind === 'forced' ? forcedChip : lockedChip}
+              >
+                {chip.text}
               </span>
             ))}
           </div>
