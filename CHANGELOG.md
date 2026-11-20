@@ -1,3 +1,11 @@
+## [1.522.3](https://github.com/featherweight-design/concert-crawl/compare/v1.522.2...v1.522.3) (2026-11-20)
+
+
+### Bug Fixes
+
+* **web:** ignore the retired filterTaste param instead of clearing it ([5ef6e0f](https://github.com/featherweight-design/concert-crawl/commit/5ef6e0f071ac778cf4cfc799c92ed27192e86d32))
+* **web:** let Clear all lift a stored taste-filter link ([5e0a479](https://github.com/featherweight-design/concert-crawl/commit/5e0a4792973f3507fd974a144df832fab8ae0d73))
+
 ## [1.522.2](https://github.com/featherweight-design/concert-crawl/compare/v1.522.1...v1.522.2) (2026-11-15)
 
 
