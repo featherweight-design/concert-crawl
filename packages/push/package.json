@@ -29,7 +29,7 @@
     "@concert-crawl/config": "workspace:*",
     "@types/web-push": "^3.6.4",
     "eslint": "^9.39.5",
-    "typescript": "^5.0.0",
+    "typescript": "^7.0.2",
     "vite": "^6.4.5",
     "vitest": "^5.1.0"
   }
