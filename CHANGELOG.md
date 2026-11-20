@@ -1,3 +1,13 @@
+## [1.522.4](https://github.com/featherweight-design/concert-crawl/compare/v1.522.3...v1.522.4) (2026-11-20)
+
+
+### Bug Fixes
+
+* **api:** address the headliner-slugs review ([8ab2736](https://github.com/featherweight-design/concert-crawl/commit/8ab2736cb1a98f6e461bc9bd3efe480efc0af798))
+* **api:** drop punctuation-only headliners, test the display-null fallback ([ac691da](https://github.com/featherweight-design/concert-crawl/commit/ac691dad1a104b796125eae5b85cba39b6f9197f))
+* **api:** give each co-headliner its own slug on the event detail ([fda7a74](https://github.com/featherweight-design/concert-crawl/commit/fda7a74c94ca56bd9acf92d6ff44a1a4c0cde720))
+* **api:** name the real empty-canonical case in comments and test ([d7524d9](https://github.com/featherweight-design/concert-crawl/commit/d7524d9f1a27ed91746669544d134005eee674fb))
+
 ## [1.522.3](https://github.com/featherweight-design/concert-crawl/compare/v1.522.2...v1.522.3) (2026-11-20)
 
 
