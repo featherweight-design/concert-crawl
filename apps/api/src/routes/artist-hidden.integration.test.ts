@@ -109,11 +109,24 @@ describe('#1342 hidden artists are absent from every public surface', () => {
   it('resolves the event-detail link to null so the name renders as plain text', async () => {
     await seedPair();
 
-    const resolved = await resolveArtistSlugs(HIDDEN_NAME, [VISIBLE_NAME]);
+    const resolved = await resolveArtistSlugs(
+      HIDDEN_NAME,
+      [VISIBLE_NAME],
+      [HIDDEN_NAME, VISIBLE_NAME],
+    );
 
     expect(resolved.artistSlug).toBeNull();
     expect(resolved.supportingArtistSlugs).toEqual([
       expect.stringContaining('mountain-grass-unit'),
+    ]);
+    // A hidden co-headliner keeps its name but gets no link, like the
+    // headliner above; the visible act beside it still links.
+    expect(resolved.headliners).toEqual([
+      { name: HIDDEN_NAME, slug: null },
+      {
+        name: VISIBLE_NAME,
+        slug: expect.stringContaining('mountain-grass-unit'),
+      },
     ]);
   });
 

@@ -342,7 +342,7 @@ watchingRouter.put('/:eventId', async (ctx) => {
   // watch itself already succeeded, so a failure here must not fail the write.
   let artistSlug: string | null = null;
   try {
-    ({ artistSlug } = await resolveArtistSlugs(eventRow.artist, null));
+    ({ artistSlug } = await resolveArtistSlugs(eventRow.artist, null, null));
   } catch (err) {
     apiLogger.warn(
       { err, userId: authInfo.userId, eventId },
