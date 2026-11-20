@@ -18,8 +18,6 @@
     "@concert-crawl/types": "workspace:*",
     "@sentry/nextjs": "^11.12.0",
     "@serwist/next": "^9.5.13",
-    "@stripe/react-stripe-js": "^6.8.0",
-    "@stripe/stripe-js": "^9.13.0",
     "@tanstack/react-query": "^5.107.1",
     "@tanstack/react-query-devtools": "^5.107.1",
     "@vercel/speed-insights": "^2.1.0",

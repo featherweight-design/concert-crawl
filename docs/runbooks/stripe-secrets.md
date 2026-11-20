@@ -19,6 +19,10 @@ where each lives, how to rotate each, and the test-vs-live rules.
 | `STRIPE_WEBHOOK_SECRET`              | Render API service (env var) | test-mode endpoint secret (`whsec_…`) | live-mode endpoint secret (`whsec_…`) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel web project (env var) | test-mode key (`pk_test_…`)           | live-mode key (`pk_live_…`)           |
 
+- **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is retired (2026-11-20).** The web
+  publishable key was removed with the tier picker (the app is free); the web
+  app reads no Stripe key and the var can be deleted from Vercel.
+
 - **GitHub Actions has NO Stripe keys.** CI tests use a dummy key with the
   SDK stubbed at the dependency-injected client boundary; webhook signature
   tests sign with `stripe.webhooks.generateTestHeaderString` (spec §10).
@@ -53,6 +57,9 @@ Create the replacement BEFORE revoking the old key so API calls never gap:
 4. Stripe Dashboard → revoke/delete the old key.
 
 ## Rotating `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+
+Retired 2026-11-20: the web publishable key was removed with the tier picker,
+so there is nothing to rotate. The steps below are kept for history.
 
 Publishable keys are not secret (they ship in the browser bundle), but they
 are rolled together with the secret key when a full credential reset is

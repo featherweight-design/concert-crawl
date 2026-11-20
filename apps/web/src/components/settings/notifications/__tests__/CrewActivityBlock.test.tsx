@@ -65,9 +65,6 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
 vi.mock('@/lib/queries/use-spotify-connection', () => ({
   useSpotifyConnection: () => ({ data: undefined }),
 }));
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: () => null,
-}));
 
 // Hoisted: `vi.mock` runs before module-scope consts, so the spy has to be
 // created inside the hoisted block to be visible to the factory.

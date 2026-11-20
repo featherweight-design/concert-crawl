@@ -16,7 +16,8 @@ None.
 - SCA notice: `me/page.tsx` resolves `x-vercel-ip-country` via `isScaRegion`
   (EEA + UK; unknown ⇒ true, fail-safe toward compliance) and the boolean
   threads me/page → SettingsRoute/SettingsRouteDesktop → PlanPanel →
-  TierPickerSheet → CheckoutPanel.
+  TierPickerSheet → CheckoutPanel. (Note, 2026-11-20: `isScaRegion` and
+  `scaRegion` were removed with the tier picker; the app is free.)
 - Refund link: CheckoutPanel links `/legal/terms#refunds`; the terms page
   contains the `id="refunds"` anchor (spec §7 — refund policy as a terms
   section, no standalone page yet).

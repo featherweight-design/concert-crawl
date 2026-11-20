@@ -5,7 +5,7 @@
 // The account menu lives in the app-wide provider, so a static import would put
 // the QR encoder on every page for a sheet most visits never open. Mounted on
 // the first open and kept mounted after, so closing still runs the sheet's own
-// exit path. Same shape as `tier-picker/lazy.ts`.
+// exit path.
 
 import dynamic from 'next/dynamic';
 import { createElement, useState, type ComponentType } from 'react';

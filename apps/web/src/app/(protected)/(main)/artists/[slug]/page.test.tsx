@@ -54,18 +54,8 @@ vi.mock('@/theme', () => ({
   useTheme: () => ({ theme: 'electric', setTheme: () => undefined }),
 }));
 
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: () => null,
-}));
-
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
-}));
-
-// The page reads the Vercel geo header to decide whether the tier picker needs
-// SCA copy; there is no request scope here.
-vi.mock('next/headers', () => ({
-  headers: async () => new Headers({ 'x-vercel-ip-country': 'US' }),
 }));
 
 // The page server-renders the past list; the pill's mutation needs a query

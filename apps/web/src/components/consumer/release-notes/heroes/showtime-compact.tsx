@@ -264,109 +264,6 @@ export function PricesCompact(): React.ReactElement {
   );
 }
 
-// 2 · Tier badges — single Founder medallion
-export function TierCompact(): React.ReactElement {
-  return (
-    <CompactStage
-      eyebrow={COPY.heroes.compact.tiers.eyebrow}
-      eyebrowHue="#7AE6FF"
-      founderGlow
-    >
-      <div
-        style={
-          {
-            position: 'absolute',
-            left: '50%',
-            top: '48%',
-            ['--cmp-base' as string]: 'translate(-50%, -50%)',
-            transform: 'translate(-50%, -50%)',
-            opacity: 0,
-            animation: 'cmpScaleIn 700ms 0.2s cubic-bezier(.2,.85,.2,1) both',
-            filter:
-              'drop-shadow(0 8px 14px rgba(0,0,0,0.55)) drop-shadow(0 0 18px rgba(122,230,255,0.45))',
-          } as React.CSSProperties
-        }
-      >
-        <div style={{ position: 'relative', width: 78, height: 78 }}>
-          <svg width="78" height="78" viewBox="0 0 120 120">
-            <defs>
-              <linearGradient id="cmp-founder-ring" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#7AE6FF" />
-                <stop offset="100%" stopColor="#FF7BD4" />
-              </linearGradient>
-            </defs>
-            <circle
-              cx="60"
-              cy="60"
-              r="57"
-              fill="rgba(255,255,255,0.05)"
-              stroke="url(#cmp-founder-ring)"
-              strokeWidth="3"
-            />
-            <circle
-              cx="60"
-              cy="60"
-              r="48"
-              fill="none"
-              stroke="#7AE6FF"
-              strokeWidth="0.7"
-              opacity="0.45"
-            />
-          </svg>
-          {/* crown glyph */}
-          <div
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            <svg width="36" height="36" viewBox="0 0 24 24">
-              <path
-                d="M3 17 L3 7.5 L7.5 13 L12 4 L16.5 13 L21 7.5 L21 17 Z"
-                fill="#7AE6FF"
-                stroke="#FF7BD4"
-                strokeWidth="0.6"
-                strokeLinejoin="round"
-              />
-              <rect
-                x="3"
-                y="17.5"
-                width="18"
-                height="2.6"
-                rx="0.5"
-                fill="#7AE6FF"
-              />
-              <circle cx="7.5" cy="11.2" r="0.95" fill="#FF7BD4" />
-              <circle cx="12" cy="6.5" r="0.95" fill="#FF7BD4" />
-              <circle cx="16.5" cy="11.2" r="0.95" fill="#FF7BD4" />
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          left: '50%',
-          bottom: 12,
-          transform: 'translateX(-50%)',
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: 7,
-          fontWeight: 800,
-          color: '#FF7BD4',
-          letterSpacing: '0.20em',
-          textTransform: 'uppercase',
-          opacity: 0,
-          animation: 'cmpFadeIn 500ms 0.65s ease-out both',
-        }}
-      >
-        {COPY.heroes.compact.tiers.firstHundredOnly}
-      </div>
-    </CompactStage>
-  );
-}
-
 // 3 · History — single hero stub + counter
 export function HistoryCompact(): React.ReactElement {
   return (
@@ -1724,7 +1621,6 @@ export function VenuePassportCompact(): React.ReactElement {
 // use it to resolve <SpotlightHero hero="..." compact /> routes.
 export const SPOTLIGHT_COMPACT_HEROES: Record<string, React.ComponentType> = {
   price: PricesCompact,
-  tiers: TierCompact,
   history: HistoryCompact,
   calendar: CalendarCompact,
   share: ShareableCompact,
