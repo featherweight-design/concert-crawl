@@ -30,9 +30,6 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
 }));
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: () => null,
-}));
 vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
   useArtistFollow: (_slug: string, initialFollowing: boolean) => ({
     following: initialFollowing,

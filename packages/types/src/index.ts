@@ -1,9 +1,4 @@
-// Stripe decline_code → 5-category mapping (spec Part 2 §1.6) — shared by
-// the API webhook handler and the web tier-picker failure surfaces.
-export * from './decline-category.js';
-
-// Web analytics share-event contract (posthog-js) and the tier picker's entry
-// type.
+// Web analytics share-event contract (posthog-js).
 export * from './analytics-events.js';
 
 // #764 venue first-timer guide — chip pool, chip-state / publish-state /

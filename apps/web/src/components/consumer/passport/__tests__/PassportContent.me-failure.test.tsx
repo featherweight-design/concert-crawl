@@ -31,9 +31,6 @@ vi.mock('@/lib/users', () => ({
 vi.mock('@/lib/queries/use-feature-flags', () => ({
   useFeatureFlags: () => ({ data: featureFlagDefaults(), isPending: false }),
 }));
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: () => null,
-}));
 
 const objectUrlApi = {
   create: URL.createObjectURL,

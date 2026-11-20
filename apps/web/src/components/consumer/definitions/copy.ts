@@ -600,17 +600,12 @@ export const CONSUMER_COPY = {
       passport: {
         passportEyebrow: 'Showtime · every night kept',
       },
-      tiers: {
-        pickYourSeat: 'Pick your seat',
-        firstHundredOnly: 'FIRST 100 ONLY',
-      },
       compact: {
         prices: {
           eyebrow: 'Crowd-sourced',
           verifiedLabel: 'Verified',
           faceValue: 'Face value',
         },
-        tiers: { eyebrow: 'Founder', firstHundredOnly: 'First 100 only' },
         history: { eyebrow: 'Concerts', nightsKept: 'Nights kept' },
         calendar: { eyebrow: 'Jun 2026' },
         shareable: { eyebrow: 'Share card' },

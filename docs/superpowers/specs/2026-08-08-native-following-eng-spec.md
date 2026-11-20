@@ -236,6 +236,8 @@ Unchanged from `EventDetailCtaBlock.tsx`. Every gated follow action is gated **t
 
 `scaRegion` is derived server-side from `x-vercel-ip-country` via `isScaRegion` and threaded to every component that can render `TierPickerSheet`. Any new page that renders a follow affordance must thread it; a missing `scaRegion` is invisible until a European card hits 3D Secure.
 
+> **Note (2026-11-20):** `isScaRegion` and the `scaRegion` prop were removed with the tier picker (the app is free). Nothing threads an SCA verdict any more.
+
 ### 6.2 `FOLLOW_ANCHOR`
 
 Not a new component. It becomes:

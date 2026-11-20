@@ -2,7 +2,6 @@
 
 import React from 'react';
 import {
-  TierShowtime,
   HistoryShowtime,
   PricesShowtime,
   CalendarShowtime,
@@ -29,7 +28,6 @@ interface SpotlightHeroProps {
 
 const FULL_HEROES: Record<string, React.ComponentType> = {
   price: PricesShowtime,
-  tiers: TierShowtime,
   history: HistoryShowtime,
   calendar: CalendarShowtime,
   share: ShareableShowtime,

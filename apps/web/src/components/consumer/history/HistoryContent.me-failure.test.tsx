@@ -63,9 +63,6 @@ vi.mock('@/components/consumer/share/ShareSheet', () => ({
 vi.mock('@/lib/history', () => ({
   downloadHistoryIcs: () => Promise.resolve(),
 }));
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: () => null,
-}));
 vi.mock('./AddShowRow', () => ({
   AddShowRow: () => null,
 }));

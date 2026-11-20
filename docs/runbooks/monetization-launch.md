@@ -69,6 +69,8 @@ infra)** are human-owned and cannot be done by an agent.
       (test mode). Placing live keys is the notify-and-proceed cutover.
 - [ ] **(Hugh / infra)** LIVE publishable key on the prod **web** project
       (`concert-crawl`, Vercel): `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (`pk_live_*`).
+      _Retired 2026-11-20: the web publishable key was removed with the tier picker
+      (the app is free); web reads no Stripe key and the var can be deleted from Vercel._
 - [ ] **(Hugh / infra)** Live-mode Stripe **products + prices** provisioned
       (`supporter_monthly`, `premium_monthly`, `founder_monthly`) via
       `STRIPE_SECRET_KEY=sk_live_… tsx scripts/stripe-provision.ts --mode live`. Verify one

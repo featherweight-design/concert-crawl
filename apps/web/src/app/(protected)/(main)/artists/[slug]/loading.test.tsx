@@ -32,10 +32,6 @@ vi.mock('@/theme', () => ({
   useTheme: () => ({ theme: 'electric', setTheme: () => undefined }),
 }));
 
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: () => null,
-}));
-
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
 }));

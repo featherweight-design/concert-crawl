@@ -1,19 +1,6 @@
-// The web app's typed analytics events (posthog-js): poster sharing only,
-// plus the tier picker's entry type, which picks its header copy. Billing and
-// plan events are not sent: the app is moving to a free tier, and the privacy
+// The web app's typed analytics events (posthog-js): poster sharing only.
+// Billing and plan events are not sent: the app is free, and the privacy
 // policy discloses only usage and share events.
-
-// Where the tier picker was opened from. The picker picks its header copy by
-// entry. A signed-out tap goes to sign-in rather than opening the picker, so
-// there are no `logged-out-*` entries; a signed-out header still renders when
-// the plan has not resolved.
-export type PickerEntry =
-  | 'settings'
-  | 'paywall'
-  // A signed-in user committing their onboarding artist picks without the
-  // entitlement to follow (PR 8).
-  | 'follow'
-  | 'takeover';
 
 /** Where a share sheet was opened from. One surface today; named so a second
  * one is a new member rather than an untyped string. */
