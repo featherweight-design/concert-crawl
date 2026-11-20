@@ -716,10 +716,10 @@ describe('GET /v1/events/:id — integration', () => {
         canonicalHeadliners: [],
         date: '2027-07-09',
       });
-      // A punctuation-only name canonicalizes to '' and is no act.
+      // A leading-separator name canonicalizes to '' and is no act.
       const punctuation = await seedEvent(venue.id, {
-        artist: '!!!',
-        headliners: ['!!!'],
+        artist: 'Leading Separator Row',
+        headliners: [' & Bar'],
         canonicalHeadliners: [],
         date: '2027-07-10',
       });
