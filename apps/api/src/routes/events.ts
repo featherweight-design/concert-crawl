@@ -1220,7 +1220,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     await resolveArtistSlugs(
       row.artist,
       row.supportingArtists,
-      row.headlinerNames,
+      // `canonical_headliners` is the ladder-ran signal (NULL = never ran);
+      // `headliners` is only the display spelling of what it found.
+      row.canonicalHeadliners === null ? null : (row.headlinerNames ?? []),
     );
 
   const {

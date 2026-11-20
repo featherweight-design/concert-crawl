@@ -12,7 +12,7 @@
 
 import { db, artists } from '@concert-crawl/db';
 import { and, eq, inArray } from 'drizzle-orm';
-import { canonicalizeArtist } from '@concert-crawl/types';
+import { canonicalizeArtist, type EventHeadliner } from '@concert-crawl/types';
 
 export interface ResolvedArtistSlugs {
   /** The headliner's slug, or null when the projection has no row. */
@@ -27,25 +27,32 @@ export interface ResolvedArtistSlugs {
    * Every act headlining the bill, each with its own slug (null where that
    * name has no visible row), in `events.headliners` order. A co-headline
    * night ("Clipse & J.I.D") has one display string in `artist` but two acts
-   * here, so each can link to its own page. Null when the `headliners`
-   * argument is null (the ladder never ran on the row); an empty array when
-   * the ladder found no act.
+   * here, so each can link to its own page. One entry per act: two spellings
+   * of one act ("Clipse", "CLIPSE") keep the first. Null when the
+   * `headliners` argument is null (the ladder never ran on the row); an empty
+   * array when the ladder found no act.
    */
-  headliners: Array<{ name: string; slug: string | null }> | null;
+  headliners: EventHeadliner[] | null;
 }
 
 export const resolveArtistSlugs = async (
   headliner: string,
   supportingArtists: string[] | null,
-  headliners: string[] | null = null,
+  headliners: string[] | null,
 ): Promise<ResolvedArtistSlugs> => {
   const headlinerCanonical = canonicalizeArtist(headliner);
   const supportingCanonical = (supportingArtists ?? []).map((name) =>
     canonicalizeArtist(name),
   );
-  const headlinersCanonical = (headliners ?? []).map((name) =>
-    canonicalizeArtist(name),
-  );
+  // Each act paired with its canonical name, first spelling kept per act.
+  const headlinerActs: { name: string; canonical: string }[] = [];
+  for (const name of headliners ?? []) {
+    const canonical = canonicalizeArtist(name);
+    if (!headlinerActs.some((act) => act.canonical === canonical)) {
+      headlinerActs.push({ name, canonical });
+    }
+  }
+  const headlinersCanonical = headlinerActs.map((act) => act.canonical);
 
   // One lookup for every distinct non-empty canonical name on the bill.
   // canonicalizeArtist can return '' (a name that is punctuation only), which
@@ -94,9 +101,9 @@ export const resolveArtistSlugs = async (
     headliners:
       headliners === null
         ? null
-        : headliners.map((name, index) => ({
+        : headlinerActs.map(({ name, canonical }) => ({
             name,
-            slug: slugByCanonical.get(headlinersCanonical[index] ?? '') ?? null,
+            slug: slugByCanonical.get(canonical) ?? null,
           })),
   };
 };

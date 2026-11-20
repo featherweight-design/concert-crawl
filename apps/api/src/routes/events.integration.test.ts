@@ -664,7 +664,8 @@ describe('GET /v1/events/:id — integration', () => {
         title: 'Clipse & J.I.D',
         artist: 'Clipse & J.I.D',
         canonicalArtist: 'clipse',
-        headliners: ['Clipse', 'J.I.D', 'Unprojected Act'],
+        // 'CLIPSE' is a second spelling of the first act: one entry, not two.
+        headliners: ['Clipse', 'J.I.D', 'CLIPSE', 'Unprojected Act'],
         canonicalHeadliners: ['clipse', 'j.i.d', 'unprojected act'],
         supportingArtists: [],
         date: '2027-07-06',
@@ -694,12 +695,16 @@ describe('GET /v1/events/:id — integration', () => {
       const venue = await seedVenue({ slug: 'headliner-null-venue' });
       const legacy = await seedEvent(venue.id, {
         artist: 'Legacy Row',
-        headliners: null,
+        // A display array without the ladder-ran signal still reads as never
+        // ran: nullness follows canonical_headliners, not headliners.
+        headliners: ['Legacy Row'],
+        canonicalHeadliners: null,
         date: '2027-07-07',
       });
       const noAct = await seedEvent(venue.id, {
         artist: 'Bass Bingo',
         headliners: [],
+        canonicalHeadliners: [],
         date: '2027-07-08',
       });
 
