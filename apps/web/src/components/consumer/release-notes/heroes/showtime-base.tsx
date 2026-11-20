@@ -102,14 +102,6 @@ export function useShowtimeKeyframes() {
 
 // ── ShowtimeBackdrop ─────────────────────────────────────────────────────────
 
-interface ShowtimeBackdropProps {
-  /**
-   * When true, renders a centred gold glow — used by the Founder medallion
-   * in the Tier hero to call extra attention to the marquee badge.
-   */
-  founderGlow?: boolean;
-}
-
 /**
  * Full-bleed dark cinematic stage background.
  *
@@ -120,9 +112,7 @@ interface ShowtimeBackdropProps {
  * Theme-independent: always dark Showtime palette regardless of
  * electric / jade / light theme on the surrounding app chrome.
  */
-export function ShowtimeBackdrop({
-  founderGlow = false,
-}: ShowtimeBackdropProps) {
+export function ShowtimeBackdrop() {
   useShowtimeKeyframes();
 
   return (
@@ -168,25 +158,6 @@ export function ShowtimeBackdrop({
           pointerEvents: 'none',
         }}
       />
-
-      {/* optional centred gold glow for Founder marquee */}
-      {founderGlow && (
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            width: 280,
-            height: 280,
-            marginLeft: -140,
-            marginTop: -140,
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(255,227,107,0.18) 0%, transparent 65%)',
-            pointerEvents: 'none',
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -25,7 +25,7 @@ export function FollowingShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       {/* slow ping rings emanating from artist plate */}
       {[0, 1.0, 2.0].map((delay, idx) => (
@@ -308,7 +308,7 @@ export function PriceDropShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       {/* central halo — leans amber/lime to signal "save" */}
       <div
@@ -598,7 +598,7 @@ export function SetlistShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       {/* central halo behind receipt */}
       <div
@@ -906,7 +906,7 @@ export function FirstTimerShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       {/* central venue plate — geometric silhouette only */}
       <div
@@ -1112,7 +1112,7 @@ export function LastTimeShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       {/* POLAROID — left, the recalled visit */}
       <div
@@ -1627,7 +1627,7 @@ export function SupportActShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       {/* central spotlight halo — points at the opener */}
       <div
@@ -1771,7 +1771,7 @@ export function VenuePassportShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       {/* radial halo behind card */}
       <div
