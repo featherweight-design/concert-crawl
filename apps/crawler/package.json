@@ -28,6 +28,6 @@
     "@sentry/node": "^11.12.0",
     "dotenv": "^18.0.10",
     "drizzle-orm": "^0.45.4",
-    "playwright": "^1.65.0"
+    "playwright": "^1.65.1"
   }
 }
