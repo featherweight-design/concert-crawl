@@ -15,7 +15,7 @@ const COPY = CONSUMER_COPY.releaseNotes;
 
 // ── Shared compact stage ─────────────────────────────────────────────────────
 // 200×132 strip backdrop: dark cinematic base + two contained color washes +
-// optional founder glow + compact mono eyebrow.
+// compact mono eyebrow.
 // Keyframes (cmpBgShift, cmpFadeIn, cmpScaleIn, cmpPulse, cmpBreathe,
 // cmpEqWave, cmpPing, cmpStampIn, cmpRing, cmpSparkle, cmpStubDeal,
 // cmpArrowFall) are injected by showtime-base.tsx — do NOT redefine here.
@@ -24,14 +24,12 @@ interface CompactStageProps {
   children?: React.ReactNode;
   eyebrow?: string;
   eyebrowHue?: string;
-  founderGlow?: boolean;
 }
 
 export function CompactStage({
   children,
   eyebrow,
   eyebrowHue = '#7AE6FF',
-  founderGlow,
 }: CompactStageProps): React.ReactElement {
   useShowtimeKeyframes();
   return (
@@ -76,24 +74,6 @@ export function CompactStage({
           pointerEvents: 'none',
         }}
       />
-      {founderGlow && (
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            width: 120,
-            height: 120,
-            marginLeft: -60,
-            marginTop: -60,
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(255,227,107,0.18) 0%, transparent 65%)',
-            pointerEvents: 'none',
-          }}
-        />
-      )}
-
       {children}
 
       {eyebrow && (

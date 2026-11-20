@@ -785,7 +785,7 @@ export function PricesShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       {/* central halo */}
       <div
@@ -974,7 +974,7 @@ export function CalendarShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       <div
         style={{
@@ -1233,7 +1233,7 @@ export function ShareableShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       <div
         style={{
@@ -1333,7 +1333,7 @@ export function WatchersShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       <div
         style={{
@@ -1447,7 +1447,7 @@ export function SpotifyShowtime(): React.ReactElement {
         fontFamily: 'Inter, system-ui',
       }}
     >
-      <ShowtimeBackdrop founderGlow={false} />
+      <ShowtimeBackdrop />
 
       <div
         style={{
