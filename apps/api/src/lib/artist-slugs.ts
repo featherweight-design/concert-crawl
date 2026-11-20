@@ -48,7 +48,12 @@ export const resolveArtistSlugs = async (
   const headlinerActs: { name: string; canonical: string }[] = [];
   for (const name of headliners ?? []) {
     const canonical = canonicalizeArtist(name);
-    if (!headlinerActs.some((act) => act.canonical === canonical)) {
+    // A punctuation-only name canonicalizes to '' and is no act, as
+    // canonicalizeSupporting drops it too.
+    if (
+      canonical !== '' &&
+      !headlinerActs.some((act) => act.canonical === canonical)
+    ) {
       headlinerActs.push({ name, canonical });
     }
   }

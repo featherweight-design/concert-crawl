@@ -708,7 +708,29 @@ describe('GET /v1/events/:id — integration', () => {
         date: '2027-07-08',
       });
 
+      // The ladder ran (canonical_headliners set) but the display column is
+      // NULL: still "ran, found nothing", so [] rather than null.
+      const noDisplay = await seedEvent(venue.id, {
+        artist: 'No Display Row',
+        headliners: null,
+        canonicalHeadliners: [],
+        date: '2027-07-09',
+      });
+      // A punctuation-only name canonicalizes to '' and is no act.
+      const punctuation = await seedEvent(venue.id, {
+        artist: '!!!',
+        headliners: ['!!!'],
+        canonicalHeadliners: [],
+        date: '2027-07-10',
+      });
+
       type Body = { data: { headliners: unknown } };
+      for (const row of [noDisplay, punctuation]) {
+        const body = (await (
+          await app.request(`/v1/events/${row.id}`)
+        ).json()) as Body;
+        expect(body.data.headliners).toEqual([]);
+      }
       const legacyBody = (await (
         await app.request(`/v1/events/${legacy.id}`)
       ).json()) as Body;
