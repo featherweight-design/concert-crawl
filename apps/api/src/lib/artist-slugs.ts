@@ -48,8 +48,8 @@ export const resolveArtistSlugs = async (
   const headlinerActs: { name: string; canonical: string }[] = [];
   for (const name of headliners ?? []) {
     const canonical = canonicalizeArtist(name);
-    // A punctuation-only name canonicalizes to '' and is no act, as
-    // canonicalizeSupporting drops it too.
+    // A blank or leading-separator name (' & Bar') canonicalizes to '' and
+    // is no act, as canonicalizeSupporting drops it too.
     if (
       canonical !== '' &&
       !headlinerActs.some((act) => act.canonical === canonical)
@@ -60,7 +60,7 @@ export const resolveArtistSlugs = async (
   const headlinersCanonical = headlinerActs.map((act) => act.canonical);
 
   // One lookup for every distinct non-empty canonical name on the bill.
-  // canonicalizeArtist can return '' (a name that is punctuation only), which
+  // canonicalizeArtist can return '' (a blank or leading-separator name), which
   // matches nothing and would only bloat the IN list.
   const lookup = [
     ...new Set([
