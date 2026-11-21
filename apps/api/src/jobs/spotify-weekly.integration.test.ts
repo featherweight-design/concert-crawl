@@ -86,6 +86,21 @@ const ISO_WEEK = '2026-W30';
 let userSeq = 0;
 let USER = 'user-weekly-1';
 
+// The weekly digest is opt-in (migration 0124): nobody is mailed without a
+// preferences row that says so. An upsert, so a test can flip it after a
+// helper has already opted the user in.
+async function seedDigestOptIn(userId: string, enabled = true): Promise<void> {
+  await testDb
+    .insert(userNotificationPreferences)
+    .values({ userId, weeklyDigestEnabled: enabled })
+    .onConflictDoUpdate({
+      target: userNotificationPreferences.userId,
+      set: { weeklyDigestEnabled: enabled },
+    });
+}
+
+// Opts the user in as well: the Spotify shape is gated on the same opt-in, and
+// nearly every test here is about what happens to someone who wants the mail.
 async function seedConnection(
   userId: string,
   overrides: Partial<typeof userSpotifyConnections.$inferInsert> = {},
@@ -97,6 +112,7 @@ async function seedConnection(
     digestEnabled: true,
     ...overrides,
   });
+  await seedDigestOptIn(userId);
 }
 
 async function seedPremium(userId: string): Promise<void> {
@@ -451,6 +467,32 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
     expect(resendState.sends).toHaveLength(1);
   });
 
+  it('skips a Spotify connection whose owner never opted in', async () => {
+    // A connection with the legacy digest flag on, and no preferences row:
+    // the state every connected user is in after migration 0124 until they
+    // turn the digest on.
+    await testDb.insert(userSpotifyConnections).values({
+      userId: USER,
+      spotifyUserId: `spotify-${USER}`,
+      status: 'connected',
+      digestEnabled: true,
+    });
+    await seedPremium(USER);
+    clerkState.emails.set(USER, 'never-opted@example.com');
+    await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
+    const venue = await seedVenue({ slug: `venue-${USER}` });
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    });
+
+    await runSpotifyWeekly(NOW);
+
+    expect(await getDigestLogRows(USER)).toHaveLength(0);
+    expect(resendState.sends).toHaveLength(0);
+  });
+
   it('skips users who turned the digest off', async () => {
     await seedConnection(USER, { digestEnabled: false });
     await seedPremium(USER);
@@ -525,13 +567,18 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
 // match query filtered follows to the two spotify_* sources. Fixing either
 // alone drops every native follower while still reporting success (#1515).
 describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () => {
-  const seedFollow = async (userId: string, name: string): Promise<void> => {
+  const seedFollow = async (
+    userId: string,
+    name: string,
+    { optedIn = true }: { optedIn?: boolean } = {},
+  ): Promise<void> => {
     await testDb.insert(userArtistFollows).values({
       userId,
       artistName: name,
       source: 'manual',
       canonicalName: canonicalizeArtist(name),
     });
+    if (optedIn) await seedDigestOptIn(userId);
   };
 
   it('sends nothing to a native-only follower while the flag is off', async () => {
@@ -579,7 +626,8 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
     expect(resendState.sends[0]?.html).toContain('Sleep Token');
   });
 
-  it('reaches a follower who never opened Settings (no preferences row)', async () => {
+  // Opt-in (migration 0124): a missing preferences row is off, not on.
+  it('skips a follower who never opened Settings (no preferences row)', async () => {
     vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
     await seedPremium(USER);
     clerkState.emails.set(USER, 'lazy-row@example.com');
@@ -589,7 +637,7 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
       canonicalArtist: 'sleep token',
       date: '2026-07-22',
     });
-    await seedFollow(USER, 'Sleep Token');
+    await seedFollow(USER, 'Sleep Token', { optedIn: false });
 
     await runSpotifyWeekly(NOW);
 
@@ -599,7 +647,20 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
         .from(userNotificationPreferences)
         .where(eq(userNotificationPreferences.userId, USER)),
     ).toHaveLength(0);
-    expect(await getDigestLogRows(USER)).toHaveLength(1);
+    expect(await getDigestLogRows(USER)).toHaveLength(0);
+    expect(resendState.sends).toHaveLength(0);
+  });
+
+  it('mails nobody who opted in but follows no artist', async () => {
+    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
+    await seedPremium(USER);
+    clerkState.emails.set(USER, 'no-follows@example.com');
+    await seedDigestOptIn(USER);
+
+    await runSpotifyWeekly(NOW);
+
+    expect(await getDigestLogRows(USER)).toHaveLength(0);
+    expect(resendState.sends).toHaveLength(0);
   });
 
   it('honours weekly_digest_enabled=false from the preferences table', async () => {
@@ -609,10 +670,7 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
     // The legacy column stays true: a regression back to reading the
     // connection would send this email anyway.
     await seedConnection(USER, { digestEnabled: true });
-    await testDb.insert(userNotificationPreferences).values({
-      userId: USER,
-      weeklyDigestEnabled: false,
-    });
+    await seedDigestOptIn(USER, false);
     const venue = await seedVenue({ slug: `venue-${USER}` });
     await seedEvent(venue.id, {
       artist: 'Sleep Token',
@@ -706,6 +764,7 @@ describe('runSpotifyWeekly — spotify-sync flag', () => {
       source: 'manual',
       canonicalName: canonicalizeArtist('Sleep Token'),
     });
+    await seedDigestOptIn(USER);
   };
 
   it('sends no Spotify digest when the flag is off', async () => {

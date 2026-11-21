@@ -75,7 +75,8 @@ describe('/v1/me/notification-preferences', () => {
     // Asymmetric on purpose: alerts on, auto-watch off.
     expect(data.artistAlertsEnabled).toBe(true);
     expect(data.artistAutoWatch).toBe(false);
-    expect(data.weeklyDigestEnabled).toBe(true);
+    // Opt-in (migration 0124): nobody gets the digest until they turn it on.
+    expect(data.weeklyDigestEnabled).toBe(false);
     expect(data.productEmailsEnabled).toBe(true);
   });
 

@@ -185,6 +185,11 @@ describe('GET /v1/email/unsubscribe — integration', () => {
   });
 
   it('turns product_emails_enabled off and promises no billing email', async () => {
+    // Opted in first: the digest defaults off (migration 0124), so a fresh
+    // row would pass the assertion below without proving anything.
+    await testDb
+      .insert(userNotificationPreferences)
+      .values({ userId: 'user_product_1', weeklyDigestEnabled: true });
     const token = buildUnsubscribeToken('user_product_1', 'product');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_product_1&family=product&token=${token}`,

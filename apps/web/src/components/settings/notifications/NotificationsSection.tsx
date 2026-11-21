@@ -119,7 +119,7 @@ export const NotificationsSection = ({
   const priceDropsOn = prefs?.priceDropsEnabled ?? true;
   const artistAlertsOn = prefs?.artistAlertsEnabled ?? true;
   const artistAutoWatchOn = prefs?.artistAutoWatch ?? false;
-  const weeklyDigestOn = prefs?.weeklyDigestEnabled ?? true;
+  const weeklyDigestOn = prefs?.weeklyDigestEnabled ?? false;
   const productEmailsOn = prefs?.productEmailsEnabled ?? true;
 
   const spotifyConnected = spotify?.status === 'connected';
