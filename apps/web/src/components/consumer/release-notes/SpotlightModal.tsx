@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Release } from '@/lib/definitions/releases';
 import { SpotlightHero } from './SpotlightHero';
-import { useDialogKeyboard } from '@/components/admin/primitives/useDialogKeyboard';
+import { useModalDialog } from '@/lib/hooks/useModalDialog';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const COPY = CONSUMER_COPY.releaseNotes;
@@ -46,7 +46,7 @@ export function SpotlightModal({
   // aria-modal claims the page behind is inert: this moves focus in on open,
   // keeps Tab inside, returns focus to the opener on close, and owns Escape
   // and the page scroll lock.
-  useDialogKeyboard(dialogRef, onClose, { enabled: Boolean(sp) });
+  useModalDialog(dialogRef, Boolean(sp), onClose);
 
   // isMobile tracks viewport width — intentionally separate from heroScale so
   // the dialog layout never feeds back into the ResizeObserver measurement.
@@ -105,6 +105,7 @@ export function SpotlightModal({
     >
       <div
         ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="spotlight-modal-title"

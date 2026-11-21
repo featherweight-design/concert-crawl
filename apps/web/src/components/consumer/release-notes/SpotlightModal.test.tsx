@@ -39,6 +39,7 @@ describe('SpotlightModal focus', () => {
     );
     const dialog = screen.getByRole('dialog');
     expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.documentElement.style.overflow).toBe('hidden');
 
     // Shift+Tab from the first control wraps to the last, never out.
     const buttons = Array.from(dialog.querySelectorAll('button')).filter(
@@ -53,6 +54,7 @@ describe('SpotlightModal focus', () => {
     expect(document.activeElement).toBe(first);
 
     unmount();
+    expect(document.documentElement.style.overflow).not.toBe('hidden');
     expect(document.activeElement).toBe(opener);
     opener.remove();
   });
