@@ -203,11 +203,15 @@ export const PassportStamp = ({
         width,
         height,
         borderRadius: cfg.stampRadius,
-        overflow: 'hidden',
         background: SHARE_STAMP_GROUND,
         // A frame on an image, not screen chrome — a neutral translucent ink
         // reads on every riso paper, where a themed border would not.
-        boxShadow: `0 0 0 ${cfg.hairline * 1.5}px rgba(255,255,255,0.14), 0 ${cfg.hairline * 6}px ${cfg.hairline * 16}px ${cfg.hairline * -6}px rgba(0,0,0,0.6)`,
+        // Render cost: no blurred drop shadow and no `overflow: hidden` clip
+        // here. Each cost about a second per tile at the 2x print size (a
+        // 12-stamp card rendered in 17.6s, 9.0s without them) and the shadow
+        // was invisible on the dark tile ground. The bottom scrim carries the
+        // tile's corner radius instead of the clip.
+        boxShadow: `0 0 0 ${cfg.hairline * 1.5}px rgba(255,255,255,0.14)`,
       }}
     >
       <RoundVenueStamp show={show} size={size} grain={cfg.grain} />
@@ -220,6 +224,7 @@ export const PassportStamp = ({
           right: 0,
           bottom: 0,
           height: Math.round(height * 0.62),
+          borderRadius: `0 0 ${cfg.stampRadius}px ${cfg.stampRadius}px`,
           background:
             'linear-gradient(0deg, rgba(6,7,15,0.82) 0%, rgba(6,7,15,0.34) 46%, rgba(6,7,15,0) 100%)',
         }}
