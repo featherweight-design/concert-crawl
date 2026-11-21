@@ -33,7 +33,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   priceDropsEnabled: true,
   artistAlertsEnabled: true,
   artistAutoWatch: false,
-  weeklyDigestEnabled: true,
+  weeklyDigestEnabled: false,
   productEmailsEnabled: true,
 };
 

@@ -86,7 +86,7 @@ describe('useNotificationPreferences', () => {
       priceDropsEnabled: true,
       artistAlertsEnabled: true,
       artistAutoWatch: false,
-      weeklyDigestEnabled: true,
+      weeklyDigestEnabled: false,
       productEmailsEnabled: true,
     });
   });
@@ -137,7 +137,7 @@ describe('usePatchNotificationPreferences', () => {
       priceDropsEnabled: true,
       artistAlertsEnabled: true,
       artistAutoWatch: false,
-      weeklyDigestEnabled: true,
+      weeklyDigestEnabled: false,
       productEmailsEnabled: true,
     });
   });

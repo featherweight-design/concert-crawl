@@ -48,7 +48,7 @@
 
 import { pathToFileURL } from 'node:url';
 import * as Sentry from '@sentry/hono/node';
-import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, ne } from 'drizzle-orm';
 import {
   costTracking,
   db,
@@ -446,23 +446,31 @@ export const runSpotifyWeekly = async (
         ? await db
             .selectDistinct({ userId: userArtistFollows.userId })
             .from(userArtistFollows)
-            // LEFT: preference rows are written lazily on the first PATCH, so a
-            // follower who never opened Settings has none. An inner join here
-            // would mail nobody but the users who touched a toggle.
-            .leftJoin(
+            // INNER, on purpose: the digest is opt-in (migration 0124). A
+            // follower with no preferences row never turned it on, so they
+            // are not mailed; neither is anyone with no follows.
+            .innerJoin(
               userNotificationPreferences,
               eq(userNotificationPreferences.userId, userArtistFollows.userId),
             )
-            .where(
-              sql`coalesce(${userNotificationPreferences.weeklyDigestEnabled}, true)`,
-            )
+            .where(eq(userNotificationPreferences.weeklyDigestEnabled, true))
         : await db
             .select({ userId: userSpotifyConnections.userId })
             .from(userSpotifyConnections)
+            // The opt-in gates this shape too, so a Spotify connection alone
+            // never mails anyone who has not turned the digest on.
+            .innerJoin(
+              userNotificationPreferences,
+              eq(
+                userNotificationPreferences.userId,
+                userSpotifyConnections.userId,
+              ),
+            )
             .where(
               and(
                 ne(userSpotifyConnections.status, 'revoked'),
                 eq(userSpotifyConnections.digestEnabled, true),
+                eq(userNotificationPreferences.weeklyDigestEnabled, true),
               ),
             );
       summary.digestCandidates = recipients.length;
