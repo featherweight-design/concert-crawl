@@ -13,12 +13,14 @@
 //
 // Two phases, each in its own try/catch so one failure never blocks the rest:
 //
-//   1. DIGEST — every non-revoked connection with digestEnabled, gated at
-//               send time by canUseFeature(planState, 'spotify-sync') (§7:
-//               Premium-only) — or, under NATIVE_DIGEST_ENABLED, by
-//               'following', which every signed-in plan has since going
-//               free, so every follower gets it (see the generalized digest
-//               note below).
+//   1. DIGEST — opt-in (migration 0124): only users whose preferences row
+//               has weekly_digest_enabled, in either shape. The Spotify
+//               shape takes every non-revoked connection with digestEnabled,
+//               gated at send time by canUseFeature(planState,
+//               'spotify-sync') (§7: Premium-only); under
+//               NATIVE_DIGEST_ENABLED it takes every opted-in follower,
+//               gated by 'following', which every signed-in plan has since
+//               going free (see the generalized digest note below).
 //               Matches = events in the next 7 Denver-local
 //               days whose canonical_artist equals — or canonical_supporting
 //               overlaps — the user's followed canonical names (§9.1).
@@ -38,8 +40,8 @@
 // carries digestSkippedFlag so a silent week is legible.
 //
 // GENERALIZED DIGEST (native following PR 9). NATIVE_DIGEST_ENABLED=1 flips
-// the digest from "Spotify subscribers" to "anyone who follows an artist":
-// recipients come from user_artist_follows joined to
+// the digest from "Spotify subscribers" to "anyone who follows an artist and
+// opted in": recipients come from user_artist_follows inner-joined to
 // user_notification_preferences.weekly_digest_enabled, the source filter goes
 // away, and the entitlement key becomes 'following'. All three move together
 // on purpose — leaving the connection join in place would have dropped every

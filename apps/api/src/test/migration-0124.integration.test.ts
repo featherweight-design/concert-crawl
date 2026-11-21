@@ -75,7 +75,7 @@ describe('migration 0124 — weekly digest opt-in', () => {
     );
   });
 
-  it('sets every existing row false and touches no other column', async () => {
+  it('sets every existing row false and leaves the other preferences alone', async () => {
     await db.execute(sql`
       INSERT INTO user_notification_preferences
         (user_id, weekly_digest_enabled, product_emails_enabled)
