@@ -1,0 +1,42 @@
+{
+  "feature": "Past shows: no outbound ticket link",
+  "note": "Hugh, 2026-11-22: a past show keeps its price but links nowhere to buy. No board draws a past event page; the change removes elements and adds none. CC_PAST_EVENT_ID is a past event with a live (not sold-out) price and a ticket URL; the pre-PR sheet used 4dc7387e on scratch-contact-sheet. The public /e/[id] already dropped its CTA on past shows; this sheet shows the signed-in page, top and price card.",
+  "rows": [
+    {
+      "id": "past-event",
+      "label": "/events/[id] on a past show: first screen, no Get tickets",
+      "steps": [
+        {
+          "goto": "/events/${CC_PAST_EVENT_ID}",
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"stage-meta\"]"
+        }
+      ]
+    },
+    {
+      "id": "past-event-price",
+      "label": "/events/[id] on a past show: the price card keeps its price, the source name is plain text",
+      "steps": [
+        {
+          "goto": "/events/${CC_PAST_EVENT_ID}",
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"stage-meta\"]"
+        },
+        {
+          "scroll": 700,
+          "settle": 400
+        }
+      ]
+    }
+  ]
+}
