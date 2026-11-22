@@ -1,3 +1,19 @@
+# [1.532.0](https://github.com/featherweight-design/concert-crawl/compare/v1.531.0...v1.532.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **crews:** a cancelled show opens no tab, counts for nothing, and is never TONIGHT ([47dc1f9](https://github.com/featherweight-design/concert-crawl/commit/47dc1f958ada41cef0a31b624e8e63a426b66f0e))
+* **web:** dismiss the strip on leaving the page it was shown on ([a96018c](https://github.com/featherweight-design/concert-crawl/commit/a96018c1b58b96c151092e1975586610f742d91c))
+
+
+### Features
+
+* **crews:** keep a cancelled show on Coming up for a day ([2be9100](https://github.com/featherweight-design/concert-crawl/commit/2be9100a8896a1d50d890921b4c65cce105dfe81))
+* **web:** draw the watched show's artwork in the welcome-back strip ([9aadc6f](https://github.com/featherweight-design/concert-crawl/commit/9aadc6f06d0c4828f003ab0e391fbbb93d51fe05))
+* **web:** scroll each where-its-sold row to its own tier card ([d527a5e](https://github.com/featherweight-design/concert-crawl/commit/d527a5e7e366ee15978e7a99d828a65067ea512f))
+* **web:** show the welcome-back strip after a signup replay ([5cfe036](https://github.com/featherweight-design/concert-crawl/commit/5cfe036d7806980585c85f7dcf4692f0fac0299f))
+
 # [1.531.0](https://github.com/featherweight-design/concert-crawl/compare/v1.530.0...v1.531.0) (2026-11-22)
 
 
