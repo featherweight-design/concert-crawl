@@ -677,7 +677,8 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
       canonicalArtist: 'sleep token',
       date: '2026-07-22',
     });
-    await seedFollow(USER, 'Sleep Token');
+    // optedIn: false, or the helper would flip the row back on.
+    await seedFollow(USER, 'Sleep Token', { optedIn: false });
 
     await runSpotifyWeekly(NOW);
 
