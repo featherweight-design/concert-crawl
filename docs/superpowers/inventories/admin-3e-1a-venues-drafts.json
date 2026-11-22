@@ -1,0 +1,36 @@
+{
+  "feature": "Admin 3e-1a: the Venues list's Drafts filter",
+  "note": "Boards: design/design_handoff_admin_redesign/addendum-3/boards/03-venues (drafts-in-list-d, drafts-card-m). Admin role (CONTACT_SHEET_ROLE=admin). The shared scratch branch holds no draft venue, and nothing in 3e-1a can create one (the Add a venue route is 3e-1b), so the sheet shows the list with no drafts, which must read as before, plus the Drafts chip selected with nothing in it. A draft's place under All (last, after OK, never folded) and the phone subtitle with drafts are covered by venue-list-rules.test.ts.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "venues-all",
+      "label": "Venues, All: Drafts chip after Hidden",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venues-list\"]"
+        },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "venues-drafts",
+      "label": "Venues, Drafts selected, none yet",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venues-list\"]"
+        },
+        { "click": "button[aria-pressed]:has-text(\"Drafts\")" },
+        { "settle": 1200 }
+      ]
+    }
+  ]
+}
