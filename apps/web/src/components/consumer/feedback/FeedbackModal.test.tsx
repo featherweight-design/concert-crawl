@@ -35,7 +35,13 @@ afterEach(() => {
 const { getToken, clerkUser } = vi.hoisted(() => ({
   getToken: vi.fn(),
   // Who Clerk says is signed in; null is signed out. Tests reassign it.
-  clerkUser: { current: null as { id: string } | null, loaded: true },
+  clerkUser: {
+    current: null as {
+      id: string;
+      emailAddresses: { emailAddress: string }[];
+    } | null,
+    loaded: true,
+  },
 }));
 beforeEach(() => {
   getToken.mockReset();
@@ -392,14 +398,14 @@ describe('FeedbackModal — a failed send saves the draft (A4)', () => {
   // Hugh, 2026-11-22: on a shared phone the next fan to sign in never sees
   // the last one's note. A signed-in draft lives under its own user id.
   it('clears what one fan typed when another signs in with the sheet open', () => {
-    clerkUser.current = { id: 'user_a' };
+    clerkUser.current = { id: 'user_a', emailAddresses: [] };
     const { rerender } = render(
       <FeedbackModal open={true} onClose={vi.fn()} />,
     );
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'user a typing' },
     });
-    clerkUser.current = { id: 'user_b' };
+    clerkUser.current = { id: 'user_b', emailAddresses: [] };
     rerender(<FeedbackModal open={true} onClose={vi.fn()} />);
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
   });
@@ -414,13 +420,13 @@ describe('FeedbackModal — a failed send saves the draft (A4)', () => {
         savedAt: Date.now(),
       }),
     );
-    clerkUser.current = { id: 'user_b' };
+    clerkUser.current = { id: 'user_b', emailAddresses: [] };
     const { unmount } = render(<FeedbackModal open={true} onClose={vi.fn()} />);
     expect(screen.queryByText(/Saved draft restored/i)).toBeNull();
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
     unmount();
 
-    clerkUser.current = { id: 'user_a' };
+    clerkUser.current = { id: 'user_a', emailAddresses: [] };
     render(<FeedbackModal open={true} onClose={vi.fn()} />);
     expect(screen.getByText(/Saved draft restored/i)).toBeTruthy();
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(
@@ -445,7 +451,7 @@ describe('FeedbackModal — a failed send saves the draft (A4)', () => {
     expect(screen.queryByText(/Saved draft restored/i)).toBeNull();
 
     clerkUser.loaded = true;
-    clerkUser.current = { id: 'user_a' };
+    clerkUser.current = { id: 'user_a', emailAddresses: [] };
     rerender(<FeedbackModal open={true} onClose={vi.fn()} />);
     expect(screen.queryByText(/Saved draft restored/i)).toBeNull();
     expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).not.toBeNull();
