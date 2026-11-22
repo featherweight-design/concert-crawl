@@ -1,3 +1,11 @@
+## [1.539.2](https://github.com/featherweight-design/concert-crawl/compare/v1.539.1...v1.539.2) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** refuse a restore at a removed venue too ([018d207](https://github.com/featherweight-design/concert-crawl/commit/018d207a5f1cab887701366d222db5d64b6cd1a5))
+* **api:** refuse attending a show at a removed venue ([4c4b752](https://github.com/featherweight-design/concert-crawl/commit/4c4b7523af8c009785272b4071728e718c49359f))
+
 ## [1.539.1](https://github.com/featherweight-design/concert-crawl/compare/v1.539.0...v1.539.1) (2026-11-22)
 
 
