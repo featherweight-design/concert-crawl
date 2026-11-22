@@ -1,0 +1,146 @@
+[
+ {
+  "section": "01-artist-search",
+  "name": "search-spec",
+  "title": "Artist search · the three kinds of row",
+  "note": "One list: has shows, ours with no shows, MusicBrainz acts. Second-line rules, same-name rule, Follow, cap and order.",
+  "w": 1180,
+  "h": 880
+ },
+ {
+  "section": "01-artist-search",
+  "name": "search-results-320",
+  "title": "Artist search · 320px, results",
+  "note": "Six rows for \"Clip\" in kind order, then Shows. Under 360 the Follow is icon-only.",
+  "w": 320,
+  "h": 720
+ },
+ {
+  "section": "01-artist-search",
+  "name": "search-results-360",
+  "title": "Artist search · 360px, results",
+  "note": "Six rows for \"Clip\" in kind order, then Shows. Labelled Follow; Clipboard Hearts is already followed.",
+  "w": 360,
+  "h": 720
+ },
+ {
+  "section": "01-artist-search",
+  "name": "search-rest-360",
+  "title": "Artist search · 360px, nothing typed",
+  "note": "Recent and Popular as built, plus one hint card that says any act can be found and followed.",
+  "w": 360,
+  "h": 720
+ },
+ {
+  "section": "01-artist-search",
+  "name": "search-one-320",
+  "title": "Artist search · 320px, one letter",
+  "note": "Below the two-letter floor: no request, a quiet \"keep typing\".",
+  "w": 320,
+  "h": 400
+ },
+ {
+  "section": "01-artist-search",
+  "name": "search-loading-320",
+  "title": "Artist search · 320px, loading",
+  "note": "Four skeleton rows with the Follow footprint, so rows land without a jump.",
+  "w": 320,
+  "h": 560
+ },
+ {
+  "section": "01-artist-search",
+  "name": "search-none-320",
+  "title": "Artist search · 320px, no result",
+  "note": "Nothing in our acts, the MusicBrainz copy or venues.",
+  "w": 320,
+  "h": 480
+ },
+ {
+  "section": "01-artist-search",
+  "name": "search-error-320",
+  "title": "Artist search · 320px, failed",
+  "note": "The request failed: not \"nobody by that name\". One retry.",
+  "w": 320,
+  "h": 480
+ },
+ {
+  "section": "01-artist-search",
+  "name": "palette-results-d",
+  "title": "Artist search · desktop palette, results",
+  "note": "The ⌘K card: same list at rowWide, first row highlighted as built. Enter opens the row; Follow is its own Tab stop.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "01-artist-search",
+  "name": "palette-loading-d",
+  "title": "Artist search · desktop palette, loading",
+  "note": "Four skeleton rows.",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "01-artist-search",
+  "name": "palette-none-d",
+  "title": "Artist search · desktop palette, no result",
+  "note": "Same words as the phone.",
+  "w": 1280,
+  "h": 460
+ },
+ {
+  "section": "02-no-shows-page",
+  "name": "page-spec",
+  "title": "No-shows artist page · the rules",
+  "note": "Photo order and credit, ring, identity line, About (facts, Wikipedia), the empty state before and after Follow, reading order.",
+  "w": 1180,
+  "h": 880
+ },
+ {
+  "section": "02-no-shows-page",
+  "name": "page-commons-360",
+  "title": "No-shows page · 360px, Commons photo, Follow",
+  "note": "Commons photo with its credit, identity line, empty Upcoming, About with facts and the Wikipedia summary.",
+  "w": 360,
+  "h": 1340
+ },
+ {
+  "section": "02-no-shows-page",
+  "name": "page-commons-320-following",
+  "title": "No-shows page · 320px, Following",
+  "note": "After Follow: the hero bar reads Following and the empty card says you will hear when they book.",
+  "w": 320,
+  "h": 1420
+ },
+ {
+  "section": "02-no-shows-page",
+  "name": "page-plate-360",
+  "title": "No-shows page · 360px, plate, facts only",
+  "note": "A MusicBrainz act we hold no photo or summary for: the plate, no credit, About with two facts.",
+  "w": 360,
+  "h": 1080
+ },
+ {
+  "section": "02-no-shows-page",
+  "name": "page-commons-d",
+  "title": "No-shows page · desktop, Follow",
+  "note": "Credit under the photo, neutral ring, no starburst. Left: Upcoming (empty). Right: About, then Listen.",
+  "w": 1280,
+  "h": 1060
+ },
+ {
+  "section": "02-no-shows-page",
+  "name": "page-commons-d-following",
+  "title": "No-shows page · desktop, Following",
+  "note": "The rail reads Following; the empty card switches its line.",
+  "w": 1280,
+  "h": 1060
+ },
+ {
+  "section": "02-no-shows-page",
+  "name": "page-plate-d",
+  "title": "No-shows page · desktop, plate, facts only",
+  "note": "No credit, no summary, no Listen.",
+  "w": 1280,
+  "h": 860
+ }
+]
