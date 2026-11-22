@@ -68,9 +68,9 @@ export const USER_PLANS: readonly UserPlan[] = [
 //     and supporter accounts, except spotify-sync (sync retired 2026-10-29).
 //     Logged-out cells are unchanged: anything personal needs an account.
 //   - 2026-11-21: the API stopped enforcing the keys every signed-in plan
-//     passes (following, concert-history, calendar-export, crews); only
-//     spotify-sync keeps a server gate. Changing a row here no longer changes
-//     what the API accepts.
+//     passes (following, concert-history, calendar-export, crews), and the
+//     spotify-sync routes and gate were removed with the sync. Changing a row
+//     here no longer changes what the API accepts.
 // Single point of truth for both the boolean entitlement and the locked-tap
 // UX routing — edits here must update the test table in lockstep.
 export const ENTITLEMENTS_MATRIX: Record<

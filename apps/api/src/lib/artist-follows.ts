@@ -41,8 +41,9 @@ const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const;
 /**
  * Correlated `EXISTS` for the events-list `following=1` filter. Correlated
  * against the outer `events` row so it AND-composes with the list endpoint's
- * other conditions and applies identically to the count and row queries — with the one deliberate divergence noted at the top of this
- * file: no `source` filter.
+ * other conditions and applies identically to the count and row queries,
+ * with the one deliberate divergence noted at the top of this file: no
+ * `source` filter.
  *
  * Matches when the viewer follows an act on the event's bill, as
  * `billsCanonicalName` defines that (lib/event-billing.ts).

@@ -187,7 +187,6 @@ eventsRouter.get(
     // the viewer's follow rows of every source. It needs a signed-in viewer
     // (anonymous → 401). A viewer with zero matching rows gets an empty 200
     // (the EXISTS matches nothing).
-    //
     const scopeConditions: SQL[] = [];
 
     if (following) {
@@ -360,7 +359,8 @@ eventsRouter.get(
     }));
 
     // Anonymous: the same for everyone, so the edge may hold it. A signed-in
-    // list can carry the following scope, so it stays out of any shared cache. Set after the reads, never on an error.
+    // list can carry the following scope, so it stays out of any shared
+    // cache. Set after the reads, never on an error.
     markViewerScopedRead(ctx, Boolean(listAuth?.userId));
     return ctx.json({
       success: true,
