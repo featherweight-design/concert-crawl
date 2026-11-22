@@ -31,7 +31,7 @@ const continueStyle = (phone: boolean, busy: boolean): CSSProperties => ({
   alignItems: 'center',
   justifyContent: 'center',
   height: phone ? 46 : 38,
-  padding: '0 18px',
+  padding: phone ? '0 12px' : '0 18px',
   borderRadius: 9,
   border: '1px solid transparent',
   background:
@@ -223,6 +223,9 @@ const DesktopShell = ({
           minWidth: 0,
           overflowY: 'auto',
           padding: '28px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 18,
         }}
       >
         {children}
@@ -340,7 +343,7 @@ const PhoneShell = ({
           }}
         >
           {first ? (
-            <X size={16} aria-hidden />
+            <X size={15} strokeWidth={1.8} aria-hidden />
           ) : (
             <ChevronLeft size={16} aria-hidden />
           )}
@@ -379,7 +382,10 @@ const PhoneShell = ({
           flex: 1,
           minHeight: 0,
           overflowY: 'auto',
-          padding: '18px 16px 20px',
+          padding: '18px 16px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14,
         }}
       >
         {children}

@@ -40,7 +40,7 @@ export const StartScreen = ({
 }) => (
   <div
     data-testid="add-venue-start"
-    style={{ display: 'flex', flexDirection: 'column', gap: phone ? 14 : 20 }}
+    style={{ display: 'flex', flexDirection: 'column', gap: phone ? 14 : 18 }}
   >
     <div>
       <h1
@@ -85,7 +85,7 @@ export const StartScreen = ({
         boxSizing: 'border-box',
         borderRadius: 14,
         border: '1px solid var(--border)',
-        background: 'var(--surface)',
+        background: 'var(--surface-1)',
         padding: phone ? '20px 16px' : '22px 24px',
         display: 'flex',
         flexDirection: 'column',
