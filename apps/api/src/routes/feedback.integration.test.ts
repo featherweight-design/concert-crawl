@@ -119,6 +119,47 @@ describe('POST /v1/feedback', () => {
     });
   });
 
+  it('stores a venue suggestion from the fan modal', async () => {
+    setAuth('user-venue-abc');
+    const res = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'venue_suggestion',
+        message: 'Dazzle\ndazzledenver.com',
+        pageUrl: '/venues',
+        metadata: { theme: 'electric', build: 'dev', device: 'Mac' },
+      }),
+    });
+    expect(res.status).toBe(201);
+    const rows = await testDb
+      .select()
+      .from(feedback)
+      .where(eq(feedback.userId, 'user-venue-abc'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.category).toBe('venue_suggestion');
+    expect(rows[0]?.message).toBe('Dazzle\ndazzledenver.com');
+  });
+
+  it('refuses an error report, which no fan surface sends', async () => {
+    setAuth('user-error-kind');
+    const res = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'error_report',
+        message: 'Something broke.',
+        pageUrl: '/events',
+      }),
+    });
+    expect(res.status).toBe(422);
+    const rows = await testDb
+      .select()
+      .from(feedback)
+      .where(eq(feedback.userId, 'user-error-kind'));
+    expect(rows).toHaveLength(0);
+  });
+
   it('stores a problem report from an error page with its ids', async () => {
     setAuth('user-error-report');
     const res = await app.request('/v1/feedback', {

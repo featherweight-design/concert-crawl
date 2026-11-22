@@ -391,6 +391,17 @@ export const CONSUMER_COPY = {
           },
           other: { label: "What's on your mind?", hint: 'Anything at all.' },
         },
+        // Suggest a venue swaps the one box for these three (addendum 3,
+        // 02-suggest-a-venue). The box's text moves into Anything else.
+        venue: {
+          nameLabel: 'Venue name',
+          namePlaceholder: 'Which venue?',
+          websiteLabel: 'Website (optional)',
+          websitePlaceholder: 'Their site or calendar page',
+          websiteHint: "Helps us check we're allowed to read it.",
+          notesLabel: 'Anything else? (optional)',
+          notesPlaceholder: 'What should we know?',
+        },
         note: 'We read every note.',
         screenshotAttachLabel: 'Attach a screenshot',
         screenshotAttachSublabel: 'PNG or JPEG, up to 6 MB',
@@ -402,12 +413,14 @@ export const CONSUMER_COPY = {
       categories: {
         bug: "Something's broken",
         idea: 'An idea',
+        venueSuggestion: 'Suggest a venue',
         praise: 'Something I love',
         other: 'Other',
       },
       errors: {
         categoryRequired: 'Pick what kind of note this is.',
         messageRequired: 'Tell us a little more first.',
+        venueNameRequired: 'Tell us which venue.',
         screenshotTooBig: 'That image is too big. Try a smaller screenshot.',
         // Names the two everyone has; WebP, GIF and AVIF also pass.
         screenshotWrongType: "That file type won't work. Try a PNG or JPEG.",

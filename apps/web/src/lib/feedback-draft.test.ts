@@ -9,6 +9,9 @@ import {
   saveDraft,
 } from './feedback-draft';
 
+// A draft of any kind but Suggest a venue leaves the venue fields empty.
+const NO_VENUE = { venueName: '', website: '' };
+
 beforeEach(() => {
   localStorage.clear();
 });
@@ -19,6 +22,7 @@ describe('saveDraft', () => {
       category: 'bug',
       message: 'something is broken',
       screenshot: null,
+      ...NO_VENUE,
     });
     expect(result).not.toBeNull();
     expect(result?.savedAt).toBeGreaterThan(0);
@@ -38,6 +42,7 @@ describe('loadDraft', () => {
       category: 'idea',
       message: 'add dark mode',
       screenshot: { name: 'foo.png', dataUrl: 'data:image/png;base64,xxx' },
+      ...NO_VENUE,
     });
     const loaded = loadDraft();
     expect(loaded?.category).toBe('idea');
@@ -48,11 +53,46 @@ describe('loadDraft', () => {
     });
   });
 
+  it('round-trips a venue suggestion with its own fields', () => {
+    saveDraft({
+      category: 'venue_suggestion',
+      message: 'Jazz most nights.',
+      screenshot: null,
+      venueName: 'Dazzle',
+      website: 'dazzledenver.com',
+    });
+    expect(loadDraft()).toMatchObject({
+      category: 'venue_suggestion',
+      message: 'Jazz most nights.',
+      venueName: 'Dazzle',
+      website: 'dazzledenver.com',
+    });
+  });
+
+  it('loads a draft saved before the venue fields, with them empty', () => {
+    localStorage.setItem(
+      FEEDBACK_DRAFT_KEY,
+      JSON.stringify({
+        category: 'bug',
+        message: 'old draft',
+        screenshot: null,
+        savedAt: Date.now(),
+      }),
+    );
+    expect(loadDraft()).toMatchObject({
+      category: 'bug',
+      message: 'old draft',
+      venueName: '',
+      website: '',
+    });
+  });
+
   it('discards drafts older than the TTL', () => {
     const saved = saveDraft({
       category: 'bug',
       message: 'stale',
       screenshot: null,
+      ...NO_VENUE,
     });
     expect(saved).not.toBeNull();
     // Simulate looking up the draft TTL+1ms after it was saved.
@@ -83,7 +123,12 @@ describe('loadDraft', () => {
 
 describe('clearDraft', () => {
   it('removes a saved draft', () => {
-    saveDraft({ category: 'praise', message: 'great app', screenshot: null });
+    saveDraft({
+      category: 'praise',
+      message: 'great app',
+      screenshot: null,
+      ...NO_VENUE,
+    });
     clearDraft();
     expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).toBeNull();
   });
