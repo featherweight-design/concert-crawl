@@ -28,7 +28,7 @@ import {
   liveStatusOf,
 } from '@/components/consumer/event-detail/EventStatusCard';
 import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
-import { isEventPast } from '@/components/consumer/definitions/lib';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { PendingCardB } from '@/components/consumer/PendingCardB';
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet';
 import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard';
@@ -390,15 +390,28 @@ export function EventDetailPriceBlock({
   event,
   reports,
   currentUserId: _currentUserId,
-}: EventDetailSharedProps) {
+  past = false,
+}: EventDetailSharedProps & {
+  /**
+   * The show's date is behind it. Decided by the server page, never here: a
+   * client clock read during render can disagree with the server's around
+   * midnight and fail hydration.
+   */
+  past?: boolean;
+}) {
   const { getToken, isLoaded: authLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   // Only announce the gate once Clerk has resolved; before that a signed-in
   // visitor would briefly get the sign-up accessible name (#1247).
   const priceGateSignedOut = authLoaded && !isSignedIn;
-  // A past show keeps its price but links nowhere to buy: every outbound
-  // ProvenanceCTA below is dropped (Hugh, 2026-11-22).
-  const past = isEventPast(event.date, event.venue.timezone);
+  // A past show keeps its price but links nowhere to buy (Hugh, 2026-11-22).
+  // Every outbound link below reads these two, never event.ticketUrl or
+  // event.ticketLinks. An unsafe URL is dropped here too, as on the two resale
+  // CTAs below, so no wrapper mounts around a ProvenanceCTA that renders nothing.
+  const ticketUrl = past ? null : event.ticketUrl;
+  const ticketLinks = past
+    ? []
+    : (event.ticketLinks ?? []).filter((link) => isSafeHttpUrl(link.url));
   // Where it's sold (B+ TS3, plan Q5) replaces the price card's seller
   // alternates: while it lists them, the price card keeps its headline and
   // tiers but not those rows, so no seller shows twice on the page.
@@ -953,7 +966,7 @@ export function EventDetailPriceBlock({
             onAddPrice={() => setSubmitPriceOpen(true)}
           />
         </div>
-        {!past && (
+        {!past && isSafeHttpUrl(priceDecision.resaleLink.url) && (
           <div className="mt-3">
             <ProvenanceCTA
               kind="resale"
@@ -1018,7 +1031,7 @@ export function EventDetailPriceBlock({
           priceMax={event.ticketPriceMax}
           priceSource={event.priceSource}
           venueName={event.venue.name}
-          ticketUrl={past ? null : event.ticketUrl}
+          ticketUrl={ticketUrl}
           eventId={event.id}
           artist={event.artist}
           date={event.date}
@@ -1041,7 +1054,7 @@ export function EventDetailPriceBlock({
             onAddPrice={() => setSubmitPriceOpen(true)}
           />
         </div>
-        {!past && (
+        {!past && isSafeHttpUrl(priceDecision.resaleLink.url) && (
           <div className="mt-3">
             <ProvenanceCTA
               kind="resale"
@@ -1142,9 +1155,8 @@ export function EventDetailPriceBlock({
 
     // Find a resale ticketLink for the outbound CTA; fall back to the headline
     // vendor when no link is surfaced.
-    const resaleLink = past
-      ? null
-      : (event.ticketLinks?.find((link) => link.kind === 'resale') ?? null);
+    const resaleLink =
+      ticketLinks.find((link) => link.kind === 'resale') ?? null;
 
     return (
       <>
@@ -1491,7 +1503,7 @@ export function EventDetailPriceBlock({
             : {}),
         };
       });
-      const outboundLink = past ? null : (event.ticketLinks?.[0] ?? null);
+      const outboundLink = ticketLinks[0] ?? null;
       const outboundKind: ProvenanceCTAKind | null = outboundLink
         ? outboundLink.kind === 'boxoffice'
           ? 'boxoffice'
@@ -1848,7 +1860,7 @@ export function EventDetailPriceBlock({
             priceMax={confirmedSub.priceMax}
             priceSource="community"
             venueName={event.venue.name}
-            ticketUrl={past ? null : event.ticketUrl}
+            ticketUrl={ticketUrl}
             eventId={event.id}
             artist={event.artist}
             date={event.date}
@@ -2153,7 +2165,7 @@ export function EventDetailPriceBlock({
         priceMax={event.ticketPriceMax}
         priceSource={event.priceSource}
         venueName={event.venue.name}
-        ticketUrl={past ? null : event.ticketUrl}
+        ticketUrl={ticketUrl}
         eventId={event.id}
         artist={event.artist}
         date={event.date}

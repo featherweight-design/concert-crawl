@@ -2050,6 +2050,7 @@ describe('EventDetailPriceBlock on a past show', () => {
         event={tierEvent(PAST)}
         reports={[]}
         currentUserId={null}
+        past
       />,
     );
     expect(screen.getAllByText(/\$110/).length).toBeGreaterThan(0);
@@ -2083,10 +2084,29 @@ describe('EventDetailPriceBlock on a past show', () => {
         event={withUrl(PAST)}
         reports={[]}
         currentUserId={null}
+        past
       />,
     );
     expect(screen.getByTestId('price-display-stub')).toBeDefined();
     expect(latestPriceDisplayProps?.ticketUrl).toBeNull();
+  });
+
+  it('mounts no outbound link for an unsafe seller URL', () => {
+    const event = tierEvent('2099-07-15');
+    render(
+      <EventDetailPriceBlock
+        event={{
+          ...event,
+          ticketLinks: [
+            { kind: 'primary', vendor: 'Etix', url: 'javascript:alert(1)' },
+          ],
+        }}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getAllByText(/\$110/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: /etix/i })).toBeNull();
   });
 
   it('drops the resale link on a past sold-out show, keeping Sold out', () => {
@@ -2106,6 +2126,7 @@ describe('EventDetailPriceBlock on a past show', () => {
         })}
         reports={[]}
         currentUserId={null}
+        past
       />,
     );
     expect(screen.getByText('Sold out')).toBeDefined();

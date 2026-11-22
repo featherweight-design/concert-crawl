@@ -68,6 +68,7 @@ import {
   IconClock,
   IconUsers,
   EventTicketCta,
+  showsPrimaryCta,
 } from '@/components/consumer/event-detail';
 
 const copy = CONSUMER_COPY.eventDetail;
@@ -223,10 +224,8 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   // and the watch strip with "Watch to track the price") and the price card.
   // Their boards (more-st-ev_canc, more-st-ev_post) draw neither: the card,
   // then one CTA (refund info, or Watching for the new date).
-  // A past show keeps its price but gets no outbound CTA, as on /e: there is
-  // nothing left to buy (Hugh, 2026-11-22). A status-led page keeps its CTA:
-  // a past cancelled show's refund link and a past postponed show's Watch
-  // toggle are not purchase links.
+  // A past show keeps its price but links nowhere to buy (Hugh, 2026-11-22);
+  // which past shows keep the CTA slot is showsPrimaryCta's call.
   const past = isEventPast(event.date, event.venue.timezone);
   const leadsWithStatus =
     event.status === 'cancelled' || event.status === 'postponed';
@@ -249,39 +248,39 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   );
 
   // The one CTA. A status-led page puts it right under the status card.
-  const primaryCta =
-    past && !leadsWithStatus ? null : (
-      <>
-        {/* Primary CTA — renders on every show still to come, and on a past
-        cancelled or postponed one, whose refund link and Watch toggle are not
-        purchase links. Postponed swaps it for
-        the Watch toggle (no date to buy for yet); cancelled relabels the
-        ticket link as refund info, since the vendor handles refunds.
-        Sold out → disabled button. ticketUrl or eventUrl → "Get Tickets ↗"
+  const primaryCta = !showsPrimaryCta({
+    past,
+    status: event.status,
+    delistedAt: event.delistedAt,
+  }) ? null : (
+    <>
+      {/* Primary CTA. Postponed swaps it for the Watch toggle (no date to
+        buy for yet); cancelled relabels the ticket link as refund info, since
+        the vendor handles refunds. Sold out → disabled button. ticketUrl or eventUrl → "Get Tickets ↗"
         (eventUrl deep-links the venue's specific event page when there's
         no direct ticket link, #1152). Fallback → venue website. No URL →
         disabled "No tickets available". */}
-        <div className="mt-5">
-          {event.status === 'postponed' ? (
-            <WatchShowButton
-              eventId={event.id}
-              initialWatching={event.isWatching}
-              artist={event.artist}
-              variant="cta"
-            />
-          ) : (
-            <EventTicketCta
-              status={event.status}
-              delistedAt={event.delistedAt}
-              ticketHref={safeTicketUrl}
-              soldOut={event.priceStatus === 'soldout'}
-              href={ctaHref}
-              hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
-            />
-          )}
-        </div>
-      </>
-    );
+      <div className="mt-5">
+        {event.status === 'postponed' ? (
+          <WatchShowButton
+            eventId={event.id}
+            initialWatching={event.isWatching}
+            artist={event.artist}
+            variant="cta"
+          />
+        ) : (
+          <EventTicketCta
+            status={event.status}
+            delistedAt={event.delistedAt}
+            ticketHref={safeTicketUrl}
+            soldOut={event.priceStatus === 'soldout'}
+            href={ctaHref}
+            hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
+          />
+        )}
+      </div>
+    </>
+  );
 
   // event-nll-m: a No longer listed phone hero ends under the title; the genre
   // chips and the date line sit below it, above the dashed card.
@@ -480,6 +479,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
                 event={event}
                 reports={reports}
                 currentUserId={userId ?? null}
+                past={past}
               />
             </div>
           )}
