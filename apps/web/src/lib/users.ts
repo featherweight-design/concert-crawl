@@ -28,12 +28,14 @@ export async function patchMe(
 
 // The row's art fields, checked at the boundary. Each falls back to null on its
 // own, so an API that predates them (the web and the API deploy separately) or a
-// malformed value costs the row its picture, never the page.
+// malformed value costs the row its picture, never the list.
 const submissionArtSchema = z.object({
   imageUrl: z.string().nullable().catch(null),
   artistPhotoUrl: z.string().nullable().catch(null),
   genre: z.string().nullable().catch(null),
 });
+
+const NO_ART = { imageUrl: null, artistPhotoUrl: null, genre: null };
 
 export async function fetchMySubmissions(
   token: string,
@@ -42,7 +44,10 @@ export async function fetchMySubmissions(
     '/v1/users/me/submissions',
     token,
   );
-  return rows.map((row) => ({ ...row, ...submissionArtSchema.parse(row) }));
+  return rows.map((row) => {
+    const art = submissionArtSchema.safeParse(row);
+    return { ...row, ...(art.success ? art.data : NO_ART) };
+  });
 }
 
 export async function checkHandleAvailability(

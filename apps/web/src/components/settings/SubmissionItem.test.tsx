@@ -72,8 +72,15 @@ describe('SubmissionItem art', () => {
 
   it('rings the art in the lead genre, and neutral with none', () => {
     render(<SubmissionItem submission={row({ genre: 'indie rock' })} />);
-    const ringed = screen.getByTestId('submission-art-ring');
-    expect(ringed.style.boxShadow).toContain('var(--genre-');
+    expect(screen.getByTestId('submission-art-ring').style.boxShadow).toContain(
+      'var(--genre-indie)',
+    );
+    cleanup();
+
+    render(<SubmissionItem submission={row({ genre: 'rap' })} />);
+    expect(screen.getByTestId('submission-art-ring').style.boxShadow).toContain(
+      'var(--genre-hip-hop)',
+    );
     cleanup();
 
     render(<SubmissionItem submission={row({ genre: null })} />);

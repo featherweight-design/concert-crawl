@@ -1,0 +1,30 @@
+{
+  "feature": "Submitted prices \u00b7 row art: the show's photo ringed in its lead genre (PR B)",
+  "note": "/me/submissions mounts ThemeSync, which re-applies the account's saved theme, so this sheet runs one theme pass, Electric (as B16 and B18 do); the audit account's saved theme must be Electric. Boards: design/design_handoff_bplus_redesign/addendum-2/screens/24-submitted-prices/submitted-prices-m.jpg and addendum-4/screens/06-submitted-prices-closed/submitted-closed-m.jpg (44px tile, genre ring); desktop screens/07-more-screens/more-s-d_submissions.jpg. The route renders both the phone list and the desktop Settings panel, so the wait takes the visible ring. Needs an audit user with at least one submitted price.",
+  "rows": [
+    {
+      "id": "submissions",
+      "label": "/me/submissions: rows with art",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/me/submissions",
+          "settle": 1500
+        },
+        {
+          "wait": "[data-testid=\"submission-art-ring\"]:visible"
+        }
+      ]
+    }
+  ],
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ]
+}

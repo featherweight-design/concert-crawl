@@ -112,6 +112,7 @@ import { createApp } from '../app.js';
 import {
   clearTables,
   seedVenue,
+  seedArtist,
   seedEvent,
   seedPriceSubmission,
   seedUserProfile,
@@ -594,6 +595,54 @@ describe('GET /v1/users/me/submissions', () => {
       data: Array<{ venueSlug: string | null }>;
     };
     expect(body.data[0]?.venueSlug).toBe(venue.slug);
+  });
+
+  it("returns the row's art: artwork, headliner portrait, lead genre", async () => {
+    setAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    await seedArtist({
+      name: 'Son Little',
+      photoUrl: 'https://img.example/son-little.jpg',
+    });
+    // A tour-shaped billing: the portrait comes from the one headliner, not
+    // the billed name.
+    const event = await seedEvent(venue.id, {
+      artist: 'Son Little: CityFolk Tour',
+      headliners: ['Son Little'],
+      canonicalHeadliners: ['son little'],
+      imageUrl: 'https://img.example/poster.jpg',
+      genre: ['soul', 'indie'],
+    });
+    const bare = await seedEvent(venue.id, { artist: 'No Art Band' });
+    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '30' });
+    await seedPriceSubmission(bare.id, 'user_test123', { priceMin: '20' });
+
+    const res = await app.request('/v1/users/me/submissions', {
+      headers: { Authorization: 'Bearer test' },
+    });
+    const body = (await res.json()) as {
+      data: Array<{
+        eventId: string;
+        imageUrl: string | null;
+        artistPhotoUrl: string | null;
+        genre: string | null;
+      }>;
+    };
+    // One row per submission: the artists join must not fan out.
+    expect(body.data).toHaveLength(2);
+    const art = body.data.find((row) => row.eventId === event.id);
+    expect(art).toMatchObject({
+      imageUrl: 'https://img.example/poster.jpg',
+      artistPhotoUrl: 'https://img.example/son-little.jpg',
+      genre: 'soul',
+    });
+    const none = body.data.find((row) => row.eventId === bare.id);
+    expect(none).toMatchObject({
+      imageUrl: null,
+      artistPhotoUrl: null,
+      genre: null,
+    });
   });
 
   it('returns tier, corroborationCount, and submittedAt fields', async () => {
