@@ -15,6 +15,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import type { EventHeadliner } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { formatMoreCount } from './lib/supportingLine';
 
 const COPY = CONSUMER_COPY.eventTitle;
 
@@ -86,7 +87,7 @@ export const CoBilledHeading = ({
         className={`${CHIP_CLASS} ${visibility}`}
         style={{ fontSize: 13, letterSpacing: '-0.01em' }}
       >
-        {expanded ? COPY.showFewer : COPY.moreChip(hiddenCount)}
+        {expanded ? COPY.showFewer : formatMoreCount(hiddenCount)}
       </button>
     ) : null;
 

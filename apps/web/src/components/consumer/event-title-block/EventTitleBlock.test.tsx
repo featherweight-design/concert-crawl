@@ -515,4 +515,44 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
       );
     });
   });
+
+  it('renders each co-headliner as its own link when the bill has more than one', () => {
+    render(
+      <EventTitleBlock
+        headliner="Clipse & J.I.D"
+        supportingArtists={[]}
+        tourName={null}
+        surface="detail"
+        linkArtists
+        headliners={[
+          { name: 'Clipse', slug: 'clipse' },
+          { name: 'J.I.D', slug: 'jid' },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'Clipse' })).toHaveAttribute(
+      'href',
+      '/artists/clipse',
+    );
+    expect(screen.getByRole('link', { name: 'J.I.D' })).toHaveAttribute(
+      'href',
+      '/artists/jid',
+    );
+  });
+
+  it('keeps the single heading for one act or an unresolved headliner list', () => {
+    render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        artistSlug="wednesday"
+        supportingArtists={[]}
+        tourName={null}
+        surface="detail"
+        linkArtists
+        headliners={[{ name: 'Wednesday', slug: 'wednesday' }]}
+      />,
+    );
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByTestId('cobill-chip-phone')).toBeNull();
+  });
 });
