@@ -1052,7 +1052,7 @@ function MenuBody({
             <Reply {...TILE_ICON_PROPS} />
           </RowTile>
         }
-        {...(showFeedbackNew ? { trailing: <NewPill /> } : {})}
+        trailing={showFeedbackNew ? <NewPill /> : undefined}
       />
 
       {/* Admin section */}

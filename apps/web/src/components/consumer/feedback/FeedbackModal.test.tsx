@@ -31,15 +31,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const { getToken } = vi.hoisted(() => ({ getToken: vi.fn() }));
+beforeEach(() => {
+  getToken.mockReset();
+  getToken.mockResolvedValue('tok');
+});
+
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: vi.fn().mockResolvedValue('tok') }),
+  useAuth: () => ({ getToken }),
   useUser: () => ({ user: null }),
 }));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/browse',
 }));
 vi.mock('@/theme/ThemeProvider', () => ({
-  useTheme: () => ({ theme: 'electric' }),
+  useThemeName: () => 'electric',
 }));
 
 import { FeedbackModal } from './FeedbackModal';
@@ -284,6 +290,49 @@ describe('FeedbackModal — a failed send saves the draft (A4)', () => {
     rerender(<FeedbackModal open={true} onClose={onClose} />);
     expect(screen.getByText(/Saved draft restored/i)).toBeTruthy();
     expect(screen.queryByText(MODAL.sendFailed.body)).toBeNull();
+  });
+
+  it('a reopen while the send is in flight shows it sending, then its result', async () => {
+    let fail: (res: Response) => void = () => {};
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        fail = resolve;
+      }),
+    );
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <FeedbackModal open={true} onClose={onClose} />,
+    );
+    fillCategoryAndMessage('still going');
+    await submitAndWait();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    rerender(<FeedbackModal open={false} onClose={onClose} />);
+    rerender(<FeedbackModal open={true} onClose={onClose} />);
+
+    // Still sending, so nothing can send twice.
+    expect(screen.getByText(MODAL.footer.submitting)).toBeTruthy();
+    fireEvent.click(screen.getByText(MODAL.footer.submitting));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fail(new Response('boom', { status: 500 }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByText(MODAL.sendFailed.body)).toBeTruthy();
+    expect(draftOf().message).toBe('still going');
+  });
+
+  it('a session token that fails to load counts as a failed send', async () => {
+    getToken.mockRejectedValueOnce(new Error('clerk down'));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    fillCategoryAndMessage('no token');
+    await submitAndWait();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(screen.getByText(MODAL.sendFailed.body)).toBeTruthy();
+    expect(draftOf().message).toBe('no token');
   });
 
   it('clears the saved draft on successful submission', async () => {

@@ -1,6 +1,6 @@
 {
   "feature": "B20 · Errors, 404, offline, feedback tab",
-  "note": "Plan row B20 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): not-found = 06-states/bp-s-notfound_m, 06-states/bp-s-notfound_d; offline-page = 06-states/bp-s-offline_m, 06-states/bp-s-offline_empty_m; offline-pill = 06-states/bp-s-offline_pill_m, 06-states/bp-s-offline_account_m; feedback = 06-states/bp-s-feedback_tab_m, 06-states/bp-s-feedback_m. Walk by hand (state a sheet cannot set up): feedback-done (06-states/bp-s-feedback_done_m): sending writes a row. Unknown venue and artist slugs are soft 404s by design (ruled 2026-11-11): /venues/[slug] and /artists/[slug] each have a loading.tsx, so the response streams a 200 before the page's notFound() runs, and Next injects a robots noindex meta in place of the status. A real 404 would cost the loading skeleton or a request per view in the proxy. Their rows expect 200 and wait for the not-found surface. Each row asserts the injected robots noindex meta (expectMeta). /e/[id] has no loading.tsx and keeps a real 404.",
+  "note": "Plan row B20 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): not-found = 06-states/bp-s-notfound_m, 06-states/bp-s-notfound_d; offline-page = 06-states/bp-s-offline_m, 06-states/bp-s-offline_empty_m; offline-pill = 06-states/bp-s-offline_pill_m, 06-states/bp-s-offline_account_m; feedback = 06-states/bp-s-feedback_m (the edge tab is gone: P47-20 opens it from the account menu). Walk by hand (state a sheet cannot set up): feedback-done (06-states/bp-s-feedback_done_m): sending writes a row. Unknown venue and artist slugs are soft 404s by design (ruled 2026-11-11): /venues/[slug] and /artists/[slug] each have a loading.tsx, so the response streams a 200 before the page's notFound() runs, and Next injects a robots noindex meta in place of the status. A real 404 would cost the loading skeleton or a request per view in the proxy. Their rows expect 200 and wait for the not-found surface. Each row asserts the injected robots noindex meta (expectMeta). /e/[id] has no loading.tsx and keeps a real 404.",
   "rows": [
     {
       "id": "offline-page",
@@ -34,7 +34,7 @@
     },
     {
       "id": "feedback",
-      "label": "/events: the feedback tab opened",
+      "label": "/events: feedback opened from the account menu",
       "steps": [
         {
           "goto": "/events",
@@ -44,7 +44,12 @@
           "wait": "[data-testid=\"event-row\"]"
         },
         {
-          "click": "button[aria-label=\"Send feedback\"]",
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "settle": 300
+        },
+        {
+          "clickRole": "button",
+          "name": "Send feedback",
           "settle": 500,
           "waitDialog": "^Feedback$"
         }
