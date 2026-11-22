@@ -10,6 +10,7 @@ import {
   parseRunDates,
   sortWorstFirst,
   streakDates,
+  worstRank,
   type VenueListRow,
 } from './venue-list-rules';
 
@@ -127,6 +128,16 @@ describe('venue list rules', () => {
       ['a', 2],
       ['b', 1],
     ]);
+  });
+
+  it('keeps drafts out of Hidden and ranks them with hidden venues', () => {
+    const draft = venue('Draft', { active: false, wentLiveAt: null });
+    expect(matchesFilter(draft, 'hidden')).toBe(false);
+    expect(matchesFilter(venue('Gone', { active: false }), 'hidden')).toBe(
+      true,
+    );
+    expect(worstRank(draft)).toBe(5);
+    expect(worstRank({ ...draft, needsLook: true })).toBe(3);
   });
 
   it('filters Needs a look to the venues with a dot', () => {

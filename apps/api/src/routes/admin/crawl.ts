@@ -587,6 +587,8 @@ crawlAdminRouter.get('/status', async (ctx) => {
       name: venues.name,
       websiteUrl: venues.websiteUrl,
       active: venues.active,
+      // Null is a draft (admin 3c), so its status chip says so.
+      wentLiveAt: venues.wentLiveAt,
       verified: venues.verified,
       consecutiveFailures: venues.consecutiveFailures,
       blockedAt: venues.blockedAt,

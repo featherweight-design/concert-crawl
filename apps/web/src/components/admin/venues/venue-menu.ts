@@ -34,12 +34,14 @@ const COPY = ADMIN_COPY.venueHeader;
  * since Resume clears the pause and nothing else.
  */
 export type VenueMenuState =
-  'crawling' | 'paused' | 'autoPaused' | 'hidden' | 'removed';
+  'crawling' | 'paused' | 'autoPaused' | 'hidden' | 'removed' | 'draft';
 
 export const venueMenuState = (venue: VenueWithCrawlHealth): VenueMenuState => {
   // Taken down wins over everything: `removedAt` is set with `active` false.
   if (venue.removedAt !== null) return 'removed';
-  if (!venue.active) return 'hidden';
+  // A draft (never live, `went_live_at` null) reaches the site only through
+  // Go live, so it never gets the hidden menu's Show.
+  if (!venue.active) return venue.wentLiveAt === null ? 'draft' : 'hidden';
   if (venue.crawlPausedAt === null) return 'crawling';
   // The crawling chip's rule (`isAutoPause`), so the chip and the menu agree;
   // a paused blocked venue is its own case that shares the auto-paused menu.
@@ -53,6 +55,8 @@ export const hiddenStateLine = (venue: VenueWithCrawlHealth): string | null => {
   if (venue.removedAt !== null)
     return COPY.takenDown(shortDate(venue.removedAt));
   if (venue.active) return null;
+  // Nobody hid a draft: it was never on the site.
+  if (venue.wentLiveAt === null) return null;
   const hiddenAt = venue.hiddenAt ?? null;
   if (hiddenAt === null) return COPY.hiddenNoRecord;
   const date = shortDate(hiddenAt);
@@ -139,7 +143,7 @@ const itemsFor = (
           onSelect: act.resume,
         };
 
-  if (state === 'hidden' || state === 'removed') {
+  if (state === 'hidden' || state === 'removed' || state === 'draft') {
     const blockers = refused ?? venue.deleteBlockers;
     const remove: RowMenuItem = deleteRefused(blockers)
       ? {
@@ -165,6 +169,9 @@ const itemsFor = (
           divided: true,
           onSelect: act.remove,
         };
+    // 🔸 Undrawn until 3e: a draft's menu is Delete alone. Its setup actions
+    // (They said yes / no, Go live) arrive with 3c-3 and 3e.
+    if (state === 'draft') return [remove];
     const line = hiddenStateLine(venue) ?? '';
     // Taken down at the venue's request: the menu offers no Show, Resume,
     // crawl row or second Take down, only the line saying so and Delete.

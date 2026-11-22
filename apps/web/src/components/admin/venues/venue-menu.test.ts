@@ -132,6 +132,32 @@ describe('hiddenStateLine', () => {
 describe('venueMenuState', () => {
   const PAUSED_AT = '2026-10-28T18:00:00.000Z';
 
+  it('a never-live venue is a draft, with Delete alone and no Show', () => {
+    const draft = venue({ active: false, wentLiveAt: null });
+    expect(venueMenuState(draft)).toBe('draft');
+    expect(hiddenStateLine(draft)).toBeNull();
+    const noop = (): void => undefined;
+    const act = {
+      pause: noop,
+      resume: noop,
+      trial: noop,
+      flagship: noop,
+      hide: noop,
+      takeDown: noop,
+      show: noop,
+      remove: noop,
+    };
+    expect(venueMenuItems(draft, act).map((item) => item.key)).toEqual([
+      'delete',
+    ]);
+  });
+
+  it('a hidden venue that has been live keeps the hidden menu', () => {
+    expect(
+      venueMenuState(venue({ active: false, wentLiveAt: PAUSED_AT })),
+    ).toBe('hidden');
+  });
+
   it('a reasonless pause at 3 failures is auto-paused', () => {
     expect(
       venueMenuState(
