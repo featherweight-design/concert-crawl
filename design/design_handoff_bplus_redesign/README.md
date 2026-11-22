@@ -154,6 +154,10 @@ These are the parts to build once and reuse.
 
 Hugh's decisions on its open questions (2026-11-12) are at the end of that README.
 
+## Addendum 11 (2026-11-22)
+
+[`addendum-11/`](addendum-11/README.md) draws the Browse Vibe chip with three or more vibes picked: the dot stack stops at three, the phone chip reads "3 vibes" (and "All vibes" for all 16), the desktop segment keeps "Electronic +2", the legend under it names up to four picks, and the phone chip row still scrolls sideways rather than wrapping.
+
 ## Open decisions (Hugh)
 
 - **"Follow / Following" on artist pages.** CLAUDE.md's locked vocabulary bans "Following", but the live artist and event pages use it. The designs keep what ships.
