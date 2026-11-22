@@ -235,6 +235,62 @@ describe('PublicEventDetail (#72)', () => {
     expect(row.querySelector('button')).toBeNull();
   });
 
+  // The scalar holds whichever price was written last; the card leads with the
+  // cheapest corroborated tier, as the protected page does (#1365).
+  const tier = (priceMin: string, priceMax: string | null) => ({
+    tier: 'GA' as const,
+    headline: {
+      submissionId: 'sub-1',
+      priceMin,
+      priceMax,
+      vendor: 'VenueBoxOffice' as const,
+      sourceCategory: 'standard' as const,
+      submitterHandle: null,
+      observedAt: '2026-06-01T00:00:00.000Z',
+      approvedAt: '2026-06-01T00:00:00.000Z',
+      approvalKind: 'admin' as const,
+      confirmsCount: 1,
+    },
+    alternates: [],
+    pending: [],
+    counterSubmission: null,
+    reports: 0,
+  });
+
+  it('shows the cheapest tier, not the last-written scalar', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          ticketPriceMin: '95',
+          ticketPriceMax: null,
+          priceByTier: [tier('25.00', '30.00'), tier('95.00', null)],
+        })}
+        related={[]}
+      />,
+    );
+
+    expect(screen.getByTestId('public-event-price').textContent).toContain(
+      '$25\u2013$30',
+    );
+  });
+
+  it('falls back to the scalar when no tier has a headline', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          ticketPriceMin: '40',
+          ticketPriceMax: null,
+          priceByTier: [{ ...tier('25.00', null), headline: null }],
+        })}
+        related={[]}
+      />,
+    );
+
+    expect(screen.getByTestId('public-event-price').textContent).toContain(
+      '$40',
+    );
+  });
+
   it('says sold out rather than showing a stale price', () => {
     render(
       <PublicEventDetail

@@ -221,4 +221,35 @@ describe('cached-content', () => {
     expect(sloppy).not.toHaveProperty('genre');
     expect(sloppy).not.toHaveProperty('showTime');
   });
+
+  it('lifts the cheapest tier headline off priceByTier, skipping headline-less tiers', async () => {
+    vi.stubGlobal(
+      'caches',
+      makeCacheStorage({
+        'public-api': [
+          {
+            url: 'https://api.example.com/v1/events',
+            body: eventsResponse([
+              {
+                ...sampleEvent,
+                ticketPriceMin: '95.00',
+                priceByTier: [
+                  { headline: null },
+                  { headline: { priceMin: '25.00' } },
+                  { headline: { priceMin: '95.00' } },
+                ],
+              },
+              { ...sampleEvent, id: 'evt-2', priceByTier: 'nope' },
+            ]),
+          },
+        ],
+      }),
+    );
+    const [tiered, mistyped] = await getCachedEvents();
+    expect(tiered).toMatchObject({
+      ticketPriceMin: '95.00',
+      headlinePrice: '25.00',
+    });
+    expect(mistyped).not.toHaveProperty('headlinePrice');
+  });
 });
