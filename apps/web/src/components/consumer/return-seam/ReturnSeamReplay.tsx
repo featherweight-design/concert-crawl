@@ -8,8 +8,6 @@ import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-art
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { EventImage } from '@/components/consumer/event-image/EventImage';
-import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
-import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   decodeIntent,
@@ -262,14 +260,9 @@ export const ReturnSeamReplay = () => {
           data-testid="return-seam-strip-art"
           className="h-10 w-10 shrink-0 overflow-hidden rounded-[10px]"
           style={{
-            // The show keeps its genre ring. The artist's photo wears the
-            // board's signal ring and glow (board 10, the tile's box-shadow).
+            // Board 10 draws one signal ring and glow on both tiles.
             boxShadow:
-              strip.action === 'watch'
-                ? genreRing(
-                    genreColor(stripShow?.genres[0]) ?? NEUTRAL_GENRE_COLOR,
-                  )
-                : '0 0 0 1.25px var(--signal), 0 0 20px color-mix(in oklch, var(--signal) 40%, transparent)',
+              '0 0 0 1.25px var(--signal), 0 0 20px color-mix(in oklch, var(--signal) 40%, transparent)',
           }}
         >
           <EventImage
