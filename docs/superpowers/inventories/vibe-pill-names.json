@@ -1,0 +1,61 @@
+{
+  "feature": "Vibe pill names: the phone Vibe chip reads both picked names beside the two-dot stack",
+  "note": "Board: design/design_handoff_bplus_redesign/screens/04-genre-and-vibe/bp-vibe-browse_vibe_m (chip 'Electronic, Hip-hop' with the two-dot stack). Three picks are not drawn: the chip keeps the count. The chip is phone-only; desktop draws the segment ('Electronic +1'), unchanged.",
+  "shares": {
+    "binding": "getChipLabel",
+    "module": "apps/web/src/components/consumer/filter-bar"
+  },
+  "rows": [
+    {
+      "id": "vibe-two",
+      "label": "/events: two Vibes",
+      "view": "apps/web/src/components/consumer/filter-bar/filter-defs.ts",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=electronic&filterVibe=hip-hop",
+          "settle": 5000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-row\"]:visible, [data-testid=\"filter-segment-bar\"]:visible"
+        }
+      ]
+    },
+    {
+      "id": "vibe-one",
+      "label": "/events: one Vibe",
+      "view": "apps/web/src/components/consumer/filter-bar/filter-defs.ts",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=electronic",
+          "settle": 5000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-row\"]:visible, [data-testid=\"filter-segment-bar\"]:visible"
+        }
+      ]
+    },
+    {
+      "id": "vibe-three",
+      "label": "/events: three Vibes (undrawn, count kept)",
+      "view": "apps/web/src/components/consumer/filter-bar/filter-defs.ts",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=electronic&filterVibe=hip-hop&filterVibe=indie",
+          "settle": 5000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-row\"]:visible, [data-testid=\"filter-segment-bar\"]:visible"
+        }
+      ]
+    }
+  ]
+}

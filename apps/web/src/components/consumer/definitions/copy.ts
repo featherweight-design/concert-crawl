@@ -803,6 +803,9 @@ export const CONSUMER_COPY = {
     venueCount: (count: number) =>
       `${count} ${count === 1 ? 'venue' : 'venues'}`,
     vibeCount: (count: number) => `${count} ${count === 1 ? 'vibe' : 'vibes'}`,
+    // Two Vibes read as their names (`bp-vibe-browse_vibe_m`), the pair the
+    // chip's two-dot stack draws; more fall back to the count above.
+    vibeNames: (names: readonly string[]) => names.join(', '),
 
     // The count line under the desktop bar
     showCount: (count: number) => `${count} ${count === 1 ? 'show' : 'shows'}`,
