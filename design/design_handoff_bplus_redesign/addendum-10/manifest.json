@@ -1,0 +1,58 @@
+[
+ {
+  "section": "01-public-resale",
+  "name": "public-spec",
+  "title": "Public event page · who sells the price, all states",
+  "note": "The read-only card in its four states, on Light, and the Where it’s sold ruling.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "01-public-resale",
+  "name": "public-resale-cheapest-m",
+  "title": "Public event page · resale is the cheapest, 360",
+  "note": "Resale pill and Sold by StubHub · resale. The box office tier is an Also row.",
+  "w": 360,
+  "h": 1000
+ },
+ {
+  "section": "01-public-resale",
+  "name": "public-resale-cheapest-d",
+  "title": "Public event page · resale is the cheapest, desktop",
+  "note": "The same card in the left column, account card on the right.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "01-public-resale",
+  "name": "public-boxoffice-resale-m",
+  "title": "Public event page · box office, resale also listed, 360",
+  "note": "★ Box office headline; the resale price is an Also row with its pill.",
+  "w": 360,
+  "h": 1000
+ },
+ {
+  "section": "01-public-resale",
+  "name": "public-boxoffice-resale-d",
+  "title": "Public event page · box office, resale also listed, desktop",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "01-public-resale",
+  "name": "public-resale-only-m",
+  "title": "Public event page · resale only, 360",
+  "note": "Resale headline, no Also, and the dashed only-resale note.",
+  "w": 360,
+  "h": 1000
+ },
+ {
+  "section": "01-public-resale",
+  "name": "public-resale-only-d",
+  "title": "Public event page · resale only, desktop",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ }
+]

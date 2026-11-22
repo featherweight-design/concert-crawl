@@ -113,7 +113,7 @@ These are the parts to build once and reuse.
   - **Empty:** one pattern everywhere.
   - **Errors and offline:** errors and 404 (the error uses the CCMark with its trail broken), offline.
   - **Cal view:** week strip with genre dots per day, plus the jump picker.
-  - **From outside:** the crew invite (open, already a member, expired) and the public event page for signed-out visitors.
+  - **From outside:** the crew invite (open, already a member, expired) and the public event page for signed-out visitors. Who sells a resale headline price there, and why Where it's sold stays signed-in only, is in [`addendum-10`](addendum-10/README.md) (2026-11-22).
   - **Smaller pieces:** price confirm sheets, more tiers and vendors, notifications (with empty, loading and error states), and the Tell us feedback tab.
   - **PWA:** icon, install surfaces, offline notices, launch.
 - **Signed out** (`11-signed-out`): the beta invite page, with the code field inline, a fanned stack of show cards, and the venue-icon proof row.
