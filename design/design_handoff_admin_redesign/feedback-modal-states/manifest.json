@@ -1,0 +1,106 @@
+[
+ {
+  "section": "01-screenshot",
+  "name": "fb-screenshot-none-m",
+  "title": "Screenshot · nothing attached",
+  "note": "A file the fan picks, never an automatic capture. The checkbox row becomes an attach row; tapping it opens the photo or file picker.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-screenshot",
+  "name": "fb-screenshot-attached-m",
+  "title": "Screenshot · attached",
+  "note": "Thumbnail, file name and size, and × to remove (36px, 44px hit area). Picking again replaces it.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-screenshot",
+  "name": "fb-screenshot-wrong-type-m",
+  "title": "Screenshot · wrong file type",
+  "note": "The file is refused and not shown. Live copy. The error clears when the fan picks again.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-screenshot",
+  "name": "fb-screenshot-too-big-m",
+  "title": "Screenshot · too big",
+  "note": "Over 6 MB. Live copy.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-send-failed",
+  "name": "fb-send-failed-m",
+  "title": "Send failed",
+  "note": "The form stays as the fan left it, with the banner just above the buttons. Try again resends; Save and come back closes the sheet with the draft kept.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-send-failed",
+  "name": "fb-draft-restored-m",
+  "title": "Opened again · draft restored",
+  "note": "Kind, text and screenshot come back. Discard draft clears it on the spot.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-validation",
+  "name": "fb-validation-nothing-m",
+  "title": "Validation · no kind, no message",
+  "note": "Send is never disabled. Pressing it marks each missing field and focuses the first.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-validation",
+  "name": "fb-validation-venue-m",
+  "title": "Validation · Suggest a venue, no name",
+  "note": "Replaces “Send stays off” on the addendum 3 empty board.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-field-per-kind",
+  "name": "fb-kind-idea-m",
+  "title": "An idea",
+  "note": "Same box, its own label and hint. The others are in the table above.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-desktop",
+  "name": "fb-broken-d",
+  "title": "Desktop · Something’s broken, screenshot attached",
+  "note": "Every kind uses the same 520px modal.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "05-desktop",
+  "name": "fb-failed-d",
+  "title": "Desktop · send failed",
+  "note": "",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "05-desktop",
+  "name": "fb-sent-d",
+  "title": "Desktop · sent",
+  "note": "One sent state for every kind.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "06-what-we-send",
+  "name": "fb-what-we-send-m",
+  "title": "What we send with it · open",
+  "note": "Closed by default, one quiet line above Send. Opens in place.",
+  "w": 390,
+  "h": 844
+ }
+]
