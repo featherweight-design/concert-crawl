@@ -1,3 +1,8 @@
+'use client';
+
+// A client component because the Followed highlight reads the viewer's follows
+// through a hook; every import below is client-safe and `event` is plain data.
+
 import Link from 'next/link';
 import type { EventWithVenue } from '@concert-crawl/types';
 import { Panel } from '@/components/consumer/image-slot';
