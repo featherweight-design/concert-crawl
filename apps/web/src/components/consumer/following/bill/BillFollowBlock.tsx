@@ -54,6 +54,24 @@ const NAME_STYLE: React.CSSProperties = {
   color: 'var(--fg)',
 };
 
+// 9px mono `--fg-subtle` after the name (addendum-8 §5). Null on a bill with
+// one headliner, so those rows look as they always did.
+const RoleTag = ({ role }: { role: BillArtist['role'] }) =>
+  role === null ? null : (
+    <span
+      data-testid="bill-role-tag"
+      className="shrink-0"
+      style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: 9,
+        letterSpacing: '0.1em',
+        color: 'var(--fg-subtle)',
+      }}
+    >
+      {role === 'headliner' ? COPY.roleHeadliner : COPY.roleSupport}
+    </span>
+  );
+
 export interface BillFollowBlockProps {
   /** Headliner first, then support. Slug-less names are dropped upstream. */
   artists: BillArtist[];
@@ -257,18 +275,22 @@ export const BillFollowBlock = ({
                 span in both branches, and the anchor only carries `min-w-0`
                 so that span has room to shrink into. */}
             {signedOut ? (
-              <span className={NAME_CLASS} style={NAME_STYLE}>
-                {artist.name}
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className={NAME_CLASS} style={NAME_STYLE}>
+                  {artist.name}
+                </span>
+                <RoleTag role={artist.role} />
               </span>
             ) : (
               <Link
                 href={`/artists/${artist.slug}`}
-                className="flex min-w-0 items-center underline-offset-4 hover:underline focus-visible:underline"
-                style={{ alignSelf: 'stretch' }}
+                className="flex min-w-0 items-baseline gap-2 underline-offset-4 hover:underline focus-visible:underline"
+                style={{ alignSelf: 'stretch', alignItems: 'center' }}
               >
                 <span className={NAME_CLASS} style={NAME_STYLE}>
                   {artist.name}
                 </span>
+                <RoleTag role={artist.role} />
               </Link>
             )}
             {/* Quiet at `row`: a bill can carry four of these, and four

@@ -28,5 +28,8 @@ export const BILL_FOLLOW_COPY = {
   // What the block is for, said once. It is the only line that explains the
   // payoff, so it names the trigger ("book a Denver date") rather than
   // gesturing at alerts in general.
+  // Role tags, drawn only on a bill with more than one headliner.
+  roleHeadliner: 'CO-HEADLINER',
+  roleSupport: 'SUPPORT',
   body: "We'll tell you the day any of them book another Denver date.",
 } as const;

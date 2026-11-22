@@ -14,12 +14,21 @@ export interface BillArtist {
   slug: string;
   name: string;
   following: boolean;
+  /**
+   * Set only when the bill lists more than one headliner row, so today's
+   * single-headliner events carry no tag. Null otherwise.
+   */
+  role: 'headliner' | 'support' | null;
 }
 
 /** The fields of an event detail response the bill block actually reads. */
 export type BillSource = Pick<
   EventDetailResponse,
-  'artist' | 'artistSlug' | 'supportingArtists' | 'supportingArtistSlugs'
+  | 'artist'
+  | 'artistSlug'
+  | 'supportingArtists'
+  | 'supportingArtistSlugs'
+  | 'headliners'
 >;
 
 /**
@@ -39,7 +48,9 @@ export const followedSlugSet = (
 };
 
 /**
- * Headliner first, then the support in billed order. Deduped by slug: a
+ * Every headliner in billing order (a co-headline night lists each act), then
+ * the support in billed order. A row with no `headliners` list (the ladder
+ * never ran, or found none) falls back to the single `artist`. Deduped by slug: a
  * co-headliner listed in both fields is one artist and must not draw two
  * buttons that disagree with each other the moment one is tapped.
  */
@@ -50,11 +61,21 @@ export const billArtists = (
   const supporting = event.supportingArtists ?? [];
   const supportingSlugs = event.supportingArtistSlugs ?? [];
 
-  const candidates: Array<{ name: string; slug: string | null }> = [
-    { name: event.artist, slug: event.artistSlug },
+  const headliners =
+    event.headliners !== null && event.headliners.length > 0
+      ? event.headliners
+      : [{ name: event.artist, slug: event.artistSlug }];
+
+  const candidates: Array<{
+    name: string;
+    slug: string | null;
+    role: 'headliner' | 'support';
+  }> = [
+    ...headliners.map((act) => ({ ...act, role: 'headliner' as const })),
     ...supporting.map((name, index) => ({
       name,
       slug: supportingSlugs[index] ?? null,
+      role: 'support' as const,
     })),
   ];
 
@@ -68,7 +89,10 @@ export const billArtists = (
       slug,
       name: candidate.name,
       following: followedSlugs.has(slug),
+      role: candidate.role,
     });
   }
-  return rows;
+  // The tag only earns its place on a co-headline bill.
+  const coBilled = rows.filter((row) => row.role === 'headliner').length > 1;
+  return coBilled ? rows : rows.map((row) => ({ ...row, role: null }));
 };

@@ -1,10 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
-import type { EventStatus } from '@concert-crawl/types';
+import type { EventHeadliner, EventStatus } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { StatusPill } from '@/components/consumer/StatusPill';
 import { NoLongerListedChip } from '@/components/consumer/event-detail/NoLongerListedCard';
 import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
+import { CoBilledHeading } from './CoBilledHeading';
 import { SupportingLine } from './SupportingLine';
 
 /**
@@ -47,6 +48,12 @@ interface EventTitleBlockProps {
    * has no row for that name. Ignored unless `linkArtists` is set.
    */
   artistSlug?: string | null;
+  /**
+   * Every act headlining the bill. From two, the heading becomes the co-billed
+   * one: each name its own link (with `linkArtists`), "+N more" past the
+   * breakpoint's limit. Null or one act keeps the single-name heading.
+   */
+  headliners?: EventHeadliner[] | null;
   /** Positionally aligned with `supportingArtists`. See SupportingLine. */
   supportingArtistSlugs?: Array<string | null> | null;
   /**
@@ -92,6 +99,7 @@ export const EventTitleBlock = ({
   maxInline = null,
   headlinerAs = 'div',
   artistSlug = null,
+  headliners = null,
   supportingArtistSlugs = null,
   linkArtists = false,
   headSize,
@@ -139,6 +147,32 @@ export const EventTitleBlock = ({
   const Headliner = headlinerAs;
   const showLegacyFallback =
     isLegacyRow && !!fallbackTitle && fallbackTitle !== headliner;
+
+  const headingClassName = `m-0 min-w-0 ${dim ? 'text-fg-muted' : followedNames.includes(headliner) ? 'text-signal' : 'text-fg transition-colors group-hover/eventtitle:text-signal'} ${surface === 'detail' ? 'whitespace-normal' : 'truncate'}`;
+  const headingStyle: React.CSSProperties = {
+    textDecoration:
+      surface === 'detail' &&
+      status === 'cancelled' &&
+      !isDelisted(status, delistedAt)
+        ? 'line-through'
+        : undefined,
+    // A heavier strike on the 64px headline, as drawn.
+    textDecorationThickness:
+      surface === 'detail' &&
+      status === 'cancelled' &&
+      !isDelisted(status, delistedAt)
+        ? '3px'
+        : undefined,
+    // Wraps at spaces, never inside a word (addendum 3 rule 2).
+    overflowWrap: 'normal',
+    wordBreak: 'normal',
+    fontSize: headSize ?? ramp.head,
+    fontWeight: surface === 'detail' ? 900 : 800,
+    // The detail hero is drawn at -0.04em and 1.05 (`hero-320-wrap`,
+    // `hero-320-long-word`); the list surfaces keep their own.
+    letterSpacing: surface === 'detail' ? '-0.04em' : '-0.02em',
+    lineHeight: surface === 'detail' ? 1.05 : 1.12,
+  };
 
   const supportingLine = (
     <SupportingLine
@@ -199,55 +233,31 @@ export const EventTitleBlock = ({
         </div>
       )}
 
-      <Headliner
-        // `detail` wraps to as many lines as needed (no `truncate`); `hero`
-        // stays one line via `truncate` (which sets overflow-hidden + ellipsis +
-        // whitespace-nowrap). Applying `truncate` on `detail` too would clip a
-        // multi-line title, so it is scoped to the hero only.
-        className={`m-0 min-w-0 ${dim ? 'text-fg-muted' : followedNames.includes(headliner) ? 'text-signal' : 'text-fg transition-colors group-hover/eventtitle:text-signal'} ${surface === 'detail' ? 'whitespace-normal' : 'truncate'}`}
-        // B+ draws a cancelled show's title struck and dimmed
-        // (`more-st-ev_canc_m`, `more-st-rows_board`). Postponed is not struck,
-        // and nor is a No longer listed show: nothing says it is off. The
-        // strike is the detail page's only: the hero card keeps its words.
-        style={{
-          textDecoration:
-            surface === 'detail' &&
-            status === 'cancelled' &&
-            !isDelisted(status, delistedAt)
-              ? 'line-through'
-              : undefined,
-          // A heavier strike on the 64px headline, as drawn.
-          textDecorationThickness:
-            surface === 'detail' &&
-            status === 'cancelled' &&
-            !isDelisted(status, delistedAt)
-              ? '3px'
-              : undefined,
-          // Wraps at spaces, never inside a word (addendum 3 rule 2).
-          overflowWrap: 'normal',
-          wordBreak: 'normal',
-          fontSize: headSize ?? ramp.head,
-          fontWeight: surface === 'detail' ? 900 : 800,
-          // The detail hero is drawn at -0.04em and 1.05 (`hero-320-wrap`,
-          // `hero-320-long-word`); the list surfaces keep their own.
-          letterSpacing: surface === 'detail' ? '-0.04em' : '-0.02em',
-          lineHeight: surface === 'detail' ? 1.05 : 1.12,
-        }}
-      >
-        {/* The link lives INSIDE the heading so the h1 keeps its text and its
-            place in the document outline; wrapping the heading would move the
-            landmark. Sizing is inherited, so the RAMP is untouched. */}
-        {linkArtists && artistSlug !== null ? (
-          <Link
-            href={`/artists/${artistSlug}`}
-            className="underline-offset-4 hover:underline focus-visible:underline"
-          >
-            {headliner}
-          </Link>
-        ) : (
-          headliner
-        )}
-      </Headliner>
+      {headliners !== null && headliners.length > 1 ? (
+        <CoBilledHeading
+          headliners={headliners}
+          linkArtists={linkArtists}
+          as={headlinerAs}
+          className={headingClassName}
+          style={headingStyle}
+        />
+      ) : (
+        <Headliner className={headingClassName} style={headingStyle}>
+          {/* The link lives INSIDE the heading so the h1 keeps its text and its
+              place in the document outline; wrapping the heading would move the
+              landmark. Sizing is inherited, so the RAMP is untouched. */}
+          {linkArtists && artistSlug !== null ? (
+            <Link
+              href={`/artists/${artistSlug}`}
+              className="underline-offset-4 hover:underline focus-visible:underline"
+            >
+              {headliner}
+            </Link>
+          ) : (
+            headliner
+          )}
+        </Headliner>
+      )}
 
       {hasOpeners &&
         (supportClassName === undefined ? (

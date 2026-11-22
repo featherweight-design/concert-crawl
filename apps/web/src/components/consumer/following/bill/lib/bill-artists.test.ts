@@ -8,6 +8,7 @@ const source = (over: Partial<BillSource> = {}): BillSource => ({
   artistSlug: 'headliner',
   supportingArtists: ['Support One', 'Support Two'],
   supportingArtistSlugs: ['support-one', 'support-two'],
+  headliners: null,
   ...over,
 });
 
@@ -79,5 +80,58 @@ describe('billArtists', () => {
       followedSlugSet([]),
     );
     expect(rows).toEqual([]);
+  });
+
+  it('lists every co-headliner first, tagged, then the support', () => {
+    const rows = billArtists(
+      source({
+        artist: 'Clipse & J.I.D',
+        headliners: [
+          { name: 'Clipse', slug: 'clipse' },
+          { name: 'J.I.D', slug: 'jid' },
+        ],
+        supportingArtists: ['Pusha T'],
+        supportingArtistSlugs: ['pusha-t'],
+      }),
+      followedSlugSet([]),
+    );
+    expect(rows.map((row) => [row.slug, row.role])).toEqual([
+      ['clipse', 'headliner'],
+      ['jid', 'headliner'],
+      ['pusha-t', 'support'],
+    ]);
+  });
+
+  it('drops an unmatched co-headliner and tags nobody when one is left', () => {
+    const rows = billArtists(
+      source({
+        headliners: [
+          { name: 'Clipse', slug: 'clipse' },
+          { name: 'J.I.D', slug: null },
+        ],
+      }),
+      followedSlugSet([]),
+    );
+    expect(rows.map((row) => row.role)).toEqual([null, null, null]);
+    expect(rows[0]?.slug).toBe('clipse');
+  });
+
+  it('still lists matched support when every headliner is unmatched', () => {
+    const rows = billArtists(
+      source({
+        headliners: [
+          { name: 'A', slug: null },
+          { name: 'B', slug: null },
+        ],
+      }),
+      followedSlugSet([]),
+    );
+    expect(rows.map((row) => row.slug)).toEqual(['support-one', 'support-two']);
+    expect(rows.every((row) => row.role === null)).toBe(true);
+  });
+
+  it('falls back to the single artist when the headliner list is empty', () => {
+    const rows = billArtists(source({ headliners: [] }), followedSlugSet([]));
+    expect(rows[0]?.slug).toBe('headliner');
   });
 });
