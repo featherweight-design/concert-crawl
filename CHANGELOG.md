@@ -1,3 +1,19 @@
+# [1.542.0](https://github.com/featherweight-design/concert-crawl/compare/v1.541.1...v1.542.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** build the servable photo expression on call, not at import ([2e84565](https://github.com/featherweight-design/concert-crawl/commit/2e845654013e0be07828158448b4416c25014971))
+* **api:** no hide record on a draft (admin 3c-1 review) ([ca1a328](https://github.com/featherweight-design/concert-crawl/commit/ca1a328b5c53e3611ae4f22da11e379b75cb6402))
+* **api:** only a 404 reads a Spotify artist as gone ([24634a1](https://github.com/featherweight-design/concert-crawl/commit/24634a1a1d692351ffd00cd50a244bb753c896ed))
+* **web:** a draft's menu has no Show; draft status on crawl status and health ([b7a412f](https://github.com/featherweight-design/concert-crawl/commit/b7a412f67f7096b39154660c050730bc25d5352f))
+
+
+### Features
+
+* **api:** refresh Spotify photos by stored id, clear when gone, never serve past 30 days ([3cf4aa6](https://github.com/featherweight-design/concert-crawl/commit/3cf4aa62adf01dd5fd40cdd9f817791cdbd083db))
+* **api:** venue drafts, create-only and refused by Show (admin 3c-1) ([9ddaaf1](https://github.com/featherweight-design/concert-crawl/commit/9ddaaf1645c9a21a78ae973767aa6708cecdf4f6))
+
 ## [1.541.1](https://github.com/featherweight-design/concert-crawl/compare/v1.541.0...v1.541.1) (2026-11-22)
 
 
