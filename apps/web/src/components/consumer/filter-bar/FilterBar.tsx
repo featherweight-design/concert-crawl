@@ -717,7 +717,7 @@ export function FilterBar({
                 data-testid="filter-count-line-phone"
                 style={COUNT_LINE_STYLE}
               >
-                {copy.showCountMatch(showCount)}
+                {copy.showCount(showCount)}
               </span>
             )}
             <VibeLegend genres={filterValues.vibe} />
