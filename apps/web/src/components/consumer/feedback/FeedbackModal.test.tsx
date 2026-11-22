@@ -41,15 +41,17 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/theme/ThemeProvider', () => ({
   useTheme: () => ({ theme: 'electric' }),
 }));
-vi.mock('@/components/brand/cc-mark', () => ({
-  CCMark: () => <div data-testid="cc-mark" />,
-}));
 
 import { FeedbackModal } from './FeedbackModal';
 
+const MODAL = CONSUMER_COPY.feedback.modal;
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function fillCategoryAndMessage(message: string, category = 'Bug'): void {
+function fillCategoryAndMessage(
+  message: string,
+  category: string = MODAL.categories.bug,
+): void {
   const categoryBtn = screen.getByRole('button', {
     name: category,
     pressed: false,
@@ -60,7 +62,9 @@ function fillCategoryAndMessage(message: string, category = 'Bug'): void {
 }
 
 async function submitAndWait(): Promise<void> {
-  const sendBtn = screen.getAllByRole('button', { name: /Send →/i })[0];
+  const sendBtn = screen.getAllByRole('button', {
+    name: MODAL.footer.submit,
+  })[0];
   if (!sendBtn) throw new Error('Send button not found');
   await act(async () => {
     fireEvent.click(sendBtn);
@@ -77,7 +81,7 @@ describe('FeedbackModal — render', () => {
   it('renders the dialog with form content when open', () => {
     render(<FeedbackModal open={true} onClose={vi.fn()} />);
     expect(screen.getByRole('dialog')).toBeTruthy();
-    expect(screen.getByText('Holler at ya boi.')).toBeTruthy();
+    expect(screen.getByText(MODAL.form.heading)).toBeTruthy();
   });
 
   it('renders nothing when closed', () => {
@@ -111,7 +115,10 @@ describe('FeedbackModal — error retry preserves user inputs (#829)', () => {
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     expect(textarea.value).toBe('the page wont load');
     // The selected chip retains aria-pressed=true.
-    const bugChip = screen.getByRole('button', { name: 'Bug', pressed: true });
+    const bugChip = screen.getByRole('button', {
+      name: MODAL.categories.bug,
+      pressed: true,
+    });
     expect(bugChip).toBeTruthy();
 
     fetchMock.mockRestore();
@@ -183,7 +190,7 @@ describe('FeedbackModal — Save and come back persists draft (#830)', () => {
     await submitAndWait();
 
     // Success state shows up.
-    expect(screen.getByText('Loud and clear.')).toBeTruthy();
+    expect(screen.getByText(MODAL.success.heading)).toBeTruthy();
     // Draft removed from localStorage.
     expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).toBeNull();
     fetchMock.mockRestore();
@@ -273,7 +280,7 @@ describe('FeedbackModal — screenshot picker', () => {
     render(<FeedbackModal open={true} onClose={vi.fn()} />);
     pick(sizedFile(1_000, 'image/svg+xml'));
     expect(screen.getByRole('alert').textContent).toBe(
-      CONSUMER_COPY.feedback.modal.errors.screenshotWrongType,
+      MODAL.errors.screenshotWrongType,
     );
     expect(readSpy).not.toHaveBeenCalled();
   });
@@ -283,7 +290,7 @@ describe('FeedbackModal — screenshot picker', () => {
     render(<FeedbackModal open={true} onClose={vi.fn()} />);
     pick(sizedFile(MAX_FEEDBACK_SCREENSHOT_BYTES + 1, 'image/png'));
     expect(screen.getByRole('alert').textContent).toBe(
-      CONSUMER_COPY.feedback.modal.errors.screenshotTooBig,
+      MODAL.errors.screenshotTooBig,
     );
     expect(readSpy).not.toHaveBeenCalled();
   });

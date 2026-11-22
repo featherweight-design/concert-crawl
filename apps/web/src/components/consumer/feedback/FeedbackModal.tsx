@@ -5,7 +5,6 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { usePathname } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useTheme } from '@/theme/ThemeProvider';
-import { CCMark } from '@/components/brand/cc-mark';
 import { ModalShell } from '@/components/consumer/modal-shell';
 import { deviceSummary } from '@/components/consumer/error-report/lib/report-context';
 import { clearDraft, loadDraft, saveDraft } from '@/lib/feedback-draft';
@@ -280,72 +279,18 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     user: userEmail,
   };
 
-  const header = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <CCMark size={22} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <HeaderRail state={state} />
-      </div>
-      <button
-        type="button"
-        aria-label={CONSUMER_COPY.feedback.modal.closeAriaLabel}
-        onClick={handleClose}
-        style={{
-          all: 'unset',
-          cursor: 'pointer',
-          width: 30,
-          height: 30,
-          borderRadius: 8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--fg-muted)',
-          border: '1px solid var(--border)',
-        }}
-      >
-        <CloseIcon />
-      </button>
-    </div>
-  );
-
-  const footer = showForm ? (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-      <SecondaryButton onClick={handleClose} fullWidth={false}>
-        {CONSUMER_COPY.feedback.modal.footer.cancel}
-      </SecondaryButton>
-      <div style={{ width: 200 }}>
-        <SubmitButton loading={state === 'loading'} onClick={handleSubmit}>
-          {CONSUMER_COPY.feedback.modal.footer.submit}
-        </SubmitButton>
-      </div>
-    </div>
-  ) : undefined;
-
-  const mobileFooter = showForm ? (
-    <SubmitButton loading={state === 'loading'} onClick={handleSubmit}>
-      {CONSUMER_COPY.feedback.modal.footer.submit}
-    </SubmitButton>
-  ) : undefined;
-
+  // fan-send-feedback and fan-feedback-sent-m draw no header rail and no
+  // pinned footer: the title, the chips, the field and Send sit in one
+  // column, and the sheet fits its content.
   return (
     <ModalShell
       open={open}
       onClose={handleClose}
       ariaLabel={CONSUMER_COPY.feedback.modal.ariaLabel}
-      sheetHeight={state === 'success' || state === 'error' ? 'short' : 'tall'}
-      header={header}
-      footer={footer}
-      mobileFooter={mobileFooter}
+      sheetHeight="fit"
     >
-      <div
-        style={{
-          opacity: state === 'loading' ? 0.5 : 1,
-          pointerEvents: state === 'loading' ? 'none' : 'auto',
-        }}
-      >
-        {state === 'success' && (
-          <SuccessState onClose={handleClose} onReset={reset} />
-        )}
+      <div>
+        {state === 'success' && <SuccessState onDone={handleClose} />}
         {state === 'error' && (
           <ErrorState
             onRetry={returnToForm}
@@ -369,6 +314,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             draftRestored={draftRestored}
             onDiscardDraft={discardDraft}
             fileInputRef={fileInputRef}
+            onSubmit={handleSubmit}
           />
         )}
       </div>
@@ -406,6 +352,7 @@ interface FormProps {
   draftRestored: boolean;
   onDiscardDraft: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onSubmit: () => void;
 }
 
 function FormFields({
@@ -423,50 +370,32 @@ function FormFields({
   draftRestored,
   onDiscardDraft,
   fileInputRef,
+  onSubmit,
 }: FormProps) {
   const disabled = state === 'loading';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {draftRestored && (
         <DraftRestoredBanner onDiscard={onDiscardDraft} disabled={disabled} />
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <h2
-          style={{
-            margin: 0,
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 900,
-            fontSize: 30,
-            letterSpacing: '-0.035em',
-            lineHeight: 1.0,
-            color: 'var(--fg)',
-            textWrap: 'balance',
-          }}
-        >
-          {CONSUMER_COPY.feedback.modal.form.heading}
-        </h2>
-        <p
-          style={{
-            margin: 0,
-            fontFamily: 'var(--font-ui)',
-            fontSize: 14,
-            lineHeight: 1.5,
-            color: 'var(--fg-muted)',
-            letterSpacing: '-0.005em',
-            textWrap: 'pretty',
-          }}
-        >
-          {CONSUMER_COPY.feedback.modal.form.subheading}
-        </p>
-      </div>
+      <h2
+        style={{
+          margin: 0,
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 800,
+          fontSize: 19,
+          color: 'var(--fg)',
+        }}
+      >
+        {CONSUMER_COPY.feedback.modal.form.heading}
+      </h2>
 
       {/* Category chips */}
       <div>
-        <Eyebrow error={catError}>
-          {CONSUMER_COPY.feedback.modal.form.categoryEyebrow}
-        </Eyebrow>
         <div
+          role="group"
+          aria-label={CONSUMER_COPY.feedback.modal.form.categoryGroupLabel}
           style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -486,22 +415,29 @@ function FormFields({
                 style={{
                   all: 'unset',
                   cursor: disabled ? 'default' : 'pointer',
-                  padding: '7px 12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  boxSizing: 'border-box',
+                  height: 34,
+                  padding: '0 13px',
                   borderRadius: 999,
                   fontFamily: 'var(--font-ui)',
-                  fontWeight: 700,
-                  fontSize: 12.5,
-                  letterSpacing: '-0.005em',
-                  background: active ? 'var(--signal)' : 'transparent',
-                  color: active ? 'var(--fg-on-accent)' : 'var(--fg)',
-                  border: `1.5px solid ${
+                  fontWeight: 600,
+                  fontSize: 13,
+                  // The selected chip: a gradient rim on --surface-2.
+                  border: `1px solid ${
                     active
-                      ? 'var(--signal)'
+                      ? 'transparent'
                       : catError
                         ? 'var(--warning)'
-                        : 'var(--border-strong)'
+                        : 'var(--border)'
                   }`,
-                  transition: 'background .12s, color .12s, border-color .12s',
+                  background: active
+                    ? 'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box'
+                    : 'transparent',
+                  color: active ? 'var(--fg)' : 'var(--fg-muted)',
+                  transition:
+                    'color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease)',
                 }}
               >
                 {cat.label}
@@ -518,32 +454,30 @@ function FormFields({
 
       {/* Message */}
       <div>
-        <Eyebrow error={msgError}>
-          {CONSUMER_COPY.feedback.modal.form.messageEyebrow}
-        </Eyebrow>
         <textarea
           className="fb-textarea"
           value={message}
           onChange={(ev) => setMessage(ev.target.value)}
           disabled={disabled}
-          rows={5}
+          aria-label={CONSUMER_COPY.feedback.modal.form.messagePlaceholder}
           placeholder={CONSUMER_COPY.feedback.modal.form.messagePlaceholder}
           style={{
+            display: 'block',
             width: '100%',
+            minHeight: 110,
             boxSizing: 'border-box',
-            padding: '12px 14px',
-            background: 'var(--surface-1)',
+            padding: 12,
+            background: 'var(--bg)',
             color: 'var(--fg)',
             border: `1px solid ${msgError ? 'var(--warning)' : 'var(--border-strong)'}`,
-            borderRadius: 10,
+            borderRadius: 12,
             fontFamily: 'var(--font-ui)',
             fontSize: 14,
             lineHeight: 1.5,
-            letterSpacing: '-0.005em',
             resize: 'vertical',
             outline: 'none',
             opacity: disabled ? 0.6 : 1,
-            transition: 'border-color .12s',
+            transition: 'border-color var(--motion-fast) var(--motion-ease)',
           }}
         />
         {msgError && (
@@ -750,66 +684,97 @@ function FormFields({
       </div>
 
       <ContextDisclosure ctx={ctxData} />
+
+      <p
+        style={{
+          margin: 0,
+          fontFamily: 'var(--font-ui)',
+          fontSize: 12,
+          lineHeight: 1.45,
+          color: 'var(--fg-subtle)',
+        }}
+      >
+        {CONSUMER_COPY.feedback.modal.form.note}
+      </p>
+      <SubmitButton loading={disabled} onClick={onSubmit}>
+        {CONSUMER_COPY.feedback.modal.footer.submit}
+      </SubmitButton>
     </div>
   );
 }
 
 // ── Status states ─────────────────────────────────────────────────────────
 
-function SuccessState({
-  onClose,
-  onReset,
-}: {
-  onClose: () => void;
-  onReset: () => void;
-}) {
+// fan-feedback-sent-m: a check tile, the heading, the note, and Done.
+function SuccessState({ onDone }: { onDone: () => void }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
-        padding: '8px 0',
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div
-        style={{
-          fontSize: 30,
-          fontWeight: 900,
-          letterSpacing: '-0.035em',
-          lineHeight: 1.0,
-          color: 'var(--fg)',
-          textWrap: 'balance',
-        }}
-      >
-        {CONSUMER_COPY.feedback.modal.success.heading}
-      </div>
-      <div
-        style={{
-          fontSize: 14,
-          color: 'var(--fg-muted)',
-          lineHeight: 1.55,
-          letterSpacing: '-0.005em',
-          textWrap: 'pretty',
-        }}
-      >
-        {CONSUMER_COPY.feedback.modal.success.body}
-      </div>
-      <div
+        role="status"
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 6,
-          marginTop: 4,
+          alignItems: 'center',
+          textAlign: 'center',
+          gap: 10,
+          padding: '18px 8px 4px',
         }}
       >
-        <SubmitButton onClick={onClose}>
-          {CONSUMER_COPY.feedback.modal.success.primaryAction}
-        </SubmitButton>
-        <SecondaryButton onClick={onReset}>
-          {CONSUMER_COPY.feedback.modal.success.secondaryAction}
-        </SecondaryButton>
+        <div
+          aria-hidden="true"
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border:
+              '1px solid color-mix(in oklab, var(--success) 40%, transparent)',
+            background: 'color-mix(in oklab, var(--success) 10%, transparent)',
+            color: 'var(--success)',
+          }}
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h2
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 19,
+            fontWeight: 800,
+            color: 'var(--fg)',
+          }}
+        >
+          {CONSUMER_COPY.feedback.modal.success.heading}
+        </h2>
+        <p
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 14,
+            lineHeight: 1.5,
+            maxWidth: 300,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {CONSUMER_COPY.feedback.modal.success.body}
+        </p>
       </div>
+      <SubmitButton onClick={onDone}>
+        {CONSUMER_COPY.feedback.modal.success.primaryAction}
+      </SubmitButton>
     </div>
   );
 }
@@ -1173,71 +1138,6 @@ function HelpText({
   );
 }
 
-function HeaderRail({ state }: { state: ModalState }) {
-  const isError = state === 'error';
-  const isSuccess = state === 'success';
-  const accent = isError
-    ? 'var(--warning)'
-    : isSuccess
-      ? 'var(--signal)'
-      : 'var(--accent)';
-  const eyebrow = isError
-    ? CONSUMER_COPY.feedback.modal.headerRail.error
-    : isSuccess
-      ? CONSUMER_COPY.feedback.modal.headerRail.success
-      : CONSUMER_COPY.feedback.modal.headerRail.form;
-  const code = isError
-    ? CONSUMER_COPY.feedback.modal.headerRail.codeError
-    : isSuccess
-      ? CONSUMER_COPY.feedback.modal.headerRail.codeSuccess
-      : CONSUMER_COPY.feedback.modal.headerRail.codeForm;
-  const pulse = state === 'form' || state === 'loading';
-
-  return (
-    <div
-      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
-    >
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: 6,
-          background: accent,
-          flexShrink: 0,
-          boxShadow: pulse ? `0 0 8px ${accent}` : 'none',
-          animation: pulse ? 'fbPulse 1.6s ease-in-out infinite' : 'none',
-        }}
-      />
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: accent,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          fontWeight: 700,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {eyebrow}
-      </span>
-      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: 'var(--fg-subtle)',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          fontWeight: 700,
-        }}
-      >
-        {code}
-      </span>
-    </div>
-  );
-}
-
 // Only the error state has a rail: the success screen carries its own header.
 function StatusRail() {
   const accent = 'var(--warning)';
@@ -1306,20 +1206,21 @@ function SubmitButton({
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
-        height: 48,
+        gap: 6,
+        height: 46,
         width: '100%',
         boxSizing: 'border-box',
-        background: 'var(--signal)',
+        padding: '0 12px',
+        background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
         color: 'var(--fg-on-accent)',
-        borderRadius: 10,
+        border: '1px solid transparent',
+        borderRadius: 9,
         fontFamily: 'var(--font-ui)',
-        fontWeight: 800,
-        fontSize: 14.5,
-        letterSpacing: '-0.005em',
-        boxShadow: loading ? 'none' : '0 12px 32px -16px var(--signal)',
+        fontWeight: 700,
+        fontSize: 15,
+        whiteSpace: 'nowrap',
         opacity: loading ? 0.55 : 1,
-        transition: 'opacity .12s, transform .12s',
+        transition: 'opacity var(--motion-fast) var(--motion-ease)',
       }}
     >
       {loading && <Spinner />}
@@ -1380,18 +1281,5 @@ function Spinner() {
         animation: 'fbSpin 0.8s linear infinite',
       }}
     />
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
-      <path
-        d="M2 2l8 8M10 2l-8 8"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }

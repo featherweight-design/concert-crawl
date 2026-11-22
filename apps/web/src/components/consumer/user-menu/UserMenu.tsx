@@ -15,6 +15,7 @@ import {
   CornerUpRight,
   Eye,
   QrCode,
+  Reply,
   Tag,
   Users,
 } from 'lucide-react';
@@ -45,6 +46,11 @@ import {
   hasUnseen as hasUnseenNotifications,
 } from '@/lib/queries/use-notifications';
 import { ShareAppSheet } from '@/components/consumer/share-app/lazy';
+import { FeedbackModal } from '@/components/consumer/feedback/FeedbackModal';
+import {
+  hasSeenFeedbackMenu,
+  markFeedbackMenuSeen,
+} from '@/lib/feedback-menu-seen';
 import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 import { GetInCard } from './GetInCard';
 import { AccountMenuContext, useAccountMenu } from './account-menu-context';
@@ -193,6 +199,15 @@ export function AccountMenuProvider({
   const [shareOpen, setShareOpen] = useState(false);
   // Stable: BottomSheet's focus effect depends on onClose.
   const closeShare = useCallback(() => setShareOpen(false), []);
+  // Same reason as the share sheet: the feedback modal outlives the menu.
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
+  // Starts true so the server render and first paint carry no pill; the
+  // effect below reads the device's flag once mounted.
+  const [feedbackMenuSeen, setFeedbackMenuSeen] = useState(true);
+  useEffect(() => {
+    setFeedbackMenuSeen(hasSeenFeedbackMenu());
+  }, []);
   const [liveSubmissionCount, setLiveSubmissionCount] = useState(0);
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null);
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
@@ -448,6 +463,13 @@ export function AccountMenuProvider({
       close();
       setShareOpen(true);
     },
+    showFeedbackNew: !feedbackMenuSeen,
+    onSendFeedback: () => {
+      close();
+      markFeedbackMenuSeen();
+      setFeedbackMenuSeen(true);
+      setFeedbackOpen(true);
+    },
     onSettings: () => {
       // Deliberately not close(): this navigates away, so returning focus to a
       // trigger that is about to unmount would fight the destination page for it.
@@ -508,6 +530,10 @@ export function AccountMenuProvider({
           onClose={closeShare}
           mode={isPublicBrowseEnabled() ? 'open' : 'invite'}
         />
+        {/* Feedback posts to an authed endpoint, so only a member gets it. */}
+        {isSignedIn === true && (
+          <FeedbackModal open={feedbackOpen} onClose={closeFeedback} />
+        )}
       </AccountMenuBodyContext.Provider>
     </AccountMenuContext.Provider>
   );
@@ -631,6 +657,10 @@ interface MenuBodyProps {
   onDismiss: () => void;
   /** Closes the menu and opens the Share Concert Crawl sheet. */
   onShareApp: () => void;
+  /** Closes the menu and opens the feedback modal. */
+  onSendFeedback: () => void;
+  /** The Send feedback row's New pill, until this device first opens it. */
+  showFeedbackNew: boolean;
   liveSubmissionCount: number;
   avatarHandle: string | null;
   avatarColor: AvatarColor | null;
@@ -848,6 +878,8 @@ function MenuBody({
   onSignOut,
   onDismiss,
   onShareApp,
+  onSendFeedback,
+  showFeedbackNew,
   liveSubmissionCount,
   avatarHandle,
   avatarColor,
@@ -1003,12 +1035,24 @@ function MenuBody({
       <MenuRow
         label={CONSUMER_COPY.userMenu.rows.settings}
         onClick={onSettings}
-        last
         leading={
           <RowTile>
             <Users {...TILE_ICON_PROPS} />
           </RowTile>
         }
+      />
+      {/* fan-account-menu-send-feedback: last in App, the reply glyph in
+          signal, and a New pill until the first open. */}
+      <MenuRow
+        label={CONSUMER_COPY.userMenu.rows.sendFeedback}
+        onClick={onSendFeedback}
+        last
+        leading={
+          <RowTile tint="var(--signal)">
+            <Reply {...TILE_ICON_PROPS} />
+          </RowTile>
+        }
+        {...(showFeedbackNew ? { trailing: <NewPill /> } : {})}
       />
 
       {/* Admin section */}
@@ -1211,6 +1255,31 @@ function RowTile({
 }
 
 const TILE_ICON_PROPS = { size: 15, strokeWidth: 1.75 } as const;
+
+function NewPill() {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 22,
+        padding: '0 9px',
+        borderRadius: 999,
+        fontFamily: 'var(--font-ui)',
+        fontSize: 10.5,
+        fontWeight: 600,
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+        color: 'var(--signal)',
+        background: 'color-mix(in oklab, var(--signal) 14%, transparent)',
+        border: '1px solid color-mix(in oklab, var(--signal) 32%, transparent)',
+        flexShrink: 0,
+      }}
+    >
+      {CONSUMER_COPY.userMenu.rows.sendFeedbackNew}
+    </span>
+  );
+}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (

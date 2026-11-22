@@ -362,32 +362,24 @@ export const CONSUMER_COPY = {
   },
 
   // ── Feedback modal ──────────────────────────────────────────────
-  // Shown in the floating feedback tab and modal, accessible from all consumer pages
+  // Opened from the account menu's Send feedback row
   feedback: {
-    edgeTab: {
-      ariaLabel: 'Send feedback',
-      label: 'Tell us · beta',
-    },
     modal: {
       ariaLabel: 'Feedback',
-      closeAriaLabel: 'Close feedback',
       form: {
-        heading: 'Holler at ya boi.',
-        subheading:
-          'Bug, idea, or praise. We read all of it, usually within a couple days.',
-        categoryEyebrow: 'What kind?',
-        messageEyebrow: "What's up?",
-        messagePlaceholder:
-          'What did you see? What did you expect? For bugs, please share anything that helps reproduce it.',
+        heading: 'Send feedback',
+        categoryGroupLabel: 'Kind of feedback',
+        messagePlaceholder: 'What happened?',
+        note: 'We read every note.',
         screenshotEyebrow: 'Screenshot (optional)',
         screenshotAttachLabel: 'Attach a screenshot',
         screenshotAttachSublabel: 'Optional · helps a lot',
         screenshotRemoveAriaLabel: 'Remove screenshot',
       },
       categories: {
-        bug: 'Bug',
-        idea: 'Idea',
-        praise: 'Praise',
+        bug: "Something's broken",
+        idea: 'An idea',
+        praise: 'Something I love',
         other: 'Other',
       },
       errors: {
@@ -398,15 +390,13 @@ export const CONSUMER_COPY = {
         screenshotWrongType: "That file type won't work. Try a PNG or JPEG.",
       },
       footer: {
-        cancel: 'Cancel',
-        submit: 'Send →',
+        submit: 'Send',
         submitting: 'Sending…',
       },
       success: {
-        heading: 'Loud and clear.',
-        body: "Thanks. We'll reach out if we need more.",
-        primaryAction: 'Back to the show',
-        secondaryAction: 'Send another',
+        heading: 'Thanks. We got it.',
+        body: 'We read every note.',
+        primaryAction: 'Done',
       },
       error: {
         heading: 'Signal lost.',
@@ -424,14 +414,6 @@ export const CONSUMER_COPY = {
           device: 'Device',
           user: 'User',
         },
-      },
-      headerRail: {
-        form: 'Beta channel · always open',
-        success: 'Got it · beta channel',
-        error: 'Beta channel · stalled',
-        codeForm: 'OPEN',
-        codeSuccess: 'SENT',
-        codeError: 'ERR',
       },
       statusRail: {
         errorLabel: "Didn't send · beta channel",
@@ -678,6 +660,8 @@ export const CONSUMER_COPY = {
       howItWorks: 'How Concert Crawl works',
       howItWorksHref: '/onboarding?entry=menu',
       settings: 'Settings',
+      sendFeedback: 'Send feedback',
+      sendFeedbackNew: 'New',
       admin: 'Admin',
       signOut: 'Sign out',
       // The Share Concert Crawl sheet's row: last in You when signed in, first
