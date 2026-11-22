@@ -1,3 +1,15 @@
+# [1.545.0](https://github.com/featherweight-design/concert-crawl/compare/v1.544.0...v1.545.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** guide drafts hold back like the crawl and stop at the LLM budget ([30f33a3](https://github.com/featherweight-design/concert-crawl/commit/30f33a3a2a4567164294d5f104cc05610d319fc8))
+
+
+### Features
+
+* **api:** draft the venue guide from its own robots-allowed pages (admin 3d-2) ([0c819a5](https://github.com/featherweight-design/concert-crawl/commit/0c819a5502a1d48aaeb9f965ededac9fcbc34de3))
+
 # [1.544.0](https://github.com/featherweight-design/concert-crawl/compare/v1.543.0...v1.544.0) (2026-11-22)
 
 
