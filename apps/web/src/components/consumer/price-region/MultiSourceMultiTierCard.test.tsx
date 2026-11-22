@@ -103,7 +103,12 @@ describe('MultiSourceMultiTierCard (state #5 — live multi-tier mixed sources)'
       expect(screen.getAllByTestId('price-check-outcome')).toHaveLength(1);
       const line = screen.getByTestId('price-check-outcome');
       const alternate = screen.getByText('Or pay for convenience');
-      // Before the "Or pay for convenience" block, so not under the alternate.
+      const meta = screen.getByText('seen on Venue · face value · no fees');
+      // Between the headline's meta line and the alternate block: under the
+      // big price, not under the alternate.
+      expect(
+        meta.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
       expect(
         line.compareDocumentPosition(alternate) &
           Node.DOCUMENT_POSITION_FOLLOWING,
@@ -120,8 +125,14 @@ describe('MultiSourceMultiTierCard (state #5 — live multi-tier mixed sources)'
       );
       const line = screen.getByTestId('price-check-outcome');
       const alternate = screen.getByText('Or pay for convenience');
+      const altPrice = screen.getByText('$35');
+      // Under the alternate's own row.
       expect(
         alternate.compareDocumentPosition(line) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        altPrice.compareDocumentPosition(line) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     });

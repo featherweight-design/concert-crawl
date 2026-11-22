@@ -1,0 +1,23 @@
+{
+  "feature": "Price check outcome lines on the multi-source card: under the headline price and under the resale alternate",
+  "note": "Board: cold-review 08-tier-check-outcome, README row 12. Needs CC_VENDORS_EVENT_ID: an event whose GA tier has a box-office headline plus a resale alternate (the multi-source card), a settled check inside the 14-day window on each of the two prices, and a second tier with a settled update.",
+  "widths": [
+    { "label": "xs", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "multi-source-check-outcome",
+      "label": "Event page: settled check lines under the headline and the resale alternate",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/events/${CC_VENDORS_EVENT_ID}",
+          "wait": "[data-testid=\"price-check-outcome\"]",
+          "settle": 5000
+        }
+      ]
+    }
+  ]
+}
