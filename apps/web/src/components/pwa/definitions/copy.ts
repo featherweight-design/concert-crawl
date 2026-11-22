@@ -71,8 +71,8 @@ export const POST_WATCH_COPY = {
 
 export const OFFLINE_COPY = {
   pillLabel: 'Offline · cached OK',
-  // Under 360px the pill drops the suffix (addendum 2, 15-320px/offline-pill-320).
-  // The phone bar holds to 1023, so the 640 and 900 header boards no longer apply.
+  // Under 1024px the pill drops the suffix (addendum 3 rule 1; addendum 2's
+  // 360px breakpoint is retired).
   pillLabelShort: 'Offline',
   pillAria: "You're offline. Cached shows are still available.",
   fallback: {
