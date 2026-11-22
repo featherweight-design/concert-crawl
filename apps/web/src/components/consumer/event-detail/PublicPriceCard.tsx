@@ -3,7 +3,7 @@
 // PublicPriceCard — the read-only price card on the public event page
 // (B+ addendum 10, boards/01-public-resale). The trust pill names the kind of
 // price and the Sold by line names its seller, in the item 38 and 40
-// language of the signed-in card. The other sellers sit under Also.
+// language of the signed-in card. Every other listed price sits under Also.
 //
 // Read-only on purpose: it is not EventDetailPriceBlock, which wires price
 // submission behind `useAuth`, and it does not carry the Where it's sold
@@ -18,8 +18,7 @@ import { resolveAlternateKind } from '@/components/consumer/lib/price-source-kin
 import { displayVendor } from '@/components/consumer/vendor-display';
 import { withResaleWord } from '@/components/consumer/where-its-sold/trust-line';
 import { sellerName } from '@/components/consumer/where-its-sold/WhereItsSoldCard';
-import type { WhereItsSoldRow } from '@/components/consumer/where-its-sold/rows';
-import type { PublicPrice } from './public-price';
+import type { ListedPrice, PublicPrice } from './public-price';
 
 const copy = CONSUMER_COPY.eventDetail;
 const publicCopy = CONSUMER_COPY.publicEvent;
@@ -93,7 +92,7 @@ function CardShell({
   );
 }
 
-function AlsoRow({ row }: { row: WhereItsSoldRow }) {
+function AlsoRow({ row }: { row: ListedPrice }) {
   const resale =
     resolveAlternateKind(row.vendor, row.sourceCategory) === 'resale';
   return (
@@ -269,7 +268,7 @@ export function PublicPriceCard({ price }: { price: PublicPrice }) {
           </p>
           <ul className="m-0 list-none p-0" style={{ marginTop: 6 }}>
             {also.map((row) => (
-              <AlsoRow key={row.id} row={row} />
+              <AlsoRow key={row.submissionId} row={row} />
             ))}
           </ul>
           {moreCount > 0 && (
