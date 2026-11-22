@@ -1,3 +1,10 @@
+# [1.540.0](https://github.com/featherweight-design/concert-crawl/compare/v1.539.2...v1.540.0) (2026-11-22)
+
+
+### Features
+
+* **web:** caption every Passport venue tile, put cred on the Submitted prices row ([23e7695](https://github.com/featherweight-design/concert-crawl/commit/23e7695d0ce6c237ef601d3b898a56b2fe287dae))
+
 ## [1.539.2](https://github.com/featherweight-design/concert-crawl/compare/v1.539.1...v1.539.2) (2026-11-22)
 
 
