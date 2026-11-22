@@ -389,8 +389,8 @@ const buildShape = (
 
 // Attribute values in double or single quotes, as drawing tools write both.
 const TAG =
-  /<(\/?)([a-zA-Z]+)((?:\s+[a-zA-Z][a-zA-Z:-]*\s*=\s*(?:"[^"<>]*"|'[^'<>]*'))*)\s*(\/?)>/y;
-const ATTRIBUTE = /([a-zA-Z][a-zA-Z:-]*)\s*=\s*(?:"([^"<>]*)"|'([^'<>]*)')/g;
+  /<(\/?)([a-zA-Z]+)((?:\s+[a-zA-Z][a-zA-Z0-9:-]*\s*=\s*(?:"[^"<>]*"|'[^'<>]*'))*)\s*(\/?)>/y;
+const ATTRIBUTE = /([a-zA-Z][a-zA-Z0-9:-]*)\s*=\s*(?:"([^"<>]*)"|'([^'<>]*)')/g;
 
 const parseAttributes = (raw: string): Map<string, string> => {
   const attrs = new Map<string, string>();
