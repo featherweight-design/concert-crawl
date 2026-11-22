@@ -23,6 +23,9 @@ const sub = (id: string, submittedAt: string): UserSubmissionItem => ({
   corroborationCount: 1,
   submittedAt,
   status: 'confirmed',
+  imageUrl: null,
+  artistPhotoUrl: null,
+  genre: null,
 });
 
 describe('formatAgo', () => {

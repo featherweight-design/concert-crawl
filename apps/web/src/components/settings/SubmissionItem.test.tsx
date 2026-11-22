@@ -15,8 +15,20 @@ vi.mock('next/link', () => ({
     href: string;
   }) => <a href={href}>{children}</a>,
 }));
-vi.mock('@/components/consumer/venue-glyph', () => ({
-  VenueTile: () => null,
+// The slot itself is Panel's to test; here it reports the chain it was handed.
+vi.mock('@/components/consumer/image-slot', () => ({
+  Panel: (props: {
+    artworkUrl: string | null;
+    photoUrl: string | null;
+    name: string;
+  }) => (
+    <span
+      data-testid="submission-art"
+      data-artwork={props.artworkUrl ?? ''}
+      data-photo={props.photoUrl ?? ''}
+      data-name={props.name}
+    />
+  ),
 }));
 
 const reasons = CONSUMER_COPY.settings.submissionClosedReason;
@@ -34,7 +46,41 @@ const row = (overrides: Partial<UserSubmissionItem>): UserSubmissionItem => ({
   corroborationCount: 1,
   submittedAt: '2026-10-20T12:00:00.000Z',
   status: 'confirmed',
+  imageUrl: null,
+  artistPhotoUrl: null,
+  genre: null,
   ...overrides,
+});
+
+describe('SubmissionItem art', () => {
+  // `more-s-d_submissions`: a 44px photo of the show, ringed in its genre.
+  it('hands the event artwork, then the portrait, to the slot', () => {
+    render(
+      <SubmissionItem
+        submission={row({
+          imageUrl: 'https://img.example/poster.jpg',
+          artistPhotoUrl: 'https://img.example/portrait.jpg',
+        })}
+      />,
+    );
+
+    const art = screen.getByTestId('submission-art');
+    expect(art.dataset.artwork).toBe('https://img.example/poster.jpg');
+    expect(art.dataset.photo).toBe('https://img.example/portrait.jpg');
+    expect(art.dataset.name).toBe('Gimme Gimme Disco');
+  });
+
+  it('rings the art in the lead genre, and neutral with none', () => {
+    render(<SubmissionItem submission={row({ genre: 'indie rock' })} />);
+    const ringed = screen.getByTestId('submission-art-ring');
+    expect(ringed.style.boxShadow).toContain('var(--genre-');
+    cleanup();
+
+    render(<SubmissionItem submission={row({ genre: null })} />);
+    expect(screen.getByTestId('submission-art-ring').style.boxShadow).toBe(
+      '0 0 0 1.25px var(--border-strong)',
+    );
+  });
 });
 
 afterEach(cleanup);

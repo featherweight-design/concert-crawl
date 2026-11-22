@@ -1782,6 +1782,11 @@ export interface UserSubmissionItem {
   status: SubmissionDisplayStatus;
   /** Why a `closed` row closed (addendum-4 §6). Absent on every other status. */
   closedReason?: SubmissionClosedReason;
+  // The row's 44px art: the event's artwork, then the headliner's portrait,
+  // the chain Watching and Concerts use. Null when neither exists.
+  imageUrl: string | null;
+  artistPhotoUrl: string | null;
+  genre: string | null; // the lead genre, drives the art's ring
 }
 
 // Handle availability check response
