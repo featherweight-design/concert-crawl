@@ -1,6 +1,5 @@
 import { SentryTierTag } from '@/components/auth/SentryTierTag';
 import { PendingErrorReportFlush } from '@/components/consumer/error-report/PendingErrorReportFlush';
-import { FeedbackEdgeTabGate } from '@/components/consumer/feedback';
 import { ScrollResetOnNavigate } from '@/components/consumer/scroll-reset/ScrollResetOnNavigate';
 import { OnboardingThemeFlush } from '@/components/auth/OnboardingThemeFlush';
 import { FeatureDropPillGate } from '@/components/consumer/release-notes/FeatureDropPillGate';
@@ -28,7 +27,6 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
           Next skips its own scroll reset when the new page's top is still on
           screen, so a part-scrolled page landed the next one part way down. */}
       <ScrollResetOnNavigate />
-      <FeedbackEdgeTabGate />
       <FeatureDropPillGate />
       <OnboardingThemeFlush />
       <FollowNudgeGate />

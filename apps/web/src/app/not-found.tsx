@@ -7,7 +7,7 @@
 // the public routes too), so the same pieces draw the signed-out variant when
 // there is no session. Left out on purpose: the install slot, the launch
 // animation and the post-signup seam, and the (protected) layout's gates (the
-// feedback edge tab, the Feature drop pill, the follow nudge, the onboarding
+// Feature drop pill, the follow nudge, the onboarding
 // theme flush, the Sentry tier tag). All of those belong to a page the app
 // opened, not to a path that does not exist.
 import { AppHeader } from '@/components/consumer/app-header';
