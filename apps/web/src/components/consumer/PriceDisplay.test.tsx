@@ -340,3 +340,54 @@ describe('FeeBreakdown fees toggle (price-states-age-trust)', () => {
     expect(screen.queryByTestId('fees-toggle')).toBeNull();
   });
 });
+
+describe('PriceDisplay footer source link', () => {
+  beforeEach(() => {
+    stubMatchMedia(false);
+  });
+  afterEach(cleanup);
+
+  const renderWith = (ticketUrl: string | null) =>
+    render(
+      <PriceDisplay
+        priceMin="35.00"
+        priceMax={null}
+        priceSource="ticketmaster"
+        venueName="Larimer Lounge"
+        ticketUrl={ticketUrl}
+        eventId="evt_1"
+        artist="Test Artist"
+        date="2026-09-01T02:00:00.000Z"
+      />,
+    );
+
+  it('links the source name to an http(s) ticket URL', () => {
+    renderWith('https://example.com/tickets');
+    const footer = screen.getByTestId('price-card-footer');
+    expect(
+      footer.querySelector('a[href="https://example.com/tickets"]'),
+    ).not.toBeNull();
+  });
+
+  it('renders the source name as plain text with no ticket URL (a past show)', () => {
+    renderWith(null);
+    const footer = screen.getByTestId('price-card-footer');
+    expect(footer.textContent).toContain('Ticketmaster');
+    expect(
+      Array.from(footer.querySelectorAll('a')).some((link) =>
+        link.textContent?.includes('Ticketmaster'),
+      ),
+    ).toBe(false);
+  });
+
+  it('never links a non-http ticket URL', () => {
+    renderWith('javascript:alert(1)');
+    const footer = screen.getByTestId('price-card-footer');
+    expect(footer.textContent).toContain('Ticketmaster');
+    expect(
+      Array.from(footer.querySelectorAll('a')).some((link) =>
+        link.textContent?.includes('Ticketmaster'),
+      ),
+    ).toBe(false);
+  });
+});

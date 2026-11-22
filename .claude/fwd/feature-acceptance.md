@@ -29,6 +29,7 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
   - The copy goes when the worktree is pruned.
 
   `CLAUDE.md`'s "What Claude must not touch" carries the matching exception.
+
 - **Parallel stacks (one per lane).** The local env files stay untouched; a second stack takes its ports from the
   process env on the command line. `dotenv` never overrides an existing variable, so the command line wins. `cp` both
   apps' local env files from the main checkout into the worktree (never open them), run `pnpm install`, and build the
@@ -97,21 +98,22 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
 
 ## Environment
 
-| Variable                                        | Use                                             |
-| ----------------------------------------------- | ----------------------------------------------- |
-| `CONTACT_SHEET_BASE`                            | Overrides `baseUrl` (kit); never production     |
-| `E2E_AUDIT_USER_*`, `E2E_AUDIT_ADMIN_*`         | The sign-in account (names only)                |
-| `CONTACT_SHEET_ROLE`                            | `admin` signs in as the admin audit user        |
-| `CC_EVENT_ID`                                   | An upcoming event with prices                   |
-| `CC_DISPUTED_EVENT_ID`, `CC_PENDING_EVENT_ID`   | A1: a disputed price; a pending price banner    |
-| `CC_CANCELLED_EVENT_ID`                         | A2, A4: a cancelled show the audit user watches |
-| `CC_POSTPONED_EVENT_ID`, `CC_SOLD_OUT_EVENT_ID` | A4, A3                                          |
-| `CC_REMOVED_EVENT_ID`                           | A5: a show the stale sweep removed              |
-| `CC_ARTIST_SLUG`                                | B10: an artist with upcoming shows              |
-| `CC_ARTIST_SLUG_NO_SHOWS`                       | B10: an artist with no upcoming shows           |
-| `CC_CREW_ID`                                    | B14: a crew the audit user is in                |
-| `CC_CREW_INVITE_TOKEN`                          | B14: a live invite token for that crew          |
-| `CC_PAST_ARTIST_NAME`                           | Edit Concerts PR4: an artist with 2+ past shows |
+| Variable                                        | Use                                                         |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `CONTACT_SHEET_BASE`                            | Overrides `baseUrl` (kit); never production                 |
+| `E2E_AUDIT_USER_*`, `E2E_AUDIT_ADMIN_*`         | The sign-in account (names only)                            |
+| `CONTACT_SHEET_ROLE`                            | `admin` signs in as the admin audit user                    |
+| `CC_EVENT_ID`                                   | An upcoming event with prices                               |
+| `CC_DISPUTED_EVENT_ID`, `CC_PENDING_EVENT_ID`   | A1: a disputed price; a pending price banner                |
+| `CC_CANCELLED_EVENT_ID`                         | A2, A4: a cancelled show the audit user watches             |
+| `CC_POSTPONED_EVENT_ID`, `CC_SOLD_OUT_EVENT_ID` | A4, A3                                                      |
+| `CC_REMOVED_EVENT_ID`                           | A5: a show the stale sweep removed                          |
+| `CC_ARTIST_SLUG`                                | B10: an artist with upcoming shows                          |
+| `CC_ARTIST_SLUG_NO_SHOWS`                       | B10: an artist with no upcoming shows                       |
+| `CC_CREW_ID`                                    | B14: a crew the audit user is in                            |
+| `CC_CREW_INVITE_TOKEN`                          | B14: a live invite token for that crew                      |
+| `CC_PAST_ARTIST_NAME`                           | Edit Concerts PR4: an artist with 2+ past shows             |
+| `CC_PAST_EVENT_ID`                              | Past shows: a past event with a live price and a ticket URL |
 
 The kit expands `${VAR}` in `goto`, `route`, `clickRole` names, `fill` text, `waitDialog` and cookie values, and fails
 a row whose variable is unset. **It redacts every expanded value**, and every variable whose name marks a credential

@@ -138,3 +138,12 @@ describe('ProvenanceCTA', () => {
     });
   });
 });
+
+describe('ProvenanceCTA with an unsafe href', () => {
+  it('renders nothing for a non-http URL', () => {
+    const { container } = render(
+      <ProvenanceCTA kind="primary" vendor="Etix" href="javascript:alert(1)" />,
+    );
+    expect(container.querySelector('a')).toBeNull();
+  });
+});

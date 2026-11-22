@@ -13,6 +13,7 @@ import {
 } from '@/components/consumer/lib/price-source-kind';
 import { relTimeAgo } from '@/components/consumer/lib/staleness';
 import { StaleStamp } from '@/components/consumer/StaleStamp';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { StillAccurateAction } from '@/components/consumer/StillAccurateAction';
 import {
   PRICE_EYEBROW,
@@ -1099,7 +1100,9 @@ export function PriceDisplay({
   );
   const sourceName = resolveSourceName(priceSource, venueName, priceVendor);
   const effectiveObservedAt = observedAt ?? priceObservedAt ?? null;
-  const sourceUrl = ticketUrl;
+  // ticketUrl is crawler-derived and untrusted: only an http(s) URL becomes a
+  // link, so a stored javascript:/data: value renders as plain text.
+  const sourceUrl = isSafeHttpUrl(ticketUrl) ? ticketUrl : null;
 
   // No-price state → community-handoff card
   if (face === null) {
@@ -1123,7 +1126,7 @@ export function PriceDisplay({
     fees: ticketFees ?? null,
     sourceKind,
     source: sourceName,
-    sourceUrl: ticketUrl,
+    sourceUrl,
     observedAt: effectiveObservedAt,
     openedAt: ticketPriceOpenedAt ?? null,
     range14d: range14d ?? null,
