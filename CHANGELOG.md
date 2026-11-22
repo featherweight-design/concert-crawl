@@ -1,3 +1,20 @@
+# [1.530.0](https://github.com/featherweight-design/concert-crawl/compare/v1.529.1...v1.530.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** drop a submission row that is not an object ([94ae7ec](https://github.com/featherweight-design/concert-crawl/commit/94ae7ec38bed7e2c154c3bcd570abe4ad465d323))
+* **web:** invite venue count reads checked every night ([d7b2263](https://github.com/featherweight-design/concert-crawl/commit/d7b22630a91970f0117b56741e4777c8fb856a0b))
+* **web:** reuse the more-count formatter, add event title block co-bill tests ([8d4d7d9](https://github.com/featherweight-design/concert-crawl/commit/8d4d7d987808f8c0cc5371fe809f56e97308d2db))
+* **web:** safeParse submission art, test the art fields end to end ([5e04377](https://github.com/featherweight-design/concert-crawl/commit/5e043778af5fc831e86e844cf0b88b2bcd18fbee))
+
+
+### Features
+
+* **web:** co-billed event heading and role-tagged bill rows ([3ebefbc](https://github.com/featherweight-design/concert-crawl/commit/3ebefbcc0cc2db1f1a44bae6d709032123a3a133))
+* **web:** step the co-billed heading 34/30/26px so two names always show in full ([2ed2a9d](https://github.com/featherweight-design/concert-crawl/commit/2ed2a9d822bdaa30d099df782c8d8dce749bd3f5))
+* **web:** submitted prices row art, a photo ringed in its genre ([870b39d](https://github.com/featherweight-design/concert-crawl/commit/870b39de7a87497161103dfc319c49349afcf805))
+
 ## [1.529.1](https://github.com/featherweight-design/concert-crawl/compare/v1.529.0...v1.529.1) (2026-11-22)
 
 
