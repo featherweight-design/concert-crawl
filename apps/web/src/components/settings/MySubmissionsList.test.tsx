@@ -15,8 +15,8 @@ vi.mock('next/link', () => ({
     href: string;
   }) => <a href={href}>{children}</a>,
 }));
-vi.mock('@/components/consumer/venue-glyph', () => ({
-  VenueTile: () => null,
+vi.mock('@/components/consumer/image-slot', () => ({
+  Panel: () => null,
 }));
 
 const copy = CONSUMER_COPY.settings;
@@ -34,6 +34,9 @@ const row: UserSubmissionItem = {
   corroborationCount: 1,
   submittedAt: '2026-10-20T12:00:00.000Z',
   status: 'confirmed',
+  imageUrl: null,
+  artistPhotoUrl: null,
+  genre: null,
 };
 
 afterEach(cleanup);

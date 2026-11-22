@@ -23,6 +23,7 @@ import {
   userCred,
   priceSubmissions,
   events,
+  artists,
   subscriptions,
   venues,
 } from '@concert-crawl/db';
@@ -36,7 +37,10 @@ import type {
   HandleAvailabilityResponse,
   Tier,
 } from '@concert-crawl/types';
-import { displayHeadliner } from '../lib/event-billing.js';
+import {
+  displayHeadliner,
+  portraitCanonicalName,
+} from '../lib/event-billing.js';
 import { apiLogger } from '../lib/logger.js';
 import { deleteUserData } from '../lib/user-data.js';
 import { getStripeClient, isStripeConfigured } from '../lib/stripe.js';
@@ -383,6 +387,9 @@ usersRouter.get('/me/submissions', async (ctx) => {
     status: string | null;
     archivedReason: string | null;
     unusedCheck: boolean;
+    imageUrl: string | null;
+    artistPhotoUrl: string | null;
+    genre: string[] | null;
   };
 
   const rows: SubmissionRow[] = await db
@@ -401,10 +408,19 @@ usersRouter.get('/me/submissions', async (ctx) => {
       status: priceSubmissions.status,
       archivedReason: priceSubmissions.archivedReason,
       unusedCheck: unusedCheckOf(),
+      // The row's art: the event's artwork, then the headliner's portrait,
+      // ringed in the lead genre (the boards' 44px thumbnail, B+ rule 2).
+      imageUrl: events.imageUrl,
+      artistPhotoUrl: artists.photoUrl,
+      genre: events.genre,
     })
     .from(priceSubmissions)
     .leftJoin(events, eq(priceSubmissions.eventId, events.id))
     .leftJoin(venues, eq(events.venueId, venues.id))
+    // Headliner portrait, on the same terms as /v1/watching: `artists` is a
+    // projection keyed on canonicalName with no foreign key, and the unique
+    // index on that column keeps this join cardinality-preserving.
+    .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .where(eq(priceSubmissions.userId, auth.userId))
     .orderBy(desc(priceSubmissions.createdAt));
 
@@ -437,6 +453,9 @@ usersRouter.get('/me/submissions', async (ctx) => {
       submittedAt: row.submittedAt.toISOString(),
       status: submissionDisplayStatus(stored),
       ...(closedReason === undefined ? {} : { closedReason }),
+      imageUrl: row.imageUrl ?? null,
+      artistPhotoUrl: row.artistPhotoUrl ?? null,
+      genre: row.genre?.[0] ?? null,
     };
   });
 

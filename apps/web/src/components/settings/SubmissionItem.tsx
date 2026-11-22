@@ -1,5 +1,8 @@
 import Link from 'next/link';
-import { VenueTile } from '@/components/consumer/venue-glyph';
+import { Panel } from '@/components/consumer/image-slot';
+import { slotRadiusFor } from '@/components/consumer/image-slot/lib/slot-metrics';
+import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
+import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { StatusPill } from './StatusPill';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { formatAgo, formatDate, priceLabelOf } from './submission-format';
@@ -28,13 +31,29 @@ export function SubmissionItem({
       className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
       style={isLast ? undefined : { borderBottom: '1px solid var(--border)' }}
     >
-      {/* The venue's tile, none has an image. A submission whose event has no
-          venue row has no slug and wears VenueTile's name-keyed fallback. */}
-      <VenueTile
-        slug={submission.venueSlug ?? ''}
-        name={submission.venue}
-        size={44}
-      />
+      {/* The show's art, ringed in its lead genre (B+ rule 2): the event's
+          artwork, then the headliner's portrait, then Panel's name-keyed mark. */}
+      <span
+        data-testid="submission-art-ring"
+        className="block shrink-0 overflow-hidden"
+        style={{
+          width: 44,
+          height: 44,
+          // The same radius the slot inside draws, so ring and art agree.
+          borderRadius: slotRadiusFor(44),
+          boxShadow: genreRing(
+            genreColor(submission.genre) ?? NEUTRAL_GENRE_COLOR,
+          ),
+        }}
+      >
+        <Panel
+          surface="event"
+          name={submission.artist}
+          artworkUrl={submission.imageUrl}
+          photoUrl={submission.artistPhotoUrl}
+          size={44}
+        />
+      </span>
 
       {/* Middle: who, where, and how the price is doing */}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
