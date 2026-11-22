@@ -1,0 +1,44 @@
+{
+  "feature": "2a \u00b7 Vibe legend: each chosen Vibe's dot and name beside the count",
+  "note": "Queue item 2a. Board: design/design_handoff_bplus_redesign/screens/04-genre-and-vibe/bp-vibe-browse_vibe_m (count row: N SHOWS then each pick's dot and name). The legend sentence (COPY.md line 12) is not drawn; it is sr-only.",
+  "shares": {
+    "binding": "VibeLegend",
+    "module": "apps/web/src/components/consumer/filter-bar"
+  },
+  "rows": [
+    {
+      "id": "vibe-two",
+      "label": "/events: two Vibes",
+      "view": "apps/web/src/components/consumer/filter-bar/VibeLegend.tsx",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=indie&filterVibe=rock",
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"vibe-legend\"]"
+        }
+      ]
+    },
+    {
+      "id": "vibe-one",
+      "label": "/events: one Vibe",
+      "view": "apps/web/src/components/consumer/filter-bar/VibeLegend.tsx",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=folk",
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"vibe-legend\"]"
+        }
+      ]
+    }
+  ]
+}
