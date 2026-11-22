@@ -1,3 +1,16 @@
+# [1.526.0](https://github.com/featherweight-design/concert-crawl/compare/v1.525.0...v1.526.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** drop the dead px-2 on the past row ([e0de056](https://github.com/featherweight-design/concert-crawl/commit/e0de056842a78c30a2df6e07d53bbdfecf1a0346))
+* **web:** spotlight price reads the cheapest tier, not ticketPriceMin ([47574d7](https://github.com/featherweight-design/concert-crawl/commit/47574d72ed37b63ca8622e7b4cbe54740cff51c5))
+
+
+### Features
+
+* **web:** a past show on the artist page opens its event ([9458dae](https://github.com/featherweight-design/concert-crawl/commit/9458dae528c8e45ac11f776844c3ce7c0d410aa4))
+
 # [1.525.0](https://github.com/featherweight-design/concert-crawl/compare/v1.524.1...v1.525.0) (2026-11-22)
 
 
