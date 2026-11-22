@@ -47,6 +47,7 @@ import {
 } from '../lib/price-aggregation/index.js';
 import { parsePrice } from '../lib/price.js';
 import { MT_TIME_ZONE } from '../lib/time.js';
+import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 const dateLabelFormatter = new Intl.DateTimeFormat('en-US', {
   weekday: 'short',
@@ -103,7 +104,7 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
       today: sql<string>`${todayMt()}::text`,
       eventId: events.id,
       artist: displayHeadliner(),
-      artistPhotoUrl: artists.photoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl,
       date: events.date,
       showTime: events.showTime,
       ticketPriceMin: events.ticketPriceMin,

@@ -88,6 +88,7 @@ import {
   eventFilterConditions,
   eventFilterShape,
 } from '../lib/event-filters.js';
+import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 // The schema's keys are pinned to EVENTS_QUERY_KEYS by `satisfies`, so a key
 // added on one side without the other fails to compile.
@@ -268,7 +269,7 @@ eventsRouter.get(
         sourceUrl: events.sourceUrl,
         createdAt: events.createdAt,
         updatedAt: events.updatedAt,
-        artistPhotoUrl: artists.photoUrl,
+        artistPhotoUrl: servableArtistPhotoUrl,
         venue: {
           id: venues.id,
           name: venues.name,
@@ -516,7 +517,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       // needs to know whether the chip has anywhere to point. Stripped from the
       // response below in favour of the boolean.
       venueGuidePublishedAt: venues.guidePublishedAt,
-      artistPhotoUrl: artists.photoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl,
       venue: {
         id: venues.id,
         name: venues.name,
@@ -1266,7 +1267,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
       sourceUrl: events.sourceUrl,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt,
-      artistPhotoUrl: artists.photoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl,
       venue: {
         id: venues.id,
         name: venues.name,

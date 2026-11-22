@@ -54,6 +54,7 @@ import {
   tallySubmissionCounts,
 } from '@concert-crawl/types';
 import { avatarColumns, avatarOf } from '../lib/avatar.js';
+import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 export const usersRouter = new Hono();
 
@@ -411,7 +412,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
       // The row's art: the event's artwork, then the headliner's portrait,
       // ringed in the lead genre (the boards' 44px thumbnail, B+ rule 2).
       imageUrl: events.imageUrl,
-      artistPhotoUrl: artists.photoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl,
       genre: events.genre,
     })
     .from(priceSubmissions)

@@ -8,14 +8,15 @@
 //   1. IDENTITY  — rows with matchStatus 'unmatched', oldest first, capped at
 //                  MATCH_BATCH_SIZE. Each gets a confidence-gated match
 //                  (lib/artist-match.ts) and its verdict written back.
-//   2. PHOTO     — already-matched rows whose photoUrl is older than
-//                  PHOTO_REFETCH_DAYS. Spotify image URLs can expire; the
-//                  UI's onError swap is the safety net, this job is the
-//                  repair. A refresh never downgrades an established
-//                  identity: if the re-search no longer resolves, the row
-//                  keeps its spotifyArtistId and matchStatus (an auto-matched
-//                  row may take its same pick's fresh photo) and only
-//                  matchCheckedAt moves.
+//   2. PHOTO     — matched rows whose photoUrl is older than
+//                  PHOTO_REFETCH_DAYS, looked up by their stored Spotify id
+//                  (never re-searched by name). Spotify's terms allow only
+//                  temporary caching, so when Spotify no longer returns the
+//                  artist, or returns it with no image, the photo and its
+//                  clock are cleared and counted in `photosCleared`; the row
+//                  keeps its identity and the public readers fall back to the
+//                  next image. Readers also refuse any photo older than 30
+//                  days (lib/artist-photo.ts), so a down job cannot extend it.
 //   3. RETRY     — 'no_match' rows last checked more than NO_MATCH_RETRY_DAYS
 //                  ago, and 'ambiguous' rows past AMBIGUOUS_RECHECK_DAYS, in
 //                  both cases only while not yet exhausted. Without this they
@@ -52,7 +53,7 @@
 
 import { pathToFileURL } from 'node:url';
 import * as Sentry from '@sentry/hono/node';
-import { and, eq, isNotNull, lt, or, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import { artists, auditLog, db } from '@concert-crawl/db';
 import {
   AUTO_MATCH_ACTOR,
@@ -114,10 +115,11 @@ export interface MatchArtistsSummary {
   noMatch: number;
   photosRefreshed: number;
   /**
-   * Matched rows whose re-search did not resolve: the identity is kept and
-   * only the candidate snapshot moved.
+   * Photos dropped because Spotify no longer returns the stored artist id, or
+   * returns it with no image (Spotify's terms allow only temporary caching).
+   * The row keeps its identity and falls back to the next image in the order.
    */
-  refreshesKept: number;
+  photosCleared: number;
   /**
    * Rows a human changed while Spotify was searching, so the job's write was
    * refused by its `updatedAt` guard and the human's answer stands.
@@ -154,7 +156,7 @@ export const runMatchArtists = async (
     autoMatched: 0,
     noMatch: 0,
     photosRefreshed: 0,
-    refreshesKept: 0,
+    photosCleared: 0,
     superseded: 0,
     failures: 0,
     abortedReason: null,
@@ -234,7 +236,13 @@ export const runMatchArtists = async (
         and(
           eq(artists.matchStatus, 'matched'),
           isNotNull(artists.photoUrl),
-          lt(artists.photoFetchedAt, staleBefore),
+          isNotNull(artists.spotifyArtistId),
+          // A photo with no fetch stamp has no age to trust, so it is refreshed
+          // too (every writer stamps it; this repairs a stray row).
+          or(
+            isNull(artists.photoFetchedAt),
+            lt(artists.photoFetchedAt, staleBefore),
+          ),
         ),
       ),
     )
@@ -245,10 +253,47 @@ export const runMatchArtists = async (
     .orderBy(sql`${artists.matchCheckedAt} asc nulls first`, artists.createdAt)
     .limit(batchSize);
 
+  // The photo pass: look the stored Spotify id up directly rather than
+  // re-searching by name, so a photo can never outlive its source. One call per
+  // row, the same spend as the name search it replaces. Guarded on `updatedAt`
+  // so a human change mid-refresh is never overwritten. Identity is never
+  // touched: only the photo and its clock move.
+  const refreshPhoto = async (row: {
+    id: string;
+    spotifyArtistId: string;
+    updatedAt: Date;
+  }): Promise<void> => {
+    const lookup = await client.fetchArtistPhoto(row.spotifyArtistId);
+    const checkedAt = now();
+    const imageUrl = lookup.found ? lookup.imageUrl : null;
+    const written = await db
+      .update(artists)
+      .set({
+        photoUrl: imageUrl,
+        photoFetchedAt: imageUrl === null ? null : checkedAt,
+        matchCheckedAt: checkedAt,
+        updatedAt: checkedAt,
+      })
+      .where(and(eq(artists.id, row.id), unchangedSince(row.updatedAt)))
+      .returning({ id: artists.id });
+    if (written.length === 0) {
+      supersede(row.id);
+    } else if (imageUrl === null) {
+      summary.photosCleared += 1;
+    } else {
+      summary.photosRefreshed += 1;
+    }
+  };
+
   for (const row of rows) {
     summary.considered += 1;
-    const isRefresh = row.matchStatus === 'matched';
     try {
+      // The selection only returns matched rows that carry an id.
+      if (row.matchStatus === 'matched' && row.spotifyArtistId !== null) {
+        await refreshPhoto({ ...row, spotifyArtistId: row.spotifyArtistId });
+        continue;
+      }
+
       const result = await matchArtist(
         row.canonicalName,
         { search: client.searchArtists },
@@ -259,50 +304,6 @@ export const runMatchArtists = async (
       // a "cached at" that reads later than its own "checked at" is confusing
       // for no reason.
       const checkedAt = now();
-
-      if (isRefresh && result.status !== 'matched') {
-        // Don't downgrade an established identity on a flaky re-search. The
-        // snapshot is still written: it means "what the last search returned",
-        // and holding a matched row's old list back would be the one exception
-        // the picker has no way to know about.
-        //
-        // An auto-matched row lands here on every refresh, because its name is
-        // ambiguous by definition. When Spotify's top result is still the same
-        // act, its photo is refreshed from it and the refresh clock advances;
-        // otherwise only the snapshot moves, so a stale photo is never stamped
-        // fresh. Guarded on `updatedAt`, auto-matched or not, so a human
-        // change mid-refresh (a repoint, a demotion, a not-an-artist ruling)
-        // is never overwritten and never receives the old pick's photo.
-        const repick =
-          row.autoMatchedAt === null
-            ? null
-            : pickBestEffortCandidate(result.candidates, row);
-        const samePick =
-          repick !== null &&
-          'picked' in repick &&
-          repick.picked.id === row.spotifyArtistId;
-        const refreshed = await db
-          .update(artists)
-          .set({
-            ...(samePick
-              ? { photoUrl: repick.picked.imageUrl, photoFetchedAt: checkedAt }
-              : {}),
-            matchCheckedAt: checkedAt,
-            spotifyCandidates: result.candidates,
-            spotifyCandidatesFetchedAt: checkedAt,
-            updatedAt: checkedAt,
-          })
-          .where(and(eq(artists.id, row.id), unchangedSince(row.updatedAt)))
-          .returning({ id: artists.id });
-        if (refreshed.length === 0) {
-          supersede(row.id);
-        } else if (samePick) {
-          summary.photosRefreshed += 1;
-        } else {
-          summary.refreshesKept += 1;
-        }
-        continue;
-      }
 
       if (result.status === 'matched') {
         const written = await db
@@ -332,11 +333,7 @@ export const runMatchArtists = async (
           supersede(row.id);
           continue;
         }
-        if (isRefresh) {
-          summary.photosRefreshed += 1;
-        } else {
-          summary.matched += 1;
-        }
+        summary.matched += 1;
         continue;
       }
 

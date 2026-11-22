@@ -33,6 +33,7 @@ import type { CrewMemberPreview, CrewShow } from '@concert-crawl/types';
 import { displayHeadliner, portraitCanonicalName } from './event-billing.js';
 import { MT_TIME_ZONE } from './time.js';
 import { avatarColumns, avatarOf } from './avatar.js';
+import { servableArtistPhotoUrl } from './artist-photo.js';
 
 /** Addendum 6 item 41: "a cancelled show leaves after a day". */
 const CANCELLED_STAYS_SINCE = sql`now() - interval '1 day'`;
@@ -78,7 +79,7 @@ const selectAttendanceRows = async (
       title: events.title,
       artist: displayHeadliner(),
       imageUrl: events.imageUrl,
-      artistPhotoUrl: artists.photoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl,
       venue: venues.name,
       venueSlug: venues.slug,
       userId: userEvents.userId,

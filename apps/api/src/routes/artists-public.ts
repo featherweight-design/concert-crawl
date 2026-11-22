@@ -48,6 +48,7 @@ import {
 } from '../lib/price-aggregation/index.js';
 import { parsePrice } from '../lib/price.js';
 import { todayInDenver } from '../lib/time.js';
+import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 export const artistsPublicRouter = new Hono();
 
@@ -223,7 +224,7 @@ artistsPublicRouter.get(
         name: artists.name,
         slug: artists.slug,
         canonicalName: artists.canonicalName,
-        photoUrl: artists.photoUrl,
+        photoUrl: servableArtistPhotoUrl,
         upcomingShowCount: upcomingCount,
       })
       .from(artists)
@@ -249,6 +250,7 @@ artistsPublicRouter.get(
         artists.slug,
         artists.canonicalName,
         artists.photoUrl,
+        artists.photoFetchedAt,
       )
       .orderBy(desc(upcomingCount), asc(soonestDate), asc(artists.name))
       .limit(limit);
@@ -325,7 +327,7 @@ artistsPublicRouter.get(
         slug: artists.slug,
         canonicalName: artists.canonicalName,
         spotifyArtistId: artists.spotifyArtistId,
-        photoUrl: artists.photoUrl,
+        photoUrl: servableArtistPhotoUrl,
         spotifyCandidates: artists.spotifyCandidates,
       })
       .from(artists)
