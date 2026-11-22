@@ -69,6 +69,12 @@ describe('multi-select labels (addendum 2, item 6)', () => {
     expect(getChipLabel('vibe', ['electronic'], venues)).toBe('Electronic');
   });
 
+  it('reads all 16 Vibes as "All vibes", and a stale value never counts', () => {
+    expect(getChipLabel('vibe', [...VIBE_ORDER], venues)).toBe('All vibes');
+    const fifteenPlusStale = [...VIBE_ORDER.slice(1), 'not-a-vibe'];
+    expect(getChipLabel('vibe', fifteenPlusStale, venues)).toBe('16 vibes');
+  });
+
   it('names a genre bucket in sentence case, keeping R&B an initialism', () => {
     expect(genreLabel('hip-hop')).toBe('Hip-hop');
     expect(genreLabel('r&b')).toBe('R&B');
