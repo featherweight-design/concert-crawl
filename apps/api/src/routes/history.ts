@@ -144,7 +144,8 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
 
   // The cheapest tier, as on Watching and the event page, not
   // events.ticketPriceMin: that scalar holds whatever price was written last,
-  // so a night's spend could disagree with the price the show page showed.
+  // so a night's price could disagree with the one the show page showed. It is
+  // the show's lowest price, not what this user paid: nothing records that.
   const priceByTierByEventId = await loadPriceByTierByEventId(
     rows.map((row) => row.eventId),
   );
