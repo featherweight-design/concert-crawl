@@ -28,6 +28,13 @@ export type WhereItsSoldEvent = Pick<
   | 'counterSubmission'
 >;
 
+/**
+ * The price card or tier row that shows a tier's price carries
+ * `data-price-tier`; a row's › scrolls to the one for its own tier.
+ */
+export const priceTierSelector = (tier: string): string =>
+  `[data-price-tier="${tier.replace(/["\\]/g, '\\$&')}"]`;
+
 /** The in-page anchor a row's › points at. */
 export const priceAnchorId = (submissionId: string): string =>
   `price-${submissionId}`;

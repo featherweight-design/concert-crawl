@@ -5,11 +5,13 @@
 // tile, the seller in Inter bold, a "GA · all-in" / "face value · no fees"
 // line, the price right-aligned in bold and a ›.
 //
-// The › scrolls to the price card holding the prices (an in-page anchor named
-// by the submission id, placed at the top of the price slot). There is no
+// The › scrolls to the price card holding that row's tier (the card or "Other
+// tiers" row marked `data-price-tier`); where none is marked, to an in-page
+// anchor named by the submission id at the top of the price slot. There is no
 // per-seller URL to send anyone to, so the row never links out (Design
 // item 34).
 
+import type { MouseEvent } from 'react';
 import {
   CONSUMER_COPY,
   VENDOR_PICKER_COPY,
@@ -25,12 +27,29 @@ import { resolveAlternateKind } from '@/components/consumer/lib/price-source-kin
 import { displayVendor } from '@/components/consumer/vendor-display';
 import {
   priceAnchorId,
+  priceTierSelector,
   type WhereItsSoldRow,
 } from '@/components/consumer/where-its-sold/rows';
 
 const copy = CONSUMER_COPY.whereItsSold;
 
 const EYEBROW_ID = 'where-its-sold-eyebrow';
+
+// Scroll to the card (or "Other tiers" row) that shows this row's tier. With
+// none on the page the link falls through to the row's own anchor.
+function scrollToTierCard(
+  event: MouseEvent<HTMLAnchorElement>,
+  row: WhereItsSoldRow,
+): void {
+  const target = document.querySelector(priceTierSelector(row.tier));
+  if (target === null) return;
+  event.preventDefault();
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  target.scrollIntoView?.({
+    behavior: calm ? 'auto' : 'smooth',
+    block: 'start',
+  });
+}
 
 /** The row's seller name. `Other` reads as the picker's "Somewhere else". */
 export const sellerName = (vendor: string): string =>
@@ -122,6 +141,7 @@ export function WhereItsSoldCard({ rows }: { rows: WhereItsSoldRow[] }) {
             >
               <a
                 href={`#${priceAnchorId(row.id)}`}
+                onClick={(event) => scrollToTierCard(event, row)}
                 data-price-id={row.id}
                 className="flex min-w-0 items-center"
                 style={{

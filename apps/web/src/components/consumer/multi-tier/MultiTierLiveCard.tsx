@@ -85,6 +85,8 @@ export const MultiTierLiveCard = ({
 
   return (
     <div
+      data-price-tier={headline.tier}
+      className="scroll-mt-24"
       style={{
         borderRadius: '12px',
         background: 'var(--surface-1)',
