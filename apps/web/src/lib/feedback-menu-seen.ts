@@ -8,7 +8,8 @@ const KEY = 'cc.feedback-menu-seen';
 export function hasSeenFeedbackMenu(): boolean {
   try {
     return window.localStorage.getItem(KEY) === '1';
-  } catch {
+  } catch (err) {
+    console.warn('feedback-menu-seen: storage read blocked', err);
     // Storage blocked (privacy mode, sandboxed frame): show the pill.
     return false;
   }
@@ -17,7 +18,8 @@ export function hasSeenFeedbackMenu(): boolean {
 export function markFeedbackMenuSeen(): void {
   try {
     window.localStorage.setItem(KEY, '1');
-  } catch {
+  } catch (err) {
+    console.warn('feedback-menu-seen: storage write blocked', err);
     // Storage blocked: the pill comes back next visit, which is harmless.
   }
 }

@@ -425,7 +425,7 @@ export const CONSUMER_COPY = {
       // above Try again. The draft is saved the moment the send fails.
       sendFailed: {
         title: "Signal lost. It didn't send.",
-        body: "We saved your note on this phone. Try again now, or close this and it'll be here next time.",
+        body: "We saved your note on this device. Try again now, or close this and it'll be here next time.",
         primaryAction: 'Try again',
       },
       contextDisclosure: {

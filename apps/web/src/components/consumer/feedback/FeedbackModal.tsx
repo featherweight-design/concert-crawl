@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useThemeName } from '@/theme/ThemeProvider';
 import { ModalShell } from '@/components/consumer/modal-shell';
 import { deviceSummary } from '@/components/consumer/error-report/lib/report-context';
 import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
@@ -32,6 +32,8 @@ const MODAL = CONSUMER_COPY.feedback.modal;
 // fb-sending-m: while a send is in flight the kinds, the field, the attach
 // row and What we send lock and dim to 55%.
 const DIMMED = 0.55;
+// How long a send may take before it counts as failed and the draft is saved.
+const SEND_TIMEOUT_MS = 30_000;
 
 const CATEGORIES: { key: FeedbackCategory; label: string }[] = [
   { key: 'bug', label: MODAL.categories.bug },
@@ -48,9 +50,10 @@ interface FeedbackModalProps {
   onClose: () => void;
 }
 
-export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
+export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   const pathname = usePathname();
-  const { theme } = useTheme();
+  // Never throws outside the provider: the modal mounts in the account menu.
+  const theme = useThemeName();
   const { getToken } = useAuth();
   const { user } = useUser();
   const isMobile = useIsMobileViewport();
@@ -82,16 +85,24 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   // Validation moves focus to the first missing field.
   const firstChipRef = useRef<HTMLButtonElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // Holds the pending reset() timer scheduled by handleClose so a quick
+  // Holds the pending reset() timer scheduled by closeSheet so a quick
   // reopen can cancel it before it fires and wipes a freshly-restored
   // draft (#834 Copilot R3 — race condition: timer fires 300ms after
   // close, user reopens within that window, useEffect hydrates draft,
   // then timer fires and resets state).
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Bumped on every close. A send captures it, so a send the fan closed
-  // the sheet on (A2: × and Esc still close while sending) finishes
-  // quietly instead of landing its result on a later, fresh sheet.
-  const sessionRef = useRef(0);
+  // A2: × and Esc still close while sending, and the send carries on. While
+  // it is in flight the sheet keeps its sending state (a reopen shows it, so
+  // nothing can send twice). If it lands with the sheet closed, the sheet
+  // resets; a failure has already saved the draft for the next open.
+  const sendingRef = useRef(false);
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+  // Bumped by every reset, so a screenshot still being read when the sheet
+  // resets is not attached to the fresh one.
+  const readGenRef = useRef(0);
 
   const clearFileInput = useCallback(() => {
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -115,6 +126,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     const justOpened = open && !prevOpenRef.current;
     prevOpenRef.current = open;
     if (!justOpened) return;
+    if (sendingRef.current) return;
     // Cancel any pending close-reset timer so it can't fire mid-hydration
     // and wipe the draft we just restored (#834 Copilot R3).
     cancelPendingReset();
@@ -131,7 +143,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setState('form');
   }, [open, cancelPendingReset]);
 
-  const handleScreenshotChange = useCallback(
+  const pickScreenshot = useCallback(
     (file: File | null) => {
       setScreenshotError(null);
       if (!file) {
@@ -152,8 +164,13 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         return;
       }
       const reader = new FileReader();
+      const gen = readGenRef.current;
+      reader.onerror = () => {
+        console.warn('Feedback screenshot could not be read', reader.error);
+      };
       reader.onload = () => {
         const { result } = reader;
+        if (gen !== readGenRef.current) return;
         if (typeof result === 'string') {
           setScreenshot({ name: file.name, dataUrl: result });
         }
@@ -164,6 +181,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   );
 
   const reset = useCallback(() => {
+    readGenRef.current += 1;
     setState('form');
     setCategory(null);
     setMessage('');
@@ -176,15 +194,16 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     clearFileInput();
   }, [clearFileInput]);
 
-  const handleClose = useCallback(() => {
+  const closeSheet = useCallback(() => {
     // Closing a failed send keeps the draft (fb-send-failed-m), edits
     // made since the failure included.
     if (state === 'error') saveDraft({ category, message, screenshot });
-    sessionRef.current += 1;
     onClose();
     // Replace any pending reset so a rapid close/reopen/close sequence
     // can't queue multiple resets that fire after a draft hydration.
     cancelPendingReset();
+    // A send in flight resets the sheet itself when it lands.
+    if (sendingRef.current) return;
     resetTimerRef.current = setTimeout(() => {
       resetTimerRef.current = null;
       reset();
@@ -213,7 +232,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   // Send is never disabled: a press with something missing marks each
   // missing field in place and moves focus to the first one.
-  const handleSubmit = useCallback(async () => {
+  const submitFeedback = useCallback(async () => {
     const catInvalid = !category;
     const msgInvalid = !message.trim();
     if (catInvalid || msgInvalid) {
@@ -222,26 +241,29 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       (catInvalid ? firstChipRef : textareaRef).current?.focus();
       return;
     }
+    if (sendingRef.current) return;
 
+    sendingRef.current = true;
     setState('loading');
     setDraftSaveFailed(false);
-    const session = sessionRef.current;
+
+    // The sheet was closed while sending: start it fresh for the next open.
+    const landedClosed = () => {
+      sendingRef.current = false;
+      if (openRef.current) return false;
+      reset();
+      return true;
+    };
 
     // A4: the draft is written the moment a send fails, so the banner is
     // true as soon as it shows. If the fan already closed the sheet, the
     // draft is restored on the next open.
     const failSend = () => {
       const saved = saveDraft({ category, message, screenshot });
-      if (sessionRef.current !== session) return;
+      if (landedClosed()) return;
       setDraftSaveFailed(!saved);
       setState('error');
     };
-
-    const token = await getToken();
-    if (!token) {
-      failSend();
-      return;
-    }
 
     // The same coarse summary a problem report sends, so admin's Device
     // column reads one way and never stores a fingerprintable agent.
@@ -251,8 +273,12 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         : 'unknown';
 
     try {
+      const token = await getToken();
+      if (!token) throw new Error('no session token');
       const res = await fetch(`${API_URL}/v1/feedback`, {
         method: 'POST',
+        // A hung request would hold "Sending…" forever; give up and save.
+        signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -273,21 +299,21 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       // Successful submission invalidates any saved draft. A send the fan
       // closed on gets no toast (A2).
       clearDraft();
-      if (sessionRef.current !== session) return;
+      if (landedClosed()) return;
       setDraftRestored(false);
       setState('success');
     } catch (err) {
       console.error('Feedback submission failed', err);
       failSend();
     }
-  }, [category, getToken, message, pathname, screenshot, theme]);
+  }, [category, getToken, message, pathname, reset, screenshot, theme]);
 
-  const handleCategoryChange = useCallback((cat: FeedbackCategory) => {
+  const pickCategory = useCallback((cat: FeedbackCategory) => {
     setCategory(cat);
     setCatError(false);
   }, []);
 
-  const handleMessageChange = useCallback((msg: string) => {
+  const editMessage = useCallback((msg: string) => {
     setMessage(msg);
     if (msg.trim()) setMsgError(false);
   }, []);
@@ -314,42 +340,51 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   return (
     <ModalShell
       open={open}
-      onClose={handleClose}
+      onClose={closeSheet}
       ariaLabel={MODAL.ariaLabel}
       sheetHeight="fit"
       desktopWidth={success ? 440 : 520}
     >
       <div style={{ position: 'relative' }}>
-        {!isMobile && <CloseButton onClick={handleClose} />}
+        {isMobile ? (
+          // The phone sheet draws no ×: it closes by drag or the scrim. A
+          // keyboard or screen-reader user still needs a control, so it
+          // shows only while focused.
+          <span className="sr-only focus-within:not-sr-only">
+            <CloseButton onClick={closeSheet} />
+          </span>
+        ) : (
+          <CloseButton onClick={closeSheet} />
+        )}
         {success ? (
-          <SuccessState onDone={handleClose} />
+          <SuccessState onDone={closeSheet} />
         ) : (
           <FormFields
             state={state}
             gap={isMobile ? 12 : 14}
             category={category}
-            setCategory={handleCategoryChange}
+            setCategory={pickCategory}
             message={message}
-            setMessage={handleMessageChange}
+            setMessage={editMessage}
             catError={catError}
             msgError={msgError}
             ctxData={ctxData}
             screenshot={screenshot}
             screenshotError={screenshotError}
-            onScreenshotChange={handleScreenshotChange}
+            onScreenshotChange={pickScreenshot}
             draftRestored={draftRestored}
             onDiscardDraft={discardDraft}
             draftSaveFailed={draftSaveFailed}
             fileInputRef={fileInputRef}
             firstChipRef={firstChipRef}
             textareaRef={textareaRef}
-            onSubmit={handleSubmit}
+            onSubmit={submitFeedback}
           />
         )}
       </div>
     </ModalShell>
   );
-}
+};
 
 // ── Form ──────────────────────────────────────────────────────────────────
 
@@ -1089,7 +1124,8 @@ function DraftRestoredBanner({
           let visible = true;
           try {
             visible = target.matches(':focus-visible');
-          } catch {
+          } catch (err) {
+            console.warn('matches(:focus-visible) unsupported', err);
             visible = true;
           }
           setFocusVisible(visible);
@@ -1105,7 +1141,7 @@ function DraftRestoredBanner({
           color: 'var(--signal)',
           borderRadius: 4,
           boxShadow: focusVisible ? '0 0 0 2px var(--signal)' : 'none',
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled ? DIMMED : 1,
         }}
       >
         {MODAL.draftBanner.discardLabel}
@@ -1177,7 +1213,7 @@ function SubmitButton({
         fontWeight: 700,
         fontSize: 15,
         whiteSpace: 'nowrap',
-        opacity: loading ? 0.55 : 1,
+        opacity: loading ? DIMMED : 1,
         transition: 'opacity var(--motion-fast) var(--motion-ease)',
       }}
     >

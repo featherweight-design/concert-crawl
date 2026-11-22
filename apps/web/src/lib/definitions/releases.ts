@@ -56,12 +56,12 @@ export interface Release {
 export const RELEASES: Release[] = [
   {
     version: 'v0.74.0-beta',
-    date: 'Nov 22, 2026',
+    date: 'Nov 21, 2026',
     headline: null,
     items: [
       {
         kind: 'changed',
-        text: 'Send feedback now lives in your account menu, with a screenshot you attach yourself and a note that waits on your phone if the send fails.',
+        text: 'Send feedback now lives in your account menu, with a screenshot you attach yourself and a note that waits on this device if a send fails.',
       },
     ],
   },

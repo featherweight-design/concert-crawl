@@ -1,0 +1,148 @@
+{
+  "feature": "P47-20 PR A: feedback modal from the account menu",
+  "note": "Boards: design/design_handoff_admin_redesign/feedback-modal-states (PR #757, head 103ba548) with its README follow-ups A1-A4. Fan audit user (no CONTACT_SHEET_ROLE). The send-failed row answers POST /v1/feedback with a 500, so nothing is written. Walked by hand: sending (the dim at 55%, × still closes), success (needs a real write), a failed local save.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 720,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1280,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "menu",
+      "label": "Account menu: the Send feedback row",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "settle": 300
+        },
+        {
+          "wait": "text=Send feedback",
+          "settle": 300
+        }
+      ]
+    },
+    {
+      "id": "form",
+      "label": "Feedback modal: the empty form",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "settle": 300
+        },
+        {
+          "clickRole": "button",
+          "name": "Send feedback",
+          "settle": 500,
+          "waitDialog": "^Feedback$"
+        }
+      ]
+    },
+    {
+      "id": "form-bug",
+      "label": "Feedback modal: Something's broken picked, note typed",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "settle": 300
+        },
+        {
+          "clickRole": "button",
+          "name": "Send feedback",
+          "settle": 500,
+          "waitDialog": "^Feedback$"
+        },
+        {
+          "clickRole": "button",
+          "name": "Something's broken",
+          "settle": 200
+        },
+        {
+          "fill": "textarea",
+          "text": "The Load more button jumped me back to the top."
+        }
+      ]
+    },
+    {
+      "id": "send-failed",
+      "label": "Feedback modal: send failed, draft saved, Try again",
+      "steps": [
+        {
+          "route": "**/v1/feedback",
+          "status": 500,
+          "body": {
+            "error": "boom"
+          }
+        },
+        {
+          "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "settle": 300
+        },
+        {
+          "clickRole": "button",
+          "name": "Send feedback",
+          "settle": 500,
+          "waitDialog": "^Feedback$"
+        },
+        {
+          "clickRole": "button",
+          "name": "Something's broken",
+          "settle": 200
+        },
+        {
+          "fill": "textarea",
+          "text": "The Load more button jumped me back to the top."
+        },
+        {
+          "clickRole": "button",
+          "name": "^Send$"
+        },
+        {
+          "wait": "text=Signal lost",
+          "settle": 400
+        }
+      ]
+    }
+  ]
+}
