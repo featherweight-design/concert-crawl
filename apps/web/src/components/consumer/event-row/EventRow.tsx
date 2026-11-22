@@ -20,6 +20,9 @@ import {
   resolveRowStatus,
   rowEdgeStatus,
 } from './lib/row-status';
+import { FollowedDisc } from '../followed-mark/FollowedDisc';
+import { followedOnBill } from '@/lib/followed-on-bill';
+import { useFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 import { StatusChip, statusColor } from '@/components/consumer/StatusChip';
 import { orderGenres, vibeBucketMembers } from './lib/order-genres';
 import { cardedEdge } from './lib/carded-edge';
@@ -61,6 +64,15 @@ export const EventRow = ({
   const rowRef = useRef<HTMLDivElement>(null);
   const [narrow, setNarrow] = useState(false);
   const config = SURFACES[surface];
+  // Which acts on this bill the viewer follows. Concerts and the Passport
+  // never render an EventRow, and the artist page's own rows are not on this
+  // surface list, so the mark is confined to the rows the design names.
+  const followedNames = followedOnBill(
+    useFollowedArtistNames(),
+    show.headliner,
+    show.supports,
+  );
+  const followsHeadliner = followedNames.includes(show.headliner);
 
   // Measured, not passed in. A caller-supplied `narrow` flag is what clipped
   // the 390 Watching list, which never passed one.
@@ -179,6 +191,14 @@ export const EventRow = ({
               className="h-full w-full"
             />
           </div>
+          {followedNames.length > 0 && (
+            <FollowedDisc
+              size={16}
+              ring={2.5}
+              className="absolute"
+              style={{ right: -3, bottom: -3 }}
+            />
+          )}
           {show.isWatching && (
             // Watching state is not a row object — it reports, it does not act.
             // --accent is the watching colour; the Following chip must never
@@ -209,6 +229,7 @@ export const EventRow = ({
           >
             <RowTitleLine
               headliner={show.headliner}
+              followed={followsHeadliner}
               tourName={show.tourName}
               showsTour={config.showsTour}
               promotesTour={config.promotesTour}
@@ -257,8 +278,14 @@ export const EventRow = ({
                   surface="card"
                   narrow={narrow}
                   maxInline={2}
+                  followedNames={followedNames}
                 />
               </div>
+            )}
+            {followedNames.length > 0 && (
+              <span className="sr-only" data-testid="row-followed-label">
+                {copy.a11y.youFollow(followedNames)}
+              </span>
             )}
           </Link>
           <WhenWhere

@@ -62,6 +62,8 @@ const WIDTH_EPSILON = 1;
 
 interface RowTitleLineProps {
   headliner: string;
+  /** The viewer follows the headliner: the name takes --signal (addendum-8 §6). */
+  followed?: boolean;
   tourName: string | null;
   /** Rule 1 — the surface decides whether a tour name is worth line 1's room. */
   showsTour: boolean;
@@ -114,13 +116,19 @@ const TITLE_BESIDE_CHIP: CSSProperties = {
   maxWidth: 'max-content',
 };
 
-const titleColorClass = (struck: boolean, hoverTint: boolean): string => {
+const titleColorClass = (
+  struck: boolean,
+  hoverTint: boolean,
+  followed: boolean,
+): string => {
   if (struck) return 'text-fg-muted';
+  if (followed) return 'text-signal';
   return hoverTint ? 'text-fg group-hover/eventtitle:text-signal' : 'text-fg';
 };
 
 export const RowTitleLine = ({
   headliner,
+  followed = false,
   tourName,
   showsTour,
   promotesTour = false,
@@ -251,7 +259,7 @@ export const RowTitleLine = ({
         data-struck={struck || undefined}
         // A struck title stays muted on hover: brightening it to the signal
         // color would make a cancelled show read as a live one.
-        className={`min-w-0 truncate transition-colors ${titleColorClass(struck, hoverTint)}`}
+        className={`min-w-0 truncate transition-colors ${titleColorClass(struck, hoverTint, followed && promoted === null)}`}
         // The strike is a decoration on the title box only, so the measuring
         // copy below keeps the same advance widths and the fit never moves.
         style={{

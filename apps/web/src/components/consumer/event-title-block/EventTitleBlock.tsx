@@ -21,6 +21,8 @@ const RAMP: Record<Surface, { head: number; tour: number; gap: number }> = {
 };
 
 interface EventTitleBlockProps {
+  /** Acts on this bill the viewer follows, as printed: each takes --signal. */
+  followedNames?: readonly string[];
   headliner: string;
   supportingArtists: string[] | null;
   tourName: string | null;
@@ -96,6 +98,7 @@ export const EventTitleBlock = ({
   centered = false,
   supportClassName,
   beforePill,
+  followedNames = [],
 }: EventTitleBlockProps): React.JSX.Element => {
   const ramp = RAMP[surface];
   // `detail` is the surface that renders on the event stage's wash (B8), the
@@ -145,6 +148,7 @@ export const EventTitleBlock = ({
       dim={dim}
       slugs={supportingArtistSlugs}
       linkArtists={linkArtists}
+      followedNames={followedNames}
     />
   );
 
@@ -200,7 +204,7 @@ export const EventTitleBlock = ({
         // stays one line via `truncate` (which sets overflow-hidden + ellipsis +
         // whitespace-nowrap). Applying `truncate` on `detail` too would clip a
         // multi-line title, so it is scoped to the hero only.
-        className={`m-0 min-w-0 ${dim ? 'text-fg-muted' : 'text-fg transition-colors group-hover/eventtitle:text-signal'} ${surface === 'detail' ? 'whitespace-normal' : 'truncate'}`}
+        className={`m-0 min-w-0 ${dim ? 'text-fg-muted' : followedNames.includes(headliner) ? 'text-signal' : 'text-fg transition-colors group-hover/eventtitle:text-signal'} ${surface === 'detail' ? 'whitespace-normal' : 'truncate'}`}
         // B+ draws a cancelled show's title struck and dimmed
         // (`more-st-ev_canc_m`, `more-st-rows_board`). Postponed is not struck,
         // and nor is a No longer listed show: nothing says it is off. The
