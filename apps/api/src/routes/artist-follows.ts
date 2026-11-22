@@ -241,7 +241,7 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
       .select({
         canonicalName: artists.canonicalName,
         slug: artists.slug,
-        photoUrl: servableArtistPhotoUrl,
+        photoUrl: servableArtistPhotoUrl(),
       })
       .from(artists)
       // A hidden row (#1342) has no page to route to, so it contributes no

@@ -39,7 +39,7 @@ searchRouter.get('/popular', async (ctx) => {
       artist: displayHeadliner(),
       date: events.date,
       imageUrl: events.imageUrl,
-      artistPhotoUrl: servableArtistPhotoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl(),
       ticketPriceMin: events.ticketPriceMin,
       // The row's genre ring and chip (B19). Grouped by the primary key, so
       // it needs no GROUP BY entry of its own.
@@ -169,7 +169,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       name: artists.name,
       slug: artists.slug,
       canonicalName: artists.canonicalName,
-      photoUrl: servableArtistPhotoUrl,
+      photoUrl: servableArtistPhotoUrl(),
     })
     .from(artists)
     .where(

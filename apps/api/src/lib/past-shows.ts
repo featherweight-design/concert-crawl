@@ -195,7 +195,7 @@ export const loadPastShows = async ({
     .select({
       eventId: events.id,
       artist: displayHeadliner(),
-      artistPhotoUrl: servableArtistPhotoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl(),
       venueName: venues.name,
       venueSlug: venues.slug,
       date: events.date,
