@@ -96,10 +96,10 @@ describe('ENTITLEMENTS_MATRIX', () => {
     },
   );
 
-  it('covers exactly 8 features × 6 plans', () => {
-    expect(PREMIUM_FEATURES).toHaveLength(8);
+  it('covers exactly 7 features × 6 plans', () => {
+    expect(PREMIUM_FEATURES).toHaveLength(7);
     expect(USER_PLANS).toHaveLength(6);
-    expect(Object.keys(ENTITLEMENTS_MATRIX)).toHaveLength(8);
+    expect(Object.keys(ENTITLEMENTS_MATRIX)).toHaveLength(7);
     for (const feature of PREMIUM_FEATURES) {
       expect(Object.keys(ENTITLEMENTS_MATRIX[feature])).toHaveLength(6);
     }
