@@ -543,7 +543,7 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
   // ---- Feature flag ladder (named person: delete; history subject: anonymize) ----
   await testDb
     .insert(featureFlags)
-    .values({ key: 'crews', enabled: false, updatedBy: 'seed-admin' })
+    .values({ key: 'crews', stage: 'off', updatedBy: 'seed-admin' })
     .onConflictDoNothing();
   await testDb
     .insert(featureFlagUsers)

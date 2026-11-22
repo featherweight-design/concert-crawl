@@ -26,7 +26,6 @@ export type PremiumFeature =
   | 'calendar-export'
   | 'following'
   | 'alerts'
-  | 'spotify-sync'
   | 'price-drop-alerts'
   | 'crews';
 
@@ -39,7 +38,6 @@ export const PREMIUM_FEATURES: readonly PremiumFeature[] = [
   'calendar-export',
   'following',
   'alerts',
-  'spotify-sync',
   'price-drop-alerts',
   'crews',
 ];
@@ -71,6 +69,7 @@ export const USER_PLANS: readonly UserPlan[] = [
 //     passes (following, concert-history, calendar-export, crews), and the
 //     spotify-sync routes and gate were removed with the sync. Changing a row
 //     here no longer changes what the API accepts.
+//   - 2026-11-21 (P47-17 contract): the retired spotify-sync row is removed.
 // Single point of truth for both the boolean entitlement and the locked-tap
 // UX routing — edits here must update the test table in lockstep.
 export const ENTITLEMENTS_MATRIX: Record<
@@ -113,14 +112,6 @@ export const ENTITLEMENTS_MATRIX: Record<
     'logged-out': 'hidden',
     free: 'visible-active',
     supporter: 'visible-active',
-    premium: 'visible-active',
-    founder: 'visible-active',
-    gifted: 'visible-active',
-  },
-  'spotify-sync': {
-    'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
-    supporter: 'paywall-on-tap',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',

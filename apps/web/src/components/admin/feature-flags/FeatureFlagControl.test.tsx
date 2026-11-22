@@ -52,7 +52,6 @@ const flag = (overrides: Partial<AdminFeatureFlag> = {}): AdminFeatureFlag => ({
   key: 'crews',
   label: 'Crews',
   description: 'The Crews tab and crew pages.',
-  enabled: false,
   updatedAt: null,
   updatedBy: null,
   stage: 'off',
@@ -94,20 +93,6 @@ describe('FeatureFlagControl (the ladder)', () => {
         rung === 'beta' ? 'true' : 'false',
       );
     }
-  });
-
-  it('reads the old boolean when a payload has no stage', () => {
-    // An older payload: the ladder fields are simply absent.
-    const legacy: AdminFeatureFlag = {
-      key: 'crews',
-      label: 'Crews',
-      description: 'The Crews tab and crew pages.',
-      enabled: true,
-      updatedAt: null,
-      updatedBy: null,
-    };
-    render(<FeatureFlagControl initial={[legacy]} />);
-    expect(step('everyone')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('labels the timestamp on a flag that has been changed', () => {
@@ -397,8 +382,8 @@ describe('FeatureFlagControl Mark verified (staging)', () => {
         initial={[
           flag({ stage: 'me' }),
           flag({
-            key: 'spotify-sync',
-            label: 'Spotify sync',
+            key: 'release-notes',
+            label: 'Release notes',
             stage: 'me',
             verifiedAt: '2026-09-07T00:00:00.000Z',
           }),
@@ -411,7 +396,7 @@ describe('FeatureFlagControl Mark verified (staging)', () => {
     }
     fireEvent.click(acceptButton());
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByTestId('flag-undo-verified-spotify-sync'));
+    fireEvent.click(screen.getByTestId('flag-undo-verified-release-notes'));
     expect(del).not.toHaveBeenCalled();
     finish(flag({ stage: 'me', verifiedAt: '2026-09-07T00:00:00.000Z' }));
   });

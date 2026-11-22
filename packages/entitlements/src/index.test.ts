@@ -15,7 +15,7 @@ import {
 // amendment, the #763 §7 (E8) spotify-sync override, and the 2026-07-29
 // Supporter-unlocks amendment (concert-history + calendar-export), and the
 // 2026-08-05 crews decision (Supporter unlocks crews), and the 2026-10-29
-// going-free ruling (free and supporter unlock everything but spotify-sync) — so several
+// going-free ruling (free and supporter unlock everything; spotify-sync since removed) — so several
 // rows are no longer verbatim #781. A matrix edit fails these tests until this
 // table is updated in lockstep — that friction is intentional (eng infra spec
 // Part 1).
@@ -59,14 +59,6 @@ const EXPECTED_CELLS: Record<
     'logged-out': 'hidden',
     free: 'visible-active',
     supporter: 'visible-active',
-    premium: 'visible-active',
-    founder: 'visible-active',
-    gifted: 'visible-active',
-  },
-  'spotify-sync': {
-    'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
-    supporter: 'paywall-on-tap',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',

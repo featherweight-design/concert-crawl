@@ -10,7 +10,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { FlagHistory } from './FlagHistory';
 import { FlagPeopleSearch } from './FlagPeopleSearch';
 import { PersonRow } from './PersonRow';
-import { StageLadder, stageOf, type Stage } from './StageLadder';
+import { StageLadder, type Stage } from './StageLadder';
 import { mention, roleLabel, shortDate } from './flag-drawer-format';
 
 const COPY = ADMIN_COPY.featureFlags;
@@ -86,7 +86,7 @@ export const FlagDrawer = ({
   };
 
   const onStaging = flag.environment !== 'production';
-  const stage = stageOf(flag);
+  const { stage } = flag;
   const people = flag.people ?? [];
   const betaCount = flag.betaCount ?? null;
 

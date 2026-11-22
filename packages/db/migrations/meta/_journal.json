@@ -869,6 +869,13 @@
       "when": 1796400000000,
       "tag": "0124_digest_opt_in",
       "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "7",
+      "when": 1796500000000,
+      "tag": "0125_flag_contract_spotify_sync",
+      "breakpoints": true
     }
   ]
 }

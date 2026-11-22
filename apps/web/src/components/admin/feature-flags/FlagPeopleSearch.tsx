@@ -8,7 +8,6 @@ import { apiClient } from '@/lib/api';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { mention, roleLabel } from './flag-drawer-format';
 import { PersonRow } from './PersonRow';
-import { stageOf } from './StageLadder';
 
 const DRAWER = ADMIN_COPY.featureFlags.drawer;
 
@@ -58,7 +57,7 @@ export const FlagPeopleSearch = ({
   const [searching, setSearching] = useState(false);
   const [failed, setFailed] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
-  const stage = stageOf(flag);
+  const { stage } = flag;
   const named = new Set((flag.people ?? []).map((person) => person.userId));
 
   useEffect(() => {

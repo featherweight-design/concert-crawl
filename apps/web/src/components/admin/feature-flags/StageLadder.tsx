@@ -8,9 +8,6 @@ export type Stage = 'off' | 'me' | 'beta' | 'everyone';
 // The ladder, lowest rung first (`07-people-flags-operations/*-admin-feature-flags`).
 export const STAGES: readonly Stage[] = ['off', 'me', 'beta', 'everyone'];
 
-export const stageOf = (flag: AdminFeatureFlag): Stage =>
-  flag.stage ?? (flag.enabled ? 'everyone' : 'off');
-
 export const rankOf = (stage: Stage): number => STAGES.indexOf(stage);
 
 interface StageLadderProps {
@@ -26,7 +23,7 @@ interface StageLadderProps {
  * down never is.
  */
 export const StageLadder = ({ flag, onPick, scope }: StageLadderProps) => {
-  const stage = stageOf(flag);
+  const { stage } = flag;
   const locked = flag.locked === true;
   const prefix = scope === undefined ? '' : `${scope}-`;
 
