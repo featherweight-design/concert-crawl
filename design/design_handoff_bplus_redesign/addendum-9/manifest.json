@@ -1,0 +1,58 @@
+[
+ {
+  "section": "02-start-adding-it",
+  "name": "start-basics-m",
+  "title": "Start adding it · phone, Basics",
+  "note": "The message quoted above an empty Basics step, Back to it inline. Fields at 16px (rule 1).",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-start-adding-it",
+  "name": "start-basics-long-m",
+  "title": "Start adding it · phone, long message",
+  "note": "Clamped to 4 lines; Show all opens it in place. Back to it stays on the link row.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-start-adding-it",
+  "name": "start-basics-long-open-m",
+  "title": "Start adding it · phone, long message opened",
+  "note": "The whole message; the form moves down. Show less closes it.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "02-start-adding-it",
+  "name": "start-basics-long-d",
+  "title": "Start adding it · desktop, long message",
+  "note": "The same clamp on desktop; a short message stays as suggestion-start-d.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "03-passport-captions",
+  "name": "venues-collected-320",
+  "title": "Venues collected · 320px, captioned",
+  "note": "Auto-fill columns of at least 60px: 4 across at 320.",
+  "w": 320,
+  "h": 760
+ },
+ {
+  "section": "03-passport-captions",
+  "name": "venues-collected-390",
+  "title": "Venues collected · 390px, captioned",
+  "note": "5 across at 390.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "03-passport-captions",
+  "name": "venues-collected-d",
+  "title": "Venues collected · desktop, captioned",
+  "note": "The side column of passport-next-d, now captioned (nothing stamped yet, so every tile is dim).",
+  "w": 1280,
+  "h": 900
+ }
+]

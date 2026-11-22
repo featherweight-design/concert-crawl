@@ -55,6 +55,7 @@ These are the parts to build once and reuse.
 8. **Small caps chips.** NEW, HOST, ADMIN, CONFIRMED and similar chips are vertically centered. Hugh has caught this twice.
 9. **Skeletons hold the layout.** A skeleton uses the same card shapes and neutral left edges, with a soft sheen that sweeps on `--motion-slow`. The page chrome (header, title, filters, tabs) renders immediately, so only the data is a skeleton. The sheen is static under reduced motion.
 10. **The pink wave is reserved.** The loader (rule 11) appears only where someone is waiting on shows: the launch, Browse's first load (next to "Loading shows") and pull-to-refresh. Every other wait, including Load more, gets a quiet skeleton or text.
+14. **Text fields are 16px on the phone, 14px on desktop.** iOS Safari zooms the page when someone taps a field under 16px and stays zoomed after the keyboard closes. Every text input and text area (fan and admin, search included) uses 16px type on the phone layout, the breakpoint the feedback note box (PR #761) uses, and 14px from there up. Height, padding and placeholders are unchanged. Boards drawn at 14px or 13.5px on the phone read as 16px ([`addendum-9`](addendum-9/README.md) rule 1, 2026-11-22).
 
 ## Motion
 
