@@ -1,3 +1,10 @@
+# [1.523.0](https://github.com/featherweight-design/concert-crawl/compare/v1.522.5...v1.523.0) (2026-11-22)
+
+
+### Features
+
+* **api:** make the weekly digest opt-in (migration 0124) ([5fc97a4](https://github.com/featherweight-design/concert-crawl/commit/5fc97a49c8aab83c09e757b29a1549a5a50992ee))
+
 ## [1.522.5](https://github.com/featherweight-design/concert-crawl/compare/v1.522.4...v1.522.5) (2026-11-22)
 
 
