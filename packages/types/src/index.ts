@@ -2066,40 +2066,7 @@ export interface AdminUserDetail {
   trackedEvents: AdminUserTrackedEventItem[];
 }
 
-// --- Spotify sync (#763) ---
-// Connection payload returned by GET/POST/PATCH /v1/spotify/connection and
-// POST /v1/spotify/connection/sync (eng spec §6). A user with no connection
-// row gets the bare disconnected variant.
-export type SpotifyConnectionStatus = 'connected' | 'error' | 'revoked';
-
-export interface SpotifyConnectionView {
-  status: SpotifyConnectionStatus;
-  displayName: string | null;
-  artistCount: number;
-  lastSyncedAt: string | null; // ISO
-  autoWatch: boolean;
-  digestEnabled: boolean;
-  pushEnabled: boolean;
-  // Denver-match summary (§9.1 canonical match against upcoming events) —
-  // additive extension over the spec §6 payload so the connect-success and
-  // Connections surfaces can show real "N play Denver" numbers (PR 5).
-  denverArtistCount: number;
-  denverShowCount: number;
-  // Display names of every Denver-matched artist for the "WE RECOGNIZED"
-  // chip row on the connect-success screen (folds past 6 behind "+N more").
-  matchedArtists: string[];
-}
-
-export type SpotifyConnectionResponse =
-  SpotifyConnectionView | { status: 'disconnected' };
-
-// GET /v1/spotify/nudge — post-first-watch connect nudge gate (PR 5).
-// Eligible = user has no Spotify connection row AND has never seen the nudge
-// (user_profiles.spotify_nudge_seen_at IS NULL).
-export interface SpotifyNudgeResponse {
-  eligible: boolean;
-}
-
+// --- Spotify taste picks (#763) ---
 // GET /v1/spotify/taste-picks — "Based on your taste" discovery shelf
 // (#763 PR 8, eng spec §9.4). Why the event matched, so the UI can render
 // the design's reason chips: top-artist matches carry the listening rank
@@ -2125,14 +2092,6 @@ export interface SpotifyTastePick {
   venueName: string;
   venueSlug: string;
   reason: SpotifyTastePickReason;
-}
-
-// status mirrors the connection row so the shelf can render the design's
-// failure ("taste on pause" + Reconnect) state without a second request;
-// error/revoked/disconnected responses always carry an empty picks array.
-export interface SpotifyTastePicksResponse {
-  status: SpotifyConnectionStatus | 'disconnected';
-  picks: SpotifyTastePick[];
 }
 
 /**

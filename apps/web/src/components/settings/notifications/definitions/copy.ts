@@ -43,10 +43,6 @@ export const NOTIFICATIONS_COPY = {
     },
     // Rendered uppercase in CSS so the accessible name stays readable.
     newBadge: 'New',
-    // Only for a connected user: the same switches govern Spotify-sourced
-    // artists, so nobody goes hunting for a second set in Connections.
-    spotifyNote:
-      'These cover artists from Spotify too. One set of switches, whatever filled the list.',
   },
   // #1572. Its own group, outside the push master AND outside the entitlement
   // gate the digest sits behind: an opt-out we are obliged to offer cannot

@@ -1,1 +1,0 @@
-export { SpotifyLogo } from './SpotifyLogo';

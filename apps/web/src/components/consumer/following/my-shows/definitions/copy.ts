@@ -24,11 +24,6 @@ export const MY_SHOWS_ARTISTS_COPY = {
     noDates: 'No dates announced',
   },
 
-  /** Per-row provenance mark. The word, not a sentence. */
-  source: {
-    spotify: 'Spotify',
-  },
-
   find: {
     /**
      * No sub-line. The one it had promised a browse index that does not
@@ -44,15 +39,6 @@ export const MY_SHOWS_ARTISTS_COPY = {
     state: (push: boolean, digest: boolean) =>
       `Push ${push ? 'on' : 'off'} · weekly digest ${digest ? 'on' : 'off'}`,
   },
-
-  /**
-   * Footnote under the list when any follow arrived from Spotify. The point is
-   * the reassurance, not the count: unfollowing here is local.
-   */
-  spotifyFootnote: (count: number) =>
-    count === 1
-      ? "One of these came in from Spotify. Unfollowing here won't touch your Spotify library."
-      : `${count} of these came in from Spotify. Unfollowing here won't touch your Spotify library.`,
 
   empty: {
     /**

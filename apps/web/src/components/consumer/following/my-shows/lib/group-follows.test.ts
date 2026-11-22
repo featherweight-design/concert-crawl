@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FollowedArtist } from '@concert-crawl/types';
-import { groupFollows, spotifyFollowCount } from './group-follows';
+import { groupFollows } from './group-follows';
 
 const artist = (
   name: string,
@@ -81,21 +81,5 @@ describe('groupFollows', () => {
 
   it('leaves both groups empty for an empty list', () => {
     expect(groupFollows([])).toEqual({ dated: [], undated: [] });
-  });
-});
-
-describe('spotifyFollowCount', () => {
-  it('counts every follow that did not come from a manual tap', () => {
-    expect(
-      spotifyFollowCount([
-        artist('One', null, 'spotify_followed'),
-        artist('Two', null, 'manual'),
-        artist('Three', '2026-09-12', 'spotify_followed'),
-      ]),
-    ).toBe(2);
-  });
-
-  it('is zero when every follow was manual', () => {
-    expect(spotifyFollowCount([artist('One', null)])).toBe(0);
   });
 });

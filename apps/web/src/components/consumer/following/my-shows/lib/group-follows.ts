@@ -47,7 +47,3 @@ export const groupFollows = (follows: FollowedArtist[]): FollowGroups => {
 // and case-insensitive so "the xx" doesn't land in a lowercase ghetto.
 const compareNames = (first: FollowedArtist, second: FollowedArtist): number =>
   first.name.localeCompare(second.name, undefined, { sensitivity: 'base' });
-
-/** How many follows came in from Spotify. Zero means no footnote is owed. */
-export const spotifyFollowCount = (follows: FollowedArtist[]): number =>
-  follows.filter((follow) => follow.source !== 'manual').length;
