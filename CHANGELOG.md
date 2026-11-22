@@ -1,3 +1,12 @@
+## [1.527.2](https://github.com/featherweight-design/concert-crawl/compare/v1.527.1...v1.527.2) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** fix passport content tests for the leaf cell wrapper and the two headings ([45febd9](https://github.com/featherweight-design/concert-crawl/commit/45febd95c373106207628c4e88dda85296351646))
+* **web:** fix passport leaf height and pair two leaves to a view on every width ([7914078](https://github.com/featherweight-design/concert-crawl/commit/79140789c635e1a6123b4802492a123f0607eab4))
+* **web:** keep the full venue name in the passport tile label and cover the phone in the sheet ([3081004](https://github.com/featherweight-design/concert-crawl/commit/308100452a95377527b9841f75b8d04cb0cefc78))
+
 ## [1.527.1](https://github.com/featherweight-design/concert-crawl/compare/v1.527.0...v1.527.1) (2026-11-22)
 
 
