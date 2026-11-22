@@ -19,7 +19,7 @@
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
-          "wait": "[data-testid=\"vibe-legend\"]"
+          "wait": "[data-testid=\"vibe-legend\"]:visible"
         }
       ]
     },
@@ -36,7 +36,7 @@
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
-          "wait": "[data-testid=\"vibe-legend\"]"
+          "wait": "[data-testid=\"vibe-legend\"]:visible"
         }
       ]
     }
