@@ -3,7 +3,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { FEEDBACK_DRAFT_KEY } from '@/lib/feedback-draft';
+import { FEEDBACK_DRAFT_KEY, feedbackDraftKey } from '@/lib/feedback-draft';
 import {
   FEEDBACK_SCREENSHOT_TYPES,
   MAX_FEEDBACK_MESSAGE_LENGTH,
@@ -32,15 +32,24 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const { getToken } = vi.hoisted(() => ({ getToken: vi.fn() }));
+const { getToken, clerkUser } = vi.hoisted(() => ({
+  getToken: vi.fn(),
+  // Who Clerk says is signed in; null is signed out. Tests reassign it.
+  clerkUser: { current: null as { id: string } | null, loaded: true },
+}));
 beforeEach(() => {
   getToken.mockReset();
   getToken.mockResolvedValue('tok');
+  clerkUser.current = null;
+  clerkUser.loaded = true;
 });
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken }),
-  useUser: () => ({ user: null }),
+  useUser: () => ({
+    user: clerkUser.loaded ? clerkUser.current : undefined,
+    isLoaded: clerkUser.loaded,
+  }),
 }));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/browse',
@@ -378,6 +387,55 @@ describe('FeedbackModal — a failed send saves the draft (A4)', () => {
     expect(textarea.value).toBe('');
     expect(screen.queryByText(/Saved draft restored/i)).toBeNull();
     expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).toBeNull();
+  });
+
+  // Hugh, 2026-11-22: on a shared phone the next fan to sign in never sees
+  // the last one's note. A signed-in draft lives under its own user id.
+  it("never restores another signed-in user's draft", () => {
+    localStorage.setItem(
+      feedbackDraftKey('user_a'),
+      JSON.stringify({
+        category: 'idea',
+        message: 'user a only',
+        screenshot: null,
+        savedAt: Date.now(),
+      }),
+    );
+    clerkUser.current = { id: 'user_b' };
+    const { unmount } = render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    expect(screen.queryByText(/Saved draft restored/i)).toBeNull();
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
+    unmount();
+
+    clerkUser.current = { id: 'user_a' };
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    expect(screen.getByText(/Saved draft restored/i)).toBeTruthy();
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(
+      'user a only',
+    );
+  });
+
+  it('waits for Clerk before restoring, so a signed-in fan never gets the signed-out draft', () => {
+    localStorage.setItem(
+      FEEDBACK_DRAFT_KEY,
+      JSON.stringify({
+        category: 'idea',
+        message: 'signed-out note',
+        screenshot: null,
+        savedAt: Date.now(),
+      }),
+    );
+    clerkUser.loaded = false;
+    const { rerender } = render(
+      <FeedbackModal open={true} onClose={vi.fn()} />,
+    );
+    expect(screen.queryByText(/Saved draft restored/i)).toBeNull();
+
+    clerkUser.loaded = true;
+    clerkUser.current = { id: 'user_a' };
+    rerender(<FeedbackModal open={true} onClose={vi.fn()} />);
+    expect(screen.queryByText(/Saved draft restored/i)).toBeNull();
+    expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).not.toBeNull();
   });
 
   // The banner must never claim a save that failed (quota, private mode):

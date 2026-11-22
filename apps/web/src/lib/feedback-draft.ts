@@ -15,6 +15,12 @@ import {
 } from '@concert-crawl/types';
 
 export const FEEDBACK_DRAFT_KEY = 'feedback-draft-v1';
+
+// A signed-in fan's draft is kept under their own user id, so the next person
+// to sign in on a shared phone never sees it (Hugh, 2026-11-22). A signed-out
+// draft keeps the one device-wide key it has always had.
+export const feedbackDraftKey = (userId: string | null): string =>
+  userId === null ? FEEDBACK_DRAFT_KEY : `${FEEDBACK_DRAFT_KEY}:${userId}`;
 export const FEEDBACK_DRAFT_TTL_MS = 72 * 60 * 60 * 1000; // 72h
 
 export interface FeedbackDraftScreenshot {
@@ -90,11 +96,12 @@ function isStoredDraft(val: unknown): val is StoredDraft {
 
 export function saveDraft(
   draft: Omit<FeedbackDraft, 'savedAt'>,
+  userId: string | null,
 ): FeedbackDraft | null {
   if (!isBrowser()) return null;
   const payload: FeedbackDraft = { ...draft, savedAt: Date.now() };
   try {
-    localStorage.setItem(FEEDBACK_DRAFT_KEY, JSON.stringify(payload));
+    localStorage.setItem(feedbackDraftKey(userId), JSON.stringify(payload));
     return payload;
   } catch (err) {
     // Quota exceeded (e.g. very large screenshot) or storage disabled.
@@ -104,19 +111,23 @@ export function saveDraft(
   }
 }
 
-export function loadDraft(now: number = Date.now()): FeedbackDraft | null {
+export function loadDraft(
+  userId: string | null,
+  now: number = Date.now(),
+): FeedbackDraft | null {
   if (!isBrowser()) return null;
+  const key = feedbackDraftKey(userId);
   try {
-    const raw = localStorage.getItem(FEEDBACK_DRAFT_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (!isStoredDraft(parsed)) {
       // Corrupt or schema-drifted entry — clear to avoid sticky bad state.
-      localStorage.removeItem(FEEDBACK_DRAFT_KEY);
+      localStorage.removeItem(key);
       return null;
     }
     if (now - parsed.savedAt > FEEDBACK_DRAFT_TTL_MS) {
-      localStorage.removeItem(FEEDBACK_DRAFT_KEY);
+      localStorage.removeItem(key);
       return null;
     }
     return {
@@ -130,7 +141,7 @@ export function loadDraft(now: number = Date.now()): FeedbackDraft | null {
     // the same error indefinitely (#834 Copilot R2).
     console.error('feedback-draft: failed to load draft', err);
     try {
-      localStorage.removeItem(FEEDBACK_DRAFT_KEY);
+      localStorage.removeItem(key);
     } catch (removeErr) {
       console.warn('feedback-draft: failed to purge corrupt entry', removeErr);
     }
@@ -138,10 +149,10 @@ export function loadDraft(now: number = Date.now()): FeedbackDraft | null {
   }
 }
 
-export function clearDraft(): void {
+export function clearDraft(userId: string | null): void {
   if (!isBrowser()) return;
   try {
-    localStorage.removeItem(FEEDBACK_DRAFT_KEY);
+    localStorage.removeItem(feedbackDraftKey(userId));
   } catch (err) {
     console.error('feedback-draft: failed to clear draft', err);
   }

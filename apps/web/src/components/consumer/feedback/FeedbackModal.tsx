@@ -78,7 +78,10 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   // Never throws outside the provider: the modal mounts in the account menu.
   const theme = useThemeName();
   const { getToken } = useAuth();
-  const { user } = useUser();
+  const { user, isLoaded: userLoaded } = useUser();
+  // Whose draft this is: a signed-in fan's own, never the last user's on a
+  // shared phone (Hugh, 2026-11-22). Signed out keeps the device-wide draft.
+  const draftOwner = user?.id ?? null;
   const isMobile = useIsMobileViewport();
   const userEmail = user?.emailAddresses[0]?.emailAddress ?? 'anonymous';
   const [state, setState] = useState<ModalState>('form');
@@ -104,7 +107,8 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   // failure (quota / privacy mode). Swaps the send-failed banner's text so
   // it never claims a save that didn't happen.
   const [draftSaveFailed, setDraftSaveFailed] = useState(false);
-  const prevOpenRef = useRef(false);
+  // Set once this open has read its draft; cleared when the sheet closes.
+  const hydratedRef = useRef(false);
   // Lifted from FormFields so discardDraft / reset can clear the underlying
   // <input type="file"> value when the screenshot state goes away. Without
   // this, re-attaching the same file after a discard doesn't fire onChange
@@ -148,18 +152,22 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   // against an unmounted component.
   useEffect(() => cancelPendingReset, [cancelPendingReset]);
 
-  // Hydrate from a saved draft whenever the modal opens (false→true).
+  // Hydrate from a saved draft once per open, after Clerk has said who is
+  // signed in, so a signed-in fan never loads the signed-out draft first.
   // This is the only place we read from localStorage so we don't fight
   // with the user's in-progress typing.
   useEffect(() => {
-    const justOpened = open && !prevOpenRef.current;
-    prevOpenRef.current = open;
-    if (!justOpened) return;
+    if (!open) {
+      hydratedRef.current = false;
+      return;
+    }
+    if (!userLoaded || hydratedRef.current) return;
+    hydratedRef.current = true;
     if (sendingRef.current) return;
     // Cancel any pending close-reset timer so it can't fire mid-hydration
     // and wipe the draft we just restored (#834 Copilot R3).
     cancelPendingReset();
-    const draft = loadDraft();
+    const draft = loadDraft(draftOwner);
     if (!draft) return;
     setCategory(draft.category);
     setMessage(draft.message);
@@ -173,7 +181,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
     // If the modal was previously closed mid-error/success, ensure we
     // land back on the form when rehydrating so the user sees the draft.
     setState('form');
-  }, [open, cancelPendingReset]);
+  }, [open, userLoaded, draftOwner, cancelPendingReset]);
 
   const pickScreenshot = useCallback(
     (file: File | null) => {
@@ -246,7 +254,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   const closeSheet = useCallback(() => {
     // Closing a failed send keeps the draft (fb-send-failed-m), edits
     // made since the failure included.
-    if (state === 'error') saveDraft(currentDraft());
+    if (state === 'error') saveDraft(currentDraft(), draftOwner);
     onClose();
     // Replace any pending reset so a rapid close/reopen/close sequence
     // can't queue multiple resets that fire after a draft hydration.
@@ -257,10 +265,10 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
       resetTimerRef.current = null;
       reset();
     }, 300);
-  }, [cancelPendingReset, currentDraft, onClose, reset, state]);
+  }, [cancelPendingReset, currentDraft, draftOwner, onClose, reset, state]);
 
   const discardDraft = useCallback(() => {
-    clearDraft();
+    clearDraft(draftOwner);
     setDraftRestored(false);
     setCategory(null);
     setMessage('');
@@ -272,7 +280,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
     setMsgError(false);
     setNameError(false);
     clearFileInput();
-  }, [clearFileInput]);
+  }, [clearFileInput, draftOwner]);
 
   // Send is never disabled: a press with something missing marks each
   // missing field in place and moves focus to the first one.
@@ -309,7 +317,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
     // true as soon as it shows. If the fan already closed the sheet, the
     // draft is restored on the next open.
     const failSend = () => {
-      const saved = saveDraft(currentDraft());
+      const saved = saveDraft(currentDraft(), draftOwner);
       if (landedClosed()) return;
       setDraftSaveFailed(!saved);
       setState('error');
@@ -351,7 +359,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
       if (!res.ok) throw new Error(`${res.status}`);
       // Successful submission invalidates any saved draft. A send the fan
       // closed on gets no toast (A2).
-      clearDraft();
+      clearDraft(draftOwner);
       if (landedClosed()) return;
       setDraftRestored(false);
       setState('success');
@@ -362,6 +370,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   }, [
     category,
     currentDraft,
+    draftOwner,
     getToken,
     message,
     pathname,
