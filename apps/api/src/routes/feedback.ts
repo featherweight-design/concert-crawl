@@ -4,6 +4,7 @@ import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { z } from 'zod';
 import { db, feedback } from '@concert-crawl/db';
 import {
+  FAN_FEEDBACK_CATEGORIES,
   feedbackScreenshotRejection,
   isFeedbackScreenshot,
 } from '@concert-crawl/types';
@@ -14,7 +15,7 @@ import { apiLogger } from '../lib/logger.js';
 const errorIdSchema = z.string().regex(/^[\w-]{1,64}$/);
 
 const feedbackSchema = z.object({
-  category: z.enum(['bug', 'idea', 'praise', 'other']),
+  category: z.enum(FAN_FEEDBACK_CATEGORIES),
   message: z.string().min(1, 'Message is required').max(2000),
   pageUrl: z.string().max(2048),
   metadata: z

@@ -327,8 +327,8 @@ export const ER_POLICY = {
 export type NotificationType = 'admin_alert' | 'user_notification';
 
 // Feedback categories. `error_report` and `venue_suggestion` (migration 0117)
-// are stored and filterable by admin; the fan modal starts sending them in
-// Phase 6, so the public POST /v1/feedback does not accept them yet.
+// are stored and filterable by admin. The fan modal sends a venue suggestion;
+// no fan surface sends an error report (the error page files a `bug`).
 export const FEEDBACK_CATEGORIES = [
   'bug',
   'idea',
@@ -338,6 +338,17 @@ export const FEEDBACK_CATEGORIES = [
   'venue_suggestion',
 ] as const;
 export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
+
+// The kinds the fan modal sends, and so the only ones the public POST
+// /v1/feedback accepts.
+export const FAN_FEEDBACK_CATEGORIES = [
+  'bug',
+  'idea',
+  'praise',
+  'other',
+  'venue_suggestion',
+] as const satisfies readonly FeedbackCategory[];
+export type FanFeedbackCategory = (typeof FAN_FEEDBACK_CATEGORIES)[number];
 
 // Subscription tiers
 export type SubscriptionTier = 'free' | 'premium';

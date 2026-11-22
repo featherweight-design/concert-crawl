@@ -20,9 +20,9 @@ import {
   FEEDBACK_SCREENSHOT_TYPES,
   MAX_FEEDBACK_SCREENSHOT_BYTES,
   isFeedbackScreenshotType,
+  type FanFeedbackCategory as FeedbackCategory,
 } from '@concert-crawl/types';
 
-type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other';
 // `error` is the send-failed state: the form stays as the fan left it and a
 // banner sits above Try again. The draft is already saved by then.
 type ModalState = 'form' | 'loading' | 'success' | 'error';
@@ -35,12 +35,29 @@ const DIMMED = 0.55;
 // How long a send may take before it counts as failed and the draft is saved.
 const SEND_TIMEOUT_MS = 30_000;
 
+// In the order addendum 3's `02/fan-suggest-a-venue-m` draws them.
 const CATEGORIES: { key: FeedbackCategory; label: string }[] = [
   { key: 'bug', label: MODAL.categories.bug },
   { key: 'idea', label: MODAL.categories.idea },
+  { key: 'venue_suggestion', label: MODAL.categories.venueSuggestion },
   { key: 'praise', label: MODAL.categories.praise },
   { key: 'other', label: MODAL.categories.other },
 ];
+
+const isVenue = (category: FeedbackCategory | null): boolean =>
+  category === 'venue_suggestion';
+
+// A venue suggestion's fields ride in the message, with no metadata keys:
+// the name, the website when given, then Anything else after a blank line.
+// Admin quotes the whole message (feedback-item-rules `headOf`).
+const venueMessage = (name: string, website: string, notes: string): string =>
+  [[name.trim(), website.trim()].filter(Boolean).join('\n'), notes.trim()]
+    .filter(Boolean)
+    .join('\n\n');
+
+// Caps the two one-line fields well inside the API's 2000-character message.
+const VENUE_NAME_MAX = 200;
+const WEBSITE_MAX = 500;
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
@@ -63,6 +80,11 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   const [message, setMessage] = useState('');
   const [catError, setCatError] = useState(false);
   const [msgError, setMsgError] = useState(false);
+  // Suggest a venue's fields. They stay in memory when the fan switches kind
+  // (757 A5); only the kind on screen is sent or saved.
+  const [venueName, setVenueName] = useState('');
+  const [website, setWebsite] = useState('');
+  const [nameError, setNameError] = useState(false);
   const [screenshot, setScreenshot] = useState<ScreenshotValue | null>(null);
   // Why the picked file was refused (wrong type, or too big), shown under
   // the attach row until the fan picks again or removes it.
@@ -85,6 +107,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   // Validation moves focus to the first missing field.
   const firstChipRef = useRef<HTMLButtonElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const venueNameRef = useRef<HTMLInputElement>(null);
   // Holds the pending reset() timer scheduled by closeSheet so a quick
   // reopen can cancel it before it fires and wipes a freshly-restored
   // draft (#834 Copilot R3 — race condition: timer fires 300ms after
@@ -135,8 +158,11 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
     setCategory(draft.category);
     setMessage(draft.message);
     setScreenshot(draft.screenshot);
+    setVenueName(draft.venueName);
+    setWebsite(draft.website);
     setCatError(false);
     setMsgError(false);
+    setNameError(false);
     setDraftRestored(true);
     // If the modal was previously closed mid-error/success, ensure we
     // land back on the form when rehydrating so the user sees the draft.
@@ -185,8 +211,11 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
     setState('form');
     setCategory(null);
     setMessage('');
+    setVenueName('');
+    setWebsite('');
     setCatError(false);
     setMsgError(false);
+    setNameError(false);
     setScreenshot(null);
     setScreenshotError(null);
     setDraftRestored(false);
@@ -194,10 +223,24 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
     clearFileInput();
   }, [clearFileInput]);
 
+  // 757 A5: a draft keeps only what the current kind shows, so a hidden
+  // screenshot is not kept with a venue suggestion, nor venue fields with a
+  // bug.
+  const currentDraft = useCallback(() => {
+    const venue = isVenue(category);
+    return {
+      category,
+      message,
+      screenshot: venue ? null : screenshot,
+      venueName: venue ? venueName : '',
+      website: venue ? website : '',
+    };
+  }, [category, message, screenshot, venueName, website]);
+
   const closeSheet = useCallback(() => {
     // Closing a failed send keeps the draft (fb-send-failed-m), edits
     // made since the failure included.
-    if (state === 'error') saveDraft({ category, message, screenshot });
+    if (state === 'error') saveDraft(currentDraft());
     onClose();
     // Replace any pending reset so a rapid close/reopen/close sequence
     // can't queue multiple resets that fire after a draft hydration.
@@ -208,37 +251,38 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
       resetTimerRef.current = null;
       reset();
     }, 300);
-  }, [
-    cancelPendingReset,
-    category,
-    message,
-    onClose,
-    reset,
-    screenshot,
-    state,
-  ]);
+  }, [cancelPendingReset, currentDraft, onClose, reset, state]);
 
   const discardDraft = useCallback(() => {
     clearDraft();
     setDraftRestored(false);
     setCategory(null);
     setMessage('');
+    setVenueName('');
+    setWebsite('');
     setScreenshot(null);
     setScreenshotError(null);
     setCatError(false);
     setMsgError(false);
+    setNameError(false);
     clearFileInput();
   }, [clearFileInput]);
 
   // Send is never disabled: a press with something missing marks each
   // missing field in place and moves focus to the first one.
   const submitFeedback = useCallback(async () => {
+    const venue = isVenue(category);
     const catInvalid = !category;
-    const msgInvalid = !message.trim();
-    if (catInvalid || msgInvalid) {
+    // Suggest a venue needs only the name; Anything else is optional.
+    const nameInvalid = venue && !venueName.trim();
+    const msgInvalid = !venue && !message.trim();
+    if (catInvalid || nameInvalid || msgInvalid) {
       setCatError(catInvalid);
+      setNameError(nameInvalid);
       setMsgError(msgInvalid);
-      (catInvalid ? firstChipRef : textareaRef).current?.focus();
+      if (catInvalid) firstChipRef.current?.focus();
+      else if (nameInvalid) venueNameRef.current?.focus();
+      else textareaRef.current?.focus();
       return;
     }
     if (sendingRef.current) return;
@@ -259,7 +303,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
     // true as soon as it shows. If the fan already closed the sheet, the
     // draft is restored on the next open.
     const failSend = () => {
-      const saved = saveDraft({ category, message, screenshot });
+      const saved = saveDraft(currentDraft());
       if (landedClosed()) return;
       setDraftSaveFailed(!saved);
       setState('error');
@@ -285,13 +329,16 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
         },
         body: JSON.stringify({
           category,
-          message: message.trim(),
+          message: venue
+            ? venueMessage(venueName, website, message)
+            : message.trim(),
           pageUrl: pathname,
           metadata: {
             theme,
             build: APP_VERSION,
             device,
-            screenshot: screenshot?.dataUrl,
+            // Hidden under Suggest a venue, so never sent with one (757 A5).
+            screenshot: venue ? undefined : screenshot?.dataUrl,
           },
         }),
       });
@@ -306,7 +353,18 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
       console.error('Feedback submission failed', err);
       failSend();
     }
-  }, [category, getToken, message, pathname, reset, screenshot, theme]);
+  }, [
+    category,
+    currentDraft,
+    getToken,
+    message,
+    pathname,
+    reset,
+    screenshot,
+    theme,
+    venueName,
+    website,
+  ]);
 
   const pickCategory = useCallback((cat: FeedbackCategory) => {
     setCategory(cat);
@@ -316,6 +374,11 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   const editMessage = useCallback((msg: string) => {
     setMessage(msg);
     if (msg.trim()) setMsgError(false);
+  }, []);
+
+  const editVenueName = useCallback((name: string) => {
+    setVenueName(name);
+    if (name.trim()) setNameError(false);
   }, []);
 
   // The same five fields the request carries, so the list never claims
@@ -369,6 +432,11 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
             setMessage={editMessage}
             catError={catError}
             msgError={msgError}
+            venueName={venueName}
+            setVenueName={editVenueName}
+            website={website}
+            setWebsite={setWebsite}
+            nameError={nameError}
             ctxData={ctxData}
             screenshot={screenshot}
             screenshotError={screenshotError}
@@ -379,6 +447,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
             fileInputRef={fileInputRef}
             firstChipRef={firstChipRef}
             textareaRef={textareaRef}
+            venueNameRef={venueNameRef}
             onSubmit={submitFeedback}
           />
         )}
@@ -412,6 +481,11 @@ interface FormProps {
   setMessage: (msg: string) => void;
   catError: boolean;
   msgError: boolean;
+  venueName: string;
+  setVenueName: (name: string) => void;
+  website: string;
+  setWebsite: (site: string) => void;
+  nameError: boolean;
   ctxData: CtxData;
   screenshot: ScreenshotValue | null;
   screenshotError: 'type' | 'size' | null;
@@ -422,6 +496,7 @@ interface FormProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   firstChipRef: React.RefObject<HTMLButtonElement | null>;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  venueNameRef: React.RefObject<HTMLInputElement | null>;
   onSubmit: () => void;
 }
 
@@ -435,6 +510,11 @@ function FormFields({
   setMessage,
   catError,
   msgError,
+  venueName,
+  setVenueName,
+  website,
+  setWebsite,
+  nameError,
   ctxData,
   screenshot,
   screenshotError,
@@ -445,6 +525,7 @@ function FormFields({
   fileInputRef,
   firstChipRef,
   textareaRef,
+  venueNameRef,
   onSubmit,
 }: FormProps) {
   const disabled = state === 'loading';
@@ -453,7 +534,8 @@ function FormFields({
   const catErrorId = `${ids}-cat-error`;
   const msgErrorId = `${ids}-msg-error`;
   const labelId = `${ids}-label`;
-  const field = MODAL.form.field[category ?? 'none'];
+  const venue = category === 'venue_suggestion';
+  const field = MODAL.form.field[venue ? 'none' : (category ?? 'none')];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap }}>
@@ -532,64 +614,82 @@ function FormFields({
         )}
       </div>
 
-      {/* Message: its label sits above the box, the hint is the placeholder */}
-      <div>
-        <div
-          id={labelId}
-          style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: 12.5,
-            fontWeight: 600,
-            color: 'var(--fg-muted)',
-            marginBottom: 6,
-          }}
-        >
-          {field.label}
-        </div>
-        <textarea
-          ref={textareaRef}
-          className="fb-textarea"
-          value={message}
-          onChange={(ev) => setMessage(ev.target.value)}
+      {venue ? (
+        <VenueFields
+          isMobile={isMobile}
           disabled={disabled}
-          aria-labelledby={labelId}
-          aria-invalid={msgError || undefined}
-          aria-describedby={msgError ? msgErrorId : undefined}
-          placeholder={field.hint}
-          style={{
-            display: 'block',
-            width: '100%',
-            minHeight: 96,
-            boxSizing: 'border-box',
-            padding: 12,
-            background: 'var(--bg)',
-            color: 'var(--fg)',
-            border: `1px solid ${msgError ? 'var(--danger)' : 'var(--border-strong)'}`,
-            borderRadius: 12,
-            fontFamily: 'var(--font-ui)',
-            // 16 on the phone: iOS zooms the page into a smaller field.
-            fontSize: isMobile ? 16 : 14,
-            lineHeight: 1.45,
-            resize: 'vertical',
-            outline: 'none',
-            opacity: disabled ? DIMMED : 1,
-            transition: 'border-color var(--motion-fast) var(--motion-ease)',
-          }}
+          venueName={venueName}
+          setVenueName={setVenueName}
+          website={website}
+          setWebsite={setWebsite}
+          notes={message}
+          setNotes={setMessage}
+          nameError={nameError}
+          nameRef={venueNameRef}
         />
-        {msgError && (
-          <FieldError id={msgErrorId}>
-            {MODAL.errors.messageRequired}
-          </FieldError>
-        )}
-      </div>
+      ) : (
+        <>
+          {/* Message: its label sits above the box, the hint is the placeholder */}
+          <div>
+            <div
+              id={labelId}
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: 'var(--fg-muted)',
+                marginBottom: 6,
+              }}
+            >
+              {field.label}
+            </div>
+            <textarea
+              ref={textareaRef}
+              className="fb-textarea"
+              value={message}
+              onChange={(ev) => setMessage(ev.target.value)}
+              disabled={disabled}
+              aria-labelledby={labelId}
+              aria-invalid={msgError || undefined}
+              aria-describedby={msgError ? msgErrorId : undefined}
+              placeholder={field.hint}
+              style={{
+                display: 'block',
+                width: '100%',
+                minHeight: 96,
+                boxSizing: 'border-box',
+                padding: 12,
+                background: 'var(--bg)',
+                color: 'var(--fg)',
+                border: `1px solid ${msgError ? 'var(--danger)' : 'var(--border-strong)'}`,
+                borderRadius: 12,
+                fontFamily: 'var(--font-ui)',
+                // 16 on the phone: iOS zooms the page into a smaller field.
+                fontSize: isMobile ? 16 : 14,
+                lineHeight: 1.45,
+                resize: 'vertical',
+                outline: 'none',
+                opacity: disabled ? DIMMED : 1,
+                transition:
+                  'border-color var(--motion-fast) var(--motion-ease)',
+              }}
+            />
+            {msgError && (
+              <FieldError id={msgErrorId}>
+                {MODAL.errors.messageRequired}
+              </FieldError>
+            )}
+          </div>
 
-      <ScreenshotRow
-        screenshot={screenshot}
-        error={screenshotError}
-        disabled={disabled}
-        fileInputRef={fileInputRef}
-        onChange={onScreenshotChange}
-      />
+          <ScreenshotRow
+            screenshot={screenshot}
+            error={screenshotError}
+            disabled={disabled}
+            fileInputRef={fileInputRef}
+            onChange={onScreenshotChange}
+          />
+        </>
+      )}
 
       <p
         style={{
@@ -611,6 +711,164 @@ function FormFields({
         {failed ? MODAL.sendFailed.primaryAction : MODAL.footer.submit}
       </SubmitButton>
     </div>
+  );
+}
+
+// ── Suggest a venue fields ────────────────────────────────────────────────
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: 'block',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: 'var(--fg-muted)',
+  marginBottom: 6,
+};
+
+// `02/fan-suggest-a-venue-m`: 44px fields on --bg, a 12px radius, 14px text
+// (16 on the phone, as the box, so iOS does not zoom).
+const fieldStyle = (
+  isMobile: boolean,
+  disabled: boolean,
+  invalid = false,
+): React.CSSProperties => ({
+  display: 'block',
+  width: '100%',
+  boxSizing: 'border-box',
+  background: 'var(--bg)',
+  color: 'var(--fg)',
+  border: `1px solid ${invalid ? 'var(--danger)' : 'var(--border-strong)'}`,
+  borderRadius: 12,
+  fontFamily: 'var(--font-ui)',
+  fontSize: isMobile ? 16 : 14,
+  outline: 'none',
+  opacity: disabled ? DIMMED : 1,
+  transition: 'border-color var(--motion-fast) var(--motion-ease)',
+});
+
+interface VenueFieldsProps {
+  isMobile: boolean;
+  disabled: boolean;
+  venueName: string;
+  setVenueName: (name: string) => void;
+  website: string;
+  setWebsite: (site: string) => void;
+  notes: string;
+  setNotes: (notes: string) => void;
+  nameError: boolean;
+  nameRef: React.RefObject<HTMLInputElement | null>;
+}
+
+// Picking Suggest a venue swaps the box for Venue name, Website (optional)
+// and Anything else? (optional). Anything else is the box's own text, so it
+// carries over both ways when the fan switches kind (757 Q4).
+function VenueFields({
+  isMobile,
+  disabled,
+  venueName,
+  setVenueName,
+  website,
+  setWebsite,
+  notes,
+  setNotes,
+  nameError,
+  nameRef,
+}: VenueFieldsProps) {
+  const ids = useId();
+  const nameId = `${ids}-venue-name`;
+  const nameErrorId = `${ids}-venue-name-error`;
+  const siteId = `${ids}-venue-site`;
+  const siteHintId = `${ids}-venue-site-hint`;
+  const notesId = `${ids}-venue-notes`;
+  const COPY = MODAL.form.venue;
+
+  return (
+    <>
+      <div>
+        <label htmlFor={nameId} style={fieldLabelStyle}>
+          {COPY.nameLabel}
+        </label>
+        <input
+          ref={nameRef}
+          id={nameId}
+          className="fb-textarea"
+          type="text"
+          value={venueName}
+          onChange={(ev) => setVenueName(ev.target.value)}
+          disabled={disabled}
+          maxLength={VENUE_NAME_MAX}
+          placeholder={COPY.namePlaceholder}
+          aria-invalid={nameError || undefined}
+          aria-describedby={nameError ? nameErrorId : undefined}
+          style={{
+            ...fieldStyle(isMobile, disabled, nameError),
+            height: 44,
+            padding: '0 12px',
+          }}
+        />
+        {nameError && (
+          <FieldError id={nameErrorId}>
+            {MODAL.errors.venueNameRequired}
+          </FieldError>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor={siteId} style={fieldLabelStyle}>
+          {COPY.websiteLabel}
+        </label>
+        <input
+          id={siteId}
+          className="fb-textarea"
+          type="text"
+          inputMode="url"
+          autoComplete="url"
+          value={website}
+          onChange={(ev) => setWebsite(ev.target.value)}
+          disabled={disabled}
+          maxLength={WEBSITE_MAX}
+          placeholder={COPY.websitePlaceholder}
+          aria-describedby={siteHintId}
+          style={{
+            ...fieldStyle(isMobile, disabled),
+            height: 44,
+            padding: '0 12px',
+          }}
+        />
+        <div
+          id={siteHintId}
+          style={{
+            marginTop: 5,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12,
+            color: 'var(--fg-subtle)',
+          }}
+        >
+          {COPY.websiteHint}
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor={notesId} style={fieldLabelStyle}>
+          {COPY.notesLabel}
+        </label>
+        <textarea
+          id={notesId}
+          className="fb-textarea"
+          value={notes}
+          onChange={(ev) => setNotes(ev.target.value)}
+          disabled={disabled}
+          placeholder={COPY.notesPlaceholder}
+          style={{
+            ...fieldStyle(isMobile, disabled),
+            minHeight: 72,
+            padding: 12,
+            lineHeight: 1.45,
+            resize: 'vertical',
+          }}
+        />
+      </div>
+    </>
   );
 }
 

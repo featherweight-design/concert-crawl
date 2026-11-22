@@ -12,8 +12,10 @@
 export const FEEDBACK_DRAFT_KEY = 'feedback-draft-v1';
 export const FEEDBACK_DRAFT_TTL_MS = 72 * 60 * 60 * 1000; // 72h
 
-const VALID_CATEGORIES = ['bug', 'idea', 'praise', 'other'] as const;
-type FeedbackCategory = (typeof VALID_CATEGORIES)[number];
+import {
+  FAN_FEEDBACK_CATEGORIES,
+  type FanFeedbackCategory,
+} from '@concert-crawl/types';
 
 export interface FeedbackDraftScreenshot {
   name: string;
@@ -21,11 +23,19 @@ export interface FeedbackDraftScreenshot {
 }
 
 export interface FeedbackDraft {
-  category: FeedbackCategory | null;
+  category: FanFeedbackCategory | null;
   message: string;
   screenshot: FeedbackDraftScreenshot | null;
+  // Suggest a venue's own fields (757 A5). A draft saved before they existed
+  // has neither key, and loads with both empty.
+  venueName: string;
+  website: string;
   savedAt: number;
 }
+
+// What a stored entry may hold: the venue keys can be missing.
+type StoredDraft = Omit<FeedbackDraft, 'venueName' | 'website'> &
+  Partial<Pick<FeedbackDraft, 'venueName' | 'website'>>;
 
 function isBrowser(): boolean {
   if (typeof window === 'undefined') return false;
@@ -46,12 +56,15 @@ function isRecord(val: unknown): val is Record<string, unknown> {
   return typeof val === 'object' && val !== null && !Array.isArray(val);
 }
 
-function isFeedbackCategory(val: unknown): val is FeedbackCategory {
+function isFeedbackCategory(val: unknown): val is FanFeedbackCategory {
   return (
     typeof val === 'string' &&
-    (VALID_CATEGORIES as readonly string[]).includes(val)
+    FAN_FEEDBACK_CATEGORIES.some((category) => category === val)
   );
 }
+
+const isOptionalString = (val: unknown): boolean =>
+  val === undefined || typeof val === 'string';
 
 function isScreenshot(val: unknown): val is FeedbackDraftScreenshot {
   return (
@@ -61,7 +74,7 @@ function isScreenshot(val: unknown): val is FeedbackDraftScreenshot {
   );
 }
 
-function isFeedbackDraft(val: unknown): val is FeedbackDraft {
+function isStoredDraft(val: unknown): val is StoredDraft {
   if (!isRecord(val)) return false;
   const categoryOk =
     val['category'] === null || isFeedbackCategory(val['category']);
@@ -70,7 +83,9 @@ function isFeedbackDraft(val: unknown): val is FeedbackDraft {
     val['screenshot'] === null || isScreenshot(val['screenshot']);
   const savedAtOk =
     typeof val['savedAt'] === 'number' && Number.isFinite(val['savedAt']);
-  return categoryOk && messageOk && screenshotOk && savedAtOk;
+  const venueOk =
+    isOptionalString(val['venueName']) && isOptionalString(val['website']);
+  return categoryOk && messageOk && screenshotOk && savedAtOk && venueOk;
 }
 
 export function saveDraft(
@@ -95,7 +110,7 @@ export function loadDraft(now: number = Date.now()): FeedbackDraft | null {
     const raw = localStorage.getItem(FEEDBACK_DRAFT_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (!isFeedbackDraft(parsed)) {
+    if (!isStoredDraft(parsed)) {
       // Corrupt or schema-drifted entry — clear to avoid sticky bad state.
       localStorage.removeItem(FEEDBACK_DRAFT_KEY);
       return null;
@@ -104,7 +119,11 @@ export function loadDraft(now: number = Date.now()): FeedbackDraft | null {
       localStorage.removeItem(FEEDBACK_DRAFT_KEY);
       return null;
     }
-    return parsed;
+    return {
+      ...parsed,
+      venueName: parsed.venueName ?? '',
+      website: parsed.website ?? '',
+    };
   } catch (err) {
     // JSON.parse threw (truncated/invalid payload) or some other read
     // failure. Purge the bad entry so reopening the modal doesn't log

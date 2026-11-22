@@ -454,3 +454,127 @@ describe('FeedbackModal — screenshot picker', () => {
     expect(readSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('FeedbackModal — Suggest a venue', () => {
+  const VENUE = MODAL.form.venue;
+  const pickVenue = (): void => {
+    fireEvent.click(
+      screen.getByRole('button', { name: MODAL.categories.venueSuggestion }),
+    );
+  };
+  const sentBody = (spy: { mock: { calls: unknown[][] } }) => {
+    const init = spy.mock.calls[0]?.[1] as RequestInit | undefined;
+    return JSON.parse(String(init?.body)) as {
+      category: string;
+      message: string;
+      metadata: Record<string, unknown>;
+    };
+  };
+
+  it('swaps the box for the three venue fields and hides the attach row', () => {
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    pickVenue();
+    expect(screen.getByLabelText(VENUE.nameLabel)).toBeTruthy();
+    expect(screen.getByLabelText(VENUE.websiteLabel)).toBeTruthy();
+    expect(screen.getByLabelText(VENUE.notesLabel)).toBeTruthy();
+    expect(screen.getByText(VENUE.websiteHint)).toBeTruthy();
+    expect(screen.queryByText(MODAL.form.screenshotAttachLabel)).toBeNull();
+  });
+
+  it('needs only the venue name, and focuses it when missing', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    pickVenue();
+    await submitAndWait();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(screen.getByText(MODAL.errors.venueNameRequired)).toBeTruthy();
+    expect(screen.queryByText(MODAL.errors.messageRequired)).toBeNull();
+    const name = screen.getByLabelText(VENUE.nameLabel);
+    expect(document.activeElement).toBe(name);
+    fireEvent.change(name, { target: { value: 'Dazzle' } });
+    expect(screen.queryByText(MODAL.errors.venueNameRequired)).toBeNull();
+  });
+
+  it('joins the fields into the message, carrying the box text into Anything else', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('{}', { status: 201 }));
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    fillCategoryAndMessage('Jazz most nights.', MODAL.categories.idea);
+    pickVenue();
+    const notes = screen.getByLabelText(
+      VENUE.notesLabel,
+    ) as HTMLTextAreaElement;
+    expect(notes.value).toBe('Jazz most nights.');
+    fireEvent.change(screen.getByLabelText(VENUE.nameLabel), {
+      target: { value: ' Dazzle ' },
+    });
+    fireEvent.change(screen.getByLabelText(VENUE.websiteLabel), {
+      target: { value: 'dazzledenver.com' },
+    });
+    await submitAndWait();
+    const body = sentBody(fetchSpy);
+    expect(body.category).toBe('venue_suggestion');
+    expect(body.message).toBe('Dazzle\ndazzledenver.com\n\nJazz most nights.');
+    expect(body.metadata['screenshot']).toBeUndefined();
+  });
+
+  it('sends the name alone when nothing else is given', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('{}', { status: 201 }));
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    pickVenue();
+    fireEvent.change(screen.getByLabelText(VENUE.nameLabel), {
+      target: { value: 'Dazzle' },
+    });
+    await submitAndWait();
+    expect(sentBody(fetchSpy).message).toBe('Dazzle');
+  });
+
+  it('switching back to another kind brings the text back to the box', () => {
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    pickVenue();
+    fireEvent.change(screen.getByLabelText(VENUE.notesLabel), {
+      target: { value: 'carry me' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: MODAL.categories.bug }));
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement;
+    expect(box.value).toBe('carry me');
+  });
+
+  it('saves a failed venue send with its own fields and restores them (A5)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('boom', { status: 500 }),
+    );
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <FeedbackModal open={true} onClose={onClose} />,
+    );
+    pickVenue();
+    fireEvent.change(screen.getByLabelText(VENUE.nameLabel), {
+      target: { value: 'Dazzle' },
+    });
+    fireEvent.change(screen.getByLabelText(VENUE.websiteLabel), {
+      target: { value: 'dazzledenver.com' },
+    });
+    await submitAndWait();
+    expect(
+      JSON.parse(localStorage.getItem(FEEDBACK_DRAFT_KEY) ?? '{}'),
+    ).toMatchObject({
+      category: 'venue_suggestion',
+      venueName: 'Dazzle',
+      website: 'dazzledenver.com',
+      screenshot: null,
+    });
+
+    rerender(<FeedbackModal open={false} onClose={onClose} />);
+    rerender(<FeedbackModal open={true} onClose={onClose} />);
+    expect(
+      (screen.getByLabelText(VENUE.nameLabel) as HTMLInputElement).value,
+    ).toBe('Dazzle');
+    expect(
+      (screen.getByLabelText(VENUE.websiteLabel) as HTMLInputElement).value,
+    ).toBe('dazzledenver.com');
+  });
+});
