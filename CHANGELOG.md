@@ -1,3 +1,16 @@
+# [1.529.0](https://github.com/featherweight-design/concert-crawl/compare/v1.528.0...v1.529.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** phone Vibe count reads "N shows" as drawn, test both mount points ([6214239](https://github.com/featherweight-design/concert-crawl/commit/62142394efa25b73970d3dba02ee52bdc4e8fda2))
+
+
+### Features
+
+* **web:** draw the Vibe legend on the phone count row too ([e90f16c](https://github.com/featherweight-design/concert-crawl/commit/e90f16c2eee2b4a37960d32e1d1e5e3b6ca07e2e))
+* **web:** show each chosen Vibe's dot and name beside the count ([368d081](https://github.com/featherweight-design/concert-crawl/commit/368d0811ebe7971238f39a705756d178a2014236))
+
 # [1.528.0](https://github.com/featherweight-design/concert-crawl/compare/v1.527.2...v1.528.0) (2026-11-22)
 
 
