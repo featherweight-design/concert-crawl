@@ -180,6 +180,20 @@ describe('CrewHome lead order (#1226)', () => {
   it('falls back to the roster when a crew has neither', () => {
     expect(leadTabFor(detail())).toBe('roster');
   });
+
+  // Addendum 6 item 41: a show cancelled in the last day stays on Coming up,
+  // but it is not a plan, so it neither opens the tab nor counts on it.
+  it('does not open or count Coming up for a cancelled show alone', () => {
+    const crew = detail({
+      upcoming: [show({ status: 'cancelled' })],
+      nights: [show({ eventId: 'e2' })],
+    });
+    expect(leadTabFor(crew)).toBe('nights');
+    render(<CrewHome crew={crew} />);
+    expect(
+      screen.getByRole('tab', { name: /Coming up/ }),
+    ).not.toHaveTextContent('1');
+  });
 });
 
 // AM2

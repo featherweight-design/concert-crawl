@@ -1,9 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import {
-  cancelledAtFor,
-  endDelisting,
-} from '@concert-crawl/db/upcoming-events';
+import { confirmedStatusFields } from '@concert-crawl/db/upcoming-events';
 import {
   db,
   eventReports,
@@ -257,11 +254,8 @@ export const updateEventNotifying = async (
         // Clears first_missing_at too on a delisted row: otherwise the show
         // hides again right after its watchers hear, and a restore would be
         // re-cancelled by the next sweep.
-        ...(typeof body.status === 'string' && endDelisting()),
-        // When a confirmed cancellation began, for the crew page's day (0127).
-        ...(typeof body.status === 'string' && {
-          cancelledAt: cancelledAtFor(body.status),
-        }),
+        ...(typeof body.status === 'string' &&
+          confirmedStatusFields(body.status)),
         updatedAt: new Date(),
       })
       .where(eq(events.id, id))

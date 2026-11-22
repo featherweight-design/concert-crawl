@@ -15,6 +15,7 @@ import {
   gt,
   inArray,
   isNotNull,
+  isNull,
   ne,
   or,
   sql,
@@ -39,6 +40,9 @@ import { avatarColumns, avatarOf } from './avatar.js';
  * degrading into a merged feed of solo nights, so both numbers live here and
  * are read by every call site rather than inlined where they can drift.
  */
+/** Addendum 6 item 41: "a cancelled show leaves after a day". */
+const CANCELLED_STAYS_SINCE = sql`now() - interval '1 day'`;
+
 export const UPCOMING_MIN_GOING = 1;
 export const PAST_MIN_GOING = 2;
 
@@ -105,7 +109,12 @@ const selectAttendanceRows = async (
         keepRecentlyCancelled
           ? (or(
               ne(events.status, 'cancelled'),
-              gt(events.cancelledAt, sql`now() - interval '1 day'`),
+              // The sweep's guess is No longer listed, never Cancelled, so a
+              // delisted row never takes the day even with a stale time.
+              and(
+                isNull(events.delistedAt),
+                gt(events.cancelledAt, CANCELLED_STAYS_SINCE),
+              ),
             ) ?? sql`true`)
           : ne(events.status, 'cancelled'),
         ...extraConditions,

@@ -101,6 +101,17 @@ export const cancelledAtFor = (status: string): SQL | null =>
     ? sql`CASE WHEN ${events.status} = 'cancelled' AND ${events.delistedAt} IS NULL THEN ${events.cancelledAt} ELSE now() END`
     : null;
 
+/**
+ * Every column a confirmed status write (an admin PATCH, a promoted fan
+ * report) must set beside `status`: the end of No longer listed, and the
+ * cancellation time. One helper, so a new writer cannot take one and miss
+ * the other.
+ */
+export const confirmedStatusFields = (status: string) => ({
+  ...endDelisting(),
+  cancelledAt: cancelledAtFor(status),
+});
+
 /** The conditions every "shows still to come" query needs. */
 export const upcomingEventConditions = ({
   from,
