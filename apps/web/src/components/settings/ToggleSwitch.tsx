@@ -1,8 +1,8 @@
 'use client';
 
-// Accessible switch (role="switch", 40×24) for the Connections card's
-// auto-watch preference (#763 PR 5). Button element = native Enter/Space
-// activation; visual state mirrors the design handoff toggle.
+// Accessible switch (role="switch", 40×24) for the notification preferences.
+// Button element = native Enter/Space activation; visual state mirrors the
+// design handoff toggle.
 
 interface ToggleSwitchProps {
   checked: boolean;

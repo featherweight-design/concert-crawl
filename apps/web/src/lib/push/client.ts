@@ -1,5 +1,5 @@
 // Web Push client helper (#763 PR 9): feature detection, the permission +
-// subscribe flow, and unsubscribe for the Connections push toggle. Runs
+// subscribe flow, and unsubscribe for the notification push toggles. Runs
 // entirely in the browser and never throws across the UI boundary — every
 // failure path resolves to a typed result and logs (async-catch convention).
 

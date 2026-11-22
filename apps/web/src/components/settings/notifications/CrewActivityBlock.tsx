@@ -12,7 +12,7 @@
 // everyone, and the mute is stored as row-presence anyway (there is no muted
 // boolean to mirror).
 
-import { ToggleSwitch } from '../connections/ToggleSwitch';
+import { ToggleSwitch } from '../ToggleSwitch';
 import { useCrews, useCrewMuteToggle } from '@/lib/queries/use-crew-mutes';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
