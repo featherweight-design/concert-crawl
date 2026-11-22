@@ -22,7 +22,6 @@ vi.mock('@clerk/backend', () => ({
   createClerkClient: () => ({
     users: {
       getUser: async (userId: string) => ({
-        publicMetadata: {},
         primaryEmailAddressId: 'em_primary',
         emailAddresses: clerkState.emails.has(userId)
           ? [
