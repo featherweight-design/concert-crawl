@@ -115,13 +115,11 @@ describe('admin glyph drafting (3d-1)', () => {
       'text',
     ]);
 
-    await vi.waitFor(async () => {
-      const costs = await testDb
-        .select()
-        .from(costTracking)
-        .where(eq(costTracking.service, 'venue-glyph'));
-      expect(costs).toHaveLength(1);
-    });
+    const costs = await testDb
+      .select()
+      .from(costTracking)
+      .where(eq(costTracking.service, 'venue-glyph'));
+    expect(costs).toHaveLength(1);
     const audits = await testDb
       .select()
       .from(auditLog)
@@ -170,15 +168,53 @@ describe('admin glyph drafting (3d-1)', () => {
     expect(((await short.json()) as { data: unknown }).data).toMatchObject({
       hidden: { invalid: 3, total: 3 },
     });
+
+    // One malformed draft hides only itself.
+    mockCreate.mockResolvedValueOnce(
+      reply(
+        JSON.stringify({
+          drafts: [
+            { label: 'A', svg: GOOD },
+            { label: 'B' },
+            { label: 'C', svg: GOOD },
+            { label: 'D', svg: GOOD },
+          ],
+        }),
+      ),
+    );
+    const mixed = await request(
+      'POST',
+      `/v1/admin/venues/${venue.id}/glyph-drafts`,
+      {},
+    );
+    expect(((await mixed.json()) as { data: unknown }).data).toMatchObject({
+      hidden: { invalid: 1, total: 1 },
+    });
   });
 
-  it('answers 503 when the call fails, 404 for no venue, 400 for a bad reference', async () => {
+  it('answers 503 when the call fails, 422 for an unreadable image, 404 for no venue, 400 for a bad reference', async () => {
     const venue = await seedVenue();
     mockCreate.mockRejectedValueOnce(new Error('overloaded'));
     expect(
       (await request('POST', `/v1/admin/venues/${venue.id}/glyph-drafts`, {}))
         .status,
     ).toBe(503);
+    // The failed attempt is audited.
+    const failed = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'venue.glyph_draft'));
+    expect(failed.map((audit) => audit.metadata)).toEqual([
+      { references: 0, steered: false, failed: true },
+    ]);
+
+    mockCreate.mockRejectedValueOnce(
+      Object.assign(new Error('image does not match'), { status: 400 }),
+    );
+    expect(
+      (await request('POST', `/v1/admin/venues/${venue.id}/glyph-drafts`, {}))
+        .status,
+    ).toBe(422);
 
     expect(
       (
@@ -190,6 +226,11 @@ describe('admin glyph drafting (3d-1)', () => {
       ).status,
     ).toBe(404);
 
+    expect(
+      (await request('POST', '/v1/admin/venues/not-a-uuid/glyph-drafts', {}))
+        .status,
+    ).toBe(400);
+
     const bad = await request(
       'POST',
       `/v1/admin/venues/${venue.id}/glyph-drafts`,
@@ -200,6 +241,6 @@ describe('admin glyph drafting (3d-1)', () => {
       },
     );
     expect(bad.status).toBe(400);
-    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledTimes(2);
   });
 });
