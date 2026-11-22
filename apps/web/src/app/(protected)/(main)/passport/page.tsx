@@ -1,8 +1,11 @@
+import { headers } from 'next/headers';
+import { after } from 'next/server';
 import { apiClient } from '@/lib/api';
 import { auth } from '@/lib/auth';
 import { fetchHistory } from '@/lib/history';
 import { fetchMe } from '@/lib/users';
 import { passportYear } from '@/lib/passport/passport-request';
+import { planPassportCard } from '@/lib/passport/render-card';
 import { DENVER_TIME_ZONE, localDateString } from '@/lib/time';
 import { PassportContent } from '@/components/consumer/passport/PassportContent';
 
@@ -61,6 +64,34 @@ export default async function PassportPage() {
       return [];
     }),
   ]);
+
+  // Warm the share card once the page is on its way: the browser asks for it
+  // on mount, and the first render costs several seconds. `after` runs past
+  // the response, so the page never waits on it. The key is the route's own
+  // (same planner), so a request for the stored theme finds this entry, or
+  // joins it in flight. A theme the reader switched to is not warmed.
+  if (history.past.length > 0) {
+    const requestHeaders = await headers();
+    const host = requestHeaders.get('host');
+    if (host !== null) {
+      const protocol = requestHeaders.get('x-forwarded-proto') ?? 'https';
+      const plan = planPassportCard({
+        ratio: 'square',
+        userId: profile.id,
+        handle: profile.handle,
+        profileTheme: profile.theme,
+        themeOverride: undefined,
+        past: history.past,
+      });
+      after(async () => {
+        try {
+          await plan.render(`${protocol}://${host}`);
+        } catch (err) {
+          console.error('[passport] card pre-warm failed', { err });
+        }
+      });
+    }
+  }
 
   return (
     <PassportContent

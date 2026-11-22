@@ -1,31 +1,16 @@
-import { ImageResponse } from 'next/og';
-import { PassportCard } from '@/components/consumer/passport/PassportCard';
-import {
-  PASSPORT_PRINT_MODE,
-  PASSPORT_PRINT_SCALE,
-} from '@/components/consumer/passport/definitions/modes';
 import type {
   HistoryResponse,
   UserProfileResponse,
 } from '@concert-crawl/types';
 import { auth } from '@/lib/auth';
 import { fetchHistory } from '@/lib/history';
-import { loadShareFonts } from '@/lib/share/fonts';
 import {
   isPassportRatio,
   PASSPORT_CACHE_CONTROL,
-  PASSPORT_DIMENSIONS,
   PASSPORT_VARY,
-  passportYear,
-  resolvePassportTheme,
 } from '@/lib/passport/passport-request';
-import {
-  matchesEtag,
-  passportCacheKey,
-  passportEtag,
-  renderOnce,
-} from '@/lib/passport/render-cache';
-import { toAttendedShows } from '@/lib/passport/select-shows';
+import { matchesEtag, passportEtag } from '@/lib/passport/render-cache';
+import { planPassportCard } from '@/lib/passport/render-card';
 import { fetchMe } from '@/lib/users';
 
 // The passport PNG.
@@ -57,20 +42,6 @@ const problem = (status: number, message: string): Response =>
     },
   });
 
-/**
- * Fonts come from our own origin: `next/font/google` output is unreachable
- * from a route handler and satori bundles no system fonts. A non-200 throws
- * rather than falling back — a card in a font nobody chose is worse than a 502.
- */
-const originFontLoader = (request: Request) => async (assetPath: string) => {
-  const url = new URL(assetPath, request.url);
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-  return response.arrayBuffer();
-};
-
 export const GET = async (
   request: Request,
   context: PassportRouteContext,
@@ -100,22 +71,15 @@ export const GET = async (
     return problem(502, 'passport data unavailable');
   }
 
-  const { tokens } = resolvePassportTheme({
-    theme: new URL(request.url).searchParams.get('theme') ?? undefined,
-    profileTheme: profile.theme,
-  });
-
-  const shows = toAttendedShows(history.past);
-  const year = passportYear();
-  const key = passportCacheKey({
-    userId: profile.id,
+  const plan = planPassportCard({
     ratio,
+    userId: profile.id,
     handle: profile.handle,
-    year,
-    tokens,
-    shows,
+    profileTheme: profile.theme,
+    themeOverride: new URL(request.url).searchParams.get('theme') ?? undefined,
+    past: history.past,
   });
-  const etag = passportEtag(key);
+  const etag = passportEtag(plan.key);
   const headers = {
     'Cache-Control': PASSPORT_CACHE_CONTROL,
     Vary: PASSPORT_VARY,
@@ -127,24 +91,8 @@ export const GET = async (
     return new Response(null, { status: 304, headers });
   }
 
-  // The cache owns the render: fonts and satori run only on a miss, and once
-  // for requests that arrive for the same card together. A failure is never
-  // stored.
   try {
-    const png = await renderOnce(key, async () => {
-      const fonts = await loadShareFonts(originFontLoader(request));
-      return new ImageResponse(
-        <PassportCard
-          mode={PASSPORT_PRINT_MODE}
-          scale={PASSPORT_PRINT_SCALE}
-          shows={shows}
-          tokens={tokens}
-          handle={profile.handle}
-          year={year}
-        />,
-        { ...PASSPORT_DIMENSIONS[ratio], fonts },
-      ).arrayBuffer();
-    });
+    const png = await plan.render(new URL(request.url).origin);
     return new Response(png, {
       headers: { ...headers, 'Content-Type': 'image/png' },
     });
