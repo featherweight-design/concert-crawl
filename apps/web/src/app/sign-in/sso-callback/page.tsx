@@ -10,8 +10,7 @@ interface SsoCallbackPageProps {
 }
 
 /**
- * Where Google returns to, dark under `/sign-in` until the cutover (plan
- * 2026-11-14). Anyone can write this URL, so the return path is sanitized here,
+ * Where Google returns to (plan 2026-11-14). Anyone can write this URL, so the return path is sanitized here,
  * once, and a signed-in visitor is simply sent on.
  */
 export default async function SsoCallbackPage({

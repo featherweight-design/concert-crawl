@@ -40,7 +40,7 @@ vi.mock('@clerk/nextjs/errors', () => ({
 import { AUTH_FLOW_COPY } from '@/components/auth/flow/definitions/copy';
 import { FLOOR_MS } from '@/lib/auth/timing-pad';
 import { SIGN_IN_COPY } from '@/app/sign-in/definitions/copy';
-import { SIGN_UP_COPY } from '../definitions/copy';
+import { SIGN_UP_COPY } from './definitions/copy';
 import { SignUpFlow } from './SignUpFlow';
 
 const COPY = SIGN_UP_COPY;
@@ -566,7 +566,7 @@ describe('SignUpFlow, verify', () => {
     await toVerify();
     expect(
       screen.getByRole('link', { name: COPY.verify.haveAccountLink }),
-    ).toHaveAttribute('href', '/sign-in/new');
+    ).toHaveAttribute('href', '/sign-in');
   });
 });
 

@@ -232,21 +232,6 @@ export default function InviteCodePage() {
             ? copy.button.wait(formatClock(lock.remaining))
             : copy.button.idle}
         </PrimaryButton>
-
-        <p className="m-0 text-center text-xs leading-normal text-fg-subtle">
-          {copy.agreement.prefix}
-          {/* New tab, like the checkout panel's legal links: navigating away
-              in place would throw away the code the visitor has typed. */}
-          <Link
-            href={copy.agreement.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block py-1.5 text-signal underline underline-offset-2"
-          >
-            {copy.agreement.link}
-          </Link>
-          .
-        </p>
       </form>
 
       <div className="flex flex-col items-center gap-1">

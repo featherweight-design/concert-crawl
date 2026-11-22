@@ -42,7 +42,7 @@ import { formatClock, useCountdown } from '@/lib/auth/use-countdown';
 import { useOnline } from '@/lib/auth/use-online';
 import { AuthLoadingState } from '@/app/sign-in/AuthLoadingState';
 import { SIGN_IN_COPY } from '@/app/sign-in/definitions/copy';
-import { SIGN_UP_COPY } from '../definitions/copy';
+import { SIGN_UP_COPY } from './definitions/copy';
 
 const COPY = SIGN_UP_COPY;
 const FLOW = AUTH_FLOW_COPY;
@@ -445,7 +445,7 @@ export function SignUpFlow({
         <LinkButton onClick={backToForm}>{COPY.verify.wrongEmail}</LinkButton>
         <p className="m-0 text-center text-sm text-fg-muted">
           {COPY.verify.haveAccount}{' '}
-          <Link href="/sign-in/new" className="font-bold text-signal">
+          <Link href="/sign-in" className="font-bold text-signal">
             {COPY.verify.haveAccountLink}
           </Link>
         </p>
@@ -580,7 +580,7 @@ export function SignUpFlow({
       )}
       <p className="m-0 text-center text-sm text-fg-muted">
         {COPY.form.foot}{' '}
-        <Link href="/sign-in/new" className="font-bold text-signal">
+        <Link href="/sign-in" className="font-bold text-signal">
           {COPY.form.footLink}
         </Link>
       </p>

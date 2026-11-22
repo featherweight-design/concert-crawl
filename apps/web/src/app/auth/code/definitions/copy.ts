@@ -27,16 +27,6 @@ export const copy = {
     // Too many tries: the field locks and the button counts down.
     wait: (clock: string) => `Try again in ${clock}`,
   },
-  // Under the Continue button: "continuing" is that button. Same shape as the
-  // checkout panel's legal line, and the link names the document's own heading.
-  // Stays until the cutover: the sign-up form that carries its own consent
-  // checkbox is not live yet, so this line is still the Beta Agreement's
-  // consent. It goes in the cutover PR.
-  agreement: {
-    prefix: 'By continuing you agree to our ',
-    link: 'Private Beta Agreement',
-    href: '/legal/beta',
-  },
   errors: {
     invalid_format:
       'Codes are BETA-XXXX-XXXX, or 4 to 20 letters and numbers. Check for typos.',

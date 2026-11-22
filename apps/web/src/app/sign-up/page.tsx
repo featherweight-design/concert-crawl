@@ -11,18 +11,18 @@ import { INVITE_COOKIE_NAME, verifyInviteCookie } from '@/lib/invite-cookie';
 import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 import { SignUpFlow } from './SignUpFlow';
 
-interface SignUpNewProps {
+interface SignUpPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
- * The custom sign-up, dark at `/sign-up/new` until the cutover (plan
- * 2026-11-14). The invite-cookie gate is the parent layout's, unchanged. Every
+ * The custom sign-up (plan 2026-11-14), live since the cutover
+ * (PR 9). The invite-cookie gate is the parent layout's, unchanged. Every
  * sign-up still ends at `/auth/complete` (it redeems the invite, then
  * onboarding), so the target is computed here, once, by the same helper as the
  * stock page. A signed-in visitor already has an account: on to the target.
  */
-export default async function SignUpNewPage({ searchParams }: SignUpNewProps) {
+export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams;
   const target = completeTarget(params);
   const { userId } = await auth();

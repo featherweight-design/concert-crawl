@@ -67,7 +67,7 @@ export function ForgotFlow({ returnTo }: { returnTo: string }) {
 
   if (!clerk.loaded) return <AuthLoadingState />;
 
-  const backHref = `/sign-in/new?${new URLSearchParams({ redirect_url: returnTo }).toString()}`;
+  const backHref = `/sign-in?${new URLSearchParams({ redirect_url: returnTo }).toString()}`;
 
   async function onSend(evt: FormEvent) {
     evt.preventDefault();

@@ -8,8 +8,7 @@ interface ForgotProps {
 }
 
 /**
- * Reset a password, dark at `/sign-in/forgot` until the cutover (plan
- * 2026-11-14). The email is asked again here rather than carried in the URL.
+ * Reset a password (plan 2026-11-14). The email is asked again here rather than carried in the URL.
  * A signed-in visitor goes straight on; the return path is sanitized once, here.
  */
 export default async function ForgotPage({ searchParams }: ForgotProps) {

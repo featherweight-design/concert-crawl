@@ -29,7 +29,7 @@ vi.mock('@/app/legal/TermsBody', () => ({ TermsBody: () => null }));
 vi.mock('@/app/legal/PrivacyBody', () => ({ PrivacyBody: () => null }));
 vi.mock('@/app/legal/BetaBody', () => ({ BetaBody: () => null }));
 
-import SignUpNewPage from './page';
+import SignUpPage from './page';
 
 interface Props {
   beta: boolean;
@@ -52,11 +52,11 @@ beforeEach(() => {
 });
 
 const visit = async (params: Record<string, string | string[]> = {}) =>
-  (await SignUpNewPage({ searchParams: Promise.resolve(params) })) as {
+  (await SignUpPage({ searchParams: Promise.resolve(params) })) as {
     props: Props;
   };
 
-describe('/sign-up/new', () => {
+describe('/sign-up', () => {
   it('sends a signed-in visitor to the same /auth/complete target as the stock page', async () => {
     mocks.auth.mockResolvedValue({ userId: 'user_1' });
     await expect(

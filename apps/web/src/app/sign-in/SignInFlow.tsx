@@ -34,8 +34,8 @@ import {
 import { held, RESET_FLOOR_MS } from '@/lib/auth/timing-pad';
 import { formatClock, useCountdown } from '@/lib/auth/use-countdown';
 import { useOnline } from '@/lib/auth/use-online';
-import { AuthLoadingState } from '../AuthLoadingState';
-import { SIGN_IN_COPY } from '../definitions/copy';
+import { AuthLoadingState } from './AuthLoadingState';
+import { SIGN_IN_COPY } from './definitions/copy';
 
 const COPY = SIGN_IN_COPY;
 

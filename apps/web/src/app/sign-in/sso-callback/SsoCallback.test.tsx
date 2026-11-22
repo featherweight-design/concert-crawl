@@ -154,7 +154,7 @@ describe('SsoCallback', () => {
     renderCallback('/events');
     await settle();
     expect(mocks.replace).toHaveBeenCalledWith(
-      '/sign-in/new?google=refused&redirect_url=%2Fevents',
+      '/sign-in?google=refused&redirect_url=%2Fevents',
     );
     expect(mocks.signUp.create).not.toHaveBeenCalled();
     expect(mocks.signUp.password).not.toHaveBeenCalled();
@@ -186,7 +186,7 @@ describe('SsoCallback', () => {
     await settle();
     expect(mocks.signIn.finalize).not.toHaveBeenCalled();
     expect(mocks.replace).toHaveBeenCalledWith(
-      '/sign-in/new?google=failed&redirect_url=%2Fevents',
+      '/sign-in?google=failed&redirect_url=%2Fevents',
     );
   });
 
@@ -201,7 +201,7 @@ describe('SsoCallback', () => {
     renderCallback();
     await settle();
     expect(mocks.replace).toHaveBeenCalledWith(
-      '/sign-in/new?google=cancelled&redirect_url=%2Fevents',
+      '/sign-in?google=cancelled&redirect_url=%2Fevents',
     );
   });
 
@@ -212,7 +212,7 @@ describe('SsoCallback', () => {
       renderCallback();
       await settle();
       expect(mocks.replace).toHaveBeenCalledWith(
-        '/sign-in/new?google=failed&redirect_url=%2Fevents',
+        '/sign-in?google=failed&redirect_url=%2Fevents',
       );
       expect(mocks.signIn.finalize).not.toHaveBeenCalled();
     },
@@ -224,7 +224,7 @@ describe('SsoCallback', () => {
     renderCallback();
     await settle();
     expect(mocks.replace).toHaveBeenCalledWith(
-      '/sign-in/new?google=failed&redirect_url=%2Fevents',
+      '/sign-in?google=failed&redirect_url=%2Fevents',
     );
     expect(mocks.signIn.finalize).not.toHaveBeenCalled();
     expect(mocks.captureException).toHaveBeenCalledWith(
@@ -239,7 +239,7 @@ describe('SsoCallback', () => {
     renderCallback();
     await settle();
     expect(mocks.replace).toHaveBeenCalledWith(
-      '/sign-in/new?google=failed&redirect_url=%2Fevents',
+      '/sign-in?google=failed&redirect_url=%2Fevents',
     );
     expect(mocks.signIn.finalize).not.toHaveBeenCalled();
     expect(mocks.captureException).toHaveBeenCalledWith(
@@ -254,7 +254,7 @@ describe('SsoCallback', () => {
     renderCallback();
     await settle();
     expect(mocks.replace).toHaveBeenCalledWith(
-      '/sign-in/new?google=failed&redirect_url=%2Fevents',
+      '/sign-in?google=failed&redirect_url=%2Fevents',
     );
   });
 
@@ -341,7 +341,7 @@ describe('SsoCallback, consent still needed', () => {
       screen.getByRole('button', { name: COPY.googleConsent.cancel }),
     );
     expect(mocks.replace).toHaveBeenCalledWith(
-      '/sign-in/new?google=cancelled&redirect_url=%2Fevents',
+      '/sign-in?google=cancelled&redirect_url=%2Fevents',
     );
   });
 

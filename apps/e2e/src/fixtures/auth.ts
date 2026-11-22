@@ -21,6 +21,9 @@ export const SMOKE_STORAGE_STATE_PATH = '.auth/smoke.json';
 export const auditStorageStatePath = (role: 'user' | 'admin'): string =>
   `.auth/audit-${role}.json`;
 
+// The sign-in submit on either step, on the custom flow or Clerk's stock one.
+const SUBMIT_NAME = /^(continue|sign in)$/i;
+
 /**
  * Completes the Clerk sign-in form on `page`, which must already be on
  * `/sign-in`, and resolves once the browser holds a Clerk session.
@@ -39,21 +42,24 @@ export async function signInWithClerk(
   const emailInput = page.getByLabel(/email/i);
   await emailInput.waitFor({ state: 'visible', timeout: 30_000 });
   await emailInput.fill(email);
-  // `exact: true` is required because Clerk renders a "Sign in with
-  // Google" OAuth button whose accessible name resolves to "Sign in
-  // with Google Continue" — a substring match on /continue/i hits
-  // both buttons and trips Playwright's strict-mode check.
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  // Anchored, not a substring: the Google button's accessible name also
+  // contains "Continue" and would trip Playwright's strict-mode check.
+  // "Sign in" is the custom flow's password-step button (plan 2026-11-14,
+  // decision 4); "Continue" is its email step and both of Clerk's stock steps.
+  const submit = page.getByRole('button', { name: SUBMIT_NAME });
+  await submit.click();
 
-  // Target by `name` attribute, not label. `getByLabel(/password/i)`
-  // also matches Clerk's "Show password" toggle button (aria-label
-  // "Show password"), tripping strict mode. Playwright's `fill()`
-  // auto-waits for the input to become enabled — Clerk renders the
-  // field `disabled` for a beat after the email-step transition.
-  const passwordInput = page.locator('input[name="password"]');
+  // Target by attribute, not label: `getByLabel(/password/i)` also matches
+  // the "Show password" toggle, tripping strict mode. The custom flow's field
+  // has no `name`, so match its autocomplete too (Clerk's stock field carries
+  // both, which is still one element). `fill()` auto-waits for the input to
+  // become enabled: the field is `disabled` for a beat after the email step.
+  const passwordInput = page.locator(
+    'input[autocomplete="current-password"], input[name="password"]',
+  );
   await passwordInput.waitFor({ state: 'visible', timeout: 30_000 });
   await passwordInput.fill(password);
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await submit.click();
 
   // `commit`, not the default `load`: leaving /sign-in is the signal here, and
   // the session cookie below is the state the caller actually needs.

@@ -53,7 +53,7 @@ export function SsoCallback({ returnTo, legal }: SsoCallbackProps) {
   const consentRef = useRef<HTMLInputElement>(null);
 
   const startHref = (notice: GoogleNotice) =>
-    `/sign-in/new?${new URLSearchParams({ google: notice, redirect_url: returnTo }).toString()}`;
+    `/sign-in?${new URLSearchParams({ google: notice, redirect_url: returnTo }).toString()}`;
 
   async function finalize(which: 'signIn' | 'signUp'): Promise<boolean> {
     const navigate = async ({

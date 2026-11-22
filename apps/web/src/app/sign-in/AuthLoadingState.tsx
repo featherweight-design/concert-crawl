@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { SIGN_IN_COPY } from './definitions/copy';
 
 // Clerk's script is fetched from clerk.concertcrawl.app. A blocker such as
-// Brave Shields drops that request without ever erroring, so <SignIn /> never
+// Brave Shields drops that request without ever erroring, so the flow never
 // mounts and nothing reports a failure. This timeout is the only signal we get
 // that it is never arriving.
 export const AUTH_LOAD_TIMEOUT_MS = 10000;

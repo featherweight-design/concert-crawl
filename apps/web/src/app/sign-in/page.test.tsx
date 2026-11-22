@@ -15,7 +15,7 @@ vi.mock('@/lib/auth/intent-subject', () => ({
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('./SignInFlow', () => ({ SignInFlow: () => null }));
 
-import SignInNewPage from './page';
+import SignInPage from './page';
 
 beforeEach(() => {
   mocks.auth.mockReset().mockResolvedValue({ userId: null });
@@ -24,11 +24,11 @@ beforeEach(() => {
 });
 
 const visit = (redirect_url?: string | string[]) =>
-  SignInNewPage({
+  SignInPage({
     searchParams: Promise.resolve(redirect_url ? { redirect_url } : {}),
   });
 
-describe('/sign-in/new', () => {
+describe('/sign-in', () => {
   it('lets a signed-out visitor through with the sanitized return path', async () => {
     const tree = (await visit('/events/42')) as { props: { returnTo: string } };
     expect(tree.props.returnTo).toBe('/events/42');
@@ -66,7 +66,7 @@ describe('/sign-in/new', () => {
   it('passes how a Google attempt ended, and nothing it does not know', async () => {
     const read = async (google: string) =>
       (
-        (await SignInNewPage({
+        (await SignInPage({
           searchParams: Promise.resolve({ google }),
         })) as { props: { google: string | null } }
       ).props.google;

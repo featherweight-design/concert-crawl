@@ -99,7 +99,7 @@ describe('ForgotFlow, email', () => {
     );
     expect(
       screen.getByRole('link', { name: COPY.forgot.back }),
-    ).toHaveAttribute('href', '/sign-in/new?redirect_url=%2Fevents%2F42');
+    ).toHaveAttribute('href', '/sign-in?redirect_url=%2Fevents%2F42');
   });
 
   it('refuses a malformed address on the page without asking Clerk', () => {

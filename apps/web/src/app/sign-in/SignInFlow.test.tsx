@@ -44,7 +44,7 @@ vi.mock('@/components/waitlist/WaitlistModal', () => ({
 }));
 
 import { AUTH_FLOW_COPY } from '@/components/auth/flow/definitions/copy';
-import { SIGN_IN_COPY } from '../definitions/copy';
+import { SIGN_IN_COPY } from './definitions/copy';
 import { FLOOR_MS, RESET_FLOOR_MS } from '@/lib/auth/timing-pad';
 import { SignInFlow } from './SignInFlow';
 

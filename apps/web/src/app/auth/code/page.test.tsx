@@ -24,18 +24,6 @@ vi.mock('@/components/waitlist/WaitlistModal', () => ({
 import InviteCodePage from './page';
 import { copy } from './definitions/copy';
 
-describe('invite-code screen links the Private Beta Agreement (#1619)', () => {
-  it('renders a link to /legal/beta named after the agreement', () => {
-    render(<InviteCodePage />);
-
-    const link = screen.getByRole('link', { name: 'Private Beta Agreement' });
-    expect(link).toHaveAttribute('href', '/legal/beta');
-    expect(link.closest('p')).toHaveTextContent(
-      'By continuing you agree to our Private Beta Agreement.',
-    );
-  });
-});
-
 describe('invite-code screen pre-fills a code from a poster link', () => {
   afterEach(() => {
     window.history.replaceState(null, '', '/');
