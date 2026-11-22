@@ -41,8 +41,10 @@ interface CrewComingUpRowProps {
  * "I'm in" on the right, which is the existing Yes, going. Tapping the row
  * opens the show.
  *
- * Tonight swaps the tile for TONIGHT. Postponed and cancelled are not here
- * yet: `CrewShow` carries no status (item 41b).
+ * Tonight swaps the tile for TONIGHT. A postponed show keeps its row with the
+ * POSTPONED chip. A cancelled one stays for a day from its cancellation (item
+ * 41, "a cancelled show leaves after a day"; the API decides the day) with the
+ * Cancelled chip and a struck title, the way a cancelled row reads on Browse.
  */
 export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
   const router = useRouter();
@@ -54,14 +56,18 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
   const goingId = useId();
   const statusId = useId();
   const postponed = show.status === 'postponed';
+  const cancelled = show.status === 'cancelled';
   const row = fromCrewShow(show);
   const summary = summariseGoing(show, viewerId, COPY.you);
   const tonight = isTonight(show.iso);
   const tile = tileParts(show.iso);
   // Tonight is the night the doors matter (the board's "Doors 7:00 PM"); a
   // later show reads its show time, and so does tonight without a doors time.
-  // A postponed show does not open its doors, so it never says so.
-  const doors = tonight && !postponed ? formatShowTime(show.doorsTime) : null;
+  // A postponed or cancelled show does not open its doors, so it never says so.
+  const doors =
+    tonight && show.status === 'upcoming'
+      ? formatShowTime(show.doorsTime)
+      : null;
   const whenLabel = doors === null ? row.timeLabel : COPY.doors(doors);
 
   const imIn = () => {
@@ -168,7 +174,7 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
           // The date, venue and who is going describe the link, so a screen
           // reader hears them with the act's name; the ring is drawn round the
           // whole card the link opens.
-          aria-describedby={`${metaId} ${goingId}${postponed ? ` ${statusId}` : ''}`}
+          aria-describedby={`${metaId} ${goingId}${postponed || cancelled ? ` ${statusId}` : ''}`}
           className="after:absolute after:inset-0 after:rounded-[16px] after:content-[''] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-[var(--focus)]"
           style={{
             display: 'block',
@@ -177,8 +183,12 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             whiteSpace: 'nowrap',
             fontSize: 16,
             fontWeight: 800,
-            color: 'var(--fg)',
-            textDecoration: 'none',
+            // A cancelled title is struck and muted, as RowTitleLine draws it:
+            // a decoration, not a row opacity, which would drop the muted
+            // foreground below AA. The chip says it for a screen reader.
+            color: cancelled ? 'var(--fg-muted)' : 'var(--fg)',
+            textDecoration: cancelled ? 'line-through' : 'none',
+            textDecorationThickness: cancelled ? 1.5 : undefined,
           }}
         >
           {row.headliner}
@@ -247,6 +257,16 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
             />
           </div>
         )}
+        {cancelled && (
+          // Same slot as POSTPONED: the crew sees the plan called off before
+          // the row leaves.
+          <div id={statusId} style={{ marginTop: 6 }}>
+            <StatusChip
+              status="cancelled"
+              label={CONSUMER_COPY.cancelledLabel}
+            />
+          </div>
+        )}
         {toggle.isError && (
           <p
             role="alert"
@@ -261,7 +281,9 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
         )}
       </div>
 
-      {!summary.youGoing && (
+      {/* A cancelled show has no night to commit to: the event page offers no
+          Going on one (EventDetailCtaBlock), so the row offers no I'm in. */}
+      {!summary.youGoing && !cancelled && (
         <button
           type="button"
           onClick={imIn}

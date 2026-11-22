@@ -397,24 +397,64 @@ describe('/v1/crews', () => {
       expect(body.data.upcoming[0]?.doorsTime).toBeNull();
     });
 
-    it('still drops a cancelled show: when it leaves is a Design call that is open', async () => {
-      const venue = await seedVenue({ slug: 'cancelled-venue' });
-      const event = await seedEvent(venue.id, {
-        date: dayOffset(8),
-        artist: 'Cancelled Act',
-        status: 'cancelled',
-      });
-      await seedUserEvent(KEEPER, event.id, {
-        status: null,
-        attendingAt: new Date(),
-      });
-      const crewId = await seedCrew([KEEPER, MATE]);
-      setAuth();
+    // Addendum 6 item 41: "a cancelled show leaves after a day". The day runs
+    // from events.cancelled_at (0127), so a cancellation with no time (one
+    // from before 0127, or the stale sweep's guess) drops at once.
+    describe('a cancelled show', () => {
+      const seedCancelled = async (
+        slug: string,
+        cancelledAt: Date | null,
+      ): Promise<string> => {
+        const venue = await seedVenue({ slug });
+        const event = await seedEvent(venue.id, {
+          date: dayOffset(8),
+          artist: `Cancelled ${slug}`,
+          status: 'cancelled',
+          cancelledAt,
+        });
+        await seedUserEvent(KEEPER, event.id, {
+          status: null,
+          attendingAt: new Date(),
+        });
+        return event.id;
+      };
+      const HOUR = 60 * 60 * 1000;
 
-      const body = (await (
-        await app.request(`/v1/crews/${crewId}`)
-      ).json()) as DetailBody;
-      expect(body.data.upcoming).toEqual([]);
+      it('stays on Coming up for a day from its cancellation, and says so', async () => {
+        const recent = await seedCancelled(
+          'cancelled-recent',
+          new Date(Date.now() - 2 * HOUR),
+        );
+        await seedCancelled('cancelled-old', new Date(Date.now() - 25 * HOUR));
+        await seedCancelled('cancelled-untimed', null);
+        const crewId = await seedCrew([KEEPER, MATE]);
+        setAuth();
+
+        const body = (await (
+          await app.request(`/v1/crews/${crewId}`)
+        ).json()) as DetailBody;
+        expect(body.data.upcoming.map((show) => show.eventId)).toEqual([
+          recent,
+        ]);
+        expect(body.data.upcoming[0]?.status).toBe('cancelled');
+      });
+
+      it('never reaches the lens list or the crew card count', async () => {
+        await seedCancelled('cancelled-lens', new Date(Date.now() - HOUR));
+        const crewId = await seedCrew([KEEPER, MATE]);
+        setAuth();
+
+        const shows = (await (
+          await app.request(`/v1/crews/${crewId}/shows`)
+        ).json()) as ShowsBody;
+        expect(shows.data.shows).toEqual([]);
+        const list = (await (
+          await app.request('/v1/crews')
+        ).json()) as ListBody;
+        expect(
+          list.data.crews.find((crew) => crew.id === crewId)?.upcomingCount,
+        ).toBe(0);
+      });
     });
 
     it('drops a past show with exactly one attendee from both lists', async () => {

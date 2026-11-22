@@ -324,7 +324,7 @@ crewsRouter.get('/:crewId', async (ctx) => {
 
   const memberIds = memberRows.map((row) => row.userId);
   const [upcoming, nights, mute] = await Promise.all([
-    loadCrewShows(memberIds, 'upcoming'),
+    loadCrewShows(memberIds, 'upcoming', [], { keepRecentlyCancelled: true }),
     loadCrewShows(memberIds, 'past'),
     db
       .select({ id: crewMutes.id })

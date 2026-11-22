@@ -1,0 +1,18 @@
+-- When a show was confirmed cancelled (addendum 6 item 41: on the crew page "a
+-- cancelled show leaves after a day").
+--
+-- No column could say this before. updated_at moves on every crawl upsert, and
+-- delisted_at belongs to the stale sweep, whose cancellation is a guess and is
+-- shown as "No longer listed", not "Cancelled".
+--
+-- The writers that confirm a cancellation set it: an admin edit (PATCH
+-- /v1/admin/events/:id and the Needs you answers that call it), and a promoted
+-- fan report. The stale sweep leaves it null. Moving a show off cancelled
+-- clears it. The crawler writes no cancelled status.
+--
+-- Rows cancelled before this migration stay null, so the crew page drops them
+-- at once, as it did before.
+--
+-- Expand-only: one nullable column, no default, no backfill. Code from before
+-- this migration never reads or writes it.
+ALTER TABLE "events" ADD COLUMN "cancelled_at" timestamp with time zone;
