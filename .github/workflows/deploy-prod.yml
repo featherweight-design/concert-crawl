@@ -39,6 +39,11 @@ on:
         required: false
         default: false
         type: boolean
+      no_build_cache:
+        description: 'Build the web app without the Vercel build cache (vercel deploy --force)'
+        required: false
+        default: false
+        type: boolean
 
 # Serialize prod deploys. cancel-in-progress: false means a queued deploy
 # waits for the running one rather than being replaced. Shared with
@@ -517,12 +522,23 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          # Empty on workflow_run, where inputs do not exist.
+          NO_BUILD_CACHE: ${{ github.event.inputs.no_build_cache }}
         run: |
+          # `--force` builds without restoring the previous deployment's build
+          # cache. Opt-in per dispatch, for a build that fails on a restored
+          # cache (2026-11-22: two OOMs in static generation after restoring a
+          # 950 MB cache, while staging built the same commit).
+          force_flag=()
+          if [ "$NO_BUILD_CACHE" = "true" ]; then
+            force_flag=(--force)
+            echo "Building without the Vercel build cache (--force)"
+          fi
           # Pinned, not `@latest`. This command holds a token that can write to
           # production, so `@latest` would hand a mutable third-party release
           # write access on every run, and a breaking one would stop promotions
           # with no change in this repository. Bump it deliberately.
-          npx --yes vercel@59.23.2 deploy --prod --yes \
+          npx --yes vercel@59.23.2 deploy --prod --yes "${force_flag[@]}" \
             --token "$VERCEL_TOKEN"
 
       # Record the deploy in Sentry under the API project only, after both
