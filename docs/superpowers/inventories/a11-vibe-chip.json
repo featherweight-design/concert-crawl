@@ -1,0 +1,78 @@
+{
+  "feature": "Vibe chip with three or more vibes (addendum 11): three-dot stack, count label, All vibes at 16, legend capped at four names then +N more",
+  "note": "Boards: design/design_handoff_bplus_redesign/addendum-11/boards/01-vibe-chip (vibe-3, vibe-4, vibe-all at 320/360 and desktop; vibe-chip-spec table). Phone chip and desktop segment both on /events.",
+  "shares": {
+    "binding": "getChipLabel",
+    "module": "apps/web/src/components/consumer/filter-bar"
+  },
+  "rows": [
+    {
+      "id": "vibe-three",
+      "label": "/events: 3 Vibes",
+      "view": "apps/web/src/components/consumer/filter-bar/filter-defs.ts",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=electronic&filterVibe=hip-hop&filterVibe=pop",
+          "settle": 5000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-row\"]:visible, [data-testid=\"filter-segment-bar\"]:visible"
+        }
+      ]
+    },
+    {
+      "id": "vibe-four",
+      "label": "/events: 4 Vibes",
+      "view": "apps/web/src/components/consumer/filter-bar/filter-defs.ts",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=electronic&filterVibe=hip-hop&filterVibe=pop&filterVibe=indie",
+          "settle": 5000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-row\"]:visible, [data-testid=\"filter-segment-bar\"]:visible"
+        }
+      ]
+    },
+    {
+      "id": "vibe-five",
+      "label": "/events: 5 Vibes (legend +2 more)",
+      "view": "apps/web/src/components/consumer/filter-bar/filter-defs.ts",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=electronic&filterVibe=hip-hop&filterVibe=pop&filterVibe=indie&filterVibe=rock",
+          "settle": 5000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-row\"]:visible, [data-testid=\"filter-segment-bar\"]:visible"
+        }
+      ]
+    },
+    {
+      "id": "vibe-all",
+      "label": "/events: all 16 Vibes",
+      "view": "apps/web/src/components/consumer/filter-bar/filter-defs.ts",
+      "steps": [
+        {
+          "goto": "/events?filterVibe=electronic&filterVibe=hip-hop&filterVibe=pop&filterVibe=indie&filterVibe=rock&filterVibe=metal&filterVibe=punk&filterVibe=folk&filterVibe=country&filterVibe=jazz&filterVibe=latin&filterVibe=reggae&filterVibe=jam&filterVibe=world&filterVibe=classical&filterVibe=comedy",
+          "settle": 5000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"phone-filter-row\"]:visible, [data-testid=\"filter-segment-bar\"]:visible"
+        }
+      ]
+    }
+  ]
+}
