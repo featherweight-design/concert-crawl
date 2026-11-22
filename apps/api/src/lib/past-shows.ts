@@ -32,6 +32,7 @@ import { followedArtistsCondition } from './artist-follows.js';
 import { displayHeadliner, portraitCanonicalName } from './event-billing.js';
 import { containsPattern } from './escape-like.js';
 import { MT_TIME_ZONE, todayInDenver } from './time.js';
+import { servableArtistPhotoUrl } from './artist-photo.js';
 
 export const PAST_SHOWS_PAGE = 30;
 
@@ -194,7 +195,7 @@ export const loadPastShows = async ({
     .select({
       eventId: events.id,
       artist: displayHeadliner(),
-      artistPhotoUrl: artists.photoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl,
       venueName: venues.name,
       venueSlug: venues.slug,
       date: events.date,

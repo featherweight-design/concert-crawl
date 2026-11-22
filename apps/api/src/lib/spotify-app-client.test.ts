@@ -400,6 +400,72 @@ describe('createSpotifyAppClient().fetchArtistDetails', () => {
     expect(details?.get('sp2')).toEqual({ genres: ['dub'] });
   });
 
+  describe('fetchArtistPhoto', () => {
+    it('returns the first image of the artist, one request', async () => {
+      const fetchFn = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(tokenResponse('t1'))
+        .mockResolvedValueOnce(
+          jsonResponse({
+            id: 'sp1',
+            images: [
+              { url: 'https://i.scdn.co/image/big' },
+              { url: 'https://i.scdn.co/image/small' },
+            ],
+          }),
+        );
+
+      const client = await createSpotifyAppClient({ fetchFn });
+
+      expect(await client?.fetchArtistPhoto('sp1')).toEqual({
+        found: true,
+        imageUrl: 'https://i.scdn.co/image/big',
+      });
+      expect(fetchFn).toHaveBeenCalledTimes(2);
+      expect(String(fetchFn.mock.calls[1]?.[0])).toContain('/artists/sp1');
+    });
+
+    it('reports found with no image when the artist has none', async () => {
+      const fetchFn = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(tokenResponse('t1'))
+        .mockResolvedValueOnce(jsonResponse({ id: 'sp1', images: [] }));
+
+      const client = await createSpotifyAppClient({ fetchFn });
+
+      expect(await client?.fetchArtistPhoto('sp1')).toEqual({
+        found: true,
+        imageUrl: null,
+      });
+    });
+
+    it('reports an id Spotify does not know (404) as gone', async () => {
+      const fetchFn = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(tokenResponse('t1'))
+        .mockResolvedValueOnce(jsonResponse({ error: 'not found' }, 404));
+
+      const client = await createSpotifyAppClient({ fetchFn });
+
+      expect(await client?.fetchArtistPhoto('sp_gone')).toEqual({
+        found: false,
+      });
+    });
+
+    it('never reads an auth failure as gone', async () => {
+      const fetchFn = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(tokenResponse('t1'))
+        .mockResolvedValueOnce(jsonResponse({ error: 'forbidden' }, 403));
+
+      const client = await createSpotifyAppClient({ fetchFn });
+
+      await expect(client?.fetchArtistPhoto('sp1')).rejects.toThrow(
+        SpotifyAuthError,
+      );
+    });
+  });
+
   it('aborts the run when Spotify rejects the app token', async () => {
     // A 403 is systemic, not per-id — swallowing it would quietly return an
     // empty map, which reads as "Spotify knows nothing about these artists".

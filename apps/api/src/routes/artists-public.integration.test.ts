@@ -51,6 +51,34 @@ describe('GET /v1/artists/:slug — integration', () => {
     await clearTables();
   });
 
+  // Spotify's terms allow only temporary caching of artist photos: a photo
+  // last fetched more than 30 days ago is never served, whatever the job did.
+  it.each([
+    { label: 'serves a photo fetched 29 days ago', ageDays: 29, served: true },
+    { label: 'drops a photo fetched 31 days ago', ageDays: 31, served: false },
+  ])('$label', async ({ ageDays, served }) => {
+    await seedArtist({
+      name: 'Nightjar Choir',
+      canonicalName: 'nightjar choir',
+      spotifyArtistId: 'sp_nightjar',
+      photoUrl: 'https://i.example.com/nightjar.jpg',
+      photoFetchedAt: new Date(Date.now() - ageDays * 24 * 60 * 60 * 1000),
+    });
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    await seedEvent(venue.id, {
+      artist: 'Nightjar Choir',
+      canonicalArtist: 'nightjar choir',
+      date: '2099-09-02',
+    });
+
+    const res = await getArtist('nightjar-choir');
+    const body: SuccessBody = await res.json();
+
+    expect(body.data.artist.photoUrl).toBe(
+      served ? 'https://i.example.com/nightjar.jpg' : null,
+    );
+  });
+
   it('returns artist detail with ascending upcoming, descending past, and a history drawn from past', async () => {
     await seedArtist({
       name: 'Nightjar Choir',

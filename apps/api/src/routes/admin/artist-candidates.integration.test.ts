@@ -87,6 +87,7 @@ vi.mock('../../lib/spotify-app-client.js', () => ({
             .map((id) => [id, searchState.detailsById[id] ?? { genres: [] }]),
         );
       },
+      fetchArtistPhoto: async () => ({ found: false as const }),
       getCallCount: () => 1,
     };
   },

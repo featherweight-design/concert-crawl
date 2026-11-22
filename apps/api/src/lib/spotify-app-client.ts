@@ -88,7 +88,12 @@ const searchResponseSchema = z.object({
 const artistDetailResponseSchema = z.object({
   id: z.string().min(1),
   genres: z.array(z.string()).nullish(),
+  images: z.array(artistImageSchema).nullish(),
 });
+
+/** What Spotify says about one artist id's photo, for the 30-day cache rule. */
+export type ArtistPhotoLookup =
+  { found: false } | { found: true; imageUrl: string | null };
 
 /** The fields a full artist object adds over a search result. */
 export interface ArtistDetail {
@@ -129,6 +134,13 @@ export interface SpotifyAppClient {
    * endpoint is unavailable. Only the picker calls this, at human pace.
    */
   fetchArtistDetails(artistIds: string[]): Promise<Map<string, ArtistDetail>>;
+  /**
+   * The current photo of one artist, by id. `found: false` only when Spotify
+   * says the id does not exist (400 or 404); every other failure throws, so a
+   * rate limit or an auth blip can never read as "gone" and wipe a photo.
+   * One call per id, the same spend as the name search it replaces.
+   */
+  fetchArtistPhoto(artistId: string): Promise<ArtistPhotoLookup>;
   /** Total HTTP calls issued, token mint included — for cost bookkeeping. */
   getCallCount(): number;
 }
@@ -372,5 +384,36 @@ export const createSpotifyAppClient = async (
     return detailsById;
   };
 
-  return { searchArtists, fetchArtistDetails, getCallCount: () => callCount };
+  const fetchArtistPhoto = async (
+    artistId: string,
+  ): Promise<ArtistPhotoLookup> => {
+    let body: unknown;
+    try {
+      body = await requestJson(`/artists/${encodeURIComponent(artistId)}`);
+    } catch (err) {
+      if (
+        err instanceof SpotifyApiError &&
+        (err.status === 404 || err.status === 400)
+      ) {
+        return { found: false };
+      }
+      throw err;
+    }
+    const parsed = artistDetailResponseSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new SpotifyApiError(
+        'Spotify returned an unexpected artist response shape',
+        200,
+      );
+    }
+    const first = (parsed.data.images ?? []).find((image) => image !== null);
+    return { found: true, imageUrl: first?.url ?? null };
+  };
+
+  return {
+    searchArtists,
+    fetchArtistDetails,
+    fetchArtistPhoto,
+    getCallCount: () => callCount,
+  };
 };

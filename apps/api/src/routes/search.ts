@@ -22,6 +22,7 @@ import {
   loadPriceByTierByEventId,
   resolveDisplayPrice,
 } from '../lib/price-aggregation/index.js';
+import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 export const searchRouter = new Hono();
 
@@ -38,7 +39,7 @@ searchRouter.get('/popular', async (ctx) => {
       artist: displayHeadliner(),
       date: events.date,
       imageUrl: events.imageUrl,
-      artistPhotoUrl: artists.photoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl,
       ticketPriceMin: events.ticketPriceMin,
       // The row's genre ring and chip (B19). Grouped by the primary key, so
       // it needs no GROUP BY entry of its own.
@@ -69,7 +70,13 @@ searchRouter.get('/popular', async (ctx) => {
         ...upcomingEventConditions({ from: today }),
       ),
     )
-    .groupBy(events.id, venues.name, venues.slug, artists.photoUrl)
+    .groupBy(
+      events.id,
+      venues.name,
+      venues.slug,
+      artists.photoUrl,
+      artists.photoFetchedAt,
+    )
     .orderBy(desc(watcherCount), asc(events.date))
     .limit(5);
 
@@ -162,7 +169,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       name: artists.name,
       slug: artists.slug,
       canonicalName: artists.canonicalName,
-      photoUrl: artists.photoUrl,
+      photoUrl: servableArtistPhotoUrl,
     })
     .from(artists)
     .where(

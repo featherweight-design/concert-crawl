@@ -42,6 +42,7 @@ import { isSoldOutForFansSql } from '../lib/sold-out.js';
 import { loadPriceByTierByEventId } from '../lib/price-aggregation/index.js';
 import { currentPriceCondition, underCheckSql } from '../lib/price-check.js';
 import { MT_TIME_ZONE, todayInDenver, todayInTimezone } from '../lib/time.js';
+import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 export const venuesPublicRouter = new Hono();
 
@@ -254,7 +255,7 @@ venuesPublicRouter.get(
         sourceUrl: events.sourceUrl,
         createdAt: events.createdAt,
         updatedAt: events.updatedAt,
-        artistPhotoUrl: artists.photoUrl,
+        artistPhotoUrl: servableArtistPhotoUrl,
       })
       .from(events)
       // Headliner portrait, on the same terms as /v1/events: `artists` is a

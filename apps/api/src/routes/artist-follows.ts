@@ -16,6 +16,7 @@ import type {
 } from '@concert-crawl/types';
 import { loadNextShowByCanonical } from '../lib/artist-follows.js';
 import { requireSignedIn } from '../middleware/auth.js';
+import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 /**
  * Follow / unfollow an artist (#1115, PR-D).
@@ -240,7 +241,7 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
       .select({
         canonicalName: artists.canonicalName,
         slug: artists.slug,
-        photoUrl: artists.photoUrl,
+        photoUrl: servableArtistPhotoUrl,
       })
       .from(artists)
       // A hidden row (#1342) has no page to route to, so it contributes no

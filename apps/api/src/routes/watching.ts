@@ -29,6 +29,7 @@ import {
 import { idSchema } from '../lib/id-schema.js';
 import { todayInDenver } from '../lib/time.js';
 import { isSoldOutForFansSql } from '../lib/sold-out.js';
+import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 // Watching is FREE for all signed-in plans (locked decision, #781 R6 —
 // ENTITLEMENTS_MATRIX.watching). Do NOT add a plan gate here;
@@ -66,7 +67,7 @@ watchingRouter.get('/', async (ctx) => {
       imageUrl: events.imageUrl,
       genre: events.genre,
       updatedAt: events.updatedAt,
-      artistPhotoUrl: artists.photoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl,
       venueName: venues.name,
       venueSlug: venues.slug,
     })

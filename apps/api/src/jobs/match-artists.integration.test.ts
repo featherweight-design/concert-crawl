@@ -23,7 +23,20 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const stubClient = (
   searchArtists: SpotifyAppClient['searchArtists'],
-): SpotifyAppClient => ({ searchArtists, getCallCount: () => 1 });
+  fetchArtistPhoto: SpotifyAppClient['fetchArtistPhoto'] = async () => {
+    throw new Error('unexpected by-id photo lookup');
+  },
+): SpotifyAppClient => ({
+  searchArtists,
+  fetchArtistDetails: async () => new Map(),
+  fetchArtistPhoto,
+  getCallCount: () => 1,
+});
+
+// The photo pass never searches: it looks the stored id up directly.
+const noSearch: SpotifyAppClient['searchArtists'] = async () => {
+  throw new Error('the photo pass must not search by name');
+};
 
 const seedArtist = async (
   values: Partial<typeof artists.$inferInsert> & { canonicalName: string },
@@ -47,7 +60,7 @@ const bucketTotal = (summary: MatchArtistsSummary): number =>
   summary.autoMatched +
   summary.noMatch +
   summary.photosRefreshed +
-  summary.refreshesKept +
+  summary.photosCleared +
   summary.superseded +
   summary.failures;
 
@@ -140,8 +153,6 @@ describe('runMatchArtists', () => {
   });
 
   it('never overwrites a human change made during a photo refresh', async () => {
-    // A confirmed match (not auto-matched) due a refresh, whose re-search
-    // stops resolving: the snapshot-only write path.
     const id = await seedArtist({
       canonicalName: 'khruangbin',
       matchStatus: 'matched',
@@ -154,8 +165,8 @@ describe('runMatchArtists', () => {
 
     const summary = await runMatchArtists({
       now: () => NOW,
-      client: stubClient(async () => {
-        // An admin demotes the row while Spotify searches.
+      client: stubClient(noSearch, async () => {
+        // An admin demotes the row while Spotify answers.
         await testDb
           .update(artists)
           .set({
@@ -163,23 +174,21 @@ describe('runMatchArtists', () => {
             spotifyArtistId: null,
             photoUrl: null,
             photoFetchedAt: null,
-            spotifyCandidates: null,
             updatedAt: new Date(),
           })
           .where(eq(artists.id, id));
-        return [];
+        return { found: true, imageUrl: 'https://i.scdn.co/image/renewed' };
       }),
     });
 
     const row = await readArtist(id);
     expect(row?.matchStatus).toBe('no_match');
-    expect(row?.spotifyCandidates).toBeNull();
-    expect(row?.matchCheckedAt).not.toEqual(NOW);
+    expect(row?.photoUrl).toBeNull();
     expect(summary).toMatchObject({ considered: 1, superseded: 1 });
     expect(bucketTotal(summary)).toBe(summary.considered);
   });
 
-  it("refreshes an auto-matched row's photo from the same pick", async () => {
+  it("refreshes an auto-matched row's photo by its stored id", async () => {
     const id = await seedArtist({
       name: 'Bahamas',
       canonicalName: 'bahamas',
@@ -189,28 +198,19 @@ describe('runMatchArtists', () => {
       photoFetchedAt: new Date('2026-01-01T00:00:00Z'),
       autoMatchedAt: new Date('2026-01-01T00:00:00Z'),
     });
+    const lookup = vi.fn(async () => ({
+      found: true as const,
+      imageUrl: 'https://i.scdn.co/image/new',
+    }));
 
     await runMatchArtists({
       now: () => NOW,
-      client: stubClient(async () => [
-        {
-          id: 'sp_a',
-          name: 'Bahamas',
-          images: [{ url: 'https://i.scdn.co/image/new' }],
-          genres: [],
-          spotifyUrl: null,
-        },
-        {
-          id: 'sp_b',
-          name: 'Bahamas',
-          images: [{ url: 'https://i.scdn.co/image/b' }],
-          genres: [],
-          spotifyUrl: null,
-        },
-      ]),
+      client: stubClient(noSearch, lookup),
     });
 
     const row = await readArtist(id);
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(lookup).toHaveBeenCalledWith('sp_a');
     expect(row?.spotifyArtistId).toBe('sp_a');
     expect(row?.photoUrl).toBe('https://i.scdn.co/image/new');
     expect(row?.photoFetchedAt).toEqual(NOW);
@@ -578,7 +578,7 @@ describe('runMatchArtists', () => {
     expect(rows.every((row) => row.matchCheckedAt === null)).toBe(true);
   });
 
-  it(`re-fetches photos older than ${PHOTO_REFETCH_DAYS} days`, async () => {
+  it(`re-fetches photos older than ${PHOTO_REFETCH_DAYS} days by stored id`, async () => {
     const staleId = await seedArtist({
       canonicalName: 'khruangbin',
       matchStatus: 'matched',
@@ -595,21 +595,20 @@ describe('runMatchArtists', () => {
       photoUrl: 'https://i.scdn.co/image/fresh',
       photoFetchedAt: new Date(NOW.getTime() - DAY_MS),
     });
+    const lookup = vi.fn(async () => ({
+      found: true as const,
+      imageUrl: 'https://i.scdn.co/image/renewed',
+    }));
 
     const summary = await runMatchArtists({
       now: () => NOW,
-      client: stubClient(async () => [
-        {
-          id: 'sp_khru',
-          name: 'Khruangbin',
-          images: [{ url: 'https://i.scdn.co/image/renewed' }],
-          genres: [],
-          spotifyUrl: null,
-        },
-      ]),
+      client: stubClient(noSearch, lookup),
     });
 
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(lookup).toHaveBeenCalledWith('sp_khru');
     expect(summary.photosRefreshed).toBe(1);
+    expect(bucketTotal(summary)).toBe(summary.considered);
     expect((await readArtist(staleId))?.photoUrl).toBe(
       'https://i.scdn.co/image/renewed',
     );
@@ -618,8 +617,8 @@ describe('runMatchArtists', () => {
     );
   });
 
-  it('never downgrades an established identity when a re-search stops resolving', async () => {
-    const staleId = await seedArtist({
+  it('clears the photo, keeps the identity and counts it when Spotify no longer has the artist', async () => {
+    const id = await seedArtist({
       canonicalName: 'khruangbin',
       matchStatus: 'matched',
       spotifyArtistId: 'sp_khru',
@@ -629,20 +628,85 @@ describe('runMatchArtists', () => {
       ),
     });
 
-    await runMatchArtists({
+    const summary = await runMatchArtists({
       now: () => NOW,
-      client: stubClient(async () => []),
+      client: stubClient(noSearch, async () => ({ found: false })),
     });
 
-    const row = await readArtist(staleId);
+    const row = await readArtist(id);
+    expect(row?.photoUrl).toBeNull();
+    expect(row?.photoFetchedAt).toBeNull();
     expect(row?.matchStatus).toBe('matched');
     expect(row?.spotifyArtistId).toBe('sp_khru');
-    expect(row?.photoUrl).toBe('https://i.scdn.co/image/expired');
-    expect(row?.matchCheckedAt).toEqual(NOW);
-    // The verdict is held back; the snapshot is not. It means "what the last
-    // search returned", and a matched row is no exception.
-    expect(row?.spotifyCandidates).toEqual([]);
-    expect(row?.spotifyCandidatesFetchedAt).toEqual(NOW);
+    expect(row?.matchAttempts).toBe(0);
+    expect(summary.photosCleared).toBe(1);
+    expect(summary.photosRefreshed).toBe(0);
+    expect(bucketTotal(summary)).toBe(summary.considered);
+  });
+
+  it('clears the photo when Spotify returns the artist with no image', async () => {
+    const id = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchStatus: 'matched',
+      spotifyArtistId: 'sp_khru',
+      photoUrl: 'https://i.scdn.co/image/expired',
+      photoFetchedAt: new Date(
+        NOW.getTime() - (PHOTO_REFETCH_DAYS + 1) * DAY_MS,
+      ),
+    });
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(noSearch, async () => ({
+        found: true,
+        imageUrl: null,
+      })),
+    });
+
+    const row = await readArtist(id);
+    expect(row?.photoUrl).toBeNull();
+    expect(row?.photoFetchedAt).toBeNull();
+    expect(summary.photosCleared).toBe(1);
+  });
+
+  it('keeps the photo when the lookup fails for a reason other than "gone"', async () => {
+    const id = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchStatus: 'matched',
+      spotifyArtistId: 'sp_khru',
+      photoUrl: 'https://i.scdn.co/image/expired',
+      photoFetchedAt: new Date(
+        NOW.getTime() - (PHOTO_REFETCH_DAYS + 1) * DAY_MS,
+      ),
+    });
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(noSearch, async () => {
+        throw new SpotifyRateLimitError();
+      }),
+    });
+
+    expect(summary.abortedReason).toBe('rate_limit');
+    expect((await readArtist(id))?.photoUrl).toBe(
+      'https://i.scdn.co/image/expired',
+    );
+  });
+
+  it('refreshes a photo that has no fetch stamp rather than serving it forever', async () => {
+    const id = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchStatus: 'matched',
+      spotifyArtistId: 'sp_khru',
+      photoUrl: 'https://i.scdn.co/image/unstamped',
+    });
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(noSearch, async () => ({ found: false })),
+    });
+
+    expect((await readArtist(id))?.photoUrl).toBeNull();
   });
 
   it(`retries a no_match row checked over ${NO_MATCH_RETRY_DAYS} days ago`, async () => {
@@ -886,7 +950,7 @@ describe('runMatchArtists', () => {
   // The budget is for identity work. A matched row whose photo keeps failing to
   // re-resolve still needs its next refresh, so the refresh path must not spend
   // an attempt — otherwise three flaky searches would freeze the image forever.
-  it('spends no attempt on a photo refresh that stops resolving', async () => {
+  it('spends no attempt on a photo refresh that clears', async () => {
     const staleId = await seedArtist({
       canonicalName: 'khruangbin',
       matchStatus: 'matched',
@@ -899,7 +963,7 @@ describe('runMatchArtists', () => {
 
     await runMatchArtists({
       now: () => NOW,
-      client: stubClient(async () => []),
+      client: stubClient(noSearch, async () => ({ found: false })),
     });
 
     expect((await readArtist(staleId))?.matchAttempts).toBe(0);
