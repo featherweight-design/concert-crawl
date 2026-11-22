@@ -155,4 +155,4 @@ Stated plainly rather than implied:
   second factor blocks for an automated run.
 - **Push and digest delivery** are Gate 6's subject, not this one. See
   `side-effects-native-following.md`, including the honest note that
-  `NATIVE_DIGEST_ENABLED` is off in both staging and prod.
+  `NATIVE_DIGEST_ENABLED` was off in both staging and prod (retired since: the digest now covers every opted-in follower).

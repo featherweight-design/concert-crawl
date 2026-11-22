@@ -95,8 +95,8 @@ async function seedDigestOptIn(userId: string, enabled = true): Promise<void> {
     });
 }
 
-// Opts the user in as well: the Spotify shape is gated on the same opt-in, and
-// nearly every test here is about what happens to someone who wants the mail.
+// Opts the user in as well: nearly every test here is about what happens to
+// someone who wants the mail.
 async function seedConnection(
   userId: string,
   overrides: Partial<typeof userSpotifyConnections.$inferInsert> = {},
@@ -384,8 +384,9 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
     expect(resendState.sends).toHaveLength(0);
   });
 
-  it('skips users who turned the digest off', async () => {
-    await seedConnection(USER, { digestEnabled: false });
+  it('skips users who turned the digest off in preferences', async () => {
+    await seedConnection(USER);
+    await seedDigestOptIn(USER, false);
     clerkState.emails.set(USER, 'off@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
     const venue = await seedVenue({ slug: `venue-${USER}` });
@@ -450,10 +451,10 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
   });
 });
 
-// PR 9 step 3. Both halves of the digest were Spotify-shaped: the recipient
-// query inner-joined user_spotify_connections for digestEnabled, and the
-// match query filtered follows to the two spotify_* sources. Fixing either
-// alone drops every native follower while still reporting success (#1515).
+// #1515: the digest was once Spotify-shaped (recipients joined through
+// user_spotify_connections, matches filtered to the spotify_* sources), which
+// dropped every native follower while still reporting success. These cover
+// followers with no Spotify connection at all.
 describe('runSpotifyWeekly — native followers (#1515)', () => {
   const seedFollow = async (
     userId: string,

@@ -93,6 +93,8 @@ one thing in this gate worth re-checking if the preference ever moves.
 `30 15 * * 1` (`render.yaml` lines 81–115 prod, 261–295 staging). The cron is
 real and provisioned in both environments.
 
+> **Superseded.** `NATIVE_DIGEST_ENABLED` was retired in digest PR 2. The digest now covers every opted-in follower and nothing reads the variable. What follows is the record as written.
+
 Native follows enter the digest behind a flag:
 
 ```ts
@@ -166,4 +168,4 @@ Three runs, none of them long, all of them needing a stack this run did not have
 3. **Fire it with two accounts**, one following and one not, and confirm the
    second gets nothing. This is the leg that cannot be faked from one account.
 
-Then the digest, with `NATIVE_DIGEST_ENABLED=1` in staging only, on Hugh's say-so.
+Then the digest (historical: this step set `NATIVE_DIGEST_ENABLED=1`, which no longer exists).
