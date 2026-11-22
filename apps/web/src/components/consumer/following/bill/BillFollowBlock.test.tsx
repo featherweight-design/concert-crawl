@@ -101,9 +101,14 @@ const plan = (over: Partial<PlanState> = {}): PlanState => ({
 });
 
 const BILL: BillArtist[] = [
-  { slug: 'nightjar-choir', name: 'Nightjar Choir', following: false },
-  { slug: 'paper-tigers', name: 'Paper Tigers', following: false },
-  { slug: 'low-ceiling', name: 'Low Ceiling', following: false },
+  {
+    slug: 'nightjar-choir',
+    name: 'Nightjar Choir',
+    following: false,
+    role: null,
+  },
+  { slug: 'paper-tigers', name: 'Paper Tigers', following: false, role: null },
+  { slug: 'low-ceiling', name: 'Low Ceiling', following: false, role: null },
 ];
 
 const bulkOk = (slugs: string[]): BulkFollowResponse => ({
@@ -584,5 +589,25 @@ describe('BillFollowBlock — a single row', () => {
       }),
     ).toBeInTheDocument();
     warn.mockRestore();
+  });
+
+  it('tags each row with its role on a co-headline bill', () => {
+    render(
+      <BillFollowBlock
+        artists={[
+          { ...BILL[0]!, role: 'headliner' },
+          { ...BILL[1]!, role: 'headliner' },
+          { ...BILL[2]!, role: 'support' },
+        ]}
+      />,
+    );
+    expect(
+      screen.getAllByTestId('bill-role-tag').map((tag) => tag.textContent),
+    ).toEqual(['CO-HEADLINER', 'CO-HEADLINER', 'SUPPORT']);
+  });
+
+  it('draws no role tag on a single-headliner bill', () => {
+    render(<BillFollowBlock artists={BILL} />);
+    expect(screen.queryByTestId('bill-role-tag')).toBeNull();
   });
 });

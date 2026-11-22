@@ -1151,6 +1151,9 @@ export const CONSUMER_COPY = {
   eventTitle: {
     lead: 'with',
     moreSuffix: 'more',
+    // Co-billed heading chip: counts the names not shown, then expands in place.
+    moreChip: (hidden: number) => `+${hidden} more`,
+    showFewer: 'Show fewer',
     tourAriaLabel: (tourName: string) => `Tour: ${tourName}`,
     // Screen-reader roster conjunction (e.g. "A, B, and C").
     rosterConjunction: 'and',

@@ -352,6 +352,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           surface="detail"
           headlinerAs="h1"
           artistSlug={event.artistSlug}
+          headliners={event.headliners}
           supportingArtistSlugs={event.supportingArtistSlugs}
           linkArtists
           headSize="var(--stage-head)"

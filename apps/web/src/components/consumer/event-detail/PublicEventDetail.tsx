@@ -154,6 +154,7 @@ export const PublicEventDetail = ({
           delistedAt={event.delistedAt}
           surface="detail"
           headlinerAs="h1"
+          headliners={event.headliners}
           headSize="var(--stage-head)"
           centered
           beforePill={
