@@ -10,14 +10,17 @@
 // and `canonicalizeArtist` is the same function the API applies to the bill.
 
 import { useAuth } from '@clerk/nextjs';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { fetchFollowedArtists } from '@/lib/following';
+
+const FOLLOWED_NAMES_ROOT = 'followed-artist-names';
 
 // Scoped by userId: the QueryClient outlives sign-in sessions, so an account
 // switch must not surface the previous viewer's follows.
 export const followedArtistNamesQueryKey = (
   userId: string | null | undefined,
-) => ['followed-artist-names', userId ?? null] as const;
+) => [FOLLOWED_NAMES_ROOT, userId ?? null] as const;
 
 const EMPTY: ReadonlySet<string> = new Set();
 
@@ -37,4 +40,16 @@ export function useFollowedArtistNames(): ReadonlySet<string> {
     staleTime: 60 * 1000,
   });
   return data ?? EMPTY;
+}
+
+/**
+ * Every follow or unfollow write calls this on success, so the disc and the
+ * signal name on rows, the hero and the event page match the tap the viewer
+ * just made instead of waiting out `staleTime`.
+ */
+export function useInvalidateFollowedArtistNames(): () => void {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: [FOLLOWED_NAMES_ROOT] });
+  }, [queryClient]);
 }

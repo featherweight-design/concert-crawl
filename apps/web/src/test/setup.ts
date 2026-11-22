@@ -20,4 +20,5 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 vi.mock('@/lib/queries/use-followed-artist-names', async (importOriginal) => ({
   ...(await importOriginal<typeof FollowedNamesModule>()),
   useFollowedArtistNames: vi.fn(() => new Set<string>()),
+  useInvalidateFollowedArtistNames: vi.fn(() => () => {}),
 }));

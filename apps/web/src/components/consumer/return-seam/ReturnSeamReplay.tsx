@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { apiClient } from '@/lib/api';
+import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { actionToastOptions } from '@/lib/action-toast';
@@ -39,6 +40,7 @@ export const ReturnSeamReplay = () => {
   const { data: watchedShows } = useWatching();
   const { mutate } = useWatchToggle();
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const invalidateFollowedNames = useInvalidateFollowedArtistNames();
 
   const rawIntent = params.get('intent');
   // Arrives from an editable URL, so it is capped and de-controlled before it
@@ -66,6 +68,7 @@ export const ReturnSeamReplay = () => {
         const token = await getToken();
         if (!token) throw new Error('Not authenticated');
         await apiClient.post<unknown>(`/v1/artists/${slug}/follow`, token, {});
+        invalidateFollowedNames();
         setReplayed(true);
         router.refresh();
       } catch (err) {
@@ -76,7 +79,7 @@ export const ReturnSeamReplay = () => {
         setFailed(true);
       }
     },
-    [getToken, router],
+    [getToken, router, invalidateFollowedNames],
   );
 
   useEffect(() => {
