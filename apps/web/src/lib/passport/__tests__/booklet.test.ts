@@ -93,32 +93,35 @@ describe('bookletPages', () => {
 describe('bookletSpreads', () => {
   const pages = bookletPages(nights(11), null);
 
-  it('pairs pages on desktop, the identity page with page 1', () => {
-    const spreads = bookletSpreads(pages, 'spread');
-    expect(spreads.map(spreadName)).toEqual(['ID · 1', '2 · 3']);
+  it('pairs pages on every width, the identity page with page 1', () => {
+    expect(bookletSpreads(pages).map(spreadName)).toEqual(['ID · 1', '2 · 3']);
   });
 
-  it('stacks the identity page over page 1 on a phone, then one page each', () => {
-    const spreads = bookletSpreads(pages, 'stack');
-    expect(spreads.map(spreadName)).toEqual(['ID · 1', '2', '3']);
+  it('gives an odd last page a blank partner so no spread is a leaf short', () => {
+    const spreads = bookletSpreads(bookletPages(nights(8), null));
+    expect(spreads.map((spread) => spread.length)).toEqual([2, 2]);
+    const partner = spreads[1]?.[1];
+    expect(partner?.kind === 'page' && partner.page.number).toBe(3);
+    expect(
+      partner?.kind === 'page' &&
+        partner.page.slots.every((slot) => slot.kind === 'empty'),
+    ).toBe(true);
   });
 
   it('labels each spread by the pages in it', () => {
-    const spreads = bookletSpreads(bookletPages(nights(16), null), 'spread');
+    const spreads = bookletSpreads(bookletPages(nights(16), null));
     expect(spreads.map(spreadLabel)).toEqual([
       'Identity and page 1',
       'Pages 2 and 3',
       'Pages 4 and 5',
     ]);
     expect(
-      spreadLabel(
-        bookletSpreads(bookletPages(nights(8), null), 'spread')[1] ?? [],
-      ),
+      spreadLabel(bookletSpreads(bookletPages(nights(8), null))[1] ?? []),
     ).toBe('Pages 2 and 3');
   });
 
   it('knows a spread with no stamps is waiting', () => {
-    const spreads = bookletSpreads(bookletPages(nights(4), null), 'spread');
+    const spreads = bookletSpreads(bookletPages(nights(4), null));
     expect(spreads.map(spreadHasStamps)).toEqual([true, false]);
   });
 });

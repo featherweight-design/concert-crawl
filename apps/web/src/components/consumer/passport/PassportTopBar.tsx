@@ -13,9 +13,10 @@ const COPY = CONSUMER_COPY.passport;
  * below the booklet. It replaces the big title block under 1024px; the desktop
  * header is unchanged. The icon is hidden where the device cannot share the
  * image file, like the row's Share button, and its slot stays so the title
- * stays centred.
+ * stays centred. With no `share` (an upcoming show and no stamp yet, so no card
+ * to share) the slot stays empty.
  */
-export const PassportTopBar = ({ share }: { share: PassportShare }) => (
+export const PassportTopBar = ({ share }: { share?: PassportShare }) => (
   <div
     className="grid h-[54px] grid-cols-[44px_1fr_44px] items-center lg:hidden"
     data-testid="passport-top-bar"
@@ -30,7 +31,7 @@ export const PassportTopBar = ({ share }: { share: PassportShare }) => (
     <h1 className="text-center text-[17px] font-extrabold text-fg">
       {COPY.pageTitle}
     </h1>
-    {share.canShare ? (
+    {share?.canShare ? (
       <button
         type="button"
         onClick={share.share}

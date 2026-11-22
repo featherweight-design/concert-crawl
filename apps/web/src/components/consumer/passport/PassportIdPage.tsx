@@ -11,13 +11,6 @@ export interface PassportIdentity {
   city: string | null;
   avatarColor: AvatarColor | null;
   year: number;
-  /**
-   * When the account began, formatted as "Apr 2026". The "since" on the card
-   * is the first stamp's month; before there is a stamp it is this, so an
-   * empty book still reads "DENVER · SINCE SEP 2026" (addendum 4
-   * `passport-next-d`).
-   */
-  joined?: string | null;
 }
 
 interface PassportIdPageProps {
@@ -62,10 +55,11 @@ function Stat({
 
 /** The booklet's identity page: who, since when, and the year in three numbers. */
 export function PassportIdPage({ identity, stats }: PassportIdPageProps) {
-  const since = sinceLabel(stats.first?.date) ?? identity.joined ?? null;
+  // `02/passport-zero-m`: with no shows the line reads DENVER, no Since date.
+  const since = sinceLabel(stats.first?.date);
   const placeLine = [
     identity.city,
-    since === null ? null : `${PASSPORT_COPY.footerSincePrefix} ${since}`,
+    since == null ? null : `${PASSPORT_COPY.footerSincePrefix} ${since}`,
   ]
     .filter((part): part is string => part !== null && part !== '')
     .join(' · ');
@@ -73,7 +67,7 @@ export function PassportIdPage({ identity, stats }: PassportIdPageProps) {
   return (
     <div
       data-booklet-leaf="id"
-      className="flex h-full flex-col gap-5 p-6 lg:p-7"
+      className="flex h-[300px] flex-col gap-5 p-6 lg:h-[340px] lg:p-7"
     >
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-signal">
@@ -102,7 +96,7 @@ export function PassportIdPage({ identity, stats }: PassportIdPageProps) {
         </span>
       </div>
 
-      <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] gap-6">
+      <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] gap-[22px] max-[359px]:gap-4">
         <Stat
           value={String(stats.nights)}
           label={

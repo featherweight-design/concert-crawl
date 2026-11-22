@@ -11,6 +11,7 @@ import { MAX_LIST_PARAM_VALUES, type VenuePublic } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { CheckboxMark } from './CheckboxMark';
+import { venueTileCaption } from '@/components/consumer/venue-guide/lib';
 import { compareVenueNames } from './filter-defs';
 
 const copy = CONSUMER_COPY.filterBar.popover;
@@ -163,7 +164,7 @@ export const VenueOptionGrid = ({
                       ...(look.nameLead && { lineHeight: look.nameLead }),
                     }}
                   >
-                    {venue.name}
+                    {venueTileCaption(venue.name, venue.shortName)}
                   </span>
                   {venue.neighborhood && (
                     <span

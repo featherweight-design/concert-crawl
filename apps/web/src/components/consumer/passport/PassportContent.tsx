@@ -141,12 +141,17 @@ export const PassportContent = ({
           className={`${openBook ? 'grid' : 'hidden lg:grid'} grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']`}
         >
           <header className="flex flex-col gap-2 [grid-area:head]">
+            {/* An upcoming-only phone gets the same top bar as the populated
+                page (back chevron, "Your Passport"), not the big title. */}
+            {openBook && <PassportTopBar />}
             <p
               className={`font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle ${openBook ? 'hidden lg:block' : ''}`}
             >
               {COPY.breadcrumb}
             </p>
-            <PageTitle plain={!openBook} />
+            <div className={openBook ? 'hidden lg:block' : undefined}>
+              <PageTitle plain={!openBook} />
+            </div>
             <p className="text-sm text-fg-muted lg:text-[15px]">{subtitle}</p>
           </header>
           <div className="min-w-0 [grid-area:book]">

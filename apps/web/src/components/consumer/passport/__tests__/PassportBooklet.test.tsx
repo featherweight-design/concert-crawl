@@ -64,17 +64,17 @@ const IDENTITY = {
 describe('PassportIdPage since', () => {
   afterEach(cleanup);
 
-  // `passport-next-d`: an empty book still reads "DENVER · SINCE SEP 2026".
-  it('falls back to the month the account began when there is no stamp yet', () => {
+  // `02/passport-zero-m`: an empty book reads DENVER with no Since date.
+  it('drops the Since date when there is no stamp yet', () => {
     render(
       <PassportBooklet
         pages={bookletPages([], null)}
-        identity={{ ...IDENTITY, joined: 'Sep 2026' }}
+        identity={IDENTITY}
         stats={passportStats([])}
       />,
     );
     const id = document.querySelector('[data-booklet-leaf="id"]');
-    expect(id).toHaveTextContent('Denver · SINCE Sep 2026');
+    expect(id).not.toHaveTextContent('SINCE');
   });
 
   it('prefers the first stamp once there is one', () => {
@@ -82,7 +82,7 @@ describe('PassportIdPage since', () => {
     render(
       <PassportBooklet
         pages={bookletPages(past, null)}
-        identity={{ ...IDENTITY, joined: 'Sep 2026' }}
+        identity={IDENTITY}
         stats={passportStats(toAttendedShows(past))}
       />,
     );
@@ -180,15 +180,15 @@ describe('PassportBooklet', () => {
     expect(screen.queryByText(COPY.jumpTo)).not.toBeInTheDocument();
   });
 
-  it('swipes one page at a time on a phone', () => {
+  it('swipes one spread at a time on a phone', () => {
     renderBooklet(11);
 
-    expect(statusOf('stack')).toBe(COPY.swipeForPage(2));
+    expect(statusOf('stack')).toBe(COPY.swipeForPages(2, 3));
     swipe([300, 100], [100, 110]);
 
     expect(within(view('stack')).queryByText('@hugh')).not.toBeInTheDocument();
-    expect(stampsIn('stack')).toBe(4);
-    expect(statusOf('stack')).toBe(COPY.swipeForPage(3));
+    expect(stampsIn('stack')).toBe(7);
+    expect(statusOf('stack')).toBe(COPY.pagesNights(2, 3, 11));
   });
 
   // A vertical scroll that drifts sideways must not turn the page.
@@ -197,33 +197,32 @@ describe('PassportBooklet', () => {
 
     swipe([300, 100], [200, 400]);
 
-    expect(statusOf('stack')).toBe(COPY.swipeForPage(2));
+    expect(statusOf('stack')).toBe(COPY.swipeForPages(2, 3));
     expect(within(view('stack')).getByText('@hugh')).toBeInTheDocument();
   });
 
-  it('counts the whole booklet on the last page', () => {
+  it('counts the whole booklet on the last spread', () => {
     renderBooklet(11);
 
     swipe([300, 100], [100, 100]);
-    swipe([300, 100], [100, 100]);
 
-    expect(statusOf('stack')).toBe(COPY.pageNights(3, 11));
+    expect(statusOf('stack')).toBe(COPY.pagesNights(2, 3, 11));
   });
 
-  // The two layouts group pages differently, so the booklet remembers a page,
-  // not a spread index: a resize keeps the reader on what they were reading.
-  it('keeps the same page when the layout changes', () => {
+  it('reads a lone first spread as one page with its nights', () => {
+    renderBooklet(2);
+
+    expect(statusOf('stack')).toBe(COPY.pageNights(1, 2));
+  });
+
+  // Both layouts pair the same leaves, so a turn on one is a turn on the other.
+  it('shows the same spread on both layouts', () => {
     renderBooklet(11);
 
     fireEvent.click(
       within(view('spread')).getByRole('button', { name: COPY.nextPage }),
     );
-    // Desktop now opens on pages 2 and 3; the phone shows page 2.
-    expect(statusOf('stack')).toBe(COPY.swipeForPage(3));
-
-    swipe([300, 100], [100, 100]);
-    // Phone on page 3; desktop still shows the spread that holds it.
-    expect(statusOf('stack')).toBe(COPY.pageNights(3, 11));
+    expect(statusOf('stack')).toBe(COPY.pagesNights(2, 3, 11));
     expect(statusOf('spread')).toBe(COPY.spreadOf(2, 2));
   });
 
