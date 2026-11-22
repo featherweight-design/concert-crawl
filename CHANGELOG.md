@@ -1,3 +1,11 @@
+## [1.529.1](https://github.com/featherweight-design/concert-crawl/compare/v1.529.0...v1.529.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **ci:** correct the no_build_cache comments ([f5c2ed1](https://github.com/featherweight-design/concert-crawl/commit/f5c2ed1ee5a570ee59952a1e8994f7bb18b1ce62))
+* **ci:** opt-in no_build_cache input on deploy to production ([ede8038](https://github.com/featherweight-design/concert-crawl/commit/ede8038e44c7529e04b9153d563899b02b274124))
+
 # [1.529.0](https://github.com/featherweight-design/concert-crawl/compare/v1.528.0...v1.529.0) (2026-11-22)
 
 
