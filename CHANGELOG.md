@@ -1,3 +1,15 @@
+# [1.531.0](https://github.com/featherweight-design/concert-crawl/compare/v1.530.0...v1.531.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **db:** make the 0126 drop idempotent ([a1b44d8](https://github.com/featherweight-design/concert-crawl/commit/a1b44d8b36631289960ca3dca8642a92b1954f28))
+
+
+### Features
+
+* **db:** drop feature_flags.enabled now that 0125 is in production (0126) ([4b83c1b](https://github.com/featherweight-design/concert-crawl/commit/4b83c1be805e651a73af827a5c20c91b676ca400))
+
 # [1.530.0](https://github.com/featherweight-design/concert-crawl/compare/v1.529.1...v1.530.0) (2026-11-22)
 
 
