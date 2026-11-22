@@ -8,7 +8,6 @@ import { FeedbackModal } from '@/components/consumer/feedback/FeedbackModal';
 import { useReleaseReadState } from './useReleaseReadState';
 import { ReleaseEntry } from './ReleaseEntry';
 import { spotlightAvailable } from './spotlight-gate';
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { SpotlightModal } from './SpotlightModal';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
@@ -20,7 +19,6 @@ interface ReleasePageProps {
 
 export function ReleasePage({ releases }: ReleasePageProps) {
   const router = useRouter();
-  const { enabled: spotifySync } = useFeatureFlag('spotify-sync');
   const latestVersion = releases[0]?.version ?? '';
   const { markSeen } = useReleaseReadState(latestVersion);
 
@@ -157,7 +155,7 @@ export function ReleasePage({ releases }: ReleasePageProps) {
                 release={release}
                 isLatest={idx === 0}
                 onOpenSpotlight={handleOpenSpotlight}
-                spotlightHidden={!spotlightAvailable(release, spotifySync)}
+                spotlightHidden={!spotlightAvailable(release)}
               />
             ))}
           </div>

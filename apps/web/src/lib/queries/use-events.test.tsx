@@ -23,10 +23,6 @@ vi.mock('@clerk/nextjs', () => ({
   }),
 }));
 
-vi.mock('./use-spotify-connection', () => ({
-  useSpotifyConnection: () => ({ data: null }),
-}));
-
 const page = (offset: number): EventsListResponse => ({
   data: [],
   total: 60,

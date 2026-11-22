@@ -62,9 +62,6 @@ vi.mock('@/lib/push/client', () => ({
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined, isPending: false }),
 }));
-vi.mock('@/lib/queries/use-spotify-connection', () => ({
-  useSpotifyConnection: () => ({ data: undefined }),
-}));
 
 // Hoisted: `vi.mock` runs before module-scope consts, so the spy has to be
 // created inside the hoisted block to be visible to the factory.

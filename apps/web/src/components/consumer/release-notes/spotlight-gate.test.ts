@@ -8,24 +8,23 @@ const spotlight = (hero: string) => ({
 });
 
 describe('spotlightAvailable', () => {
-  it('hides the Spotify spotlight while Spotify sync is off, shows it when on', () => {
-    expect(spotlightAvailable(spotlight('spotify'), false)).toBe(false);
-    expect(spotlightAvailable(spotlight('spotify'), true)).toBe(true);
+  it('never offers the retired Spotify spotlight', () => {
+    expect(spotlightAvailable(spotlight('spotify'))).toBe(false);
   });
 
-  it('never gates another hero on the Spotify flag', () => {
-    expect(spotlightAvailable(spotlight('price'), false)).toBe(true);
+  it('offers any other hero', () => {
+    expect(spotlightAvailable(spotlight('price'))).toBe(true);
   });
 
   it('is false for a release with no spotlight', () => {
-    expect(spotlightAvailable({}, true)).toBe(false);
+    expect(spotlightAvailable({})).toBe(false);
   });
 
-  it('regression: the shipped v0.10.0 Connect Spotify spotlight is hidden with the flag off', () => {
+  it('regression: the shipped v0.10.0 Connect Spotify spotlight is hidden', () => {
     const spotify = RELEASES.find(
       (entry) => entry.spotlight?.hero === 'spotify',
     );
     if (spotify === undefined) throw new Error('the Spotify release is gone');
-    expect(spotlightAvailable(spotify, false)).toBe(false);
+    expect(spotlightAvailable(spotify)).toBe(false);
   });
 });

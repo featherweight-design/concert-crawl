@@ -14,8 +14,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
 import type { FollowedArtist } from '@concert-crawl/types';
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
-import { SpotifyLogo } from '@/components/brand/spotify-logo/SpotifyLogo';
 import { useMyShowsArtistCount } from '@/components/consumer/history/MyShowsShell';
 import { MY_SHOWS_CTA_GRADIENT } from '@/components/consumer/history/definitions/constants';
 import { SHELF_NARROW_QUERY } from '@/components/consumer/following/definitions/constants';
@@ -25,7 +23,7 @@ import { ArtistsEmpty } from './ArtistsEmpty';
 import { Mono } from './Mono';
 import { GlyphSearch } from './Glyphs';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
-import { groupFollows, spotifyFollowCount } from './lib/group-follows';
+import { groupFollows } from './lib/group-follows';
 
 const COPY = MY_SHOWS_ARTISTS_COPY;
 
@@ -41,7 +39,6 @@ interface MyShowsArtistsContentProps {
 export const MyShowsArtistsContent = ({
   artists,
 }: MyShowsArtistsContentProps) => {
-  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync');
   const [narrow, setNarrow] = useState(false);
 
   useEffect(() => {
@@ -54,7 +51,6 @@ export const MyShowsArtistsContent = ({
 
   const follows = useMemo(() => artists ?? [], [artists]);
   const groups = useMemo(() => groupFollows(follows), [follows]);
-  const spotifyCount = useMemo(() => spotifyFollowCount(follows), [follows]);
   // The shared tab bar draws it on the Artists tab. A failed read has no count.
   useMyShowsArtistCount(artists === undefined ? undefined : follows.length);
 
@@ -108,35 +104,6 @@ export const MyShowsArtistsContent = ({
     </SearchLink>
   );
 
-  // Moves with the per-row SourceMark: the footnote's reassurance only makes
-  // sense beside rows that say where they came from, so neither is shown
-  // without the other.
-  const spotifyNote = spotifyEnabled && spotifyCount > 0 && (
-    <div
-      style={{
-        padding: '12px 14px',
-        borderRadius: 10,
-        border: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-      }}
-    >
-      <SpotifyLogo size={14} />
-      <p
-        style={{
-          margin: 0,
-          flex: 1,
-          fontSize: 12,
-          color: 'var(--fg-muted)',
-          lineHeight: 1.4,
-        }}
-      >
-        {COPY.spotifyFootnote(spotifyCount)}
-      </p>
-    </div>
-  );
-
   // Both densities carry these ABOVE the list. Trailing it put the surface's
   // only notification affordance below however many follows the viewer had,
   // which for a long list meant it was never seen at all.
@@ -146,7 +113,6 @@ export const MyShowsArtistsContent = ({
       style={{ marginTop: 16, marginBottom: 4 }}
     >
       <AlertsRow />
-      {spotifyNote}
     </div>
   );
 

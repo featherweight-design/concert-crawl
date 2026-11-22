@@ -54,11 +54,6 @@ vi.mock('@/lib/push/client', () => ({
     unsubscribeFromPushMock(token, knownId),
 }));
 
-const useSpotifyConnectionMock = vi.fn();
-vi.mock('@/lib/queries/use-spotify-connection', () => ({
-  useSpotifyConnection: () => useSpotifyConnectionMock(),
-}));
-
 import { NotificationsSection } from '../NotificationsSection';
 import { NOTIFICATIONS_COPY } from '../definitions/copy';
 
@@ -80,7 +75,6 @@ beforeEach(() => {
   getPushDeviceStateMock.mockReset();
   subscribeToPushMock.mockReset();
   unsubscribeFromPushMock.mockReset();
-  useSpotifyConnectionMock.mockReset();
   // Default: loaded, master off, sub-toggles default true, supported.
   useNotificationPreferencesMock.mockReturnValue({
     data: {
@@ -94,7 +88,6 @@ beforeEach(() => {
     },
     isLoading: false,
   });
-  useSpotifyConnectionMock.mockReturnValue({ data: undefined });
   getPushDeviceStateMock.mockResolvedValue({
     support: 'supported',
     permission: 'default',
@@ -510,24 +503,6 @@ describe('NotificationsSection — Artists you follow', () => {
     expect(
       screen.queryByRole('button', { name: /premium|upgrade/i }),
     ).toBeNull();
-  });
-
-  it('shows the Spotify note only once a connection exists', async () => {
-    masterOn();
-    render(withClient(<NotificationsSection />));
-    await waitFor(() => {
-      expect(
-        screen.getByRole('switch', { name: ARTISTS.digest.label }),
-      ).not.toBeNull();
-    });
-    expect(screen.queryByText(ARTISTS.spotifyNote)).toBeNull();
-
-    cleanup();
-    useSpotifyConnectionMock.mockReturnValue({ data: { status: 'connected' } });
-    render(withClient(<NotificationsSection />));
-    await waitFor(() => {
-      expect(screen.getByText(ARTISTS.spotifyNote)).not.toBeNull();
-    });
   });
 
   it('surfaces a visible banner when a preference patch fails', async () => {

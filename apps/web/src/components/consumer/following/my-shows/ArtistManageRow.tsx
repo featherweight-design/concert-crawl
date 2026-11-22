@@ -27,7 +27,6 @@ import { Panel } from '@/components/consumer/image-slot';
 import { FollowDateLine } from '@/components/consumer/following/FollowDateLine';
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { followDateLine } from '@/lib/following';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { cardedEdge } from '@/components/consumer/event-row/lib/carded-edge';
@@ -39,7 +38,6 @@ import {
   ROW_ART_SIZE,
   ROW_ART_SIZE_NARROW,
 } from './definitions/constants';
-import { SourceMark } from './SourceMark';
 
 const COPY = MY_SHOWS_ARTISTS_COPY;
 
@@ -56,14 +54,9 @@ export const ArtistManageRow = ({
   variant = 'row',
   narrow = false,
 }: ArtistManageRowProps) => {
-  // Hooks run unconditionally. A slug-less follow (a Spotify act never billed
-  // in Denver) simply never renders the control that would call `toggle` —
+  // Hooks run unconditionally. A slug-less follow simply never renders the control that would call `toggle` —
   // the follow endpoint is keyed by slug, so there is nothing to call.
   const follow = useArtistFollow(artist.slug ?? '', true);
-  // The follows endpoint is deliberately ungated — a user must be able to
-  // manage a list they already have — so `source` keeps arriving with the flag
-  // off. Naming Spotify is the part that has to stop, not the row.
-  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync');
 
   const card = variant === 'card';
   const art = card
@@ -159,12 +152,6 @@ export const ArtistManageRow = ({
             color: 'var(--fg-subtle)',
           }}
         />
-
-        {spotifyEnabled && artist.source !== 'manual' && (
-          <span style={{ marginTop: card ? 4 : 1 }}>
-            <SourceMark />
-          </span>
-        )}
       </div>
 
       {artist.slug !== null && (

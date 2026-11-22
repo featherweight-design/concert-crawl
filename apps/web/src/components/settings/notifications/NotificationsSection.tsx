@@ -19,7 +19,6 @@ import {
   usePatchNotificationPreferences,
   type NotificationPreferences,
 } from '@/lib/queries/use-notification-preferences';
-import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection';
 import { ToggleSwitch } from '../ToggleSwitch';
 import { CrewActivityBlock } from './CrewActivityBlock';
 import { Bell } from 'lucide-react';
@@ -80,7 +79,6 @@ export const NotificationsSection = ({
   const { getToken } = useAuth();
   const { data: prefs, isLoading, isError } = useNotificationPreferences();
   const patch = usePatchNotificationPreferences();
-  const { data: spotify } = useSpotifyConnection();
   const [deviceState, setDeviceState] = useState<PushDeviceState | null>(null);
   // #1130 fix — surface a visible error when the toggle pipeline fails
   // (subscribe returns error, or PATCH throws). Previously the click just
@@ -121,8 +119,6 @@ export const NotificationsSection = ({
   const artistAutoWatchOn = prefs?.artistAutoWatch ?? false;
   const weeklyDigestOn = prefs?.weeklyDigestEnabled ?? false;
   const productEmailsOn = prefs?.productEmailsEnabled ?? true;
-
-  const spotifyConnected = spotify?.status === 'connected';
 
   const refreshDeviceState = useCallback(async () => {
     const state = await getPushDeviceState();
@@ -551,12 +547,6 @@ export const NotificationsSection = ({
             disabled={patch.isPending}
           />
         </div>
-
-        {/* One set of switches whatever filled the list — without this
-                  a Spotify user goes hunting for a second set in Connections. */}
-        {spotifyConnected && (
-          <p className="text-xs text-fg-muted">{ARTISTS_COPY.spotifyNote}</p>
-        )}
       </div>
 
       {/* ── Shows you're watching ──────────────────────────────────────── */}

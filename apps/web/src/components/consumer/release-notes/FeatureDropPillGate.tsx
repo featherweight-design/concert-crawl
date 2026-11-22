@@ -17,7 +17,6 @@ export function FeatureDropPillGate() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useAuth();
   const { enabled: releaseNotesEnabled } = useFeatureFlag('release-notes');
-  const { enabled: spotifySync } = useFeatureFlag('spotify-sync');
 
   const latestVersion = LATEST?.version ?? '';
   const { pillDismissed, dismissPill } = useReleaseReadState(latestVersion);
@@ -44,12 +43,7 @@ export function FeatureDropPillGate() {
     void router.push(LATEST.spotlight.ctaHref);
   }, [router]);
 
-  if (
-    !LATEST ||
-    !spotlightAvailable(LATEST, spotifySync) ||
-    pillDismissed ||
-    hidden
-  )
+  if (!LATEST || !spotlightAvailable(LATEST) || pillDismissed || hidden)
     return null;
 
   return (

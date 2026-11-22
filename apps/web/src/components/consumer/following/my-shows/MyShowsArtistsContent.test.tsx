@@ -1,15 +1,7 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom';
-import {
-  describe,
-  it,
-  expect,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  vi,
-} from 'vitest';
+import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import type { FollowedArtist } from '@concert-crawl/types';
 import { MyShowsArtistsContent } from './MyShowsArtistsContent';
@@ -44,19 +36,6 @@ vi.mock('@/lib/queries/use-notification-preferences', () => ({
     },
   }),
 }));
-
-const flags = vi.hoisted(() => ({ spotify: true }));
-
-vi.mock('@/lib/queries/use-feature-flags', () => ({
-  useFeatureFlag: (key: string) => ({
-    isLoading: false,
-    enabled: key === 'spotify-sync' ? flags.spotify : true,
-  }),
-}));
-
-beforeEach(() => {
-  flags.spotify = true;
-});
 
 beforeAll(() => {
   // jsdom ships no matchMedia; the narrow-density effect reads it on mount.
@@ -177,36 +156,6 @@ describe('MyShowsArtistsContent', () => {
     ).toHaveAttribute('aria-current', 'page');
   });
 
-  it('shows the Spotify footnote only when a follow came from Spotify', () => {
-    render(
-      <MyShowsArtistsContent
-        artists={[artist('One', '2026-09-12', 'spotify_followed')]}
-      />,
-    );
-    expect(screen.getAllByText(COPY.spotifyFootnote(1))).not.toHaveLength(0);
-
-    cleanup();
-    render(<MyShowsArtistsContent artists={[artist('One', '2026-09-12')]} />);
-    expect(screen.queryByText(COPY.spotifyFootnote(1))).toBeNull();
-  });
-
-  // The footnote and the per-row mark are shown together or not at all: the
-  // reassurance only reads if the rows it describes still say where they
-  // came from.
-  it('hides the Spotify footnote and the row marks while the flag is off', () => {
-    flags.spotify = false;
-
-    render(
-      <MyShowsArtistsContent
-        artists={[artist('One', '2026-09-12', 'spotify_followed')]}
-      />,
-    );
-
-    expect(screen.queryByText(COPY.spotifyFootnote(1))).toBeNull();
-    expect(screen.queryByText(COPY.source.spotify)).toBeNull();
-    expect(screen.getAllByRole('link', { name: 'One' })).not.toHaveLength(0);
-  });
-
   it('offers the find pill and the alerts deep link', () => {
     render(<MyShowsArtistsContent artists={[artist('One', '2026-09-12')]} />);
 
@@ -222,12 +171,12 @@ describe('MyShowsArtistsContent', () => {
   // it below however many follows the viewer had, so a long list hid it
   // entirely. Both densities must carry it above the first group.
   it.each(['mobile', 'desktop'])(
-    'puts alerts and the Spotify footnote above the list on %s',
+    'puts alerts above the list on %s',
     (density) => {
       const { container } = render(
         <MyShowsArtistsContent
           artists={[
-            artist('Wax Harbour', '2026-09-12', 'spotify_followed'),
+            artist('Wax Harbour', '2026-09-12'),
             artist('Null Signal', null),
           ]}
         />,
@@ -242,16 +191,13 @@ describe('MyShowsArtistsContent', () => {
       const alerts = scope.getByRole('link', {
         name: new RegExp(COPY.alerts.title),
       });
-      const footnote = scope.getByText(COPY.spotifyFootnote(1));
       const [firstHeading] = scope.getAllByRole('heading', { level: 2 });
       if (firstHeading === undefined) throw new Error('no group heading');
 
-      for (const node of [alerts, footnote]) {
-        expect(
-          node.compareDocumentPosition(firstHeading) &
-            Node.DOCUMENT_POSITION_FOLLOWING,
-        ).toBeTruthy();
-      }
+      expect(
+        alerts.compareDocumentPosition(firstHeading) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     },
   );
 
