@@ -1958,6 +1958,35 @@ describe('EventDetailPriceBlock price check', () => {
     expect(screen.getByTestId('price-check-outcome')).toBeTruthy();
   });
 
+  it("puts each tier's ended-check line under its own price", () => {
+    const event = buildBaseEvent({
+      ticketPriceMin: '44.00',
+      priceSource: 'community',
+      priceCheckOutcomes: [
+        outcomeFor('parent-1'),
+        {
+          submissionId: 'parent-2',
+          outcome: 'updated' as const,
+          resolvedAt: '2026-11-13T12:00:00.000Z',
+          previous: { floor: 120, ceiling: null },
+        },
+      ],
+      priceByTier: [
+        makeTierBlock({ tier: 'GA', headline: headline('parent-1') }),
+        makeTierBlock({ tier: 'VIP', headline: headline('parent-2') }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    const lines = screen.getAllByTestId('price-check-outcome');
+    expect(lines.map((line) => line.dataset['outcome'])).toEqual([
+      'held',
+      'updated',
+    ]);
+    expect(lines[1]?.textContent).toContain('Was $120');
+  });
+
   it('draws no anchor and no check card when no tier is under a check', () => {
     const event = buildBaseEvent({
       ticketPriceMin: '44.00',

@@ -667,8 +667,6 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         lastAdminActionKind: 'defer' | null;
       } & PriceCheckFields)
     | null = null;
-  // How the last check on the primary live price ended, while it is recent.
-  let priceCheckOutcome: PriceCheckOutcome | null = null;
 
   // Per-tier price aggregation (PR 3) and the flat priceVendor/priceAlternates/
   // priceConfirmsCount/counterSubmission/pendingSubmissions fields share the
@@ -965,54 +963,67 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           counters: primaryCounters,
         }),
       };
-    } else if (
-      !legacyPrimary.contested &&
-      !allPendingRows.some(
-        (sub) => sub.disputedSubmissionId === legacyPrimary.id,
-      )
-    ) {
-      // No check is open, so show how the last one ended. The rows that can
-      // say are the archived ones tied to the live price: its predecessor, or
-      // updates that lost to it (lib/price-check-outcome.ts).
-      const archived = await db
-        .select({
-          id: priceSubmissions.id,
-          priceMin: priceSubmissions.priceMin,
-          priceMax: priceSubmissions.priceMax,
-          disputedSubmissionId: priceSubmissions.disputedSubmissionId,
-          archivedReason: priceSubmissions.archivedReason,
-          updatedAt: priceSubmissions.updatedAt,
-        })
-        .from(priceSubmissions)
-        .where(
-          and(
-            eq(priceSubmissions.eventId, id),
-            eq(priceSubmissions.status, 'archived'),
-            // Older decisions are dropped in the picker anyway; keep them out
-            // of the read.
-            gte(
-              priceSubmissions.updatedAt,
-              new Date(
-                Date.now() - (PRICE_CHECK_OUTCOME_DAYS + 1) * 86_400_000,
-              ),
-            ),
-            or(
-              eq(priceSubmissions.disputedSubmissionId, legacyPrimary.id),
-              legacyPrimary.disputedSubmissionId !== null
-                ? eq(priceSubmissions.id, legacyPrimary.disputedSubmissionId)
-                : undefined,
-            ),
-          ),
-        );
-      priceCheckOutcome = pickPriceCheckOutcome({
-        liveId: legacyPrimary.id,
-        liveDisputedSubmissionId: legacyPrimary.disputedSubmissionId,
-        liveUpdatedAt: legacyPrimary.updatedAt,
-        archived,
-        now: new Date(),
-      });
     }
   }
+
+  // How the last check ended on each tier's live price, while it is recent. A
+  // price with a check open shows no outcome. The rows that can say are the
+  // archived ones tied to a live price: its predecessor, or updates that lost
+  // to it (lib/price-check-outcome.ts).
+  const outcomeCandidates = [...headlinesByTier.values()].filter(
+    (head) =>
+      !head.contested &&
+      !allPendingRows.some((sub) => sub.disputedSubmissionId === head.id),
+  );
+  const priceCheckOutcomes: PriceCheckOutcome[] = [];
+  if (outcomeCandidates.length > 0) {
+    const liveIds = outcomeCandidates.map((head) => head.id);
+    const predecessorIds = outcomeCandidates.flatMap((head) =>
+      head.disputedSubmissionId !== null ? [head.disputedSubmissionId] : [],
+    );
+    const archived = await db
+      .select({
+        id: priceSubmissions.id,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        disputedSubmissionId: priceSubmissions.disputedSubmissionId,
+        archivedReason: priceSubmissions.archivedReason,
+        updatedAt: priceSubmissions.updatedAt,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, id),
+          eq(priceSubmissions.status, 'archived'),
+          // Older decisions are dropped in the picker anyway; keep them out
+          // of the read.
+          gte(
+            priceSubmissions.updatedAt,
+            new Date(Date.now() - (PRICE_CHECK_OUTCOME_DAYS + 1) * 86_400_000),
+          ),
+          or(
+            inArray(priceSubmissions.disputedSubmissionId, liveIds),
+            predecessorIds.length > 0
+              ? inArray(priceSubmissions.id, predecessorIds)
+              : undefined,
+          ),
+        ),
+      );
+    const now = new Date();
+    for (const head of outcomeCandidates) {
+      const picked = pickPriceCheckOutcome({
+        liveId: head.id,
+        liveDisputedSubmissionId: head.disputedSubmissionId,
+        liveUpdatedAt: head.updatedAt,
+        archived,
+        now,
+      });
+      if (picked !== null) priceCheckOutcomes.push(picked);
+    }
+  }
+  const priceCheckOutcome =
+    priceCheckOutcomes.find((out) => out.submissionId === legacyPrimary?.id) ??
+    null;
 
   const priceByTier = aggregateByTier({
     corroborated: allCorroboratedRows.map((sub) => ({
@@ -1131,6 +1142,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceConfirmsCount,
       counterSubmission,
       priceCheckOutcome,
+      priceCheckOutcomes,
       pendingSubmissions,
       priceByTier,
       // A reporter's handle is for signed-in viewers: an anonymous answer (the

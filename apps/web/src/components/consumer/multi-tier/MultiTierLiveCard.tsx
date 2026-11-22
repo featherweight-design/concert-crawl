@@ -1,12 +1,9 @@
 'use client';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import {
-  CheckGlyph,
-  Eyebrow,
-  PendingTrustPill,
-} from '@/components/consumer/glyphs';
+import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs';
 import type { PriceCheckOutcome } from '@concert-crawl/types';
+import { PriceCheckOutcomeLine } from '@/components/consumer/multi-tier/PriceCheckOutcomeLine';
 import { OtherTiers } from '@/components/consumer/multi-tier/OtherTiers';
 import type { TierAlternateRowProps } from '@/components/consumer/multi-tier/TierAlternateRow';
 import { StaleStamp } from '@/components/consumer/StaleStamp';
@@ -40,29 +37,14 @@ export interface MultiTierLiveCardProps {
   // submissionId, and the card had no notion of which event it sat on.
   eventId?: string;
   submissionId?: string | null;
-  // How the last price check on this price ended (more-st-disputes_board,
-  // "After review"), while it is recent. Drawn as a notice row at the foot of
-  // the card. The API only sends one for the price it names, so the caller
-  // passes it for a single-tier event.
+  // How the last price check on the headline price ended, while it is recent.
+  // Drawn under the big price (08-tier-check-outcome). The caller passes the
+  // outcome that names this headline's submission; each other tier's row
+  // carries its own (TierAlternateRowProps.outcome).
   checkOutcome?: PriceCheckOutcome | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
-
-// "$44" or "$44–$60": the price an update replaced.
-const formatWas = (previous: { floor: number; ceiling: number | null }) =>
-  previous.ceiling !== null
-    ? `$${previous.floor}–$${previous.ceiling}`
-    : `$${previous.floor}`;
-
-// Null when the outcome cannot be put into words: an update with no price it
-// replaced says nothing true, and it must not fall through to the "held" line.
-const checkOutcomeText = (outcome: PriceCheckOutcome): string | null => {
-  if (outcome.outcome === 'held') return copy.checkHeld;
-  return outcome.previous !== null
-    ? copy.checkUpdated(formatWas(outcome.previous))
-    : null;
-};
 
 const formatHeadlinePrice = (floor: number, ceiling?: number): string => {
   if (ceiling !== undefined) return `$${floor}–${ceiling}`;
@@ -80,8 +62,6 @@ export const MultiTierLiveCard = ({
   checkOutcome = null,
 }: MultiTierLiveCardProps) => {
   const hasAlternates = alternates.length > 0;
-  const outcomeText =
-    checkOutcome !== null ? checkOutcomeText(checkOutcome) : null;
 
   return (
     <div
@@ -177,39 +157,10 @@ export const MultiTierLiveCard = ({
         )}
       </div>
 
+      <PriceCheckOutcomeLine outcome={checkOutcome} />
+
       {/* Other tiers section */}
       {hasAlternates && <OtherTiers alternates={alternates} />}
-
-      {/* How the last price check ended: a success-tinted notice row */}
-      {checkOutcome !== null && outcomeText !== null && (
-        <div
-          data-testid="price-check-outcome"
-          data-outcome={checkOutcome.outcome}
-          style={{
-            marginTop: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 12px',
-            borderRadius: '10px',
-            border:
-              '1px solid color-mix(in oklab, var(--success) 45%, transparent)',
-            background: 'color-mix(in oklab, var(--success) 8%, transparent)',
-            fontFamily: 'var(--font-ui)',
-            fontSize: '13px',
-            color: 'var(--fg-muted)',
-            lineHeight: 1.4,
-          }}
-        >
-          <span
-            aria-hidden="true"
-            style={{ color: 'var(--success)', flexShrink: 0 }}
-          >
-            <CheckGlyph size={12} />
-          </span>
-          <span>{outcomeText}</span>
-        </div>
-      )}
     </div>
   );
 };
