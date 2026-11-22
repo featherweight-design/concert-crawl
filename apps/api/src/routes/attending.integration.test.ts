@@ -26,6 +26,7 @@ import {
   notifications,
   subscriptions,
   userEvents,
+  venues,
 } from '@concert-crawl/db';
 import { createApp } from '../app.js';
 import { testDb } from '../test/helpers/db.js';
@@ -151,6 +152,14 @@ describe('PUT/DELETE /v1/attending/:eventId', () => {
     }
     const rows = await testDb.select().from(userEvents);
     expect(rows).toHaveLength(0);
+
+    // Positive control: the same show at a live venue is markable.
+    const live = await seedVenue({ slug: 'live-venue', name: 'Live Venue' });
+    const open = await seedEvent(live.id, { date: UPCOMING });
+    const ok = await app.request(`/v1/attending/${open.id}`, {
+      method: 'PUT',
+    });
+    expect(ok.status).toBe(200);
   });
 
   it('returns 404 for an event the crawler stopped seeing', async () => {
@@ -535,6 +544,21 @@ describe('past shows and restore (edit your Concerts)', () => {
       const { data } = await del(event.id);
       await put(event.id, { restore: data.restore });
       expect(await mateRows()).toBe(0);
+    });
+
+    it('refuses a restore once the venue is removed', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: UPCOMING });
+      const attendingAt = new Date('2026-02-03T04:05:06.789Z');
+      await seedUserEvent(USER_ID, event.id, { status: null, attendingAt });
+      const { data } = await del(event.id);
+      await testDb
+        .update(venues)
+        .set({ removedAt: new Date() })
+        .where(eq(venues.id, venue.id));
+
+      expect((await put(event.id, { restore: data.restore })).status).toBe(404);
+      expect(await rowFor(USER_ID, event.id)).toBeUndefined();
     });
 
     it('still restores when the show was delisted after the removal', async () => {
