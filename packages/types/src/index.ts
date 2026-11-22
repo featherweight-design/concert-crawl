@@ -1919,7 +1919,9 @@ export interface HistoryShow {
   date: string; // YYYY-MM-DD, event local date
   dateLabel: string; // "Mon, Oct 20"
   showTime: string | null; // "8:00 PM"
-  priceFinal: number | null; // last observed face price
+  // The show's lowest price (cheapest corroborated tier, else the event's
+  // scalar), not what this user paid: nothing records that.
+  priceFinal: number | null;
   genre: string | null; // single word, drives "top genre"
   attendingAt: string; // ISO — non-null by construction on this surface
   // Share-this-night inputs (a PosterSource needs the venue's place and clock).
@@ -1957,7 +1959,8 @@ export interface HistoryStats {
   topVenue: string | null;
   first: string | null; // YYYY-MM-DD
   last: string | null;
-  totalSpent: number | null; // null when no row has priceFinal
+  // Sum of past priceFinal values; null when no row has one.
+  totalSpent: number | null;
 }
 
 // Attendance is one list split by time (#1357): `past` and `upcoming` are the
