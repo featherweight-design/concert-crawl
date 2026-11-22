@@ -14,10 +14,12 @@ export const VENUE_HEADER_NEIGHBORHOOD_SIZE = 12.5;
 export const VENUE_HEADER_NEIGHBORHOOD_GAP = 2;
 /** The space above the status chips' row. */
 export const VENUE_HEADER_CHIPS_GAP = 6;
-/** Re-crawl, View on site and the ⋯ trigger. */
+/** Re-crawl, On Concert Crawl, On the venue's site and the ⋯ trigger. */
 export const VENUE_HEADER_BUTTON_HEIGHT = 36;
 /** The phone stacks the buttons under the name block, this far below. */
 export const VENUE_HEADER_PHONE_STACK_GAP = 12;
+/** The phone's link row between them (`08/venue-header-links`). */
+export const VENUE_HEADER_PHONE_LINK_HEIGHT = 24;
 
 const nameBlock = (phone: boolean): number => {
   const name =
@@ -35,8 +37,9 @@ const nameBlock = (phone: boolean): number => {
 /**
  * The header's height with no toast or notice under it, the state it loads
  * in. Desktop is one row: tile, name block, buttons (67). The phone stacks
- * the tile and name block over one row of buttons, and assumes a venue with a
- * neighbourhood, as nearly all have (129.75).
+ * the tile and name block over the link row and one row of buttons, and
+ * assumes a venue with a neighbourhood and a crawl URL, as nearly all have
+ * (165.75).
  */
 export const VENUE_HEADER_HEIGHT = {
   desktop: Math.max(
@@ -46,6 +49,8 @@ export const VENUE_HEADER_HEIGHT = {
   ),
   phone:
     Math.max(VENUE_HEADER_TILE.phone, nameBlock(true)) +
+    VENUE_HEADER_PHONE_STACK_GAP +
+    VENUE_HEADER_PHONE_LINK_HEIGHT +
     VENUE_HEADER_PHONE_STACK_GAP +
     VENUE_HEADER_BUTTON_HEIGHT,
 } as const;
