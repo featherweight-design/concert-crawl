@@ -1,3 +1,10 @@
+# [1.546.0](https://github.com/featherweight-design/concert-crawl/compare/v1.545.0...v1.546.0) (2026-11-22)
+
+
+### Features
+
+* **web:** add-a-venue rules, draft create action and the Venues Drafts filter ([ab0c5a2](https://github.com/featherweight-design/concert-crawl/commit/ab0c5a266138837be212e93e96376a74b7594d5a))
+
 # [1.545.0](https://github.com/featherweight-design/concert-crawl/compare/v1.544.0...v1.545.0) (2026-11-22)
 
 
