@@ -109,6 +109,15 @@ const FOOTER_BLEED = {
   'phone-tight': '-mx-[18px] -mb-6 px-[18px] lg:-mx-6 lg:px-6',
 } as const;
 
+// The hairline under the close row once the body has scrolled (addendum 6
+// item 15, as ModalShell's rail). It runs edge to edge, so it reaches past the
+// sheet's padding by the same amounts as FOOTER_BLEED.
+const RULE_BLEED = {
+  default: '-inset-x-6',
+  tight: '-inset-x-4 min-[360px]:-inset-x-5',
+  'phone-tight': '-inset-x-[18px] lg:-inset-x-6',
+} as const;
+
 // :not(:disabled) excludes native controls that can't actually receive focus
 // (disabled button/input/select/textarea) — otherwise the focus trap sees them
 // as focusables and refuses to wrap when they're at either end of the list.
@@ -255,11 +264,11 @@ export const BottomSheet = ({
         // still sees both literal class names.
         className={`fixed inset-x-0 bottom-0 ${
           pinned
-            ? 'flex h-[92dvh] max-h-[92dvh] flex-col overflow-hidden lg:max-h-[85vh]'
+            ? 'flex h-[92dvh] max-h-[92dvh] flex-col overflow-hidden lg:max-h-[calc(100dvh-80px)]'
             : // The sheet stops 24px below the top of the screen and taller
               // content scrolls inside it (addendum 6 item 15); from `lg` up
-              // it is the 85vh dialog.
-              `max-h-[calc(100dvh-24px)] lg:max-h-[85vh] ${
+              // it is the dialog, capped at the window less 80px as ModalShell.
+              `max-h-[calc(100dvh-24px)] lg:max-h-[calc(100dvh-80px)] ${
                 hasFooter ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'
               }`
         } rounded-t-2xl ${
@@ -364,6 +373,15 @@ export const BottomSheet = ({
         ) : (
           <>
             <div className="relative flex min-h-0 flex-1 flex-col">
+              {/* Always drawn, clear until the body scrolls, as ModalShell. */}
+              <span
+                aria-hidden="true"
+                data-testid="sheet-rule"
+                data-scrolled={edges.scrolled ? 'true' : 'false'}
+                className={`pointer-events-none absolute top-0 z-[1] h-px ${RULE_BLEED[inset]} ${
+                  edges.scrolled ? 'bg-border' : 'bg-transparent'
+                }`}
+              />
               <div
                 ref={bodyRef}
                 onScroll={measure}

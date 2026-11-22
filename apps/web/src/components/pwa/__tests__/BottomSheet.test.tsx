@@ -231,8 +231,50 @@ describe('BottomSheet', () => {
     );
     const sheet = screen.getByRole('dialog').className;
     expect(sheet).toContain('max-h-[calc(100dvh-24px)]');
-    expect(sheet).toContain('lg:max-h-[85vh]');
+    // From `lg` up the dialog is capped at the window less 80px, as ModalShell.
+    expect(sheet).toContain('lg:max-h-[calc(100dvh-80px)]');
+    expect(sheet).not.toContain('85vh');
     expect(sheet).toContain('overflow-y-auto');
+  });
+
+  it('caps a pinned sheet on desktop at the window less 80px', () => {
+    render(
+      <BottomSheet open onClose={vi.fn()} title="test" pinned>
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const sheet = screen.getByRole('dialog').className;
+    expect(sheet).toContain('lg:max-h-[calc(100dvh-80px)]');
+    expect(sheet).not.toContain('85vh');
+  });
+
+  it('draws a hairline under the close row once the body has scrolled', () => {
+    render(
+      <BottomSheet
+        open
+        onClose={vi.fn()}
+        title="test"
+        footer={<button>main action</button>}
+      >
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const body = screen.getByTestId('sheet-body');
+    const scroll = (scrollTop: number) => {
+      const metrics = { scrollTop, scrollHeight: 900, clientHeight: 300 };
+      for (const [key, value] of Object.entries(metrics)) {
+        Object.defineProperty(body, key, { value, configurable: true });
+      }
+      fireEvent.scroll(body);
+    };
+    const rule = screen.getByTestId('sheet-rule');
+    expect(rule.dataset['scrolled']).toBe('false');
+    expect(rule.className).toContain('bg-transparent');
+    scroll(40);
+    expect(rule.dataset['scrolled']).toBe('true');
+    expect(rule.className).toContain('bg-border');
+    scroll(0);
+    expect(rule.dataset['scrolled']).toBe('false');
   });
 
   it('pins a footer under a scrolling body when one is given', () => {
