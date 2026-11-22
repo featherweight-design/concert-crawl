@@ -186,13 +186,13 @@ export interface CrewShow {
   doorsTime: string | null;
   /**
    * `postponed` keeps its row and its surviving date (the board draws the
-   * amber POSTPONED chip under the going line). A cancelled show is not here:
-   * the query drops it, and when it should leave "after a day" is a Design
-   * call that is still open (addendum 6 item 41, cancelled). Only the Coming
-   * up row reads it: a past night or the lens list gets the same mapping but
-   * draws no chip.
+   * amber POSTPONED chip under the going line). `cancelled` reaches only the
+   * crew page's Coming up list, for a day from `events.cancelled_at`
+   * (addendum 6 item 41, "a cancelled show leaves after a day"), with the
+   * Cancelled chip and a struck title. Past nights and the lens list drop
+   * cancelled shows. Only the Coming up row draws a chip.
    */
-  status: 'upcoming' | 'postponed';
+  status: 'upcoming' | 'postponed' | 'cancelled';
   title: string;
   /**
    * The derived headliner, on the same terms as every other event payload.

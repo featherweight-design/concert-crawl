@@ -159,6 +159,30 @@ describe('CrewUpcoming', () => {
     );
   });
 
+  it("draws the Cancelled chip, strikes the title, and offers no I'm in", () => {
+    render(
+      <CrewUpcoming
+        shows={[
+          show({
+            status: 'cancelled',
+            iso: todayMt(),
+            doorsTime: '19:00:00',
+            goingCount: 1,
+            going: [member('mira', 'mira')],
+          }),
+        ]}
+        viewerId="me"
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Marian Hill' });
+    expect(link).toHaveAccessibleDescription(/Cancelled/);
+    expect(link).toHaveStyle({ textDecoration: 'line-through' });
+    const row = screen.getByTestId('crew-coming-up-row');
+    expect(row).not.toHaveTextContent('Doors');
+    // Someone else is going, which would draw I'm in on a show that is on.
+    expect(screen.queryByRole('button', { name: /I'm in/ })).toBeNull();
+  });
+
   it('draws no chip on a show that is on', () => {
     render(<CrewUpcoming shows={[show()]} viewerId="me" />);
     expect(screen.getByTestId('crew-coming-up-row')).not.toHaveTextContent(

@@ -12,9 +12,11 @@ import {
   asc,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   ne,
+  or,
   sql,
 } from 'drizzle-orm';
 import {
@@ -60,6 +62,7 @@ const selectAttendanceRows = async (
   memberIds: string[],
   tense: CrewShowTense,
   extraConditions: SQL[],
+  keepRecentlyCancelled: boolean,
 ) =>
   db
     .select({
@@ -95,8 +98,16 @@ const selectAttendanceRows = async (
         eq(events.hiddenFromConsumer, false),
         // A cancelled show is not a night anyone went to, and not one anyone
         // is going to. Postponed rows stay in: the surviving date is the one
-        // that matters (#1212).
-        ne(events.status, 'cancelled'),
+        // that matters (#1212). The crew page's Coming up list keeps a
+        // confirmed cancellation for a day, so the crew sees it called off
+        // (addendum 6 item 41); a cancellation older than 0127 has no time
+        // and drops at once.
+        keepRecentlyCancelled
+          ? (or(
+              ne(events.status, 'cancelled'),
+              gt(events.cancelledAt, sql`now() - interval '1 day'`),
+            ) ?? sql`true`)
+          : ne(events.status, 'cancelled'),
         ...extraConditions,
       ),
     )
@@ -121,10 +132,21 @@ export const loadCrewShows = async (
   tense: CrewShowTense,
   /** The Browse filters (When, Where, Price, Vibe) a crew lens applies. */
   extraConditions: SQL[] = [],
+  /**
+   * The crew page's Coming up list only: keep a show confirmed cancelled in
+   * the last day, which its row draws with the Cancelled chip. The lens list
+   * and past nights draw no status, so they never get one.
+   */
+  { keepRecentlyCancelled = false }: { keepRecentlyCancelled?: boolean } = {},
 ): Promise<CrewShow[]> => {
   if (memberIds.length === 0) return [];
 
-  const rows = await selectAttendanceRows(memberIds, tense, extraConditions);
+  const rows = await selectAttendanceRows(
+    memberIds,
+    tense,
+    extraConditions,
+    keepRecentlyCancelled,
+  );
   const minGoing = minGoingFor(tense);
   const byEvent = new Map<string, CrewShow>();
 
@@ -145,8 +167,7 @@ export const loadCrewShows = async (
       iso: row.iso,
       showTime: row.showTime ?? null,
       doorsTime: row.doorsTime ?? null,
-      // The query drops cancelled shows, so only these two reach here.
-      status: row.eventStatus === 'postponed' ? 'postponed' : 'upcoming',
+      status: row.eventStatus,
       title: row.title,
       artist: row.artist,
       imageUrl: row.imageUrl,

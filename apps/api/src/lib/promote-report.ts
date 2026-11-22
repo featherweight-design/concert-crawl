@@ -1,6 +1,9 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { db, eventReports, events } from '@concert-crawl/db';
-import { endDelisting } from '@concert-crawl/db/upcoming-events';
+import {
+  cancelledAtFor,
+  endDelisting,
+} from '@concert-crawl/db/upcoming-events';
 import { lockEventRow, PastLockedError } from './past-lock.js';
 import {
   closeReportAsMoot,
@@ -131,7 +134,11 @@ export async function promoteReport(
       await tx
         .update(events)
         // A confirmed status replaces the sweep's No longer listed.
-        .set({ status, ...endDelisting() })
+        .set({
+          status,
+          ...endDelisting(),
+          cancelledAt: cancelledAtFor(status),
+        })
         .where(eq(events.id, eventId));
     }
 

@@ -179,6 +179,11 @@ export const events = pgTable(
     // never "Cancelled". Cleared when anyone confirms a real cancellation or
     // sets the show back to upcoming.
     delistedAt: timestamp('delisted_at', { withTimezone: true }),
+    // When a show was confirmed cancelled (0127): set by an admin edit or a
+    // promoted fan report, never by the stale sweep, and cleared when the show
+    // moves off cancelled. Null on rows cancelled before 0127. The crew page
+    // keeps a cancelled show for a day from this (addendum 6 item 41).
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     // Admin 4a: a show added by hand, for one the crawler cannot see. The
     // crawl never removes it (Pass 2, the stale sweep and drift reconcile skip
     // it) and never rewrites its title, times, description or lineup. A crawled

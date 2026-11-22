@@ -86,6 +86,21 @@ export const endDelisting = () => ({
   firstMissingAt: sql`CASE WHEN ${events.delistedAt} IS NOT NULL THEN NULL ELSE ${events.firstMissingAt} END`,
 });
 
+/**
+ * The `cancelled_at` to write beside a confirmed status (0127), for the same
+ * writers as `endDelisting`: an admin PATCH and a promoted fan report. The
+ * stale sweep never calls it, so its guessed cancellation stays null.
+ *
+ * - Cancelled: now, unless the row was already confirmed cancelled, which
+ *   keeps its time (an admin re-saving a cancelled show does not restart the
+ *   crew page's day). A swept row (delisted) counts as a fresh confirmation.
+ * - Any other status: null, so an un-cancelled show carries no stale time.
+ */
+export const cancelledAtFor = (status: string): SQL | null =>
+  status === 'cancelled'
+    ? sql`CASE WHEN ${events.status} = 'cancelled' AND ${events.delistedAt} IS NULL THEN ${events.cancelledAt} ELSE now() END`
+    : null;
+
 /** The conditions every "shows still to come" query needs. */
 export const upcomingEventConditions = ({
   from,
