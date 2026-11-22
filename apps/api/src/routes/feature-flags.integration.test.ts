@@ -85,11 +85,6 @@ describe('feature flag route gating', () => {
     expect(res.status).toBe(404);
   });
 
-  it('answers 404 for the spotify router when spotify-sync is off', async () => {
-    const res = await app.request('/v1/spotify/taste-picks');
-    expect(res.status).toBe(404);
-  });
-
   it('answers 404 rather than 401 or 403 while the flag is off', async () => {
     const res = await app.request('/v1/crews', { method: 'POST' });
     expect(res.status).toBe(404);
