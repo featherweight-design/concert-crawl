@@ -23,7 +23,6 @@ const poster: PosterEvent = {
   dateShort: 'FRI, MAR 14',
   showTime: '8:00 PM',
   state: 'going',
-  dropLabel: null,
 };
 
 // The console spies in here would otherwise outlive their own test and

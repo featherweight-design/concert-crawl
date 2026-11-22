@@ -35,8 +35,6 @@ const event: PosterSource = {
     city: 'Denver',
     timezone: 'America/Denver',
   },
-  ticketPriceMin: '28.00',
-  ticketPriceOpenedAt: null,
   priceStatus: 'live',
 };
 

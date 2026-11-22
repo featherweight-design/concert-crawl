@@ -24,48 +24,17 @@ export interface PosterEvent {
   /** Localised show time, or `null` when the venue never published one. */
   showTime: string | null;
   state: PosterState;
-  /** `↓ $12` for a price drop; `null` for every other state. */
-  dropLabel: string | null;
 }
 
-const parseAmount = (raw: string | null | undefined): number | null => {
-  if (raw === null || raw === undefined) return null;
-  const value = Number.parseFloat(raw);
-  return Number.isFinite(value) ? value : null;
-};
-
 /**
- * Which of the three tagline states this event is in.
- *
- * Sold out wins over a price drop: a share of a gone show that reads "price
- * dropped" is actively misleading. Everything else is `going`, which is also
- * the tagline bank's fallback.
+ * Which tagline state this event is in: sold out, else `going`, which is also
+ * the tagline bank's fallback. Nothing records an opening price, so no event
+ * reaches the bank's `drop` state.
  */
 export const posterStateFor = (event: {
   priceStatus?: 'live' | 'soldout' | null;
-  ticketPriceMin?: string | null;
-  ticketPriceOpenedAt?: number | null;
-}): PosterState => {
-  if (event.priceStatus === 'soldout') return 'soldout';
-  const current = parseAmount(event.ticketPriceMin);
-  const opened = event.ticketPriceOpenedAt ?? null;
-  if (current !== null && opened !== null && current < opened) return 'drop';
-  return DEFAULT_POSTER_STATE;
-};
-
-/**
- * The `↓ $XX` the state pill carries in the drop state (handoff README §1).
- * Null for every other state, so the pill renders label-only.
- */
-export const posterDropLabel = (event: {
-  ticketPriceMin?: string | null;
-  ticketPriceOpenedAt?: number | null;
-}): string | null => {
-  const current = parseAmount(event.ticketPriceMin);
-  const opened = event.ticketPriceOpenedAt ?? null;
-  if (current === null || opened === null || current >= opened) return null;
-  return `↓ $${Math.round(opened - current)}`;
-};
+}): PosterState =>
+  event.priceStatus === 'soldout' ? 'soldout' : DEFAULT_POSTER_STATE;
 
 /** Uppercase because the poster's mono date stamp is set in caps. */
 const shortDate = (date: string, timezone: string): string =>
@@ -90,8 +59,6 @@ export interface PosterSource {
   showTime: string | null;
   venue: { name: string; city: string; timezone: string };
   priceStatus?: 'live' | 'soldout' | null;
-  ticketPriceMin?: string | null;
-  ticketPriceOpenedAt?: number | null;
 }
 
 // Compile-time proof that the API's event still fits the poster's input. If a
@@ -115,5 +82,4 @@ export const toPosterEvent = (event: PosterSource): PosterEvent => ({
   dateShort: shortDate(event.date, event.venue.timezone),
   showTime: formatShowTime(event.showTime),
   state: posterStateFor(event),
-  dropLabel: posterDropLabel(event),
 });

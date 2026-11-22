@@ -31,7 +31,6 @@ const poster: PosterEvent = {
   dateShort: 'FRI, MAR 14',
   showTime: '8:00 PM',
   state: 'going',
-  dropLabel: null,
 };
 
 const mount = (props: Partial<React.ComponentProps<typeof ShareSheet>> = {}) =>
