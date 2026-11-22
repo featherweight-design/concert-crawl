@@ -193,6 +193,32 @@ describe('readGuidePages', () => {
     ]);
   });
 
+  it('skips a page that is not HTML and reads only the first 512 KB of a huge one', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      const path = new URL(url).pathname;
+      if (path === '/faq') {
+        return {
+          response: page(PAGE_TEXT, {
+            headers: { 'content-type': 'application/pdf' },
+          }),
+          finalUrl: url,
+        };
+      }
+      return {
+        response: page(`${path} ${PAGE_TEXT}${'y'.repeat(2 * 1024 * 1024)}`, {
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        }),
+        finalUrl: url,
+      };
+    });
+    const result = await readGuidePages(SITE, 3_000);
+    expect(statuses(result)[0]).toEqual(['/faq', 'notFound']);
+    expect(result.pages).toHaveLength(3);
+    expect(result.pages[0]?.text.length).toBeLessThanOrEqual(
+      GUIDE_PAGE_MAX_CHARS,
+    );
+  });
+
   it('reads a failed request as unreachable and carries on', async () => {
     fetchMock
       .mockRejectedValueOnce(new Error('ECONNRESET'))

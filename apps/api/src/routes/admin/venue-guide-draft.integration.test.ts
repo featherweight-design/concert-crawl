@@ -31,6 +31,7 @@ vi.mock('../../lib/guide-pages.js', () => ({
 
 import { and, eq } from 'drizzle-orm';
 import {
+  adminSettings,
   auditLog,
   costTracking,
   venueGuideChips,
@@ -274,6 +275,57 @@ describe('admin guide drafting (3d-2)', () => {
     const venue = await seedVenue({ websiteUrl: 'ftp://dazzle.example' });
     expect((await draft(venue.id)).status).toBe(400);
     expect(mockReadPages).not.toHaveBeenCalled();
+  });
+
+  it('holds back from a removed venue, a paused crawl and a blocked site', async () => {
+    const now = new Date();
+    for (const overrides of [
+      { removedAt: now },
+      { crawlPausedAt: now },
+      { blockedAt: now },
+    ]) {
+      const venue = await seedVenue({
+        name: `Venue ${Object.keys(overrides)[0]}`,
+        ...overrides,
+      });
+      expect((await draft(venue.id)).status).toBe(409);
+    }
+    expect(mockReadPages).not.toHaveBeenCalled();
+  });
+
+  it('reads nothing and asks nothing once "If it runs out" stops the spent budget', async () => {
+    const venue = await seedVenue();
+    await testDb.insert(adminSettings).values({
+      llmMonthlyBudgetUsd: '1',
+      llmBudgetFallbackToStructured: true,
+    });
+    await testDb
+      .insert(costTracking)
+      .values({ service: 'venue-about', costUsd: '2', recordedAt: new Date() });
+    const res = await draft(venue.id);
+    expect(res.status).toBe(409);
+    expect(mockReadPages).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect((await audits(venue.id)).map((row) => row.metadata)).toEqual([
+      { failed: true, overBudget: true },
+    ]);
+  });
+
+  it('reads the JSON past a sentence around it', async () => {
+    const venue = await seedVenue();
+    mockReadPages.mockResolvedValue(twoPages);
+    mockCreate.mockResolvedValue(
+      reply(
+        `Here is the guide:\n${JSON.stringify({ sections: [{ chip: 'parking', body: 'Garage.', source: 1 }] })}\nHope it helps.`,
+      ),
+    );
+    const res = await draft(venue.id);
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.sections[1]).toMatchObject({
+      chipType: 'parking',
+      state: 'drafted',
+    });
   });
 
   it('is admin only', async () => {

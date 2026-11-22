@@ -1,6 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zValidator } from '@hono/zod-validator';
 import {
+  llmBudgetVerdict,
+  readLlmBudgetStatus,
   recordLlmCost,
   VENUE_GUIDE_DRAFT_MODEL,
   type TokenUsage,
@@ -24,6 +26,7 @@ import { apiLogger } from '../../lib/logger.js';
 import { validationHook } from '../../lib/validator.js';
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
+import { venueRemovedBody } from './lib/venue-hide.js';
 
 // Admin 3e guide drafting (plan row 3d-2, decision 11).
 //
@@ -108,11 +111,12 @@ ${pages
 Respond with only JSON, no markdown:
 {"sections":[{"chip":"parking","body":"...","source":1,"check":null}]}`;
 
-const stripFence = (text: string): string =>
-  text
-    .replace(/^```(?:json)?\s*\n?/i, '')
-    .replace(/\n?```\s*$/i, '')
-    .trim();
+/** The JSON object in the reply, past any fence or sentence around it. */
+const jsonObjectIn = (text: string): string => {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  return start === -1 || end < start ? text : text.slice(start, end + 1);
+};
 
 /** The model's reply as sections, or null when it isn't the JSON asked for. */
 const readReply = (
@@ -122,7 +126,7 @@ const readReply = (
   if (!textBlock || textBlock.type !== 'text') return null;
   try {
     const reply = modelReplySchema.safeParse(
-      JSON.parse(stripFence(textBlock.text)),
+      JSON.parse(jsonObjectIn(textBlock.text)),
     );
     return reply.success ? reply.data : null;
   } catch {
@@ -231,11 +235,32 @@ venueGuideDraftAdminRouter.post(
         name: venues.name,
         websiteUrl: venues.websiteUrl,
         crawlDelayMs: venues.crawlDelayMs,
+        removedAt: venues.removedAt,
+        crawlPausedAt: venues.crawlPausedAt,
+        blockedAt: venues.blockedAt,
       })
       .from(venues)
       .where(eq(venues.id, id));
     if (!venue) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
+    }
+    // Drafting fetches the venue's site like a crawl does, so it holds back
+    // wherever the crawl does: a removed venue, a paused crawl, or a site
+    // that answered 403 or 429 (as probe-platform does).
+    if (venue.removedAt !== null) {
+      return ctx.json(venueRemovedBody, 409);
+    }
+    if (venue.crawlPausedAt !== null) {
+      return ctx.json(
+        { success: false, error: 'Crawling is paused for this venue' },
+        409,
+      );
+    }
+    if (venue.blockedAt !== null) {
+      return ctx.json(
+        { success: false, error: 'This venue’s site has blocked the crawler' },
+        409,
+      );
     }
     const site = httpUrlOrNull(venue.websiteUrl);
     if (!site) {
@@ -251,6 +276,16 @@ venueGuideDraftAdminRouter.post(
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditMeta', { failed: true });
+
+    // The draft counts toward the monthly LLM budget, so "If it runs out"
+    // stops it as it stops the crawl's Haiku calls, before any page is read.
+    if (llmBudgetVerdict(await readLlmBudgetStatus()) === 'over_stop') {
+      ctx.set('auditMeta', { failed: true, overBudget: true });
+      return ctx.json(
+        { success: false, error: 'The monthly LLM budget is spent' },
+        409,
+      );
+    }
 
     const { attempts, pages } = await readGuidePages(
       site.href,
@@ -296,6 +331,10 @@ venueGuideDraftAdminRouter.post(
 
     const reply = readReply(message);
     if (!reply) {
+      apiLogger.warn(
+        { venueId: id, stopReason: message.stop_reason },
+        'guide-drafts: reply was not the JSON asked for',
+      );
       ctx.set('auditMeta', { ...attempt, failed: true, unreadable: true });
       return ctx.json(
         { success: false, error: 'The draft came back unreadable. Try again.' },

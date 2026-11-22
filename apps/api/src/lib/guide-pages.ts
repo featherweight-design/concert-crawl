@@ -71,6 +71,40 @@ type PageFetch =
   | { ok: false; status: number }
   | { ok: true; finalUrl: string; html: string; lastModified: string | null };
 
+/** An HTML page, or one that doesn't say: a PDF or an image is not a guide page. */
+const isHtml = (contentType: string | null): boolean =>
+  contentType === null ||
+  /^\s*(text\/html|application\/xhtml\+xml)\b/i.test(contentType);
+
+/**
+ * The body's first `PAGE_MAX_BYTES`, read from the stream and then cancelled,
+ * so a huge page is never downloaded whole.
+ */
+const readCapped = async (response: Response): Promise<string> => {
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (size < PAGE_MAX_BYTES) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    size += value.byteLength;
+  }
+  await reader.cancel().catch((err: unknown) => {
+    apiLogger.debug({ err }, 'guide-pages: body cancel failed');
+  });
+  const bytes = new Uint8Array(Math.min(size, PAGE_MAX_BYTES));
+  let offset = 0;
+  for (const chunk of chunks) {
+    const part = chunk.subarray(0, bytes.length - offset);
+    bytes.set(part, offset);
+    offset += part.byteLength;
+    if (offset >= bytes.length) break;
+  }
+  return new TextDecoder().decode(bytes);
+};
+
 /** A status that says the site wants no more requests from us right now. */
 const isBackOff = (status: number): boolean => status === 403 || status === 429;
 
@@ -154,15 +188,16 @@ export async function readGuidePages(
               ...(budget !== undefined ? { budget } : {}),
             },
           );
-          if (!response.ok) {
-            await response.body?.cancel().catch(() => undefined);
+          if (!response.ok || !isHtml(response.headers.get('content-type'))) {
+            await response.body?.cancel().catch((err: unknown) => {
+              apiLogger.debug({ err }, 'guide-pages: body cancel failed');
+            });
             return { ok: false, status: response.status };
           }
-          const buffer = await response.arrayBuffer();
           return {
             ok: true,
             finalUrl,
-            html: new TextDecoder().decode(buffer.slice(0, PAGE_MAX_BYTES)),
+            html: await readCapped(response),
             lastModified: response.headers.get('last-modified'),
           };
         },
