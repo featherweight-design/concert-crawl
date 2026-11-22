@@ -32,6 +32,27 @@ import { ExternalLinkIcon } from './InfoRow';
 
 const copy = CONSUMER_COPY.eventDetail;
 
+/**
+ * Whether the signed-in page renders its primary CTA slot at all. A past show
+ * gets none: there is nothing left to buy (Hugh, 2026-11-22). A past cancelled
+ * show keeps its refund or venue link and a past postponed show its Watch
+ * toggle, since neither is a purchase link (orchestrator, 2026-11-22). A No
+ * longer listed show is not cancelled (see above), so a past one drops its
+ * ticket link like any other past show.
+ */
+export const showsPrimaryCta = ({
+  past,
+  status,
+  delistedAt,
+}: {
+  past: boolean;
+  status: EventStatus;
+  delistedAt: string | null | undefined;
+}): boolean =>
+  !past ||
+  status === 'postponed' ||
+  (status === 'cancelled' && !isDelisted(status, delistedAt));
+
 const disabledStyle = {
   all: 'unset',
   boxSizing: 'border-box',

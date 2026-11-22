@@ -6,5 +6,5 @@ export {
   IconUsers,
   ExternalLinkIcon,
 } from './InfoRow';
-export { EventTicketCta } from './EventTicketCta';
+export { EventTicketCta, showsPrimaryCta } from './EventTicketCta';
 export { PublicEventDetail } from './PublicEventDetail';

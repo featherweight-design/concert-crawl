@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { EventTicketCta } from './EventTicketCta';
+import { EventTicketCta, showsPrimaryCta } from './EventTicketCta';
 
 const copy = CONSUMER_COPY.eventDetail;
 const ticket = 'https://tickets.example.com/show';
@@ -100,5 +100,43 @@ describe('EventTicketCta', () => {
     );
     expect(screen.getByRole('link', { name: copy.getTickets })).toBeTruthy();
     expect(screen.queryByText(copy.refundInfo)).toBeNull();
+  });
+});
+
+// Hugh, 2026-11-22: no purchase link on a past show. A refund link and the
+// Watch toggle are not purchase links (orchestrator, 2026-11-22).
+describe('showsPrimaryCta', () => {
+  it('shows the CTA on every show still to come', () => {
+    expect(
+      showsPrimaryCta({ past: false, status: 'upcoming', delistedAt: null }),
+    ).toBe(true);
+  });
+
+  it('drops it on an ordinary past show', () => {
+    expect(
+      showsPrimaryCta({ past: true, status: 'upcoming', delistedAt: null }),
+    ).toBe(false);
+  });
+
+  it('keeps the refund link on a past cancelled show', () => {
+    expect(
+      showsPrimaryCta({ past: true, status: 'cancelled', delistedAt: null }),
+    ).toBe(true);
+  });
+
+  it('keeps the Watch toggle on a past postponed show', () => {
+    expect(
+      showsPrimaryCta({ past: true, status: 'postponed', delistedAt: null }),
+    ).toBe(true);
+  });
+
+  it('drops it on a past No longer listed show, which would offer tickets', () => {
+    expect(
+      showsPrimaryCta({
+        past: true,
+        status: 'cancelled',
+        delistedAt: '2026-10-01T00:00:00Z',
+      }),
+    ).toBe(false);
   });
 });
