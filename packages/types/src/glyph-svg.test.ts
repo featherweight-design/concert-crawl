@@ -106,6 +106,25 @@ describe('validateGlyphSvg', () => {
     expect(reason(svg('<path d="M4 12a30 30 0 1016 0"/>'))).toBe('offGrid');
   });
 
+  it('checks the control point S and T reflect, which is never written', () => {
+    // C's second control 10,4 reflects through the pen at 20,12 to 30,20.
+    expect(reason(svg('<path d="M4 12 C4 4 10 4 20 12 S22 20 22 12"/>'))).toBe(
+      'offGrid',
+    );
+    expect(reason(svg('<path d="M4 12 C4 4 10 4 12 12 S20 20 20 12"/>'))).toBe(
+      'ok',
+    );
+    // T after Q reflects the control; T alone uses the pen.
+    expect(reason(svg('<path d="M2 12 Q2 2 20 12 T22 12"/>'))).toBe('offGrid');
+    expect(reason(svg('<path d="M2 12 T22 12"/>'))).toBe('ok');
+  });
+
+  it('fails an arc whose radius underflows, rather than skipping it', () => {
+    expect(reason(svg('<path d="M2 2 A1e-200 1e-200 0 0 1 22 22"/>'))).toBe(
+      'offGrid',
+    );
+  });
+
   it('checks an arc along its sweep, not only at its ends', () => {
     // A half circle of radius 8 from 4,12 to 20,12 tops out at y 4.
     expect(reason(svg('<path d="M4 12 A8 8 0 0 1 20 12"/>'))).toBe('ok');
