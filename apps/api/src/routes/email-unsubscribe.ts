@@ -112,10 +112,9 @@ emailUnsubscribeRouter.get(
     try {
       switch (family) {
         case 'digest':
-          // Both homes. The generalized digest reads the preferences table,
-          // but the legacy column still gates the Spotify-shaped query while
-          // NATIVE_DIGEST_ENABLED is off — writing only one would leave the
-          // link silently broken for half the audience.
+          // Both homes. The digest reads only the preferences table now, but
+          // the legacy column is still exposed by the Spotify connection API,
+          // so it keeps agreeing until the contract migration drops it.
           await db
             .update(userSpotifyConnections)
             .set({ digestEnabled: false })
