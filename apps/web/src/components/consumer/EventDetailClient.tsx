@@ -1018,7 +1018,7 @@ export function EventDetailPriceBlock({
           priceMax={event.ticketPriceMax}
           priceSource={event.priceSource}
           venueName={event.venue.name}
-          ticketUrl={event.ticketUrl}
+          ticketUrl={past ? null : event.ticketUrl}
           eventId={event.id}
           artist={event.artist}
           date={event.date}
@@ -1848,7 +1848,7 @@ export function EventDetailPriceBlock({
             priceMax={confirmedSub.priceMax}
             priceSource="community"
             venueName={event.venue.name}
-            ticketUrl={event.ticketUrl}
+            ticketUrl={past ? null : event.ticketUrl}
             eventId={event.id}
             artist={event.artist}
             date={event.date}
@@ -2153,7 +2153,7 @@ export function EventDetailPriceBlock({
         priceMax={event.ticketPriceMax}
         priceSource={event.priceSource}
         venueName={event.venue.name}
-        ticketUrl={event.ticketUrl}
+        ticketUrl={past ? null : event.ticketUrl}
         eventId={event.id}
         artist={event.artist}
         date={event.date}
