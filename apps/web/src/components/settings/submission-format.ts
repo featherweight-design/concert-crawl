@@ -139,3 +139,6 @@ export const groupByMonth = (
   }
   return months;
 };
+
+/** Cred a verified price earns: 1 each, matching the Settings summary ("+41 cred"). */
+export const CRED_PER_CONFIRMED_PRICE = 1;

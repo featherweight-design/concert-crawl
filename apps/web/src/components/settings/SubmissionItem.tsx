@@ -5,7 +5,12 @@ import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { StatusPill } from './StatusPill';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { formatAgo, formatDate, priceLabelOf } from './submission-format';
+import {
+  CRED_PER_CONFIRMED_PRICE,
+  formatAgo,
+  formatDate,
+  priceLabelOf,
+} from './submission-format';
 import type { UserSubmissionItem } from '@concert-crawl/types';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
@@ -72,6 +77,15 @@ export function SubmissionItem({
           {!closed && confirms > 0 && (
             <span className="text-[12px] text-fg-muted">
               {SETTINGS_COPY.submissionConfirms(confirms)}
+            </span>
+          )}
+          {submission.status === 'confirmed' && (
+            <span
+              data-testid="submission-cred-tag"
+              className="text-[10px] font-bold uppercase text-accent"
+              style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}
+            >
+              {SETTINGS_COPY.submissionCredTag(CRED_PER_CONFIRMED_PRICE)}
             </span>
           )}
           {closed && submission.closedReason !== undefined && (

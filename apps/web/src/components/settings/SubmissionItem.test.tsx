@@ -141,10 +141,18 @@ describe('SubmissionItem closed rows', () => {
     expect(screen.queryByText(reasons.stale)).toBeNull();
   });
 
-  // `submitted-prices-m` draws no "+1 cred" tag on a confirmed row.
-  it('a confirmed row carries no +1 cred tag', () => {
+  // Addendum 9 item 4: the desktop row on both sizes.
+  it('a confirmed row ends its line with +1 cred', () => {
     render(<SubmissionItem submission={row({ status: 'confirmed' })} />);
 
-    expect(screen.queryByText(/\+1 cred/i)).toBeNull();
+    expect(screen.getByTestId('submission-cred-tag').textContent).toBe(
+      '+1 cred',
+    );
+  });
+
+  it('a pending row carries no cred tag', () => {
+    render(<SubmissionItem submission={row({ status: 'pending' })} />);
+
+    expect(screen.queryByTestId('submission-cred-tag')).toBeNull();
   });
 });

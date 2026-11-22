@@ -1597,8 +1597,12 @@ export const CONSUMER_COPY = {
       'The next show you go to, drop the price you saw. Two fans confirm and it goes live.',
 
     // ── SubmissionItem ────────────────────────────────────────────
+    // The submitter never counts themself, so "other" is the accurate count
+    // (addendum-9 item 4). Same line on the phone and the desktop row.
     submissionConfirms: (confirms: number) =>
-      `${confirms} ${confirms === 1 ? 'fan' : 'fans'} confirmed`,
+      `${confirms} other ${confirms === 1 ? 'fan' : 'fans'} confirmed.`,
+    // The cred a confirmed row earned, drawn in caps by the row's style.
+    submissionCredTag: (cred: number) => `+${cred} cred`,
     // Why a closed row closed, beside its CLOSED pill (addendum-4 §6).
     submissionClosedReason: {
       stale: 'No second fan in time',

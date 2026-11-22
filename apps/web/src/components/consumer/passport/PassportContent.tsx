@@ -31,7 +31,7 @@ export interface PassportContentProps {
   /** Attended shows still ahead: Up next and the next slot. */
   upcoming: HistoryShow[];
   /** Every active venue, for Venues collected. Empty if the list failed. */
-  activeVenues: { slug: string; name: string }[];
+  activeVenues: { slug: string; name: string; shortName?: string | null }[];
   identity: PassportIdentity;
   /** Today in Denver, `YYYY-MM-DD`. */
   today: string;
