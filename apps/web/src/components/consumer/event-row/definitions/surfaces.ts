@@ -18,7 +18,7 @@ export type WhenWhereUnit = (typeof WHEN_WHERE_UNITS)[number];
 export type CarriedContext =
   Extract<WhenWhereUnit, 'date' | 'venue'> | 'artist';
 
-export type MetaChipKind = 'crew' | 'following' | 'genre' | 'provenance';
+export type MetaChipKind = 'crew' | 'genre' | 'provenance';
 
 /** The artwork's edge in px, at a wide row and at a narrow (<=360px) one. */
 export interface RowArtSize {
@@ -80,7 +80,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   browse: {
     artSize: SHRINKING_ART,
     carries: ['date'],
-    chipPriority: ['following', 'genre'],
+    chipPriority: ['genre'],
     hasActionGutter: false,
     carded: true,
     showsDelta: false,
@@ -93,7 +93,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   venue: {
     artSize: SHRINKING_ART,
     carries: ['venue'],
-    chipPriority: ['following', 'genre'],
+    chipPriority: ['genre'],
     hasActionGutter: false,
     carded: true,
     showsDelta: false,
@@ -112,7 +112,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   related: {
     artSize: FULL_ART,
     carries: [],
-    chipPriority: ['following', 'genre'],
+    chipPriority: ['genre'],
     hasActionGutter: true,
     carded: false,
     showsDelta: false,
@@ -154,7 +154,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   crew: {
     artSize: SHRINKING_ART,
     carries: ['date'],
-    chipPriority: ['crew', 'following', 'genre'],
+    chipPriority: ['crew', 'genre'],
     hasActionGutter: false,
     carded: false,
     showsDelta: false,
@@ -174,7 +174,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   crewLens: {
     artSize: SHRINKING_ART,
     carries: ['date'],
-    chipPriority: ['crew', 'following', 'genre'],
+    chipPriority: ['crew', 'genre'],
     hasActionGutter: false,
     carded: false,
     showsDelta: false,

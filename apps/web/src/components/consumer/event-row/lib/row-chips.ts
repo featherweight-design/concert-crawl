@@ -9,8 +9,6 @@ export interface ChipSpec {
   label: string;
   tone: ChipTone;
   srLabel?: string;
-  /** Named rather than a node so this stays a pure data module. */
-  mark?: 'spotify';
   /** The raw genre whose color the chip's dot carries (B+ rule 2). */
   genreDot?: string;
   /**
@@ -68,19 +66,6 @@ export function rowChips(
           show.crewGoing.names,
           show.crewGoing.count,
         ),
-      });
-    }
-
-    if (kind === 'following' && show.isFollowed) {
-      chips.push({
-        key: 'following',
-        label: copy.meta.following,
-        // Following is the neutral, Spotify-marked chip. --signal is reserved
-        // for CTAs and status, and --accent means watching; borrowing either
-        // makes a follow read as an action or as a watch.
-        tone: 'strong',
-        srLabel: copy.a11y.following,
-        mark: 'spotify',
       });
     }
 

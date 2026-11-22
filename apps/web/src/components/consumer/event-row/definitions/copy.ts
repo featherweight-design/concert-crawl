@@ -50,17 +50,12 @@ export const EVENT_ROW_COPY = {
     resale: 'Resale',
   },
   meta: {
-    following: 'Following',
     // The visible chip is a count only. Naming people on a list row is event
     // detail's job, so the names ride along in the sr-only label instead.
     crewGoing: (count: number) => `${count} going`,
   },
   a11y: {
     watchingTick: (artist: string) => `You are watching ${artist}`,
-    // Replaces the chip's visible label rather than adding to it, so it has to
-    // carry the word itself. The Spotify mark beside it is aria-hidden, so the
-    // source is named here rather than left to the glyph.
-    following: 'Following this artist on Spotify',
     // Replaces the "N going" chip, so it has to restate the count as well as
     // name who. Members without a handle are counted and never named, so the
     // remainder is reported as "and N more" rather than silently dropped.

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { RowMetaChip } from './RowMetaChip';
-import { SpotifyLogo } from '@/components/brand/spotify-logo';
 import { GenreDot } from '@/components/consumer/GenreDot';
 import { EVENT_ROW_COPY } from './definitions/copy';
 import { fitChips } from './lib/fit-chips';
@@ -10,10 +9,9 @@ import type { ChipSpec } from './lib/row-chips';
 
 const CHIP_GAP = 5;
 
-// The mark widens the chip, so the measure copy has to carry it too or the fit
+// The dot widens the chip, so the measure copy has to carry it too or the fit
 // pass sizes against a chip narrower than the one it renders.
 const chipMark = (chip: ChipSpec) => {
-  if (chip.mark === 'spotify') return <SpotifyLogo size={11} />;
   if (chip.genreDot) return <GenreDot genre={chip.genreDot} />;
   return undefined;
 };

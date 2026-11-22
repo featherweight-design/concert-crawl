@@ -69,7 +69,6 @@ export interface EventRowShow {
   /** Watching only. */
   saved: RowSavedPrice | null;
   genres: string[];
-  isFollowed: boolean;
   isWatching: boolean;
   /** null on every surface that has no crew context to state. */
   crewGoing: RowCrewGoing | null;
@@ -130,7 +129,6 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
     // API alone) sends none. A missing list would throw in the chip builder
     // and take the whole Watching list down with it.
     genres: show.genres ?? [],
-    isFollowed: false,
     crewGoing: null,
     // Every row on this list is watched by definition, so the tick would be on
     // all of them and tell the reader nothing.
@@ -188,9 +186,6 @@ export function fromEventWithVenue(
     price,
     saved: null,
     genres: event.genre ?? [],
-    // followedArtists is absent for anonymous viewers and empty for signed-in
-    // viewers with no match; both mean "not theirs".
-    isFollowed: (event.followedArtists?.length ?? 0) > 0,
     isWatching: options.isWatching ?? false,
     crewGoing: options.crewGoing ?? null,
     status: event.isSoldOut ? 'soldout' : 'live',
@@ -247,9 +242,6 @@ export function fromArtistShow(
         : null,
     saved: null,
     genres: show.genres,
-    // The page has its own follow control, and `following` is not in this
-    // surface's chip priority — a chip here would repeat the header.
-    isFollowed: false,
     crewGoing: null,
     // The row's action is the watch button, which states the same thing louder
     // and one gutter away. A tick beside it is the fact twice.
@@ -290,7 +282,6 @@ export function fromCrewShow(show: CrewShow): EventRowShow {
     price: null,
     saved: null,
     genres: [],
-    isFollowed: false,
     crewGoing: {
       count: show.goingCount,
       names: show.going.flatMap((member) =>

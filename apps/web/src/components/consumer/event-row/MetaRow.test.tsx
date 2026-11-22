@@ -29,7 +29,7 @@ const CHIPS: ChipSpec[] = [
     tone: 'neutral',
     secondaryLabel: 'indie',
   },
-  { key: 'following', label: 'Following', tone: 'strong' },
+  { key: 'crew', label: '3 going', tone: 'signal' },
 ];
 
 function renderRow(available: number) {
@@ -62,7 +62,7 @@ describe('MetaRow', () => {
   it('drops the trailing chip once collapsing is not enough', () => {
     const row = renderRow(150);
     expect(row.children).toHaveLength(1);
-    expect(row.textContent).not.toContain('Following');
+    expect(row.textContent).not.toContain('3 going');
   });
 
   it('tells a screen reader the genre the row stopped drawing', () => {

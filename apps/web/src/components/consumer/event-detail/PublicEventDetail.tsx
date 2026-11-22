@@ -5,7 +5,7 @@
 // with every account-shaped affordance removed:
 //
 //   NOT rendered — WatchZone / WatchShowButton, the "I'm going!" commitment
-//   strip, DetailFollowStrip, EventDetailPriceBlock and every price-submission
+//   strip, EventDetailPriceBlock and every price-submission
 //   path inside it, community reports, the first-timer guide chip, and the
 //   report footer. The price appears as a flat read-only row instead.
 //
