@@ -1,3 +1,17 @@
+# [1.544.0](https://github.com/featherweight-design/concert-crawl/compare/v1.543.0...v1.544.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** only an image 400 reads as a bad image; room for four drafts; more glyph route tests ([04ad685](https://github.com/featherweight-design/concert-crawl/commit/04ad6859350fe80f842105f2db12c6045448c390))
+* **api:** read glyph drafts one by one, audit failed attempts, tell a bad image from an outage ([b62e366](https://github.com/featherweight-design/concert-crawl/commit/b62e36634708fd62bfb72abd631a5a434fb13dac))
+* **web:** drop the passport share card pre-warm ([325309a](https://github.com/featherweight-design/concert-crawl/commit/325309a162889f82e3c318528b4c3911aac0e36e))
+
+
+### Features
+
+* **api:** draft four venue glyphs with Claude Haiku, style-checked (admin 3d-1b) ([b706e10](https://github.com/featherweight-design/concert-crawl/commit/b706e10612da28d2147bab773b8a2e67dee19588))
+
 # [1.543.0](https://github.com/featherweight-design/concert-crawl/compare/v1.542.0...v1.543.0) (2026-11-22)
 
 
