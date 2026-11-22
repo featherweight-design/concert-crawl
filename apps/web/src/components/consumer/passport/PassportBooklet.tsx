@@ -385,8 +385,8 @@ interface PassportBookletProps {
 
 /**
  * The open stamp booklet (B+ Passport board): four stamps a page, two pages a
- * spread on desktop, and on a phone the identity page over page 1, then one
- * page at a time under a swipe.
+ * spread on every width: the identity page with page 1, then 2 with 3, and so
+ * on, a phone swiping a spread at a time.
  *
  * Both layouts render and CSS shows one, so a phone never paints a frame of
  * the desktop spread before a media query answers. They share the first

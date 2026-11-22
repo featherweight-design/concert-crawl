@@ -65,8 +65,8 @@ const blankPartner = (number: number): BookletLeaf => ({
   kind: 'page',
   page: {
     number,
-    slots: Array.from({ length: STAMPS_PER_PAGE }, () => ({
-      kind: 'empty' as const,
+    slots: Array.from({ length: STAMPS_PER_PAGE }, (): BookletSlot => ({
+      kind: 'empty',
     })),
   },
 });
@@ -177,7 +177,6 @@ export interface CollectedVenue {
   slug: string;
   name: string;
   /** The venue's own short name, when it has one, for the tile's caption. */
-  shortName: string | null;
   collected: boolean;
 }
 
@@ -190,7 +189,6 @@ export const collectedVenues = (
   active: readonly {
     slug: string;
     name: string;
-    shortName?: string | null;
   }[],
   past: readonly HistoryShow[],
 ): { venues: CollectedVenue[]; collected: number; total: number } => {
@@ -198,7 +196,6 @@ export const collectedVenues = (
   const tiles = active.map((venue) => ({
     slug: venue.slug,
     name: venue.name,
-    shortName: venue.shortName ?? null,
     collected: stamped.has(venue.slug),
   }));
   const venues = [
