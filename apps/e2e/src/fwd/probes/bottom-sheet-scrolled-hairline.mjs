@@ -13,7 +13,10 @@ export default async function ({ page, goto, press, check, width }) {
     width.label === 'desktop' ? { width: 1300, height: 560 } : { width: 320, height: 460 },
   );
   await goto(`/events/${eventId}`);
-  await page.waitForLoadState('networkidle').catch(() => undefined);
+  await page.waitForLoadState('networkidle').catch((err) => {
+    // A dev server's HMR socket can keep the network busy; carry on from the DOM.
+    console.warn('networkidle not reached:', err.message);
+  });
   const opener = page
     .getByRole('button', { name: /^Share this show$/ })
     .first();

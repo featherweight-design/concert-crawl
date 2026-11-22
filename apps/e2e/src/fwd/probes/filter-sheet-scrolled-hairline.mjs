@@ -5,7 +5,10 @@ export const widths = ['xs'];
 
 export default async function ({ page, goto, press, check, width }) {
   await goto('/events');
-  await page.waitForLoadState('networkidle').catch(() => undefined);
+  await page.waitForLoadState('networkidle').catch((err) => {
+    // A dev server's HMR socket can keep the network busy; carry on from the DOM.
+    console.warn('networkidle not reached:', err.message);
+  });
   const opener = page.locator('[data-testid="filters-button"]:visible').first();
   await opener.waitFor({ timeout: 15000 });
   await press(opener);
