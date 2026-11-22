@@ -18,6 +18,7 @@ import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
 import { clearDraft, loadDraft, saveDraft } from '@/lib/feedback-draft';
 import {
   FEEDBACK_SCREENSHOT_TYPES,
+  MAX_FEEDBACK_MESSAGE_LENGTH,
   MAX_FEEDBACK_SCREENSHOT_BYTES,
   isFeedbackScreenshotType,
   type FanFeedbackCategory as FeedbackCategory,
@@ -53,11 +54,16 @@ const isVenue = (category: FeedbackCategory | null): boolean =>
 const venueMessage = (name: string, website: string, notes: string): string =>
   [[name.trim(), website.trim()].filter(Boolean).join('\n'), notes.trim()]
     .filter(Boolean)
-    .join('\n\n');
+    .join('\n\n')
+    // Text carried over from a longer note can pass Anything else's cap, so
+    // the joined message is held to the API's cap rather than sent to a 422.
+    .slice(0, MAX_FEEDBACK_MESSAGE_LENGTH);
 
-// Caps the two one-line fields well inside the API's 2000-character message.
+// The three fields' caps, with the two separators, fit the API's message cap.
 const VENUE_NAME_MAX = 200;
 const WEBSITE_MAX = 500;
+const NOTES_MAX =
+  MAX_FEEDBACK_MESSAGE_LENGTH - VENUE_NAME_MAX - WEBSITE_MAX - '\n\n\n'.length;
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
@@ -649,6 +655,7 @@ function FormFields({
               value={message}
               onChange={(ev) => setMessage(ev.target.value)}
               disabled={disabled}
+              maxLength={MAX_FEEDBACK_MESSAGE_LENGTH}
               aria-labelledby={labelId}
               aria-invalid={msgError || undefined}
               aria-describedby={msgError ? msgErrorId : undefined}
@@ -858,6 +865,7 @@ function VenueFields({
           value={notes}
           onChange={(ev) => setNotes(ev.target.value)}
           disabled={disabled}
+          maxLength={NOTES_MAX}
           placeholder={COPY.notesPlaceholder}
           style={{
             ...fieldStyle(isMobile, disabled),

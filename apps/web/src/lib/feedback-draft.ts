@@ -9,13 +9,13 @@
 // localStorage, but a corrupt or schema-drifted entry would crash the
 // modal if rendered as-is).
 
-export const FEEDBACK_DRAFT_KEY = 'feedback-draft-v1';
-export const FEEDBACK_DRAFT_TTL_MS = 72 * 60 * 60 * 1000; // 72h
-
 import {
   FAN_FEEDBACK_CATEGORIES,
   type FanFeedbackCategory,
 } from '@concert-crawl/types';
+
+export const FEEDBACK_DRAFT_KEY = 'feedback-draft-v1';
+export const FEEDBACK_DRAFT_TTL_MS = 72 * 60 * 60 * 1000; // 72h
 
 export interface FeedbackDraftScreenshot {
   name: string;

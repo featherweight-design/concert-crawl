@@ -341,6 +341,9 @@ export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
 
 // The kinds the fan modal sends, and so the only ones the public POST
 // /v1/feedback accepts.
+// The longest message POST /v1/feedback takes.
+export const MAX_FEEDBACK_MESSAGE_LENGTH = 2000;
+
 export const FAN_FEEDBACK_CATEGORIES = [
   'bug',
   'idea',
