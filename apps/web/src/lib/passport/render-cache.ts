@@ -16,13 +16,14 @@ import { createHash } from 'node:crypto';
 
 const MAX_ENTRIES = 16;
 
-export interface RenderedPassport {
-  png: ArrayBuffer;
-  etag: string;
-}
+// Without a deployment id (local, self-hosted) a fixed fallback would let a new
+// build keep an old ETag, so fall back to this process's start: a deploy
+// restarts the process and retires every card.
+const BUILD_STAMP =
+  process.env['VERCEL_DEPLOYMENT_ID'] ?? `proc${Date.now().toString(36)}`;
 
-const rendered = new Map<string, RenderedPassport>();
-const inFlight = new Map<string, Promise<RenderedPassport>>();
+const rendered = new Map<string, ArrayBuffer>();
+const inFlight = new Map<string, Promise<ArrayBuffer>>();
 
 export interface PassportKeyParts {
   userId: string;
@@ -37,7 +38,7 @@ export const passportCacheKey = (parts: PassportKeyParts): string =>
   createHash('sha256')
     .update(
       JSON.stringify([
-        process.env['VERCEL_DEPLOYMENT_ID'] ?? 'dev',
+        BUILD_STAMP,
         parts.userId,
         parts.ratio,
         parts.handle,
@@ -65,7 +66,7 @@ export const matchesEtag = (
 export const renderOnce = async (
   key: string,
   render: () => Promise<ArrayBuffer>,
-): Promise<RenderedPassport> => {
+): Promise<ArrayBuffer> => {
   const hit = rendered.get(key);
   if (hit !== undefined) {
     // Re-insert so the Map's order is least-recently-used first.
@@ -79,14 +80,13 @@ export const renderOnce = async (
   }
   const job = render()
     .then((png) => {
-      const entry = { png, etag: passportEtag(key) };
-      rendered.set(key, entry);
+      rendered.set(key, png);
       while (rendered.size > MAX_ENTRIES) {
         const oldest = rendered.keys().next().value;
         if (oldest === undefined) break;
         rendered.delete(oldest);
       }
-      return entry;
+      return png;
     })
     .finally(() => {
       inFlight.delete(key);
@@ -94,9 +94,6 @@ export const renderOnce = async (
   inFlight.set(key, job);
   return job;
 };
-
-export const peekRendered = (key: string): RenderedPassport | undefined =>
-  rendered.get(key);
 
 /** Test seam: start from an empty cache. */
 export const clearPassportRenderCache = (): void => {
