@@ -1,0 +1,60 @@
+{
+  "feature": "B+ addendum 10 · who sells the price on the public event page (/e/[id])",
+  "note": "Boards: design/design_handoff_bplus_redesign/addendum-10/boards/01-public-resale (public-resale-cheapest, public-boxoffice-resale, public-resale-only at 360 and 1280; public-spec for case D and the Light tones). The public page sits behind the launch gate, so the pre-PR sheet runs the web dev server with NEXT_PUBLIC_PUBLIC_BROWSE=true on its command line. Each case needs an upcoming event in the target database: CC_SOLDBY_A_ID (cheapest price is resale, four other sellers, so Also shows 3 and +1 more), CC_SOLDBY_B_ID (box office headline with a resale alternate), CC_SOLDBY_C_ID (only resale listed), CC_SOLDBY_D_ID (a promoted sold-out report with box office and resale listed). The no-tier flat card and the Community pill are covered by PublicEventDetail.test.tsx.",
+  "signedOut": true,
+  "widths": [
+    { "label": "xs", "width": 320, "height": 900, "touch": true },
+    { "label": "phone", "width": 360, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1280, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "case-a-resale-cheapest",
+      "label": "A: the cheapest price is resale; Resale pill, Sold by {seller} · resale, Also cheapest first, +1 more",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/e/${CC_SOLDBY_A_ID}",
+          "wait": "[data-testid=\"public-price-also-more\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "case-b-boxoffice-resale",
+      "label": "B: box office headline; ★ Box office pill, face value, the resale price as an Also row with its pill",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/e/${CC_SOLDBY_B_ID}",
+          "wait": "[data-testid=\"public-price-also-row\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "case-c-resale-only",
+      "label": "C: only resale is listed; the dashed note, no Also",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/e/${CC_SOLDBY_C_ID}",
+          "wait": "[data-testid=\"public-price-resale-only\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "case-d-soldout-resale",
+      "label": "D: sold out leads; Resale from {price} on {seller} · above face value",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/e/${CC_SOLDBY_D_ID}",
+          "wait": "[data-testid=\"public-price-soldout-resale\"]",
+          "settle": 1000
+        }
+      ]
+    }
+  ]
+}
