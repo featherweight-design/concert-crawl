@@ -1,0 +1,23 @@
+{
+  "feature": "Concerts header stats: no Spent tile, 22px phone / 30px desktop values, Top venue spans two on the phone",
+  "note": "Boards: design #750 concerts-stats, concerts-stats-missing. The signed-in audit user has all five stats. The missing-stat state (no Top genre and no Top venue, row two dropped) is covered by the HistoryHeader unit test, since the kit signs in as one account.",
+  "widths": [
+    { "label": "xs", "width": 320, "height": 640 },
+    { "label": "phone", "width": 390, "height": 844 },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "concerts-header",
+      "label": "/history: header stats",
+      "steps": [
+        { "goto": "/history", "settle": 1500 },
+        { "wait": "[data-testid=\"history-header\"]" },
+        {
+          "wait": "body:not(:has([aria-busy=\"true\"]))",
+          "settle": 500
+        }
+      ]
+    }
+  ]
+}
