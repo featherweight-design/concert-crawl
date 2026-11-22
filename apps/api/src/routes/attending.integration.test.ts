@@ -131,6 +131,28 @@ describe('PUT/DELETE /v1/attending/:eventId', () => {
     expect(res.status).toBe(404);
   });
 
+  it('returns 404 for a show at a removed venue, upcoming or past', async () => {
+    setAuth();
+    await seedSupporter();
+    const venue = await seedVenue({
+      removedAt: new Date('2026-05-01T00:00:00Z'),
+    });
+    const upcoming = await seedEvent(venue.id, { date: UPCOMING });
+    const past = await seedEvent(venue.id, {
+      artist: 'Past Night',
+      date: '2026-01-10',
+    });
+
+    for (const event of [upcoming, past]) {
+      const res = await app.request(`/v1/attending/${event.id}`, {
+        method: 'PUT',
+      });
+      expect(res.status).toBe(404);
+    }
+    const rows = await testDb.select().from(userEvents);
+    expect(rows).toHaveLength(0);
+  });
+
   it('returns 404 for an event the crawler stopped seeing', async () => {
     setAuth();
     await seedSupporter();
