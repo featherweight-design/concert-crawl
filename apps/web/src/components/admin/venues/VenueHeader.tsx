@@ -14,7 +14,12 @@ import {
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { VenueExpectedBadge } from '@/components/admin/venue-expected-badge/VenueExpectedBadge';
 import { crawlingLabel } from './venue-list-rules';
-import { headerLine, recrawlOff, viewOnSiteHref } from './venue-header-rules';
+import {
+  concertCrawlHref,
+  headerLine,
+  recrawlOff,
+  venueSiteLink,
+} from './venue-header-rules';
 import type { Recrawl, RecrawlState } from './useRecrawl';
 import { VenueMenu, type VenueMenuFailure } from './VenueMenu';
 import {
@@ -44,6 +49,28 @@ const BUTTON: CSSProperties = {
 };
 
 /** Settled outcomes with nothing to retry, and the line each one reads. */
+// Desktop's pair, drawn as the header's buttons (`08/venue-header-links`).
+const LINK_BUTTON: CSSProperties = {
+  ...BUTTON,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  textDecoration: 'none',
+};
+
+// The phone's pair: 13px signal links, the icon after the text.
+const PHONE_LINK: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 5,
+  minHeight: 24,
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'var(--signal)',
+  textDecoration: 'none',
+};
+
 const NOTICE: Partial<Record<RecrawlState, string>> = {
   ranFailed: COPY.notice.ranFailed,
   unknown: COPY.notice.unknown,
@@ -123,7 +150,8 @@ export const VenueHeader = ({
   const busyLabel = recrawl.state === 'running' ? COPY.running : COPY.queued;
   const notice = NOTICE[recrawl.state];
   const menuShown = notice === undefined ? menuNotice : null;
-  const siteHref = viewOnSiteHref(venue);
+  const fanHref = concertCrawlHref(venue);
+  const site = venueSiteLink(venue);
   const lineId = `venue-header-line-${venue.id}`;
   const grow = isPhone ? 1 : 'none';
 
@@ -208,6 +236,34 @@ export const VenueHeader = ({
             </div>
           </div>
         </div>
+        {/* The phone draws both as links under the name; Re-crawl and ⋯
+            stay buttons (`08/venue-header-links`). */}
+        {isPhone && (fanHref !== null || site !== null) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+            {fanHref !== null && (
+              <a
+                href={fanHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={PHONE_LINK}
+              >
+                {COPY.onConcertCrawl}
+                <ExternalLink size={12} aria-hidden />
+              </a>
+            )}
+            {site !== null && (
+              <a
+                href={site.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={PHONE_LINK}
+              >
+                {site.host}
+                <ExternalLink size={12} aria-hidden />
+              </a>
+            )}
+          </div>
+        )}
         {/* Wraps so the nowrap buttons never overflow a 320px phone. */}
         <div
           style={{
@@ -254,23 +310,26 @@ export const VenueHeader = ({
           <span role="status" aria-live="polite" className="sr-only">
             {busy ? busyLabel : (notice ?? menuShown ?? '')}
           </span>
-          {siteHref !== null && (
+          {!isPhone && fanHref !== null && (
             <a
-              href={siteHref}
+              href={fanHref}
               target="_blank"
               rel="noopener noreferrer"
-              style={{
-                ...BUTTON,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                textDecoration: 'none',
-                flex: grow,
-              }}
+              style={LINK_BUTTON}
             >
               <ExternalLink size={14} aria-hidden />
-              {COPY.viewOnSite}
+              {COPY.onConcertCrawl}
+            </a>
+          )}
+          {!isPhone && site !== null && (
+            <a
+              href={site.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={LINK_BUTTON}
+            >
+              <ExternalLink size={14} aria-hidden />
+              {COPY.onVenueSite}
             </a>
           )}
           <VenueMenu

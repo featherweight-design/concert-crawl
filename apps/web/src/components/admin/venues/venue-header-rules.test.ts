@@ -6,7 +6,8 @@ import {
   recrawlOff,
   recrawlProgress,
   runningSince,
-  viewOnSiteHref,
+  concertCrawlHref,
+  venueSiteLink,
   type HeaderVenue,
   type RecrawlLine,
   type RecrawlProgress,
@@ -82,19 +83,42 @@ describe('recrawlOff', () => {
   });
 });
 
-describe('viewOnSiteHref', () => {
+describe('concertCrawlHref', () => {
   it('opens our public venue page', () => {
-    expect(viewOnSiteHref(venue())).toBe('/venues/ogden-theatre');
+    expect(concertCrawlHref(venue())).toBe('/venues/ogden-theatre');
   });
 
   it('has no page for a hidden venue', () => {
-    expect(viewOnSiteHref(venue({ active: false }))).toBeNull();
+    expect(concertCrawlHref(venue({ active: false }))).toBeNull();
   });
 
   it('has no page for a taken-down venue, even with `active` set', () => {
     expect(
-      viewOnSiteHref(venue({ removedAt: '2026-11-02T18:00:00Z' })),
+      concertCrawlHref(venue({ removedAt: '2026-11-02T18:00:00Z' })),
     ).toBeNull();
+  });
+});
+
+describe('venueSiteLink', () => {
+  it('opens the origin of the crawl URL, never its calendar path', () => {
+    expect(
+      venueSiteLink({
+        websiteUrl: 'https://www.ballarena.com/events/calendar?x=1',
+      }),
+    ).toEqual({ href: 'https://www.ballarena.com', host: 'ballarena.com' });
+  });
+
+  it('reads only the URL, so a hidden venue keeps it', () => {
+    expect(venueSiteLink({ websiteUrl: 'https://ogden.com/feed' })).toEqual({
+      href: 'https://ogden.com',
+      host: 'ogden.com',
+    });
+  });
+
+  it('has no link without a full http(s) URL', () => {
+    expect(venueSiteLink({ websiteUrl: '' })).toBeNull();
+    expect(venueSiteLink({ websiteUrl: 'ogden.com' })).toBeNull();
+    expect(venueSiteLink({ websiteUrl: 'javascript:alert(1)' })).toBeNull();
   });
 });
 

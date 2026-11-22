@@ -14,7 +14,7 @@ import {
   useIsPhone,
 } from '@/components/admin/primitives';
 import { GUIDE_ANCHOR_ID } from '@/components/consumer/venue-guide/FirstTimerCallout';
-import { viewOnSiteHref, type HeaderVenue } from '../venue-header-rules';
+import { concertCrawlHref, type HeaderVenue } from '../venue-header-rules';
 import { GuideEditPanel } from './GuideEditPanel';
 import {
   GUIDE_SECTIONS,
@@ -212,7 +212,7 @@ export const GuideTab = ({
   const phone = useIsPhone();
   const router = useRouter();
   const [editing, setEditing] = useState<GuideSection | null>(null);
-  const siteHref = viewOnSiteHref(venue);
+  const siteHref = concertCrawlHref(venue);
 
   const preview =
     siteHref === null ? null : (
