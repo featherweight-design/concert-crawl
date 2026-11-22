@@ -262,9 +262,14 @@ export const ReturnSeamReplay = () => {
           data-testid="return-seam-strip-art"
           className="h-10 w-10 shrink-0 overflow-hidden rounded-[10px]"
           style={{
-            boxShadow: genreRing(
-              genreColor(stripShow?.genres[0]) ?? NEUTRAL_GENRE_COLOR,
-            ),
+            // The show keeps its genre ring. The artist's photo wears the
+            // board's signal ring and glow (board 10, the tile's box-shadow).
+            boxShadow:
+              strip.action === 'watch'
+                ? genreRing(
+                    genreColor(stripShow?.genres[0]) ?? NEUTRAL_GENRE_COLOR,
+                  )
+                : '0 0 0 1.25px var(--signal), 0 0 20px color-mix(in oklch, var(--signal) 40%, transparent)',
           }}
         >
           <EventImage
