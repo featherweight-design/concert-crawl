@@ -289,7 +289,7 @@ describe('PassportContent', () => {
     const slots = spread!.querySelectorAll(
       '[data-booklet-leaf="page-1"] > *:not(:last-child)',
     );
-    expect(slots[0]).toHaveAttribute('data-booklet-next', 'up');
+    expect(slots[0]?.querySelector('[data-booklet-next="up"]')).not.toBeNull();
     expect(spread!.querySelectorAll('[data-booklet-empty]')).toHaveLength(3);
   });
 
@@ -312,7 +312,10 @@ describe('PassportContent', () => {
     expect(
       document.querySelector('[data-passport-empty-layout="phone"]'),
     ).toBeNull();
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    // The phone top bar and the desktop title both sit in the DOM; CSS shows
+    // one, and the title block is hidden under lg.
+    expect(screen.getByTestId('passport-top-bar')).toHaveClass('lg:hidden');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(2);
     const ghost = desktop!.querySelector<HTMLElement>(
       '[data-booklet-next="up"]',
     );
