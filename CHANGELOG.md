@@ -1,3 +1,17 @@
+# [1.524.0](https://github.com/featherweight-design/concert-crawl/compare/v1.523.0...v1.524.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** answer 401 before validating past-shows and bulk follow, fix stale gate docs ([ed9e624](https://github.com/featherweight-design/concert-crawl/commit/ed9e624e904c0ba5f72d6ba4f97c33353daf7d85))
+* **api:** answer 401 before validating the follow slug ([923e9c5](https://github.com/featherweight-design/concert-crawl/commit/923e9c5a0adbced2dbb0861e19984f70528aa14d))
+* **api:** opt-out test reads the preferences table; mark retired flag in old docs ([fb5f7e0](https://github.com/featherweight-design/concert-crawl/commit/fb5f7e00378fb87ba99854edd0bcc258ef50fb99))
+
+
+### Features
+
+* **api:** drop the founder window and the plan gates every account passes ([83bf70e](https://github.com/featherweight-design/concert-crawl/commit/83bf70e5a8eb3128a320f855f359b70fe200af09))
+
 # [1.523.0](https://github.com/featherweight-design/concert-crawl/compare/v1.522.5...v1.523.0) (2026-11-22)
 
 
