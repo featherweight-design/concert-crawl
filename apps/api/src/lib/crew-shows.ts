@@ -34,15 +34,15 @@ import { displayHeadliner, portraitCanonicalName } from './event-billing.js';
 import { MT_TIME_ZONE } from './time.js';
 import { avatarColumns, avatarOf } from './avatar.js';
 
+/** Addendum 6 item 41: "a cancelled show leaves after a day". */
+const CANCELLED_STAYS_SINCE = sql`now() - interval '1 day'`;
+
 /**
  * The tense rule (locked decision 2). Upcoming needs at least one member
  * going; a past night needs at least two. This is what stops a crew home
  * degrading into a merged feed of solo nights, so both numbers live here and
  * are read by every call site rather than inlined where they can drift.
  */
-/** Addendum 6 item 41: "a cancelled show leaves after a day". */
-const CANCELLED_STAYS_SINCE = sql`now() - interval '1 day'`;
-
 export const UPCOMING_MIN_GOING = 1;
 export const PAST_MIN_GOING = 2;
 
