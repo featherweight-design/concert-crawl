@@ -99,12 +99,3 @@ export async function loadPlanContext(
     planState,
   };
 }
-
-// Thin wrapper — existing callers only need the derived PlanState.
-export async function loadPlanState(
-  userId: string,
-  publicMetadata: unknown,
-): Promise<PlanState> {
-  const context = await loadPlanContext(userId, publicMetadata);
-  return context.planState;
-}
