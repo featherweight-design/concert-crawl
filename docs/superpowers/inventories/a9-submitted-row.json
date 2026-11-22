@@ -1,0 +1,23 @@
+{
+  "feature": "Addendum 9 item 4 · Submitted prices row: \"N other fans confirmed.\" and +1 CRED on both sizes",
+  "note": "/me/submissions mounts ThemeSync, so this sheet runs one theme pass, Electric; the audit account's saved theme must be Electric. Desktop board: design/design_handoff_bplus_redesign/screens/07-more-screens/more-s-d_submissions.jpg. Needs an audit user with at least one confirmed submitted price. The route renders both lists, so the wait takes the visible cred tag.",
+  "rows": [
+    {
+      "id": "submissions-confirmed-row",
+      "label": "/me/submissions: confirmed rows with the cred tag",
+      "fullPage": true,
+      "steps": [
+        { "goto": "/me/submissions", "settle": 5000 },
+        { "wait": "[data-testid=\"submission-cred-tag\"]:visible" }
+      ]
+    }
+  ],
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": { "cc-theme": "electric" },
+      "colorScheme": "dark"
+    }
+  ]
+}

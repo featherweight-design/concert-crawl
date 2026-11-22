@@ -1,0 +1,24 @@
+{
+  "feature": "Addendum 9 item 3 · Passport Venues collected: every tile captioned",
+  "note": "Boards: design/design_handoff_bplus_redesign/addendum-9/boards/03-passport-captions/venues-collected-{320,390,d}.html (4 columns at 320, 5 at 390, 5 in the desktop side column; collected first). Needs a signed-in audit account with attended shows, as bplus-b13-passport does. Waits as that inventory: share card prepares after mount.",
+  "rows": [
+    {
+      "id": "passport-venues",
+      "label": "/passport: Venues collected with captions",
+      "steps": [
+        { "goto": "/passport/square", "expectStatus": 200 },
+        { "goto": "/passport", "settle": 5000 },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        { "wait": "[data-testid=\"passport-booklet\"]" },
+        { "wait": "body:not(:has([aria-busy=\"true\"]))" },
+        { "wait": "body:not(:has([aria-busy=\"true\"]))" },
+        {
+          "wait": "[data-testid=\"passport-venues-collected\"]:visible",
+          "scrollTo": "[data-testid=\"passport-venues-collected\"]:visible"
+        }
+      ]
+    }
+  ]
+}
