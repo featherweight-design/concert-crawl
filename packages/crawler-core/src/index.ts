@@ -17,7 +17,9 @@ export {
   LLM_EXTRACTION_MODEL,
   VENUE_ABOUT_MODEL,
   VENUE_GLYPH_MODEL,
+  VENUE_GUIDE_DRAFT_MODEL,
 } from './lib/llm-models.js';
+export { cleanHtml, type CleanedPage } from './lib/extractors/clean-html.js';
 export {
   LLM_SERVICES,
   recordLlmCost,

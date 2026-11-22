@@ -20,3 +20,7 @@ export const VENUE_ABOUT_MODEL =
 /** The admin's glyph drafting route (apps/api, admin 3d). It reads reference images. */
 export const VENUE_GLYPH_MODEL =
   'claude-haiku-4-5-20251001' satisfies PricedModelId;
+
+/** The admin's guide drafting route (apps/api). */
+export const VENUE_GUIDE_DRAFT_MODEL =
+  'claude-haiku-4-5-20251001' satisfies PricedModelId;
