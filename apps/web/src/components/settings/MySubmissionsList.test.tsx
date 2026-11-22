@@ -93,3 +93,47 @@ describe('MySubmissionsList filter row', () => {
     expect(screen.getByText(copy.submissionsNewestFirst)).toBeTruthy();
   });
 });
+
+describe('MySubmissionsList load more', () => {
+  const many = (count: number): UserSubmissionItem[] =>
+    Array.from({ length: count }, (_, idx) => ({
+      ...row,
+      id: `s${idx}`,
+      submittedAt: new Date(Date.UTC(2026, 9, 28 - (idx % 20))).toISOString(),
+    }));
+  const rowCount = () => screen.getAllByText(row.artist).length;
+
+  it('shows no button at 20 rows or fewer', () => {
+    render(<MySubmissionsList submissions={many(20)} />);
+    expect(rowCount()).toBe(20);
+    expect(screen.queryByTestId('submissions-load-more')).toBeNull();
+  });
+
+  it('opens on 20 rows, then appends the next batch, smaller at the end', () => {
+    render(<MySubmissionsList submissions={many(55)} />);
+    expect(rowCount()).toBe(20);
+    expect(screen.getByTestId('submissions-load-more').textContent).toBe(
+      copy.submissionsLoadMore(20),
+    );
+    fireEvent.click(screen.getByTestId('submissions-load-more'));
+    expect(rowCount()).toBe(40);
+    expect(screen.getByTestId('submissions-load-more').textContent).toBe(
+      copy.submissionsLoadMore(15),
+    );
+    fireEvent.click(screen.getByTestId('submissions-load-more'));
+    expect(rowCount()).toBe(55);
+    expect(screen.queryByTestId('submissions-load-more')).toBeNull();
+  });
+
+  it('starts over at 20 when the filter changes', () => {
+    render(<MySubmissionsList submissions={many(30)} />);
+    fireEvent.click(screen.getByTestId('submissions-load-more'));
+    expect(rowCount()).toBe(30);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(copy.submissionFilters.all),
+      }),
+    );
+    expect(rowCount()).toBe(20);
+  });
+});

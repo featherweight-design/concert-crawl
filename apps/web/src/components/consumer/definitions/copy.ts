@@ -1599,6 +1599,8 @@ export const CONSUMER_COPY = {
     },
     // The sort note at the right end of the filter row (desktop only).
     submissionsNewestFirst: 'Newest first',
+    // The next batch of the list; N is up to 20 (the last batch is smaller).
+    submissionsLoadMore: (count: number) => `Load ${count} more`,
     // A filter with no rows: the shared state card (`bp-s-empty_search_m`).
     submissionsFilterEmpty: {
       // The same eyebrow Browse's filtered-empty state wears (`emptyFilteredEyebrow`).
