@@ -1167,6 +1167,14 @@ venuesAdminRouter.patch(
       Object.keys(contactAfter).length > 0
         ? { contact: { before: contactBefore, after: contactAfter } }
         : {};
+    // A glyph change keeps the one it replaced, so a lost glyph can be put back.
+    const changeMeta =
+      body.glyphSvg !== undefined && body.glyphSvg !== existing.glyphSvg
+        ? {
+            ...contactMeta,
+            glyph: { before: existing.glyphSvg, after: body.glyphSvg },
+          }
+        : contactMeta;
 
     // Who set the crawl mode. A mode sent by an admin is forced ('admin');
     // clearing it hands the pick back to the crawler, so the source is unknown
@@ -1249,7 +1257,7 @@ venuesAdminRouter.patch(
           ? { hide: { reason: hideReason ?? null, note: hideNote ?? null } }
           : {}),
         ...(body.active === true && !existing.active ? { show: true } : {}),
-        ...contactMeta,
+        ...changeMeta,
       });
     } else if (hidingNow) {
       ctx.set('auditAction', 'venue.hide');
@@ -1257,14 +1265,14 @@ venuesAdminRouter.patch(
         reason: hideReason ?? null,
         note: hideNote ?? null,
         upcomingShows: await upcomingShowCount(id),
-        ...contactMeta,
+        ...changeMeta,
       });
     } else if (body.active === true && !existing.active) {
       ctx.set('auditAction', 'venue.show');
-      if ('contact' in contactMeta) ctx.set('auditMeta', contactMeta);
+      if (Object.keys(changeMeta).length > 0) ctx.set('auditMeta', changeMeta);
     } else {
       ctx.set('auditAction', 'venue.update');
-      if ('contact' in contactMeta) ctx.set('auditMeta', contactMeta);
+      if (Object.keys(changeMeta).length > 0) ctx.set('auditMeta', changeMeta);
     }
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', getAuthUser(ctx).userId);

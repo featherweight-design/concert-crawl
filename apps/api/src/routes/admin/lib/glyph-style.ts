@@ -17,11 +17,13 @@ export const GLYPH_STYLE_ERRORS: Record<GlyphSvgFailure, string> = {
     'This isn’t an icon we can use. Upload a 24 × 24 SVG of strokes only.',
 };
 
-/** `glyphSvg` on the venue PATCH: checked, then saved as rebuilt. Null clears it. */
+/** `glyphSvg` on the venue PATCH: checked, then saved as rebuilt. Null or blank clears it. */
 export const glyphSvgField = z
   .string()
-  .max(GLYPH_SVG_MAX_LENGTH)
+  .max(GLYPH_SVG_MAX_LENGTH, GLYPH_STYLE_ERRORS.invalid)
   .transform((val, ctx) => {
+    // A cleared field clears the glyph, the same as null.
+    if (val.trim() === '') return null;
     const checked = validateGlyphSvg(val);
     if (checked.ok) return checked.svg;
     ctx.addIssue({

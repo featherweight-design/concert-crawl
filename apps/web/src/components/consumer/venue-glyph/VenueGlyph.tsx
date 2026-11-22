@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import {
   GLYPH_STROKE_WIDTH,
   validateGlyphSvg,
@@ -26,8 +26,12 @@ interface VenueGlyphProps {
  */
 export function VenueGlyph({ glyphKey, glyphSvg, size = 24 }: VenueGlyphProps) {
   const gradientId = `vg${useId().replace(/:/g, '')}`;
+  // Parsed once per string, not on every render of a long list of tiles.
+  const checked = useMemo(
+    () => (glyphKey === null && glyphSvg ? validateGlyphSvg(glyphSvg) : null),
+    [glyphKey, glyphSvg],
+  );
   if (glyphKey === null) {
-    const checked = glyphSvg ? validateGlyphSvg(glyphSvg) : null;
     if (!checked?.ok) return null;
     return (
       <svg
