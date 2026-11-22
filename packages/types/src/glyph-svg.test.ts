@@ -57,6 +57,20 @@ describe('validateGlyphSvg', () => {
     ).toBe('ok');
   });
 
+  it('accepts single quotes and the wrapping an editor exports', () => {
+    expect(
+      reason("<svg viewBox='0 0 24 24' fill='none'><path d='M2 2h20'/></svg>"),
+    ).toBe('ok');
+    expect(
+      reason(
+        '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' +
+          svg(
+            '<title>Glass and note</title><desc id="d">Made in a tool</desc><defs/><defs></defs><path d="M2 2h20"/>',
+          ),
+      ),
+    ).toBe('ok');
+  });
+
   it('fails a fill on a shape, a group or the root', () => {
     expect(reason(svg('<path d="M2 2h20v20z" fill="#f00"/>'))).toBe('fill');
     expect(reason(svg('<g fill="red"><path d="M2 2h20"/></g>'))).toBe('fill');
@@ -92,6 +106,17 @@ describe('validateGlyphSvg', () => {
     expect(reason(svg('<path d="M4 12a30 30 0 1016 0"/>'))).toBe('offGrid');
   });
 
+  it('checks an arc along its sweep, not only at its ends', () => {
+    // A half circle of radius 8 from 4,12 to 20,12 tops out at y 4.
+    expect(reason(svg('<path d="M4 12 A8 8 0 0 1 20 12"/>'))).toBe('ok');
+    // Both ends and radii on the grid, but the large arc rises far above it.
+    expect(reason(svg('<path d="M0 12 A24 24 0 1 1 24 12"/>'))).toBe('offGrid');
+    // A radius too small for the gap is scaled up to a half circle (to y 0).
+    expect(reason(svg('<path d="M0 12 A1 1 0 0 1 24 12"/>'))).toBe('ok');
+    // Relative: the large arc's low point is y 24.9.
+    expect(reason(svg('<path d="M4 4 a12 12 0 1 0 16 0"/>'))).toBe('offGrid');
+  });
+
   it('fails anything outside the allowlist as invalid', () => {
     const cases = [
       'not an svg',
@@ -110,7 +135,8 @@ describe('validateGlyphSvg', () => {
       svg(''),
       svg('<path d="M2 2h20"/>', 'viewBox="0 0 48 48"'),
       `${svg('<path d="M2 2h20"/>')}<svg viewBox="0 0 24 24"></svg>`,
-      "<svg viewBox='0 0 24 24'><path d='M2 2h20'/></svg>",
+      svg('<defs><linearGradient id="a"/></defs><path d="M2 2h20"/>'),
+      svg('<title><b>x</b></title><path d="M2 2h20"/>'),
       svg('<path d="M2 2h20"/>'.repeat(GLYPH_SVG_MAX_SHAPES + 1)),
       svg(' '.repeat(GLYPH_SVG_MAX_LENGTH)),
     ];

@@ -106,6 +106,75 @@ const checkFill = (value: string | undefined): void => {
 
 // ---- path data ----
 
+const ARC_SAMPLES = 32;
+/** Sampled points may sit this far past the grid's edge (float error). */
+const ARC_TOLERANCE = 0.01;
+
+/**
+ * Checks every point along an SVG arc against the grid, via the spec's
+ * endpoint-to-center conversion (SVG 1.1 appendix F.6.5 and F.6.6).
+ */
+const arcOnGrid = (
+  fromX: number,
+  fromY: number,
+  rawRx: number,
+  rawRy: number,
+  rotation: number,
+  largeArc: number,
+  sweep: number,
+  toX: number,
+  toY: number,
+): void => {
+  let rx = Math.abs(rawRx);
+  let ry = Math.abs(rawRy);
+  // A zero radius, or no distance at all, draws a straight line or nothing.
+  if (rx === 0 || ry === 0 || (fromX === toX && fromY === toY)) return;
+  const phi = (rotation * Math.PI) / 180;
+  const cos = Math.cos(phi);
+  const sin = Math.sin(phi);
+  const dx = (fromX - toX) / 2;
+  const dy = (fromY - toY) / 2;
+  const x1 = cos * dx + sin * dy;
+  const y1 = -sin * dx + cos * dy;
+  const lambda = (x1 * x1) / (rx * rx) + (y1 * y1) / (ry * ry);
+  if (lambda > 1) {
+    rx *= Math.sqrt(lambda);
+    ry *= Math.sqrt(lambda);
+  }
+  const num = rx * rx * ry * ry - rx * rx * y1 * y1 - ry * ry * x1 * x1;
+  const den = rx * rx * y1 * y1 + ry * ry * x1 * x1;
+  const coef =
+    (largeArc === sweep ? -1 : 1) * Math.sqrt(Math.max(0, num / den));
+  const cx1 = (coef * rx * y1) / ry;
+  const cy1 = (-coef * ry * x1) / rx;
+  const cx = cos * cx1 - sin * cy1 + (fromX + toX) / 2;
+  const cy = sin * cx1 + cos * cy1 + (fromY + toY) / 2;
+  const angle = (ux: number, uy: number, vx: number, vy: number): number =>
+    Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy);
+  const theta = angle(1, 0, (x1 - cx1) / rx, (y1 - cy1) / ry);
+  let delta = angle(
+    (x1 - cx1) / rx,
+    (y1 - cy1) / ry,
+    (-x1 - cx1) / rx,
+    (-y1 - cy1) / ry,
+  );
+  if (sweep === 0 && delta > 0) delta -= 2 * Math.PI;
+  if (sweep === 1 && delta < 0) delta += 2 * Math.PI;
+  for (let i = 1; i < ARC_SAMPLES; i += 1) {
+    const at = theta + (delta * i) / ARC_SAMPLES;
+    const px = cx + rx * Math.cos(at) * cos - ry * Math.sin(at) * sin;
+    const py = cy + rx * Math.cos(at) * sin + ry * Math.sin(at) * cos;
+    if (
+      px < -ARC_TOLERANCE ||
+      py < -ARC_TOLERANCE ||
+      px > GLYPH_GRID + ARC_TOLERANCE ||
+      py > GLYPH_GRID + ARC_TOLERANCE
+    ) {
+      fail('offGrid');
+    }
+  }
+};
+
 const PATH_ARGS: Record<string, number> = {
   m: 2,
   l: 2,
@@ -122,8 +191,9 @@ const PATH_ARGS: Record<string, number> = {
 /**
  * Parses path data command by command, tracking the pen so relative commands
  * are checked against the grid too, and writes it back out canonically.
- * Endpoints and control points must sit on the grid; an arc's bulge is held
- * by capping its radii at the grid.
+ * Endpoints and control points must sit on the grid (a curve stays inside
+ * its control points, so that holds the whole curve); an arc is sampled
+ * along its sweep, since its bulge can leave the grid with both ends on it.
  */
 export const normalizePathData = (data: string): string => {
   if (!/^[MmZzLlHhVvCcSsQqTtAa0-9.,\s+\-eE]*$/.test(data)) fail('invalid');
@@ -197,12 +267,23 @@ export const normalizePathData = (data: string): string => {
       penY = baseY + (args[0] ?? 0);
       onGrid(penY);
     } else if (lower === 'a') {
-      const [rx = 0, ry = 0, , , , x = 0, y = 0] = args;
+      const [rx = 0, ry = 0, rotation = 0, large = 0, sweep = 0, x = 0, y = 0] =
+        args;
       if (rx < 0 || ry < 0) fail('invalid');
-      if (rx > GLYPH_GRID || ry > GLYPH_GRID) fail('offGrid');
+      onGrid(baseX + x, baseY + y);
+      arcOnGrid(
+        penX,
+        penY,
+        rx,
+        ry,
+        rotation,
+        large,
+        sweep,
+        baseX + x,
+        baseY + y,
+      );
       penX = baseX + x;
       penY = baseY + y;
-      onGrid(penX, penY);
     } else {
       for (let i = 0; i < args.length; i += 2) {
         onGrid(baseX + (args[i] ?? 0), baseY + (args[i + 1] ?? 0));
@@ -285,14 +366,16 @@ const buildShape = (
   }
 };
 
+// Attribute values in double or single quotes, as drawing tools write both.
 const TAG =
-  /<(\/?)([a-zA-Z]+)((?:\s+[a-zA-Z][a-zA-Z:-]*\s*=\s*"[^"<>]*")*)\s*(\/?)>/y;
-const ATTRIBUTE = /([a-zA-Z][a-zA-Z:-]*)\s*=\s*"([^"<>]*)"/g;
+  /<(\/?)([a-zA-Z]+)((?:\s+[a-zA-Z][a-zA-Z:-]*\s*=\s*(?:"[^"<>]*"|'[^'<>]*'))*)\s*(\/?)>/y;
+const ATTRIBUTE = /([a-zA-Z][a-zA-Z:-]*)\s*=\s*(?:"([^"<>]*)"|'([^'<>]*)')/g;
 
 const parseAttributes = (raw: string): Map<string, string> => {
   const attrs = new Map<string, string>();
   for (const match of raw.matchAll(ATTRIBUTE)) {
-    const [, name = '', value = ''] = match;
+    const [, name = '', doubled, single] = match;
+    const value = doubled ?? single ?? '';
     if (attrs.has(name)) fail('invalid');
     attrs.set(name, value);
   }
@@ -330,9 +413,14 @@ const serializeShape = (shape: GlyphSvgShape): string => {
 
 const parse = (input: string): GlyphSvgShape[] => {
   if (input.length > GLYPH_SVG_MAX_LENGTH) fail('invalid');
+  // What an editor's export wraps a glyph in, none of it drawn: the prolog,
+  // a doctype, comments, a title or description, and an empty <defs>.
   const source = input
     .replace(/^\s*<\?xml[^?<>]*\?>/, '')
-    .replace(/<!--[\s\S]*?-->/g, '');
+    .replace(/^\s*<!DOCTYPE[^<>[\]]*>/i, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(title|desc)(?:\s[^<>]*)?>[^<>]*<\/\1>/gi, '')
+    .replace(/<defs\s*(?:\/>|>\s*<\/defs>)/gi, '');
 
   const shapes: GlyphSvgShape[] = [];
   // The open elements: `svg` first, then any `g`, and a shape written with a
