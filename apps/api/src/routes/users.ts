@@ -412,7 +412,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
       // The row's art: the event's artwork, then the headliner's portrait,
       // ringed in the lead genre (the boards' 44px thumbnail, B+ rule 2).
       imageUrl: events.imageUrl,
-      artistPhotoUrl: servableArtistPhotoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl(),
       genre: events.genre,
     })
     .from(priceSubmissions)

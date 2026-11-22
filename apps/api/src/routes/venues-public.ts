@@ -255,7 +255,7 @@ venuesPublicRouter.get(
         sourceUrl: events.sourceUrl,
         createdAt: events.createdAt,
         updatedAt: events.updatedAt,
-        artistPhotoUrl: servableArtistPhotoUrl,
+        artistPhotoUrl: servableArtistPhotoUrl(),
       })
       .from(events)
       // Headliner portrait, on the same terms as /v1/events: `artists` is a

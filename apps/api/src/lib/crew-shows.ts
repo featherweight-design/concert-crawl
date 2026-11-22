@@ -79,7 +79,7 @@ const selectAttendanceRows = async (
       title: events.title,
       artist: displayHeadliner(),
       imageUrl: events.imageUrl,
-      artistPhotoUrl: servableArtistPhotoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl(),
       venue: venues.name,
       venueSlug: venues.slug,
       userId: userEvents.userId,

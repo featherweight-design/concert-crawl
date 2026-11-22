@@ -104,7 +104,7 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
       today: sql<string>`${todayMt()}::text`,
       eventId: events.id,
       artist: displayHeadliner(),
-      artistPhotoUrl: servableArtistPhotoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl(),
       date: events.date,
       showTime: events.showTime,
       ticketPriceMin: events.ticketPriceMin,

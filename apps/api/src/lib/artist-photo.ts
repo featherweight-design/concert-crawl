@@ -12,12 +12,17 @@
 // stamps it with the URL; the job also selects such a row for a refresh, so a
 // stray one is repaired rather than served forever.
 
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import { artists } from '@concert-crawl/db';
 
 /** A cached Spotify photo older than this is treated as absent. */
 export const PHOTO_MAX_AGE_DAYS = 30;
 
-export const servableArtistPhotoUrl = sql<
-  string | null
->`CASE WHEN ${artists.photoFetchedAt} IS NULL OR ${artists.photoFetchedAt} > now() - ${PHOTO_MAX_AGE_DAYS} * interval '1 day' THEN ${artists.photoUrl} END`;
+// Built on call, not at module load. Several unit suites mock
+// `@concert-crawl/db` with a stub that has no `artists` table, and a
+// module-level constant would dereference the column at import time, failing
+// in files that never read a photo at all (see artist-exhaustion.ts).
+export const servableArtistPhotoUrl = (): SQL<string | null> =>
+  sql<
+    string | null
+  >`CASE WHEN ${artists.photoFetchedAt} IS NULL OR ${artists.photoFetchedAt} > now() - ${PHOTO_MAX_AGE_DAYS} * interval '1 day' THEN ${artists.photoUrl} END`;

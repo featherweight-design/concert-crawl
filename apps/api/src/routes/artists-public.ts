@@ -224,7 +224,7 @@ artistsPublicRouter.get(
         name: artists.name,
         slug: artists.slug,
         canonicalName: artists.canonicalName,
-        photoUrl: servableArtistPhotoUrl,
+        photoUrl: servableArtistPhotoUrl(),
         upcomingShowCount: upcomingCount,
       })
       .from(artists)
@@ -327,7 +327,7 @@ artistsPublicRouter.get(
         slug: artists.slug,
         canonicalName: artists.canonicalName,
         spotifyArtistId: artists.spotifyArtistId,
-        photoUrl: servableArtistPhotoUrl,
+        photoUrl: servableArtistPhotoUrl(),
         spotifyCandidates: artists.spotifyCandidates,
       })
       .from(artists)

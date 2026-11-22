@@ -67,7 +67,7 @@ watchingRouter.get('/', async (ctx) => {
       imageUrl: events.imageUrl,
       genre: events.genre,
       updatedAt: events.updatedAt,
-      artistPhotoUrl: servableArtistPhotoUrl,
+      artistPhotoUrl: servableArtistPhotoUrl(),
       venueName: venues.name,
       venueSlug: venues.slug,
     })
