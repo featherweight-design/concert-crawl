@@ -1,3 +1,13 @@
+## [1.522.5](https://github.com/featherweight-design/concert-crawl/compare/v1.522.4...v1.522.5) (2026-11-22)
+
+
+### Bug Fixes
+
+* **e2e:** drop the phone-timing snooze row from the Needs you inventory ([b9f74f2](https://github.com/featherweight-design/concert-crawl/commit/b9f74f27af8d1f8ae9ec59a10e701abdd878b6ac))
+* **web:** halve the Passport share card render time ([5167c6f](https://github.com/featherweight-design/concert-crawl/commit/5167c6f770193fbe83a4c0d2276afefa37b77ee7))
+* **web:** move, trap and return focus in the What's new popup ([b784817](https://github.com/featherweight-design/concert-crawl/commit/b78481770ebb6333be0573f18db376ee512f78b0))
+* **web:** use the consumer modal hook for the What's new popup, add probe ([87c509d](https://github.com/featherweight-design/concert-crawl/commit/87c509dce75fec9f6d38952bc5615698dfc07329))
+
 ## [1.522.4](https://github.com/featherweight-design/concert-crawl/compare/v1.522.3...v1.522.4) (2026-11-20)
 
 
