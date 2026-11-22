@@ -42,8 +42,9 @@ export const isAutoPause = (
  * `active=false`. Blocked wins over everything on the crawl axis because a
  * 403 or 429 means the site asked us to stop, whatever else is set.
  *
- * `draft` arrives with 3c's `went_live_at`; until then every venue is live or
- * hidden.
+ * `draft` is a venue that has never gone live (`went_live_at` null, which is
+ * also `active=false`). Only an explicit null is a draft: a row without the
+ * field reads as hidden, never draft.
  *
  * Auto-paused is `isAutoPause`: a pause with a reason is a hand pause even
  * after a failing streak.
@@ -56,9 +57,16 @@ export function deriveVenueStatusChips(
     | 'blockedAt'
     | 'consecutiveFailures'
     | 'robotsTxtAllowed'
-  > & { crawlPauseReason?: Venue['crawlPauseReason'] },
+  > & {
+    crawlPauseReason?: Venue['crawlPauseReason'];
+    wentLiveAt?: Venue['wentLiveAt'];
+  },
 ): VenueStatusChips {
-  const onSite: VenueOnSite = venue.active ? 'live' : 'hidden';
+  const onSite: VenueOnSite = venue.active
+    ? 'live'
+    : venue.wentLiveAt === null
+      ? 'draft'
+      : 'hidden';
   if (venue.blockedAt !== null) return { onSite, crawling: 'blocked' };
   if (venue.robotsTxtAllowed === false) {
     return { onSite, crawling: 'robots_disallowed' };

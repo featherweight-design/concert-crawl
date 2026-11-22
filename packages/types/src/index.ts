@@ -467,6 +467,10 @@ export interface Venue {
   hiddenBy?: string | null;
   hiddenReason?: VenueHideReason | null;
   hiddenNote?: string | null;
+  // Admin 3c: when the venue first went on the site. Null is a draft, which is
+  // also `active: false`. Optional because public reads don't send it; the
+  // admin API always does.
+  wentLiveAt?: string | null;
   // Set when the venue's data was removed at its request; cleared on activation.
   removedAt: string | null;
   extractionStrategy: ExtractionStrategy | null;
