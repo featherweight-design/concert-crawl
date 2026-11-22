@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
@@ -12,6 +12,14 @@ import { AddVenueFlow } from './AddVenueFlow';
 
 const COPY = ADMIN_COPY.addVenue;
 
+beforeEach(() => {
+  // `useIsPhone` reads matchMedia, which jsdom does not ship: desktop.
+  window.matchMedia = vi.fn().mockImplementation(() => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+});
 afterEach(cleanup);
 
 describe('AddVenueFlow', () => {
