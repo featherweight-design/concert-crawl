@@ -931,9 +931,11 @@ venuesAdminRouter.patch(
     const hidingNow = body.active === false && existing.active;
     // A venue hidden before reasons were stored can be given one by hiding it
     // again; one that already has a reason keeps its first hider and reason.
+    // A draft was never on the site, so nobody hid it: no hide record.
     const recordingReason =
       body.active === false &&
       !existing.active &&
+      existing.wentLiveAt !== null &&
       existing.hiddenReason === null &&
       hideReason !== undefined;
     const hiddenFields =
