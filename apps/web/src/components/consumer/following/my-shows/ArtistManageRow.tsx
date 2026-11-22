@@ -54,8 +54,9 @@ export const ArtistManageRow = ({
   variant = 'row',
   narrow = false,
 }: ArtistManageRowProps) => {
-  // Hooks run unconditionally. A slug-less follow simply never renders the control that would call `toggle` —
-  // the follow endpoint is keyed by slug, so there is nothing to call.
+  // Hooks run unconditionally. A slug-less follow simply never renders the
+  // control that would call `toggle`: the follow endpoint is keyed by slug,
+  // so there is nothing to call.
   const follow = useArtistFollow(artist.slug ?? '', true);
 
   const card = variant === 'card';

@@ -39,7 +39,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
 
 // Scoped by userId — the app-level QueryClient outlives sign-in sessions, so
 // an account switch must not surface the previous user's cached preferences
-// (same reasoning as planStateQueryKey / spotifyConnectionQueryKey).
+// (same reasoning as planStateQueryKey).
 export const notificationPreferencesQueryKey = (
   userId: string | null | undefined,
 ) => ['notification-preferences', userId ?? null] as const;
