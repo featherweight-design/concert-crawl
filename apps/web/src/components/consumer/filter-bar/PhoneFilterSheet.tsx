@@ -673,9 +673,17 @@ export function PhoneFilterSheet({
         </div>
 
         {view === 'main' ? (
+          // Addendum 6 item 15: the hairline under the header appears once
+          // the body has scrolled (it supersedes bp-f-filt_sheet_m's rule at
+          // rest). The border is always there, clear until then, so nothing
+          // jumps.
           <div
             {...zone}
-            className="mx-4 flex shrink-0 items-center justify-between border-b border-border pt-1 pb-2"
+            data-testid="filter-sheet-header"
+            data-scrolled={edges.scrolled ? 'true' : 'false'}
+            className={`mx-4 flex shrink-0 items-center justify-between border-b pt-1 pb-2 ${
+              edges.scrolled ? 'border-border' : 'border-transparent'
+            }`}
           >
             <h2 className={TITLE_CLASS}>{copy.phone.filters}</h2>
             <button

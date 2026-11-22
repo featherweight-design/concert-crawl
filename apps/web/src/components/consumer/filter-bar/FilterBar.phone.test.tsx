@@ -625,6 +625,28 @@ describe('FilterBar phone sheet', () => {
     },
   );
 
+  it('draws the hairline under the header only once the body has scrolled', () => {
+    renderBar();
+    const sheet = openSheet();
+    const header = within(sheet).getByTestId('filter-sheet-header');
+    const body = within(sheet).getByTestId('filter-sheet-body');
+    const scroll = (scrollTop: number) => {
+      const metrics = { scrollTop, scrollHeight: 900, clientHeight: 300 };
+      for (const [key, value] of Object.entries(metrics)) {
+        Object.defineProperty(body, key, { value, configurable: true });
+      }
+      fireEvent.scroll(body);
+    };
+    // Addendum 6 item 15: no rule at rest.
+    expect(header.dataset['scrolled']).toBe('false');
+    expect(header.className).toContain('border-transparent');
+    scroll(40);
+    expect(header.dataset['scrolled']).toBe('true');
+    expect(header.className).toContain('border-border');
+    scroll(0);
+    expect(header.dataset['scrolled']).toBe('false');
+  });
+
   it('Where leads with the URL picks in their order, then the busiest', () => {
     searchParams.current = new URLSearchParams(
       'filterWhere=bluebird-theater&filterWhere=ogden-theatre',
