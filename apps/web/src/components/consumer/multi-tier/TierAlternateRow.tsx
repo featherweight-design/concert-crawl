@@ -153,6 +153,8 @@ export const TierAlternateRow = (props: TierAlternateRowProps) => {
         <div
           id={`counter-${check.counterId}`}
           data-testid="tier-check-row"
+          data-price-tier={tier}
+          className="scroll-mt-24"
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -290,6 +292,8 @@ export const TierAlternateRow = (props: TierAlternateRowProps) => {
 
   return (
     <div
+      data-price-tier={tier}
+      className="scroll-mt-24"
       style={{
         display: 'flex',
         gap: '10px',

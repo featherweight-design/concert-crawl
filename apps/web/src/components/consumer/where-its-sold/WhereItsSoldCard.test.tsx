@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import type { TierPriceBlock } from '@concert-crawl/types';
 import { WhereItsSoldAnchors, WhereItsSoldCard } from './WhereItsSoldCard';
 import { buildWhereItsSoldRows, type WhereItsSoldEvent } from './rows';
@@ -364,6 +370,77 @@ describe('WhereItsSoldCard', () => {
       .getAllByTestId('where-its-sold-row')
       .find((row) => row.textContent?.includes('Somewhere else'));
     expect(other?.textContent).toBe('?Somewhere elseGA · all-in$45–$60');
+  });
+
+  describe('the › scrolls to the card for its own tier', () => {
+    const mockScroll = () => {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: vi.fn().mockReturnValue({ matches: false }),
+      });
+      const scroll = vi.fn();
+      Element.prototype.scrollIntoView = scroll;
+      return scroll;
+    };
+
+    it('scrolls to the element marked with the row’s tier and stays on the page', () => {
+      const scroll = mockScroll();
+      const rows = buildWhereItsSoldRows(
+        boardEvent({
+          priceByTier: [
+            block('GA', headline('tm', 'Ticketmaster', '45.00')),
+            block('VIP', headline('vip', 'Ticketmaster', '120.00')),
+          ],
+          priceAlternates: [
+            {
+              id: 'vip-axs',
+              tier: 'VIP',
+              vendor: 'AXS',
+              priceMin: '130.00',
+              priceMax: null,
+              sourceCategory: 'standard',
+            },
+          ],
+        }),
+      );
+      render(
+        <>
+          <div data-price-tier="GA" data-testid="ga-card" />
+          <div data-price-tier="VIP" data-testid="vip-row" />
+          <WhereItsSoldCard rows={rows} />
+        </>,
+      );
+      const link = document.querySelector('a[data-price-id="vip-axs"]');
+      expect(link).not.toBeNull();
+      const notPrevented = fireEvent.click(link as Element);
+      expect(notPrevented).toBe(false);
+      expect(scroll).toHaveBeenCalledTimes(1);
+      expect(scroll.mock.contexts[0]).toBe(screen.getByTestId('vip-row'));
+    });
+
+    it('falls through to the row’s own anchor when no card carries the tier', () => {
+      const scroll = mockScroll();
+      renderCard(boardEvent());
+      const link = document.querySelector('a[data-price-id="axs"]');
+      const notPrevented = fireEvent.click(link as Element);
+      expect(notPrevented).toBe(true);
+      expect(scroll).not.toHaveBeenCalled();
+    });
+
+    it('does not animate under reduced motion', () => {
+      const scroll = mockScroll();
+      window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+      render(
+        <>
+          <div data-price-tier="GA" />
+          <WhereItsSoldCard rows={buildWhereItsSoldRows(boardEvent())} />
+        </>,
+      );
+      fireEvent.click(
+        document.querySelector('a[data-price-id="axs"]') as Element,
+      );
+      expect(scroll).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
+    });
   });
 
   it('renders nothing with no rows', () => {
