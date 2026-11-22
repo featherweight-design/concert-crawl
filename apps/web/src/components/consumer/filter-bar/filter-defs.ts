@@ -186,9 +186,17 @@ export function getSegmentLabel(
 }
 
 /**
+ * True when every one of the 16 Vibes is picked (addendum 11). Counts only
+ * values that are real Vibes, so a stale or repeated URL value cannot make a
+ * partial pick read as "All vibes".
+ */
+export const isEveryVibePicked = (values: readonly string[]): boolean =>
+  VIBE_ORDER.every((vibe) => values.includes(vibe));
+
+/**
  * The phone chip's value: one pick reads as its name, two Vibes as both names
- * ("Electronic, Hip-hop", `bp-vibe-browse_vibe_m`), several picks as a count
- * ("2 venues", "3 vibes").
+ * ("Electronic, Hip-hop", `bp-vibe-browse_vibe_m`), three or more as a count
+ * ("2 venues", "3 vibes"), and all 16 as "All vibes" (addendum 11).
  */
 export function getChipLabel(
   key: FilterKey,
@@ -199,6 +207,7 @@ export function getChipLabel(
   if (values.length > 1) {
     if (key === 'where') return copy.venueCount(values.length);
     if (key === 'vibe') {
+      if (isEveryVibePicked(values)) return copy.vibeAll;
       const names = values.flatMap((value) => {
         const name = getActiveFilterLabel(key, value, venues, genres);
         return name === null ? [] : [name];

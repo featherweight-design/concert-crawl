@@ -812,6 +812,12 @@ export const CONSUMER_COPY = {
     venueCount: (count: number) =>
       `${count} ${count === 1 ? 'venue' : 'venues'}`,
     vibeCount: (count: number) => `${count} ${count === 1 ? 'vibe' : 'vibes'}`,
+    // Every one of the 16 Vibes picked (addendum 11): the chip and the desktop
+    // segment say so, with no count and no "+N".
+    vibeAll: 'All vibes',
+    // The legend's tail once five to fifteen Vibes are on: the first three
+    // names show, this counts the rest.
+    vibeLegendMore: (more: number) => `+${more} more`,
     // Two Vibes read as their names (`bp-vibe-browse_vibe_m`), the pair the
     // chip's two-dot stack draws; more fall back to the count above.
     vibeNames: (names: readonly string[]) => names.join(', '),

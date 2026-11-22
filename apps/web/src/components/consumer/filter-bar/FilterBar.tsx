@@ -37,6 +37,7 @@ import {
   type FilterValues,
   getActiveFilterCount,
   getChipLabel,
+  isEveryVibePicked,
   getFilterOptions,
   getFirstResolvedLabel,
   toggleValue,
@@ -442,7 +443,8 @@ export function FilterBar({
   );
 
   // `bp-f-filt_active_d` stacks a mark per pick: the venue tiles for Where,
-  // the genre dots for Vibe. It draws two; the stack shows the first two. The
+  // the genre dots for Vibe. Where draws two tiles; Vibe grows to three dots and
+  // stops (addendum 11), the first picks in the order picked. The
   // phone chips draw the same marks, with 16px tiles each ringed in the chip's
   // fill (`browse-active-320`). The board rings tiles only, not dots.
   const dimensionMarks = (
@@ -477,7 +479,7 @@ export function FilterBar({
     if (key === 'vibe' && values.length > 0) {
       return (
         <StackedMarks testId={`${testPrefix}-vibe-stack`} tight>
-          {values.slice(0, 2).map((genre) => (
+          {values.slice(0, 3).map((genre) => (
             <GenreDot key={genre} genre={genre} />
           ))}
         </StackedMarks>
@@ -492,9 +494,11 @@ export function FilterBar({
     // narrow segment ellipsises the name and never the count ("Red Ro… +1").
     // A stale first slug is skipped for the name, never left blank.
     const resolved = getFirstResolvedLabel(key, values, venues, genres);
-    const activeLabel = resolved?.label ?? null;
+    // Every Vibe picked reads "All vibes" with no "+N" (addendum 11).
+    const everyVibe = key === 'vibe' && isEveryVibePicked(values);
+    const activeLabel = everyVibe ? copy.vibeAll : (resolved?.label ?? null);
     const suffix =
-      resolved !== null && resolved.rest > 0
+      !everyVibe && resolved !== null && resolved.rest > 0
         ? copy.segment.moreSuffix(resolved.rest)
         : undefined;
     // The board's pair spans 30px: two 18px tiles, 6px tucked.
