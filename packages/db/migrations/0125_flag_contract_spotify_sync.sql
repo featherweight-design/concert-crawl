@@ -20,7 +20,9 @@
 --   UPDATE feature_flags SET enabled = (stage = 'everyone') WHERE enabled IS NULL;
 --   ALTER TABLE feature_flags ALTER COLUMN enabled SET NOT NULL;
 --   The deleted spotify-sync row is not restored; its registry default (off)
---   is what an old release reads without it.
+--   is what an old release reads without it. Its feature_flag_users and
+--   feature_flag_history rows are gone for good too; the admin actions on it
+--   stay in audit_log, which has no FK to feature_flags.
 
 DELETE FROM "feature_flags" WHERE "key" = 'spotify-sync';--> statement-breakpoint
 ALTER TABLE "feature_flags" ALTER COLUMN "enabled" DROP NOT NULL;
