@@ -1,3 +1,15 @@
+# [1.535.0](https://github.com/featherweight-design/concert-crawl/compare/v1.534.0...v1.535.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** count the legacy primary among price check outcome candidates ([1b736bf](https://github.com/featherweight-design/concert-crawl/commit/1b736bff2e16361079d6a5c1ae5cf6b434d2ad0f))
+
+
+### Features
+
+* **web:** show a price check's outcome under the tier it settled ([abe594c](https://github.com/featherweight-design/concert-crawl/commit/abe594c4a42e6d79eb5d7342093397f09f4e1d46))
+
 # [1.534.0](https://github.com/featherweight-design/concert-crawl/compare/v1.533.1...v1.534.0) (2026-11-22)
 
 
