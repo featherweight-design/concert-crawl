@@ -1,3 +1,15 @@
+## [1.533.1](https://github.com/featherweight-design/concert-crawl/compare/v1.533.0...v1.533.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** price the popular search rows from the cheapest tier ([9d4f008](https://github.com/featherweight-design/concert-crawl/commit/9d4f00831f7b98a2fe39c7559793fdce3c6ce17d))
+* **web:** lead the share page and offline rows with the cheapest tier ([44f528a](https://github.com/featherweight-design/concert-crawl/commit/44f528a88a44481a082511036b0fd1d3a8b83fb4))
+* **web:** leave the poster drop on the scalar, its opening price has no producer ([04635fe](https://github.com/featherweight-design/concert-crawl/commit/04635fe42ed502a6b55fce3e63b1972aecfadb2a))
+* **web:** price search artist rows and the poster drop from the cheapest tier ([b47e35e](https://github.com/featherweight-design/concert-crawl/commit/b47e35ebcf16c809b3f90cbbdadb5036de053ab7))
+* **web:** skip a non-numeric cached headline and state the tier-order precondition ([37a4c09](https://github.com/featherweight-design/concert-crawl/commit/37a4c099e6b1be96957a1a6245d58f8ecb7e16b9))
+* **web:** word the sign-in footer as the landing and invite do ([79363f6](https://github.com/featherweight-design/concert-crawl/commit/79363f6da505202cdb1a03e0245cb1b80ea91f05))
+
 # [1.533.0](https://github.com/featherweight-design/concert-crawl/compare/v1.532.0...v1.533.0) (2026-11-22)
 
 
