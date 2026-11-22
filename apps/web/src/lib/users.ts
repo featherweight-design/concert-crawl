@@ -44,9 +44,13 @@ export async function fetchMySubmissions(
     '/v1/users/me/submissions',
     token,
   );
-  return rows.map((row) => {
+  // A row that is not an object has nothing to draw, so it is dropped rather
+  // than kept as a hollow row the list would then trip on.
+  return rows.flatMap((row) => {
+    // The body is not validated whole, so `null` can arrive despite the type.
+    if (typeof row !== 'object' || row === null) return [];
     const art = submissionArtSchema.safeParse(row);
-    return { ...row, ...(art.success ? art.data : NO_ART) };
+    return [{ ...row, ...(art.success ? art.data : NO_ART) }];
   });
 }
 

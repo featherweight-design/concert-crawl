@@ -40,10 +40,10 @@ describe('fetchMySubmissions art fields', () => {
     });
   });
 
-  it('keeps a row that is not an object rather than failing the list', async () => {
+  it('drops a row that is not an object, keeping the rest of the list', async () => {
     get.mockResolvedValue([null, { id: 'c', genre: 'rock' }]);
     const rows = await fetchMySubmissions('token');
-    expect(rows).toHaveLength(2);
-    expect(rows[1]?.genre).toBe('rock');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ id: 'c', genre: 'rock' });
   });
 });
