@@ -1103,13 +1103,14 @@ export const CONSUMER_COPY = {
   },
 
   // ── Post-signup return seam ─────────────────────────────────────
-  // The toast that confirms an action replayed while the visitor was signing
-  // up (design_handoff_custom_auth COPY.md `int.watchToast`; the follow line is
-  // its sibling). DRAFT until copy-review.
+  // The welcome-back strip: what replayed while the visitor was signing up
+  // (logged-out UX deliverable 7; board `bp-s-extras_board`). The follow line
+  // is its sibling.
   returnSeam: {
-    watching: (show: string) => `You’re watching ${show}.`,
-    following: (artist: string) => `You’re following ${artist}.`,
-    myShows: 'My shows',
+    watching: (show: string) => `Now watching ${show}.`,
+    following: (artist: string) => `Now following ${artist}.`,
+    kept: 'Kept while you were signing up',
+    view: 'View',
   },
 
   // ── Who else is watching ────────────────────────────────────────
