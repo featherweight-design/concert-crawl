@@ -105,11 +105,13 @@ attendingRouter.put('/:eventId', async (ctx) => {
       venueRemovedAt: venues.removedAt,
     })
     .from(events)
-    .leftJoin(venues, eq(events.venueId, venues.id))
+    .innerJoin(venues, eq(events.venueId, venues.id))
     .where(eq(events.id, eventId))
     .limit(1);
 
-  if (!eventRow) {
+  // A show at a venue that asked us to remove its data (venues.removed_at)
+  // takes no attendance at all, new or restored. Same 404 as an unknown id.
+  if (!eventRow || eventRow.venueRemovedAt !== null) {
     return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
 
@@ -119,6 +121,7 @@ attendingRouter.put('/:eventId', async (ctx) => {
     // An Undo puts back what the signed token proves this user just removed,
     // so it must not 404 if the show changed in the last minute (the crawler
     // stopped seeing it, it was hidden). It never creates a new attendance.
+    // A venue removal is the one change it does not survive (above).
     if (
       !verifyRestoreToken({
         userId: authInfo.userId,
@@ -134,12 +137,9 @@ attendingRouter.put('/:eventId', async (ctx) => {
     // seeing is not markable as a night you are going to, even once the stale
     // sweep brings it back on its detail page as No longer listed. A past one
     // happened whatever the crawler later did with the listing, so only a
-    // cancelled show is refused. A show at a venue that asked us to remove
-    // its data (venues.removed_at) is refused whatever its date. Same 404 as
-    // an unknown id either way.
+    // cancelled show is refused. Same 404 as an unknown id either way.
     const markable =
       !eventRow.hiddenFromConsumer &&
-      eventRow.venueRemovedAt === null &&
       (isPast
         ? eventRow.status !== 'cancelled'
         : eventRow.firstMissingAt === null);
