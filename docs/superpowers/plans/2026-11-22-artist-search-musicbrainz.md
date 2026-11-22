@@ -17,11 +17,11 @@ Out of scope: any UI build (see "UI needs Design first"), a full MB mirror or MB
 5. **Image order:** the Spotify photo, then a Commons photo whose file licence permits reuse, shown with its credit, then the IdentityArt plate. Never a non-free English Wikipedia upload; the resolver checks the file is on Commons and reads its licence and author before using it.
 6. **Info order:** MB facts (type, area, active years, links), then the Wikipedia extract with its attribution (credit and link, CC BY-SA, unmodified), then nothing. No generated text.
 7. **Matching keeps today's safety rule.** An MB answer is accepted for an existing Spotify-matched artist only when its Spotify relation agrees with ours (the spike found 3 conflicts in 25).
+8. **Spotify photos are re-fetched at least every 30 days and dropped when Spotify no longer has them** (Hugh, 2026-11-22). Spotify's developer terms allow only temporary caching. Today the daily `match-artists` job (`apps/api/src/jobs/match-artists.ts`) already date-stamps each photo (`artists.photo_fetched_at`) and re-fetches it after `PHOTO_REFETCH_DAYS = 7`, but when the name re-search no longer lands on the same Spotify artist it keeps the old photo, so a photo can outlive its source indefinitely. The change: refresh by our stored Spotify id rather than by name, clear `photo_url` and `photo_fetched_at` when Spotify no longer returns that artist or returns it with no image, and never serve a photo whose `photo_fetched_at` is more than 30 days old. The 7-day cadence stays as it is, inside the 30-day ceiling. The cleared row falls back to the next image in decision 5's order.
 
-## Open questions for Hugh (not decided here)
+## Open question for Hugh (not decided here)
 
-- **(a) Spotify photo refresh.** Spotify's developer terms allow only temporary caching, and `artists.photo_url` is kept indefinitely today. Proposed: re-fetch each photo every 30 days and drop it when the re-fetch fails.
-- **(b) MetaBrainz supporter tier.** MetaBrainz asks commercial users to take a supporter tier. Proposed: the $0 Stealth Start-Up tier now, and a paid tier at launch.
+- **MetaBrainz supporter tier.** MetaBrainz asks commercial users to take a supporter tier. Proposed: the $0 Stealth Start-Up tier now, and a paid tier at launch.
 
 ## UI needs Design first
 
@@ -45,7 +45,8 @@ Each PR branches from `main`, merges alone, and stays under about 20 files and 8
 | 4 | **Search API** | `GET /v1/search/artists` joins the slim table into one ranked list. Today the route drops any artist with no consumer-visible event and returns at most `ARTIST_RESULT_LIMIT = 3` (from 25 candidates); this PR lifts that gate for the new list and sets a new cap from the Design handoff, while the existing caller keeps today's gated, 3-row behaviour until the UI PR switches it. Zod response gains `mbid`, `disambiguation`, `area` and a `hasShows` flag. Existing fields unchanged | risky | 2 |
 | 5 | **Follow by MBID** | `POST /v1/artists/follow { mbid }` (Zod, signed in): reuse the `artists` row with that MBID or create one from the slim table, then write the follow with `mbid`. `prune-artists.ts` keeps a row a follow points at. `artists-public.ts` serves a followed or MBID row with no shows (API only; the page waits on Design) | risky | 1, 3 |
 | 6 | **Artist info and images** | A cached resolver: MB facts from the slim table; Wikidata sitelink to the Wikipedia summary (extract, article link); Commons image licence check through `extmetadata`. Image and info order as decided above. A descriptive bot User-Agent with a contact on every Wikimedia call | risky | 4 |
-| 7+ | **UI** | Search box and the no-shows artist page, built on the Design handoffs | per handoff, with contact sheets | Design handoffs, 4, 5, 6 |
+| 7 | **Spotify photo refresh** (decision 8) | `match-artists.ts`: the photo pass looks rows up by stored Spotify id, clears `photo_url` and `photo_fetched_at` when the artist or its image is gone, and counts clears in the job summary. Public artist readers treat a photo older than 30 days as absent. Tests for the clear and the age cut-off | risky | none |
+| 8+ | **UI** | Search box and the no-shows artist page, built on the Design handoffs | per handoff, with contact sheets | Design handoffs, 4, 5, 6 |
 
 A contract step (keying follows on MBID instead of `canonical_name`) is not planned. It needs its own plan once MBID follows are in use.
 
