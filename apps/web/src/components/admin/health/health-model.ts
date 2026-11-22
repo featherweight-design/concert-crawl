@@ -38,6 +38,7 @@ export type GridVenue = Pick<
   | 'blockedAt'
   | 'consecutiveFailures'
   | 'robotsTxtAllowed'
+  | 'wentLiveAt'
 >;
 
 interface MtParts {
