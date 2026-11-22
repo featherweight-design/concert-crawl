@@ -4,18 +4,15 @@ import { resolveSection } from './SettingsRouteDesktop';
 
 describe('resolveSection', () => {
   it('honours a valid section param', () => {
-    expect(resolveSection('notifications', true)).toBe('notifications');
+    expect(resolveSection('notifications')).toBe('notifications');
   });
 
   it('falls back to profile for an unknown param', () => {
-    expect(resolveSection('nonsense', true)).toBe('profile');
-    expect(resolveSection(null, true)).toBe('profile');
+    expect(resolveSection('nonsense')).toBe('profile');
+    expect(resolveSection(null)).toBe('profile');
   });
 
-  it('selects connections only while spotify-sync is on', () => {
-    expect(resolveSection('connections', true)).toBe('connections');
-    // Otherwise the nav hides the item while the pane still selects it,
-    // leaving a deep link or a back-button entry on a blank page.
-    expect(resolveSection('connections', false)).toBe('profile');
+  it('sends a retired connections link to profile', () => {
+    expect(resolveSection('connections')).toBe('profile');
   });
 });

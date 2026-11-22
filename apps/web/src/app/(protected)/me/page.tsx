@@ -1,8 +1,5 @@
-import { Suspense } from 'react';
 import { auth } from '@/lib/auth';
-import { SpotifyReturnFlow } from '@/components/consumer/spotify/SpotifyReturnFlow';
 import { fetchMe, fetchMySubmissions } from '@/lib/users';
-import { isFeatureEnabled } from '@/lib/feature-flags';
 import { SettingsRoute } from '@/components/settings/SettingsRoute';
 import { SettingsRouteDesktop } from '@/components/settings/SettingsRouteDesktop';
 import { ThemeSync } from '@/components/settings/ThemeSync';
@@ -16,38 +13,24 @@ export default async function MePage() {
 
   const isAdmin = sessionClaims?.metadata?.role === 'admin';
 
-  const [profile, submissions, spotifyEnabled] = await Promise.all([
+  const [profile, submissions] = await Promise.all([
     fetchMe(token),
     fetchMySubmissions(token),
-    // Resolved once here so both settings routes agree and the Connections
-    // section never flashes in before a client-side flag read lands.
-    isFeatureEnabled('spotify-sync'),
   ]);
   return (
     <>
       <ThemeSync serverTheme={profile.theme} />
-      {/* Post-Spotify-OAuth return handler — mounted ONCE at page level.
-          Both settings routes below stay in the DOM (CSS-hidden), so
-          mounting it inside either would double-fire the connect POST. */}
-      <Suspense fallback={null}>
-        <SpotifyReturnFlow />
-      </Suspense>
       {/* Mobile (< sm) */}
       <div className="mx-auto w-full max-w-[640px] lg:hidden">
         <SettingsRoute
           profile={profile}
           submissions={submissions}
           isAdmin={isAdmin}
-          spotifyEnabled={spotifyEnabled}
         />
       </div>
       {/* Desktop (sm+) */}
       <div className="hidden lg:block">
-        <SettingsRouteDesktop
-          profile={profile}
-          submissions={submissions}
-          spotifyEnabled={spotifyEnabled}
-        />
+        <SettingsRouteDesktop profile={profile} submissions={submissions} />
       </div>
     </>
   );

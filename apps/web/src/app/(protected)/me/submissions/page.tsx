@@ -1,6 +1,5 @@
 import { auth } from '@/lib/auth';
 import { fetchMe, fetchMySubmissions } from '@/lib/users';
-import { isFeatureEnabled } from '@/lib/feature-flags';
 import { SettingsRouteDesktop } from '@/components/settings/SettingsRouteDesktop';
 import { SubmissionsPage } from '@/components/settings/SubmissionsPage';
 import { ThemeSync } from '@/components/settings/ThemeSync';
@@ -14,10 +13,9 @@ export default async function SubmittedPricesPage() {
   const token = await getToken();
   if (!token) return null;
 
-  const [profile, submissions, spotifyEnabled] = await Promise.all([
+  const [profile, submissions] = await Promise.all([
     fetchMe(token),
     fetchMySubmissions(token),
-    isFeatureEnabled('spotify-sync'),
   ]);
 
   return (
@@ -30,7 +28,6 @@ export default async function SubmittedPricesPage() {
         <SettingsRouteDesktop
           profile={profile}
           submissions={submissions}
-          spotifyEnabled={spotifyEnabled}
           initialSection="submissions"
         />
       </div>

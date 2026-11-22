@@ -20,7 +20,7 @@ import {
   type NotificationPreferences,
 } from '@/lib/queries/use-notification-preferences';
 import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection';
-import { ToggleSwitch } from '../connections/ToggleSwitch';
+import { ToggleSwitch } from '../ToggleSwitch';
 import { CrewActivityBlock } from './CrewActivityBlock';
 import { Bell } from 'lucide-react';
 import { PanelHeading } from '../PanelHeading';

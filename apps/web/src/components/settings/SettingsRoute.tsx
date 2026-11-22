@@ -7,8 +7,6 @@ import { ThemePickerInline } from './ThemePickerInline';
 import { NotificationsSection } from './notifications/NotificationsSection';
 import { SubmissionsSummaryCard } from './SubmissionsSummaryCard';
 import { DangerZone } from './DangerZone';
-import { ConnectionsPanel } from './connections';
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import type {
@@ -23,12 +21,6 @@ interface SettingsRouteProps {
   profile: UserProfileResponse;
   submissions: UserSubmissionItem[];
   isAdmin?: boolean;
-  /**
-   * The `spotify-sync` release flag, resolved server-side on `/me` and passed
-   * to both settings routes so mobile and desktop never disagree and the
-   * Connections section does not flash in before the client read lands.
-   */
-  spotifyEnabled: boolean;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -46,7 +38,6 @@ export function SettingsRoute({
   profile,
   submissions,
   isAdmin = false,
-  spotifyEnabled,
 }: SettingsRouteProps) {
   return (
     <>
@@ -107,21 +98,6 @@ export function SettingsRoute({
         <div id="notifications" className="flex flex-col gap-2 px-4">
           <NotificationsSection />
         </div>
-
-        {/* Connections (#763) — the section holds nothing but the Spotify
-            link and its heading copy is Spotify's, so the flag takes the whole
-            section rather than leaving an empty one. */}
-        {spotifyEnabled && (
-          <div className="flex flex-col gap-2 px-4">
-            <SectionLabel>
-              {SPOTIFY_COPY.connectEntry.sectionTitle}
-            </SectionLabel>
-            <p className="-mt-1 text-[13px] leading-[1.4] text-fg-muted">
-              {SPOTIFY_COPY.connectEntry.sectionSub}
-            </p>
-            <ConnectionsPanel />
-          </div>
-        )}
 
         {/* Account */}
         <div className="flex flex-col gap-3 px-4">
