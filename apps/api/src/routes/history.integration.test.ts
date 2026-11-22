@@ -27,6 +27,7 @@ import {
   seedArtist,
   seedVenue,
   seedEvent,
+  seedPriceSubmission,
   seedUserEvent,
 } from '../test/helpers/seed.js';
 
@@ -131,6 +132,37 @@ describe('GET /v1/history', () => {
     expect(body.data.stats.nights).toBe(1);
     expect(body.data.stats.venues).toBe(1);
     expect(body.data.stats.totalSpent).toBe(45);
+  });
+
+  // The spend reads the cheapest tier, as Watching and the event page do, not
+  // events.ticket_price_min, which holds whatever price was written last.
+  it('prices a night from its tiers over the event scalar', async () => {
+    setAuth();
+    await seedSupporter();
+    const venue = await seedVenue({ name: 'Ogden Theatre', slug: 'ogden' });
+    const event = await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      date: '2026-06-01',
+      ticketPriceMin: '120.00',
+    });
+    await seedPriceSubmission(event.id, 'user_a', {
+      tier: 'Reserved',
+      priceMin: '95',
+      status: 'corroborated',
+    });
+    await seedPriceSubmission(event.id, 'user_b', {
+      tier: 'GA',
+      priceMin: '68',
+      status: 'corroborated',
+    });
+    await seedUserEvent(USER_ID, event.id, {
+      status: null,
+      attendingAt: ATTENDED,
+    });
+
+    const body = await getHistory();
+    expect(body.data.past[0]?.priceFinal).toBe(68);
+    expect(body.data.stats.totalSpent).toBe(68);
   });
 
   // The headliner portrait, on the same terms as Watching and Browse. This

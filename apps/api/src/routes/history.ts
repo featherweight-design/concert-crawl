@@ -41,6 +41,10 @@ import {
 } from '../lib/event-billing.js';
 import { computeHistoryStats } from '../lib/history-stats.js';
 import { buildHistoryIcs } from '../lib/ics.js';
+import {
+  loadPriceByTierByEventId,
+  lowestHeadlinePrice,
+} from '../lib/price-aggregation/index.js';
 import { parsePrice } from '../lib/price.js';
 import { MT_TIME_ZONE } from '../lib/time.js';
 
@@ -138,6 +142,13 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
     )
     .orderBy(asc(events.date), asc(events.showTime));
 
+  // The cheapest tier, as on Watching and the event page, not
+  // events.ticketPriceMin: that scalar holds whatever price was written last,
+  // so a night's spend could disagree with the price the show page showed.
+  const priceByTierByEventId = await loadPriceByTierByEventId(
+    rows.map((row) => row.eventId),
+  );
+
   const past: HistoryShow[] = [];
   const upcoming: HistoryShow[] = [];
 
@@ -158,7 +169,11 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
       date: row.date,
       dateLabel: formatDateLabel(row.date),
       showTime: formatShowTime(row.showTime ?? null),
-      priceFinal: parsePrice(row.ticketPriceMin ?? null),
+      // Falls back to the scalar for crawler-sourced prices, which have no
+      // corroborated submissions to aggregate: same order Watching uses.
+      priceFinal:
+        lowestHeadlinePrice(priceByTierByEventId.get(row.eventId) ?? []) ??
+        parsePrice(row.ticketPriceMin ?? null),
       genre: row.genre?.[0] ?? null,
       attendingAt: row.attendingAt.toISOString(),
       venueCity: row.venueCity,
