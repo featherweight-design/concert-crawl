@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { ChevronRight, Lock, Mail, Share2 } from 'lucide-react';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { maskEmail } from '@/lib/mask-email';
 import { LegalLinksCard } from './LegalLinksCard';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
@@ -69,7 +70,9 @@ export function AccountManagementRow({
               <Mail size={16} />
             </span>
             <RowLabel>{SETTINGS_COPY.emailRow}</RowLabel>
-            <span className="truncate text-[14px] text-fg-muted">{email}</span>
+            <span className="truncate text-[14px] text-fg-muted">
+              {maskEmail(email)}
+            </span>
             <ChevronRight
               size={15}
               aria-hidden
