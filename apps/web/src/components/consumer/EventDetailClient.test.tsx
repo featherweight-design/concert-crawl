@@ -34,6 +34,7 @@ vi.mock('next/navigation', () => ({
 // records its props so the stale-price wiring can be asserted without
 // rendering the real tree.
 interface PriceDisplayStubProps {
+  ticketUrl?: string | null;
   priceObservedAt?: string | null;
   priceSubmissionId?: string | null;
   onSighted?: () => void;
@@ -2053,6 +2054,39 @@ describe('EventDetailPriceBlock on a past show', () => {
     );
     expect(screen.getAllByText(/\$110/).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: /etix/i })).toBeNull();
+  });
+
+  it('passes the seller link to the price card only while the show is to come', () => {
+    const withUrl = (date: string) =>
+      buildBaseEvent({
+        date,
+        ticketPriceMin: '45.00',
+        priceSource: 'structured_data',
+        priceByTier: null,
+        pendingSubmissions: null,
+        ticketLinks: null,
+        priceStatus: null,
+        priceApprovalKind: null,
+        ticketUrl: 'https://etix.example/e',
+      });
+    const { unmount } = render(
+      <EventDetailPriceBlock
+        event={withUrl('2099-07-15')}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(latestPriceDisplayProps?.ticketUrl).toBe('https://etix.example/e');
+    unmount();
+    render(
+      <EventDetailPriceBlock
+        event={withUrl(PAST)}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getByTestId('price-display-stub')).toBeDefined();
+    expect(latestPriceDisplayProps?.ticketUrl).toBeNull();
   });
 
   it('drops the resale link on a past sold-out show, keeping Sold out', () => {
