@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { db, feedback } from '@concert-crawl/db';
 import {
   FAN_FEEDBACK_CATEGORIES,
+  MAX_FEEDBACK_MESSAGE_LENGTH,
   feedbackScreenshotRejection,
   isFeedbackScreenshot,
 } from '@concert-crawl/types';
@@ -16,7 +17,10 @@ const errorIdSchema = z.string().regex(/^[\w-]{1,64}$/);
 
 const feedbackSchema = z.object({
   category: z.enum(FAN_FEEDBACK_CATEGORIES),
-  message: z.string().min(1, 'Message is required').max(2000),
+  message: z
+    .string()
+    .min(1, 'Message is required')
+    .max(MAX_FEEDBACK_MESSAGE_LENGTH),
   pageUrl: z.string().max(2048),
   metadata: z
     .object({

@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FEEDBACK_DRAFT_KEY } from '@/lib/feedback-draft';
 import {
   FEEDBACK_SCREENSHOT_TYPES,
+  MAX_FEEDBACK_MESSAGE_LENGTH,
   MAX_FEEDBACK_SCREENSHOT_BYTES,
 } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -530,6 +531,22 @@ describe('FeedbackModal — Suggest a venue', () => {
     });
     await submitAndWait();
     expect(sentBody(fetchSpy).message).toBe('Dazzle');
+  });
+
+  it('holds a carried-over long note to the API cap', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('{}', { status: 201 }));
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    fillCategoryAndMessage('x'.repeat(MAX_FEEDBACK_MESSAGE_LENGTH));
+    pickVenue();
+    fireEvent.change(screen.getByLabelText(VENUE.nameLabel), {
+      target: { value: 'Dazzle' },
+    });
+    await submitAndWait();
+    const sent = sentBody(fetchSpy).message;
+    expect(sent.length).toBe(MAX_FEEDBACK_MESSAGE_LENGTH);
+    expect(sent.startsWith('Dazzle\n\nx')).toBe(true);
   });
 
   it('switching back to another kind brings the text back to the box', () => {
