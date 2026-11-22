@@ -61,6 +61,13 @@ pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps
 
 `.env.local` or any real secret; git operations that rewrite `main`; production migrations without explicit human approval; anything destructive without explicit confirmation.
 
+**One exception: lane dev envs (Hugh, 2026-11-22, standing).** A lane may copy `apps/*/.env.local` into its own worktree to run the app for signed-in contact sheets (`.claude/fwd/feature-acceptance.md`). The exception holds only under these conditions:
+
+- Copy with `cp` only. Never open, read, grep or print the file, and never commit it.
+- Send dev-server output to a log file, and read only the ready line or error lines from it.
+- The env must hold test or dev values only. Any live key ends the exception.
+- The copy goes when the worktree is pruned.
+
 ## Sessions
 
 - Commit WIP before ending a session; leave a `## Next` in the plan or a memory update. Compact after each committed task. Prettier formats on commit (Husky and lint-staged).

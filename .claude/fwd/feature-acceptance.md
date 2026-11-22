@@ -21,6 +21,14 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
 - **The local stack.** The dev server signs in against the **Concert Crawl Staging** Clerk app's **development**
   instance, with the same `E2E_AUDIT_*` credentials as staging, and its database is the Neon `scratch-contact-sheet`
   branch, not the seeded Docker DB. Both are set in the operator's local env files; never read or print them.
+- **Lane dev-env exception (Hugh, 2026-11-22, standing).** A lane may copy `apps/*/.env.local` from the main checkout
+  into its own worktree to run the app for signed-in contact sheets. The exception holds only under these conditions:
+  - Copy with `cp` only. Never open, read, grep or print the file, and never commit it.
+  - Send dev-server output to a log file, and read only the ready line or error lines from it.
+  - The env must hold test or dev values only. Any live key ends the exception.
+  - The copy goes when the worktree is pruned.
+
+  `CLAUDE.md`'s "What Claude must not touch" carries the matching exception.
 - **Parallel stacks (one per lane).** The local env files stay untouched; a second stack takes its ports from the
   process env on the command line. `dotenv` never overrides an existing variable, so the command line wins. `cp` both
   apps' local env files from the main checkout into the worktree (never open them), run `pnpm install`, and build the
