@@ -4,7 +4,11 @@ import {
   getAppToken,
   resetAppTokenCache,
 } from './spotify-app-client.js';
-import { SpotifyAuthError, SpotifyRateLimitError } from './spotify.js';
+import {
+  SpotifyApiError,
+  SpotifyAuthError,
+  SpotifyRateLimitError,
+} from './spotify.js';
 
 const tokenResponse = (accessToken: string, expiresIn = 3600): Response =>
   new Response(
@@ -450,6 +454,19 @@ describe('createSpotifyAppClient().fetchArtistDetails', () => {
       expect(await client?.fetchArtistPhoto('sp_gone')).toEqual({
         found: false,
       });
+    });
+
+    it('never reads a 400 as gone: only a 404 clears a photo', async () => {
+      const fetchFn = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(tokenResponse('t1'))
+        .mockResolvedValueOnce(jsonResponse({ error: 'bad request' }, 400));
+
+      const client = await createSpotifyAppClient({ fetchFn });
+
+      await expect(client?.fetchArtistPhoto('sp1')).rejects.toThrow(
+        SpotifyApiError,
+      );
     });
 
     it('never reads an auth failure as gone', async () => {

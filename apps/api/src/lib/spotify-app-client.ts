@@ -136,7 +136,7 @@ export interface SpotifyAppClient {
   fetchArtistDetails(artistIds: string[]): Promise<Map<string, ArtistDetail>>;
   /**
    * The current photo of one artist, by id. `found: false` only when Spotify
-   * says the id does not exist (400 or 404); every other failure throws, so a
+   * says the id does not exist (404); every other failure throws, so a
    * rate limit or an auth blip can never read as "gone" and wipe a photo.
    * One call per id, the same spend as the name search it replaces.
    */
@@ -391,10 +391,7 @@ export const createSpotifyAppClient = async (
     try {
       body = await requestJson(`/artists/${encodeURIComponent(artistId)}`);
     } catch (err) {
-      if (
-        err instanceof SpotifyApiError &&
-        (err.status === 404 || err.status === 400)
-      ) {
+      if (err instanceof SpotifyApiError && err.status === 404) {
         return { found: false };
       }
       throw err;
