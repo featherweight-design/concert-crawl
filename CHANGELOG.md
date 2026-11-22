@@ -1,3 +1,10 @@
+# [1.534.0](https://github.com/featherweight-design/concert-crawl/compare/v1.533.1...v1.534.0) (2026-11-22)
+
+
+### Features
+
+* **web:** load submitted prices 20 at a time ([ab755a2](https://github.com/featherweight-design/concert-crawl/commit/ab755a27615ae166e20d3e8a7d910dd67bb1808d))
+
 ## [1.533.1](https://github.com/featherweight-design/concert-crawl/compare/v1.533.0...v1.533.1) (2026-11-22)
 
 
