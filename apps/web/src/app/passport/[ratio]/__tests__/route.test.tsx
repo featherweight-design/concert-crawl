@@ -14,6 +14,8 @@ const fetchHistoryMock = vi.fn();
 vi.mock('@/lib/history', () => ({ fetchHistory: fetchHistoryMock }));
 
 const { GET } = await import('@/app/passport/[ratio]/route');
+const { clearPassportRenderCache } =
+  await import('@/lib/passport/render-cache');
 
 const PUBLIC_DIR = path.resolve(__dirname, '../../../../../public');
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
@@ -31,7 +33,7 @@ const serveFontsFromDisk = (): void => {
 
 // Only the fields the route reads. Annotating as UserProfileResponse would
 // force thirty irrelevant nulls without testing anything more.
-const profile = { handle: '@huey', theme: 'jade' };
+const profile = { id: 'user_a', handle: '@huey', theme: 'jade' };
 
 const historyShow = (index: number) => ({
   eventId: `event-${index}`,
@@ -65,6 +67,7 @@ describe('GET /passport/[ratio]', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearPassportRenderCache();
     serveFontsFromDisk();
     getTokenMock.mockResolvedValue('test-token');
     fetchMeMock.mockResolvedValue(profile);
@@ -155,7 +158,11 @@ describe('GET /passport/[ratio]', () => {
   it(
     'renders for an account with no handle set',
     async () => {
-      fetchMeMock.mockResolvedValue({ handle: null, theme: 'electric' });
+      fetchMeMock.mockResolvedValue({
+        id: 'user_a',
+        handle: null,
+        theme: 'electric',
+      });
 
       const response = await call('http://localhost/passport/square', 'square');
 
@@ -186,6 +193,49 @@ describe('GET /passport/[ratio]', () => {
         'square',
       );
       expect(response.status).toBe(200);
+    },
+    RENDER_TIMEOUT_MS,
+  );
+
+  it(
+    'serves a repeat request from the cache and 304s a matching ETag',
+    async () => {
+      const first = await call('http://localhost/passport/square', 'square');
+      const etag = first.headers.get('ETag');
+      expect(etag).not.toBeNull();
+      const fetchSpy = vi.mocked(globalThis.fetch);
+      fetchSpy.mockClear();
+
+      const repeat = await call('http://localhost/passport/square', 'square');
+      expect(repeat.status).toBe(200);
+      expect(repeat.headers.get('ETag')).toBe(etag);
+      expect(fetchSpy).not.toHaveBeenCalled();
+
+      const revalidated = await GET(
+        new Request('http://localhost/passport/square', {
+          headers: { 'If-None-Match': etag ?? '' },
+        }),
+        { params: Promise.resolve({ ratio: 'square' }) },
+      );
+      expect(revalidated.status).toBe(304);
+      expect(revalidated.headers.get('Cache-Control')).toBe(
+        'private, max-age=300',
+      );
+    },
+    RENDER_TIMEOUT_MS,
+  );
+
+  it(
+    'changes the ETag when a stamp is added',
+    async () => {
+      const before = await call('http://localhost/passport/square', 'square');
+      fetchHistoryMock.mockResolvedValue({
+        past: [historyShow(1), historyShow(2), historyShow(3)],
+        upcoming: [],
+        stats: {},
+      });
+      const after = await call('http://localhost/passport/square', 'square');
+      expect(after.headers.get('ETag')).not.toBe(before.headers.get('ETag'));
     },
     RENDER_TIMEOUT_MS,
   );
