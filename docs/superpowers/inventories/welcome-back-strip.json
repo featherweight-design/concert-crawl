@@ -1,0 +1,22 @@
+{
+  "feature": "B+ welcome-back strip after a signup replay",
+  "note": "Board: design/design_handoff_logged_out_ux (README, SPEC section 8) and bplus bp-s-extras_board (Welcome back strip). Needs CC_VENDORS_EVENT_ID: an upcoming event the audit user is not already watching (the replay toggles Watch). The strip lives 6 seconds, so the sheet captures straight after it appears.",
+  "widths": [
+    { "label": "xs", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "welcome-back-strip",
+      "label": "Event page after a Watch replay: the strip sits under the header",
+      "steps": [
+        {
+          "goto": "/events/${CC_VENDORS_EVENT_ID}?intent=watch:${CC_VENDORS_EVENT_ID}&label=Geese",
+          "wait": "text=Kept while you were signing up",
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}
