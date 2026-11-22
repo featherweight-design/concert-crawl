@@ -12,16 +12,18 @@ import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
 const COPY = ADMIN_COPY.venuesList;
 
 /**
- * Filter chips that ship now, in the board's order (`04/venues-desktop`).
- * "Needs a look" counts venues with a Needs you dot (ruling 17); 2a has
- * landed, so it ships. Drafts wait on 3e, and "robots.txt changed" on its
- * storage. Disallowed is ruling 16's addition, last.
+ * Filter chips that ship now, in the board's order (`04/venues-desktop`,
+ * `A3/03/drafts-in-list-d`). "Needs a look" counts venues with a Needs you
+ * dot (ruling 17); 2a has landed, so it ships. Drafts follow Hidden (3e-1);
+ * "robots.txt changed" waits on its storage. Disallowed is ruling 16's
+ * addition, last.
  */
 export const VENUE_FILTERS = [
   'all',
   'needsLook',
   'paused',
   'hidden',
+  'drafts',
   'disallowed',
 ] as const;
 export type VenueFilter = (typeof VENUE_FILTERS)[number];
@@ -306,9 +308,10 @@ export const matchesFilter = (
     case 'paused':
       return chips.onSite === 'live' && chips.crawling === 'paused';
     case 'hidden':
-      // Hidden means a venue that was live. Drafts get their own Drafts
-      // filter with 3e-1 (`04/venues-desktop`), so they stay out of this one.
+      // Hidden means a venue that was live. Drafts have their own filter.
       return chips.onSite === 'hidden';
+    case 'drafts':
+      return chips.onSite === 'draft';
     case 'disallowed':
       return venue.robotsTxtAllowed === false;
   }
@@ -326,18 +329,23 @@ export const matchesSearch = (
 };
 
 const OK_RANK = 6;
+/** Under All, drafts sort last, after OK, in a group of their own (`A3/03/drafts-in-list-d`). */
+const DRAFT_RANK = 7;
 
 /**
  * Worst first (ruling 19): blocked, auto-paused, failing, the Needs you dot,
  * paused, then OK by name. A dot outranks paused, so a paused venue with an
  * item waiting rises to rank 3. A hidden venue isn't crawled, so it reads as
- * not OK and sorts after paused, before OK, and so does a draft.
+ * not OK and sorts after paused, before OK. A draft was never live, so it
+ * sorts after OK, last.
  */
 export const worstRank = (venue: RankedVenue): number => {
   const { onSite, crawling } = deriveVenueStatusChips(venue);
   // Something waiting in Needs you outranks a quiet hidden venue: the chip
   // counts it, so the list mustn't bury it among the hidden ones.
-  if (onSite !== 'live') return venue.needsLook === true ? 3 : 5;
+  if (onSite !== 'live' && venue.needsLook === true) return 3;
+  if (onSite === 'draft') return DRAFT_RANK;
+  if (onSite === 'hidden') return 5;
   if (crawling === 'blocked') return 0;
   if (crawling === 'auto_paused') return 1;
   if (crawling === 'crawling' && isFailing(venue)) return 2;
@@ -362,14 +370,23 @@ export const sortWorstFirst = <T extends RankedVenue>(
 
 /**
  * Splits a worst-first list at the fold: every venue that isn't OK stays, and
- * OK venues fill up to `VISIBLE_ROWS`. OK venues sort last, so the fold is
- * always the tail. A fold of one row would hide nothing worth hiding.
+ * OK venues fill up to `VISIBLE_ROWS`. Only OK venues fold; the drafts after
+ * them stay shown as their own group. A fold of one row would hide nothing
+ * worth hiding.
  */
 export const foldOk = <T extends RankedVenue>(
   sorted: readonly T[],
 ): { shown: T[]; folded: T[] } => {
-  const firstOk = sorted.findIndex(isOk);
-  const keep = firstOk === -1 ? sorted.length : Math.max(firstOk, VISIBLE_ROWS);
-  if (sorted.length - keep <= 1) return { shown: [...sorted], folded: [] };
-  return { shown: sorted.slice(0, keep), folded: sorted.slice(keep) };
+  const firstDraft = sorted.findIndex(
+    (venue) => worstRank(venue) === DRAFT_RANK,
+  );
+  const body = firstDraft === -1 ? sorted : sorted.slice(0, firstDraft);
+  const drafts = firstDraft === -1 ? [] : sorted.slice(firstDraft);
+  const firstOk = body.findIndex(isOk);
+  const keep = firstOk === -1 ? body.length : Math.max(firstOk, VISIBLE_ROWS);
+  if (body.length - keep <= 1) return { shown: [...sorted], folded: [] };
+  return {
+    shown: [...body.slice(0, keep), ...drafts],
+    folded: body.slice(keep),
+  };
 };

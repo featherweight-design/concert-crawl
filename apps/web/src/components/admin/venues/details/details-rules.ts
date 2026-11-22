@@ -156,7 +156,7 @@ export const parsePin = (
 const INT4_MAX = 2147483647;
 
 /** The capacity as typed ("19,500" included): null when empty, NaN when bad. */
-const parseCapacity = (text: string): number | null => {
+export const parseCapacity = (text: string): number | null => {
   const digits = text.replace(/[,\s]/g, '');
   if (digits === '') return null;
   // Digits only: `Number` would also take "1e3" and "0x10".

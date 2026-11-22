@@ -331,6 +331,9 @@ export const ADMIN_COPY = {
     subtitle: (venues: number, shows: number) =>
       `${venueCount(venues)} · ${shows.toLocaleString('en-US')} upcoming ${shows === 1 ? 'show' : 'shows'} · worst first`,
     subtitlePhone: (venues: number) => `${venueCount(venues)} · worst first`,
+    // `A3/03/drafts-card-m`: with a draft in the list, the phone counts both.
+    subtitlePhoneWithDrafts: (live: number, drafts: number) =>
+      `${live.toLocaleString('en-US')} live · ${drafts.toLocaleString('en-US')} ${drafts === 1 ? 'draft' : 'drafts'}`,
     shows: (count: number) =>
       `${count.toLocaleString('en-US')} ${count === 1 ? 'show' : 'shows'}`,
     search: 'Search venues',
@@ -340,6 +343,7 @@ export const ADMIN_COPY = {
       needsLook: 'Needs a look',
       paused: 'Paused',
       hidden: 'Hidden',
+      drafts: 'Drafts',
       disallowed: 'Disallowed',
     },
     // The pink dot's name for screen readers; the dot itself is decoration.
@@ -1424,6 +1428,73 @@ export const ADMIN_COPY = {
     // venue taken off the site. A crawl pause keeps its shows published.
     label: 'Crawl paused',
   },
+  // 3e: the full-page Add a venue (`05-add-a-venue`). Field labels reuse
+  // `venueDetails.fields`, so the venue page and this flow never drift.
+  addVenue: {
+    title: 'Add a venue',
+    crumb: 'Add a venue',
+    start: {
+      subtitle: 'Start from a venue people asked for, or from scratch.',
+      // `start-mobile`'s section label, drawn in mono caps.
+      askedForLabel: 'Venues people asked for',
+      fromScratch: 'Start from scratch',
+      // `start-nobody-asked-yet`.
+      emptyTitle: 'No venues asked for right now',
+      emptyBody:
+        'When fans use “Suggest a venue”, or name a venue we don’t have in feedback, it shows up here with how many asked.',
+    },
+    steps: {
+      basics: 'Basics',
+      source: 'Source',
+      icon: 'Icon',
+      guide: 'First-timer guide',
+      review: 'Review',
+      optional: 'Optional',
+    },
+    rail: {
+      // The rail's header before a name is typed.
+      unnamed: 'New venue',
+      status: 'New venue · draft',
+      done: 'Done',
+      notYet: 'Not open yet',
+    },
+    stepOf: (step: number, total: number) => `Step ${step} of ${total}`,
+    footer: {
+      back: 'Back',
+      cancel: 'Cancel',
+      savedAsYouGo: 'Saved as you go',
+      continue: 'Continue',
+      saving: 'Saving…',
+    },
+    basics: {
+      title: 'The basics',
+      subtitle:
+        'Who and where. Everything here can change later except the link.',
+      linkHint: 'Made from the name. Change it before going live, not after.',
+      websitePlaceholder: 'venue.com',
+      robots: {
+        title: 'robots.txt',
+        checking: 'Checking…',
+        allowed: 'Allows us',
+        disallowed: 'Asks us not to',
+        unknown: 'Couldn’t check',
+        checkedNow: 'Checked just now',
+        // No website yet: nothing to check.
+        waiting: 'Add the website to check it.',
+      },
+    },
+    errors: {
+      nameRequired: 'Give the venue a name.',
+      linkRequired: 'Give the venue a link.',
+      linkInvalid:
+        'Use 2 to 60 lowercase letters, numbers and hyphens, with no hyphen at either end.',
+      linkTaken: 'Another venue has this link. Pick another.',
+      websiteRequired: 'Add the venue’s website.',
+      websiteInvalid: 'Enter a website, like venue.com.',
+      saveFailed: 'Couldn’t save. Try again.',
+    },
+  },
+
   addVenueModal: {
     trigger: 'Add a venue',
     header: {

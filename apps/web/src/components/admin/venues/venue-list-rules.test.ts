@@ -130,14 +130,30 @@ describe('venue list rules', () => {
     ]);
   });
 
-  it('keeps drafts out of Hidden and ranks them with hidden venues', () => {
+  it('gives drafts their own filter and sorts them last, after OK', () => {
     const draft = venue('Draft', { active: false, wentLiveAt: null });
+    const gone = venue('Gone', { active: false });
     expect(matchesFilter(draft, 'hidden')).toBe(false);
-    expect(matchesFilter(venue('Gone', { active: false }), 'hidden')).toBe(
-      true,
-    );
-    expect(worstRank(draft)).toBe(5);
+    expect(matchesFilter(gone, 'hidden')).toBe(true);
+    expect(matchesFilter(draft, 'drafts')).toBe(true);
+    expect(matchesFilter(gone, 'drafts')).toBe(false);
+    expect(matchesFilter(venue('Live'), 'drafts')).toBe(false);
+    expect(
+      sortWorstFirst([draft, venue('Ok'), gone]).map((row) => row.name),
+    ).toEqual(['Gone', 'Ok', 'Draft']);
+    // A draft waiting in Needs you still rises with the dot.
     expect(worstRank({ ...draft, needsLook: true })).toBe(3);
+  });
+
+  it('never folds a draft away with the OK venues', () => {
+    const many = Array.from({ length: 21 }, (_, i) =>
+      venue(`V${String(i).padStart(2, '0')}`),
+    );
+    const draft = venue('Draft', { active: false, wentLiveAt: null });
+    const { shown, folded } = foldOk(sortWorstFirst([...many, draft]));
+    expect(folded).toHaveLength(11);
+    expect(folded.map((row) => row.name)).not.toContain('Draft');
+    expect(shown.at(-1)?.name).toBe('Draft');
   });
 
   it('filters Needs a look to the venues with a dot', () => {
