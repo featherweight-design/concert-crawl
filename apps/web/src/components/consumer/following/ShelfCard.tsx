@@ -2,15 +2,7 @@
 
 // One artist card in the browse follow shelf.
 //
-// Box, type scale and row order are the Spotify taste card's (spotify/
-// DiscoveryShelf.tsx `TastePickCard`) on purpose: the two shelves occupy ONE
-// slot on browse, so a viewer meets them as a single component that sometimes
-// says a different thing. Anything changed here is changed there too, or the
-// slot starts flickering between two card designs.
-//
-// The card opens the SHOW, matching the taste card's `/events/{eventId}`. The
-// two sat in one slot linking to two different places, which made the
-// destination a coin flip on which shelf you happened to get.
+// The card opens the SHOW (`/events/{eventId}`).
 //
 // The art is still the ARTIST photo, never the event graphic — a card about a
 // person does not borrow a show's poster (imagery rule, #1531).

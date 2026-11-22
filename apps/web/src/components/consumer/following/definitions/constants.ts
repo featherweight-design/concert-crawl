@@ -1,8 +1,8 @@
 // Non-copy constants for the browse follow shelf (native following, PR 4).
 
 // The card box itself (width and height) lives in
-// consumer/definitions/constants.ts, because the Spotify taste shelf and its
-// skeleton share it. The earlier 138/124 narrow split is gone with it.
+// consumer/definitions/constants.ts, shared with the shelf skeleton. The
+// earlier 138/124 narrow split is gone.
 
 /**
  * The 320px baseline. The shelf card no longer switches on it — its width is
@@ -18,7 +18,7 @@ export const SHELF_NARROW_QUERY = '(max-width: 359px)';
  */
 export const SHELF_SUGGESTION_POOL = 24;
 
-/** Cards rendered from that pool. Matches the Spotify taste shelf's ten. */
+/** Cards rendered from that pool. Ten. */
 export const SHELF_VISIBLE_CARDS = 10;
 
 /** See all joins the shelf header only past this many follows (addendum 3,

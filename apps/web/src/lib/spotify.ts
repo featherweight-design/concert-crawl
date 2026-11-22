@@ -2,7 +2,6 @@
 import type {
   SpotifyConnectionResponse,
   SpotifyConnectionView,
-  SpotifyTastePicksResponse,
 } from '@concert-crawl/types';
 import { apiClient } from './api';
 
@@ -12,7 +11,7 @@ import { apiClient } from './api';
 // that does nothing. Hiding the door is the only honest option.
 //
 // This gates the surfaces that offer a NEW connection. It never touches the
-// ones that offer a reconnect (SpotifyStatusBanner, DiscoveryShelf), because
+// ones that offer a reconnect (SpotifyStatusBanner), because
 // those only render for a user who already holds one of the five slots.
 //
 // Deliberately global. A per-user override belongs to the flag system, not an
@@ -71,17 +70,6 @@ export async function patchSpotifyConnection(
 
 export async function disconnectSpotify(token: string): Promise<void> {
   await apiClient.delete<void>('/v1/spotify/connection', token);
-}
-
-// "Based on your taste" shelf (#763 PR 8) — entitlement-gated server-side;
-// carries the connection status so the shelf can render its own failure state.
-export async function fetchTastePicks(
-  token: string,
-): Promise<SpotifyTastePicksResponse> {
-  return apiClient.get<SpotifyTastePicksResponse>(
-    '/v1/spotify/taste-picks',
-    token,
-  );
 }
 
 // The post-first-watch nudge is no longer a Spotify pitch (native following,

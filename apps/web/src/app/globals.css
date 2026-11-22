@@ -398,7 +398,7 @@
     transform: rotate(360deg);
   }
 }
-/* DiscoveryShelf loading state (design_handoff_discovery_loading). */
+/* Loading sweep and dot (design_handoff_discovery_loading), used by SweepOverlay. */
 @keyframes dlSweep {
   0% {
     transform: translateX(-115%);

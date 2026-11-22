@@ -114,10 +114,8 @@ describe('FollowShelf', () => {
     navState.search = '';
   });
 
-  // The follow shelf and the Spotify taste shelf compete for one slot on
-  // browse, so a viewer meets them as a single component. They were 77px
-  // apart: this card's art is absolutely positioned and contributed no
-  // height, pinning it to the 116px floor at 202px.
+  // The card's art is absolutely positioned and once contributed no height,
+  // pinning the card to the 116px floor at 202px.
   it('gives the card the shared shelf box', () => {
     renderShelf({
       artists: [artist(), artist({ key: 'k2', name: 'Bugbear' })],
