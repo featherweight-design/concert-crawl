@@ -104,8 +104,9 @@ export const PublicEventDetail = ({
 
   // A poster link is often opened days after the gig, and a "Get tickets"
   // button pointing at a dead vendor page is the first thing a new visitor
-  // would tap, so a past show drops the whole CTA. The protected page does the
-  // same (Hugh, 2026-11-22).
+  // would tap, so a past show drops the whole CTA. The protected page drops
+  // its ticket CTA too (Hugh, 2026-11-22), but keeps a past cancelled show's
+  // refund link and a past postponed show's Watch toggle (showsPrimaryCta).
   const past = isEventPast(event.date, event.venue.timezone);
 
   // Sold out beats a stale number: a shared link is often opened after the
