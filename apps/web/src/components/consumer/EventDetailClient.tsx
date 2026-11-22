@@ -28,6 +28,7 @@ import {
   liveStatusOf,
 } from '@/components/consumer/event-detail/EventStatusCard';
 import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
+import { isEventPast } from '@/components/consumer/definitions/lib';
 import { PendingCardB } from '@/components/consumer/PendingCardB';
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet';
 import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard';
@@ -395,6 +396,9 @@ export function EventDetailPriceBlock({
   // Only announce the gate once Clerk has resolved; before that a signed-in
   // visitor would briefly get the sign-up accessible name (#1247).
   const priceGateSignedOut = authLoaded && !isSignedIn;
+  // A past show keeps its price but links nowhere to buy: every outbound
+  // ProvenanceCTA below is dropped (Hugh, 2026-11-22).
+  const past = isEventPast(event.date, event.venue.timezone);
   // Where it's sold (B+ TS3, plan Q5) replaces the price card's seller
   // alternates: while it lists them, the price card keeps its headline and
   // tiers but not those rows, so no seller shows twice on the page.
@@ -949,14 +953,16 @@ export function EventDetailPriceBlock({
             onAddPrice={() => setSubmitPriceOpen(true)}
           />
         </div>
-        <div className="mt-3">
-          <ProvenanceCTA
-            kind="resale"
-            vendor={priceDecision.resaleLink.vendor ?? 'Resale'}
-            href={priceDecision.resaleLink.url}
-            outline
-          />
-        </div>
+        {!past && (
+          <div className="mt-3">
+            <ProvenanceCTA
+              kind="resale"
+              vendor={priceDecision.resaleLink.vendor ?? 'Resale'}
+              href={priceDecision.resaleLink.url}
+              outline
+            />
+          </div>
+        )}
         {submitSuccessSurface}
         <SubmitPriceModal
           open={submitPriceOpen}
@@ -1035,14 +1041,16 @@ export function EventDetailPriceBlock({
             onAddPrice={() => setSubmitPriceOpen(true)}
           />
         </div>
-        <div className="mt-3">
-          <ProvenanceCTA
-            kind="resale"
-            vendor={priceDecision.resaleLink.vendor ?? 'Resale'}
-            href={priceDecision.resaleLink.url}
-            outline
-          />
-        </div>
+        {!past && (
+          <div className="mt-3">
+            <ProvenanceCTA
+              kind="resale"
+              vendor={priceDecision.resaleLink.vendor ?? 'Resale'}
+              href={priceDecision.resaleLink.url}
+              outline
+            />
+          </div>
+        )}
         {submitSuccessSurface}
         <SubmitPriceModal
           open={submitPriceOpen}
@@ -1134,8 +1142,9 @@ export function EventDetailPriceBlock({
 
     // Find a resale ticketLink for the outbound CTA; fall back to the headline
     // vendor when no link is surfaced.
-    const resaleLink =
-      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null;
+    const resaleLink = past
+      ? null
+      : (event.ticketLinks?.find((link) => link.kind === 'resale') ?? null);
 
     return (
       <>
@@ -1482,7 +1491,7 @@ export function EventDetailPriceBlock({
             : {}),
         };
       });
-      const outboundLink = event.ticketLinks?.[0] ?? null;
+      const outboundLink = past ? null : (event.ticketLinks?.[0] ?? null);
       const outboundKind: ProvenanceCTAKind | null = outboundLink
         ? outboundLink.kind === 'boxoffice'
           ? 'boxoffice'

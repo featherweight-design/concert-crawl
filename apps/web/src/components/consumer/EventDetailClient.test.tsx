@@ -2002,3 +2002,81 @@ describe('EventDetailPriceBlock price check', () => {
     expect(screen.queryByTestId('tier-check-row')).toBeNull();
   });
 });
+
+// Hugh, 2026-11-22: "I think it's okay to show the old price, but there's no
+// reason to link them out to purchase on past shows."
+describe('EventDetailPriceBlock on a past show', () => {
+  const PAST = '2020-07-15';
+  const tierEvent = (date: string) =>
+    buildBaseEvent({
+      date,
+      ticketLinks: [
+        { kind: 'primary', vendor: 'Etix', url: 'https://etix.example/e' },
+      ],
+      priceByTier: [
+        makeTierBlock({
+          tier: 'GA',
+          headline: {
+            submissionId: 's1',
+            priceMin: '110',
+            priceMax: null,
+            vendor: 'Etix',
+            sourceCategory: 'standard',
+            submitterHandle: 'ada',
+            observedAt: '2026-06-20T00:00:00Z',
+            approvedAt: '2026-06-20T00:00:00Z',
+            approvalKind: 'fan',
+            confirmsCount: 2,
+          },
+        }),
+      ],
+    });
+
+  it('links out to buy on a show still to come', () => {
+    render(
+      <EventDetailPriceBlock
+        event={tierEvent('2099-07-15')}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getByRole('link', { name: /etix/i })).toBeDefined();
+  });
+
+  it('keeps the price but drops the link once the show is past', () => {
+    render(
+      <EventDetailPriceBlock
+        event={tierEvent(PAST)}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getAllByText(/\$110/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: /etix/i })).toBeNull();
+  });
+
+  it('drops the resale link on a past sold-out show, keeping Sold out', () => {
+    render(
+      <EventDetailPriceBlock
+        event={buildBaseEvent({
+          date: PAST,
+          priceStatus: 'soldout',
+          soldOutReport: null,
+          ticketLinks: [
+            {
+              kind: 'resale',
+              vendor: 'SeatGeek',
+              url: 'https://seatgeek.example/event',
+            },
+          ],
+        })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getByText('Sold out')).toBeDefined();
+    expect(
+      screen.queryByRole('link', { name: /buy resale on seatgeek/i }),
+    ).toBeNull();
+  });
+});
