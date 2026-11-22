@@ -1,6 +1,5 @@
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { VenueTile } from '@/components/consumer/venue-glyph';
-import { venueTileCaption } from '@/components/consumer/venue-guide/lib';
 import type { CollectedVenue } from '@/lib/passport/booklet';
 
 const COPY = CONSUMER_COPY.passport;
@@ -49,7 +48,7 @@ export function VenuesCollected({
             >
               <VenueTile
                 slug={venue.slug}
-                name={venueTileCaption(venue.name, venue.shortName)}
+                name={venue.name}
                 size={TILE_SIZE}
                 labelled
               />

@@ -9,7 +9,6 @@ import { PassportContent } from '@/components/consumer/passport/PassportContent'
 interface ActiveVenue {
   slug: string;
   name: string;
-  shortName: string | null;
 }
 
 const isActiveVenue = (candidate: unknown): candidate is ActiveVenue =>
@@ -18,10 +17,7 @@ const isActiveVenue = (candidate: unknown): candidate is ActiveVenue =>
   'slug' in candidate &&
   'name' in candidate &&
   typeof candidate.slug === 'string' &&
-  typeof candidate.name === 'string' &&
-  (!('shortName' in candidate) ||
-    candidate.shortName === null ||
-    typeof candidate.shortName === 'string');
+  typeof candidate.name === 'string';
 
 /**
  * The list is optional to this page, so a payload of the wrong shape hides
@@ -32,11 +28,9 @@ const toActiveVenues = (payload: unknown): ActiveVenue[] => {
     console.error('Passport active venues payload is not a list');
     return [];
   }
-  return payload.filter(isActiveVenue).map((venue) => ({
-    slug: venue.slug,
-    name: venue.name,
-    shortName: venue.shortName ?? null,
-  }));
+  return payload
+    .filter(isActiveVenue)
+    .map((venue) => ({ slug: venue.slug, name: venue.name }));
 };
 
 export const metadata = { title: 'Passport — Concert Crawl' };

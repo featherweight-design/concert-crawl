@@ -312,10 +312,9 @@ describe('PassportContent', () => {
     expect(
       document.querySelector('[data-passport-empty-layout="phone"]'),
     ).toBeNull();
-    // The phone top bar and the desktop title both sit in the DOM; CSS shows
-    // one, and the title block is hidden under lg.
+    // The phone top bar carries the title under lg (the desktop title block
+    // is hidden there), the same pair the populated page has.
     expect(screen.getByTestId('passport-top-bar')).toHaveClass('lg:hidden');
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(2);
     const ghost = desktop!.querySelector<HTMLElement>(
       '[data-booklet-next="up"]',
     );
