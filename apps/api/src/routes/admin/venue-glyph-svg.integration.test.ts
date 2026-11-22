@@ -16,8 +16,8 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }));
 
-import { eq } from 'drizzle-orm';
-import { venues } from '@concert-crawl/db';
+import { and, eq } from 'drizzle-orm';
+import { auditLog, venues } from '@concert-crawl/db';
 import { createApp } from '../../app.js';
 import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -47,7 +47,7 @@ describe('admin venue PATCH glyphSvg (3d-1a)', () => {
     await clearTables();
   });
 
-  it('saves a glyph as the style check rebuilds it, and clears it with null', async () => {
+  it('saves a glyph as the style check rebuilds it, and clears it with null or blank', async () => {
     const venue = await seedVenue();
     const res = await request('PATCH', `/v1/admin/venues/${venue.id}`, {
       // A drawing tool's stroke color is dropped; the renderer strokes it.
@@ -63,14 +63,39 @@ describe('admin venue PATCH glyphSvg (3d-1a)', () => {
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 L12 4 L20 20"/></svg>',
     );
 
-    await request('PATCH', `/v1/admin/venues/${venue.id}`, {
-      glyphSvg: null,
-    });
-    const [cleared] = await testDb
-      .select()
-      .from(venues)
-      .where(eq(venues.id, venue.id));
-    expect(cleared?.glyphSvg).toBeNull();
+    const saved = row?.glyphSvg ?? null;
+
+    // The audit keeps the glyph a change replaced; an unchanged glyph adds none.
+    const updates = () =>
+      testDb
+        .select()
+        .from(auditLog)
+        .where(
+          and(
+            eq(auditLog.action, 'venue.update'),
+            eq(auditLog.targetId, venue.id),
+          ),
+        );
+    expect((await updates()).map((audit) => audit.metadata)).toEqual([
+      { glyph: { before: null, after: saved } },
+    ]);
+    await request('PATCH', `/v1/admin/venues/${venue.id}`, { glyphSvg: saved });
+    expect((await updates()).at(-1)?.metadata).toBeNull();
+
+    for (const glyphSvg of [null, '  ']) {
+      await request('PATCH', `/v1/admin/venues/${venue.id}`, {
+        glyphSvg: saved,
+      });
+      const cleared = await request('PATCH', `/v1/admin/venues/${venue.id}`, {
+        glyphSvg,
+      });
+      expect(cleared.status).toBe(200);
+      const [after] = await testDb
+        .select()
+        .from(venues)
+        .where(eq(venues.id, venue.id));
+      expect(after?.glyphSvg).toBeNull();
+    }
   });
 
   it('refuses a glyph that fails the style check, writing nothing', async () => {
@@ -85,6 +110,13 @@ describe('admin venue PATCH glyphSvg (3d-1a)', () => {
       });
       expect(res.status).toBe(400);
     }
+    // The refusal names the style rule it broke.
+    const filled = await request('PATCH', `/v1/admin/venues/${venue.id}`, {
+      glyphSvg: FILLED,
+    });
+    expect(JSON.stringify(await filled.json())).toContain(
+      'This icon uses a fill.',
+    );
     const [row] = await testDb
       .select()
       .from(venues)

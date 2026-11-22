@@ -164,12 +164,10 @@ const arcOnGrid = (
     const at = theta + (delta * i) / ARC_SAMPLES;
     const px = cx + rx * Math.cos(at) * cos - ry * Math.sin(at) * sin;
     const py = cy + rx * Math.cos(at) * sin + ry * Math.sin(at) * cos;
-    if (
-      px < -ARC_TOLERANCE ||
-      py < -ARC_TOLERANCE ||
-      px > GLYPH_GRID + ARC_TOLERANCE ||
-      py > GLYPH_GRID + ARC_TOLERANCE
-    ) {
+    // Written as "not inside" so a NaN (a radius that underflows) fails too.
+    const inside = (value: number): boolean =>
+      value >= -ARC_TOLERANCE && value <= GLYPH_GRID + ARC_TOLERANCE;
+    if (!inside(px) || !inside(py)) {
       fail('offGrid');
     }
   }
@@ -224,6 +222,10 @@ export const normalizePathData = (data: string): string => {
   let startX = 0;
   let startY = 0;
   let command = '';
+  // The last curve's final control point and command, for S and T.
+  let controlX = 0;
+  let controlY = 0;
+  let lastCommand = '';
 
   skip();
   while (pos < data.length) {
@@ -247,6 +249,7 @@ export const normalizePathData = (data: string): string => {
       out.push(command);
       penX = startX;
       penY = startY;
+      lastCommand = lower;
       skip();
       continue;
     }
@@ -288,9 +291,27 @@ export const normalizePathData = (data: string): string => {
       for (let i = 0; i < args.length; i += 2) {
         onGrid(baseX + (args[i] ?? 0), baseY + (args[i + 1] ?? 0));
       }
+      // S and T draw with an unwritten control point, the last one reflected
+      // through the pen, so it is checked too.
+      if (lower === 's' || lower === 't') {
+        const follows = lower === 's' ? /[cs]/ : /[qt]/;
+        const reflected = follows.test(lastCommand)
+          ? [2 * penX - controlX, 2 * penY - controlY]
+          : [penX, penY];
+        onGrid(...reflected);
+        if (lower === 't') {
+          controlX = reflected[0] ?? penX;
+          controlY = reflected[1] ?? penY;
+        }
+      }
+      if (lower === 'c' || lower === 's' || lower === 'q') {
+        controlX = baseX + (args[args.length - 4] ?? 0);
+        controlY = baseY + (args[args.length - 3] ?? 0);
+      }
       penX = baseX + (args[args.length - 2] ?? 0);
       penY = baseY + (args[args.length - 1] ?? 0);
     }
+    lastCommand = lower;
     if (lower === 'm') {
       startX = penX;
       startY = penY;
