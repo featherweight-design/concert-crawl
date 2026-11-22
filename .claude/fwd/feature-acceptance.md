@@ -114,6 +114,7 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
 | `CC_CREW_INVITE_TOKEN`                          | B14: a live invite token for that crew                      |
 | `CC_PAST_ARTIST_NAME`                           | Edit Concerts PR4: an artist with 2+ past shows             |
 | `CC_PAST_EVENT_ID`                              | Past shows: a past event with a live price and a ticket URL |
+| `CC_PAST_CANCELLED_EVENT_ID`                    | Past shows: a past cancelled event with a ticket URL        |
 
 The kit expands `${VAR}` in `goto`, `route`, `clickRole` names, `fill` text, `waitDialog` and cookie values, and fails
 a row whose variable is unset. **It redacts every expanded value**, and every variable whose name marks a credential
