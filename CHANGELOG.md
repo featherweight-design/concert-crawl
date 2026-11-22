@@ -1,3 +1,10 @@
+## [1.524.1](https://github.com/featherweight-design/concert-crawl/compare/v1.524.0...v1.524.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** repoint the edge-cache error probe, drop the vacuous flag test, tidy comments ([903bd07](https://github.com/featherweight-design/concert-crawl/commit/903bd0785875f24945faadf9732aadbfd6bf8ef9))
+
 # [1.524.0](https://github.com/featherweight-design/concert-crawl/compare/v1.523.0...v1.524.0) (2026-11-22)
 
 
