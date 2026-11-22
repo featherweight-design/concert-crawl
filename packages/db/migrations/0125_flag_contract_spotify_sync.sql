@@ -10,9 +10,10 @@
 --    and writer of it (the ladder's `stage` is the only state now), so new
 --    rows leave it NULL. It is not dropped here because both deploy workflows
 --    migrate before they ship code: the API still serving between the two
---    steps, and any code rollback, still reads and writes `enabled`. Both
---    tolerate a nullable column (the old reader falls back to the registry
---    default on NULL). 0126 drops the column once this release is in
+--    steps, and any code rollback, still uses `enabled`: the old admin list
+--    reads it (falling back to the registry default on NULL) and the old
+--    admin PATCH writes it. The flag loaders read only `stage`. Both tolerate
+--    a nullable column. 0126 drops the column once this release is in
 --    production.
 --
 -- Down:
