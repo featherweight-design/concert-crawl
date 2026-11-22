@@ -34,7 +34,7 @@
     },
     {
       "id": "case-c-resale-only",
-      "label": "C: only resale is listed; the dashed note, no Also",
+      "label": "C: only resale is listed; the second resale seller under Also, then the dashed note",
       "fullPage": true,
       "steps": [
         {

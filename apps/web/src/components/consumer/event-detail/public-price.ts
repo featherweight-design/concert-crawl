@@ -1,7 +1,8 @@
 // public-price.ts — what the public event page's read-only price card says
 // (B+ addendum 10, boards/01-public-resale). The card names the kind of price
-// (the trust pill) and who sells it (the Sold by line), and lists every other
-// listed price under Also.
+// (the trust pill) and who sells it (the Sold by line). Also lists the other
+// sellers the signed-in Where it's sold card lists: shown only when two or
+// more sellers price the show, so one seller's other tiers do not appear.
 //
 // Every price here is one the API already resolved in `priceByTier` or the
 // Where it's sold rows; nothing reads the denormalised `ticketPriceMin`
@@ -48,7 +49,7 @@ export type PublicPrice =
       kind: 'boxoffice' | 'resale' | 'community';
       tier: Tier;
       seller: PublicSeller;
-      /** Every other listed price, cheapest first, at most ALSO_LIMIT. */
+      /** The other Where it's sold rows, cheapest first, at most ALSO_LIMIT. */
       also: WhereItsSoldRow[];
       /** How many more listed prices the Also section leaves out. */
       moreCount: number;

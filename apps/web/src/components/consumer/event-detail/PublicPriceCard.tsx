@@ -3,7 +3,7 @@
 // PublicPriceCard — the read-only price card on the public event page
 // (B+ addendum 10, boards/01-public-resale). The trust pill names the kind of
 // price and the Sold by line names its seller, in the item 38 and 40
-// language of the signed-in card. Every other listed price sits under Also.
+// language of the signed-in card. The other sellers sit under Also.
 //
 // Read-only on purpose: it is not EventDetailPriceBlock, which wires price
 // submission behind `useAuth`, and it does not carry the Where it's sold
