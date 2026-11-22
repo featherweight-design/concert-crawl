@@ -1,3 +1,10 @@
+## [1.527.1](https://github.com/featherweight-design/concert-crawl/compare/v1.527.0...v1.527.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** end the poster Print gradients on --cta-end and rename the People row ([a0556a4](https://github.com/featherweight-design/concert-crawl/commit/a0556a402bcd403fb1dae30371498087683dcc79))
+
 # [1.527.0](https://github.com/featherweight-design/concert-crawl/compare/v1.526.0...v1.527.0) (2026-11-22)
 
 
