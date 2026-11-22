@@ -18,6 +18,7 @@ import { useAuth } from '@clerk/nextjs';
 
 import { apiClient } from '@/lib/api';
 import { followArtistsBulk } from '@/lib/following';
+import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 import type { BillArtist } from './bill-artists';
 
 export interface BillFollowsResult {
@@ -40,6 +41,7 @@ const seedFollowing = (artists: BillArtist[]): Set<string> =>
 
 export const useBillFollows = (artists: BillArtist[]): BillFollowsResult => {
   const { getToken } = useAuth();
+  const invalidateFollowedNames = useInvalidateFollowedArtistNames();
   const [following, setFollowing] = useState<Set<string>>(() =>
     seedFollowing(artists),
   );
@@ -77,6 +79,7 @@ export const useBillFollows = (artists: BillArtist[]): BillFollowsResult => {
             throw new Error('Unexpected follow response shape');
           }
           const settled = result.following;
+          invalidateFollowedNames();
           setFollowing((current) => {
             const next = new Set(current);
             if (settled) next.add(slug);
@@ -96,7 +99,7 @@ export const useBillFollows = (artists: BillArtist[]): BillFollowsResult => {
         }
       })();
     },
-    [following, getToken],
+    [following, getToken, invalidateFollowedNames],
   );
 
   const followAll = useCallback(() => {
@@ -124,6 +127,7 @@ export const useBillFollows = (artists: BillArtist[]): BillFollowsResult => {
         const token = await getToken();
         if (!token) throw new Error('Not authenticated');
         const response = await followArtistsBulk(token, slugs);
+        invalidateFollowedNames();
         // Applied PER SLUG, not all-or-nothing: an act whose projection row
         // has gone (`artist_not_found`) must not leave a Following pill behind
         // while its neighbours legitimately succeeded.
@@ -153,7 +157,7 @@ export const useBillFollows = (artists: BillArtist[]): BillFollowsResult => {
         setCommitting(false);
       }
     })();
-  }, [artists, following, getToken]);
+  }, [artists, following, getToken, invalidateFollowedNames]);
 
   const result: BillFollowsResult = {
     following,

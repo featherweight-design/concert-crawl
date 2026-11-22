@@ -10,6 +10,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { followArtistsBulk } from '@/lib/following';
+import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 import {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
@@ -31,6 +32,7 @@ interface ArtistPicksCommit {
  */
 export function useArtistPicksCommit(onDone: () => void): ArtistPicksCommit {
   const { getToken } = useAuth();
+  const invalidateFollowedNames = useInvalidateFollowedArtistNames();
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
 
@@ -62,6 +64,7 @@ export function useArtistPicksCommit(onDone: () => void): ArtistPicksCommit {
         const token = await getToken();
         if (!token) throw new Error('Not authenticated');
         await followArtistsBulk(token, slugs);
+        invalidateFollowedNames();
         finishStep();
       } catch (err: unknown) {
         // A failed write is not worth stranding someone on step 7 of 8. Log it
@@ -73,7 +76,7 @@ export function useArtistPicksCommit(onDone: () => void): ArtistPicksCommit {
         setPending(false);
       }
     },
-    [getToken, finishStep],
+    [getToken, finishStep, invalidateFollowedNames],
   );
 
   const commit = useCallback(

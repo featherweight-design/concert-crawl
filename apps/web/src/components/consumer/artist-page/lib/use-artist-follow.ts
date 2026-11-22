@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 
 import { apiClient } from '@/lib/api';
+import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 
 interface ArtistFollowResult {
   following: boolean;
@@ -30,6 +31,7 @@ const isFollowResponse = (value: unknown): value is { following: boolean } =>
 
 export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
   const { getToken } = useAuth();
+  const invalidateFollowedNames = useInvalidateFollowedArtistNames();
   const [following, setFollowing] = useState(initialFollowing);
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
@@ -70,6 +72,7 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
           throw new Error('Unexpected follow response shape');
         }
         setFollowing(result.following);
+        invalidateFollowedNames();
       } catch (err) {
         setFollowing(previous);
         // Following is free on every signed-in plan, so a 403 is an ordinary
@@ -80,7 +83,7 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
         setPending(false);
       }
     })();
-  }, [following, getToken, slug]);
+  }, [following, getToken, slug, invalidateFollowedNames]);
 
   const result: ArtistFollowResult = { following, pending, toggle };
   return result;

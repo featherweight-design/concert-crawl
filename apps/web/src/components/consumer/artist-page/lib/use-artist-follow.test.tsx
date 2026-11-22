@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@/lib/api';
 import { ENTITLEMENT_REQUIRED_CODE } from '@/lib/history';
+import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 
 import { useArtistFollow } from './use-artist-follow';
 
@@ -55,6 +56,26 @@ describe('useArtistFollow', () => {
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(post.mock.calls[0]?.[0]).toBe('/v1/artists/wax-harbour/follow');
     expect(result.current.following).toBe(true);
+  });
+
+  it('refreshes the Followed highlight set once the write settles, not on a rollback', async () => {
+    const invalidate = vi.fn();
+    vi.mocked(useInvalidateFollowedArtistNames).mockReturnValue(invalidate);
+
+    post.mockResolvedValueOnce({ following: true });
+    const ok = renderHook(() => useArtistFollow('wax-harbour', false));
+    act(() => {
+      ok.result.current.toggle();
+    });
+    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(1));
+
+    post.mockRejectedValueOnce(new Error('nope'));
+    const failed = renderHook(() => useArtistFollow('wax-harbour', false));
+    act(() => {
+      failed.result.current.toggle();
+    });
+    await waitFor(() => expect(failed.result.current.following).toBe(false));
+    expect(invalidate).toHaveBeenCalledTimes(1);
   });
 
   it('rolls back when the request is rejected', async () => {
