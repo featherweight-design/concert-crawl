@@ -707,6 +707,22 @@ export function FilterBar({
           />
         </div>
         {phoneChips.length > 0 && <PhoneFilterChips chips={phoneChips} />}
+        {/* The phone has no count line of its own; the Vibe board
+            (`bp-vibe-browse_vibe_m`) draws one with each pick's dot and name,
+            so it appears here only while a Vibe is on. */}
+        {filterValues.vibe.length > 0 && (
+          <div className={COUNT_ROW_CLASS}>
+            {showCount !== null && (
+              <span
+                data-testid="filter-count-line-phone"
+                style={COUNT_LINE_STYLE}
+              >
+                {copy.showCountMatch(showCount)}
+              </span>
+            )}
+            <VibeLegend genres={filterValues.vibe} />
+          </div>
+        )}
       </div>
 
       {/* Segmented filter bar (desktop, B+ B6a) */}
