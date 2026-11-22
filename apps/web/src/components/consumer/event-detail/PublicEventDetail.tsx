@@ -7,7 +7,8 @@
 //   NOT rendered — WatchZone / WatchShowButton, the "I'm going!" commitment
 //   strip, EventDetailPriceBlock and every price-submission
 //   path inside it, community reports, the first-timer guide chip, and the
-//   report footer. The price appears as a flat read-only row instead.
+//   report footer. The price appears as a read-only card instead
+//   (PublicPriceCard): its trust pill and Sold by line, with no submit path.
 //
 // Related shows DO render, through the same EventRow the public browse list
 // uses. The row no longer carries a watch control on any surface, so the
@@ -25,7 +26,6 @@ import type { EventDetailResponse, EventWithVenue } from '@concert-crawl/types';
 
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { SectionHeader } from '@/components/consumer/section-header';
-import { pickApprovedHeadline } from '@/components/consumer/price-region/lib/pick-headline';
 
 import { Eye } from 'lucide-react';
 import {
@@ -37,7 +37,6 @@ import { GenreChips } from '@/components/consumer/GenreChips';
 import { EventTitleBlock } from '@/components/consumer/event-title-block';
 import {
   formatEventDate,
-  formatPrice,
   formatShowTime,
   isEventPast,
 } from '@/components/consumer/definitions/lib';
@@ -56,6 +55,8 @@ import {
 } from './InfoRow';
 import { EventTicketCta } from './EventTicketCta';
 import { EventStatusCard } from './EventStatusCard';
+import { PublicPriceCard } from './PublicPriceCard';
+import { buildPublicPrice } from './public-price';
 
 const copy = CONSUMER_COPY.eventDetail;
 const publicCopy = CONSUMER_COPY.publicEvent;
@@ -109,19 +110,10 @@ export const PublicEventDetail = ({
   // refund link and a past postponed show's Watch toggle (showsPrimaryCta).
   const past = isEventPast(event.date, event.venue.timezone);
 
-  // Sold out beats a stale number: a shared link is often opened after the
-  // show sold out, and a price next to a gone show reads as availability.
-  // Otherwise the cheapest corroborated tier, the one the protected page and
-  // the rows lead with; the scalar holds whichever price was written last and
-  // is only the fallback for a crawled price (#1365). This card cannot mark a
-  // pending price, so it never shows one.
-  const tierHeadline = pickApprovedHeadline(event.priceByTier);
-  const priceLabel =
-    event.priceStatus === 'soldout'
-      ? copy.soldOut
-      : tierHeadline !== null
-        ? formatPrice(tierHeadline.priceMin, tierHeadline.priceMax)
-        : formatPrice(event.ticketPriceMin, event.ticketPriceMax);
+  // What the price card says (B+ addendum 10): the kind of price and who
+  // sells it, or Sold out, or the bare crawled number. See public-price.ts.
+  const price = buildPublicPrice(event);
+  const hasPrice = price.case !== 'none';
 
   return (
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
@@ -202,9 +194,9 @@ export const PublicEventDetail = ({
               buy it, then the account. Side by side from `sm` up, the account
               card in the right column. */}
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:gap-4">
-            {(priceLabel || !past || billBlock) && (
+            {(hasPrice || !past || billBlock) && (
               <div className="flex min-w-0 flex-col gap-5 lg:flex-1">
-                {/* A flat, read-only price card rather than
+                {/* A read-only price card rather than
                     EventDetailPriceBlock. That block is a client component
                     that wires up price submission, tier-add and report modals
                     behind `useAuth`; on a signed-out mirror its community
@@ -212,34 +204,7 @@ export const PublicEventDetail = ({
                     submit a price. With no price there is no card at all,
                     because the only honest thing to put there is that same
                     invitation. */}
-                {priceLabel && (
-                  <div
-                    data-testid="public-event-price"
-                    className="rounded-[14px] px-5 py-4"
-                    style={{
-                      background: 'var(--surface-1)',
-                      border: '1px solid var(--border)',
-                    }}
-                  >
-                    <p
-                      className="m-0 font-mono uppercase text-fg-subtle"
-                      style={{ fontSize: 10, letterSpacing: '0.2em' }}
-                    >
-                      {copy.priceRowLabel}
-                    </p>
-                    <p
-                      className="m-0 mt-1 text-fg"
-                      style={{
-                        fontSize: 30,
-                        fontWeight: 900,
-                        letterSpacing: '-0.03em',
-                        lineHeight: 1.1,
-                      }}
-                    >
-                      {priceLabel}
-                    </p>
-                  </div>
-                )}
+                {hasPrice && <PublicPriceCard price={price} />}
 
                 {!past && (
                   <EventTicketCta

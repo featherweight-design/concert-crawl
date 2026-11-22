@@ -17,14 +17,11 @@ import {
   VENDOR_PICKER_COPY,
 } from '@/components/consumer/definitions/copy';
 import { formatPrice } from '@/components/consumer/definitions/lib';
-import {
-  Eyebrow,
-  PRICE_EYEBROW,
-  TRUST_TOKENS,
-} from '@/components/consumer/glyphs';
+import { Eyebrow, PRICE_EYEBROW } from '@/components/consumer/glyphs';
 import { GlyphChevron } from '@/components/consumer/following/my-shows/Glyphs';
 import { resolveAlternateKind } from '@/components/consumer/lib/price-source-kind';
 import { displayVendor } from '@/components/consumer/vendor-display';
+import { withResaleWord } from '@/components/consumer/where-its-sold/trust-line';
 import {
   priceAnchorId,
   priceTierSelector,
@@ -72,19 +69,13 @@ export function SellerLine({ row }: { row: WhereItsSoldRow }) {
     return <>{copy.faceValue.replace('{tier}', row.tier)}</>;
   }
   if (kind === 'resale') {
-    const line = copy.resaleLine.replace('{tier}', row.tier);
-    const at = line.indexOf(copy.resaleWord);
-    if (at === -1) return <>{line}</>;
     return (
       <>
-        {line.slice(0, at)}
-        <span
-          data-testid="where-its-sold-resale"
-          style={{ color: TRUST_TOKENS.resale.text }}
-        >
-          {copy.resaleWord}
-        </span>
-        {line.slice(at + copy.resaleWord.length)}
+        {withResaleWord(
+          copy.resaleLine.replace('{tier}', row.tier),
+          copy.resaleWord,
+          { testId: 'where-its-sold-resale' },
+        )}
       </>
     );
   }
