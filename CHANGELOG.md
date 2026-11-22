@@ -1,3 +1,18 @@
+# [1.527.0](https://github.com/featherweight-design/concert-crawl/compare/v1.526.0...v1.527.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** harden the feedback send against a lost token, a hang and a reopen mid-send ([a4db3c4](https://github.com/featherweight-design/concert-crawl/commit/a4db3c41a4e72ea2c7605fcfef2848680963adaa))
+* **web:** set the feedback textarea to 16px on the phone so iOS does not zoom ([5bdf4a5](https://github.com/featherweight-design/concert-crawl/commit/5bdf4a55c86d365150886dbe4200cfcf0fbc6d24))
+
+
+### Features
+
+* **web:** feedback modal redesign, Send feedback menu row, retire edge tab (WIP) ([5bde718](https://github.com/featherweight-design/concert-crawl/commit/5bde7189bed7083a1087f5d111fa05d59ca3fe0a))
+* **web:** rebuild the feedback modal against the Phase 6 state boards (WIP) ([aebcff1](https://github.com/featherweight-design/concert-crawl/commit/aebcff19e4b234b8e3ac95630a8f183401175181)), closes [#757](https://github.com/featherweight-design/concert-crawl/issues/757)
+* **web:** save the feedback draft by itself when a send fails, per the 757 follow-ups ([29f1370](https://github.com/featherweight-design/concert-crawl/commit/29f13700aabd54c66f33574d002e00e7eade9a7b))
+
 # [1.526.0](https://github.com/featherweight-design/concert-crawl/compare/v1.525.0...v1.526.0) (2026-11-22)
 
 
