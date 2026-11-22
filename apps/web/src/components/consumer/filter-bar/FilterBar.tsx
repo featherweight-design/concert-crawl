@@ -42,6 +42,7 @@ import {
   toggleValue,
 } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { VibeLegend } from './VibeLegend';
 import {
   COUNT_LINE_STYLE,
   COUNT_ROW_CLASS,
@@ -786,6 +787,9 @@ export function FilterBar({
                 ? copy.showCountMatch(showCount)
                 : copy.showCount(showCount)}
             </span>
+          )}
+          {filterValues.vibe.length > 0 && (
+            <VibeLegend genres={filterValues.vibe} />
           )}
           {activeFilterCount > 0 && (
             <button
