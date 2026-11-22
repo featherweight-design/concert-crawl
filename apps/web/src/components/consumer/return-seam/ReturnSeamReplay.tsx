@@ -7,6 +7,9 @@ import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-art
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye } from 'lucide-react';
+import { EventImage } from '@/components/consumer/event-image/EventImage';
+import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
+import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   decodeIntent,
@@ -57,6 +60,8 @@ export const ReturnSeamReplay = () => {
   // captured before that.
   const [label, setLabel] = useState<string | null>(null);
   const [action, setAction] = useState<IntentAction | null>(null);
+  // The show the strip names, so it can draw that show's artwork.
+  const [shownEventId, setShownEventId] = useState<string | null>(null);
   // The effect must fire exactly once per intent: `useWatchToggle` is a toggle,
   // so a second run would quietly un-watch the show it just watched.
   const handled = useRef<string | null>(null);
@@ -123,6 +128,7 @@ export const ReturnSeamReplay = () => {
     handled.current = rawIntent;
     setLabel(rawLabel);
     setAction(intent.action);
+    setShownEventId(intent.action === 'watch' ? intent.eventId : null);
     // A second intent in the same SPA session starts clean: a stale `failed`
     // would suppress this replay's strip outright, and a stale `replayed` would
     // flash the previous show's confirmation while this one is in flight.
@@ -173,6 +179,7 @@ export const ReturnSeamReplay = () => {
     action: IntentAction;
     label: string;
     at: string;
+    eventId: string | null;
   } | null>(null);
   const shown = useRef<string | null>(null);
   useEffect(() => {
@@ -180,8 +187,8 @@ export const ReturnSeamReplay = () => {
     const key = `${action}:${label}`;
     if (shown.current === key) return;
     shown.current = key;
-    setStrip({ action, label, at: pathname });
-  }, [replayed, failed, label, action, pathname]);
+    setStrip({ action, label, at: pathname, eventId: shownEventId });
+  }, [replayed, failed, label, action, pathname, shownEventId]);
 
   useEffect(() => {
     if (strip === null) return;
@@ -196,6 +203,12 @@ export const ReturnSeamReplay = () => {
   }, [pathname, strip]);
 
   if (strip === null) return null;
+  // The watched show's row, for its artwork: the replay only ever held the
+  // label, but the watching cache the toggle seeded carries the picture.
+  const stripShow =
+    strip.eventId !== null
+      ? watchedShows?.find((show) => show.eventId === strip.eventId)
+      : undefined;
   return (
     <div className="mx-auto w-full max-w-[640px] px-[14px] pt-2">
       <div
@@ -209,18 +222,41 @@ export const ReturnSeamReplay = () => {
           borderColor: 'color-mix(in oklch, var(--signal) 45%, transparent)',
         }}
       >
-        <Eye
-          size={17}
-          fill="currentColor"
-          aria-hidden="true"
-          style={{ color: 'var(--signal)', flexShrink: 0 }}
-        />
+        {strip.action === 'watch' ? (
+          // The board's tile: the show's artwork in its genre ring, with the
+          // identity art when it has no picture (EventImage's own fallback).
+          <div
+            data-testid="return-seam-strip-art"
+            className="h-11 w-11 shrink-0 overflow-hidden rounded-md"
+            style={{
+              boxShadow: genreRing(
+                genreColor(stripShow?.genres[0]) ?? NEUTRAL_GENRE_COLOR,
+              ),
+            }}
+          >
+            <EventImage
+              src={stripShow?.imageUrl ?? null}
+              artistPhotoUrl={stripShow?.artistPhotoUrl ?? null}
+              alt=""
+              artist={strip.label}
+              identityScale="tile"
+              className="h-full w-full"
+            />
+          </div>
+        ) : (
+          <Eye
+            size={17}
+            fill="currentColor"
+            aria-hidden="true"
+            style={{ color: 'var(--signal)', flexShrink: 0 }}
+          />
+        )}
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span
             className="ph-no-capture"
             style={{
               fontFamily: 'var(--font-ui)',
-              fontSize: 12.5,
+              fontSize: 14,
               fontWeight: 800,
               color: 'var(--fg)',
             }}
@@ -243,12 +279,11 @@ export const ReturnSeamReplay = () => {
         {strip.action === 'watch' && (
           <Link
             href="/watching"
-            className="flex min-h-11 items-center rounded-sm uppercase focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
+            className="flex min-h-11 items-center rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
             style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9.5,
-              fontWeight: 700,
-              letterSpacing: '0.1em',
+              fontFamily: 'var(--font-ui)',
+              fontSize: 14,
+              fontWeight: 800,
               color: 'var(--signal)',
               textDecoration: 'none',
             }}
