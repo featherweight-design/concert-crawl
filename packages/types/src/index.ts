@@ -4,6 +4,7 @@ export * from './analytics-events.js';
 // #764 venue first-timer guide — chip pool, chip-state / publish-state /
 // viewer-mode / density derivation. One implementation, imported by both apps.
 export * from './venue-guide.js';
+export * from './glyph-svg.js';
 // Re-exported above; imported explicitly because `export *` does not bring
 // the name into this module's scope for use in VenuePublic below.
 import type { VenueGuide } from './venue-guide.js';

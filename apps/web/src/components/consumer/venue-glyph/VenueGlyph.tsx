@@ -1,16 +1,54 @@
 import { useId } from 'react';
+import {
+  GLYPH_STROKE_WIDTH,
+  validateGlyphSvg,
+  type GlyphSvgShape,
+} from '@concert-crawl/types';
 
 import { VENUE_GLYPHS, type VenueGlyphKey } from './definitions/glyphs';
 import { VENUE_NEON } from './definitions/venue-neon';
 
 interface VenueGlyphProps {
-  glyphKey: VenueGlyphKey;
+  /** One of the drawn set; null for a venue outside it. */
+  glyphKey: VenueGlyphKey | null;
+  /**
+   * The venue's own `glyph_svg` (admin 3d), drawn when it has no key. It is
+   * checked again here and rendered from its parsed shapes, never as HTML.
+   */
+  glyphSvg?: string | null;
   size?: number;
 }
 
-/** The glyph alone, on a 24×24 grid, stroked in its venue's gradient. Decorative. */
-export function VenueGlyph({ glyphKey, size = 24 }: VenueGlyphProps) {
+/**
+ * The glyph alone, on a 24×24 grid, stroked in its venue's gradient. A venue
+ * outside the set draws its `glyph_svg` in the current text color; with
+ * neither, nothing renders and the caller keeps its own fallback. Decorative.
+ */
+export function VenueGlyph({ glyphKey, glyphSvg, size = 24 }: VenueGlyphProps) {
   const gradientId = `vg${useId().replace(/:/g, '')}`;
+  if (glyphKey === null) {
+    const checked = glyphSvg ? validateGlyphSvg(glyphSvg) : null;
+    if (!checked?.ok) return null;
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+        data-venue-glyph="custom"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={GLYPH_STROKE_WIDTH}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {checked.shapes.map((shape, i) => (
+          <CustomShape key={i} shape={shape} />
+        ))}
+      </svg>
+    );
+  }
   return (
     <svg
       width={size}
@@ -130,4 +168,31 @@ export function GlyphShapes({
       })}
     </g>
   );
+}
+
+function CustomShape({ shape }: { shape: GlyphSvgShape }) {
+  switch (shape.tag) {
+    case 'path':
+      return <path d={shape.d} />;
+    case 'circle':
+      return <circle cx={shape.cx} cy={shape.cy} r={shape.r} />;
+    case 'ellipse':
+      return (
+        <ellipse cx={shape.cx} cy={shape.cy} rx={shape.rx} ry={shape.ry} />
+      );
+    case 'line':
+      return <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} />;
+    case 'polyline':
+      return <polyline points={shape.points} />;
+    case 'rect':
+      return (
+        <rect
+          x={shape.x}
+          y={shape.y}
+          width={shape.width}
+          height={shape.height}
+          rx={shape.rx}
+        />
+      );
+  }
 }

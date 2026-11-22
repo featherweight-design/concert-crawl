@@ -72,6 +72,7 @@ import { apiLogger } from '../../lib/logger.js';
 import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js';
 import { runBackgroundTask } from '../../lib/background-tasks.js';
 import type { AdminVariables } from './index.js';
+import { glyphSvgField } from './lib/glyph-style.js';
 import { venueGuideAdminRouter } from './venue-guide.js';
 import { TRIAGE_CONDITIONS } from './lib/triage.js';
 import { idSchema } from '../../lib/id-schema.js';
@@ -313,6 +314,9 @@ export const updateVenueSchema = createVenueSchema
       .pipe(z.email().nullable())
       .nullable()
       .optional(),
+    // The venue's own glyph (admin 3d): an upload or a chosen draft. Saved as
+    // the style check rebuilds it; one that fails is a 400. Null clears it.
+    glyphSvg: glyphSvgField,
     // API-backed venue crawling (#506). When apiProvider is set, the crawler
     // (per #505) bypasses the HTML → JSON-LD → LLM cascade. null = None.
     apiProvider: z.enum(['venuepilot']).nullable().optional(),

@@ -160,4 +160,31 @@ describe('VenueGlyph', () => {
     const { container } = render(<VenueGlyph glyphKey="church" />);
     expect(container.querySelectorAll('circle').length).toBe(8);
   });
+
+  const CUSTOM =
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20 L12 4 L20 20" onclick="x()"/></svg>';
+
+  it('draws a venue outside the set from its glyph_svg, parsed rather than injected', () => {
+    const { container } = render(
+      <VenueGlyph
+        glyphKey={null}
+        glyphSvg='<svg viewBox="0 0 24 24" fill="none"><path d="M4 20 L12 4 L20 20"/><circle cx="12" cy="14" r="2"/></svg>'
+      />,
+    );
+    const glyph = container.querySelector('[data-venue-glyph="custom"]');
+    expect(glyph?.getAttribute('stroke')).toBe('currentColor');
+    expect(glyph?.getAttribute('stroke-width')).toBe('1.6');
+    expect(container.querySelector('path')?.getAttribute('d')).toBe(
+      'M4 20 L12 4 L20 20',
+    );
+    expect(container.querySelectorAll('circle').length).toBe(1);
+  });
+
+  it('renders nothing for a glyph_svg that fails the style check, or none', () => {
+    expect(
+      render(<VenueGlyph glyphKey={null} glyphSvg={CUSTOM} />).container
+        .innerHTML,
+    ).toBe('');
+    expect(render(<VenueGlyph glyphKey={null} />).container.innerHTML).toBe('');
+  });
 });
