@@ -138,7 +138,9 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
 
   it('leaves an already-watched show alone but still confirms', () => {
     withIntent(`watch:${EVENT_ID}`, 'Geese');
-    watchingData.mockReturnValue([{ eventId: EVENT_ID }]);
+    watchingData.mockReturnValue([
+      { eventId: EVENT_ID, imageUrl: null, artistPhotoUrl: null, genres: [] },
+    ]);
     render(<ReturnSeamReplay />);
     expect(mutate).not.toHaveBeenCalled();
     expect(screen.getByTestId('return-seam-strip').textContent).toContain(
