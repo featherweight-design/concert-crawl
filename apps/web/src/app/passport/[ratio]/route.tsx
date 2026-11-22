@@ -10,7 +10,7 @@ import type {
 } from '@concert-crawl/types';
 import { auth } from '@/lib/auth';
 import { fetchHistory } from '@/lib/history';
-import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts';
+import { loadShareFonts } from '@/lib/share/fonts';
 import {
   isPassportRatio,
   PASSPORT_CACHE_CONTROL,
@@ -23,7 +23,6 @@ import {
   matchesEtag,
   passportCacheKey,
   passportEtag,
-  peekRendered,
   renderOnce,
 } from '@/lib/passport/render-cache';
 import { toAttendedShows } from '@/lib/passport/select-shows';
@@ -128,40 +127,29 @@ export const GET = async (
     return new Response(null, { status: 304, headers });
   }
 
-  // Fonts and satori are the expensive part, so they run only on a miss, and
-  // once for any requests that arrive for the same card together.
-  const hit = peekRendered(key);
-  if (hit === undefined) {
-    let fonts: LoadedShareFont[];
-    try {
-      fonts = await loadShareFonts(originFontLoader(request));
-    } catch (err) {
-      console.error('[passport card] font load failed', { err });
-      return problem(502, 'share fonts unavailable');
-    }
-    try {
-      const card = await renderOnce(key, () =>
-        new ImageResponse(
-          <PassportCard
-            mode={PASSPORT_PRINT_MODE}
-            scale={PASSPORT_PRINT_SCALE}
-            shows={shows}
-            tokens={tokens}
-            handle={profile.handle}
-            year={year}
-          />,
-          { ...PASSPORT_DIMENSIONS[ratio], fonts },
-        ).arrayBuffer(),
-      );
-      return new Response(card.png, {
-        headers: { ...headers, 'Content-Type': 'image/png' },
-      });
-    } catch (err) {
-      console.error('[passport card] render failed', { err });
-      return problem(502, 'passport render failed');
-    }
+  // The cache owns the render: fonts and satori run only on a miss, and once
+  // for requests that arrive for the same card together. A failure is never
+  // stored.
+  try {
+    const png = await renderOnce(key, async () => {
+      const fonts = await loadShareFonts(originFontLoader(request));
+      return new ImageResponse(
+        <PassportCard
+          mode={PASSPORT_PRINT_MODE}
+          scale={PASSPORT_PRINT_SCALE}
+          shows={shows}
+          tokens={tokens}
+          handle={profile.handle}
+          year={year}
+        />,
+        { ...PASSPORT_DIMENSIONS[ratio], fonts },
+      ).arrayBuffer();
+    });
+    return new Response(png, {
+      headers: { ...headers, 'Content-Type': 'image/png' },
+    });
+  } catch (err) {
+    console.error('[passport card] render failed', { err });
+    return problem(502, 'passport render failed');
   }
-  return new Response(hit.png, {
-    headers: { ...headers, 'Content-Type': 'image/png' },
-  });
 };
