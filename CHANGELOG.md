@@ -1,3 +1,10 @@
+# [1.533.0](https://github.com/featherweight-design/concert-crawl/compare/v1.532.0...v1.533.0) (2026-11-22)
+
+
+### Features
+
+* **web:** offline pill reads Offline under 1024px, full label from 1024 ([aba2b25](https://github.com/featherweight-design/concert-crawl/commit/aba2b2507ef3750635e7844c94f290f7e58017fe))
+
 # [1.532.0](https://github.com/featherweight-design/concert-crawl/compare/v1.531.0...v1.532.0) (2026-11-22)
 
 
