@@ -360,6 +360,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
           <SuccessState onDone={closeSheet} />
         ) : (
           <FormFields
+            isMobile={isMobile}
             state={state}
             gap={isMobile ? 12 : 14}
             category={category}
@@ -402,6 +403,7 @@ interface ScreenshotValue {
 }
 
 interface FormProps {
+  isMobile: boolean;
   state: ModalState;
   gap: number;
   category: FeedbackCategory | null;
@@ -424,6 +426,7 @@ interface FormProps {
 }
 
 function FormFields({
+  isMobile,
   state,
   gap,
   category,
@@ -564,7 +567,8 @@ function FormFields({
             border: `1px solid ${msgError ? 'var(--danger)' : 'var(--border-strong)'}`,
             borderRadius: 12,
             fontFamily: 'var(--font-ui)',
-            fontSize: 14,
+            // 16 on the phone: iOS zooms the page into a smaller field.
+            fontSize: isMobile ? 16 : 14,
             lineHeight: 1.45,
             resize: 'vertical',
             outline: 'none',
