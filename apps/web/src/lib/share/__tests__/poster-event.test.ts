@@ -36,6 +36,39 @@ describe('posterStateFor', () => {
     ).toBe('drop');
   });
 
+  it('reads the cheapest tier before the scalar', () => {
+    // A stale scalar below the opening price must not fake a drop when the
+    // corroborated tier says the price held (#1365).
+    const tiered = {
+      ...source,
+      ticketPriceMin: '28.00',
+      ticketPriceOpenedAt: 40,
+      priceByTier: [
+        {
+          tier: 'GA' as const,
+          headline: {
+            submissionId: 'sub-1',
+            priceMin: '45.00',
+            priceMax: null,
+            vendor: 'VenueBoxOffice' as const,
+            sourceCategory: 'standard' as const,
+            submitterHandle: null,
+            observedAt: '2026-03-01T00:00:00.000Z',
+            approvedAt: '2026-03-01T00:00:00.000Z',
+            approvalKind: 'admin' as const,
+            confirmsCount: 1,
+          },
+          alternates: [],
+          pending: [],
+          counterSubmission: null,
+          reports: 0,
+        },
+      ],
+    };
+    expect(posterStateFor(tiered)).toBe('going');
+    expect(posterDropLabel(tiered)).toBeNull();
+  });
+
   it('does not call a price rise a drop', () => {
     expect(
       posterStateFor({
