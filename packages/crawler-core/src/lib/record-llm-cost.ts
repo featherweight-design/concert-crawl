@@ -24,6 +24,8 @@ export const LLM_SERVICES = [
   'genre-tagger',
   // The admin's generate-about route (venue About drafts).
   'venue-about',
+  // The admin's glyph drafting route (admin 3d, four venue glyph drafts).
+  'venue-glyph',
   // The crawler's artist adjudicator: one row per venue crawl, and one per
   // rederive-event-artists pass (adjudication-cost.ts). Never also in
   // crawl_runs.llm_cost_usd, which is extraction only.

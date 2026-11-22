@@ -16,3 +16,7 @@ export const GENRE_TAG_MODEL =
 /** The admin's generate-about route (apps/api). */
 export const VENUE_ABOUT_MODEL =
   'claude-haiku-4-5-20251001' satisfies PricedModelId;
+
+/** The admin's glyph drafting route (apps/api, admin 3d). It reads reference images. */
+export const VENUE_GLYPH_MODEL =
+  'claude-haiku-4-5-20251001' satisfies PricedModelId;

@@ -13,7 +13,11 @@ export {
   type AdjudicationCost,
 } from './lib/adjudication-cost.js';
 export { calculateCost, MODEL_RATES, type PricedModelId } from './lib/cost.js';
-export { LLM_EXTRACTION_MODEL, VENUE_ABOUT_MODEL } from './lib/llm-models.js';
+export {
+  LLM_EXTRACTION_MODEL,
+  VENUE_ABOUT_MODEL,
+  VENUE_GLYPH_MODEL,
+} from './lib/llm-models.js';
 export {
   LLM_SERVICES,
   recordLlmCost,

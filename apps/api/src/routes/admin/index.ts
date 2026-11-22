@@ -4,6 +4,7 @@ import { clerkAuth } from '../../middleware/auth.js';
 import { db, auditLog, events, priceSubmissions } from '@concert-crawl/db';
 import { and, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
 import { venuesAdminRouter } from './venues.js';
+import { venueGlyphAdminRouter } from './venue-glyph.js';
 import { inviteCodesAdminRouter } from './invite-codes.js';
 import { crawlAdminRouter } from './crawl.js';
 import { crawlBatchesAdminRouter } from './crawl-batches.js';
@@ -152,6 +153,7 @@ adminRouter.get('/review/counts', async (ctx) => {
 });
 
 adminRouter.route('/venues', venuesAdminRouter);
+adminRouter.route('/venues', venueGlyphAdminRouter);
 adminRouter.route('/invite-codes', inviteCodesAdminRouter);
 adminRouter.route('/crawl', crawlAdminRouter);
 adminRouter.route('/crawl', crawlBatchesAdminRouter);
