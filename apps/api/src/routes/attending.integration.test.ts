@@ -1,7 +1,6 @@
 // Integration tests for PUT/DELETE /v1/attending/:eventId (#70).
-// The entitlement gate derives the plan from real billing rows, so these tests
-// seed subscriptions rather than mocking canUseFeature — that's the only way to
-// prove the gate is actually mounted.
+// Signed-in only, with no plan gate; some tests still seed subscriptions to
+// show a paid plan behaves the same.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const { authState } = vi.hoisted(() => ({

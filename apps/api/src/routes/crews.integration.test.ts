@@ -1,10 +1,8 @@
 // Integration tests for /v1/crews (#1226 PR-2).
 //
 // Two guarantees carry the most weight here and both are asserted explicitly:
-//   1. The entitlement shape. Every crew route, create included, is open on
-//      free (crews unlocked for free accounts); list, read, leave, and mute
-//      staying open is what lets a lapsed creator keep every crew they already
-//      made (plan D6).
+//   1. The auth shape. Every crew route, create included, is open on every
+//      signed-in plan; there is no plan gate.
 //   2. The tense rule. Upcoming needs >= 1 member going; a past night needs
 //      >= 2 (locked decision 2), including at the exact boundaries.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -119,7 +117,7 @@ describe('/v1/crews', () => {
     await setFeatureFlag('crews', true);
   });
 
-  describe('auth and entitlement shape', () => {
+  describe('auth shape', () => {
     it('returns 401 on every route when unauthenticated', async () => {
       const crewId = randomUUID();
       const eventId = randomUUID();

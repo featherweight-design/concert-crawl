@@ -94,7 +94,6 @@ vi.mock('@clerk/backend', () => ({
 import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
-  founderWindow,
   giftedComps,
   subscriptions,
   userBilling,
@@ -153,12 +152,6 @@ const planStateBodySchema = z.object({
       roleComped: z.boolean(),
     }),
     roleBadge: z.string().nullable(),
-    founderWindow: z.object({
-      state: z.enum(['pre-launch', 'open', 'closed']),
-      seatsTotal: z.number(),
-      seatsRemaining: z.number().optional(),
-      closesAt: z.string().nullable(),
-    }),
   }),
 });
 
@@ -168,25 +161,6 @@ async function fetchMe(): Promise<z.infer<typeof planStateBodySchema>> {
   });
   expect(res.status).toBe(200);
   return planStateBodySchema.parse(await res.json());
-}
-
-// closesAt is a generated column (opensAt + windowDays) — never written.
-const FOUNDER_WINDOW_DEFAULTS = {
-  opensAt: null as Date | null,
-  seatsTotal: 100,
-  seatsRemaining: 100,
-  seatsRemainingTest: 100,
-  windowDays: 30,
-};
-
-async function setFounderWindow(
-  overrides: Partial<typeof FOUNDER_WINDOW_DEFAULTS> = {},
-): Promise<void> {
-  const values = { ...FOUNDER_WINDOW_DEFAULTS, ...overrides };
-  await testDb
-    .insert(founderWindow)
-    .values({ id: 1, ...values })
-    .onConflictDoUpdate({ target: founderWindow.id, set: values });
 }
 
 function setAuth(userId = 'user_test123'): void {
@@ -411,9 +385,6 @@ describe('GET /v1/users/me — no card-less trial', () => {
     clerkState.createdAt = Date.now() - 2 * DAY_MS;
     await clearTables();
     await clearBillingTables();
-    await setFounderWindow({
-      opensAt: new Date(Date.now() - 30 * DAY_MS),
-    });
   });
 
   it('never starts a trial clock, even for an account newer than the window', async () => {
@@ -427,44 +398,6 @@ describe('GET /v1/users/me — no card-less trial', () => {
       .where(eq(userBilling.userId, 'user_test123'))
       .limit(1);
     expect(row?.trialEndsAt ?? null).toBeNull();
-  });
-});
-
-describe('GET /v1/users/me — founder window', () => {
-  const DAY_MS = 86400000;
-
-  beforeEach(async () => {
-    clearAuth();
-    clerkState.role = 'user';
-    clerkState.plan = undefined;
-    await clearTables();
-    await clearBillingTables();
-    await setFounderWindow();
-  });
-
-  it('returns the founder window snapshot', async () => {
-    setAuth();
-    const opensAt = new Date(Date.now() - DAY_MS);
-    await setFounderWindow({ opensAt, seatsRemaining: 42 });
-    const body = await fetchMe();
-    // closesAt is generated: opensAt + windowDays (30).
-    expect(body.data.founderWindow).toEqual({
-      state: 'open',
-      seatsTotal: 100,
-      seatsRemaining: 42,
-      closesAt: new Date(opensAt.getTime() + 30 * DAY_MS).toISOString(),
-    });
-  });
-
-  it('falls back to a pre-launch founder window when the singleton row is missing', async () => {
-    setAuth();
-    await testDb.execute(sql`TRUNCATE founder_window`);
-    const body = await fetchMe();
-    expect(body.data.founderWindow).toEqual({
-      state: 'pre-launch',
-      seatsTotal: 100,
-      closesAt: null,
-    });
   });
 });
 

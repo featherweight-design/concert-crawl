@@ -1,7 +1,7 @@
 // Integration tests for the viewer-scoped follow collection (native following
 // eng spec §7.5, §9.3):
-//   GET  /v1/me/artist-follows       — ungated on purpose (downgrade case)
-//   POST /v1/me/artist-follows/bulk  — requireFeature('following') gated
+//   GET  /v1/me/artist-follows       — signed-in only, no plan gate
+//   POST /v1/me/artist-follows/bulk  — signed-in only, no plan gate
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 interface MockAuth {
@@ -118,9 +118,7 @@ describe('GET /v1/me/artist-follows', () => {
     expect(status).toBe(401);
   });
 
-  // The downgrade case, and the reason this route carries no requireFeature:
-  // a user who lapses to free must still be able to see and manage the list
-  // they built while paying.
+  // No plan gate: a free-tier account reads its list like any other.
   it('succeeds for a FREE-tier user without a 403', async () => {
     await seedFollow('Phoebe Bridgers');
     signIn();

@@ -230,14 +230,10 @@ describe('GET /v1/history/past-shows', () => {
     });
 
     const res = await app.request('/v1/history/past-shows?scope=follows');
-    // The follows scope has its own entitlement: either it answers with the
-    // filtered list or it is gated, never the unfiltered list.
-    if (res.status === 200) {
-      const body: { data: PastShowsResponse } = await res.json();
-      expect(body.data.rows.map((row) => row.eventId)).toEqual([followed.id]);
-    } else {
-      expect(res.status).toBe(403);
-    }
+    // No plan gate: the follows scope answers with the filtered list.
+    expect(res.status).toBe(200);
+    const body: { data: PastShowsResponse } = await res.json();
+    expect(body.data.rows.map((row) => row.eventId)).toEqual([followed.id]);
   });
 
   it('matches q over artist, title and venue, case-insensitively, with % literal', async () => {
