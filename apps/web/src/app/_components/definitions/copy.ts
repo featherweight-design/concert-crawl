@@ -82,7 +82,7 @@ export const LANDING_COPY = {
     signInPrompt: 'Already have an account?',
     signInLink: 'Sign in',
     venueCount: (count: number) =>
-      `${count} ${count === 1 ? 'venue' : 'venues'} · crawled every morning`,
+      `${count} ${count === 1 ? 'venue' : 'venues'} · checked every night`,
     ticker: 'This week in Denver',
     tonight: 'Tonight',
   },
