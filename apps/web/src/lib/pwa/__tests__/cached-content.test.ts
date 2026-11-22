@@ -222,7 +222,7 @@ describe('cached-content', () => {
     expect(sloppy).not.toHaveProperty('showTime');
   });
 
-  it('lifts the cheapest tier headline off priceByTier, skipping headline-less tiers', async () => {
+  it('lifts the cheapest tier headline off priceByTier, skipping headline-less and non-numeric tiers', async () => {
     vi.stubGlobal(
       'caches',
       makeCacheStorage({
@@ -235,6 +235,7 @@ describe('cached-content', () => {
                 ticketPriceMin: '95.00',
                 priceByTier: [
                   { headline: null },
+                  { headline: { priceMin: '' } },
                   { headline: { priceMin: '25.00' } },
                   { headline: { priceMin: '95.00' } },
                 ],

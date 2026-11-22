@@ -86,7 +86,10 @@ export function pickBrowseHeadline(
 }
 
 /**
- * The cheapest tier's corroborated headline, whole: floor and ceiling. A
+ * The cheapest tier's corroborated headline, whole: floor and ceiling. It is
+ * the first block carrying a headline, which is the cheapest because the API's
+ * aggregateByTier sorts blocks by headline price ascending; this helper relies
+ * on that order rather than re-sorting. A
  * surface that draws a range, or that has no way to mark an unconfirmed price,
  * reads this rather than `pickBrowseHeadline`, and falls back to the
  * `ticketPriceMin` scalar only when it returns null (#1365).
