@@ -1,0 +1,106 @@
+[
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-chip-spec",
+  "title": "Vibe chip · every count",
+  "note": "The rule in one table: chip, segment and legend for 1, 2, 3, 4, 5 to 15 and all 16 picks.",
+  "w": 1100,
+  "h": 760
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-3-320",
+  "title": "Vibe chip · 320px, 3 vibes",
+  "note": "Three dots and \"3 vibes\". The legend names all three under it.",
+  "w": 320,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-4-320",
+  "title": "Vibe chip · 320px, 4 vibes",
+  "note": "The stack stays at three dots; \"4 vibes\". The legend names four, wrapping to two lines at most.",
+  "w": 320,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-all-320",
+  "title": "Vibe chip · 320px, all vibes",
+  "note": "Every bucket picked: \"All vibes\", three dots, no legend names (the chip says it).",
+  "w": 320,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-crowded-320",
+  "title": "Vibe chip · 320px, beside every filter",
+  "note": "When, Where, Price and Vibe on: the row runs off the right edge and scrolls sideways. It never wraps.",
+  "w": 320,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-3-360",
+  "title": "Vibe chip · 360px, 3 vibes",
+  "note": "Three dots and \"3 vibes\". The legend names all three under it.",
+  "w": 360,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-4-360",
+  "title": "Vibe chip · 360px, 4 vibes",
+  "note": "The stack stays at three dots; \"4 vibes\". The legend names four, wrapping to two lines at most.",
+  "w": 360,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-all-360",
+  "title": "Vibe chip · 360px, all vibes",
+  "note": "Every bucket picked: \"All vibes\", three dots, no legend names (the chip says it).",
+  "w": 360,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-crowded-360",
+  "title": "Vibe chip · 360px, beside every filter",
+  "note": "When, Where, Price and Vibe on: the row runs off the right edge and scrolls sideways. It never wraps.",
+  "w": 360,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-crowded-320-scrolled",
+  "title": "Vibe chip · 320px, row scrolled to the end",
+  "note": "The same row scrolled: the Vibe chip, last in bar order, sits whole at the right with the 16px gutter.",
+  "w": 320,
+  "h": 720
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-3-d",
+  "title": "Vibe segment · desktop, 3 vibes",
+  "note": "Three dots, \"Electronic +2\", as \"+1\" is drawn today. The legend names all three.",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-4-d",
+  "title": "Vibe segment · desktop, 4 vibes, every segment on",
+  "note": "\"Electronic +3\" in a full bar: the segment keeps its share and ellipsises the name, never the \"+3\".",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "01-vibe-chip",
+  "name": "vibe-all-d",
+  "title": "Vibe segment · desktop, all vibes",
+  "note": "\"All vibes\", three dots, no suffix and no legend names.",
+  "w": 1280,
+  "h": 600
+ }
+]
