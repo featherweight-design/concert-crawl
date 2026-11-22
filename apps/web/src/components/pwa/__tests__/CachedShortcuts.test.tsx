@@ -49,6 +49,16 @@ describe('CachedShortcuts', () => {
     );
   });
 
+  it('prefers the cheapest tier to the last-written scalar', () => {
+    render(
+      <CachedShortcuts
+        events={[{ ...base, ticketPriceMin: '95.00', headlinePrice: '25.00' }]}
+        venues={[]}
+      />,
+    );
+    expect(screen.getByText('$25')).toBeTruthy();
+  });
+
   it('shows tba for a row with no price, and the title when no artist was cached', () => {
     render(<CachedShortcuts events={[base]} venues={[]} />);
     expect(screen.getByText('tba')).toBeTruthy();

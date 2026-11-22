@@ -455,6 +455,11 @@ export function EventDetailPriceBlock({
   const pendingSoldOutReport = findPendingReport(reports, 'sold-out');
   const pendingCancelledReport = findPendingReport(reports, 'cancelled');
 
+  // The scalar is safe here and only here: these feed the legacy branches,
+  // which run only when no tier carries a headline (priceByTier empty, or
+  // multi-tier-shipped falling through on a headline-less first block). There
+  // the scalar is the whole price, resolveDisplayPrice's own fallback. Every
+  // branch with a headline reads priceByTier instead (#1365).
   const priceMin = parseCents(event.ticketPriceMin);
   const priceMax = parseCents(event.ticketPriceMax);
 

@@ -16,6 +16,9 @@ interface CachedEvent {
   genre?: string[] | null;
   showTime?: string | null;
   ticketPriceMin?: string | null;
+  // The cheapest corroborated tier's floor, lifted off `priceByTier` at read
+  // time. The price slot prefers it to the scalar, as Browse does (#1365).
+  headlinePrice?: string;
 }
 
 // Matches the display-relevant subset of the venue rows returned by
@@ -52,6 +55,25 @@ const readString = (value: object, key: string): string | undefined => {
 };
 
 /**
+ * The cheapest tier's headline floor, the price Browse leads with. The API
+ * sorts `priceByTier` by entry price, so it is the first block carrying a
+ * headline (`pickApprovedHeadline`). Walked by hand rather than through that
+ * helper because a cached row is untrusted and may predate the field.
+ */
+const readHeadlinePrice = (event: object): string | undefined => {
+  const tiers: unknown = Reflect.get(event, 'priceByTier');
+  if (!Array.isArray(tiers)) return undefined;
+  for (const entry of tiers) {
+    const block: unknown = entry;
+    if (typeof block !== 'object' || block === null) continue;
+    const headline: unknown = Reflect.get(block, 'headline');
+    if (typeof headline !== 'object' || headline === null) continue;
+    return readString(headline, 'priceMin');
+  }
+  return undefined;
+};
+
+/**
  * Lifts the optional display fields off a validated cache row. A field of the
  * wrong type is dropped rather than failing the row, since a cached response
  * is untrusted input from an older deploy. Absent stays absent (never null),
@@ -63,6 +85,7 @@ export const toCachedEvent = (event: CachedEvent): CachedEvent => {
   const artistPhotoUrl = readString(event, 'artistPhotoUrl');
   const showTime = readString(event, 'showTime');
   const ticketPriceMin = readString(event, 'ticketPriceMin');
+  const headlinePrice = readHeadlinePrice(event);
   const genre: unknown = Reflect.get(event, 'genre');
   return {
     id: event.id,
@@ -74,6 +97,7 @@ export const toCachedEvent = (event: CachedEvent): CachedEvent => {
     ...(artistPhotoUrl === undefined ? {} : { artistPhotoUrl }),
     ...(showTime === undefined ? {} : { showTime }),
     ...(ticketPriceMin === undefined ? {} : { ticketPriceMin }),
+    ...(headlinePrice === undefined ? {} : { headlinePrice }),
     ...(Array.isArray(genre) && genre.every((item) => typeof item === 'string')
       ? { genre }
       : {}),

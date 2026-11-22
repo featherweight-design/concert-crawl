@@ -15,7 +15,11 @@
 //
 // Cross-reference: apps/api/src/lib/price-aggregation/pick-tier-headline.ts.
 
-import type { TierPriceBlock, SourceCategory } from '@concert-crawl/types';
+import type {
+  TierHeadline,
+  TierPriceBlock,
+  SourceCategory,
+} from '@concert-crawl/types';
 
 export interface BrowseHeadline {
   price: number;
@@ -30,12 +34,11 @@ export interface BrowseHeadline {
   isPending: boolean;
 }
 
-function adaptBlock(block: TierPriceBlock): BrowseHeadline | null {
-  if (block.headline === null) return null;
+function adaptHeadline(headline: TierHeadline): BrowseHeadline {
   return {
-    price: parseFloat(block.headline.priceMin),
-    sourceCategory: block.headline.sourceCategory,
-    observedAt: block.headline.observedAt,
+    price: parseFloat(headline.priceMin),
+    sourceCategory: headline.sourceCategory,
+    observedAt: headline.observedAt,
     isPending: false,
   };
 }
@@ -73,13 +76,26 @@ export function pickBrowseHeadline(
   priceByTier: ReadonlyArray<TierPriceBlock> | null | undefined,
 ): BrowseHeadline | null {
   if (priceByTier == null || priceByTier.length === 0) return null;
-  for (const block of priceByTier) {
-    const headline = adaptBlock(block);
-    if (headline !== null) return headline;
-  }
+  const approved = pickApprovedHeadline(priceByTier);
+  if (approved !== null) return adaptHeadline(approved);
   for (const block of priceByTier) {
     const pending = adaptPending(block);
     if (pending !== null) return pending;
+  }
+  return null;
+}
+
+/**
+ * The cheapest tier's corroborated headline, whole: floor and ceiling. A
+ * surface that draws a range, or that has no way to mark an unconfirmed price,
+ * reads this rather than `pickBrowseHeadline`, and falls back to the
+ * `ticketPriceMin` scalar only when it returns null (#1365).
+ */
+export function pickApprovedHeadline(
+  priceByTier: ReadonlyArray<TierPriceBlock> | null | undefined,
+): TierHeadline | null {
+  for (const block of priceByTier ?? []) {
+    if (block.headline !== null) return block.headline;
   }
   return null;
 }

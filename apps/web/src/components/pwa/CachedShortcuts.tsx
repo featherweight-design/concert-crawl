@@ -101,7 +101,7 @@ const CachedEventRow = ({ event }: { event: CachedEvent }) => {
           className="shrink-0 text-[14px] text-fg-subtle"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          {formatPrice(event.ticketPriceMin)}
+          {formatPrice(event.headlinePrice ?? event.ticketPriceMin)}
         </span>
       </Link>
     </li>

@@ -25,6 +25,7 @@ import type { EventDetailResponse, EventWithVenue } from '@concert-crawl/types';
 
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { SectionHeader } from '@/components/consumer/section-header';
+import { pickApprovedHeadline } from '@/components/consumer/price-region/lib/pick-headline';
 
 import { Eye } from 'lucide-react';
 import {
@@ -109,10 +110,17 @@ export const PublicEventDetail = ({
 
   // Sold out beats a stale number: a shared link is often opened after the
   // show sold out, and a price next to a gone show reads as availability.
+  // Otherwise the cheapest corroborated tier, the one the protected page and
+  // the rows lead with; the scalar holds whichever price was written last and
+  // is only the fallback for a crawled price (#1365). This card cannot mark a
+  // pending price, so it never shows one.
+  const tierHeadline = pickApprovedHeadline(event.priceByTier);
   const priceLabel =
     event.priceStatus === 'soldout'
       ? copy.soldOut
-      : formatPrice(event.ticketPriceMin, event.ticketPriceMax);
+      : tierHeadline !== null
+        ? formatPrice(tierHeadline.priceMin, tierHeadline.priceMax)
+        : formatPrice(event.ticketPriceMin, event.ticketPriceMax);
 
   return (
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
