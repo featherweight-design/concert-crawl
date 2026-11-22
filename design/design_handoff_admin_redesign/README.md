@@ -84,6 +84,7 @@ All names, handles, emails, counts and prices in the boards are example data. Ve
     - Also: Pause crawling, Hide from site, Re-crawl, Fewer shows than usual, Member, Operations.
     - US English: Theater.
     - The full table is in `01-foundations` and on the canvas.
+14. **Text fields are 16px on the phone, 14px on desktop.** iOS Safari zooms the page when someone taps a field under 16px and stays zoomed after the keyboard closes. Every text input and text area (fan and admin, search included) uses 16px type on the phone layout, the breakpoint the feedback note box (PR #761) uses, and 14px from there up. Height, padding and placeholders are unchanged. Boards drawn at 14px or 13.5px on the phone read as 16px ([`addendum-9`](../design_handoff_bplus_redesign/addendum-9/README.md) rule 1, 2026-11-22).
 
 ## Sections
 

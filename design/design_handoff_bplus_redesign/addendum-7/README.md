@@ -53,6 +53,7 @@ A suggestion stores its free-text `message` (plus `page_url` and the reporter). 
 - **Start adding it** opens Add a venue at Basics, empty (`03/suggestion-start-d`). The message is quoted above the fields with "Back to it", so the admin can copy the name. Nothing is filled in. It doesn't mark the suggestion done.
 - **Mark done** sets the item done (`resolved`), as on every feedback item.
 - **Dropped:** Not for us… and its reason dialog (it marked every suggestion for one venue done, which needs a name to match on), Website, robots.txt and "Also asked for by".
+- **Superseded (addendum 9, 2026-11-22):** the admin redesign boards `05-add-a-venue/basics-desktop` ("Asked for by… we filled in the name and address") and `05-add-a-venue/add-a-venue-start` ("Venues people asked for") draw content the message-only decision drops. Build Basics from `03/suggestion-start-d` and the phone and long-message boards in [`addendum-9`](../addendum-9/README.md) `02/*`, and leave the asked-for list out of the start page.
 - Related gap, not drawn here: Add a venue's **Venues people asked for** list (admin phone addendum) also needs venue names. Under decision A it has nothing to list and stays unbuilt; under B it can list suggestions that have a name.
 
 ## 4. Operations › Feedback: the row hints
