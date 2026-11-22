@@ -145,6 +145,25 @@ describe('admin venues API, 3c-1 draft safety', () => {
     });
   });
 
+  describe('Hide', () => {
+    it('writes no hide record on a draft, which was never on the site', async () => {
+      const draft = await seedDraft();
+      const res = await request('PATCH', `/v1/admin/venues/${draft.id}`, {
+        active: false,
+        hideReason: 'other',
+        hideNote: 'not yet',
+      });
+      expect(res.status).toBe(200);
+      const [row] = await testDb
+        .select()
+        .from(venues)
+        .where(eq(venues.id, draft.id));
+      expect(row?.hiddenAt).toBeNull();
+      expect(row?.hiddenReason).toBeNull();
+      expect(await auditRows('venue.hide', draft.id)).toHaveLength(0);
+    });
+  });
+
   describe('Show', () => {
     it('refuses a draft with 409, writing nothing and auditing nothing', async () => {
       const draft = await seedDraft();
