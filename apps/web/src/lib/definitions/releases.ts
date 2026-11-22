@@ -52,19 +52,9 @@ export interface Release {
 // was put behind the NEXT_PUBLIC_PUBLIC_BROWSE launch gate (see
 // `src/lib/launch-mode.ts`): it is built but unreachable until the flag flips,
 // and a changelog cannot truthfully announce something nobody can do yet.
-// Restore it, redated, as part of launch.
+// Restore it, redated, as part of launch. The public page's seller line and
+// resale marking (B+ addendum 10) sit behind the same gate and join that entry.
 export const RELEASES: Release[] = [
-  {
-    version: 'v0.77.0-beta',
-    date: 'Nov 22, 2026',
-    headline: null,
-    items: [
-      {
-        kind: 'added',
-        text: 'A show link you share now says who sells the price, and marks resale as resale.',
-      },
-    ],
-  },
   {
     version: 'v0.76.0-beta',
     date: 'Nov 22, 2026',
