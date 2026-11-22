@@ -68,7 +68,13 @@ const readHeadlinePrice = (event: object): string | undefined => {
     if (typeof block !== 'object' || block === null) continue;
     const headline: unknown = Reflect.get(block, 'headline');
     if (typeof headline !== 'object' || headline === null) continue;
-    return readString(headline, 'priceMin');
+    // Skip a headline whose floor is not a number, as the API's
+    // lowestHeadline does, so a malformed row falls back to the scalar
+    // rather than rendering "tba".
+    const priceMin = readString(headline, 'priceMin');
+    if (priceMin !== undefined && Number.isFinite(parseFloat(priceMin))) {
+      return priceMin;
+    }
   }
   return undefined;
 };
