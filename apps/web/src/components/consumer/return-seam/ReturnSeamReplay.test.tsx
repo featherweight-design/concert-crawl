@@ -95,6 +95,21 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     ).toBe('/watching');
   });
 
+  it("draws the watched show's artwork in the strip once the cache holds it", () => {
+    withIntent(`watch:${EVENT_ID}`, 'Geese');
+    watchingData.mockReturnValue([
+      {
+        eventId: EVENT_ID,
+        imageUrl: 'https://img.example/geese.jpg',
+        artistPhotoUrl: null,
+        genres: [],
+      },
+    ]);
+    render(<ReturnSeamReplay />);
+    const art = screen.getByTestId('return-seam-strip-art');
+    expect(art.querySelector('img')?.getAttribute('src')).toContain('geese');
+  });
+
   it('fires exactly once, since the endpoint is a toggle and a second run un-watches', () => {
     withIntent(`watch:${EVENT_ID}`, 'Geese');
     mutate.mockImplementation((_id, opts) => opts.onSuccess());
@@ -263,6 +278,8 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     expect(screen.getByTestId('return-seam-strip').textContent).toContain(
       'Now following TOKiMONSTA.',
     );
+    // No artwork tile either: that is the watch strip's.
+    expect(screen.queryByTestId('return-seam-strip-art')).toBeNull();
     // No View link: a follow does not live there.
     expect(
       within(screen.getByTestId('return-seam-strip')).queryByRole('link'),
