@@ -110,8 +110,11 @@ const FOOTER_BLEED = {
 } as const;
 
 // The hairline under the close row once the body has scrolled (addendum 6
-// item 15, as ModalShell's rail). It runs edge to edge, so it reaches past the
-// sheet's padding by the same amounts as FOOTER_BLEED.
+// item 15, as ModalShell's rail). Item 15 is the rule for sheets with a pinned
+// main action, so only the `footer` slot draws it; sheets without a footer
+// (Remove, Share Concert Crawl, the iPhone how-to, and Add a show, a pinned
+// search list with no main action) keep no rule. It runs edge to edge, so it reaches past the sheet's padding by the
+// same amounts as FOOTER_BLEED.
 const RULE_BLEED = {
   default: '-inset-x-6',
   tight: '-inset-x-4 min-[360px]:-inset-x-5',
