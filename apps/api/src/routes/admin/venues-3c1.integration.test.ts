@@ -89,7 +89,7 @@ describe('admin venues API, 3c-1 draft safety', () => {
 
       const audits = await auditRows('venue.create', data.id);
       expect(audits).toHaveLength(1);
-      expect(audits[0]?.meta).toEqual({ draft: true });
+      expect(audits[0]?.metadata).toEqual({ draft: true });
     });
 
     it('a draft stays a draft even when the body says active', async () => {
