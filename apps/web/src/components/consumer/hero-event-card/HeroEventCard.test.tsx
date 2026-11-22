@@ -81,6 +81,47 @@ describe('HeroEventCard — eyebrow badge', () => {
   });
 });
 
+describe('HeroEventCard — price', () => {
+  const headline = (priceMin: string) => ({
+    tier: 'GA' as const,
+    headline: {
+      submissionId: 'sub-1',
+      priceMin,
+      priceMax: null,
+      vendor: 'VenueBoxOffice' as const,
+      sourceCategory: 'standard' as const,
+      submitterHandle: null,
+      observedAt: '2026-06-01T00:00:00.000Z',
+      approvedAt: '2026-06-01T00:00:00.000Z',
+      approvalKind: 'admin' as const,
+      confirmsCount: 1,
+    },
+    alternates: [],
+    pending: [],
+    counterSubmission: null,
+    reports: 0,
+  });
+
+  it('shows the cheapest tier, not the last-written ticketPriceMin scalar', () => {
+    render(
+      <HeroEventCard
+        event={{
+          ...baseEvent,
+          ticketPriceMin: '95',
+          priceByTier: [headline('25.00')],
+        }}
+      />,
+    );
+    expect(screen.getByText('$25')).toBeDefined();
+    expect(screen.queryByText('$95')).toBeNull();
+  });
+
+  it('falls back to the scalar when the payload has no priceByTier', () => {
+    render(<HeroEventCard event={{ ...baseEvent, ticketPriceMin: '40' }} />);
+    expect(screen.getByText('$40')).toBeDefined();
+  });
+});
+
 describe('HeroEventCard — imagery chain (#1525)', () => {
   const portrait = 'https://example.test/artist.jpg';
 
