@@ -129,7 +129,11 @@ describe('migration 0116: venue drafts and test crawls', () => {
   it('backfills went_live_at to created_at and leaves a set value alone', async () => {
     const createdAt = new Date('2026-01-02T03:04:05Z');
     const liveAt = new Date('2026-05-06T07:08:09Z');
-    const draft = await seedVenue({ slug: 'm116-draft', createdAt });
+    const draft = await seedVenue({
+      slug: 'm116-draft',
+      createdAt,
+      wentLiveAt: null,
+    });
     const live = await seedVenue({
       slug: 'm116-live',
       createdAt,

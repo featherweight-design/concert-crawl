@@ -47,6 +47,18 @@ describe('VenueStatus', () => {
     );
   });
 
+  it('says a draft is a draft and not crawled', () => {
+    render(
+      <VenueStatus venue={{ ...venue, active: false, wentLiveAt: null }} />,
+    );
+    expect(screen.getByTestId('venue-status-on-site')).toHaveTextContent(
+      'Draft',
+    );
+    expect(screen.getByTestId('venue-status-crawling')).toHaveTextContent(
+      'Not crawled',
+    );
+  });
+
   // `A6/22/hidden-venue-menu`: the pause holds once it's shown.
   it('gives a hidden, paused venue the pause chip with its reason', () => {
     render(

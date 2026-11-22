@@ -101,6 +101,9 @@ export async function seedVenue(
       timezone: 'America/Denver',
       active: true,
       verified: true,
+      // Live, like every venue the create route makes without `draft`. A test
+      // that wants a draft passes `wentLiveAt: null` (with `active: false`).
+      wentLiveAt: new Date(),
       ...overrides,
     })
     .returning();

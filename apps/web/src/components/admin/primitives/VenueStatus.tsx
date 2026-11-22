@@ -101,6 +101,8 @@ export type VenueStatusVenue = Pick<
 > & {
   /** A pause with a reason is a hand pause, never an auto-pause. */
   crawlPauseReason?: Venue['crawlPauseReason'];
+  /** Null is a draft. */
+  wentLiveAt?: Venue['wentLiveAt'];
 };
 
 /**
@@ -132,8 +134,9 @@ export const VenueStatus = ({
   // something else would stop the crawl once it's shown: then the same chip a
   // live venue gets (blocked, robots.txt, a pause), in the same precedence, so
   // the chip and the ⋯ menu agree (`A6/22/hidden-venue-menu`).
+  // A draft isn't crawled either, so it reads the same way.
   const hiddenUnpaused =
-    chips.onSite === 'hidden' && chips.crawling === 'crawling';
+    chips.onSite !== 'live' && chips.crawling === 'crawling';
   const crawling = hiddenUnpaused
     ? NOT_CRAWLED
     : inList && chips.crawling === 'auto_paused'

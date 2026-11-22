@@ -88,6 +88,7 @@ import {
   upcomingShowCount,
   pastShowsAndWatchers,
   upcomingShowSplit,
+  venueDraftBody,
   venueRemovedBody,
 } from './lib/venue-hide.js';
 
@@ -784,12 +785,18 @@ venuesAdminRouter.get('/:id', async (ctx) => {
   });
 });
 
+// Admin 3c: `draft: true` saves a venue that isn't live yet. Create-only, so
+// an update can never turn a live venue back into a draft.
+const createVenueBodySchema = createVenueSchema.extend({
+  draft: z.boolean().default(false),
+});
+
 // POST /v1/admin/venues — create venue with slug uniqueness check
 venuesAdminRouter.post(
   '/',
-  zValidator('json', createVenueSchema, validationHook),
+  zValidator('json', createVenueBodySchema, validationHook),
   async (ctx) => {
-    const body = ctx.req.valid('json');
+    const { draft, ...body } = ctx.req.valid('json');
 
     const [slugConflict] = await db
       .select({ id: venues.id })
@@ -809,9 +816,12 @@ venuesAdminRouter.post(
         ...body,
         ticketVendor: body.ticketVendor ?? null,
         verified: true,
-        // Admin 3c: NULL means a draft. This route creates a live venue; the
-        // draft flow (3c) will be the only writer of a NULL.
-        wentLiveAt: new Date(),
+        // A draft is `active = false` and `went_live_at IS NULL`: the existing
+        // `active` filters keep it off the site and out of the nightly crawl.
+        // This is the only writer of a NULL; Go live (3c-3) stamps it.
+        ...(draft
+          ? { active: false, wentLiveAt: null }
+          : { wentLiveAt: new Date() }),
       })
       .returning();
 
@@ -844,6 +854,7 @@ venuesAdminRouter.post(
     }
 
     ctx.set('auditAction', 'venue.create');
+    if (draft) ctx.set('auditMeta', { draft: true });
     ctx.set('auditTargetId', venue.id);
     ctx.set('auditActorId', getAuthUser(ctx).userId);
 
@@ -887,6 +898,11 @@ venuesAdminRouter.patch(
     const refusedIfRemoved = body.active === true || reconfiguresCrawl;
     if (refusedIfRemoved && existing.removedAt !== null) {
       return ctx.json(venueRemovedBody, 409);
+    }
+    // A draft goes on the site only through Go live (3c-3), never Show.
+    // `went_live_at` is never set back to NULL, so this read can't go stale.
+    if (body.active === true && existing.wentLiveAt === null) {
+      return ctx.json(venueDraftBody, 409);
     }
 
     // TODO(2026-11-13, #404): drop this tolerance one release after #404 ships; refuse these keys outright again.

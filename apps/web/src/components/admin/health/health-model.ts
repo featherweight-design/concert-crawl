@@ -388,9 +388,10 @@ export const groupVenues = (
       continue;
     }
     // GAP G6: hidden, blocked and robots.txt venues have no drawn group, so
-    // otherwise they stay off the grid until Design draws one.
+    // otherwise they stay off the grid until Design draws one. A draft isn't
+    // crawled, so it stays off too.
     if (
-      onSite === 'hidden' ||
+      onSite !== 'live' ||
       crawling === 'blocked' ||
       crawling === 'robots_disallowed'
     ) {

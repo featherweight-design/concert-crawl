@@ -32,6 +32,20 @@ export const venueRemovedBody = {
   code: VENUE_REMOVED_CODE,
 } as const;
 
+/**
+ * Admin 3c: a draft (`went_live_at IS NULL`) reaches the site only through Go
+ * live, which checks it's ready. Show answers 409 with this body, before any
+ * write and with no audit row.
+ */
+export const VENUE_DRAFT_ERROR =
+  'This venue is a draft. Finish setting it up and use Go live.';
+export const VENUE_DRAFT_CODE = 'venue_draft';
+export const venueDraftBody = {
+  success: false,
+  error: VENUE_DRAFT_ERROR,
+  code: VENUE_DRAFT_CODE,
+} as const;
+
 /** The database or a transaction on it, so a count can join a delete's lock. */
 type Reader = Pick<typeof db, 'select'>;
 

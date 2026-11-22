@@ -14,6 +14,18 @@ describe('deriveVenueStatusChips', () => {
   it.each([
     ['a live, crawling venue', {}, 'live', 'crawling'],
     ['a hidden venue still crawling', { active: false }, 'hidden', 'crawling'],
+    [
+      'a hidden venue that has been live',
+      { active: false, wentLiveAt: AT },
+      'hidden',
+      'crawling',
+    ],
+    [
+      'a draft (never live)',
+      { active: false, wentLiveAt: null },
+      'draft',
+      'crawling',
+    ],
     ['paused by hand', { crawlPausedAt: AT }, 'live', 'paused'],
     [
       'auto-paused after 3 failures',

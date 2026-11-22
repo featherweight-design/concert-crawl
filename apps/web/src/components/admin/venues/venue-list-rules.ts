@@ -329,13 +329,13 @@ const OK_RANK = 6;
  * Worst first (ruling 19): blocked, auto-paused, failing, the Needs you dot,
  * paused, then OK by name. A dot outranks paused, so a paused venue with an
  * item waiting rises to rank 3. A hidden venue isn't crawled, so it reads as
- * not OK and sorts after paused, before OK.
+ * not OK and sorts after paused, before OK, and so does a draft.
  */
 export const worstRank = (venue: RankedVenue): number => {
   const { onSite, crawling } = deriveVenueStatusChips(venue);
   // Something waiting in Needs you outranks a quiet hidden venue: the chip
   // counts it, so the list mustn't bury it among the hidden ones.
-  if (onSite === 'hidden') return venue.needsLook === true ? 3 : 5;
+  if (onSite !== 'live') return venue.needsLook === true ? 3 : 5;
   if (crawling === 'blocked') return 0;
   if (crawling === 'auto_paused') return 1;
   if (crawling === 'crawling' && isFailing(venue)) return 2;
