@@ -31,6 +31,7 @@ vi.mock('next/link', () => ({
 
 import { HeroEventCard, spotlightGlow } from './HeroEventCard';
 import { NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
+import { useFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 
 afterEach(() => {
   cleanup();
@@ -325,5 +326,20 @@ describe('HeroEventCard — spotlight backdrop (B+ fidelity)', () => {
     expect(screen.getByTestId('hero-image-ring').className).toContain(
       'rounded-[12px]',
     );
+  });
+});
+
+describe('HeroEventCard — Followed highlight', () => {
+  it('shows the disc and the screen-reader line for a followed headliner', () => {
+    vi.mocked(useFollowedArtistNames).mockReturnValue(new Set(['test artist']));
+    render(<HeroEventCard event={baseEvent} />);
+    expect(screen.getByTestId('followed-disc')).toBeTruthy();
+    expect(screen.getByText(/you follow Test Artist/i)).toBeTruthy();
+  });
+
+  it('shows nothing when the viewer follows nobody on the bill', () => {
+    vi.mocked(useFollowedArtistNames).mockReturnValue(new Set());
+    render(<HeroEventCard event={baseEvent} />);
+    expect(screen.queryByTestId('followed-disc')).toBeNull();
   });
 });
