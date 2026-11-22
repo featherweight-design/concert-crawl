@@ -60,7 +60,6 @@ const event = {
     timezone: 'America/Denver',
   },
   ticketPriceMin: '28.00',
-  ticketPriceOpenedAt: 40,
   priceStatus: 'live',
 };
 
