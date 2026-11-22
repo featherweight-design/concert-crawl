@@ -172,6 +172,7 @@ export const ReturnSeamReplay = () => {
   const [strip, setStrip] = useState<{
     action: IntentAction;
     label: string;
+    at: string;
   } | null>(null);
   const shown = useRef<string | null>(null);
   useEffect(() => {
@@ -179,8 +180,8 @@ export const ReturnSeamReplay = () => {
     const key = `${action}:${label}`;
     if (shown.current === key) return;
     shown.current = key;
-    setStrip({ action, label });
-  }, [replayed, failed, label, action]);
+    setStrip({ action, label, at: pathname });
+  }, [replayed, failed, label, action, pathname]);
 
   useEffect(() => {
     if (strip === null) return;
@@ -188,12 +189,11 @@ export const ReturnSeamReplay = () => {
     return () => window.clearTimeout(timer);
   }, [strip]);
 
-  // Any navigation dismisses it. The replay's own URL strip keeps the pathname,
-  // so only a real move away changes it.
-  const landedAt = useRef(pathname);
+  // Any navigation dismisses it: the page it was shown on is where it belongs.
+  // The replay's own URL strip keeps the pathname, so only a real move changes it.
   useEffect(() => {
-    if (pathname !== landedAt.current) setStrip(null);
-  }, [pathname]);
+    if (strip !== null && pathname !== strip.at) setStrip(null);
+  }, [pathname, strip]);
 
   if (strip === null) return null;
   return (
