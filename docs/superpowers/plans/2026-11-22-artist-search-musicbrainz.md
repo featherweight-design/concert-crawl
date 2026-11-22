@@ -19,9 +19,7 @@ Out of scope: any UI build (see "UI needs Design first"), a full MB mirror or MB
 7. **Matching keeps today's safety rule.** An MB answer is accepted for an existing Spotify-matched artist only when its Spotify relation agrees with ours (the spike found 3 conflicts in 25).
 8. **Spotify photos are re-fetched at least every 30 days and dropped when Spotify no longer has them** (Hugh, 2026-11-22). Spotify's developer terms allow only temporary caching. Today the daily `match-artists` job (`apps/api/src/jobs/match-artists.ts`) already date-stamps each photo (`artists.photo_fetched_at`) and re-fetches it after `PHOTO_REFETCH_DAYS = 7`, but when the name re-search no longer lands on the same Spotify artist it keeps the old photo, so a photo can outlive its source indefinitely. The change: refresh by our stored Spotify id rather than by name, clear `photo_url` and `photo_fetched_at` when Spotify no longer returns that artist or returns it with no image, and never serve a photo whose `photo_fetched_at` is more than 30 days old. The 7-day cadence stays as it is, inside the 30-day ceiling. The cleared row falls back to the next image in decision 5's order.
 
-## Open question for Hugh (not decided here)
-
-- **MetaBrainz supporter tier.** MetaBrainz asks commercial users to take a supporter tier. Proposed: the $0 Stealth Start-Up tier now, and a paid tier at launch.
+9. **No MetaBrainz supporter tier and no payment** (Hugh, 2026-11-22). MetaBrainz asks commercial users to take a supporter tier; Concert Crawl charges nothing, so the ask does not apply. Revisit only if the app ever earns revenue.
 
 ## UI needs Design first
 
