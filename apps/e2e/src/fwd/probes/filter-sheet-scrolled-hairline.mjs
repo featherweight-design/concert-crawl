@@ -3,7 +3,7 @@
 // Fails with PhoneFilterSheet's header put back to an always-on border-border.
 export const widths = ['xs'];
 
-export default async function ({ page, goto, press, check }) {
+export default async function ({ page, goto, press, check, width }) {
   await goto('/events');
   await page.waitForLoadState('networkidle').catch(() => undefined);
   const opener = page.locator('[data-testid="filters-button"]:visible').first();
@@ -30,5 +30,8 @@ export default async function ({ page, goto, press, check }) {
   });
   await page.waitForTimeout(200);
   const after = await rule();
+  // PROBE_SHOTS=<dir> keeps a frame of the scrolled sheet for the PR's Design review.
+  if (process.env.PROBE_SHOTS)
+    await page.screenshot({ path: `${process.env.PROBE_SHOTS}/filters-scrolled-${width.label}.png` });
   check(!clear(after), 'a hairline under the header once the body scrolls', after);
 }

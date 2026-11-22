@@ -52,6 +52,9 @@ export default async function ({ page, goto, press, check, width }) {
     });
     await page.waitForTimeout(200);
     const after = await ruleColour();
+    // PROBE_SHOTS=<dir> keeps a frame of the scrolled sheet for the PR's Design review.
+    if (process.env.PROBE_SHOTS)
+      await page.screenshot({ path: `${process.env.PROBE_SHOTS}/share-scrolled-${width.label}.png` });
     check(
       after !== 'missing' && !clear(after),
       'a hairline under the close row once the body scrolls',
