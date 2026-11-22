@@ -1955,11 +1955,15 @@ describe('GET /v1/events/:id — priceCheckOutcome', () => {
     }
     const res = await app.request(`/v1/events/${event.id}`);
     const body = (await res.json()) as {
-      data: { priceCheckOutcomes: { submissionId: string }[] };
+      data: {
+        priceCheckOutcomes: { submissionId: string; outcome: string }[];
+      };
     };
-    const ids = body.data.priceCheckOutcomes.map((out) => out.submissionId);
-    expect(ids).toContain(boxOffice.id);
-    expect(ids).toContain(resale.id);
+    const byId = new Map(
+      body.data.priceCheckOutcomes.map((out) => [out.submissionId, out]),
+    );
+    expect(byId.get(boxOffice.id)).toMatchObject({ outcome: 'held' });
+    expect(byId.get(resale.id)).toMatchObject({ outcome: 'held' });
   });
 
   it('is null once the decision is older than 14 days', async () => {
