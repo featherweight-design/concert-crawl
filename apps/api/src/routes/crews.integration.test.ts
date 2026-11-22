@@ -24,7 +24,7 @@ vi.mock('@hono/clerk-auth', () => ({
 
 import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
-import { crewMembers, crews, subscriptions } from '@concert-crawl/db';
+import { crewMembers, crews, events, subscriptions } from '@concert-crawl/db';
 import type {
   CrewDetail,
   CrewShow,
@@ -427,6 +427,16 @@ describe('/v1/crews', () => {
         );
         await seedCancelled('cancelled-old', new Date(Date.now() - 25 * HOUR));
         await seedCancelled('cancelled-untimed', null);
+        // A stale time on a row the sweep delisted: No longer listed, never
+        // Cancelled, so it does not take the day either.
+        const swept = await seedCancelled(
+          'cancelled-swept',
+          new Date(Date.now() - HOUR),
+        );
+        await testDb
+          .update(events)
+          .set({ delistedAt: new Date() })
+          .where(eq(events.id, swept));
         const crewId = await seedCrew([KEEPER, MATE]);
         setAuth();
 

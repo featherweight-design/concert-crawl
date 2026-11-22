@@ -59,7 +59,9 @@ export const CrewComingUpRow = ({ show, viewerId }: CrewComingUpRowProps) => {
   const cancelled = show.status === 'cancelled';
   const row = fromCrewShow(show);
   const summary = summariseGoing(show, viewerId, COPY.you);
-  const tonight = isTonight(show.iso);
+  // A cancelled show has no tonight: its tile keeps the date, so it never
+  // reads TONIGHT beside the Cancelled chip.
+  const tonight = !cancelled && isTonight(show.iso);
   const tile = tileParts(show.iso);
   // Tonight is the night the doors matter (the board's "Doors 7:00 PM"); a
   // later show reads its show time, and so does tonight without a doors time.

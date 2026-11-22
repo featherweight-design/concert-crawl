@@ -66,12 +66,20 @@ const OpenSeat = () => (
 );
 
 /**
+ * Coming up keeps a show cancelled in the last day (addendum 6 item 41), but
+ * it is not a plan: it opens no tab and counts for nothing, as on the crew
+ * card.
+ */
+const liveUpcomingCount = (crew: CrewDetail): number =>
+  crew.upcoming.filter((show) => show.status !== 'cancelled').length;
+
+/**
  * Which tab opens. Coming up when there is something in it, otherwise Been
  * there when there is history, otherwise the roster — the sibling of #1357's
  * tense split, so a quiet crew never opens on an empty state it can't fix.
  */
 export const leadTabFor = (crew: CrewDetail): CrewTabId =>
-  crew.upcoming.length > 0
+  liveUpcomingCount(crew) > 0
     ? 'upcoming'
     : crew.nights.length > 0
       ? 'nights'
@@ -143,7 +151,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
     {
       id: 'upcoming',
       label: COPY.detail.upcomingTitle,
-      count: crew.upcoming.length,
+      count: liveUpcomingCount(crew),
     },
     { id: 'nights', label: COPY.detail.pastTitle, count: crew.nights.length },
     { id: 'roster', label: COPY.detail.rosterTitle, count: memberCount },

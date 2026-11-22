@@ -179,6 +179,10 @@ describe('CrewUpcoming', () => {
     expect(link).toHaveStyle({ textDecoration: 'line-through' });
     const row = screen.getByTestId('crew-coming-up-row');
     expect(row).not.toHaveTextContent('Doors');
+    expect(row).toHaveAttribute('data-tonight', 'false');
+    expect(screen.getByTestId('crew-coming-up-tile')).not.toHaveTextContent(
+      'TONIGHT',
+    );
     // Someone else is going, which would draw I'm in on a show that is on.
     expect(screen.queryByRole('button', { name: /I'm in/ })).toBeNull();
   });
