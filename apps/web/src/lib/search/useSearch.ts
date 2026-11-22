@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ArtistSearchResult } from '@concert-crawl/types';
+import type { ArtistSearchResult, TierPriceBlock } from '@concert-crawl/types';
+import { pickApprovedHeadline } from '@/components/consumer/price-region/lib/pick-headline';
 import { useAuthToken } from './useAuthToken';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -22,6 +23,11 @@ export interface ArtistResult {
   genres?: string[] | null;
   imageUrl?: string | null;
   artistPhotoUrl?: string | null;
+  /**
+   * The soonest show's cheapest corroborated tier floor, falling back to the
+   * `ticketPriceMin` scalar when no tier carries a headline (#1365). Named for
+   * the scalar so the row's price reads one field across result kinds.
+   */
   ticketPriceMin?: string | null;
 }
 
@@ -58,6 +64,7 @@ interface EventRow {
   imageUrl?: string | null;
   artistPhotoUrl?: string | null;
   ticketPriceMin?: string | null;
+  priceByTier?: TierPriceBlock[] | null;
 }
 
 function readRecent(): string[] {
@@ -92,7 +99,10 @@ function deriveArtistResults(rows: EventRow[]): ArtistResult[] {
         genres: row.genre ?? null,
         imageUrl: row.imageUrl ?? null,
         artistPhotoUrl: row.artistPhotoUrl ?? null,
-        ticketPriceMin: row.ticketPriceMin ?? null,
+        ticketPriceMin:
+          pickApprovedHeadline(row.priceByTier)?.priceMin ??
+          row.ticketPriceMin ??
+          null,
       });
     }
   }

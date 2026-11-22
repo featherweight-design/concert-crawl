@@ -48,6 +48,12 @@ const EVENTS_RESPONSE = {
         tourName: null,
         date: '2027-06-01',
         title: 'Radiohead Live',
+        // A stale scalar behind a cheaper corroborated tier (#1365).
+        ticketPriceMin: '95.00',
+        priceByTier: [
+          { headline: null },
+          { headline: { priceMin: '25.00', priceMax: '30.00' } },
+        ],
         venue: { id: 'venue-rr', name: 'Red Rocks', slug: 'red-rocks' },
       },
       {
@@ -181,6 +187,24 @@ describe('useSearch — debounce', () => {
     );
     expect(artists).toHaveLength(1);
     expect(artists[0]?.nextDate).toBe('2027-06-01');
+  });
+
+  it('prices an artist row from the cheapest tier, not the scalar', async () => {
+    const { result } = renderHook(() => useSearch());
+
+    act(() => {
+      result.current.setQuery('Radiohead');
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+
+    const radiohead = result.current.artistResults.find(
+      (artist) => artist.name === 'Radiohead',
+    );
+    expect(radiohead?.ticketPriceMin).toBe('25.00');
   });
 
   it('derives venue results with show count', async () => {

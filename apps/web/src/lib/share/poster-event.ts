@@ -1,4 +1,5 @@
-import type { EventDetailResponse } from '@concert-crawl/types';
+import type { EventDetailResponse, TierPriceBlock } from '@concert-crawl/types';
+import { pickApprovedHeadline } from '@/components/consumer/price-region/lib/pick-headline';
 import {
   formatEventDate,
   formatShowTime,
@@ -41,13 +42,26 @@ const parseAmount = (raw: string | null | undefined): number | null => {
  * dropped" is actively misleading. Everything else is `going`, which is also
  * the tagline bank's fallback.
  */
-export const posterStateFor = (event: {
-  priceStatus?: 'live' | 'soldout' | null;
+type PosterPriceSource = {
   ticketPriceMin?: string | null;
+  priceByTier?: ReadonlyArray<TierPriceBlock> | null;
   ticketPriceOpenedAt?: number | null;
-}): PosterState => {
+};
+
+/**
+ * Today's price: the cheapest tier's corroborated floor, else the scalar
+ * (#1365). The scalar alone can hold a stale tier and fake a drop.
+ */
+const currentPrice = (event: PosterPriceSource): number | null =>
+  parseAmount(
+    pickApprovedHeadline(event.priceByTier)?.priceMin ?? event.ticketPriceMin,
+  );
+
+export const posterStateFor = (
+  event: PosterPriceSource & { priceStatus?: 'live' | 'soldout' | null },
+): PosterState => {
   if (event.priceStatus === 'soldout') return 'soldout';
-  const current = parseAmount(event.ticketPriceMin);
+  const current = currentPrice(event);
   const opened = event.ticketPriceOpenedAt ?? null;
   if (current !== null && opened !== null && current < opened) return 'drop';
   return DEFAULT_POSTER_STATE;
@@ -57,11 +71,8 @@ export const posterStateFor = (event: {
  * The `↓ $XX` the state pill carries in the drop state (handoff README §1).
  * Null for every other state, so the pill renders label-only.
  */
-export const posterDropLabel = (event: {
-  ticketPriceMin?: string | null;
-  ticketPriceOpenedAt?: number | null;
-}): string | null => {
-  const current = parseAmount(event.ticketPriceMin);
+export const posterDropLabel = (event: PosterPriceSource): string | null => {
+  const current = currentPrice(event);
   const opened = event.ticketPriceOpenedAt ?? null;
   if (current === null || opened === null || current >= opened) return null;
   return `↓ $${Math.round(opened - current)}`;
@@ -91,6 +102,7 @@ export interface PosterSource {
   venue: { name: string; city: string; timezone: string };
   priceStatus?: 'live' | 'soldout' | null;
   ticketPriceMin?: string | null;
+  priceByTier?: ReadonlyArray<TierPriceBlock> | null;
   ticketPriceOpenedAt?: number | null;
 }
 
