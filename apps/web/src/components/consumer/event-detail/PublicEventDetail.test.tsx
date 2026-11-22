@@ -546,7 +546,15 @@ describe('PublicEventDetail price card, Sold by (B+ addendum 10)', () => {
   type Category = 'boxoffice' | 'standard' | 'resale';
   const listed = (
     submissionId: string,
-    vendor: 'VenueBoxOffice' | 'Ticketmaster' | 'AXS' | 'StubHub' | 'SeatGeek',
+    vendor:
+      | 'VenueBoxOffice'
+      | 'Ticketmaster'
+      | 'AXS'
+      | 'StubHub'
+      | 'SeatGeek'
+      | 'DICE'
+      | 'Etix'
+      | 'VividSeats',
     priceMin: string,
     sourceCategory: Category,
   ) => ({
@@ -578,7 +586,6 @@ describe('PublicEventDetail price card, Sold by (B+ addendum 10)', () => {
     render(
       <PublicEventDetail
         event={buildEvent({
-          priceSubmissionId: 'vbo',
           priceByTier: [
             gaBlock(listed('vbo', 'VenueBoxOffice', '38.00', 'boxoffice')),
           ],
@@ -622,25 +629,11 @@ describe('PublicEventDetail price card, Sold by (B+ addendum 10)', () => {
     render(
       <PublicEventDetail
         event={buildEvent({
-          priceSubmissionId: 'sh',
-          priceByTier: [gaBlock(listed('sh', 'StubHub', '80.00', 'resale'))],
-          priceAlternates: [
-            {
-              id: 'axs',
-              tier: 'GA',
-              vendor: 'AXS',
-              priceMin: '47.00',
-              priceMax: null,
-              sourceCategory: 'standard',
-            },
-            {
-              id: 'sg',
-              tier: 'GA',
-              vendor: 'SeatGeek',
-              priceMin: '95.00',
-              priceMax: null,
-              sourceCategory: 'resale',
-            },
+          priceByTier: [
+            gaBlock(listed('sh', 'StubHub', '80.00', 'resale'), [
+              listed('sg', 'SeatGeek', '95.00', 'resale'),
+              listed('axs', 'AXS', '47.00', 'standard'),
+            ]),
           ],
         })}
         related={[]}
@@ -683,28 +676,18 @@ describe('PublicEventDetail price card, Sold by (B+ addendum 10)', () => {
   });
 
   it('caps Also at three rows and counts the rest', () => {
-    const alternates = (
-      [
-        { id: 'axs', vendor: 'AXS', priceMin: '47.00' },
-        { id: 'dice', vendor: 'DICE', priceMin: '50.00' },
-        { id: 'etix', vendor: 'Etix', priceMin: '52.00' },
-        { id: 'sg', vendor: 'SeatGeek', priceMin: '60.00' },
-        { id: 'vs', vendor: 'VividSeats', priceMin: '70.00' },
-      ] as const
-    ).map((row) => ({
-      ...row,
-      tier: 'GA' as const,
-      priceMax: null,
-      sourceCategory: 'standard' as const,
-    }));
     render(
       <PublicEventDetail
         event={buildEvent({
-          priceSubmissionId: 'tm',
           priceByTier: [
-            gaBlock(listed('tm', 'Ticketmaster', '45.00', 'standard')),
+            gaBlock(listed('tm', 'Ticketmaster', '45.00', 'standard'), [
+              listed('axs', 'AXS', '47.00', 'standard'),
+              listed('dice', 'DICE', '50.00', 'standard'),
+              listed('etix', 'Etix', '52.00', 'standard'),
+              listed('sg', 'SeatGeek', '60.00', 'standard'),
+              listed('vs', 'VividSeats', '70.00', 'standard'),
+            ]),
           ],
-          priceAlternates: alternates,
         })}
         related={[]}
       />,

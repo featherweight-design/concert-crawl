@@ -40,23 +40,12 @@ const block = (
   reports: 1,
 });
 
-const alt = (
-  id: string,
-  vendor: string,
-  priceMin: string,
-  sourceCategory: Category = 'standard',
-  tier: TierPriceBlock['tier'] = 'GA',
-) => ({ id, tier, vendor, priceMin, priceMax: null, sourceCategory });
-
 const event = (
   overrides: Partial<PublicPriceEvent> = {},
 ): PublicPriceEvent => ({
   status: 'upcoming',
   priceStatus: 'live',
-  priceSubmissionId: null,
-  priceAlternates: null,
   priceByTier: null,
-  counterSubmission: null,
   ticketPriceMin: null,
   ticketPriceMax: null,
   ...overrides,
@@ -82,7 +71,6 @@ describe('buildPublicPrice', () => {
   it('names a box office headline and its kind (case A)', () => {
     const result = buildPublicPrice(
       event({
-        priceSubmissionId: 'vbo',
         priceByTier: [
           block('GA', price('vbo', 'VenueBoxOffice', '38.00', 'boxoffice')),
         ],
@@ -114,35 +102,42 @@ describe('buildPublicPrice', () => {
   it('lists every other seller under Also, cheapest first', () => {
     const result = buildPublicPrice(
       event({
-        priceSubmissionId: 'tm',
-        priceByTier: [block('GA', price('tm', 'Ticketmaster', '45.00'))],
-        priceAlternates: [
-          alt('axs', 'AXS', '47.00'),
-          alt('vbo', 'VenueBoxOffice', '38.00', 'boxoffice'),
+        priceByTier: [
+          block('GA', price('tm', 'Ticketmaster', '45.00'), [
+            price('axs', 'AXS', '47.00'),
+          ]),
+          block('VIP', price('vbo', 'VenueBoxOffice', '38.00', 'boxoffice')),
         ],
       }),
     );
     if (result.case !== 'headline') throw new Error(result.case);
-    expect(result.also.map((row) => row.id)).toEqual(['vbo', 'axs']);
+    expect(result.also.map((row) => [row.submissionId, row.tier])).toEqual([
+      ['vbo', 'VIP'],
+      ['axs', 'GA'],
+    ]);
     expect(result.moreCount).toBe(0);
   });
 
   it(`caps Also at ${ALSO_LIMIT} rows and counts the rest`, () => {
     const result = buildPublicPrice(
       event({
-        priceSubmissionId: 'tm',
-        priceByTier: [block('GA', price('tm', 'Ticketmaster', '45.00'))],
-        priceAlternates: [
-          alt('axs', 'AXS', '47.00'),
-          alt('sg', 'SeatGeek', '60.00', 'resale'),
-          alt('se', 'StubHub', '55.00', 'resale'),
-          alt('vs', 'VividSeats', '70.00', 'resale'),
-          alt('dice', 'DICE', '50.00'),
+        priceByTier: [
+          block('GA', price('tm', 'Ticketmaster', '45.00'), [
+            price('axs', 'AXS', '47.00'),
+            price('sg', 'SeatGeek', '60.00', 'resale'),
+            price('se', 'StubHub', '55.00', 'resale'),
+            price('vs', 'VividSeats', '70.00', 'resale'),
+            price('dice', 'DICE', '50.00'),
+          ]),
         ],
       }),
     );
     if (result.case !== 'headline') throw new Error(result.case);
-    expect(result.also.map((row) => row.id)).toEqual(['axs', 'dice', 'se']);
+    expect(result.also.map((row) => row.submissionId)).toEqual([
+      'axs',
+      'dice',
+      'se',
+    ]);
     expect(result.moreCount).toBe(2);
   });
 
@@ -177,10 +172,12 @@ describe('buildPublicPrice', () => {
       kind: 'resale',
       resaleOnly: false,
     });
+    // The face-value price that rules out resale-only is on the card too.
+    if (result.case !== 'headline') throw new Error(result.case);
+    expect(result.also.map((row) => row.submissionId)).toEqual(['vbo']);
   });
 
-  // Orchestrator ruling 3: the cheapest resale comes from priceByTier, since
-  // the Where it's sold rows are empty on a sold-out show.
+  // Orchestrator ruling 3: the cheapest resale comes from priceByTier.
   it('names the cheapest resale on a sold-out show (case D)', () => {
     const result = buildPublicPrice(
       event({
