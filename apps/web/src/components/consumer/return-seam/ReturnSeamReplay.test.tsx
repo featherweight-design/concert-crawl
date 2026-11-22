@@ -88,7 +88,7 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
       'Now watching Geese.',
     );
     const strip = screen.getByTestId('return-seam-strip');
-    expect(strip.textContent).toContain('Kept while you were signing up');
+    expect(strip.textContent).toContain('Kept while you signed up');
     expect(strip.getAttribute('role')).toBe('status');
     expect(
       within(strip).getByRole('link', { name: 'View' }).getAttribute('href'),
@@ -280,12 +280,13 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     expect(screen.getByTestId('return-seam-strip').textContent).toContain(
       'Now following TOKiMONSTA.',
     );
-    // No artwork tile either: that is the watch strip's.
-    expect(screen.queryByTestId('return-seam-strip-art')).toBeNull();
-    // No View link: a follow does not live there.
+    // The artist's tile, and View opens the artist's page (Q10).
+    expect(screen.getByTestId('return-seam-strip-art')).toBeTruthy();
     expect(
-      within(screen.getByTestId('return-seam-strip')).queryByRole('link'),
-    ).toBeNull();
+      within(screen.getByTestId('return-seam-strip'))
+        .getByRole('link', { name: 'View' })
+        .getAttribute('href'),
+    ).toBe('/artists/tokimonsta');
     expect(mutate).not.toHaveBeenCalled();
   });
 

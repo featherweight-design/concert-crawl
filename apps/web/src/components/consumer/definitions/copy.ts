@@ -1125,7 +1125,7 @@ export const CONSUMER_COPY = {
   returnSeam: {
     watching: (show: string) => `Now watching ${show}.`,
     following: (artist: string) => `Now following ${artist}.`,
-    kept: 'Kept while you were signing up',
+    kept: 'Kept while you signed up',
     view: 'View',
   },
 

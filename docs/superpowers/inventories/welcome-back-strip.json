@@ -13,8 +13,19 @@
       "steps": [
         {
           "goto": "/events/${CC_VENDORS_EVENT_ID}?intent=watch:${CC_VENDORS_EVENT_ID}&label=Geese",
-          "wait": "text=Kept while you were signing up",
+          "wait": "text=Kept while you signed up",
           "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "welcome-back-strip-follow",
+      "label": "Artist page after a Follow replay: the strip names the artist, View opens the page",
+      "steps": [
+        {
+          "goto": "/artists/${CC_FOLLOW_ARTIST_SLUG}?intent=follow:${CC_FOLLOW_ARTIST_SLUG}&label=${CC_FOLLOW_ARTIST_NAME}",
+          "wait": "text=Kept while you signed up",
+          "settle": 5000
         }
       ]
     }
