@@ -16,12 +16,22 @@ import type { UserSubmissionItem } from '@concert-crawl/types';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
 
+// The list opens on the newest rows and grows a batch at a time (cold-review
+// item 9). The server sends every row, so a batch is a slice, not a request.
+const PAGE_SIZE = 20;
+
 interface MySubmissionsListProps {
   submissions: UserSubmissionItem[];
 }
 
 export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
-  const [filter, setFilter] = useState<SubmissionFilter>('all');
+  const [filter, setFilterState] = useState<SubmissionFilter>('all');
+  const [shown, setShown] = useState(PAGE_SIZE);
+  // A new filter starts over at one batch.
+  const setFilter = (next: SubmissionFilter) => {
+    setFilterState(next);
+    setShown(PAGE_SIZE);
+  };
 
   if (submissions.length === 0) {
     return (
@@ -39,9 +49,9 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
   }
 
   const counts = countsByFilter(submissions);
-  const months = groupByMonth(
-    submissions.filter((sub) => matchesFilter(sub, filter)),
-  );
+  const matching = submissions.filter((sub) => matchesFilter(sub, filter));
+  const months = groupByMonth(matching.slice(0, shown));
+  const remaining = matching.length - shown;
 
   return (
     <div className="flex flex-col gap-4">
@@ -135,6 +145,17 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
           </div>
         </section>
       ))}
+
+      {remaining > 0 && (
+        <button
+          type="button"
+          data-testid="submissions-load-more"
+          onClick={() => setShown(shown + PAGE_SIZE)}
+          className="mx-auto min-h-[44px] rounded-full px-4 text-[13px] font-semibold text-signal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        >
+          {SETTINGS_COPY.submissionsLoadMore(Math.min(PAGE_SIZE, remaining))}
+        </button>
+      )}
     </div>
   );
 }
