@@ -1,6 +1,6 @@
 // apps/web/src/lib/feedback-draft.ts
 // localStorage-backed draft persistence for the consumer feedback modal.
-// Used by FeedbackModal to support issue #830 ("Save and come back").
+// Used by FeedbackModal: a failed send saves the draft by itself (#830).
 //
 // SSR-safe: every public helper short-circuits on the server. The TTL
 // keeps stale drafts (e.g. a user who never returned) from rehydrating

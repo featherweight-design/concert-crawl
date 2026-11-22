@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.74.0-beta',
+    date: 'Nov 22, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'changed',
+        text: 'Send feedback now lives in your account menu, with a screenshot you attach yourself and a note that waits on your phone if the send fails.',
+      },
+    ],
+  },
+  {
     version: 'v0.73.0-beta',
     date: 'Nov 14, 2026',
     headline: null,
