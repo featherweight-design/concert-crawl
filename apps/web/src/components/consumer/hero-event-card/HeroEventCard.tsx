@@ -1,25 +1,16 @@
-'use client';
-
-// A client component because the Followed highlight reads the viewer's follows
-// through a hook; every import below is client-safe and `event` is plain data.
-
 import Link from 'next/link';
 import type { EventWithVenue } from '@concert-crawl/types';
 import { Panel } from '@/components/consumer/image-slot';
 import { WatchShowButton } from '../watch-show-button';
 import { formatShowTime, venueShort } from '../definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { EventTitleBlock } from '../event-title-block';
 import { MetaRow } from '../event-row/MetaRow';
 import { fromEventWithVenue } from '../event-row/lib/row-model';
 import { orderGenres, vibeBucketMembers } from '../event-row/lib/order-genres';
 import { genreRing } from '../event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { EventImage } from '../event-image';
-import { FollowedDisc } from '../followed-mark/FollowedDisc';
-import { EVENT_ROW_COPY } from '../event-row/definitions/copy';
-import { followedOnBill } from '@/lib/followed-on-bill';
-import { useFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
+import { HeroFollowedDisc, HeroTitleBlock } from './HeroFollowed';
 import { HERO_BACKDROP_STYLE, heroFrame, heroWash } from './lib/hero-frame';
 
 const copy = CONSUMER_COPY;
@@ -47,11 +38,6 @@ export function HeroEventCard({
   filterVibes = [],
 }: HeroEventCardProps) {
   const showTime = formatShowTime(event.showTime);
-  const followedNames = followedOnBill(
-    useFollowedArtistNames(),
-    event.artist,
-    event.supportingArtists ?? [],
-  );
   // The same cheapest-tier price the rows show, so the spotlight can never
   // disagree with its own row; the scalar is only the row model's fallback.
   const rowPrice = fromEventWithVenue(event).price;
@@ -128,15 +114,10 @@ export function HeroEventCard({
               </span>
             ))}
           </div>
-          {followedNames.length > 0 && (
-            // 20px on the spotlight art (addendum-8 §6); ★ TONIGHT is untouched.
-            <FollowedDisc
-              size={20}
-              ring={2.5}
-              className="absolute"
-              style={{ right: -4, bottom: -4 }}
-            />
-          )}
+          <HeroFollowedDisc
+            headliner={event.artist}
+            supportingArtists={event.supportingArtists}
+          />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -154,14 +135,13 @@ export function HeroEventCard({
               ★ {label}
             </span>
           </div>
-          <EventTitleBlock
+          <HeroTitleBlock
             headliner={event.artist}
             supportingArtists={event.supportingArtists}
             tourName={event.tourName}
             fallbackTitle={event.title}
             status={event.status}
             surface="hero"
-            followedNames={followedNames}
             maxInline={3}
             supportClassName="hidden lg:block"
           />
@@ -212,11 +192,6 @@ export function HeroEventCard({
             />
           )}
         </div>
-        {followedNames.length > 0 && (
-          <span className="sr-only">
-            {EVENT_ROW_COPY.a11y.youFollow(followedNames)}
-          </span>
-        )}
       </Link>
 
       {/* Watch button — outside Link so clicks don't navigate */}
