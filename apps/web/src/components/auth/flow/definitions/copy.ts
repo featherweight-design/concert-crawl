@@ -11,8 +11,11 @@ export const AUTH_FLOW_COPY = {
     terms: 'Terms',
     privacy: 'Privacy',
     // The count comes from the landing's venue source, so the "21" is a
-    // number the page passes in (README gap 12), never typed here.
-    proof: (count: number) => `${count} venues · crawled every morning`,
+    // number the page passes in (README gap 12), never typed here. Worded as
+    // the landing and the invite word it (Hugh, 2026-11-22), so one claim
+    // about the crawl reads the same on every surface.
+    proof: (count: number) =>
+      `${count} ${count === 1 ? 'venue' : 'venues'} · checked every night`,
   },
   google: {
     label: 'Continue with Google',
