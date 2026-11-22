@@ -1,3 +1,20 @@
+# [1.528.0](https://github.com/featherweight-design/concert-crawl/compare/v1.527.2...v1.528.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** make the hero card a client component for the Followed highlight ([ceb107e](https://github.com/featherweight-design/concert-crawl/commit/ceb107e72a93a493f35f3da14aa4767699264b32))
+* **web:** refresh the followed-artist set when a follow is written ([2b28445](https://github.com/featherweight-design/concert-crawl/commit/2b284457a3310c896e0b4a74c1ac98edce3db851))
+* **web:** review nits on the item-15 sheets: comments, probe catch logs, inventory widths ([c8f46b9](https://github.com/featherweight-design/concert-crawl/commit/c8f46b9271dade1b3249fc13803840918119f05f))
+* **web:** sheets draw the header hairline only once scrolled, desktop cap matches modalshell ([a346cc8](https://github.com/featherweight-design/concert-crawl/commit/a346cc8fbbc683bce8d6d21f2fee99956a30c9a9))
+
+
+### Features
+
+* **db:** 0125 flag contract, retire spotify-sync and stop using enabled ([9acde94](https://github.com/featherweight-design/concert-crawl/commit/9acde948c6c23b6dcb1ec7a1270224d738dc5d9c))
+* **web:** concerts header stats drop spent, 22/30px values, top venue spans two on phone ([8a55226](https://github.com/featherweight-design/concert-crawl/commit/8a55226ed6b7e8ce494bb0a6762530f76084c5d2))
+* **web:** mark followed artists on rows, hero and event page ([defa457](https://github.com/featherweight-design/concert-crawl/commit/defa4573ebcc79008c0151fdfe12c530daccf768)), closes [#750](https://github.com/featherweight-design/concert-crawl/issues/750)
+
 ## [1.527.2](https://github.com/featherweight-design/concert-crawl/compare/v1.527.1...v1.527.2) (2026-11-22)
 
 
