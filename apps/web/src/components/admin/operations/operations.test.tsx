@@ -840,6 +840,7 @@ const WRITTEN_ACTIONS = [
   'venue.guide.save',
   'venue.guide.publish',
   'venue.guide.unpublish',
+  'venue.guide.draft',
   'venue.platform_changed',
   'venue.platform_probe',
 ];

@@ -284,8 +284,10 @@ describe('admin guide drafting (3d-2)', () => {
       { crawlPausedAt: now },
       { blockedAt: now },
     ]) {
+      const key = Object.keys(overrides)[0];
       const venue = await seedVenue({
-        name: `Venue ${Object.keys(overrides)[0]}`,
+        name: `Venue ${key}`,
+        slug: `venue-${key.toLowerCase()}`,
         ...overrides,
       });
       expect((await draft(venue.id)).status).toBe(409);

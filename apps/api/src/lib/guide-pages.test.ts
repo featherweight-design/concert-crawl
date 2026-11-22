@@ -53,7 +53,11 @@ const PAGE_TEXT = 'Parking is in the garage under the arts complex. '.repeat(5);
 const page = (
   body: string,
   init: { status?: number; headers?: Record<string, string> } = {},
-) => new Response(`<html><body><p>${body}</p></body></html>`, init);
+) =>
+  new Response(`<html><body><p>${body}</p></body></html>`, {
+    ...init,
+    headers: { 'content-type': 'text/html; charset=utf-8', ...init.headers },
+  });
 
 const statuses = (result: Awaited<ReturnType<typeof readGuidePages>>) =>
   result.attempts.map((attempt) => [
