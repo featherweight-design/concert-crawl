@@ -7,7 +7,6 @@ import {
   type CrewSummary,
   type EventsAvailabilityResponse,
   type EventsListResponse,
-  type SpotifyTastePicksResponse,
   type VenuePublic,
   type WatchingShow,
 } from '@concert-crawl/types';
@@ -34,9 +33,6 @@ import { localDateString } from '@/lib/time';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { pickerWindow } from '@/components/consumer/jump-picker/date-math';
 import { fetchAvailability } from '@/lib/queries/availability';
-import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner';
-import { DiscoveryShelf } from '@/components/consumer/spotify/DiscoveryShelf';
-import { fetchTastePicks } from '@/lib/spotify';
 import { crewLensFilterQuery, fetchCrews, fetchCrewShows } from '@/lib/crews';
 import { isFeatureEnabled } from '@/lib/feature-flags';
 import { CREWS_COPY, CrewLensList } from '@/components/consumer/crews';
@@ -231,22 +227,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     }
   })();
 
-  // SSR seed for the "Based on your taste" shelf (#763 staging r4): fetch in
-  // parallel with the events list so the shelf paints in the same HTML pass
-  // instead of popping in after the client entitlement + picks round-trips.
-  // A declined scope is the expected non-entitled path, and with the flag off
-  // the whole Spotify router is absent, so 404 belongs there too; anything else
-  // is logged so real outages stay visible. Every failure degrades to
-  // undefined → the shelf falls back to its client fetch.
-  const tastePicksPromise: Promise<SpotifyTastePicksResponse | undefined> =
-    view === 'list' && token
-      ? fetchTastePicks(token).catch((err: unknown) => {
-          if (!isScopeRejection(err))
-            console.error('taste picks SSR prefetch failed', err);
-          return undefined;
-        })
-      : Promise.resolve(undefined);
-
   // The lens pill needs the viewer's crews on the first paint or it pops in
   // after the list. A failure degrades to no pill rather than a broken page:
   // the calendar is the thing this route is for.
@@ -309,7 +289,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     venues,
     genres,
     watchedShows,
-    initialTastePicks,
     crews,
     follows,
     initialAvailability,
@@ -319,7 +298,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     fetchVenues(),
     fetchGenres().catch(() => []),
     watchedShowsPromise,
-    tastePicksPromise,
     crewsPromise,
     followsPromise,
     availabilityPromise,
@@ -384,8 +362,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
   // list wholesale. loading.tsx gates its skeleton on the same rule.
   const shelfSlotOpen = isShelfSlotOpen({ view, lensActive });
   // `zero` recruits, so it runs for logged-out visitors too (their badges
-  // render locked and hand off to the tier picker). Unknown gets no shelf: the
-  // Spotify taste shelf still has the slot in that case.
+  // render locked and hand off to the tier picker). Unknown gets no shelf.
   const shelfMode: ShelfMode | null =
     !shelfSlotOpen || followCount === null
       ? null
@@ -471,38 +448,22 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
   })();
 
   return (
-    // overflow-x-clip contains the DiscoveryShelf's full-bleed carousel (which
-    // uses -mx-4 + overflow-x-auto to reach the viewport edge on mobile) so its
-    // horizontal scroll never leaks to the page and breaks the 320px baseline.
+    // overflow-x-clip contains the shelf's full-bleed carousel (which uses -mx-4 +
+    // overflow-x-auto to reach the viewport edge on mobile) so its horizontal
+    // scroll never leaks to the page and breaks the 320px baseline.
     // 1088 is the B+ board's 1040 content column plus the 24px gutters
     // either side; the fallback and the page must share it or the shelf
     // shifts when the route resolves.
     <main className="mx-auto w-full max-w-[1088px] flex-1 overflow-x-clip px-4 pb-20 pt-4 lg:px-6 lg:pb-6">
       <PullToRefresh />
-      {/* Broken-Spotify-link notice — renders nothing unless the connection
-          is in an error/revoked state. */}
-      <SpotifyStatusBanner />
-
-      {/* One shelf slot, two claimants. The follow shelf wins it whenever the
-          server could decide a mode, because following is the thing this
-          surface is now for; the Spotify taste shelf keeps the slot only when
-          the follow seed came back unknown. Deliberately NOT a removal of the
-          taste shelf — it still renders for every viewer the follow seed
-          couldn't answer for. */}
-      {shelfMode !== null && followCount !== null ? (
+      {/* The follow shelf holds the slot whenever the server could decide a
+          mode; with the follow seed unknown the slot stays empty. */}
+      {shelfMode !== null && followCount !== null && (
         <FollowShelf
           mode={shelfMode}
           artists={shelfArtists}
           followCount={followCount}
         />
-      ) : (
-        shelfSlotOpen && (
-          <DiscoveryShelf
-            {...(initialTastePicks !== undefined && {
-              initialPicks: initialTastePicks,
-            })}
-          />
-        )
       )}
 
       {/* Filter bar */}

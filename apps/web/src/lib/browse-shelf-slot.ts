@@ -1,5 +1,4 @@
-// Browse's one shelf slot (the follow shelf, or the Spotify taste shelf when
-// the follow seed is unknown) only exists in the list view, and the crew lens
+// Browse's one shelf slot (the follow shelf) only exists in the list view, and the crew lens
 // replaces that list wholesale: a shelf above someone else's feed is a non
 // sequitur. The page and its loading fallback both read this, so the skeleton
 // never reserves a slot the page will not fill.
