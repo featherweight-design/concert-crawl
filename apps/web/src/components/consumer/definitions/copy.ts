@@ -366,15 +366,38 @@ export const CONSUMER_COPY = {
   feedback: {
     modal: {
       ariaLabel: 'Feedback',
+      closeAriaLabel: 'Close',
       form: {
         heading: 'Send feedback',
         categoryGroupLabel: 'Kind of feedback',
-        messagePlaceholder: 'What happened?',
+        // The box's label sits above it and the hint is its placeholder.
+        // `none` shows until a kind is picked.
+        field: {
+          none: {
+            label: "What's on your mind?",
+            hint: 'Pick a kind above, then tell us.',
+          },
+          bug: {
+            label: 'What happened?',
+            hint: 'What did you tap, and what did you expect?',
+          },
+          idea: {
+            label: "What's the idea?",
+            hint: 'What would make it better for you?',
+          },
+          praise: {
+            label: 'What do you love?',
+            hint: "Tell us what's working.",
+          },
+          other: { label: "What's on your mind?", hint: 'Anything at all.' },
+        },
         note: 'We read every note.',
-        screenshotEyebrow: 'Screenshot (optional)',
         screenshotAttachLabel: 'Attach a screenshot',
-        screenshotAttachSublabel: 'Optional · helps a lot',
+        screenshotAttachSublabel: 'PNG or JPEG, up to 6 MB',
+        screenshotOptional: 'Optional',
         screenshotRemoveAriaLabel: 'Remove screenshot',
+        screenshotSizeMb: (size: string) => `${size} MB`,
+        screenshotSizeKb: (size: string) => `${size} KB`,
       },
       categories: {
         bug: "Something's broken",
@@ -383,8 +406,8 @@ export const CONSUMER_COPY = {
         other: 'Other',
       },
       errors: {
-        categoryRequired: 'Pick a feedback category.',
-        messageRequired: "Don't leave us hanging, what's up?",
+        categoryRequired: 'Pick what kind of note this is.',
+        messageRequired: 'Tell us a little more first.',
         screenshotTooBig: 'That image is too big. Try a smaller screenshot.',
         // Names the two everyone has; WebP, GIF and AVIF also pass.
         screenshotWrongType: "That file type won't work. Try a PNG or JPEG.",
@@ -398,28 +421,23 @@ export const CONSUMER_COPY = {
         body: 'We read every note.',
         primaryAction: 'Done',
       },
-      error: {
-        heading: 'Signal lost.',
-        body: "We couldn't push that to the queue just now. Your message is saved on this device. Try again in a bit or send it later.",
+      // Send failed: the form stays as the fan left it, with this banner
+      // above Try again and Save and come back.
+      sendFailed: {
+        title: "Signal lost. It didn't send.",
+        body: 'Your note is saved on this phone. Try again, or save it and come back later.',
         primaryAction: 'Try again',
         secondaryAction: 'Save and come back',
       },
       contextDisclosure: {
-        toggleLabel: "Auto-attached · what we'll send",
-        fieldCount: '5 fields',
+        toggleLabel: 'What we send with it',
         fields: {
-          route: 'Route',
-          theme: 'Theme',
-          build: 'Build',
+          page: 'Page',
           device: 'Device',
-          user: 'User',
+          theme: 'Theme',
+          appVersion: 'App version',
+          account: 'Account',
         },
-      },
-      statusRail: {
-        errorLabel: "Didn't send · beta channel",
-        // No number: the rail doesn't know the real status, and a made-up one
-        // sends anyone who quotes it back to us looking in the wrong place.
-        errorCode: 'ERR',
       },
       draftBanner: {
         message: 'Saved draft restored.',

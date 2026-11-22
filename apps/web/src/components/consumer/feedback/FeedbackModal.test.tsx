@@ -92,36 +92,105 @@ describe('FeedbackModal — render', () => {
 
 // ── Regression: #829 — notes preserved on submission error ────────────────
 
-describe('FeedbackModal — error retry preserves user inputs (#829)', () => {
-  it('keeps category + message after the user retries from the error state', async () => {
+describe('FeedbackModal — send failed keeps the form (#829)', () => {
+  it('keeps kind + message under the failed banner and retries the send', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(
-        new Response('boom', { status: 500 }) as unknown as Response,
-      );
+      .mockResolvedValueOnce(new Response('boom', { status: 500 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 201 }));
     render(<FeedbackModal open={true} onClose={vi.fn()} />);
 
     fillCategoryAndMessage('the page wont load');
     await submitAndWait();
 
-    // We should be in the error state now.
-    expect(screen.getByText('Signal lost.')).toBeTruthy();
-
-    // Click "Try again" — the error-state primary action.
-    const tryAgain = screen.getByRole('button', { name: /Try again/i });
-    fireEvent.click(tryAgain);
-
-    // Form is back. Critical: message + category must still be populated.
-    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+    // The banner sits on the form; nothing the fan typed went anywhere.
+    expect(screen.getByRole('alert').textContent).toContain(
+      MODAL.sendFailed.title,
+    );
+    const textarea = screen.getByRole('textbox');
+    if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('no box');
     expect(textarea.value).toBe('the page wont load');
-    // The selected chip retains aria-pressed=true.
-    const bugChip = screen.getByRole('button', {
-      name: MODAL.categories.bug,
-      pressed: true,
-    });
-    expect(bugChip).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: MODAL.categories.bug, pressed: true }),
+    ).toBeTruthy();
 
-    fetchMock.mockRestore();
+    // Send became Try again, and it sends again.
+    const tryAgain = screen.getByRole('button', {
+      name: MODAL.sendFailed.primaryAction,
+    });
+    await act(async () => {
+      fireEvent.click(tryAgain);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(MODAL.success.heading)).toBeTruthy();
+  });
+});
+
+describe('FeedbackModal — validation', () => {
+  it('never disables Send; marks each missing field and focuses the first', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    await submitAndWait();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText(MODAL.errors.categoryRequired)).toBeTruthy();
+    expect(screen.getByText(MODAL.errors.messageRequired)).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: MODAL.categories.bug }),
+    );
+  });
+
+  it('focuses the box when only the message is missing, and clears on typing', async () => {
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: MODAL.categories.idea }),
+    );
+    await submitAndWait();
+
+    const textarea = screen.getByRole('textbox');
+    expect(document.activeElement).toBe(textarea);
+    expect(textarea.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.queryByText(MODAL.errors.categoryRequired)).toBeNull();
+    fireEvent.change(textarea, { target: { value: 'dark mode please' } });
+    expect(screen.queryByText(MODAL.errors.messageRequired)).toBeNull();
+  });
+
+  it('labels the box for the picked kind', () => {
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    expect(
+      screen.getByRole('textbox', { name: MODAL.form.field.none.label }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: MODAL.categories.bug }));
+    const box = screen.getByRole('textbox', {
+      name: MODAL.form.field.bug.label,
+    });
+    expect(box.getAttribute('placeholder')).toBe(MODAL.form.field.bug.hint);
+  });
+});
+
+describe('FeedbackModal — what we send with it', () => {
+  it('opens in place to the five fields the request carries', () => {
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    const toggle = screen.getByRole('button', {
+      name: MODAL.contextDisclosure.toggleLabel,
+    });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const fields = MODAL.contextDisclosure.fields;
+    for (const label of [
+      fields.page,
+      fields.device,
+      fields.theme,
+      fields.appVersion,
+      fields.account,
+    ]) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+    expect(screen.getByText('/browse')).toBeTruthy();
   });
 });
 

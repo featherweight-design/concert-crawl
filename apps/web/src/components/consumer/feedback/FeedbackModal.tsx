@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { useState, useCallback, useRef, useEffect, useId } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
+import {
+  Check,
+  ChevronDown,
+  CircleAlert,
+  Image as ImageIcon,
+  X,
+} from 'lucide-react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ModalShell } from '@/components/consumer/modal-shell';
 import { deviceSummary } from '@/components/consumer/error-report/lib/report-context';
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
 import { clearDraft, loadDraft, saveDraft } from '@/lib/feedback-draft';
 import {
   FEEDBACK_SCREENSHOT_TYPES,
@@ -15,13 +23,17 @@ import {
 } from '@concert-crawl/types';
 
 type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other';
+// `error` is the send-failed state: the form stays as the fan left it and a
+// banner sits above Try again and Save and come back.
 type ModalState = 'form' | 'loading' | 'success' | 'error';
 
+const MODAL = CONSUMER_COPY.feedback.modal;
+
 const CATEGORIES: { key: FeedbackCategory; label: string }[] = [
-  { key: 'bug', label: CONSUMER_COPY.feedback.modal.categories.bug },
-  { key: 'idea', label: CONSUMER_COPY.feedback.modal.categories.idea },
-  { key: 'praise', label: CONSUMER_COPY.feedback.modal.categories.praise },
-  { key: 'other', label: CONSUMER_COPY.feedback.modal.categories.other },
+  { key: 'bug', label: MODAL.categories.bug },
+  { key: 'idea', label: MODAL.categories.idea },
+  { key: 'praise', label: MODAL.categories.praise },
+  { key: 'other', label: MODAL.categories.other },
 ];
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
@@ -37,18 +49,16 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const { theme } = useTheme();
   const { getToken } = useAuth();
   const { user } = useUser();
+  const isMobile = useIsMobileViewport();
   const userEmail = user?.emailAddresses[0]?.emailAddress ?? 'anonymous';
   const [state, setState] = useState<ModalState>('form');
   const [category, setCategory] = useState<FeedbackCategory | null>(null);
   const [message, setMessage] = useState('');
   const [catError, setCatError] = useState(false);
   const [msgError, setMsgError] = useState(false);
-  const [screenshot, setScreenshot] = useState<{
-    name: string;
-    dataUrl: string;
-  } | null>(null);
+  const [screenshot, setScreenshot] = useState<ScreenshotValue | null>(null);
   // Why the picked file was refused (wrong type, or too big), shown under
-  // the picker until the fan picks again or removes it.
+  // the attach row until the fan picks again or removes it.
   const [screenshotError, setScreenshotError] = useState<
     'type' | 'size' | null
   >(null);
@@ -56,8 +66,8 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   // User can dismiss via "Discard draft" which also clears localStorage.
   const [draftRestored, setDraftRestored] = useState(false);
   // True when saveAndCloseLater hit a storage failure (quota / privacy mode).
-  // Surfaces an inline message in the error state so we never silently
-  // close while the button promised the draft was saved.
+  // Swaps the send-failed banner's text so we never silently close while
+  // the button promised the draft was saved.
   const [draftSaveFailed, setDraftSaveFailed] = useState(false);
   const prevOpenRef = useRef(false);
   // Lifted from FormFields so discardDraft / reset can clear the underlying
@@ -65,6 +75,9 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   // this, re-attaching the same file after a discard doesn't fire onChange
   // because the input's value never changed.
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Validation moves focus to the first missing field.
+  const firstChipRef = useRef<HTMLButtonElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Holds the pending reset() timer scheduled by handleClose so a quick
   // reopen can cancel it before it fires and wipes a freshly-restored
   // draft (#834 Copilot R3 — race condition: timer fires 300ms after
@@ -155,16 +168,6 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     clearFileInput();
   }, [clearFileInput]);
 
-  // Issue #829: return from the error state back to the form WITHOUT
-  // wiping category/message/screenshot so the user can correct + retry.
-  // Also clears draftSaveFailed (#834 Copilot R2) — otherwise a user who
-  // hit a save failure, returned to the form, then hit another submit
-  // error would still see the stale "Couldn't save your draft" alert.
-  const returnToForm = useCallback(() => {
-    setState('form');
-    setDraftSaveFailed(false);
-  }, []);
-
   const handleClose = useCallback(() => {
     onClose();
     // Replace any pending reset so a rapid close/reopen/close sequence
@@ -179,7 +182,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   // Issue #830: "Save and come back" — persist the current draft to
   // localStorage, then close. Reopening the modal will rehydrate it.
   // If saveDraft fails (quota exceeded, storage disabled, privacy mode)
-  // we keep the modal open and surface the failure inline so the user's
+  // we keep the modal open and swap the banner text so the user's
   // inputs aren't silently discarded by the subsequent close.
   const saveAndCloseLater = useCallback(() => {
     const saved = saveDraft({ category, message, screenshot });
@@ -203,16 +206,20 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     clearFileInput();
   }, [clearFileInput]);
 
+  // Send is never disabled: a press with something missing marks each
+  // missing field in place and moves focus to the first one.
   const handleSubmit = useCallback(async () => {
     const catInvalid = !category;
     const msgInvalid = !message.trim();
     if (catInvalid || msgInvalid) {
       setCatError(catInvalid);
       setMsgError(msgInvalid);
+      (catInvalid ? firstChipRef : textareaRef).current?.focus();
       return;
     }
 
     setState('loading');
+    setDraftSaveFailed(false);
 
     const token = await getToken();
     if (!token) {
@@ -264,43 +271,44 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   const handleMessageChange = useCallback((msg: string) => {
     setMessage(msg);
-    setMsgError(false);
+    if (msg.trim()) setMsgError(false);
   }, []);
 
-  const showForm = state === 'form' || state === 'loading';
+  // The same five fields the request carries, so the list never claims
+  // more (or less) than what rides along.
   const ctxData: CtxData = {
-    route: pathname,
-    theme,
-    build: APP_VERSION,
+    page: pathname,
     device:
       typeof navigator !== 'undefined'
-        ? navigator.userAgent.slice(0, 120)
+        ? deviceSummary(navigator.userAgent)
         : 'unknown',
-    user: userEmail,
+    theme,
+    appVersion: APP_VERSION,
+    account: userEmail,
   };
 
-  // fan-send-feedback and fan-feedback-sent-m draw no header rail and no
-  // pinned footer: the title, the chips, the field and Send sit in one
-  // column, and the sheet fits its content.
+  const success = state === 'success';
+
+  // fan-send-feedback and the feedback-modal-states boards draw no header
+  // rail and no pinned footer: the title, the chips, the field and Send sit
+  // in one column, and the sheet fits its content. Desktop is a centered
+  // modal with × top right, 440px wide once sent.
   return (
     <ModalShell
       open={open}
       onClose={handleClose}
-      ariaLabel={CONSUMER_COPY.feedback.modal.ariaLabel}
+      ariaLabel={MODAL.ariaLabel}
       sheetHeight="fit"
+      desktopWidth={success ? 440 : 520}
     >
-      <div>
-        {state === 'success' && <SuccessState onDone={handleClose} />}
-        {state === 'error' && (
-          <ErrorState
-            onRetry={returnToForm}
-            onSaveForLater={saveAndCloseLater}
-            saveFailed={draftSaveFailed}
-          />
-        )}
-        {showForm && (
+      <div style={{ position: 'relative' }}>
+        {!isMobile && <CloseButton onClick={handleClose} />}
+        {success ? (
+          <SuccessState onDone={handleClose} />
+        ) : (
           <FormFields
             state={state}
+            gap={isMobile ? 12 : 14}
             category={category}
             setCategory={handleCategoryChange}
             message={message}
@@ -313,7 +321,11 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             onScreenshotChange={handleScreenshotChange}
             draftRestored={draftRestored}
             onDiscardDraft={discardDraft}
+            draftSaveFailed={draftSaveFailed}
+            onSaveForLater={saveAndCloseLater}
             fileInputRef={fileInputRef}
+            firstChipRef={firstChipRef}
+            textareaRef={textareaRef}
             onSubmit={handleSubmit}
           />
         )}
@@ -322,14 +334,14 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   );
 }
 
-// ── Shared form fields ─────────────────────────────────────────────────────
+// ── Form ──────────────────────────────────────────────────────────────────
 
 interface CtxData {
-  route: string;
-  theme: string;
-  build: string;
+  page: string;
   device: string;
-  user: string;
+  theme: string;
+  appVersion: string;
+  account: string;
 }
 
 interface ScreenshotValue {
@@ -339,6 +351,7 @@ interface ScreenshotValue {
 
 interface FormProps {
   state: ModalState;
+  gap: number;
   category: FeedbackCategory | null;
   setCategory: (cat: FeedbackCategory) => void;
   message: string;
@@ -351,12 +364,17 @@ interface FormProps {
   onScreenshotChange: (file: File | null) => void;
   draftRestored: boolean;
   onDiscardDraft: () => void;
+  draftSaveFailed: boolean;
+  onSaveForLater: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
+  firstChipRef: React.RefObject<HTMLButtonElement | null>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   onSubmit: () => void;
 }
 
 function FormFields({
   state,
+  gap,
   category,
   setCategory,
   message,
@@ -369,33 +387,47 @@ function FormFields({
   onScreenshotChange,
   draftRestored,
   onDiscardDraft,
+  draftSaveFailed,
+  onSaveForLater,
   fileInputRef,
+  firstChipRef,
+  textareaRef,
   onSubmit,
 }: FormProps) {
   const disabled = state === 'loading';
+  const failed = state === 'error';
+  const ids = useId();
+  const catErrorId = `${ids}-cat-error`;
+  const msgErrorId = `${ids}-msg-error`;
+  const labelId = `${ids}-label`;
+  const field = MODAL.form.field[category ?? 'none'];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {draftRestored && (
-        <DraftRestoredBanner onDiscard={onDiscardDraft} disabled={disabled} />
-      )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
       <h2
         style={{
           margin: 0,
+          // Clears the desktop × drawn top right.
+          paddingRight: 40,
           fontFamily: 'var(--font-ui)',
           fontWeight: 800,
           fontSize: 19,
           color: 'var(--fg)',
         }}
       >
-        {CONSUMER_COPY.feedback.modal.form.heading}
+        {MODAL.form.heading}
       </h2>
 
-      {/* Category chips */}
+      {draftRestored && (
+        <DraftRestoredBanner onDiscard={onDiscardDraft} disabled={disabled} />
+      )}
+
+      {/* Kind chips */}
       <div>
         <div
           role="group"
-          aria-label={CONSUMER_COPY.feedback.modal.form.categoryGroupLabel}
+          aria-label={MODAL.form.categoryGroupLabel}
+          aria-describedby={catError ? catErrorId : undefined}
           style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -403,11 +435,12 @@ function FormFields({
             opacity: disabled ? 0.55 : 1,
           }}
         >
-          {CATEGORIES.map((cat) => {
+          {CATEGORIES.map((cat, index) => {
             const active = category === cat.key;
             return (
               <button
                 key={cat.key}
+                ref={index === 0 ? firstChipRef : undefined}
                 type="button"
                 disabled={disabled}
                 aria-pressed={active}
@@ -425,13 +458,7 @@ function FormFields({
                   fontWeight: 600,
                   fontSize: 13,
                   // The selected chip: a gradient rim on --surface-2.
-                  border: `1px solid ${
-                    active
-                      ? 'transparent'
-                      : catError
-                        ? 'var(--warning)'
-                        : 'var(--border)'
-                  }`,
+                  border: `1px solid ${active ? 'transparent' : 'var(--border)'}`,
                   background: active
                     ? 'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box'
                     : 'transparent',
@@ -446,34 +473,49 @@ function FormFields({
           })}
         </div>
         {catError && (
-          <HelpText tone="error">
-            {CONSUMER_COPY.feedback.modal.errors.categoryRequired}
-          </HelpText>
+          <FieldError id={catErrorId}>
+            {MODAL.errors.categoryRequired}
+          </FieldError>
         )}
       </div>
 
-      {/* Message */}
+      {/* Message: its label sits above the box, the hint is the placeholder */}
       <div>
+        <div
+          id={labelId}
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12.5,
+            fontWeight: 600,
+            color: 'var(--fg-muted)',
+            marginBottom: 6,
+          }}
+        >
+          {field.label}
+        </div>
         <textarea
+          ref={textareaRef}
           className="fb-textarea"
           value={message}
           onChange={(ev) => setMessage(ev.target.value)}
           disabled={disabled}
-          aria-label={CONSUMER_COPY.feedback.modal.form.messagePlaceholder}
-          placeholder={CONSUMER_COPY.feedback.modal.form.messagePlaceholder}
+          aria-labelledby={labelId}
+          aria-invalid={msgError || undefined}
+          aria-describedby={msgError ? msgErrorId : undefined}
+          placeholder={field.hint}
           style={{
             display: 'block',
             width: '100%',
-            minHeight: 110,
+            minHeight: 96,
             boxSizing: 'border-box',
             padding: 12,
             background: 'var(--bg)',
             color: 'var(--fg)',
-            border: `1px solid ${msgError ? 'var(--warning)' : 'var(--border-strong)'}`,
+            border: `1px solid ${msgError ? 'var(--danger)' : 'var(--border-strong)'}`,
             borderRadius: 12,
             fontFamily: 'var(--font-ui)',
             fontSize: 14,
-            lineHeight: 1.5,
+            lineHeight: 1.45,
             resize: 'vertical',
             outline: 'none',
             opacity: disabled ? 0.6 : 1,
@@ -481,209 +523,19 @@ function FormFields({
           }}
         />
         {msgError && (
-          <HelpText tone="error">
-            {CONSUMER_COPY.feedback.modal.errors.messageRequired}
-          </HelpText>
+          <FieldError id={msgErrorId}>
+            {MODAL.errors.messageRequired}
+          </FieldError>
         )}
       </div>
 
-      {/* Screenshot attachment */}
-      <div>
-        <Eyebrow>{CONSUMER_COPY.feedback.modal.form.screenshotEyebrow}</Eyebrow>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={FEEDBACK_SCREENSHOT_TYPES.join(',')}
-          style={{ display: 'none' }}
-          disabled={disabled}
-          onChange={(ev) => {
-            onScreenshotChange(ev.target.files?.[0] ?? null);
-          }}
-        />
-        {screenshot ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 14px',
-              border: '1.5px solid var(--border-strong)',
-              borderRadius: 10,
-              background: 'var(--surface-1)',
-              opacity: disabled ? 0.5 : 1,
-            }}
-          >
-            <span
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: 7,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background:
-                  'color-mix(in oklab, var(--signal) 14%, transparent)',
-                color: 'var(--signal)',
-                flexShrink: 0,
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M4 8l3 3 5-5"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            <span
-              style={{
-                flex: 1,
-                fontFamily: 'var(--font-ui)',
-                fontSize: 13,
-                fontWeight: 600,
-                color: 'var(--fg)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {screenshot.name}
-            </span>
-            <button
-              type="button"
-              disabled={disabled}
-              aria-label={
-                CONSUMER_COPY.feedback.modal.form.screenshotRemoveAriaLabel
-              }
-              onClick={() => {
-                onScreenshotChange(null);
-                if (fileInputRef.current) fileInputRef.current.value = '';
-              }}
-              style={{
-                all: 'unset',
-                cursor: disabled ? 'default' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 22,
-                height: 22,
-                borderRadius: 5,
-                color: 'var(--fg-subtle)',
-                flexShrink: 0,
-              }}
-            >
-              <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M2 2l8 8M10 2l-8 8"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              all: 'unset',
-              cursor: disabled ? 'default' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: '12px 14px',
-              border: '1.5px dashed var(--border-strong)',
-              borderRadius: 10,
-              color: 'var(--fg-muted)',
-              fontFamily: 'var(--font-ui)',
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: '-0.005em',
-              opacity: disabled ? 0.5 : 1,
-            }}
-          >
-            <span
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: 7,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'var(--surface-2)',
-                color: 'var(--signal)',
-                flexShrink: 0,
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <rect
-                  x="2"
-                  y="3.5"
-                  width="12"
-                  height="9"
-                  rx="1.5"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
-                <circle
-                  cx="8"
-                  cy="8"
-                  r="2.2"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
-                <path
-                  d="M5.5 3.5l1-1.2h3l1 1.2"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            <span
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: 1,
-              }}
-            >
-              <span
-                style={{ color: 'var(--fg)', fontSize: 13, fontWeight: 700 }}
-              >
-                {CONSUMER_COPY.feedback.modal.form.screenshotAttachLabel}
-              </span>
-              <span
-                style={{
-                  color: 'var(--fg-subtle)',
-                  fontSize: 11.5,
-                  fontWeight: 500,
-                  letterSpacing: 0,
-                }}
-              >
-                {CONSUMER_COPY.feedback.modal.form.screenshotAttachSublabel}
-              </span>
-            </span>
-          </button>
-        )}
-        {screenshotError && (
-          <div role="alert">
-            <HelpText tone="error">
-              {screenshotError === 'size'
-                ? CONSUMER_COPY.feedback.modal.errors.screenshotTooBig
-                : CONSUMER_COPY.feedback.modal.errors.screenshotWrongType}
-            </HelpText>
-          </div>
-        )}
-      </div>
-
-      <ContextDisclosure ctx={ctxData} />
+      <ScreenshotRow
+        screenshot={screenshot}
+        error={screenshotError}
+        disabled={disabled}
+        fileInputRef={fileInputRef}
+        onChange={onScreenshotChange}
+      />
 
       <p
         style={{
@@ -694,18 +546,259 @@ function FormFields({
           color: 'var(--fg-subtle)',
         }}
       >
-        {CONSUMER_COPY.feedback.modal.form.note}
+        {MODAL.form.note}
       </p>
+
+      <ContextDisclosure ctx={ctxData} />
+
+      {failed && <SendFailedBanner saveFailed={draftSaveFailed} />}
+
       <SubmitButton loading={disabled} onClick={onSubmit}>
-        {CONSUMER_COPY.feedback.modal.footer.submit}
+        {failed ? MODAL.sendFailed.primaryAction : MODAL.footer.submit}
       </SubmitButton>
+      {failed && (
+        <SecondaryButton onClick={onSaveForLater}>
+          {MODAL.sendFailed.secondaryAction}
+        </SecondaryButton>
+      )}
+    </div>
+  );
+}
+
+// ── Screenshot attach row ─────────────────────────────────────────────────
+
+// Base64 turns every 3 bytes into 4 characters, so the data URL alone gives
+// the file's size back (a restored draft has no File to ask).
+function screenshotSize(dataUrl: string): string {
+  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  const bytes = Math.floor((base64.length * 3) / 4);
+  const mb = bytes / (1024 * 1024);
+  return mb >= 0.1
+    ? MODAL.form.screenshotSizeMb(mb.toFixed(1))
+    : MODAL.form.screenshotSizeKb(
+        String(Math.max(1, Math.round(bytes / 1024))),
+      );
+}
+
+function ScreenshotRow({
+  screenshot,
+  error,
+  disabled,
+  fileInputRef,
+  onChange,
+}: {
+  screenshot: ScreenshotValue | null;
+  error: 'type' | 'size' | null;
+  disabled: boolean;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onChange: (file: File | null) => void;
+}) {
+  const ids = useId();
+  const pick = () => fileInputRef.current?.click();
+
+  return (
+    <div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={FEEDBACK_SCREENSHOT_TYPES.join(',')}
+        style={{ display: 'none' }}
+        disabled={disabled}
+        onChange={(ev) => {
+          onChange(ev.target.files?.[0] ?? null);
+        }}
+      />
+      {screenshot ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 11,
+            padding: 8,
+            borderRadius: 12,
+            border: '1px solid var(--border-strong)',
+            background: 'var(--bg)',
+            opacity: disabled ? 0.5 : 1,
+          }}
+        >
+          {/* Picking again replaces the attached file. */}
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={pick}
+            aria-label={MODAL.form.screenshotAttachLabel}
+            style={{
+              all: 'unset',
+              cursor: disabled ? 'default' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 11,
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+                flex: 'none',
+                border: '1px solid var(--border-strong)',
+                backgroundColor: 'var(--bg)',
+                backgroundImage: `url("${screenshot.dataUrl}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center top',
+              }}
+            />
+            <span style={{ flex: 1, minWidth: 0, display: 'block' }}>
+              <span
+                style={{
+                  display: 'block',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  color: 'var(--fg)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {screenshot.name}
+              </span>
+              <span
+                style={{
+                  display: 'block',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: 12,
+                  color: 'var(--fg-subtle)',
+                }}
+              >
+                {screenshotSize(screenshot.dataUrl)}
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label={MODAL.form.screenshotRemoveAriaLabel}
+            onClick={() => {
+              onChange(null);
+              if (fileInputRef.current) fileInputRef.current.value = '';
+            }}
+            style={{
+              all: 'unset',
+              cursor: disabled ? 'default' : 'pointer',
+              position: 'relative',
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              flex: 'none',
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid var(--border)',
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {/* 44px hit area around the 36px button. */}
+            <span
+              aria-hidden="true"
+              style={{ position: 'absolute', inset: -4 }}
+            />
+            <X size={16} strokeWidth={1.75} aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={pick}
+          aria-describedby={error ? `${ids}-error` : undefined}
+          style={{
+            all: 'unset',
+            cursor: disabled ? 'default' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 11,
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '8px 12px 8px 8px',
+            borderRadius: 12,
+            border: `1px dashed ${error ? 'var(--danger)' : 'var(--border-strong)'}`,
+            opacity: disabled ? 0.5 : 1,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              flex: 'none',
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--border)',
+              border: '1px solid var(--border)',
+              color: 'var(--signal)',
+            }}
+          >
+            <ImageIcon size={18} strokeWidth={1.6} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0, display: 'block' }}>
+            <span
+              style={{
+                display: 'block',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 13.5,
+                fontWeight: 600,
+                color: 'var(--fg)',
+              }}
+            >
+              {MODAL.form.screenshotAttachLabel}
+            </span>
+            <span
+              style={{
+                display: 'block',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 12,
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              {MODAL.form.screenshotAttachSublabel}
+            </span>
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 12,
+              color: 'var(--fg-subtle)',
+            }}
+          >
+            {MODAL.form.screenshotOptional}
+          </span>
+        </button>
+      )}
+      {error && (
+        <div role="alert">
+          <FieldError id={`${ids}-error`}>
+            {error === 'size'
+              ? MODAL.errors.screenshotTooBig
+              : MODAL.errors.screenshotWrongType}
+          </FieldError>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Status states ─────────────────────────────────────────────────────────
 
-// fan-feedback-sent-m: a check tile, the heading, the note, and Done.
+// fan-feedback-sent-m and fb-sent-d: a check tile, the heading, the note,
+// and Done.
 function SuccessState({ onDone }: { onDone: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -735,18 +828,7 @@ function SuccessState({ onDone }: { onDone: () => void }) {
             color: 'var(--success)',
           }}
         >
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
+          <Check size={26} strokeWidth={2} />
         </div>
         <h2
           style={{
@@ -757,7 +839,7 @@ function SuccessState({ onDone }: { onDone: () => void }) {
             color: 'var(--fg)',
           }}
         >
-          {CONSUMER_COPY.feedback.modal.success.heading}
+          {MODAL.success.heading}
         </h2>
         <p
           style={{
@@ -769,233 +851,142 @@ function SuccessState({ onDone }: { onDone: () => void }) {
             color: 'var(--fg-muted)',
           }}
         >
-          {CONSUMER_COPY.feedback.modal.success.body}
+          {MODAL.success.body}
         </p>
       </div>
       <SubmitButton onClick={onDone}>
-        {CONSUMER_COPY.feedback.modal.success.primaryAction}
+        {MODAL.success.primaryAction}
       </SubmitButton>
     </div>
   );
 }
 
-function ErrorState({
-  onRetry,
-  onSaveForLater,
-  saveFailed,
-}: {
-  // Primary action — return to the form WITHOUT clearing inputs (#829).
-  onRetry: () => void;
-  // Secondary action — persist the draft to localStorage then close (#830).
-  onSaveForLater: () => void;
-  // True when the most recent saveForLater attempt failed; surfaces an
-  // inline notice so the user knows the draft wasn't persisted.
-  saveFailed: boolean;
-}) {
+// fb-send-failed-m: the form stays put and this sits above Try again. A
+// failed draft save swaps the body for the draftBanner.saveFailed line.
+function SendFailedBanner({ saveFailed }: { saveFailed: boolean }) {
   return (
     <div
+      role="alert"
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
-        padding: '8px 0',
+        gap: 10,
+        padding: '11px 12px',
+        borderRadius: 12,
+        border: '1px solid color-mix(in oklab, var(--danger) 45%, transparent)',
+        background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
       }}
     >
-      <StatusRail />
-      <div
-        style={{
-          fontSize: 30,
-          fontWeight: 900,
-          letterSpacing: '-0.035em',
-          lineHeight: 1.0,
-          color: 'var(--fg)',
-          textWrap: 'balance',
-        }}
+      <span
+        aria-hidden="true"
+        style={{ flex: 'none', marginTop: 1, color: 'var(--danger)' }}
       >
-        {CONSUMER_COPY.feedback.modal.error.heading}
-      </div>
-      <div
-        style={{
-          fontSize: 14,
-          color: 'var(--fg-muted)',
-          lineHeight: 1.55,
-          letterSpacing: '-0.005em',
-          textWrap: 'pretty',
-        }}
-      >
-        {CONSUMER_COPY.feedback.modal.error.body}
-      </div>
-      {saveFailed && (
+        <CircleAlert size={16} strokeWidth={2} />
+      </span>
+      <div>
         <div
-          role="alert"
           style={{
-            fontSize: 13,
-            color: 'var(--warning)',
-            lineHeight: 1.5,
-            letterSpacing: '-0.005em',
-            padding: '8px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--warning)',
-            background: 'color-mix(in oklab, var(--warning) 8%, transparent)',
+            fontFamily: 'var(--font-ui)',
+            fontSize: 13.5,
+            fontWeight: 700,
+            color: 'var(--fg)',
           }}
         >
-          {CONSUMER_COPY.feedback.modal.draftBanner.saveFailed}
+          {MODAL.sendFailed.title}
         </div>
-      )}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          marginTop: 4,
-        }}
-      >
-        <SubmitButton onClick={onRetry}>
-          {CONSUMER_COPY.feedback.modal.error.primaryAction}
-        </SubmitButton>
-        <SecondaryButton onClick={onSaveForLater}>
-          {CONSUMER_COPY.feedback.modal.error.secondaryAction}
-        </SecondaryButton>
+        <div
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12.5,
+            lineHeight: 1.45,
+            color: 'var(--fg-muted)',
+            marginTop: 2,
+          }}
+        >
+          {saveFailed ? MODAL.draftBanner.saveFailed : MODAL.sendFailed.body}
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Context disclosure ────────────────────────────────────────────────────
+// ── What we send with it ──────────────────────────────────────────────────
 
+// fb-what-we-send-m: one quiet line, closed by default, opening in place to
+// the five fields the request carries.
 function ContextDisclosure({ ctx }: { ctx: CtxData }) {
   const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const fields = MODAL.contextDisclosure.fields;
   const rows: { key: string; value: string }[] = [
-    {
-      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.route,
-      value: ctx.route,
-    },
-    {
-      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.theme,
-      value: ctx.theme,
-    },
-    {
-      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.build,
-      value: ctx.build,
-    },
-    {
-      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.device,
-      value: ctx.device,
-    },
-    {
-      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.user,
-      value: ctx.user,
-    },
+    { key: fields.page, value: ctx.page },
+    { key: fields.device, value: ctx.device },
+    { key: fields.theme, value: ctx.theme },
+    { key: fields.appVersion, value: ctx.appVersion },
+    { key: fields.account, value: ctx.account },
   ];
   return (
-    <div
-      style={{
-        border: '1px solid var(--border)',
-        borderRadius: 10,
-        background: 'var(--surface-1)',
-        overflow: 'hidden',
-      }}
-    >
+    <div>
       <button
         type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
         onClick={() => setOpen((prev) => !prev)}
         style={{
           all: 'unset',
           cursor: 'pointer',
-          width: '100%',
-          boxSizing: 'border-box',
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
-          gap: 8,
-          padding: '10px 12px',
+          gap: 6,
+          fontFamily: 'var(--font-ui)',
+          fontSize: 12.5,
+          fontWeight: 600,
+          color: 'var(--fg-muted)',
         }}
       >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          style={{
-            color: 'var(--fg-muted)',
-            transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
-            transition: 'transform .15s',
-            flexShrink: 0,
-          }}
-        >
-          <path
-            d="M2 4l3 3 3-3"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </svg>
+        {MODAL.contextDisclosure.toggleLabel}
         <span
+          aria-hidden="true"
           style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            fontWeight: 700,
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
+            display: 'flex',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform var(--motion-fast) var(--motion-ease)',
           }}
         >
-          {CONSUMER_COPY.feedback.modal.contextDisclosure.toggleLabel}
-        </span>
-        <span style={{ flex: 1 }} />
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            fontWeight: 700,
-            color: 'var(--fg-subtle)',
-            letterSpacing: '0.10em',
-          }}
-        >
-          {CONSUMER_COPY.feedback.modal.contextDisclosure.fieldCount}
+          <ChevronDown size={14} strokeWidth={1.75} />
         </span>
       </button>
       {open && (
         <div
+          id={panelId}
           style={{
-            padding: '4px 12px 12px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            borderTop: '1px solid var(--border)',
+            marginTop: 8,
+            borderRadius: 12,
+            border: '1px solid var(--border)',
+            padding: '4px 12px',
           }}
         >
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <div
               key={row.key}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '60px 1fr',
-                gap: 10,
-                alignItems: 'baseline',
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '7px 0',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 12.5,
+                borderTop: index === 0 ? 'none' : '1px solid var(--border)',
               }}
             >
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.10em',
-                  textTransform: 'uppercase',
-                }}
-              >
+              <span style={{ color: 'var(--fg-subtle)', flex: 'none' }}>
                 {row.key}
               </span>
               <span
                 style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 11,
-                  fontWeight: 600,
                   color: 'var(--fg)',
-                  letterSpacing: '0.01em',
-                  wordBreak: 'break-all',
-                  lineHeight: 1.4,
+                  textAlign: 'right',
+                  minWidth: 0,
+                  overflowWrap: 'anywhere',
                 }}
               >
                 {row.value}
@@ -1010,6 +1001,33 @@ function ContextDisclosure({ ctx }: { ctx: CtxData }) {
 
 // ── Primitive atoms ───────────────────────────────────────────────────────
 
+function CloseButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={MODAL.closeAriaLabel}
+      onClick={onClick}
+      style={{
+        all: 'unset',
+        cursor: 'pointer',
+        position: 'absolute',
+        top: -4,
+        right: -6,
+        width: 30,
+        height: 30,
+        borderRadius: 8,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--fg-muted)',
+      }}
+    >
+      <X size={18} strokeWidth={1.5} aria-hidden="true" />
+    </button>
+  );
+}
+
+// fb-draft-restored-m: right below the title, above the kinds.
 function DraftRestoredBanner({
   onDiscard,
   disabled,
@@ -1017,52 +1035,43 @@ function DraftRestoredBanner({
   onDiscard: () => void;
   disabled: boolean;
 }) {
-  // Keyboard focus visibility (#834 Copilot R2). The previous `all: 'unset'`
-  // wiped the browser's default focus outline and there's no app-wide
-  // :focus-visible style covering this surface — keyboard users couldn't see
-  // where focus landed. Inline state mirrors :focus-visible behaviour
-  // (focus from keyboard only) without dragging in a CSS-module just for
-  // one button.
+  // Keyboard focus visibility (#834 Copilot R2). `all: 'unset'` would wipe
+  // the browser's default focus outline and there's no app-wide
+  // :focus-visible style covering this surface. Inline state mirrors
+  // :focus-visible behaviour (focus from keyboard only) without dragging in
+  // a CSS-module just for one button.
   const [focusVisible, setFocusVisible] = useState(false);
   return (
     <div
       role="status"
       style={{
         display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         gap: 10,
-        padding: '10px 14px',
-        borderRadius: 10,
-        border: '1px solid var(--border-strong)',
-        background: 'color-mix(in oklab, var(--signal) 8%, var(--surface-1))',
+        padding: '9px 12px',
+        borderRadius: 12,
+        border: '1px solid color-mix(in oklab, var(--signal) 30%, transparent)',
+        background: 'color-mix(in oklab, var(--signal) 7%, transparent)',
+        fontFamily: 'var(--font-ui)',
+        fontSize: 13,
+        color: 'var(--fg)',
       }}
     >
-      <span
-        style={{
-          flex: 1,
-          fontFamily: 'var(--font-ui)',
-          fontSize: 13,
-          fontWeight: 600,
-          color: 'var(--fg)',
-          letterSpacing: '-0.005em',
-        }}
-      >
-        {CONSUMER_COPY.feedback.modal.draftBanner.message}
-      </span>
+      <span>{MODAL.draftBanner.message}</span>
       <button
         type="button"
         onClick={onDiscard}
         disabled={disabled}
-        aria-label={CONSUMER_COPY.feedback.modal.draftBanner.discardAriaLabel}
+        aria-label={MODAL.draftBanner.discardAriaLabel}
         onFocus={(ev) => {
           // matches() guards against jsdom (test env) where the pseudo
           // selector is unimplemented — keep the focus ring visible there
           // rather than dropping it silently.
           const target = ev.currentTarget;
-          const matchesFn = target.matches.bind(target);
           let visible = true;
           try {
-            visible = matchesFn(':focus-visible');
+            visible = target.matches(':focus-visible');
           } catch {
             visible = true;
           }
@@ -1071,117 +1080,49 @@ function DraftRestoredBanner({
         onBlur={() => setFocusVisible(false)}
         onPointerDown={() => setFocusVisible(false)}
         style={{
+          all: 'unset',
           cursor: disabled ? 'default' : 'pointer',
           fontFamily: 'var(--font-ui)',
-          fontSize: 12,
-          fontWeight: 700,
-          color: 'var(--fg-muted)',
-          background: 'transparent',
-          padding: '4px 8px',
-          borderRadius: 6,
-          border: '1px solid var(--border)',
-          outline: 'none',
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--signal)',
+          borderRadius: 4,
           boxShadow: focusVisible ? '0 0 0 2px var(--signal)' : 'none',
           opacity: disabled ? 0.5 : 1,
         }}
       >
-        {CONSUMER_COPY.feedback.modal.draftBanner.discardLabel}
+        {MODAL.draftBanner.discardLabel}
       </button>
     </div>
   );
 }
 
-function Eyebrow({
+// One error line for every field: the alert icon, --danger, 6px under it.
+function FieldError({
+  id,
   children,
-  error = false,
 }: {
+  id: string;
   children: React.ReactNode;
-  error?: boolean;
 }) {
   return (
     <div
+      id={id}
       style={{
-        fontFamily: 'var(--font-mono)',
-        fontSize: 10,
-        fontWeight: 700,
-        color: error ? 'var(--warning)' : 'var(--fg-subtle)',
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase',
-        marginBottom: 8,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function HelpText({
-  children,
-  tone = 'muted',
-}: {
-  children: React.ReactNode;
-  tone?: 'muted' | 'error';
-}) {
-  return (
-    <div
-      style={{
-        fontFamily: 'var(--font-ui)',
-        fontSize: 12,
-        color: tone === 'error' ? 'var(--warning)' : 'var(--fg-subtle)',
+        display: 'flex',
+        gap: 6,
+        alignItems: 'flex-start',
         marginTop: 6,
+        fontFamily: 'var(--font-ui)',
+        fontSize: 12.5,
         lineHeight: 1.4,
-        letterSpacing: '-0.005em',
+        color: 'var(--danger)',
       }}
     >
+      <span aria-hidden="true" style={{ flex: 'none', marginTop: 1 }}>
+        <CircleAlert size={14} strokeWidth={2} />
+      </span>
       {children}
-    </div>
-  );
-}
-
-// Only the error state has a rail: the success screen carries its own header.
-function StatusRail() {
-  const accent = 'var(--warning)';
-  const label = CONSUMER_COPY.feedback.modal.statusRail.errorLabel;
-  const code = CONSUMER_COPY.feedback.modal.statusRail.errorCode;
-  return (
-    <div
-      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
-    >
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: 6,
-          background: accent,
-          flexShrink: 0,
-        }}
-      />
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: accent,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          fontWeight: 700,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {label}
-      </span>
-      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: 'var(--fg-subtle)',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          fontWeight: 700,
-        }}
-      >
-        {code}
-      </span>
     </div>
   );
 }
@@ -1224,21 +1165,18 @@ function SubmitButton({
       }}
     >
       {loading && <Spinner />}
-      <span>
-        {loading ? CONSUMER_COPY.feedback.modal.footer.submitting : children}
-      </span>
+      <span>{loading ? MODAL.footer.submitting : children}</span>
     </button>
   );
 }
 
+// fb-send-failed-m's ghost: 44px on --surface-2, tucked 4px under Try again.
 function SecondaryButton({
   children,
   onClick,
-  fullWidth = true,
 }: {
   children: React.ReactNode;
   onClick: () => void;
-  fullWidth?: boolean;
 }) {
   return (
     <button
@@ -1250,17 +1188,18 @@ function SecondaryButton({
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: fullWidth ? '100%' : 'auto',
+        width: '100%',
         boxSizing: 'border-box',
         height: 44,
-        padding: '0 16px',
-        borderRadius: 10,
-        color: 'var(--fg-muted)',
+        marginTop: -4,
+        padding: '0 12px',
+        borderRadius: 9,
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border-strong)',
+        color: 'var(--fg)',
         fontFamily: 'var(--font-ui)',
-        fontWeight: 700,
-        fontSize: 13,
-        letterSpacing: '-0.005em',
-        textAlign: 'center',
+        fontWeight: 600,
+        fontSize: 14,
         whiteSpace: 'nowrap',
       }}
     >
