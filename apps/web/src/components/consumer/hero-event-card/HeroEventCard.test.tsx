@@ -147,9 +147,11 @@ describe('HeroEventCard — imagery chain (#1525)', () => {
 });
 
 describe('HeroEventCard — band layout (#1525 PR 4)', () => {
-  // The type column sits beside the slot's genre ring (B+), not the slot.
+  // The type column sits beside the slot's genre ring (B+), not the slot. The
+  // ring shares a wrapper with the Followed disc, so the column follows that.
   const typeColumn = (root: HTMLElement) =>
-    root.querySelector('[data-testid="hero-image-ring"]')?.nextElementSibling;
+    root.querySelector('[data-testid="hero-image-ring"]')?.parentElement
+      ?.nextElementSibling;
 
   const slot = (root: HTMLElement) => {
     // Panel marks the slot aria-hidden because it repeats the artist name the
