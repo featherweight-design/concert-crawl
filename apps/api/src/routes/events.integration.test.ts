@@ -1930,7 +1930,7 @@ describe('GET /v1/events/:id — priceCheckOutcome', () => {
     const boxOffice = await seedPriceSubmission(event.id, owner.userId, {
       priceMin: '45',
       tier: 'GA',
-      vendor: 'Venue',
+      vendor: 'VenueBoxOffice',
       howFound: 'bought_myself',
       status: 'corroborated',
       updatedAt: stamp,
