@@ -18,9 +18,11 @@ interface PastShowsProps {
 }
 
 /**
- * Deliberately modest: no price, no link out, no photo (a date tile and the
- * venue's icon tile are all the art), and no setlist. Each
- * row ends in the "I went" pill, the one place a past night is stamped from here.
+ * Deliberately modest: no price, no photo (a date tile and the venue's icon
+ * tile are all the art), and no setlist. The whole row opens the event page
+ * (a stretched link on the venue name, so the "I went" pill is never nested in
+ * an anchor); the pill, lifted above the link, is the one place a past night
+ * is stamped from here.
  * `events.setlist` exists but has never carried real data, and setlists were
  * dropped with #1170 (no setlist.fm license), so this block only claims what
  * the crawl saw.
@@ -41,12 +43,12 @@ export const PastShows = ({ name, past, olderHref }: PastShowsProps) => {
           return (
             <li
               key={show.eventId}
+              className={`group relative -mx-2 ${index === 0 ? '' : "before:absolute before:inset-x-2 before:top-0 before:border-t before:border-border before:content-['']"} rounded-xl px-2 transition-colors hover:bg-surface-1 active:bg-surface-2 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-inset has-[a:focus-visible]:ring-signal`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                padding: '10px 0',
-                borderTop: index === 0 ? undefined : '1px solid var(--border)',
+                padding: '10px 8px',
               }}
             >
               <span
@@ -103,16 +105,36 @@ export const PastShows = ({ name, past, olderHref }: PastShowsProps) => {
                     name={show.venue}
                     size={24}
                   />
-                  <span
-                    style={{
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
+                  {/* The row's one link. Its ::after covers the whole row; the
+                      ellipsis lives on the inner span so the overlay isn't
+                      clipped. The chevron is decorative. */}
+                  <Link
+                    href={`/events/${show.eventId}`}
+                    aria-label={ARTIST_COPY.pastRowAria(
+                      show.venue,
+                      formatEventDate(show.iso, undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      }),
+                    )}
+                    data-testid="past-show-link"
+                    // Inline: `.ap-page a` (signal blue) outranks a utility.
+                    style={{ color: 'var(--fg)' }}
+                    className="flex min-w-0 no-underline after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
                   >
-                    {show.venue}
-                  </span>
+                    <span
+                      className="group-hover:underline"
+                      style={{
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {show.venue}
+                    </span>
+                  </Link>
                 </span>
                 <span
                   style={{
@@ -129,18 +151,34 @@ export const PastShows = ({ name, past, olderHref }: PastShowsProps) => {
                   {show.city ? `${year} · ${show.city}` : year}
                 </span>
               </span>
-              <WentPill
-                eventId={show.eventId}
-                artist={name}
-                venueSlug={show.venueSlug}
-                venueName={show.venue}
-                dateLabel={formatEventDate(show.iso, undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-                attending={show.attending}
-              />
+              <span className="relative z-10 flex shrink-0">
+                <WentPill
+                  eventId={show.eventId}
+                  artist={name}
+                  venueSlug={show.venueSlug}
+                  venueName={show.venue}
+                  dateLabel={formatEventDate(show.iso, undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                  attending={show.attending}
+                />
+              </span>
+              <svg
+                aria-hidden
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="shrink-0 text-fg-subtle group-hover:text-fg"
+              >
+                <path d="M6 3.5L10.5 8 6 12.5" />
+              </svg>
             </li>
           );
         })}

@@ -37,7 +37,7 @@ describe('PastShows', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('lists each show with no price, no link and no setlist', () => {
+  it('lists each show with no price and no setlist', () => {
     const { container, getByText } = render(
       <PastShows
         name="Nightjar Choir"
@@ -48,9 +48,27 @@ describe('PastShows', () => {
       />,
     );
     expect(container.querySelectorAll('li')).toHaveLength(2);
-    expect(container.querySelectorAll('a')).toHaveLength(0);
     expect(getByText('Larimer Lounge')).toBeTruthy();
     expect(container.textContent).not.toContain('$');
+  });
+
+  it('opens the event from the row, with the pill outside the link', () => {
+    const { container, getAllByTestId } = render(
+      <PastShows
+        name="Nightjar Choir"
+        past={[past('2026-06-21', 'Larimer Lounge')]}
+      />,
+    );
+    const link = getAllByTestId('past-show-link')[0];
+    expect(link?.getAttribute('href')).toBe(
+      '/events/Larimer Lounge-2026-06-21',
+    );
+    expect(link?.getAttribute('aria-label')).toBe(
+      'Larimer Lounge, Jun 21, 2026',
+    );
+    expect(container.querySelectorAll('a')).toHaveLength(1);
+    expect(link?.querySelector('button')).toBeNull();
+    expect(link?.contains(getAllByTestId('went-pill')[0] ?? null)).toBe(false);
   });
 
   it('says out loud where the record stops', () => {
