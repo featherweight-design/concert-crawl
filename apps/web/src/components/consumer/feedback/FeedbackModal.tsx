@@ -24,10 +24,14 @@ import {
 
 type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other';
 // `error` is the send-failed state: the form stays as the fan left it and a
-// banner sits above Try again and Save and come back.
+// banner sits above Try again. The draft is already saved by then.
 type ModalState = 'form' | 'loading' | 'success' | 'error';
 
 const MODAL = CONSUMER_COPY.feedback.modal;
+
+// fb-sending-m: while a send is in flight the kinds, the field, the attach
+// row and What we send lock and dim to 55%.
+const DIMMED = 0.55;
 
 const CATEGORIES: { key: FeedbackCategory; label: string }[] = [
   { key: 'bug', label: MODAL.categories.bug },
@@ -65,9 +69,9 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   // Banner shown when a previously-saved draft was rehydrated on open.
   // User can dismiss via "Discard draft" which also clears localStorage.
   const [draftRestored, setDraftRestored] = useState(false);
-  // True when saveAndCloseLater hit a storage failure (quota / privacy mode).
-  // Swaps the send-failed banner's text so we never silently close while
-  // the button promised the draft was saved.
+  // True when the automatic draft save on a failed send hit a storage
+  // failure (quota / privacy mode). Swaps the send-failed banner's text so
+  // it never claims a save that didn't happen.
   const [draftSaveFailed, setDraftSaveFailed] = useState(false);
   const prevOpenRef = useRef(false);
   // Lifted from FormFields so discardDraft / reset can clear the underlying
@@ -84,6 +88,10 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   // close, user reopens within that window, useEffect hydrates draft,
   // then timer fires and resets state).
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped on every close. A send captures it, so a send the fan closed
+  // the sheet on (A2: × and Esc still close while sending) finishes
+  // quietly instead of landing its result on a later, fresh sheet.
+  const sessionRef = useRef(0);
 
   const clearFileInput = useCallback(() => {
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -169,6 +177,10 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   }, [clearFileInput]);
 
   const handleClose = useCallback(() => {
+    // Closing a failed send keeps the draft (fb-send-failed-m), edits
+    // made since the failure included.
+    if (state === 'error') saveDraft({ category, message, screenshot });
+    sessionRef.current += 1;
     onClose();
     // Replace any pending reset so a rapid close/reopen/close sequence
     // can't queue multiple resets that fire after a draft hydration.
@@ -177,22 +189,15 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       resetTimerRef.current = null;
       reset();
     }, 300);
-  }, [cancelPendingReset, onClose, reset]);
-
-  // Issue #830: "Save and come back" — persist the current draft to
-  // localStorage, then close. Reopening the modal will rehydrate it.
-  // If saveDraft fails (quota exceeded, storage disabled, privacy mode)
-  // we keep the modal open and swap the banner text so the user's
-  // inputs aren't silently discarded by the subsequent close.
-  const saveAndCloseLater = useCallback(() => {
-    const saved = saveDraft({ category, message, screenshot });
-    if (saved) {
-      setDraftSaveFailed(false);
-      handleClose();
-    } else {
-      setDraftSaveFailed(true);
-    }
-  }, [category, handleClose, message, screenshot]);
+  }, [
+    cancelPendingReset,
+    category,
+    message,
+    onClose,
+    reset,
+    screenshot,
+    state,
+  ]);
 
   const discardDraft = useCallback(() => {
     clearDraft();
@@ -220,10 +225,21 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
     setState('loading');
     setDraftSaveFailed(false);
+    const session = sessionRef.current;
+
+    // A4: the draft is written the moment a send fails, so the banner is
+    // true as soon as it shows. If the fan already closed the sheet, the
+    // draft is restored on the next open.
+    const failSend = () => {
+      const saved = saveDraft({ category, message, screenshot });
+      if (sessionRef.current !== session) return;
+      setDraftSaveFailed(!saved);
+      setState('error');
+    };
 
     const token = await getToken();
     if (!token) {
-      setState('error');
+      failSend();
       return;
     }
 
@@ -254,13 +270,15 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         }),
       });
       if (!res.ok) throw new Error(`${res.status}`);
-      // Successful submission invalidates any saved draft.
+      // Successful submission invalidates any saved draft. A send the fan
+      // closed on gets no toast (A2).
       clearDraft();
+      if (sessionRef.current !== session) return;
       setDraftRestored(false);
       setState('success');
     } catch (err) {
       console.error('Feedback submission failed', err);
-      setState('error');
+      failSend();
     }
   }, [category, getToken, message, pathname, screenshot, theme]);
 
@@ -322,7 +340,6 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             draftRestored={draftRestored}
             onDiscardDraft={discardDraft}
             draftSaveFailed={draftSaveFailed}
-            onSaveForLater={saveAndCloseLater}
             fileInputRef={fileInputRef}
             firstChipRef={firstChipRef}
             textareaRef={textareaRef}
@@ -365,7 +382,6 @@ interface FormProps {
   draftRestored: boolean;
   onDiscardDraft: () => void;
   draftSaveFailed: boolean;
-  onSaveForLater: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   firstChipRef: React.RefObject<HTMLButtonElement | null>;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -388,7 +404,6 @@ function FormFields({
   draftRestored,
   onDiscardDraft,
   draftSaveFailed,
-  onSaveForLater,
   fileInputRef,
   firstChipRef,
   textareaRef,
@@ -432,7 +447,7 @@ function FormFields({
             display: 'flex',
             flexWrap: 'wrap',
             gap: 6,
-            opacity: disabled ? 0.55 : 1,
+            opacity: disabled ? DIMMED : 1,
           }}
         >
           {CATEGORIES.map((cat, index) => {
@@ -518,7 +533,7 @@ function FormFields({
             lineHeight: 1.45,
             resize: 'vertical',
             outline: 'none',
-            opacity: disabled ? 0.6 : 1,
+            opacity: disabled ? DIMMED : 1,
             transition: 'border-color var(--motion-fast) var(--motion-ease)',
           }}
         />
@@ -549,18 +564,13 @@ function FormFields({
         {MODAL.form.note}
       </p>
 
-      <ContextDisclosure ctx={ctxData} />
+      <ContextDisclosure ctx={ctxData} disabled={disabled} />
 
       {failed && <SendFailedBanner saveFailed={draftSaveFailed} />}
 
       <SubmitButton loading={disabled} onClick={onSubmit}>
         {failed ? MODAL.sendFailed.primaryAction : MODAL.footer.submit}
       </SubmitButton>
-      {failed && (
-        <SecondaryButton onClick={onSaveForLater}>
-          {MODAL.sendFailed.secondaryAction}
-        </SecondaryButton>
-      )}
     </div>
   );
 }
@@ -618,7 +628,7 @@ function ScreenshotRow({
             borderRadius: 12,
             border: '1px solid var(--border-strong)',
             background: 'var(--bg)',
-            opacity: disabled ? 0.5 : 1,
+            opacity: disabled ? DIMMED : 1,
           }}
         >
           {/* Picking again replaces the attached file. */}
@@ -727,7 +737,7 @@ function ScreenshotRow({
             padding: '8px 12px 8px 8px',
             borderRadius: 12,
             border: `1px dashed ${error ? 'var(--danger)' : 'var(--border-strong)'}`,
-            opacity: disabled ? 0.5 : 1,
+            opacity: disabled ? DIMMED : 1,
           }}
         >
           <span
@@ -913,7 +923,13 @@ function SendFailedBanner({ saveFailed }: { saveFailed: boolean }) {
 
 // fb-what-we-send-m: one quiet line, closed by default, opening in place to
 // the five fields the request carries.
-function ContextDisclosure({ ctx }: { ctx: CtxData }) {
+function ContextDisclosure({
+  ctx,
+  disabled,
+}: {
+  ctx: CtxData;
+  disabled: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const fields = MODAL.contextDisclosure.fields;
@@ -925,15 +941,16 @@ function ContextDisclosure({ ctx }: { ctx: CtxData }) {
     { key: fields.account, value: ctx.account },
   ];
   return (
-    <div>
+    <div style={{ opacity: disabled ? DIMMED : 1 }}>
       <button
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
+        disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
         style={{
           all: 'unset',
-          cursor: 'pointer',
+          cursor: disabled ? 'default' : 'pointer',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
@@ -1166,44 +1183,6 @@ function SubmitButton({
     >
       {loading && <Spinner />}
       <span>{loading ? MODAL.footer.submitting : children}</span>
-    </button>
-  );
-}
-
-// fb-send-failed-m's ghost: 44px on --surface-2, tucked 4px under Try again.
-function SecondaryButton({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        all: 'unset',
-        cursor: 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%',
-        boxSizing: 'border-box',
-        height: 44,
-        marginTop: -4,
-        padding: '0 12px',
-        borderRadius: 9,
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border-strong)',
-        color: 'var(--fg)',
-        fontFamily: 'var(--font-ui)',
-        fontWeight: 600,
-        fontSize: 14,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {children}
     </button>
   );
 }

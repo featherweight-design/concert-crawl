@@ -422,12 +422,11 @@ export const CONSUMER_COPY = {
         primaryAction: 'Done',
       },
       // Send failed: the form stays as the fan left it, with this banner
-      // above Try again and Save and come back.
+      // above Try again. The draft is saved the moment the send fails.
       sendFailed: {
         title: "Signal lost. It didn't send.",
-        body: 'Your note is saved on this phone. Try again, or save it and come back later.',
+        body: "We saved your note on this phone. Try again now, or close this and it'll be here next time.",
         primaryAction: 'Try again',
-        secondaryAction: 'Save and come back',
       },
       contextDisclosure: {
         toggleLabel: 'What we send with it',
@@ -444,7 +443,7 @@ export const CONSUMER_COPY = {
         discardLabel: 'Discard draft',
         discardAriaLabel: 'Discard saved draft',
         saveFailed:
-          "Couldn't save your draft. Your text is still here. Try sending now, or save again.",
+          "Couldn't save your draft. Your text is still here. Try sending now.",
       },
     },
   },

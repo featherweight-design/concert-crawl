@@ -194,15 +194,19 @@ describe('FeedbackModal — what we send with it', () => {
   });
 });
 
-// ── Regression: #830 — Save and come back persists draft + restores it ────
+// ── A4: a failed send saves the draft by itself ────────────────────────────
 
-describe('FeedbackModal — Save and come back persists draft (#830)', () => {
-  it('saves a draft on "Save and come back" and restores it on reopen', async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(
-        new Response('boom', { status: 500 }) as unknown as Response,
-      );
+describe('FeedbackModal — a failed send saves the draft (A4)', () => {
+  const draftOf = (): { category: string; message: string } =>
+    JSON.parse(localStorage.getItem(FEEDBACK_DRAFT_KEY) ?? '{}') as {
+      category: string;
+      message: string;
+    };
+
+  it('saves the draft the moment the send fails and restores it on reopen', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('boom', { status: 500 }),
+    );
     const onClose = vi.fn();
     const { rerender } = render(
       <FeedbackModal open={true} onClose={onClose} />,
@@ -210,37 +214,79 @@ describe('FeedbackModal — Save and come back persists draft (#830)', () => {
     fillCategoryAndMessage('save me for later');
     await submitAndWait();
 
-    // Click "Save and come back" — error-state secondary action.
-    const saveBtn = screen.getByRole('button', {
-      name: /Save and come back/i,
+    // Saved before the fan does anything: the banner is already true.
+    expect(draftOf()).toMatchObject({
+      category: 'bug',
+      message: 'save me for later',
     });
-    fireEvent.click(saveBtn);
+    expect(screen.getByText(MODAL.sendFailed.body)).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: MODAL.sendFailed.primaryAction }),
+    ).toBeTruthy();
+    // Try again is the only button: no "Save and come back".
+    expect(
+      screen.queryByRole('button', { name: /save and come back/i }),
+    ).toBeNull();
 
-    expect(onClose).toHaveBeenCalled();
-    // Draft is persisted to localStorage.
-    const raw = localStorage.getItem(FEEDBACK_DRAFT_KEY);
-    expect(raw).not.toBeNull();
-    const parsed = JSON.parse(raw ?? '{}') as {
-      category: string;
-      message: string;
-    };
-    expect(parsed.category).toBe('bug');
-    expect(parsed.message).toBe('save me for later');
-
-    // Reopen the modal — the draft hydrates back into the form and a
-    // "Saved draft restored" banner appears.
     rerender(<FeedbackModal open={false} onClose={onClose} />);
     rerender(<FeedbackModal open={true} onClose={onClose} />);
 
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     expect(textarea.value).toBe('save me for later');
     expect(screen.getByText(/Saved draft restored/i)).toBeTruthy();
+  });
 
-    fetchMock.mockRestore();
+  it('keeps edits made after the failure when the fan closes', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('boom', { status: 500 }),
+    );
+    const onClose = vi.fn();
+    render(<FeedbackModal open={true} onClose={onClose} />);
+    fillCategoryAndMessage('first try');
+    await submitAndWait();
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'first try, plus more' },
+    });
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalled();
+    expect(draftOf().message).toBe('first try, plus more');
+  });
+
+  it('closing mid-send lets the send finish and saves the draft if it fails (A2)', async () => {
+    let fail: (res: Response) => void = () => {};
+    vi.spyOn(globalThis, 'fetch').mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        fail = resolve;
+      }),
+    );
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <FeedbackModal open={true} onClose={onClose} />,
+    );
+    fillCategoryAndMessage('sent while leaving');
+    await submitAndWait();
+    expect(screen.getByText(MODAL.footer.submitting)).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalled();
+    rerender(<FeedbackModal open={false} onClose={onClose} />);
+
+    await act(async () => {
+      fail(new Response('boom', { status: 500 }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(draftOf().message).toBe('sent while leaving');
+
+    // The next open lands on the restored form, not a stale failed state.
+    rerender(<FeedbackModal open={true} onClose={onClose} />);
+    expect(screen.getByText(/Saved draft restored/i)).toBeTruthy();
+    expect(screen.queryByText(MODAL.sendFailed.body)).toBeNull();
   });
 
   it('clears the saved draft on successful submission', async () => {
-    // Pre-seed a draft, then submit successfully and ensure it's cleared.
     localStorage.setItem(
       FEEDBACK_DRAFT_KEY,
       JSON.stringify({
@@ -250,19 +296,15 @@ describe('FeedbackModal — Save and come back persists draft (#830)', () => {
         savedAt: Date.now(),
       }),
     );
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response('{}', { status: 201 }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('{}', { status: 201 }),
+    );
     render(<FeedbackModal open={true} onClose={vi.fn()} />);
-    // Draft hydrated, banner present.
     expect(screen.getByText(/Saved draft restored/i)).toBeTruthy();
     await submitAndWait();
 
-    // Success state shows up.
     expect(screen.getByText(MODAL.success.heading)).toBeTruthy();
-    // Draft removed from localStorage.
     expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).toBeNull();
-    fetchMock.mockRestore();
   });
 
   it('discards the saved draft when the user clicks "Discard draft"', () => {
@@ -278,48 +320,35 @@ describe('FeedbackModal — Save and come back persists draft (#830)', () => {
     render(<FeedbackModal open={true} onClose={vi.fn()} />);
     expect(screen.getByText(/Saved draft restored/i)).toBeTruthy();
 
-    const discardBtn = screen.getByRole('button', {
-      name: /Discard saved draft/i,
-    });
-    fireEvent.click(discardBtn);
+    fireEvent.click(
+      screen.getByRole('button', { name: /Discard saved draft/i }),
+    );
 
-    // Form cleared.
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     expect(textarea.value).toBe('');
     expect(screen.queryByText(/Saved draft restored/i)).toBeNull();
     expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).toBeNull();
   });
 
-  // Copilot R1 — saveAndCloseLater previously closed the modal even when
-  // saveDraft threw (quota / privacy mode), silently destroying the user's
-  // inputs while the button promised a save. Surface the failure inline
-  // and keep the modal open so the user can copy their text or retry.
-  it('shows an inline alert and keeps the modal open when saveDraft fails', async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(
-        new Response('boom', { status: 500 }) as unknown as Response,
-      );
-    const setItemMock = vi
-      .spyOn(Storage.prototype, 'setItem')
-      .mockImplementation(() => {
-        throw new Error('QuotaExceededError');
-      });
+  // The banner must never claim a save that failed (quota, private mode):
+  // the body swaps to the saveFailed line and the sheet stays open.
+  it('swaps the banner body when the automatic save fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('boom', { status: 500 }),
+    );
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
 
     const onClose = vi.fn();
     render(<FeedbackModal open={true} onClose={onClose} />);
     fillCategoryAndMessage('important note');
     await submitAndWait();
 
-    const saveBtn = screen.getByRole('button', { name: /Save and come back/i });
-    fireEvent.click(saveBtn);
-
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toBeTruthy();
-    expect(screen.getByText(/Couldn't save your draft/i)).toBeTruthy();
-
-    setItemMock.mockRestore();
-    fetchMock.mockRestore();
+    expect(screen.getByText(MODAL.draftBanner.saveFailed)).toBeTruthy();
+    expect(screen.queryByText(MODAL.sendFailed.body)).toBeNull();
   });
 });
 
