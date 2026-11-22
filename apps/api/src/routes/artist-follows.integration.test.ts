@@ -89,6 +89,10 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     expect(await followRows()).toHaveLength(0);
   });
 
+  it('401s without a session before validating the slug', async () => {
+    expect((await follow('Not_A_Slug')).status).toBe(401);
+  });
+
   it('404s an unknown slug', async () => {
     // A free account (no billing rows) passes the gate since going free, so
     // it reaches the artist lookup like anyone signed in.
@@ -247,6 +251,10 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
     await seedArtist({ name: 'Gate Act' });
     const res = await unfollow('gate-act');
     expect(res.status).toBe(401);
+  });
+
+  it('401s without a session before validating the slug', async () => {
+    expect((await unfollow('Not_A_Slug')).status).toBe(401);
   });
 
   it('removes the manual row and is idempotent when there is nothing to remove', async () => {
