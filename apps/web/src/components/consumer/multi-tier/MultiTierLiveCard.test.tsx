@@ -248,3 +248,33 @@ describe('MultiTierLiveCard price check outcome', () => {
     expect(screen.queryByTestId('price-check-outcome')).toBeNull();
   });
 });
+
+// 08-tier-check-outcome: a tier row stays plain, the line sits under it.
+describe('MultiTierLiveCard tier row outcomes', () => {
+  it('draws the line under the row it names, and not under the others', () => {
+    render(
+      <MultiTierLiveCard
+        headline={{ floor: 45, tier: 'GA', vendor: 'AXS', kind: 'community' }}
+        alternates={[
+          { tier: 'Balcony', vendor: 'AXS', floor: 65, kind: 'community' },
+          {
+            tier: 'VIP',
+            vendor: 'AXS',
+            floor: 135,
+            kind: 'community',
+            outcome: {
+              outcome: 'updated',
+              submissionId: 's2',
+              resolvedAt: '2026-11-13T12:00:00.000Z',
+              previous: { floor: 120, ceiling: null },
+            },
+          },
+        ]}
+      />,
+    );
+    const lines = screen.getAllByTestId('price-check-outcome');
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.textContent).toContain('Was $120');
+    expect(screen.getByText('$135')).toBeDefined();
+  });
+});

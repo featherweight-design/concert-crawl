@@ -1,9 +1,14 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import type { PriceCheckViewerAction, Tier } from '@concert-crawl/types';
+import type {
+  PriceCheckOutcome,
+  PriceCheckViewerAction,
+  Tier,
+} from '@concert-crawl/types';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { PriceCheckOutcomeLine } from '@/components/consumer/multi-tier/PriceCheckOutcomeLine';
 import { CounterSubmitSheet } from '@/components/consumer/CounterSubmitSheet';
 import { formatAge, priceText } from '@/components/consumer/price-check-format';
 import { displayVendor } from '@/components/consumer/vendor-display';
@@ -62,6 +67,9 @@ interface TierAlternateRowBase {
   ceiling?: number;
   kind: 'community' | 'boxoffice' | 'resale' | null;
   check?: TierRowCheck;
+  // How the last check on this tier ended: the row stays plain and the line
+  // sits under it (08-tier-check-outcome). Never set with `check`.
+  outcome?: PriceCheckOutcome | null;
 }
 
 export type TierAlternateRowProps = TierAlternateRowBase &
@@ -72,7 +80,7 @@ export type TierAlternateRowProps = TierAlternateRowBase &
 
 // ── Component ────────────────────────────────────────────────────
 export const TierAlternateRow = (props: TierAlternateRowProps) => {
-  const { tier, vendor, floor, ceiling, kind, check } = props;
+  const { tier, vendor, floor, ceiling, kind, check, outcome } = props;
   const pending = props.pending === true;
   const confirms = pending ? props.confirms : 0;
   const needed = pending ? props.needed : 0;
@@ -291,51 +299,54 @@ export const TierAlternateRow = (props: TierAlternateRowProps) => {
   }
 
   return (
-    <div
-      data-price-tier={tier}
-      className="scroll-mt-24"
-      style={{
-        display: 'flex',
-        gap: '10px',
-        padding: '10px 0',
-        borderTop: '1px dashed var(--border)',
-        alignItems: 'center',
-      }}
-    >
-      {/* Left column — tier label + dot */}
-      {tierLabel}
+    <>
+      <div
+        data-price-tier={tier}
+        className="scroll-mt-24"
+        style={{
+          display: 'flex',
+          gap: '10px',
+          padding: '10px 0',
+          borderTop: '1px dashed var(--border)',
+          alignItems: 'center',
+        }}
+      >
+        {/* Left column — tier label + dot */}
+        {tierLabel}
 
-      {/* Middle column — vendor or pending text */}
-      <div style={{ flex: 1 }}>
-        {pending ? (
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9.5px',
-              color: TRUST_TOKENS.community.text,
-              textTransform: 'uppercase',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-            }}
-          >
-            {copy.pendingTemplate(confirms, needed)}
-          </span>
-        ) : (
-          <span
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '12px',
-              color: 'var(--fg-muted)',
-              letterSpacing: '-0.005em',
-            }}
-          >
-            {displayVendor(vendor)}
-          </span>
-        )}
+        {/* Middle column — vendor or pending text */}
+        <div style={{ flex: 1 }}>
+          {pending ? (
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9.5px',
+                color: TRUST_TOKENS.community.text,
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+              }}
+            >
+              {copy.pendingTemplate(confirms, needed)}
+            </span>
+          ) : (
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                color: 'var(--fg-muted)',
+                letterSpacing: '-0.005em',
+              }}
+            >
+              {displayVendor(vendor)}
+            </span>
+          )}
+        </div>
+
+        {/* Right column — price */}
+        {livePrice}
       </div>
-
-      {/* Right column — price */}
-      {livePrice}
-    </div>
+      <PriceCheckOutcomeLine outcome={outcome} />
+    </>
   );
 };

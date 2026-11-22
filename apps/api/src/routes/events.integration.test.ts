@@ -1871,6 +1871,57 @@ describe('GET /v1/events/:id — priceCheckOutcome', () => {
     });
   });
 
+  it('lists the outcome of every tier whose live price had a check', async () => {
+    const { event, owner, other } = await seedCheckEvent('outcome-tiers');
+    const stamp = daysAgo(2);
+    const gaLive = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '45',
+      tier: 'GA',
+      status: 'corroborated',
+      updatedAt: stamp,
+    });
+    await seedPriceSubmission(event.id, other.userId, {
+      priceMin: '52',
+      tier: 'GA',
+      status: 'archived',
+      archivedReason: 'Price is correct',
+      disputedSubmissionId: gaLive.id,
+      updatedAt: stamp,
+    });
+    const vipOld = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '120',
+      tier: 'VIP',
+      status: 'archived',
+      archivedReason: 'Replaced by price check update',
+      updatedAt: stamp,
+    });
+    const vipLive = await seedPriceSubmission(event.id, other.userId, {
+      priceMin: '135',
+      tier: 'VIP',
+      status: 'corroborated',
+      disputedSubmissionId: vipOld.id,
+      updatedAt: stamp,
+    });
+    const res = await app.request(`/v1/events/${event.id}`);
+    const body = (await res.json()) as {
+      data: {
+        priceCheckOutcomes: {
+          submissionId: string;
+          outcome: 'held' | 'updated';
+          previous: { floor: number } | null;
+        }[];
+      };
+    };
+    const byId = new Map(
+      body.data.priceCheckOutcomes.map((out) => [out.submissionId, out]),
+    );
+    expect(byId.get(gaLive.id)).toMatchObject({ outcome: 'held' });
+    expect(byId.get(vipLive.id)).toMatchObject({
+      outcome: 'updated',
+      previous: { floor: 120 },
+    });
+  });
+
   it('is null once the decision is older than 14 days', async () => {
     const { event, owner, other } = await seedCheckEvent('outcome-stale');
     const stamp = daysAgo(15);

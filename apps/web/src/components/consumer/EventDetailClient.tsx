@@ -924,6 +924,17 @@ export function EventDetailPriceBlock({
   // branches below — promoted sold-out + counter-submission + pending-report
   // logic stays intact during the migration window.
   const priceDecision = decidePriceRegion({ event });
+  // The last check's outcome for one live price, by its submission id. An
+  // outcome names the price it describes, so a tier shows only its own. The
+  // flat field is the primary price's entry, read too so a web build served
+  // before the API that sends the list still shows it.
+  const outcomeFor = (submissionId: string | null | undefined) =>
+    submissionId == null
+      ? null
+      : ([
+          ...(event.priceCheckOutcomes ?? []),
+          ...(event.priceCheckOutcome != null ? [event.priceCheckOutcome] : []),
+        ].find((out) => out.submissionId === submissionId) ?? null);
   if (priceDecision.kind === 'sold-out-resale') {
     return (
       <>
@@ -1438,6 +1449,10 @@ export function EventDetailPriceBlock({
             ? { ceiling: parseFloat(altCeilingStr) }
             : {}),
           kind: altKind,
+          // How the last check on this tier ended, when no check is open.
+          ...(counter == null && block.headline != null
+            ? { outcome: outcomeFor(block.headline.submissionId) }
+            : {}),
           // A check on another tier: only that tier's row takes the open
           // check (`20/tier-price-check`).
           ...(counter != null
@@ -1567,13 +1582,7 @@ export function EventDetailPriceBlock({
             submissionId={headlineBlock.headline?.submissionId ?? null}
             // The outcome names the live price it describes; show it only on
             // the card whose headline is that price.
-            checkOutcome={
-              event.priceCheckOutcome != null &&
-              event.priceCheckOutcome.submissionId ===
-                headlineBlock.headline?.submissionId
-                ? event.priceCheckOutcome
-                : null
-            }
+            checkOutcome={outcomeFor(headlineBlock.headline?.submissionId)}
           />
           {outboundLink !== null && outboundKind !== null && (
             <div className="mt-3">

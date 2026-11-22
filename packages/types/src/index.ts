@@ -1288,6 +1288,10 @@ export interface EventDetailResponse extends EventWithVenue {
   // PriceCheckOutcome). Null when there is none to show, and always null while
   // a check is open (counterSubmission is set).
   priceCheckOutcome?: PriceCheckOutcome | null;
+  // The same outcome for every tier's live price that has one, newest check
+  // per price. A tier row or the headline shows the one whose submissionId is
+  // its own. priceCheckOutcome is the entry for the primary price.
+  priceCheckOutcomes?: PriceCheckOutcome[];
   // Promoted sold-out report — present when a community sold-out report was confirmed
   soldOutReport?: PromotedReportSummary | null;
   // The promoted fan report behind a cancelled or postponed status. Null when
