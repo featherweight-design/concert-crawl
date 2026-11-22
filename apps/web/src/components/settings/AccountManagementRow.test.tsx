@@ -25,7 +25,7 @@ describe('AccountManagementRow', () => {
       user: { passwordEnabled: false, externalAccounts: [] },
     });
     render(<AccountManagementRow email="test@example.com" />);
-    const row = screen.getByText('test@example.com').closest('button');
+    const row = screen.getByText('t•••••@example.com').closest('button');
     expect(row).not.toBeNull();
     if (row === null) return;
     fireEvent.click(row);
@@ -38,21 +38,22 @@ describe('AccountManagementRow', () => {
     });
     const mobile = render(<AccountManagementRow email="test@example.com" />);
     expect(
-      screen.getByText('test@example.com').closest('button')?.className,
+      screen.getByText('t•••••@example.com').closest('button')?.className,
     ).toContain('px-4');
     mobile.unmount();
     render(<AccountManagementRow email="test@example.com" variant="desktop" />);
     expect(
-      screen.getByText('test@example.com').closest('button')?.className,
+      screen.getByText('t•••••@example.com').closest('button')?.className,
     ).toContain('px-5');
   });
 
-  it('shows email row', () => {
+  it('shows the email masked, never the full address', () => {
     mockUseUser.mockReturnValue({
       user: { passwordEnabled: false, externalAccounts: [] },
     });
     render(<AccountManagementRow email="test@example.com" />);
-    expect(screen.getByText('test@example.com')).toBeTruthy();
+    expect(screen.getByText('t•••••@example.com')).toBeTruthy();
+    expect(screen.queryByText('test@example.com')).toBeNull();
   });
 
   it('shows no connected accounts section when externalAccounts is empty', () => {
