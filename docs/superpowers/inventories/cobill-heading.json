@@ -1,0 +1,59 @@
+{
+  "feature": "Co-billed event heading (each co-headliner its own link, +N more chip, expand in place) and role-tagged On this bill rows",
+  "note": "Boards: design #750 e6ffded78 addendum-8 05-co-billed (cobill-event-m/d, cobill-3plus-m, cobill-expand-m, cobill-bill-rows, cobill-unmatched). Rows use scratch-branch fixture events (Cobill Alpha/Beta/Cedar/Delta + an unmatched act); ids are scratch-only. The signed-out mirror (plain-text names) is covered by the CoBilledHeading unit test, since the kit signs in as one account.",
+  "widths": [
+    { "label": "xs", "width": 320, "height": 640 },
+    { "label": "phone", "width": 390, "height": 844 },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "cobill-two-acts",
+      "label": "/events/:id: 2 co-headliners + support",
+      "steps": [
+        {
+          "goto": "/events/e767f857-b760-4625-b02d-908ce6334b08",
+          "settle": 1500
+        },
+        { "wait": "[data-testid=\"bill-follow-block\"]" },
+        { "wait": "body:not(:has([aria-busy=\"true\"]))", "settle": 500 }
+      ]
+    },
+    {
+      "id": "cobill-five-acts",
+      "label": "/events/:id: 5 co-headliners, collapsed chip",
+      "steps": [
+        {
+          "goto": "/events/97f16a2f-5881-42e6-a22b-f40b893d8c7c",
+          "settle": 1500
+        },
+        { "wait": "[data-testid=\"bill-follow-block\"]" },
+        { "wait": "body:not(:has([aria-busy=\"true\"]))", "settle": 500 }
+      ]
+    },
+    {
+      "id": "cobill-five-acts-expanded",
+      "label": "/events/:id: 5 co-headliners, expanded",
+      "steps": [
+        {
+          "goto": "/events/97f16a2f-5881-42e6-a22b-f40b893d8c7c",
+          "settle": 1500
+        },
+        { "wait": "[data-testid=\"bill-follow-block\"]" },
+        { "click": "[data-testid^=\"cobill-chip\"]:visible", "settle": 400 }
+      ]
+    },
+    {
+      "id": "cobill-unmatched",
+      "label": "/events/:id: unmatched co-headliner, no role tags",
+      "steps": [
+        {
+          "goto": "/events/3aa52760-6a7a-4639-85c8-e0291d1d7b19",
+          "settle": 1500
+        },
+        { "wait": "[data-testid=\"bill-follow-block\"]" },
+        { "wait": "body:not(:has([aria-busy=\"true\"]))", "settle": 500 }
+      ]
+    }
+  ]
+}
