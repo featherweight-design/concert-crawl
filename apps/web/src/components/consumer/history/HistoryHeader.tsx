@@ -177,7 +177,7 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
           Top venue (spanning two) under them; desktop draws the five in one
           row. A missing stat gets no tile, so a missing pair drops row two
           (`concerts-stats-missing`). */}
-      <dl className="m-0 grid grid-cols-3 items-start gap-x-4 gap-y-4 lg:flex lg:items-center lg:gap-x-8">
+      <dl className="m-0 grid grid-cols-3 items-start gap-x-4 gap-y-4 lg:flex lg:flex-wrap lg:items-center lg:gap-x-8">
         {tiles.map((tile) => (
           <StatTile
             key={tile.key}

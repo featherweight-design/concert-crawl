@@ -124,6 +124,14 @@ describe('HistoryHeader', () => {
 
 // B+ "My shows": in the Concerts stats only Top venue keeps a gradient.
 describe('HistoryHeader gradient', () => {
+  it('spans Top venue over two phone columns and caps it at 300px on desktop', () => {
+    render(<HistoryHeader stats={STATS} />);
+
+    const tile = screen.getByText('Larimer Lounge').closest('div');
+    expect(tile).toHaveClass('col-span-2', 'lg:max-w-[300px]');
+    expect(screen.getByText('12')).toHaveClass('text-[22px]', 'lg:text-[30px]');
+  });
+
   it('marks Top venue, and only Top venue, for the gradient', () => {
     expect(
       historyTilesFor(STATS)
