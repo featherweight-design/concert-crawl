@@ -970,7 +970,16 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // price with a check open shows no outcome. The rows that can say are the
   // archived ones tied to a live price: its predecessor, or updates that lost
   // to it (lib/price-check-outcome.ts).
-  const outcomeCandidates = [...headlinesByTier.values()].filter(
+  // The flat priceCheckOutcome is the legacy primary's, which vendor-trust
+  // ordering can pick over its tier's headline, so it is a candidate too.
+  const outcomeCandidates = [
+    ...new Map(
+      [
+        ...headlinesByTier.values(),
+        ...(legacyPrimary !== null ? [legacyPrimary] : []),
+      ].map((head) => [head.id, head]),
+    ).values(),
+  ].filter(
     (head) =>
       !head.contested &&
       !allPendingRows.some((sub) => sub.disputedSubmissionId === head.id),
