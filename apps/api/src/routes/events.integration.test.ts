@@ -1922,6 +1922,46 @@ describe('GET /v1/events/:id — priceCheckOutcome', () => {
     });
   });
 
+  it('lists the outcome of a live price that is not its tier headline', async () => {
+    // The multi-source card draws a check's outcome under the alternate it
+    // belongs to, so both live prices in one tier carry their own entry.
+    const { event, owner, other } = await seedCheckEvent('outcome-alternate');
+    const stamp = daysAgo(2);
+    const boxOffice = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '45',
+      tier: 'GA',
+      vendor: 'Venue',
+      howFound: 'bought_myself',
+      status: 'corroborated',
+      updatedAt: stamp,
+    });
+    const resale = await seedPriceSubmission(event.id, owner.userId, {
+      priceMin: '70',
+      tier: 'GA',
+      vendor: 'StubHub',
+      howFound: 'bought_myself',
+      status: 'corroborated',
+      updatedAt: stamp,
+    });
+    for (const live of [boxOffice, resale]) {
+      await seedPriceSubmission(event.id, other.userId, {
+        priceMin: '99',
+        tier: 'GA',
+        status: 'archived',
+        archivedReason: 'Price is correct',
+        disputedSubmissionId: live.id,
+        updatedAt: stamp,
+      });
+    }
+    const res = await app.request(`/v1/events/${event.id}`);
+    const body = (await res.json()) as {
+      data: { priceCheckOutcomes: { submissionId: string }[] };
+    };
+    const ids = body.data.priceCheckOutcomes.map((out) => out.submissionId);
+    expect(ids).toContain(boxOffice.id);
+    expect(ids).toContain(resale.id);
+  });
+
   it('is null once the decision is older than 14 days', async () => {
     const { event, owner, other } = await seedCheckEvent('outcome-stale');
     const stamp = daysAgo(15);

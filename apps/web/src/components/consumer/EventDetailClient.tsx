@@ -1229,6 +1229,7 @@ export function EventDetailPriceBlock({
         tier: block.tier,
         vendor: altHeadline?.vendor ?? 'Community',
         floor: altFloor,
+        outcome: outcomeFor(altHeadline?.submissionId),
         ...(altCeilingStr != null
           ? { ceiling: parseFloat(altCeilingStr) }
           : {}),
@@ -1241,10 +1242,12 @@ export function EventDetailPriceBlock({
           headlineTier={entryBlock.tier}
           headlinePrice={headlineFloor}
           headlineVendor={headlineRow?.vendor ?? event.venue.name}
+          headlineOutcome={outcomeFor(headlineRow?.submissionId)}
           crossSource={{
             source: crossSourceAlt.vendor,
             kind: crossKind,
             price: Math.round(parseFloat(crossSourceAlt.priceMin)),
+            outcome: outcomeFor(crossSourceAlt.submissionId),
           }}
           otherTiers={otherTierRows}
         />

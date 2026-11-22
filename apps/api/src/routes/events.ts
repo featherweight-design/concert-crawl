@@ -971,12 +971,16 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // archived ones tied to a live price: its predecessor, or updates that lost
   // to it (lib/price-check-outcome.ts).
   // The flat priceCheckOutcome is the legacy primary's, which vendor-trust
-  // ordering can pick over its tier's headline, so it is a candidate too.
+  // ordering can pick over its tier's headline, so it is a candidate too. So is
+  // every other live price: a check belongs to one price from one source, and
+  // the multi-source card draws its outcome under an alternate (B+ cold review
+  // item 12).
   const outcomeCandidates = [
     ...new Map(
       [
         ...headlinesByTier.values(),
         ...(legacyPrimary !== null ? [legacyPrimary] : []),
+        ...allCorroboratedRows,
       ].map((head) => [head.id, head]),
     ).values(),
   ].filter(

@@ -84,4 +84,60 @@ describe('MultiSourceMultiTierCard (state #5 — live multi-tier mixed sources)'
 
     expect(screen.queryByText('Other tiers')).toBeNull();
   });
+  describe('price check outcome lines (cold review item 12)', () => {
+    const held = {
+      submissionId: 'sub-1',
+      outcome: 'held' as const,
+      resolvedAt: '2026-11-20T00:00:00.000Z',
+      previous: null,
+    };
+
+    it('draws the line under the headline price only when the headline was checked', () => {
+      render(
+        <MultiSourceMultiTierCard
+          {...baseProps}
+          headlineOutcome={held}
+          otherTiers={[]}
+        />,
+      );
+      expect(screen.getAllByTestId('price-check-outcome')).toHaveLength(1);
+      const line = screen.getByTestId('price-check-outcome');
+      const alternate = screen.getByText('Or pay for convenience');
+      // Before the "Or pay for convenience" block, so not under the alternate.
+      expect(
+        line.compareDocumentPosition(alternate) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('draws the line inside the alternate block when the alternate was checked', () => {
+      render(
+        <MultiSourceMultiTierCard
+          {...baseProps}
+          crossSource={{ ...baseProps.crossSource, outcome: held }}
+          otherTiers={[]}
+        />,
+      );
+      const line = screen.getByTestId('price-check-outcome');
+      const alternate = screen.getByText('Or pay for convenience');
+      expect(
+        alternate.compareDocumentPosition(line) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('draws one line per checked price and none when neither was checked', () => {
+      const { rerender } = render(
+        <MultiSourceMultiTierCard
+          {...baseProps}
+          headlineOutcome={held}
+          crossSource={{ ...baseProps.crossSource, outcome: held }}
+          otherTiers={[]}
+        />,
+      );
+      expect(screen.getAllByTestId('price-check-outcome')).toHaveLength(2);
+      rerender(<MultiSourceMultiTierCard {...baseProps} otherTiers={[]} />);
+      expect(screen.queryByTestId('price-check-outcome')).toBeNull();
+    });
+  });
 });

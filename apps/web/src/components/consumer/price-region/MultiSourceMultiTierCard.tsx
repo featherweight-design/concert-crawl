@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
+import type { PriceCheckOutcome } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs';
+import { PriceCheckOutcomeLine } from '@/components/consumer/multi-tier/PriceCheckOutcomeLine';
 import { TierAlternateRow } from '@/components/consumer/multi-tier/TierAlternateRow';
 import { displayVendor } from '@/components/consumer/vendor-display';
 import { AltSourceRow } from './AltSourceRow';
@@ -13,10 +15,15 @@ export interface MultiSourceMultiTierCardProps {
   headlineTier: string;
   headlinePrice: number;
   headlineVendor: string;
+  // How the last check on the headline price ended. It sits under the big
+  // price and never under the alternate (a check belongs to one price).
+  headlineOutcome?: PriceCheckOutcome | null;
   crossSource: {
     source: string;
     kind: 'boxoffice' | 'resale' | 'community';
     price: number;
+    // The same for the alternate: the line sits under its row, inside the card.
+    outcome?: PriceCheckOutcome | null;
   };
   otherTiers: ReadonlyArray<React.ComponentProps<typeof TierAlternateRow>>;
 }
@@ -25,6 +32,7 @@ export const MultiSourceMultiTierCard = ({
   headlineTier,
   headlinePrice,
   headlineVendor,
+  headlineOutcome,
   crossSource,
   otherTiers,
 }: MultiSourceMultiTierCardProps) => (
@@ -93,6 +101,7 @@ export const MultiSourceMultiTierCard = ({
     >
       {copy.metaTemplate(displayVendor(headlineVendor))}
     </div>
+    <PriceCheckOutcomeLine outcome={headlineOutcome} />
 
     <div style={{ marginTop: 12 }}>
       <div style={{ marginBottom: 2 }}>
@@ -103,6 +112,7 @@ export const MultiSourceMultiTierCard = ({
         kind={crossSource.kind}
         price={crossSource.price}
       />
+      <PriceCheckOutcomeLine outcome={crossSource.outcome} />
     </div>
 
     {otherTiers.length > 0 && (
