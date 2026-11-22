@@ -43,7 +43,6 @@ export const HISTORY_COPY = {
       artistsPlural: 'artists',
       topGenre: 'top genre',
       topVenue: 'top venue',
-      spent: 'spent',
     },
   },
 

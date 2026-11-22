@@ -46,7 +46,16 @@ describe('historyTilesFor', () => {
 
     expect(keys).not.toContain('topVenue');
     expect(keys).toContain('topGenre');
-    expect(keys).toContain('spent');
+  });
+
+  it('never emits a spent tile, even when the stats carry a total', () => {
+    expect(historyTilesFor(STATS).map((tile) => tile.key)).toEqual([
+      'nights',
+      'venues',
+      'artists',
+      'topGenre',
+      'topVenue',
+    ]);
   });
 
   it('singularizes the count labels at one', () => {
@@ -85,7 +94,7 @@ describe('HistoryHeader', () => {
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('indie')).toBeInTheDocument();
     expect(screen.getByText('Larimer Lounge')).toBeInTheDocument();
-    expect(screen.getByText('$264')).toBeInTheDocument();
+    expect(screen.queryByText('$264')).not.toBeInTheDocument();
   });
 
   it('hides the nullable tiles instead of showing a placeholder', () => {
@@ -97,7 +106,6 @@ describe('HistoryHeader', () => {
 
     expect(screen.queryByText(COPY.stats.topGenre)).not.toBeInTheDocument();
     expect(screen.queryByText(COPY.stats.topVenue)).not.toBeInTheDocument();
-    expect(screen.queryByText(COPY.stats.spent)).not.toBeInTheDocument();
     expect(screen.queryByText('—')).not.toBeInTheDocument();
   });
 
