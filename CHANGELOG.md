@@ -1,3 +1,15 @@
+# [1.525.0](https://github.com/featherweight-design/concert-crawl/compare/v1.524.1...v1.525.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** count the phone link row in the header height, tidy review nits ([1573e9e](https://github.com/featherweight-design/concert-crawl/commit/1573e9eeca5ec63ec953afd49dab43fd4d487bb0))
+
+
+### Features
+
+* **web:** give the admin venue header On Concert Crawl and the venue's site ([1809072](https://github.com/featherweight-design/concert-crawl/commit/18090725b675868ae86c4c0945bc70da2294fa66))
+
 ## [1.524.1](https://github.com/featherweight-design/concert-crawl/compare/v1.524.0...v1.524.1) (2026-11-22)
 
 
