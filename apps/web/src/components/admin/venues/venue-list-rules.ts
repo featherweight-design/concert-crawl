@@ -306,6 +306,8 @@ export const matchesFilter = (
     case 'paused':
       return chips.onSite === 'live' && chips.crawling === 'paused';
     case 'hidden':
+      // Hidden means a venue that was live. Drafts get their own Drafts
+      // filter with 3e-1 (`04/venues-desktop`), so they stay out of this one.
       return chips.onSite === 'hidden';
     case 'disallowed':
       return venue.robotsTxtAllowed === false;
