@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { act, render, cleanup } from '@testing-library/react';
+import { act, render, cleanup, screen, within } from '@testing-library/react';
 
 const EVENT_ID = '3f1a9c62-8d4b-4e17-9f2a-1b6c7d8e9f01';
 
@@ -17,9 +17,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => pathname,
   useRouter: () => ({ replace, push, refresh }),
 }));
-
-const toast = vi.hoisted(() => vi.fn());
-vi.mock('sonner', () => ({ toast }));
 
 const getToken = vi.fn<() => Promise<string | null>>();
 vi.mock('@clerk/nextjs', () => ({
@@ -48,7 +45,6 @@ beforeEach(() => {
   replace.mockClear();
   push.mockClear();
   refresh.mockClear();
-  toast.mockClear();
   mutate.mockClear();
   post.mockReset().mockResolvedValue({ following: true });
   getToken.mockReset().mockResolvedValue('token');
@@ -78,23 +74,25 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     render(<ReturnSeamReplay />);
     expect(mutate).not.toHaveBeenCalled();
     expect(replace).not.toHaveBeenCalled();
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('return-seam-strip')).toBeNull();
   });
 
-  it('replays the watch and says so in a toast, with a way to My shows', () => {
+  it('replays the watch and says so in the welcome-back strip, with a View link', () => {
     withIntent(`watch:${EVENT_ID}`, 'Geese');
     mutate.mockImplementation((_id, opts) => opts.onSuccess());
     render(<ReturnSeamReplay />);
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate.mock.calls[0]![0]).toBe(EVENT_ID);
-    expect(toast).toHaveBeenCalledTimes(1);
-    expect(toast.mock.calls[0]![0]).toBe('You’re watching Geese.');
-    const options = toast.mock.calls[0]![1] as {
-      action: { label: string; onClick: () => void };
-    };
-    expect(options.action.label).toBe('My shows');
-    options.action.onClick();
-    expect(push).toHaveBeenCalledWith('/watching');
+    expect(screen.getAllByTestId('return-seam-strip')).toHaveLength(1);
+    expect(screen.getByTestId('return-seam-strip').textContent).toContain(
+      'Now watching Geese.',
+    );
+    const strip = screen.getByTestId('return-seam-strip');
+    expect(strip.textContent).toContain('Kept while you were signing up');
+    expect(strip.getAttribute('role')).toBe('status');
+    expect(
+      within(strip).getByRole('link', { name: 'View' }).getAttribute('href'),
+    ).toBe('/watching');
   });
 
   it('fires exactly once, since the endpoint is a toggle and a second run un-watches', () => {
@@ -104,7 +102,7 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     rerender(<ReturnSeamReplay />);
     rerender(<ReturnSeamReplay />);
     expect(mutate).toHaveBeenCalledTimes(1);
-    expect(toast).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId('return-seam-strip')).toHaveLength(1);
   });
 
   it('strips the params so a refresh or a share cannot replay it', () => {
@@ -120,7 +118,7 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     expect(replace).toHaveBeenCalledWith('/events/e1');
     expect(mutate).not.toHaveBeenCalled();
     expect(post).not.toHaveBeenCalled();
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('return-seam-strip')).toBeNull();
   });
 
   it('leaves an already-watched show alone but still confirms', () => {
@@ -128,7 +126,9 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     watchingData.mockReturnValue([{ eventId: EVENT_ID }]);
     render(<ReturnSeamReplay />);
     expect(mutate).not.toHaveBeenCalled();
-    expect(toast.mock.calls[0]![0]).toBe('You’re watching Geese.');
+    expect(screen.getByTestId('return-seam-strip').textContent).toContain(
+      'Now watching Geese.',
+    );
   });
 
   it('claims nothing when the replay fails', () => {
@@ -138,7 +138,7 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     mutate.mockImplementation((_id, opts) => opts.onError(new Error('gone')));
     render(<ReturnSeamReplay />);
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('return-seam-strip')).toBeNull();
   });
 
   it('waits for the watching list before firing, since a cold cache reads as not-watching', () => {
@@ -162,7 +162,7 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     // The real router.replace lands the component on a param-free URL.
     searchParams = new URLSearchParams();
     rerender(<ReturnSeamReplay />);
-    expect(toast).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId('return-seam-strip')).toHaveLength(1);
   });
 
   it("leaves the destination's own query params in place", () => {
@@ -191,13 +191,15 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     mutate.mockImplementation((_id, opts) => opts.onError(new Error('gone')));
     const { rerender } = render(<ReturnSeamReplay />);
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('return-seam-strip')).toBeNull();
 
     // Same session, a different show, this time it works.
     withIntent(`watch:${OTHER_ID}`, 'Ratboys');
     mutate.mockImplementation((_id, opts) => opts.onSuccess());
     rerender(<ReturnSeamReplay />);
-    expect(toast.mock.calls[0]![0]).toBe('You’re watching Ratboys.');
+    expect(screen.getByTestId('return-seam-strip').textContent).toContain(
+      'Now watching Ratboys.',
+    );
   });
 
   it('says nothing when the label is missing, since it cannot name the show', () => {
@@ -205,7 +207,7 @@ describe('ReturnSeamReplay: replaying a watch (#794)', () => {
     mutate.mockImplementation((_id, opts) => opts.onSuccess());
     render(<ReturnSeamReplay />);
     expect(mutate).toHaveBeenCalledTimes(1);
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('return-seam-strip')).toBeNull();
   });
 });
 
@@ -221,7 +223,7 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     render(<ReturnSeamReplay />);
     await flush();
     expect(post).not.toHaveBeenCalled();
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('return-seam-strip')).toBeNull();
     // The params go all the same, so the link does not linger in the URL.
     expect(replace).toHaveBeenCalledWith('/events/e1');
     cleanup();
@@ -243,7 +245,7 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     rerender(<ReturnSeamReplay />);
     await flush();
     expect(post).toHaveBeenCalledTimes(1);
-    expect(toast).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId('return-seam-strip')).toHaveLength(1);
   });
 
   it('follows the artist, refreshes the page it just rendered, and says so', async () => {
@@ -257,10 +259,14 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     );
     // The page was rendered before the follow existed.
     expect(refresh).toHaveBeenCalledTimes(1);
-    expect(toast).toHaveBeenCalledTimes(1);
-    expect(toast.mock.calls[0]![0]).toBe('You’re following TOKiMONSTA.');
+    expect(screen.getAllByTestId('return-seam-strip')).toHaveLength(1);
+    expect(screen.getByTestId('return-seam-strip').textContent).toContain(
+      'Now following TOKiMONSTA.',
+    );
     // No "My shows" action: a follow does not live there.
-    expect(toast.mock.calls[0]![1]).not.toHaveProperty('action');
+    expect(
+      within(screen.getByTestId('return-seam-strip')).queryByRole('link'),
+    ).toBeNull();
     expect(mutate).not.toHaveBeenCalled();
   });
 
@@ -279,7 +285,7 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     await flush();
     expect(replace).toHaveBeenCalledWith('/artists/tokimonsta');
     expect(post).toHaveBeenCalledTimes(1);
-    expect(toast).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId('return-seam-strip')).toHaveLength(1);
   });
 
   it('claims nothing when the follow is refused (a plan that cannot follow, a hidden artist)', async () => {
@@ -288,7 +294,7 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     post.mockRejectedValue(new Error('403'));
     render(<ReturnSeamReplay />);
     await flush();
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('return-seam-strip')).toBeNull();
     expect(refresh).not.toHaveBeenCalled();
   });
 
@@ -299,7 +305,7 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     render(<ReturnSeamReplay />);
     await flush();
     expect(post).not.toHaveBeenCalled();
-    expect(toast).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('return-seam-strip')).toBeNull();
   });
 
   it('ignores a follow for something that is not a slug', () => {
@@ -307,5 +313,37 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     render(<ReturnSeamReplay />);
     expect(post).not.toHaveBeenCalled();
     expect(replace).toHaveBeenCalledWith('/artists/tokimonsta');
+  });
+
+  describe('the strip lifetime', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('is gone after six seconds', () => {
+      vi.useFakeTimers();
+      withIntent(`watch:${EVENT_ID}`, 'Geese');
+      mutate.mockImplementation((_id, opts) => opts.onSuccess());
+      render(<ReturnSeamReplay />);
+      expect(screen.getByTestId('return-seam-strip')).toBeDefined();
+      act(() => {
+        vi.advanceTimersByTime(5999);
+      });
+      expect(screen.queryByTestId('return-seam-strip')).not.toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.queryByTestId('return-seam-strip')).toBeNull();
+    });
+
+    it('is gone on any navigation', () => {
+      withIntent(`watch:${EVENT_ID}`, 'Geese');
+      mutate.mockImplementation((_id, opts) => opts.onSuccess());
+      const view = render(<ReturnSeamReplay />);
+      expect(screen.getByTestId('return-seam-strip')).toBeDefined();
+      pathname = '/events';
+      view.rerender(<ReturnSeamReplay />);
+      expect(screen.queryByTestId('return-seam-strip')).toBeNull();
+    });
   });
 });

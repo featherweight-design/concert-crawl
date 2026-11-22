@@ -5,8 +5,8 @@ import { useAuth } from '@clerk/nextjs';
 import { apiClient } from '@/lib/api';
 import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { actionToastOptions } from '@/lib/action-toast';
+import Link from 'next/link';
+import { Eye } from 'lucide-react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   decodeIntent,
@@ -18,6 +18,9 @@ import { useWatching } from '@/lib/queries/use-watching';
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle';
 
 const copy = CONSUMER_COPY.returnSeam;
+
+// How long the welcome-back strip stays (logged-out UX deliverable 7).
+const STRIP_MS = 6000;
 
 /**
  * Replays the action a visitor started before they had an account, once they are
@@ -161,28 +164,99 @@ export const ReturnSeamReplay = () => {
     isSignedIn,
   ]);
 
-  // The confirmation is the house toast, not a strip: the filled eye or the
-  // Following button further down does not read as a *change* on a page the
+  // The confirmation is the drawn inline strip, not a toast: the filled eye or
+  // the Following button further down does not read as a *change* on a page the
   // visitor has never seen signed in, so this says "that happened while you
-  // were away". Once per replayed intent, and only when it can be named.
-  const toasted = useRef<string | null>(null);
+  // were away". Once per replayed intent, only when it can be named, announced
+  // once, and gone after STRIP_MS or on any navigation.
+  const [strip, setStrip] = useState<{
+    action: IntentAction;
+    label: string;
+  } | null>(null);
+  const shown = useRef<string | null>(null);
   useEffect(() => {
     if (!replayed || failed || !label || !action) return;
     const key = `${action}:${label}`;
-    if (toasted.current === key) return;
-    toasted.current = key;
-    if (action === 'watch') {
-      toast(copy.watching(label), {
-        ...actionToastOptions,
-        action: {
-          label: copy.myShows,
-          onClick: () => router.push('/watching'),
-        },
-      });
-    } else {
-      toast(copy.following(label), actionToastOptions);
-    }
-  }, [replayed, failed, label, action, router]);
+    if (shown.current === key) return;
+    shown.current = key;
+    setStrip({ action, label });
+  }, [replayed, failed, label, action]);
 
-  return null;
+  useEffect(() => {
+    if (strip === null) return;
+    const timer = window.setTimeout(() => setStrip(null), STRIP_MS);
+    return () => window.clearTimeout(timer);
+  }, [strip]);
+
+  // Any navigation dismisses it. The replay's own URL strip keeps the pathname,
+  // so only a real move away changes it.
+  const landedAt = useRef(pathname);
+  useEffect(() => {
+    if (pathname !== landedAt.current) setStrip(null);
+  }, [pathname]);
+
+  if (strip === null) return null;
+  return (
+    <div className="mx-auto w-full max-w-[640px] px-[14px] pt-2">
+      <div
+        role="status"
+        aria-live="polite"
+        data-testid="return-seam-strip"
+        className="flex items-center gap-2.5 rounded-[11px] border px-3 py-[11px]"
+        style={{
+          background:
+            'color-mix(in oklch, var(--signal) 13%, var(--surface-1))',
+          borderColor: 'color-mix(in oklch, var(--signal) 45%, transparent)',
+        }}
+      >
+        <Eye
+          size={17}
+          fill="currentColor"
+          aria-hidden="true"
+          style={{ color: 'var(--signal)', flexShrink: 0 }}
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span
+            className="ph-no-capture"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 12.5,
+              fontWeight: 800,
+              color: 'var(--fg)',
+            }}
+          >
+            {strip.action === 'watch'
+              ? copy.watching(strip.label)
+              : copy.following(strip.label)}
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              letterSpacing: '0.06em',
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {copy.kept}
+          </span>
+        </div>
+        {strip.action === 'watch' && (
+          <Link
+            href="/watching"
+            className="flex min-h-11 items-center rounded-sm uppercase focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9.5,
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              color: 'var(--signal)',
+              textDecoration: 'none',
+            }}
+          >
+            {copy.view}
+          </Link>
+        )}
+      </div>
+    </div>
+  );
 };
