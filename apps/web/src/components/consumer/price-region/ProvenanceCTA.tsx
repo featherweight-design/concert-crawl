@@ -2,6 +2,7 @@
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { TRUST_TOKENS } from '@/components/consumer/glyphs';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
 const copy = CONSUMER_COPY.priceRegion.provenance;
 
@@ -20,6 +21,8 @@ export const ProvenanceCTA = ({
   href,
   outline = false,
 }: ProvenanceCTAProps) => {
+  // Ticket links are crawler-derived and untrusted: only http(s) renders.
+  if (!isSafeHttpUrl(href)) return null;
   const isResale = kind === 'resale';
   const label = isResale ? copy.seeResale : copy.getTickets;
   const caption =

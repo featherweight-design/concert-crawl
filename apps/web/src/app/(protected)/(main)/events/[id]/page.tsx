@@ -224,7 +224,8 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   // Their boards (more-st-ev_canc, more-st-ev_post) draw neither: the card,
   // then one CTA (refund info, or Watching for the new date).
   // A past show keeps its price but gets no outbound CTA, as on /e: there is
-  // nothing left to buy (Hugh, 2026-11-22).
+  // nothing left to buy (Hugh, 2026-11-22). That includes a past cancelled
+  // show's refund link; a past postponed show keeps its Watch toggle.
   const past = isEventPast(event.date, event.venue.timezone);
   const leadsWithStatus =
     event.status === 'cancelled' || event.status === 'postponed';
