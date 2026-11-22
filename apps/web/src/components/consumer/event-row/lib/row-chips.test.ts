@@ -18,7 +18,6 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     price: null,
     saved: null,
     genres: [],
-    isFollowed: false,
     crewGoing: null,
     isWatching: false,
     status: 'live',
@@ -42,22 +41,6 @@ function priceFrom(source: 'boxoffice' | null) {
 describe('rowChips', () => {
   it('offers nothing when the row has no claim to make', () => {
     expect(rowChips(makeShow(), 'browse')).toEqual([]);
-  });
-
-  it('puts Following ahead of genre on Browse', () => {
-    const chips = rowChips(
-      makeShow({ isFollowed: true, genres: ['rock', 'punk'] }),
-      'browse',
-    );
-    expect(chips.map((chip) => chip.key)).toEqual(['following', 'genre-rock']);
-  });
-
-  it('keeps Following neutral and Spotify-marked', () => {
-    const [chip] = rowChips(makeShow({ isFollowed: true }), 'browse');
-    // --signal is reserved for CTAs and status, and --accent means watching.
-    // Borrowing either makes a follow read as an action or as a watch.
-    expect(chip?.tone).toBe('strong');
-    expect(chip?.mark).toBe('spotify');
   });
 
   it('offers no provenance on Browse, whatever the price', () => {
@@ -152,29 +135,17 @@ describe('rowChips', () => {
     expect(chips).toEqual([]);
   });
 
-  it('takes the first chip slot when a crew is going, dropping genre', () => {
+  it('takes the first chip slot when a crew is going', () => {
     const chips = rowChips(
       makeShow({
-        isFollowed: true,
         genres: ['rock'],
         crewGoing: { count: 3, names: ['ada', 'gil'] },
       }),
       'crewLens',
     );
-    expect(chips.map((chip) => chip.key).slice(0, 2)).toEqual([
-      'crew',
-      'following',
-    ]);
+    expect(chips.map((chip) => chip.key).slice(0, 1)).toEqual(['crew']);
     expect(chips[0]?.label).toBe('3 going');
     expect(chips[0]?.tone).toBe('signal');
-  });
-
-  it('keeps Following first on a crew row with no crew presence', () => {
-    const chips = rowChips(
-      makeShow({ isFollowed: true, genres: ['rock'], crewGoing: null }),
-      'crewLens',
-    );
-    expect(chips.map((chip) => chip.key)).toEqual(['following', 'genre-rock']);
   });
 
   it('offers no crew chip when nobody in the crew is going', () => {

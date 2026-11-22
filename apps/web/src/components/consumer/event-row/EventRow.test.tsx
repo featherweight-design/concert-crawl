@@ -56,7 +56,6 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     },
     saved: null,
     genres: [],
-    isFollowed: false,
     crewGoing: null,
     isWatching: false,
     status: 'live',
@@ -151,7 +150,7 @@ describe('EventRow — watching is a report, not an action', () => {
     expect(tick.style.top).toBe('-3px');
     expect(tick.style.right).toBe('-3px');
     // An icon here is the regression: watching reports state, and --signal
-    // belongs to the Following chip.
+    // belongs to status chips.
     expect(tick.querySelector('svg')).toBeNull();
   });
 
@@ -206,13 +205,13 @@ describe('EventRow — the price slot', () => {
   it('takes the whole slot when sold out, spending no chip budget', () => {
     render(
       <EventRow
-        show={makeShow({ status: 'soldout', isFollowed: true })}
+        show={makeShow({ status: 'soldout', genres: ['rock'] })}
         surface="browse"
       />,
     );
     expect(screen.queryByText('$68')).toBeNull();
-    // The Following chip still gets its slot — sold out is not a meta chip.
-    expect(screen.getByTestId('row-meta').textContent).toContain('Following');
+    // The genre chip still gets its slot — sold out is not a meta chip.
+    expect(screen.getByTestId('row-meta').textContent).toContain('rock');
   });
 
   // B+ rows board: the chip sits inline after the headliner, and the price
@@ -360,11 +359,11 @@ describe('EventRow — lifecycle beats the price state', () => {
   it('spends no chip budget, so the meta chips still render', () => {
     render(
       <EventRow
-        show={makeShow({ lifecycle: 'cancelled', isFollowed: true })}
+        show={makeShow({ lifecycle: 'cancelled', genres: ['rock'] })}
         surface="browse"
       />,
     );
-    expect(screen.getByTestId('row-meta').textContent).toContain('Following');
+    expect(screen.getByTestId('row-meta').textContent).toContain('rock');
   });
 });
 
@@ -577,7 +576,7 @@ describe('EventRow — the footer slot', () => {
  *
  * Watching's chips are `provenance` then `genre` (B+ dropped the Stale chip),
  * so its ladder runs from no chips to the full two-chip budget, as Browse's
- * does with `following` and `genre`. A Browse row with no genre is unreachable
+ * does with `genre` alone. A Browse row with no genre is unreachable
  * in production, but it is the honest floor for this ladder.
  */
 describe('EventRow — Rule 3, the row reserves its own height', () => {
@@ -634,7 +633,6 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
   const browseLadder = [
     makeShow({ genres: [] }),
     makeShow({ genres: ['rock'] }),
-    makeShow({ genres: ['rock'], isFollowed: true }),
   ];
 
   // Asserted on the chip builder rather than on the rendered line, which has no
@@ -652,9 +650,9 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     ]);
   });
 
-  it('runs the Browse ladder from no chips to the full two-chip budget', () => {
+  it('runs the Browse ladder from no chips to its one-chip budget', () => {
     expect(browseLadder.map((show) => rowChips(show, 'browse').length)).toEqual(
-      [0, 1, 2],
+      [0, 1],
     );
   });
 
@@ -662,7 +660,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     expect(minHeights('watching', watchingLadder).size).toBe(1);
   });
 
-  it('holds one height across a Browse list from no chips to the full budget', () => {
+  it('holds one height across a Browse list from no chips to its one-chip budget', () => {
     expect(minHeights('browse', browseLadder).size).toBe(1);
   });
 

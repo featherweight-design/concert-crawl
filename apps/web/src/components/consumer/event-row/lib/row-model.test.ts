@@ -199,17 +199,6 @@ describe('fromEventWithVenue', () => {
   it('shortens the venue name the way every other surface does', () => {
     expect(fromEventWithVenue(baseEvent).venueName).toBe('Test');
   });
-
-  it('reads followed state as a non-empty match list', () => {
-    expect(fromEventWithVenue(baseEvent).isFollowed).toBe(false);
-    expect(
-      fromEventWithVenue({ ...baseEvent, followedArtists: [] }).isFollowed,
-    ).toBe(false);
-    expect(
-      fromEventWithVenue({ ...baseEvent, followedArtists: ['Test Artist'] })
-        .isFollowed,
-    ).toBe(true);
-  });
 });
 
 const baseWatchingShow: WatchingShow = {

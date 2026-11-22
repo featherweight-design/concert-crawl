@@ -9,7 +9,6 @@ import { MetaRow } from '../event-row/MetaRow';
 import { orderGenres, vibeBucketMembers } from '../event-row/lib/order-genres';
 import { genreRing } from '../event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
-import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight';
 import { EventImage } from '../event-image';
 import { HERO_BACKDROP_STYLE, heroFrame, heroWash } from './lib/hero-frame';
 
@@ -38,8 +37,6 @@ export function HeroEventCard({
   filterVibes = [],
 }: HeroEventCardProps) {
   const showTime = formatShowTime(event.showTime);
-  // Present only for connected viewers (#763 PR 6) — swaps the eyebrow badge.
-  const isFollowed = (event.followedArtists?.length ?? 0) > 0;
   const priceDisplay =
     event.ticketPriceMin != null
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
@@ -117,26 +114,19 @@ export function HeroEventCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          {/* Eyebrow badge slot — the Spotify "Following" badge replaces the
-              accent "★ Tonight's pick" badge when the bill matches a followed
-              artist (#763 PR 6, follow-highlight mock). */}
           <div className="mb-1.5">
-            {isFollowed ? (
-              <HeroFollowingBadge />
-            ) : (
-              <span
-                className="inline-block rounded-[5px] bg-accent px-2 py-[3px] text-fg-on-accent"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                ★ {label}
-              </span>
-            )}
+            <span
+              className="inline-block rounded-[5px] bg-accent px-2 py-[3px] text-fg-on-accent"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '9px',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              ★ {label}
+            </span>
           </div>
           <EventTitleBlock
             headliner={event.artist}

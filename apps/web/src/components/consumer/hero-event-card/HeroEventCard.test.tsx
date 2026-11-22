@@ -73,30 +73,11 @@ const baseEvent: EventWithVenue = {
   priceVendor: null,
 };
 
-describe('HeroEventCard — eyebrow badge slot (#763 PR 6)', () => {
-  it('renders the accent label badge by default', () => {
+describe('HeroEventCard — eyebrow badge', () => {
+  it('renders the accent label badge', () => {
     render(<HeroEventCard event={baseEvent} />);
     // Default label is the "Tonight's pick" style eyebrow with the ★ prefix.
     expect(screen.getByText(/★/)).toBeDefined();
-    expect(screen.queryByText('Following')).toBeNull();
-  });
-
-  it('swaps in the Following badge when followedArtists matches', () => {
-    render(
-      <HeroEventCard
-        event={{ ...baseEvent, followedArtists: ['Test Artist'] }}
-      />,
-    );
-    expect(screen.getByText('Following')).toBeDefined();
-    expect(screen.getByText('You follow this artist on Spotify')).toBeDefined();
-    // The accent eyebrow is fully replaced, not stacked.
-    expect(screen.queryByText(/★/)).toBeNull();
-  });
-
-  it('keeps the accent badge for an empty followedArtists array', () => {
-    render(<HeroEventCard event={{ ...baseEvent, followedArtists: [] }} />);
-    expect(screen.getByText(/★/)).toBeDefined();
-    expect(screen.queryByText('Following')).toBeNull();
   });
 });
 
