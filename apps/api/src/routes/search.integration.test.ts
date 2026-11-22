@@ -13,6 +13,7 @@ import {
   seedArtist,
   seedVenue,
   seedEvent,
+  seedPriceSubmission,
   seedUserEvent,
 } from '../test/helpers/seed.js';
 
@@ -107,6 +108,52 @@ describe('GET /v1/search/popular', () => {
     const res = await app.request('/v1/search/popular');
     const body = (await res.json()) as { success: boolean; data: unknown[] };
     expect(body.data).toHaveLength(5);
+  });
+
+  // #1365: the scalar holds whichever price was written last. The row leads
+  // with the cheapest corroborated tier, and keeps the scalar only when no
+  // tier has a headline.
+  it('prices each row from the cheapest tier, falling back to the scalar', async () => {
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    const tiered = await seedEvent(venue.id, {
+      title: 'Tiered',
+      date: '2027-06-01',
+      ticketPriceMin: '95.00',
+    });
+    await seedEvent(venue.id, {
+      title: 'Scalar only',
+      date: '2027-06-02',
+      ticketPriceMin: '40.00',
+    });
+    await seedPriceSubmission(tiered.id, 'user_a', {
+      tier: 'Reserved',
+      priceMin: '125',
+      status: 'corroborated',
+    });
+    await seedPriceSubmission(tiered.id, 'user_b', {
+      tier: 'GA',
+      priceMin: '25',
+      status: 'corroborated',
+    });
+
+    const res = await app.request('/v1/search/popular');
+    const body = z
+      .object({
+        data: z.array(
+          z.object({
+            title: z.string(),
+            ticketPriceMin: z.string().nullable(),
+          }),
+        ),
+      })
+      .parse(await res.json());
+
+    expect(
+      body.data.find((row) => row.title === 'Tiered')?.ticketPriceMin,
+    ).toBe('25.00');
+    expect(
+      body.data.find((row) => row.title === 'Scalar only')?.ticketPriceMin,
+    ).toBe('40.00');
   });
 
   // B19: the palette's popular rows ring the art and dot the chip in the

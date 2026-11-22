@@ -18,6 +18,8 @@ import {
 } from '../lib/event-billing.js';
 import { todayInDenver } from '../lib/time.js';
 import { containsPattern, escapeLikePattern } from '../lib/escape-like.js';
+import { resolveDisplayPrice } from '../lib/price-aggregation/build-price-by-tier.js';
+import { loadPriceByTierByEventId } from '../lib/price-aggregation/load-price-by-tier.js';
 
 export const searchRouter = new Hono();
 
@@ -69,6 +71,12 @@ searchRouter.get('/popular', async (ctx) => {
     .orderBy(desc(watcherCount), asc(events.date))
     .limit(5);
 
+  // The row's price is the cheapest corroborated tier, as on Browse; the
+  // scalar is only the fallback for crawler prices with no submissions (#1365).
+  const priceByTierByEventId = await loadPriceByTierByEventId(
+    rows.map((row) => row.id),
+  );
+
   const data = rows.map((row) => ({
     id: row.id,
     title: row.title,
@@ -76,7 +84,10 @@ searchRouter.get('/popular', async (ctx) => {
     date: row.date,
     imageUrl: row.imageUrl ?? null,
     artistPhotoUrl: row.artistPhotoUrl ?? null,
-    ticketPriceMin: row.ticketPriceMin,
+    ticketPriceMin: resolveDisplayPrice(
+      priceByTierByEventId.get(row.id) ?? [],
+      row.ticketPriceMin,
+    ),
     genre: row.genre ?? null,
     watcherCount: row.watcherCount,
     venue: { name: row.venueName, slug: row.venueSlug },
