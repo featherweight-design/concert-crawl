@@ -57,6 +57,14 @@ describe('GET /v1/history/past-shows', () => {
     expect((await app.request('/v1/history/past-shows')).status).toBe(401);
   });
 
+  // Auth runs before the query validator: a bad query never earns a 400.
+  it('returns 401, not 400, when signed out with a bad query', async () => {
+    authState.current = null;
+    expect(
+      (await app.request('/v1/history/past-shows?scope=nope')).status,
+    ).toBe(401);
+  });
+
   it('applies the visibility rule and the records floor', async () => {
     const venue = await seedVenue();
     const removed = await seedVenue({

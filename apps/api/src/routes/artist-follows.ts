@@ -15,12 +15,15 @@ import type {
   FollowedArtist,
 } from '@concert-crawl/types';
 import { loadNextShowByCanonical } from '../lib/artist-follows.js';
+import { requireSignedIn } from '../middleware/auth.js';
 
 /**
  * Follow / unfollow an artist (#1115, PR-D).
  *
  * Every signed-in account can follow and unfollow (going free, 2026-10-29):
- * there is no plan gate here, only the 401 for an anonymous caller.
+ * there is no plan gate here, only the 401 for an anonymous caller. If a plan
+ * gate ever returns, put it on POST only: DELETE and the GET list stay open so
+ * a downgrade never strands rows a user cannot see or remove.
  *
  * This router writes `user_artist_follows` and NOTHING else. It must never
  * call the Spotify API: the button does not follow the artist on the user's
@@ -288,6 +291,7 @@ const bulkFollowSchema = z.object({
  */
 meArtistFollowsRouter.post(
   '/artist-follows/bulk',
+  requireSignedIn,
   zValidator('json', bulkFollowSchema, (result, ctx) => {
     if (!result.success) {
       return ctx.json({ success: false, error: 'Invalid slug list' }, 400);

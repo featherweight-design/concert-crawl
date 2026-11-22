@@ -6,7 +6,9 @@
 > Stripe webhook route, the admin founder-window page and routes, the
 > founder-launch smoke and the card-less trial start. No billing email sends any
 > more. **Hugh:** delete the Stripe webhook endpoints (live and test) in the
-> dashboard. Billing tables and plan resolution stay.
+> dashboard. Billing tables and plan resolution stay. Deleted on 2026-11-21:
+> the public `GET /v1/billing/founder-window` and the `founderWindow` field on
+> `/v1/users/me`; the `founder_window` table stays until a contract migration.
 
 **What this is:** the operational sequence for opening the founder window and taking
 paid subscriptions live in production. This is the Phase 7 launch trigger from the
@@ -111,8 +113,6 @@ FROM founder_window WHERE id = 1;
 Expected pre-launch row: `opens_at = NULL`, `closes_at = NULL`,
 `seats_remaining = seats_total = 100`.
 
-- [ ] **Public API reads pre-launch:** `GET /v1/billing/founder-window` returns
-      `state: "pre-launch"`.
 - [ ] **Admin panel loads:** `/admin/founder-window` renders the control with the window
       state, seats, and the "Open the founder window" button.
 
@@ -180,8 +180,7 @@ RETURNING id, opens_at, closes_at;
 
 ### 1. Read-only state checks (immediate, safe)
 
-- `GET /v1/billing/founder-window` → `state: "open"`, `opensAt` set, `closesAt` =
-  `opensAt` + `window_days`.
+- `founder_window` row: `opens_at` set, `closes_at` = `opens_at` + `window_days`.
 - Admin tile at `/admin/founder-window` shows **Open**, seats remaining, and (once claims
   land) the recent-claims list.
 - Automated read-only smoke (does **not** claim a seat or spend money):
@@ -242,7 +241,7 @@ RETURNING id, opens_at, seats_remaining, seats_total;
 ```
 
 - `closes_at` auto-clears (it is generated from `opens_at`).
-- After this, `GET /v1/billing/founder-window` returns `pre-launch` again, and the admin
+- After this, the row reads pre-launch again, and the admin
   "Open the founder window" button reappears — the endpoint's `opens_at IS NULL` guard is
   satisfied, so you can re-launch cleanly once the problem is fixed.
 - ⚠️ **Re-launch with the SQL below, not the button.** The button stamps `NOW()`, which
@@ -298,8 +297,6 @@ editor also works for these read-only checks and the flip.
   (Phase 6 = admin + analytics + launch prep; Phase 7 = launch day)
 - Admin control: `apps/api/src/routes/admin/founder-window.ts` (PR 6.1, #917),
   `apps/web/src/components/admin/founder-window/FounderWindowControl.tsx`
-- Public founder window: `apps/api/src/routes/billing-founder-window.ts`
-  (`resolveFounderWindowView`)
 - Stripe secrets: `docs/runbooks/stripe-secrets.md`
 - Production launch (infra): `docs/runbooks/production-launch.md`
 - DB rollback: `docs/runbooks/db-rollback.md`

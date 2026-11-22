@@ -273,6 +273,11 @@ describe('POST /v1/me/artist-follows/bulk', () => {
     expect(status).toBe(401);
   });
 
+  it('401s an anonymous request before validating the body', async () => {
+    const { status } = await postBulk('not-an-array');
+    expect(status).toBe(401);
+  });
+
   it('follows for a free-tier user now that following is unlocked', async () => {
     await seedArtist({ name: 'Phoebe Bridgers' });
     signIn();
