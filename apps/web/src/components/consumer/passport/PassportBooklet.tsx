@@ -1,6 +1,12 @@
 'use client';
 
-import { Fragment, useRef, useState, type CSSProperties } from 'react';
+import {
+  Fragment,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   BookletStamp,
@@ -65,23 +71,45 @@ const PAGE_GROUND: CSSProperties = {
   backgroundSize: '14px 14px',
 };
 
+/**
+ * A stamp's cell. Under 360px the stamp steps down from 124 to 108px
+ * (`02/passport-id-320`) by scaling inside a smaller cell, so the page keeps
+ * its height and two columns keep their room.
+ */
+function StampCell({ size, children }: { size: number; children: ReactNode }) {
+  return (
+    <span
+      className="flex items-center justify-center max-[359px]:!size-[108px]"
+      style={{ width: size, height: size }}
+    >
+      <span className="flex shrink-0 max-[359px]:scale-[0.871]">
+        {children}
+      </span>
+    </span>
+  );
+}
+
 function StampPage({ page, size }: { page: BookletPage; size: number }) {
   return (
     <div
       data-booklet-leaf={`page-${page.number}`}
-      className="relative grid h-full grid-cols-2 place-items-center gap-3 px-3 pb-8 pt-5"
+      className="relative grid h-[300px] grid-cols-2 grid-rows-2 place-items-center gap-3 px-3 pb-6 pt-3 lg:h-[340px]"
       style={PAGE_GROUND}
     >
       {page.slots.map((slot, index) => {
         const key = `${page.number}-${index}`;
         const tilt = slotTilt(index);
-        if (slot.kind === 'stamp')
-          return (
-            <BookletStamp key={key} show={slot.show} size={size} tilt={tilt} />
-          );
-        if (slot.kind === 'next')
-          return <NextSlot key={key} show={slot.show} size={size} />;
-        return <EmptySlot key={key} size={size} tilt={tilt} />;
+        return (
+          <StampCell key={key} size={size}>
+            {slot.kind === 'stamp' ? (
+              <BookletStamp show={slot.show} size={size} tilt={tilt} />
+            ) : slot.kind === 'next' ? (
+              <NextSlot show={slot.show} size={size} />
+            ) : (
+              <EmptySlot size={size} tilt={tilt} />
+            )}
+          </StampCell>
+        );
       })}
       <span className={`absolute bottom-3 right-4 ${MONO_LABEL}`}>
         {COPY.pageLabel(page.number)}
@@ -182,7 +210,7 @@ function BookletView({
   pager,
 }: BookletViewProps) {
   const stack = layout === 'stack';
-  const spreads = bookletSpreads(pages, layout);
+  const spreads = bookletSpreads(pages);
   const current = spreadIndexFor(spreads, firstPage);
   const spread = spreads[current] ?? [];
   const last = spreads.length - 1;
@@ -195,14 +223,22 @@ function BookletView({
   };
 
   const following = spreads[current + 1];
-  const lastLeaf = spread[spread.length - 1];
+  const [followLeft, followRight] = following ?? [];
+  const lastPair = spread.filter((leaf) => leaf.kind === 'page');
+  const [lastLeft, lastRight] = lastPair;
   const status = stack
-    ? following?.[0] !== undefined
-      ? COPY.swipeForPage(leafNumber(following[0]))
-      : COPY.pageNights(
-          lastLeaf === undefined ? 1 : Math.max(1, leafNumber(lastLeaf)),
-          stats.nights,
-        )
+    ? followLeft !== undefined && followRight !== undefined
+      ? COPY.swipeForPages(leafNumber(followLeft), leafNumber(followRight))
+      : lastLeft !== undefined && lastRight !== undefined
+        ? COPY.pagesNights(
+            leafNumber(lastLeft),
+            leafNumber(lastRight),
+            stats.nights,
+          )
+        : COPY.pageNights(
+            lastLeft === undefined ? 1 : leafNumber(lastLeft),
+            stats.nights,
+          )
     : [
         COPY.spreadOf(current + 1, spreads.length),
         following !== undefined && !spreadHasStamps(following)
@@ -250,7 +286,7 @@ function BookletView({
           className={
             stack
               ? 'flex flex-col'
-              : 'grid min-h-[340px] grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]'
+              : 'grid grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]'
           }
         >
           {spread.map((leaf, index) => (

@@ -2178,10 +2178,14 @@ export const CONSUMER_COPY = {
     spreadOf: (spread: number, total: number): string =>
       `Spread ${spread} of ${total}`,
     nextPageWaiting: 'Next page is waiting',
-    swipeForPage: (page: number): string => `Swipe for page ${page}`,
-    /** The last page on a phone. The nights are the whole booklet's. */
+    swipeForPages: (left: number, right: number): string =>
+      `Swipe for pages ${left} · ${right}`,
+    /** The only spread, ID and page 1. The nights are the whole booklet's. */
     pageNights: (page: number, nights: number): string =>
       `Page ${page} · ${nights} ${nights === 1 ? 'night' : 'nights'}`,
+    /** The last spread on a phone. The nights are the whole booklet's. */
+    pagesNights: (left: number, right: number, nights: number): string =>
+      `Pages ${left} · ${right} · ${nights} ${nights === 1 ? 'night' : 'nights'}`,
     jumpTo: 'Jump to',
     // Jump to buttons read `ID · 1` and `2 · 3`; these are what they announce.
     jumpIdentity: 'Identity page',

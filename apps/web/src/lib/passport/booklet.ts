@@ -29,8 +29,8 @@ export interface BookletPage {
 export type BookletLeaf = { kind: 'id' } | { kind: 'page'; page: BookletPage };
 
 /**
- * `spread` lays two leaves side by side (desktop); `stack` shows the identity
- * page over page 1 and every later page on its own (mobile).
+ * How a spread is drawn: `spread` puts its two leaves side by side (desktop),
+ * `stack` puts them one over the other (phone). The pairing is the same.
  */
 export type BookletLayout = 'spread' | 'stack';
 
@@ -60,18 +60,37 @@ export const bookletPages = (
   }));
 };
 
+/** The page that fills the right-hand leaf when the last real page is odd. */
+const blankPartner = (number: number): BookletLeaf => ({
+  kind: 'page',
+  page: {
+    number,
+    slots: Array.from({ length: STAMPS_PER_PAGE }, () => ({
+      kind: 'empty' as const,
+    })),
+  },
+});
+
+/**
+ * Two leaves a spread on every width: the identity page with page 1, then 2
+ * with 3, then 4 with 5. An odd last page gets a blank partner, so no spread
+ * is ever a leaf short and the card never changes size.
+ */
 export const bookletSpreads = (
   pages: readonly BookletPage[],
-  layout: BookletLayout,
 ): BookletLeaf[][] => {
   const leaves: BookletLeaf[] = pages.map((page) => ({ kind: 'page', page }));
   const [first, ...rest] = leaves;
   const spreads: BookletLeaf[][] = [
     first === undefined ? [{ kind: 'id' }] : [{ kind: 'id' }, first],
   ];
-  const step = layout === 'spread' ? 2 : 1;
-  for (let i = 0; i < rest.length; i += step) {
-    spreads.push(rest.slice(i, i + step));
+  for (let i = 0; i < rest.length; i += 2) {
+    const left = rest[i];
+    if (left === undefined) continue;
+    const right =
+      rest[i + 1] ??
+      blankPartner((left.kind === 'page' ? left.page.number : 0) + 1);
+    spreads.push([left, right]);
   }
   return spreads;
 };
@@ -157,6 +176,8 @@ export const passportCodeLine = (params: {
 export interface CollectedVenue {
   slug: string;
   name: string;
+  /** The venue's own short name, when it has one, for the tile's caption. */
+  shortName: string | null;
   collected: boolean;
 }
 
@@ -166,13 +187,18 @@ export interface CollectedVenue {
  * to light, so it is not counted against the active total.
  */
 export const collectedVenues = (
-  active: readonly { slug: string; name: string }[],
+  active: readonly {
+    slug: string;
+    name: string;
+    shortName?: string | null;
+  }[],
   past: readonly HistoryShow[],
 ): { venues: CollectedVenue[]; collected: number; total: number } => {
   const stamped = new Set(past.map((show) => show.venueSlug));
   const tiles = active.map((venue) => ({
     slug: venue.slug,
     name: venue.name,
+    shortName: venue.shortName ?? null,
     collected: stamped.has(venue.slug),
   }));
   const venues = [
