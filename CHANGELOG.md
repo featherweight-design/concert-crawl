@@ -1,3 +1,17 @@
+# [1.543.0](https://github.com/featherweight-design/concert-crawl/compare/v1.542.0...v1.543.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** accept attribute names with digits (x1, y2) in the glyph check ([8219fa6](https://github.com/featherweight-design/concert-crawl/commit/8219fa6698a5d9f9d51537ec009ff3b52a0630df))
+* **api:** check an arc along its sweep, take editor exports, audit a glyph change ([52542ca](https://github.com/featherweight-design/concert-crawl/commit/52542cac15502ea0aec367736a8b03d575ad7880))
+* **api:** check the control point S and T reflect; test the glyph audit and blank clear ([eae5ceb](https://github.com/featherweight-design/concert-crawl/commit/eae5cebd3295e46c1efe94f99fa255568149868f))
+
+
+### Features
+
+* **api:** a venue's own glyph, saved through the style check (admin 3d-1a) ([7b7073e](https://github.com/featherweight-design/concert-crawl/commit/7b7073e3ca1d182c8f6e68ead9032c705ae305e3))
+
 # [1.542.0](https://github.com/featherweight-design/concert-crawl/compare/v1.541.1...v1.542.0) (2026-11-22)
 
 
