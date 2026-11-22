@@ -1,3 +1,21 @@
+# [1.539.0](https://github.com/featherweight-design/concert-crawl/compare/v1.538.0...v1.539.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** clear the feedback sheet when the signed-in fan changes ([868d6af](https://github.com/featherweight-design/concert-crawl/commit/868d6afba97db8d875c182d4653609eae7112cf0))
+* **web:** hold the feedback message to the API's 2000-character cap ([2159be2](https://github.com/featherweight-design/concert-crawl/commit/2159be2b3c023a29d86ccb8f439cc4689c1f3795))
+* **web:** retire the shared v1 feedback draft and sweep abandoned ones ([9eda401](https://github.com/featherweight-design/concert-crawl/commit/9eda401db33c1c67ba18a3e89776da263e4c885f))
+* **web:** ring the follow strip photo as the board draws it ([7704629](https://github.com/featherweight-design/concert-crawl/commit/7704629ba0c95a7b0866a8ac5f6606bdb3071180))
+* **web:** ring the watch strip tile with the signal ring too ([66988e9](https://github.com/featherweight-design/concert-crawl/commit/66988e9d43c20ea4a0c43a62c6eeafb29ae6e59a))
+
+
+### Features
+
+* **web:** add suggest a venue to the feedback modal ([f709371](https://github.com/featherweight-design/concert-crawl/commit/f709371802bef29e3ad1986097ec2cefcd1264d6))
+* **web:** keep each signed-in fan's feedback draft to themselves ([d2423c5](https://github.com/featherweight-design/concert-crawl/commit/d2423c544ba77646ad73bf1e1b21c73ea619731c))
+* **web:** welcome-back strip for a kept Follow, shorter subline, two-line title ([71be363](https://github.com/featherweight-design/concert-crawl/commit/71be3635e442cc8dcdd739fe0eb2fe8e8793699f))
+
 # [1.538.0](https://github.com/featherweight-design/concert-crawl/compare/v1.537.0...v1.538.0) (2026-11-22)
 
 
