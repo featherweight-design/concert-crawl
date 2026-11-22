@@ -1,0 +1,36 @@
+{
+  "feature": "Addendum 6 item 41 · a cancelled show on the crew page's Coming up list (board 41/crew-coming-up, cancelled state)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/boards/41-crew-coming-up/crew-coming-up.html (the postponed or cancelled card). A show confirmed cancelled in the last day stays on Coming up with the Cancelled chip in the POSTPONED slot, a struck and muted title, its dated tile and no I'm in. The cell opens the audit user's Audit Crew, whose second member is going to one cancelled show and one that is on, so the on row draws I'm in beside it for comparison. Data is set on a lane scratch branch, never the shared one. Behind the crews flag. Signed in as the audit user. Electric and Light.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": { "cc-theme": "electric" },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": { "cc-theme": "light" },
+      "colorScheme": "light"
+    }
+  ],
+  "widths": [
+    { "label": "short", "width": 320, "height": 568, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "crew-cancelled",
+      "label": "Audit Crew, Coming up with a cancelled show",
+      "steps": [
+        {
+          "goto": "/crews/1b4b5e3b-09c1-4ce8-a36b-8ea6eaba9aef",
+          "settle": 1500
+        },
+        { "wait": "[data-testid=\"crew-coming-up-row\"]", "settle": 2500 }
+      ]
+    }
+  ]
+}
