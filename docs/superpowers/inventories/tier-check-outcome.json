@@ -1,0 +1,24 @@
+{
+  "feature": "Per-tier price check outcome on the multi-tier event card",
+  "note": "Board: cold-review 08-tier-check-outcome. Needs CC_VENDORS_EVENT_ID: a plain multi-tier event (every tier has a headline, no resale alternate on the headline tier, no open check) whose settled checks, one updated and one held, are inside the 14-day window. A boxoffice headline with a resale alternate draws the multi-source card instead.",
+  "widths": [
+    { "label": "xs", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "tier-check-outcome",
+      "label": "Event page: settled check lines under their tier",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/events/${CC_VENDORS_EVENT_ID}",
+          "wait": "[data-testid=\"price-check-outcome\"]",
+
+          "settle": 5000
+        }
+      ]
+    }
+  ]
+}
