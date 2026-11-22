@@ -114,12 +114,22 @@ describe('admin glyph drafting (3d-1)', () => {
       'image',
       'text',
     ]);
+    // The steer reaches the prompt, quoted.
+    expect(JSON.stringify(sent)).toContain(
+      'the cocktail glass on the neon sign',
+    );
 
     const costs = await testDb
       .select()
       .from(costTracking)
       .where(eq(costTracking.service, 'venue-glyph'));
     expect(costs).toHaveLength(1);
+    expect(JSON.parse(costs[0]?.metadata ?? '{}')).toMatchObject({
+      venueId: venue.id,
+      inputTokens: 1200,
+      outputTokens: 800,
+    });
+    expect(Number(costs[0]?.costUsd)).toBeGreaterThan(0);
     const audits = await testDb
       .select()
       .from(auditLog)
@@ -208,13 +218,38 @@ describe('admin glyph drafting (3d-1)', () => {
       { references: 0, steered: false, failed: true },
     ]);
 
+    const withImage = {
+      references: [{ name: 'a.png', mediaType: 'image/png', data: PIXEL }],
+    };
     mockCreate.mockRejectedValueOnce(
-      Object.assign(new Error('image does not match'), { status: 400 }),
+      Object.assign(new Error('image does not match the media type'), {
+        status: 400,
+      }),
     );
     expect(
-      (await request('POST', `/v1/admin/venues/${venue.id}/glyph-drafts`, {}))
-        .status,
+      (
+        await request(
+          'POST',
+          `/v1/admin/venues/${venue.id}/glyph-drafts`,
+          withImage,
+        )
+      ).status,
     ).toBe(422);
+    // A 400 that isn't about an image is an outage, not the image.
+    mockCreate.mockRejectedValueOnce(
+      Object.assign(new Error('Your credit balance is too low'), {
+        status: 400,
+      }),
+    );
+    expect(
+      (
+        await request(
+          'POST',
+          `/v1/admin/venues/${venue.id}/glyph-drafts`,
+          withImage,
+        )
+      ).status,
+    ).toBe(503);
 
     expect(
       (
@@ -241,6 +276,36 @@ describe('admin glyph drafting (3d-1)', () => {
       },
     );
     expect(bad.status).toBe(400);
-    expect(mockCreate).toHaveBeenCalledTimes(2);
+    for (const body of [
+      { references: Array.from({ length: 4 }, () => withImage.references[0]) },
+      { prompt: 'unknown keys are refused' },
+    ]) {
+      expect(
+        (
+          await request(
+            'POST',
+            `/v1/admin/venues/${venue.id}/glyph-drafts`,
+            body,
+          )
+        ).status,
+      ).toBe(400);
+    }
+
+    // Over three full references is refused before it is parsed.
+    const huge = await request(
+      'POST',
+      `/v1/admin/venues/${venue.id}/glyph-drafts`,
+      {
+        references: [
+          {
+            name: 'a.png',
+            mediaType: 'image/png',
+            data: 'A'.repeat(3_100_000),
+          },
+        ],
+      },
+    );
+    expect(huge.status).toBe(413);
+    expect(mockCreate).toHaveBeenCalledTimes(3);
   });
 });
