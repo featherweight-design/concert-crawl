@@ -302,5 +302,53 @@
   "note": "",
   "w": 1180,
   "h": 960
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-unmatched-d",
+  "title": "Co-billed heading · unmatched co-headliner, desktop",
+  "note": "Same plain-text pattern as the phone and Larry June.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-support-cases",
+  "title": "Co-billed · support acts with and without pages",
+  "note": "",
+  "w": 900,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-marks-both",
+  "title": "Followed artists · with the Watching tick",
+  "note": "Watching top-right, Following bottom-right.",
+  "w": 1000,
+  "h": 540
+ },
+ {
+  "section": "06-following",
+  "name": "follow-event-320",
+  "title": "Followed artists · event page, 320px",
+  "note": "",
+  "w": 320,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-event-signed-out",
+  "title": "Followed artists · event page, signed out",
+  "note": "No YOU FOLLOW line or Following state; every Follow opens sign-up.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-surfaces",
+  "title": "Followed artists · which surfaces get the mark",
+  "note": "",
+  "w": 1180,
+  "h": 440
  }
 ]
