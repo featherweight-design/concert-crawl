@@ -37,6 +37,7 @@ merge to main
    ┌───────────────────────────────────────────────┐
    │ workflow_dispatch: Deploy to Production       │
    │   inputs: reason (required), allow_stale_head │
+   │           no_build_cache                      │
    └───────────────────────────────────────────────┘
                   │
                   ├──► gate job: refuses a non-main dispatch;
@@ -157,6 +158,12 @@ Both run each side through `.github/scripts/resolve-deployable-sha.sh` (which
 only resolves a SHA and always exits 0) before comparing, so a `[skip ci]`
 release commit does not read as drift. `allow_stale_head: true` downgrades both
 refusals to a warning.
+
+`no_build_cache: true` makes the web step run `vercel deploy --prod --force`, so
+the build skips restoring the previous deployment's build cache. The API deploy
+ignores it. Use it when a prod web build fails after restoring its cache, but
+the same commit builds on staging, which keeps its own cache. It was added after
+two static-generation OOMs on 2026-11-22.
 
 ### Prod migrations run in the deploy job, before the API deploy
 
