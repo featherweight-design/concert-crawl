@@ -1,0 +1,57 @@
+{
+  "feature": "Submitted prices \u00b7 Load N more (20 rows at a time)",
+  "note": "/me/submissions mounts ThemeSync, which re-applies the account's saved theme, so this sheet runs one theme pass, Electric (as B16 and B18 do); the audit account's saved theme must be Electric. Needs the audit account to have more than 20 submissions (25 on the local scratch database).",
+  "widths": [
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 900,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1280,
+      "height": 1000
+    }
+  ],
+  "rows": [
+    {
+      "id": "first-20",
+      "label": "/me/submissions: 20 rows and the Load more control",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/me/submissions",
+          "wait": "[data-testid=\"submissions-load-more\"]:visible",
+          "settle": 1200
+        }
+      ]
+    },
+    {
+      "id": "after-load-more",
+      "label": "/me/submissions: after Load more, all 25 rows and no control",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/me/submissions",
+          "wait": "[data-testid=\"submissions-load-more\"]:visible",
+          "settle": 2500
+        },
+        {
+          "click": "[data-testid=\"submissions-load-more\"]:visible",
+          "settle": 1500
+        }
+      ]
+    }
+  ],
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ]
+}
