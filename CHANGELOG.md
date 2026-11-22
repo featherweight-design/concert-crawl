@@ -1,3 +1,15 @@
+## [1.541.1](https://github.com/featherweight-design/concert-crawl/compare/v1.541.0...v1.541.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** warm from the configured origin, plan inside after(), add a page test ([9cf3f55](https://github.com/featherweight-design/concert-crawl/commit/9cf3f559968c3e78874436c96e093d25c41a64b8))
+
+
+### Performance Improvements
+
+* **web:** warm the passport share card while the page renders ([8e9732e](https://github.com/featherweight-design/concert-crawl/commit/8e9732e624637d4e1cb881a22cf6ce611a5a6654))
+
 # [1.541.0](https://github.com/featherweight-design/concert-crawl/compare/v1.540.0...v1.541.0) (2026-11-22)
 
 
