@@ -1,11 +1,8 @@
-import { after } from 'next/server';
 import { apiClient } from '@/lib/api';
 import { auth } from '@/lib/auth';
 import { fetchHistory } from '@/lib/history';
 import { fetchMe } from '@/lib/users';
 import { passportYear } from '@/lib/passport/passport-request';
-import { planPassportCard } from '@/lib/passport/render-card';
-import { siteOrigin } from '@/lib/share/site-origin';
 import { DENVER_TIME_ZONE, localDateString } from '@/lib/time';
 import { PassportContent } from '@/components/consumer/passport/PassportContent';
 
@@ -64,36 +61,6 @@ export default async function PassportPage() {
       return [];
     }),
   ]);
-
-  // Warm the share card once the page is on its way: the browser asks for it
-  // on mount, and the first render costs several seconds. `after` runs past
-  // the response, so the page never waits on it, and planning sits inside it
-  // so nothing here can fail the page.
-  //
-  // Best effort, on two counts. The cache is per instance, so a request that
-  // lands elsewhere renders for itself. And the card is keyed on the stored
-  // profile theme, while the browser asks with the theme it holds locally: a
-  // reader whose two differ renders cold, as before. A repeat view of
-  // unchanged contents finds the entry and costs nothing.
-  //
-  // The origin is our own configured one, never a request header, so a
-  // forged Host cannot aim the font fetches elsewhere.
-  if (history.past.length > 0) {
-    after(async () => {
-      try {
-        await planPassportCard({
-          ratio: 'square',
-          userId: profile.id,
-          handle: profile.handle,
-          profileTheme: profile.theme,
-          themeOverride: undefined,
-          past: history.past,
-        }).render(siteOrigin());
-      } catch (err) {
-        console.error('[passport] card pre-warm failed', { err });
-      }
-    });
-  }
 
   return (
     <PassportContent
