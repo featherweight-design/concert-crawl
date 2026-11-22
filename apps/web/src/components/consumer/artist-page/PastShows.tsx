@@ -43,7 +43,7 @@ export const PastShows = ({ name, past, olderHref }: PastShowsProps) => {
           return (
             <li
               key={show.eventId}
-              className={`group relative -mx-2 ${index === 0 ? '' : "before:absolute before:inset-x-2 before:top-0 before:border-t before:border-border before:content-['']"} rounded-xl px-2 transition-colors hover:bg-surface-1 active:bg-surface-2 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-inset has-[a:focus-visible]:ring-signal`}
+              className={`group relative -mx-2 ${index === 0 ? '' : "before:absolute before:inset-x-2 before:top-0 before:border-t before:border-border before:content-['']"} rounded-xl transition-colors hover:bg-surface-1 active:bg-surface-2 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-inset has-[a:focus-visible]:ring-signal`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
