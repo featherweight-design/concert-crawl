@@ -163,7 +163,7 @@ refusals to a warning.
 the build skips restoring the previous deployment's build cache. The API deploy
 ignores it. Use it when a prod web build fails after restoring its cache, but
 the same commit builds on staging, which keeps its own cache. It was added after
-two static-generation OOMs on 2026-11-22.
+two static-generation OOMs on 2026-11-22 (UTC).
 
 ### Prod migrations run in the deploy job, before the API deploy
 

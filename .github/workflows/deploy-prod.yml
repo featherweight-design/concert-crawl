@@ -522,12 +522,12 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-          # Empty on workflow_run, where inputs do not exist.
+          # Empty unless dispatched with the box ticked; only `true` skips the cache.
           NO_BUILD_CACHE: ${{ github.event.inputs.no_build_cache }}
         run: |
           # `--force` builds without restoring the previous deployment's build
           # cache. Opt-in per dispatch, for a build that fails on a restored
-          # cache (2026-11-22: two OOMs in static generation after restoring a
+          # cache (2026-11-22 UTC: two OOMs in static generation after restoring a
           # 950 MB cache, while staging built the same commit).
           force_flag=()
           if [ "$NO_BUILD_CACHE" = "true" ]; then
