@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, it, expect } from 'vitest';
+import { MAX_FEEDBACK_MESSAGE_LENGTH } from '@concert-crawl/types';
 import {
   FEEDBACK_DRAFT_KEY,
   FEEDBACK_DRAFT_TTL_MS,
+  LEGACY_FEEDBACK_DRAFT_KEY,
   clearDraft,
   feedbackDraftKey,
   loadDraft,
@@ -184,5 +186,40 @@ describe('a signed-in fan keeps their own draft', () => {
     clearDraft('user_a');
     expect(loadDraft('user_a')).toBeNull();
     expect(loadDraft(null)).not.toBeNull();
+  });
+});
+
+describe('old and abandoned drafts', () => {
+  const stored = (savedAt: number, message = 'note') =>
+    JSON.stringify({ category: 'idea', message, screenshot: null, savedAt });
+
+  // v1 held signed-in drafts on the device-wide key, so a signed-out visitor
+  // could have loaded the last fan's note. It is removed and never read.
+  it('never loads a v1 entry, and removes it', () => {
+    localStorage.setItem(LEGACY_FEEDBACK_DRAFT_KEY, stored(Date.now()));
+    expect(loadDraft(null)).toBeNull();
+    expect(localStorage.getItem(LEGACY_FEEDBACK_DRAFT_KEY)).toBeNull();
+  });
+
+  it("sweeps another fan's expired draft and keeps a fresh one", () => {
+    const now = Date.now();
+    localStorage.setItem(
+      feedbackDraftKey('user_old'),
+      stored(now - FEEDBACK_DRAFT_TTL_MS - 1),
+    );
+    localStorage.setItem(feedbackDraftKey('user_fresh'), stored(now));
+    localStorage.setItem('unrelated', 'kept');
+    loadDraft('user_b', now);
+    expect(localStorage.getItem(feedbackDraftKey('user_old'))).toBeNull();
+    expect(localStorage.getItem(feedbackDraftKey('user_fresh'))).not.toBeNull();
+    expect(localStorage.getItem('unrelated')).toBe('kept');
+  });
+
+  it('holds a restored message to the API cap', () => {
+    localStorage.setItem(
+      FEEDBACK_DRAFT_KEY,
+      stored(Date.now(), 'x'.repeat(MAX_FEEDBACK_MESSAGE_LENGTH + 50)),
+    );
+    expect(loadDraft(null)?.message).toHaveLength(MAX_FEEDBACK_MESSAGE_LENGTH);
   });
 });

@@ -54,10 +54,17 @@ const isVenue = (category: FeedbackCategory | null): boolean =>
 const venueMessage = (name: string, website: string, notes: string): string =>
   [[name.trim(), website.trim()].filter(Boolean).join('\n'), notes.trim()]
     .filter(Boolean)
-    .join('\n\n')
-    // Text carried over from a longer note can pass Anything else's cap, so
-    // the joined message is held to the API's cap rather than sent to a 422.
-    .slice(0, MAX_FEEDBACK_MESSAGE_LENGTH);
+    .join('\n\n');
+
+// Text carried over from a longer note can pass Anything else's cap, so the
+// joined message is held to the API's cap rather than sent to a 422. The cap
+// counts UTF-16 units, as Zod does; a cut through an emoji drops its first
+// half rather than storing a lone surrogate.
+const capMessage = (text: string): string => {
+  const cut = text.slice(0, MAX_FEEDBACK_MESSAGE_LENGTH);
+  const last = cut.charCodeAt(cut.length - 1);
+  return last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut;
+};
 
 // The three fields' caps, with the two separators, fit the API's message cap.
 const VENUE_NAME_MAX = 200;
@@ -161,12 +168,14 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
       hydratedRef.current = false;
       return;
     }
-    if (!userLoaded || hydratedRef.current) return;
+    if (hydratedRef.current) return;
+    // Cancel any pending close-reset timer so it can't fire mid-hydration
+    // and wipe the draft we just restored (#834 Copilot R3). This runs before
+    // the Clerk wait, so a reopen while Clerk loads is not wiped either.
+    if (!sendingRef.current) cancelPendingReset();
+    if (!userLoaded) return;
     hydratedRef.current = true;
     if (sendingRef.current) return;
-    // Cancel any pending close-reset timer so it can't fire mid-hydration
-    // and wipe the draft we just restored (#834 Copilot R3).
-    cancelPendingReset();
     const draft = loadDraft(draftOwner);
     if (!draft) return;
     setCategory(draft.category);
@@ -344,7 +353,7 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
         body: JSON.stringify({
           category,
           message: venue
-            ? venueMessage(venueName, website, message)
+            ? capMessage(venueMessage(venueName, website, message))
             : message.trim(),
           pageUrl: pathname,
           metadata: {
@@ -384,6 +393,9 @@ export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
   const pickCategory = useCallback((cat: FeedbackCategory) => {
     setCategory(cat);
     setCatError(false);
+    // A missing-name error belongs to the send that raised it, so switching
+    // kind and back never shows it again on an untouched field.
+    setNameError(false);
   }, []);
 
   const editMessage = useCallback((msg: string) => {

@@ -2,9 +2,23 @@
   "feature": "P47-20 PR B: Suggest a venue in the feedback modal",
   "note": "Boards: design/design_handoff_admin_redesign/feedback-modal-states (PR #757) README answers A5 and Q4, and addendum-3 boards/02-suggest-a-venue (fan-suggest-a-venue-m). Fan audit user (no CONTACT_SHEET_ROLE). The filled row answers POST /v1/feedback with a 500, so nothing is written. Walked by hand: success (needs a real write), switching kinds with text (covered by FeedbackModal.test.tsx).",
   "widths": [
-    { "label": "phone-320", "width": 320, "height": 720, "touch": true },
-    { "label": "phone", "width": 390, "height": 844, "touch": true },
-    { "label": "desktop", "width": 1280, "height": 900 }
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 720,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1280,
+      "height": 900
+    }
   ],
   "rows": [
     {
@@ -15,7 +29,9 @@
           "goto": "/events",
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
-        { "wait": "[data-testid=\"event-row\"]" },
+        {
+          "wait": "[data-testid=\"event-row\"]"
+        },
         {
           "click": "button[aria-label^=\"Account menu\"]:visible",
           "settle": 300
@@ -26,7 +42,11 @@
           "settle": 500,
           "waitDialog": "^Feedback$"
         },
-        { "clickRole": "button", "name": "Suggest a venue", "settle": 300 }
+        {
+          "clickRole": "button",
+          "name": "Suggest a venue",
+          "settle": 300
+        }
       ]
     },
     {
@@ -37,7 +57,9 @@
           "goto": "/events",
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
-        { "wait": "[data-testid=\"event-row\"]" },
+        {
+          "wait": "[data-testid=\"event-row\"]"
+        },
         {
           "click": "button[aria-label^=\"Account menu\"]:visible",
           "settle": 300
@@ -48,9 +70,19 @@
           "settle": 500,
           "waitDialog": "^Feedback$"
         },
-        { "clickRole": "button", "name": "Suggest a venue", "settle": 300 },
-        { "clickRole": "button", "name": "^Send$" },
-        { "wait": "text=Tell us which venue.", "settle": 300 }
+        {
+          "clickRole": "button",
+          "name": "Suggest a venue",
+          "settle": 300
+        },
+        {
+          "clickRole": "button",
+          "name": "^Send$"
+        },
+        {
+          "wait": "text=Tell us which venue.",
+          "settle": 300
+        }
       ]
     },
     {
@@ -60,13 +92,17 @@
         {
           "route": "**/v1/feedback",
           "status": 500,
-          "body": { "error": "boom" }
+          "body": {
+            "error": "boom"
+          }
         },
         {
           "goto": "/events",
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
-        { "wait": "[data-testid=\"event-row\"]" },
+        {
+          "wait": "[data-testid=\"event-row\"]"
+        },
         {
           "click": "button[aria-label^=\"Account menu\"]:visible",
           "settle": 300
@@ -77,8 +113,15 @@
           "settle": 500,
           "waitDialog": "^Feedback$"
         },
-        { "clickRole": "button", "name": "Suggest a venue", "settle": 300 },
-        { "fill": "input[placeholder=\"Which venue?\"]", "text": "Dazzle" },
+        {
+          "clickRole": "button",
+          "name": "Suggest a venue",
+          "settle": 300
+        },
+        {
+          "fill": "input[placeholder=\"Which venue?\"]",
+          "text": "Dazzle"
+        },
         {
           "fill": "input[placeholder=\"Their site or calendar page\"]",
           "text": "dazzledenver.com"
@@ -87,8 +130,87 @@
           "fill": "textarea",
           "text": "Jazz almost every night on Curtis."
         },
-        { "clickRole": "button", "name": "^Send$" },
-        { "wait": "text=Signal lost", "settle": 400 }
+        {
+          "clickRole": "button",
+          "name": "^Send$"
+        },
+        {
+          "wait": "text=Signal lost",
+          "settle": 400
+        }
+      ]
+    },
+    {
+      "id": "venue-draft-restored",
+      "label": "Suggest a venue: reopen after a failed send, the same signed-in fan gets the draft back with its venue fields (A4, A5)",
+      "steps": [
+        {
+          "route": "**/v1/feedback",
+          "status": 500,
+          "body": {
+            "error": "boom"
+          }
+        },
+        {
+          "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "settle": 300
+        },
+        {
+          "clickRole": "button",
+          "name": "Send feedback",
+          "settle": 500,
+          "waitDialog": "^Feedback$"
+        },
+        {
+          "clickRole": "button",
+          "name": "Suggest a venue",
+          "settle": 300
+        },
+        {
+          "fill": "input[placeholder=\"Which venue?\"]",
+          "text": "Dazzle"
+        },
+        {
+          "fill": "input[placeholder=\"Their site or calendar page\"]",
+          "text": "dazzledenver.com"
+        },
+        {
+          "fill": "textarea",
+          "text": "Jazz almost every night on Curtis."
+        },
+        {
+          "clickRole": "button",
+          "name": "^Send$"
+        },
+        {
+          "wait": "text=Signal lost",
+          "settle": 400
+        },
+        {
+          "pressKey": "Escape",
+          "settle": 400
+        },
+        {
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "settle": 300
+        },
+        {
+          "clickRole": "button",
+          "name": "Send feedback",
+          "settle": 500,
+          "waitDialog": "^Feedback$"
+        },
+        {
+          "wait": "text=Saved draft restored",
+          "settle": 300
+        }
       ]
     }
   ]

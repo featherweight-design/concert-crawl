@@ -11,14 +11,19 @@
 
 import {
   FAN_FEEDBACK_CATEGORIES,
+  MAX_FEEDBACK_MESSAGE_LENGTH,
   type FanFeedbackCategory,
 } from '@concert-crawl/types';
 
-export const FEEDBACK_DRAFT_KEY = 'feedback-draft-v1';
+export const FEEDBACK_DRAFT_KEY = 'feedback-draft-v2';
+
+// v1 kept every draft, signed in or not, under one device-wide key. Such an
+// entry may hold a signed-in fan's note, so it is never read, only removed.
+export const LEGACY_FEEDBACK_DRAFT_KEY = 'feedback-draft-v1';
 
 // A signed-in fan's draft is kept under their own user id, so the next person
 // to sign in on a shared phone never sees it (Hugh, 2026-11-22). A signed-out
-// draft keeps the one device-wide key it has always had.
+// draft has the one device-wide key.
 export const feedbackDraftKey = (userId: string | null): string =>
   userId === null ? FEEDBACK_DRAFT_KEY : `${FEEDBACK_DRAFT_KEY}:${userId}`;
 export const FEEDBACK_DRAFT_TTL_MS = 72 * 60 * 60 * 1000; // 72h
@@ -111,12 +116,44 @@ export function saveDraft(
   }
 }
 
+// Removes the v1 entry and every other fan's expired or unreadable draft. A
+// draft is otherwise removed only when its own fan loads it, so one who never
+// returns would leave it (screenshot included) in storage for good.
+function sweepDrafts(now: number, ownKey: string): void {
+  try {
+    localStorage.removeItem(LEGACY_FEEDBACK_DRAFT_KEY);
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key !== null && key !== ownKey && key.startsWith(FEEDBACK_DRAFT_KEY))
+        keys.push(key);
+    }
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      let parsed: unknown = null;
+      try {
+        parsed = raw === null ? null : JSON.parse(raw);
+      } catch {
+        parsed = null;
+      }
+      if (
+        !isStoredDraft(parsed) ||
+        now - parsed.savedAt > FEEDBACK_DRAFT_TTL_MS
+      )
+        localStorage.removeItem(key);
+    }
+  } catch (err) {
+    console.warn('feedback-draft: failed to sweep old drafts', err);
+  }
+}
+
 export function loadDraft(
   userId: string | null,
   now: number = Date.now(),
 ): FeedbackDraft | null {
   if (!isBrowser()) return null;
   const key = feedbackDraftKey(userId);
+  sweepDrafts(now, key);
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
@@ -132,6 +169,9 @@ export function loadDraft(
     }
     return {
       ...parsed,
+      // A draft from before the message cap, or an edited one, would fail
+      // every send with a 422 the fan cannot see the reason for.
+      message: parsed.message.slice(0, MAX_FEEDBACK_MESSAGE_LENGTH),
       venueName: parsed.venueName ?? '',
       website: parsed.website ?? '',
     };

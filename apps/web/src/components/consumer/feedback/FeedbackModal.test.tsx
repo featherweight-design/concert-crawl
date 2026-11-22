@@ -554,6 +554,18 @@ describe('FeedbackModal — Suggest a venue', () => {
     expect(screen.queryByText(MODAL.errors.venueNameRequired)).toBeNull();
   });
 
+  it('drops the missing-name error when the fan switches kind and back', async () => {
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    pickVenue();
+    await submitAndWait();
+    expect(screen.getByText(MODAL.errors.venueNameRequired)).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('button', { name: MODAL.categories.idea }),
+    );
+    pickVenue();
+    expect(screen.queryByText(MODAL.errors.venueNameRequired)).toBeNull();
+  });
+
   it('joins the fields into the message, carrying the box text into Anything else', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
