@@ -11,4 +11,4 @@
 --   A rollback past 0125's release also needs 0125's own down
 --   (SET NOT NULL), which then holds since every row has a value.
 
-ALTER TABLE "feature_flags" DROP COLUMN "enabled";
+ALTER TABLE "feature_flags" DROP COLUMN IF EXISTS "enabled";
