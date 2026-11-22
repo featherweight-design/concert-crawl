@@ -18,8 +18,10 @@ import {
 } from '../lib/event-billing.js';
 import { todayInDenver } from '../lib/time.js';
 import { containsPattern, escapeLikePattern } from '../lib/escape-like.js';
-import { resolveDisplayPrice } from '../lib/price-aggregation/build-price-by-tier.js';
-import { loadPriceByTierByEventId } from '../lib/price-aggregation/load-price-by-tier.js';
+import {
+  loadPriceByTierByEventId,
+  resolveDisplayPrice,
+} from '../lib/price-aggregation/index.js';
 
 export const searchRouter = new Hono();
 
