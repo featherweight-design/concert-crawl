@@ -9,6 +9,7 @@ import { db, venues } from '@concert-crawl/db';
 import { validateGlyphSvg, type GlyphSvgFailure } from '@concert-crawl/types';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
 import { getAuthUser } from '../../middleware/auth.js';
 import { apiLogger } from '../../lib/logger.js';
@@ -26,6 +27,11 @@ export const GLYPH_DRAFT_COUNT = 4;
 export const GLYPH_REFERENCE_MAX = 3;
 /** Base64 characters per reference, about 750 KB of image. */
 export const GLYPH_REFERENCE_MAX_CHARS = 1_000_000;
+/** Three full references plus the JSON around them. */
+const GLYPH_DRAFT_MAX_BODY_BYTES =
+  GLYPH_REFERENCE_MAX * GLYPH_REFERENCE_MAX_CHARS + 16_000;
+
+const venueParamSchema = z.object({ id: z.uuid() });
 
 const draftGlyphsSchema = z
   .object({
@@ -51,16 +57,12 @@ const draftGlyphsSchema = z
   })
   .strict();
 
-const modelReplySchema = z.object({
-  drafts: z
-    .array(
-      z.object({
-        label: z.string(),
-        source: z.string().optional(),
-        svg: z.string(),
-      }),
-    )
-    .max(GLYPH_DRAFT_COUNT * 2),
+// Each draft is read on its own, so one malformed draft hides only itself.
+const modelReplySchema = z.object({ drafts: z.array(z.unknown()) });
+const modelDraftSchema = z.object({
+  label: z.string(),
+  source: z.string().optional(),
+  svg: z.string(),
 });
 
 export type GlyphDraftSource =
@@ -83,13 +85,13 @@ const buildPrompt = (
   venueName: string,
   referenceNames: string[],
   steer: string | undefined,
-): string => `You draw venue icons for Concert Crawl, a Denver live music calendar. Draw ${GLYPH_DRAFT_COUNT} different icon drafts for the venue "${venueName}".
+): string => `You draw venue icons for Concert Crawl, a Denver live music calendar. Draw ${GLYPH_DRAFT_COUNT} different icon drafts for the venue ${JSON.stringify(venueName)}.
 
 ${
   referenceNames.length > 0
-    ? `The images are references, in order: ${referenceNames.map((name) => `"${name}"`).join(', ')}. Trace what is distinctive in them (a sign, a marquee, the room). Draft from the name only where they don't help.`
+    ? `The images are references, in order: ${referenceNames.map((name) => JSON.stringify(name)).join(', ')}. Trace what is distinctive in them (a sign, a marquee, the room). Draft from the name only where they don't help.`
     : 'There are no reference images. Draft from the venue name.'
-}${steer ? `\nThe admin's steer: ${steer}` : ''}
+}${steer ? `\nThe admin's steer, as a quoted string: ${JSON.stringify(steer)}` : ''}
 
 Every icon must follow the house style exactly:
 - <svg viewBox="0 0 24 24"> with only <path>, <circle>, <ellipse>, <line>, <polyline> and <rect> inside (optionally grouped in <g>).
@@ -131,7 +133,10 @@ const stripFence = (text: string): string =>
     .replace(/\n?```\s*$/i, '')
     .trim();
 
-/** Checks the model's drafts: the passing ones (at most four) and the hidden count. */
+/**
+ * Checks the model's first four drafts: the passing ones and the hidden count.
+ * The prompt asks for four, so anything past four is ignored.
+ */
 export const checkDrafts = (
   reply: z.infer<typeof modelReplySchema>,
   referenceNames: string[],
@@ -139,7 +144,14 @@ export const checkDrafts = (
   const hidden = { fill: 0, offGrid: 0, invalid: 0, total: 0 };
   const drafts: GlyphDraft[] = [];
   const offered = reply.drafts.slice(0, GLYPH_DRAFT_COUNT);
-  for (const draft of offered) {
+  for (const item of offered) {
+    const parsed = modelDraftSchema.safeParse(item);
+    if (!parsed.success) {
+      hidden.invalid += 1;
+      hidden.total += 1;
+      continue;
+    }
+    const draft = parsed.data;
     const checked = validateGlyphSvg(draft.svg);
     if (!checked.ok) {
       hidden[checked.reason] += 1;
@@ -164,15 +176,30 @@ export const checkDrafts = (
   return { drafts, hidden, asked: GLYPH_DRAFT_COUNT };
 };
 
+const isBadRequest = (err: unknown): boolean =>
+  typeof err === 'object' &&
+  err !== null &&
+  'status' in err &&
+  err.status === 400;
+
 export const venueGlyphAdminRouter = new Hono<AdminVariables>();
 
 // POST /v1/admin/venues/:id/glyph-drafts — four style-checked glyph drafts.
 // Persists nothing but its cost row and the audit.
 venueGlyphAdminRouter.post(
   '/:id/glyph-drafts',
+  bodyLimit({
+    maxSize: GLYPH_DRAFT_MAX_BODY_BYTES,
+    onError: (ctx) =>
+      ctx.json(
+        { success: false, error: 'Reference images are too large' },
+        413,
+      ),
+  }),
+  zValidator('param', venueParamSchema, validationHook),
   zValidator('json', draftGlyphsSchema, validationHook),
   async (ctx) => {
-    const { id } = ctx.req.param();
+    const { id } = ctx.req.valid('param');
     const { references, steer } = ctx.req.valid('json');
 
     const [venue] = await db
@@ -182,6 +209,13 @@ venueGlyphAdminRouter.post(
     if (!venue) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
+
+    // Audited before the call, so a failed attempt is on record too.
+    ctx.set('auditAction', 'venue.glyph_draft');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
+    const attempt = { references: references.length, steered: Boolean(steer) };
+    ctx.set('auditMeta', { ...attempt, failed: true });
 
     const referenceNames = references.map((ref) => ref.name);
     let message: Anthropic.Messages.Message;
@@ -220,6 +254,17 @@ venueGlyphAdminRouter.post(
         { err, venueId: id },
         'glyph-drafts: Anthropic call failed',
       );
+      // A 400 is the input (an image that doesn't match its type, or too
+      // big): retrying the same images won't help, so it says so.
+      if (isBadRequest(err)) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'A reference image could not be read. Try another image.',
+          },
+          422,
+        );
+      }
       return ctx.json(
         { success: false, error: 'Could not draft icons. Try again.' },
         503,
@@ -227,7 +272,7 @@ venueGlyphAdminRouter.post(
     }
 
     // Paid whatever the reply holds, so recorded before any parsing bails.
-    void recordGlyphCost(id, message.usage);
+    await recordGlyphCost(id, message.usage);
 
     const textBlock = message.content.find((block) => block.type === 'text');
     let parsed: unknown = null;
@@ -246,12 +291,8 @@ venueGlyphAdminRouter.post(
       referenceNames,
     );
 
-    ctx.set('auditAction', 'venue.glyph_draft');
-    ctx.set('auditTargetId', id);
-    ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditMeta', {
-      references: references.length,
-      steered: Boolean(steer),
+      ...attempt,
       passed: result.drafts.length,
       hidden: result.hidden,
     });
