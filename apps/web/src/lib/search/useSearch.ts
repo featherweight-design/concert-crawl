@@ -25,8 +25,9 @@ export interface ArtistResult {
   artistPhotoUrl?: string | null;
   /**
    * The soonest show's cheapest corroborated tier floor, falling back to the
-   * `ticketPriceMin` scalar when no tier carries a headline (#1365). Named for
-   * the scalar so the row's price reads one field across result kinds.
+   * `ticketPriceMin` scalar when no tier carries a headline (#1365). The field
+   * keeps the scalar's name, as the popular rows' does, though it holds the
+   * resolved price.
    */
   ticketPriceMin?: string | null;
 }
