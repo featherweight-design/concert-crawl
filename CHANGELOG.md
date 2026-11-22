@@ -1,3 +1,41 @@
+## [1.524.1](https://github.com/featherweight-design/concert-crawl/compare/v1.524.0...v1.524.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** repoint the edge-cache error probe, drop the vacuous flag test, tidy comments ([903bd07](https://github.com/featherweight-design/concert-crawl/commit/903bd0785875f24945faadf9732aadbfd6bf8ef9))
+
+# [1.524.0](https://github.com/featherweight-design/concert-crawl/compare/v1.523.0...v1.524.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** answer 401 before validating past-shows and bulk follow, fix stale gate docs ([ed9e624](https://github.com/featherweight-design/concert-crawl/commit/ed9e624e904c0ba5f72d6ba4f97c33353daf7d85))
+* **api:** answer 401 before validating the follow slug ([923e9c5](https://github.com/featherweight-design/concert-crawl/commit/923e9c5a0adbced2dbb0861e19984f70528aa14d))
+* **api:** opt-out test reads the preferences table; mark retired flag in old docs ([fb5f7e0](https://github.com/featherweight-design/concert-crawl/commit/fb5f7e00378fb87ba99854edd0bcc258ef50fb99))
+
+
+### Features
+
+* **api:** drop the founder window and the plan gates every account passes ([83bf70e](https://github.com/featherweight-design/concert-crawl/commit/83bf70e5a8eb3128a320f855f359b70fe200af09))
+
+# [1.523.0](https://github.com/featherweight-design/concert-crawl/compare/v1.522.5...v1.523.0) (2026-11-22)
+
+
+### Features
+
+* **api:** make the weekly digest opt-in (migration 0124) ([5fc97a4](https://github.com/featherweight-design/concert-crawl/commit/5fc97a49c8aab83c09e757b29a1549a5a50992ee))
+
+## [1.522.5](https://github.com/featherweight-design/concert-crawl/compare/v1.522.4...v1.522.5) (2026-11-22)
+
+
+### Bug Fixes
+
+* **e2e:** drop the phone-timing snooze row from the Needs you inventory ([b9f74f2](https://github.com/featherweight-design/concert-crawl/commit/b9f74f27af8d1f8ae9ec59a10e701abdd878b6ac))
+* **web:** halve the Passport share card render time ([5167c6f](https://github.com/featherweight-design/concert-crawl/commit/5167c6f770193fbe83a4c0d2276afefa37b77ee7))
+* **web:** move, trap and return focus in the What's new popup ([b784817](https://github.com/featherweight-design/concert-crawl/commit/b78481770ebb6333be0573f18db376ee512f78b0))
+* **web:** use the consumer modal hook for the What's new popup, add probe ([87c509d](https://github.com/featherweight-design/concert-crawl/commit/87c509dce75fec9f6d38952bc5615698dfc07329))
+
 ## [1.522.4](https://github.com/featherweight-design/concert-crawl/compare/v1.522.3...v1.522.4) (2026-11-20)
 
 

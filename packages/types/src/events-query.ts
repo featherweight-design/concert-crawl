@@ -18,7 +18,6 @@ export const EVENTS_QUERY_KEYS = [
   'filterVibe',
   'limit',
   'offset',
-  'taste',
   'following',
 ] as const;
 

@@ -31,7 +31,7 @@ import { todayInDenver } from '../lib/time.js';
 import { isSoldOutForFansSql } from '../lib/sold-out.js';
 
 // Watching is FREE for all signed-in plans (locked decision, #781 R6 —
-// ENTITLEMENTS_MATRIX.watching). Do NOT add a requireFeature() gate here;
+// ENTITLEMENTS_MATRIX.watching). Do NOT add a plan gate here;
 // auth is the only requirement.
 export const watchingRouter = new Hono();
 

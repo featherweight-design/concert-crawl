@@ -104,7 +104,7 @@ describe('edge cache headers on public reads', () => {
     for (const path of [
       '/v1/events/00000000-0000-4000-8000-000000000000',
       '/v1/venues/no-such-venue',
-      '/v1/events?taste=1',
+      '/v1/events?following=1',
     ]) {
       const res = await app.request(path);
       expect(res.status, path).toBeGreaterThanOrEqual(400);

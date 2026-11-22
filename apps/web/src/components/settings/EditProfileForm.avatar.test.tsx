@@ -61,7 +61,6 @@ const profile = (over: Partial<UserProfileResponse>): UserProfileResponse => ({
     closed: 0,
   },
   cred: 0,
-  founderWindow: { state: 'pre-launch', seatsTotal: 100, closesAt: null },
   ...over,
 });
 

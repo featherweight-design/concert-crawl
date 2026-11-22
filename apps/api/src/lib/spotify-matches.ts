@@ -1,8 +1,7 @@
 // apps/api/src/lib/spotify-matches.ts
 //
-// Denver-match summary for a user's Spotify-sourced artist set (#763 PR 5,
-// eng spec §9.1). Matching is canonical-name based — exactly the rule the
-// taste surfaces use:
+// Denver-match taste picks for a user's Spotify-sourced artist set (#763,
+// eng spec §9.1), read by the weekly digest. Matching is canonical-name based:
 //   events.canonical_artist = ANY($names)
 //     OR events.canonical_headliners && $names
 //     OR events.canonical_supporting && $names
@@ -33,7 +32,6 @@ import type {
 import {
   billedCanonicalNames,
   billsAnyCanonicalName,
-  billsCanonicalName,
   displayHeadliner,
   portraitCanonicalName,
 } from './event-billing.js';
@@ -43,18 +41,6 @@ import {
 } from './price-aggregation/index.js';
 import { SPOTIFY_FOLLOW_SOURCES } from './spotify-sync.js';
 import { todayInDenver } from './time.js';
-
-export interface SpotifyMatchSummary {
-  denverArtistCount: number;
-  denverShowCount: number;
-  matchedArtists: string[];
-}
-
-export const EMPTY_MATCH_SUMMARY: SpotifyMatchSummary = {
-  denverArtistCount: 0,
-  denverShowCount: 0,
-  matchedArtists: [],
-};
 
 interface FollowName {
   artistName: string;
@@ -88,13 +74,6 @@ const loadSpotifyFollowNames = async (
   );
 };
 
-interface MatchedEventRow {
-  id: string;
-  canonicalArtist: string;
-  canonicalHeadliners: string[] | null;
-  canonicalSupporting: string[] | null;
-}
-
 // Shared §9.1 condition: consumer-visible upcoming events whose bill names one
 // of the canonical set, per `billsAnyCanonicalName` (lib/event-billing.ts).
 const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
@@ -107,9 +86,7 @@ const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
       eq(events.hiddenFromConsumer, false),
       isNull(events.firstMissingAt),
       // A deactivated venue's shows must not drive fan-out or recommendations
-      // (#1406). Correlated EXISTS rather than a join so the two consumers of
-      // this condition keep their existing query shapes — getTastePicks
-      // already joins venues, loadMatchedUpcomingEvents does not.
+      // (#1406). Correlated EXISTS rather than a join.
       exists(
         db
           .select({ one: sql`1` })
@@ -120,141 +97,6 @@ const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
     ) ?? sql`false`
   );
 };
-
-const loadMatchedUpcomingEvents = async (
-  canonicalNames: string[],
-): Promise<MatchedEventRow[]> => {
-  if (canonicalNames.length === 0) return [];
-  return db
-    .select({
-      id: events.id,
-      canonicalArtist: events.canonicalArtist,
-      canonicalHeadliners: events.canonicalHeadliners,
-      canonicalSupporting: events.canonicalSupporting,
-    })
-    .from(events)
-    .where(matchedUpcomingCondition(canonicalNames));
-};
-
-// Full summary for the connection payload: how many of the user's artists
-// have an upcoming Denver show, how many shows that is, and the display
-// names of the matched artists.
-export async function getSpotifyMatchSummary(
-  userId: string,
-): Promise<SpotifyMatchSummary> {
-  const follows = await loadSpotifyFollowNames(userId);
-  if (follows.length === 0) return EMPTY_MATCH_SUMMARY;
-
-  const displayByCanonical = new Map<string, string>();
-  for (const follow of follows) {
-    if (!displayByCanonical.has(follow.canonicalName)) {
-      displayByCanonical.set(follow.canonicalName, follow.artistName);
-    }
-  }
-  const canonicalNames = [...displayByCanonical.keys()];
-
-  const matchedEvents = await loadMatchedUpcomingEvents(canonicalNames);
-  if (matchedEvents.length === 0) return EMPTY_MATCH_SUMMARY;
-
-  const followSet = new Set(canonicalNames);
-  const matchedCanonicals = new Set<string>();
-  for (const event of matchedEvents) {
-    for (const billed of billedCanonicalNames(event)) {
-      if (followSet.has(billed)) matchedCanonicals.add(billed);
-    }
-  }
-
-  // Sorted so the chip list is deterministic — the event query has no
-  // ORDER BY, and Set iteration would leak that row order. Uncapped: the
-  // connect-success "WE RECOGNIZED" row folds past 6 behind an expandable
-  // "+N more", and the set is naturally bounded by the user's Denver matches.
-  const matchedArtists = [...matchedCanonicals]
-    .flatMap((canonical) => displayByCanonical.get(canonical) ?? [])
-    .sort((left, right) => left.localeCompare(right));
-
-  return {
-    denverArtistCount: matchedCanonicals.size,
-    denverShowCount: matchedEvents.length,
-    matchedArtists,
-  };
-}
-
-// Per-event follow matcher for the events list/detail `followedArtists`
-// overlay (#763 PR 6, eng spec §9.2). One query per request (the user's
-// Spotify-sourced follow names), then pure in-memory overlap against each
-// row's canonical columns — no per-event queries. Returns null when the user
-// has no Spotify-sourced follow rows (never connected, or revoked-and-purged)
-// so the routes can omit the field entirely; an `error`-status connection
-// retains its rows, so highlighting deliberately continues (§8.4).
-export interface FollowedArtistMatcher {
-  matchEvent: (event: {
-    canonicalArtist: string | null;
-    canonicalHeadliners: string[] | null;
-    canonicalSupporting: string[] | null;
-  }) => string[];
-}
-
-export async function getFollowedArtistMatcher(
-  userId: string,
-): Promise<FollowedArtistMatcher | null> {
-  const follows = await loadSpotifyFollowNames(userId);
-  if (follows.length === 0) return null;
-
-  const displayByCanonical = new Map<string, string>();
-  for (const follow of follows) {
-    if (!displayByCanonical.has(follow.canonicalName)) {
-      displayByCanonical.set(follow.canonicalName, follow.artistName);
-    }
-  }
-
-  return {
-    matchEvent: (event) => {
-      const matched = new Set<string>();
-      for (const billed of billedCanonicalNames(event)) {
-        if (displayByCanonical.has(billed)) matched.add(billed);
-      }
-      // localeCompare sort mirrors getSpotifyMatchSummary — deterministic
-      // regardless of row/Set iteration order.
-      return [...matched]
-        .flatMap((canonical) => displayByCanonical.get(canonical) ?? [])
-        .sort((left, right) => left.localeCompare(right));
-    },
-  };
-}
-
-// EXISTS condition for the events-list `taste=1` filter (#763 PR 7, eng spec
-// §9.3). Correlated against the outer `events` row so it AND-composes with the
-// list endpoint's other conditions and applies identically to the count and
-// row queries. Matches the §9.1 rule: the viewer has a Spotify-sourced follow
-// row for an act the event bills, per `billsCanonicalName`.
-export function spotifyTasteCondition(userId: string): SQL {
-  return exists(
-    db
-      .select({ one: sql`1` })
-      .from(userArtistFollows)
-      .where(
-        and(
-          eq(userArtistFollows.userId, userId),
-          inArray(userArtistFollows.source, [...SPOTIFY_FOLLOW_SOURCES]),
-          billsCanonicalName(userArtistFollows.canonicalName),
-        ),
-      ),
-  );
-}
-
-// Event ids for the auto-watch opt-in backfill: every currently-matched
-// upcoming show. PR 10's fan-out only covers events that appear AFTER the
-// toggle flips, so the opt-in moment backfills the existing matches (the
-// sheet promises "we'll add all N to your Watching list now").
-export async function getMatchedUpcomingEventIds(
-  userId: string,
-): Promise<string[]> {
-  const follows = await loadSpotifyFollowNames(userId);
-  if (follows.length === 0) return [];
-  const canonicalNames = [...new Set(follows.map((row) => row.canonicalName))];
-  const matched = await loadMatchedUpcomingEvents(canonicalNames);
-  return matched.map((event) => event.id);
-}
 
 // True when `candidate` is a strictly stronger reason than `current` under
 // the §9.4 ordering: any top-artist match beats a followed match, and a

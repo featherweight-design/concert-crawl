@@ -3,9 +3,9 @@
 // Source-agnostic reads over `user_artist_follows` for the native-following
 // API (#1226 follow-up epic, eng spec §7.1/§7.4/§9.3).
 //
-// The distinction from lib/spotify-matches.ts is the whole point: those
-// helpers scope to `SPOTIFY_FOLLOW_SOURCES` because the taste surfaces are
-// about a connected Spotify account. Everything here matches EVERY row
+// The distinction from lib/spotify-matches.ts is the whole point: that
+// helper scopes to `SPOTIFY_FOLLOW_SOURCES` because the taste picks are about
+// a connected Spotify account. Everything here matches EVERY row
 // regardless of `source`, because a native follow and a Spotify follow are the
 // same product concept. Do not "align" the two by adding a source filter here.
 import {
@@ -39,11 +39,11 @@ import { todayInDenver } from './time.js';
 const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const;
 
 /**
- * Correlated `EXISTS` for the events-list `following=1` filter. Modelled on
- * `spotifyTasteCondition` (lib/spotify-matches.ts) so it AND-composes with the
- * list endpoint's other conditions and applies identically to the count and
- * row queries — with the one deliberate divergence noted at the top of this
- * file: no `source` filter.
+ * Correlated `EXISTS` for the events-list `following=1` filter. Correlated
+ * against the outer `events` row so it AND-composes with the list endpoint's
+ * other conditions and applies identically to the count and row queries,
+ * with the one deliberate divergence noted at the top of this file: no
+ * `source` filter.
  *
  * Matches when the viewer follows an act on the event's bill, as
  * `billsCanonicalName` defines that (lib/event-billing.ts).

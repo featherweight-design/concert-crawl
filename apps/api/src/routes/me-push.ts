@@ -152,16 +152,17 @@ mePushRouter.delete('/push/subscriptions/:id', async (ctx) => {
   }
 });
 
-// Mirrors the column defaults in migration 0078. The artist defaults are
-// asymmetric on purpose: following is the opt-in, so alerts default on;
+// Mirrors the column defaults (migrations 0078 and 0124). The artist defaults
+// are asymmetric on purpose: following is the opt-in, so alerts default on;
 // following must never silently mutate Watching, so auto-watch defaults off.
+// The weekly digest is opt-in (0124), so it defaults off.
 const DEFAULT_PREFS = {
   masterEnabled: false,
   watchUpdatesEnabled: true,
   priceDropsEnabled: true,
   artistAlertsEnabled: true,
   artistAutoWatch: false,
-  weeklyDigestEnabled: true,
+  weeklyDigestEnabled: false,
   // Defaults true to match the column: signing up is the opt-in, and the
   // one-click link is how it goes off.
   productEmailsEnabled: true,

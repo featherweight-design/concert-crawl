@@ -27,12 +27,10 @@ import { feedbackRouter } from './feedback.js';
 import { flagsRouter } from './flags.js';
 import { catalogRouter } from './catalog.js';
 import { searchRouter } from './search.js';
-import { spotifyRouter } from './spotify.js';
 import { mePushRouter } from './me-push.js';
 import { meInviteRouter } from './me-invite.js';
 import { notificationsRouter } from './notifications.js';
 import { emailUnsubscribeRouter } from './email-unsubscribe.js';
-import { createFounderWindowRouter } from './billing-founder-window.js';
 import { createInternalCronRouter } from './internal-cron.js';
 
 export function registerRoutes(app: Hono) {
@@ -66,7 +64,6 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/flags', flagsRouter);
   app.route('/v1/catalog', catalogRouter);
   app.route('/v1/search', searchRouter);
-  app.route('/v1/spotify', spotifyRouter);
   app.route('/v1/me', mePushRouter);
   app.route('/v1/me', meInviteRouter);
   app.route('/v1/me', meArtistFollowsRouter);
@@ -74,5 +71,4 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/notifications', notificationsRouter);
   // Signed one-click unsubscribe — no auth by design (#763 §8.2).
   app.route('/v1/email', emailUnsubscribeRouter);
-  app.route('/v1/billing', createFounderWindowRouter());
 }

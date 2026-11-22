@@ -1,0 +1,28 @@
+-- The weekly digest becomes opt-in (Hugh, 2026-11-15).
+--
+-- Every follower is eligible for the weekly digest, but nobody receives it
+-- until they turn it on. Until now weekly_digest_enabled defaulted to true and
+-- the recipient query read a missing preferences row as on, so every follower
+-- would have been mailed the moment the generalized digest shipped.
+--
+-- Two statements:
+--   1. The column default flips to false, so a row created from here on
+--      (the first PATCH, or the email unsubscribe upsert) starts opted out.
+--   2. A one-time set-false of every existing row. Nobody has knowingly opted
+--      in yet: every true in the table is the old default, written when the
+--      row was created for some other toggle. The weekly job reads the column
+--      with no other gate, so leaving those rows true would mail people who
+--      never asked.
+--
+-- A user with no preferences row reads as off in code (the recipient query
+-- inner-joins the opted-in), so no backfill insert is needed.
+--
+-- Expand-only: no column is added or dropped. Code before this migration
+-- reads the column and its own fallback; it keeps working, it just sees false.
+--
+-- Down (restores the default only; the one-time set-false is not reversible,
+-- because the prior values were defaults, not choices):
+--   ALTER TABLE user_notification_preferences
+--     ALTER COLUMN weekly_digest_enabled SET DEFAULT true;
+ALTER TABLE "user_notification_preferences" ALTER COLUMN "weekly_digest_enabled" SET DEFAULT false;--> statement-breakpoint
+UPDATE "user_notification_preferences" SET "weekly_digest_enabled" = false, "updated_at" = now() WHERE "weekly_digest_enabled" = true;

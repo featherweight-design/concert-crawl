@@ -862,6 +862,13 @@
       "when": 1796300000000,
       "tag": "0123_crawl_mode_source",
       "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
+      "when": 1796400000000,
+      "tag": "0124_digest_opt_in",
+      "breakpoints": true
     }
   ]
 }

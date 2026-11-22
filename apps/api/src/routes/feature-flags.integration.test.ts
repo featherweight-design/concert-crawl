@@ -1,8 +1,8 @@
 // Integration tests for the release-flag route gate and the public flag map.
 //
 // The guarantee worth the most here is the ordering one: requireFlag is mounted
-// with router.use('*', ...) so it runs ahead of clerkMiddleware and
-// requireFeature, which is what makes a flagged-off premium route answer 404
+// with router.use('*', ...) so it runs ahead of clerkMiddleware and any
+// plan gate, which is what makes a flagged-off premium route answer 404
 // rather than a 401 or a 403 that would confirm the feature exists.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -82,11 +82,6 @@ describe('feature flag route gating', () => {
 
   it('answers 404 for the crew-invites router when crews is off', async () => {
     const res = await app.request('/v1/crew-invites/sometoken');
-    expect(res.status).toBe(404);
-  });
-
-  it('answers 404 for the spotify router when spotify-sync is off', async () => {
-    const res = await app.request('/v1/spotify/taste-picks');
     expect(res.status).toBe(404);
   });
 

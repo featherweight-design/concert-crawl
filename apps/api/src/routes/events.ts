@@ -44,7 +44,6 @@ import {
   vendorTrustRank,
   type AvailabilityDay,
   type EventsAvailabilityResponse,
-  type PlanState,
   type PriceCheckFields,
   type PriceCheckOutcome,
   type SourceCategory,
@@ -82,15 +81,6 @@ import {
   priceCheckFields,
   underCheckSql,
 } from '../lib/price-check.js';
-import {
-  getFollowedArtistMatcher,
-  spotifyTasteCondition,
-} from '../lib/spotify-matches.js';
-import { canUseFeature } from '@concert-crawl/entitlements';
-import { isFeatureEnabled } from '../lib/feature-flags.js';
-import { flagViewerFrom } from '../lib/flag-ladder.js';
-import { loadPlanState } from '../lib/plan.js';
-import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js';
 import { parseGenreRows } from '../lib/parse-genre-rows.js';
 import { releaseWatch } from '../lib/user-events.js';
 import { idSchema } from '../lib/id-schema.js';
@@ -117,20 +107,11 @@ const listEventsSchema = z.object({
     .transform((val) => (val === '' ? undefined : val)),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
-  // Taste filter (#763 PR 7, §9.3) — presence flag; only '1' is valid so a
-  // tampered value fails validation instead of silently passing unfiltered.
-  taste: z.literal('1').optional(),
-  // "My artists" scope filter (native following, §7.1) — same presence-flag
-  // shape as `taste`, for the same reason.
+  // "My artists" scope filter (native following, §7.1) — presence flag; only
+  // '1' is valid so a tampered value fails validation instead of silently
+  // passing unfiltered.
   following: z.literal('1').optional(),
 } satisfies Record<EventsQueryKey, z.ZodType>);
-
-// Shape of the custom claims added by our Clerk JWT template — same contract
-// as middleware/entitlement.ts: only extract `metadata`, loadPlanState owns
-// validating its contents.
-const listClaimsSchema = z.object({
-  metadata: z.unknown(),
-});
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_WINDOW_DAYS = 400;
@@ -161,8 +142,8 @@ export const eventsRouter = new Hono();
 
 // GET /v1/events — public event listing with filters and pagination.
 // clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so
-// signed-in requests can opt into the followedArtists overlay; anonymous
-// requests pass straight through and skip every per-user query.
+// signed-in requests can opt into the following scope; anonymous requests pass
+// straight through and skip every per-user query.
 eventsRouter.get(
   '/',
   clerkMiddleware(),
@@ -177,7 +158,6 @@ eventsRouter.get(
       offset,
       filterPrice,
       filterVibe,
-      taste,
       following,
     } = ctx.req.valid('query');
 
@@ -195,82 +175,23 @@ eventsRouter.get(
     }
 
     // Resolved up front (getAuth is a local JWT read — no network/DB cost)
-    // because the scope gates below need it before any query runs; the
-    // followedArtists overlay after the queries reuses the same value.
+    // because the scope gate below needs it before any query runs; the cache
+    // header after the queries reuses the same value.
     const listAuth = getAuth(ctx);
 
     // ── Scope-flag gates ───────────────────────────────────────────────────
     // Run before ANY other filter so an unknown venueSlug can't short-circuit
     // to a 200 and hide a 401/403 the client needs to route on.
     //
-    // taste=1 (#763 PR 7, §9.3) narrows the list to events matching the
-    // viewer's Spotify-sourced follow rows. following=1 (native following,
-    // §7.1) does the same over follow rows of EVERY source. Both are
-    // entitlement-gated inline — this route is public, so requireFeature can't
-    // mount route-wide: anonymous → 401, a plan without the feature → 403 with
-    // the same typed body the middleware emits, so the web client's
-    // locked-surface routing works identically. An entitled viewer with zero
-    // matching rows gets an empty 200 (the EXISTS matches nothing).
-    //
-    // Both flags can arrive together, so plan state is resolved at most once.
+    // following=1 (native following, §7.1) narrows the list to events matching
+    // the viewer's follow rows of every source. It needs a signed-in viewer
+    // (anonymous → 401). A viewer with zero matching rows gets an empty 200
+    // (the EXISTS matches nothing).
     const scopeConditions: SQL[] = [];
-    let cachedPlanState: PlanState | null = null;
-    const listPlanState = async (userId: string): Promise<PlanState> => {
-      if (cachedPlanState) return cachedPlanState;
-      const claims = listClaimsSchema.safeParse(listAuth?.sessionClaims);
-      const metadata = claims.success ? claims.data.metadata : undefined;
-      cachedPlanState = await loadPlanState(userId, metadata);
-      return cachedPlanState;
-    };
-
-    if (taste) {
-      // The flag is checked before the entitlement so a flagged-off scope
-      // answers 404 rather than a 403 upsell, matching requireFlag: an
-      // unreleased feature must not advertise itself as purchasable.
-      if (!(await isFeatureEnabled('spotify-sync', flagViewerFrom(listAuth)))) {
-        return ctx.notFound();
-      }
-      if (!listAuth?.userId) {
-        return ctx.json({ success: false, error: 'Unauthorized' }, 401);
-      }
-      const planState = await listPlanState(listAuth.userId);
-      if (!canUseFeature(planState, 'spotify-sync')) {
-        apiLogger.debug(
-          { userId: listAuth.userId, plan: planState.plan },
-          'taste filter entitlement denied',
-        );
-        return ctx.json(
-          {
-            success: false,
-            error: 'This feature requires an upgraded plan',
-            code: ENTITLEMENT_REQUIRED_CODE,
-            feature: 'spotify-sync',
-          },
-          403,
-        );
-      }
-      scopeConditions.push(spotifyTasteCondition(listAuth.userId));
-    }
 
     if (following) {
       if (!listAuth?.userId) {
         return ctx.json({ success: false, error: 'Unauthorized' }, 401);
-      }
-      const planState = await listPlanState(listAuth.userId);
-      if (!canUseFeature(planState, 'following')) {
-        apiLogger.debug(
-          { userId: listAuth.userId, plan: planState.plan },
-          'following filter entitlement denied',
-        );
-        return ctx.json(
-          {
-            success: false,
-            error: 'This feature requires an upgraded plan',
-            code: ENTITLEMENT_REQUIRED_CODE,
-            feature: 'following',
-          },
-          403,
-        );
       }
       scopeConditions.push(followedArtistsCondition(listAuth.userId));
     }
@@ -347,12 +268,6 @@ eventsRouter.get(
         sourceUrl: events.sourceUrl,
         createdAt: events.createdAt,
         updatedAt: events.updatedAt,
-        // Canonical name columns feed the followedArtists overlay below and
-        // are stripped from the response payload — matching happens on the
-        // canonical form (§9.1), display happens with the follow row's name.
-        canonicalArtist: events.canonicalArtist,
-        canonicalHeadliners: events.canonicalHeadliners,
-        canonicalSupporting: events.canonicalSupporting,
         artistPhotoUrl: artists.photoUrl,
         venue: {
           id: venues.id,
@@ -381,20 +296,6 @@ eventsRouter.get(
 
     const [countResult, rows] = await Promise.all([countQuery, rowsQuery]);
     const total = countResult[0]?.total ?? 0;
-
-    // followedArtists overlay (#763 PR 6, §9.2): one extra query for any
-    // signed-in viewer with results (the matcher must load Spotify-sourced
-    // follow names to decide presence); anonymous and empty-page requests
-    // skip it entirely, so the public path cost is unchanged.
-    // The overlay is Spotify-sourced, so the flag suppresses it: /v1/events is
-    // the shared public router and cannot carry requireFlag, which is why the
-    // gate sits at the field rather than the route.
-    const followMatcher =
-      listAuth?.userId &&
-      rows.length > 0 &&
-      (await isFeatureEnabled('spotify-sync', flagViewerFrom(listAuth)))
-        ? await getFollowedArtistMatcher(listAuth.userId)
-        : null;
 
     // Batch-fetch corroborated submission vendor for community-priced events so the
     // browse card can show the correct trust tier (boxoffice ★, resale R, community C).
@@ -448,35 +349,18 @@ eventsRouter.get(
       loadPriceByTierByEventId(rows.map((row) => row.id)),
     ]);
 
-    const enrichedRows = rows.map((row) => {
-      const {
-        canonicalArtist,
-        canonicalHeadliners,
-        canonicalSupporting,
-        ...publicRow
-      } = row;
-      return {
-        ...publicRow,
-        priceVendor:
-          row.priceSource === 'community'
-            ? (vendorByEventId[row.id] ?? null)
-            : null,
-        priceByTier: priceByTierByEventId.get(row.id) ?? null,
-        ...(followMatcher
-          ? {
-              followedArtists: followMatcher.matchEvent({
-                canonicalArtist,
-                canonicalHeadliners,
-                canonicalSupporting,
-              }),
-            }
-          : {}),
-      };
-    });
+    const enrichedRows = rows.map((row) => ({
+      ...row,
+      priceVendor:
+        row.priceSource === 'community'
+          ? (vendorByEventId[row.id] ?? null)
+          : null,
+      priceByTier: priceByTierByEventId.get(row.id) ?? null,
+    }));
 
     // Anonymous: the same for everyone, so the edge may hold it. A signed-in
-    // list can carry the followedArtists overlay and taste/following scopes, so
-    // it stays out of any shared cache. Set after the reads, never on an error.
+    // list can carry the following scope, so it stays out of any shared
+    // cache. Set after the reads, never on an error.
     markViewerScopedRead(ctx, Boolean(listAuth?.userId));
     return ctx.json({
       success: true,
@@ -622,7 +506,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       // Raw per-act spellings for the `headliners` slugs; stripped from the
       // response below in favour of `headliners: [{ name, slug }]`.
       headlinerNames: events.headliners,
-      // Feed the followedArtists overlay; stripped from the response below.
+      // Canonical forms: `canonicalHeadliners` is the ladder-ran signal for the
+      // slugs; all three are stripped from the response below.
       canonicalArtist: events.canonicalArtist,
       canonicalHeadliners: events.canonicalHeadliners,
       canonicalSupporting: events.canonicalSupporting,
@@ -1202,18 +1087,6 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }));
   }
 
-  // followedArtists overlay (#763 PR 6, §9.2) — one extra query for any
-  // signed-in viewer (the matcher loads Spotify-sourced follow names to
-  // decide presence); anonymous requests skip it, and the field is omitted
-  // when no Spotify follow rows exist.
-  // Same flag gate as the list route: the overlay is Spotify-sourced data on a
-  // router that serves every viewer, so it is suppressed per field.
-  const followMatcher =
-    authInfo?.userId &&
-    (await isFeatureEnabled('spotify-sync', flagViewerFrom(authInfo)))
-      ? await getFollowedArtistMatcher(authInfo.userId)
-      : null;
-
   // #1115 PR-G — slugs for the artist-page links on the detail title block.
   // `headliners` gives each act on a co-headline bill its own slug.
   const { artistSlug, supportingArtistSlugs, headliners } =
@@ -1243,15 +1116,6 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       supportingArtistSlugs,
       headliners,
       venueGuidePublished: venueGuidePublishedAt !== null,
-      ...(followMatcher
-        ? {
-            followedArtists: followMatcher.matchEvent({
-              canonicalArtist,
-              canonicalHeadliners,
-              canonicalSupporting,
-            }),
-          }
-        : {}),
       watching: watchingCount,
       isWatching,
       attendingAt,

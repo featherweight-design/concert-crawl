@@ -13,12 +13,11 @@
 //
 // Two phases, each in its own try/catch so one failure never blocks the rest:
 //
-//   1. DIGEST — every non-revoked connection with digestEnabled, gated at
-//               send time by canUseFeature(planState, 'spotify-sync') (§7:
-//               Premium-only) — or, under NATIVE_DIGEST_ENABLED, by
-//               'following', which every signed-in plan has since going
-//               free, so every follower gets it (see the generalized digest
-//               note below).
+//   1. DIGEST — opt-in (migration 0124): every follower whose preferences
+//               row has weekly_digest_enabled, whatever the follow's source.
+//               There is no plan gate: following is free for every
+//               signed-in user, so the entitlement check and the Clerk
+//               metadata fetch that fed it are gone.
 //               Matches = events in the next 7 Denver-local
 //               days whose canonical_artist equals — or canonical_supporting
 //               overlaps — the user's followed canonical names (§9.1).
@@ -32,33 +31,23 @@
 // SPOTIFY_SYNC_DRY_RUN=1 runs a log-only cycle: no emails — but eligibility +
 // matching still evaluate, and the summary row is written with dryRun:true.
 //
-// RELEASE FLAG. The `spotify-sync` flag suppresses phase 1 in its Spotify
-// shape only. Native following is not a Spotify feature, so a generalized run
-// keeps sending with the flag off; phase 2 runs either way, and the summary
-// carries digestSkippedFlag so a silent week is legible.
-//
-// GENERALIZED DIGEST (native following PR 9). NATIVE_DIGEST_ENABLED=1 flips
-// the digest from "Spotify subscribers" to "anyone who follows an artist":
-// recipients come from user_artist_follows joined to
-// user_notification_preferences.weekly_digest_enabled, the source filter goes
-// away, and the entitlement key becomes 'following'. All three move together
-// on purpose — leaving the connection join in place would have dropped every
-// native follower while the run still reported success (#1515). Default off;
-// the summary carries nativeDigest so a prod log says which shape ran.
+// Recipients come from user_artist_follows inner-joined to
+// user_notification_preferences.weekly_digest_enabled (#1515: a connection
+// join would drop every native follower while the run still reported success).
+// There is no release flag: NATIVE_DIGEST_ENABLED and the `spotify-sync` flag
+// no longer touch this job.
 
 import { pathToFileURL } from 'node:url';
 import * as Sentry from '@sentry/hono/node';
-import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, gte, lte, ne } from 'drizzle-orm';
 import {
   costTracking,
   db,
   events,
   userArtistFollows,
   userNotificationPreferences,
-  userSpotifyConnections,
   venues,
 } from '@concert-crawl/db';
-import { canUseFeature } from '@concert-crawl/entitlements';
 import { appUrl } from '../emails/layout.js';
 import type { DigestEmailShow } from '../emails/types.js';
 import { sendTransactionalEmail } from '../lib/email.js';
@@ -67,9 +56,7 @@ import {
   displayHeadliner,
 } from '../lib/event-billing.js';
 import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js';
-import { isFeatureEnabled } from '../lib/feature-flags.js';
 import { apiLogger } from '../lib/logger.js';
-import { loadPlanState } from '../lib/plan.js';
 import {
   loadPriceByTierByEventId,
   resolveDisplayPrice,
@@ -81,9 +68,6 @@ const TASTE_PICK_COUNT = 2;
 const DENVER_TZ = 'America/Denver';
 
 const isDryRun = (): boolean => process.env['SPOTIFY_SYNC_DRY_RUN'] === '1';
-
-const isNativeDigest = (): boolean =>
-  process.env['NATIVE_DIGEST_ENABLED'] === '1';
 
 // ---------------------------------------------------------------------------
 // Date helpers — events.date is a Denver-local calendar date (YYYY-MM-DD), so
@@ -272,71 +256,31 @@ const toDigestShow = (row: MatchedEventRow): DigestEmailShow => ({
 interface WeeklySummary {
   job: 'spotify-weekly';
   dryRun: boolean;
-  // Which digest shape ran — the only way a prod summary row distinguishes a
-  // legitimately small Spotify-only audience from the flag being off.
-  nativeDigest: boolean;
   isoWeek: string;
   windowStart: string;
   windowEnd: string;
   digestCandidates: number;
-  digestSkippedEntitlement: number;
   digestPrepared: number;
   digestSent: number;
   digestZeroWeek: number;
   digestSkippedEmpty: number;
   digestFailures: number;
-  // Separates "the flag hid the Spotify shape" from a run that reached zero
-  // eligible recipients on its own.
-  digestSkippedFlag: boolean;
 }
 
-type DigestOutcome = 'sent' | 'skipped-entitlement' | 'skipped-empty';
+type DigestOutcome = 'sent' | 'skipped-empty';
 
 const digestForUser = async (
   userId: string,
-  clerkUsers: { getUser: (id: string) => Promise<{ publicMetadata: unknown }> },
   summary: WeeklySummary,
   getTastePicks: () => Promise<MatchedEventRow[]>,
 ): Promise<DigestOutcome> => {
-  // Clerk publicMetadata feeds role-comped derivation; a Clerk blip falls
-  // back to metadata-free derivation (DB rows still decide paid plans).
-  let publicMetadata: unknown;
-  try {
-    publicMetadata = (await clerkUsers.getUser(userId)).publicMetadata;
-  } catch (err) {
-    apiLogger.warn(
-      { err, userId },
-      'spotify-weekly: Clerk metadata fetch failed — deriving plan without it',
-    );
-    publicMetadata = undefined;
-  }
-  const planState = await loadPlanState(userId, publicMetadata);
-  // The generalized digest is a following feature, so it rides the following
-  // entitlement; the Spotify-only shape stays on 'spotify-sync'.
-  if (
-    !canUseFeature(
-      planState,
-      summary.nativeDigest ? 'following' : 'spotify-sync',
-    )
-  ) {
-    return 'skipped-entitlement';
-  }
-
+  // Every follow source counts; the digest is not a Spotify feature.
   const followRows = await db
     .selectDistinct({ canonicalName: userArtistFollows.canonicalName })
     .from(userArtistFollows)
     .where(
       and(
         eq(userArtistFollows.userId, userId),
-        // Legacy shape only: the digest copy said "artists you follow on
-        // Spotify", so manual follows were out of scope. Generalized, every
-        // source counts and the filter drops away.
-        summary.nativeDigest
-          ? undefined
-          : inArray(userArtistFollows.source, [
-              'spotify_followed',
-              'spotify_top',
-            ]),
         ne(userArtistFollows.canonicalName, ''),
       ),
     );
@@ -398,105 +342,57 @@ export const runSpotifyWeekly = async (
   const summary: WeeklySummary = {
     job: 'spotify-weekly',
     dryRun: isDryRun(),
-    nativeDigest: isNativeDigest(),
     isoWeek: isoWeekKey(dayUtcMs),
     windowStart: toDateString(dayUtcMs),
     windowEnd: toDateString(dayUtcMs + (DIGEST_WINDOW_DAYS - 1) * DAY_MS),
     digestCandidates: 0,
-    digestSkippedEntitlement: 0,
     digestPrepared: 0,
     digestSent: 0,
     digestZeroWeek: 0,
     digestSkippedEmpty: 0,
     digestFailures: 0,
-    digestSkippedFlag: false,
   };
   apiLogger.info(
     { isoWeek: summary.isoWeek, dryRun: summary.dryRun },
     'spotify-weekly: starting run',
   );
 
-  // The native shape rides the `following` entitlement and reads every follow
-  // source, so it is deliberately outside this flag: hiding Spotify must not
-  // take native following down with it. The condition is hoisted above the
-  // try/catch because that catch pages Sentry, and a deliberate skip must not
-  // page anyone — hoisting also means a flagged-off run does no Clerk work.
-  const digestEnabled =
-    summary.nativeDigest || (await isFeatureEnabled('spotify-sync'));
-  if (!digestEnabled) {
-    summary.digestSkippedFlag = true;
-    apiLogger.info(
-      { isoWeek: summary.isoWeek },
-      'spotify-weekly: spotify-sync flag off, skipping digest phase',
+  // Phase 1 — digests.
+  try {
+    const recipients = await db
+      .selectDistinct({ userId: userArtistFollows.userId })
+      .from(userArtistFollows)
+      // INNER, on purpose: the digest is opt-in (migration 0124). A follower
+      // with no preferences row never turned it on, so they are not mailed;
+      // neither is anyone with no follows.
+      .innerJoin(
+        userNotificationPreferences,
+        eq(userNotificationPreferences.userId, userArtistFollows.userId),
+      )
+      .where(eq(userNotificationPreferences.weeklyDigestEnabled, true));
+    summary.digestCandidates = recipients.length;
+    const getTastePicks = lazyTastePicks(
+      summary.windowStart,
+      summary.windowEnd,
     );
-  }
-
-  // Phase 1 — digests. Clerk is loaded lazily so a missing @clerk/backend
-  // never breaks module evaluation for the rest of the run.
-  if (digestEnabled) {
-    try {
-      // Fail fast once instead of erroring per-user.
-      const clerkSecretKey = process.env['CLERK_SECRET_KEY'];
-      if (clerkSecretKey === undefined || clerkSecretKey.length === 0) {
-        throw new Error('CLERK_SECRET_KEY not set — digest phase skipped');
+    for (const { userId } of recipients) {
+      try {
+        const outcome = await digestForUser(userId, summary, getTastePicks);
+        if (outcome === 'skipped-empty') summary.digestSkippedEmpty += 1;
+      } catch (err) {
+        summary.digestFailures += 1;
+        apiLogger.error({ err, userId }, 'spotify-weekly: digest failed');
+        Sentry.captureException(err, {
+          tags: { job: 'spotify-weekly', phase: 'digest' },
+          extra: { userId },
+        });
       }
-      const { createClerkClient } = await import('@clerk/backend');
-      const clerk = createClerkClient({ secretKey: clerkSecretKey });
-      const recipients = summary.nativeDigest
-        ? await db
-            .selectDistinct({ userId: userArtistFollows.userId })
-            .from(userArtistFollows)
-            // LEFT: preference rows are written lazily on the first PATCH, so a
-            // follower who never opened Settings has none. An inner join here
-            // would mail nobody but the users who touched a toggle.
-            .leftJoin(
-              userNotificationPreferences,
-              eq(userNotificationPreferences.userId, userArtistFollows.userId),
-            )
-            .where(
-              sql`coalesce(${userNotificationPreferences.weeklyDigestEnabled}, true)`,
-            )
-        : await db
-            .select({ userId: userSpotifyConnections.userId })
-            .from(userSpotifyConnections)
-            .where(
-              and(
-                ne(userSpotifyConnections.status, 'revoked'),
-                eq(userSpotifyConnections.digestEnabled, true),
-              ),
-            );
-      summary.digestCandidates = recipients.length;
-      const getTastePicks = lazyTastePicks(
-        summary.windowStart,
-        summary.windowEnd,
-      );
-      for (const { userId } of recipients) {
-        try {
-          const outcome = await digestForUser(
-            userId,
-            clerk.users,
-            summary,
-            getTastePicks,
-          );
-          if (outcome === 'skipped-entitlement') {
-            summary.digestSkippedEntitlement += 1;
-          }
-          if (outcome === 'skipped-empty') summary.digestSkippedEmpty += 1;
-        } catch (err) {
-          summary.digestFailures += 1;
-          apiLogger.error({ err, userId }, 'spotify-weekly: digest failed');
-          Sentry.captureException(err, {
-            tags: { job: 'spotify-weekly', phase: 'digest' },
-            extra: { userId },
-          });
-        }
-      }
-    } catch (err) {
-      apiLogger.error({ err }, 'spotify-weekly: digest phase failed');
-      Sentry.captureException(err, {
-        tags: { job: 'spotify-weekly', phase: 'digest' },
-      });
     }
+  } catch (err) {
+    apiLogger.error({ err }, 'spotify-weekly: digest phase failed');
+    Sentry.captureException(err, {
+      tags: { job: 'spotify-weekly', phase: 'digest' },
+    });
   }
 
   // Phase 2 — observability. Best-effort: bookkeeping never fails the run.

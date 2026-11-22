@@ -57,6 +57,14 @@ describe('GET /v1/history/past-shows', () => {
     expect((await app.request('/v1/history/past-shows')).status).toBe(401);
   });
 
+  // Auth runs before the query validator: a bad query never earns a 400.
+  it('returns 401, not 400, when signed out with a bad query', async () => {
+    authState.current = null;
+    expect(
+      (await app.request('/v1/history/past-shows?scope=nope')).status,
+    ).toBe(401);
+  });
+
   it('applies the visibility rule and the records floor', async () => {
     const venue = await seedVenue();
     const removed = await seedVenue({
@@ -230,14 +238,10 @@ describe('GET /v1/history/past-shows', () => {
     });
 
     const res = await app.request('/v1/history/past-shows?scope=follows');
-    // The follows scope has its own entitlement: either it answers with the
-    // filtered list or it is gated, never the unfiltered list.
-    if (res.status === 200) {
-      const body: { data: PastShowsResponse } = await res.json();
-      expect(body.data.rows.map((row) => row.eventId)).toEqual([followed.id]);
-    } else {
-      expect(res.status).toBe(403);
-    }
+    // No plan gate: the follows scope answers with the filtered list.
+    expect(res.status).toBe(200);
+    const body: { data: PastShowsResponse } = await res.json();
+    expect(body.data.rows.map((row) => row.eventId)).toEqual([followed.id]);
   });
 
   it('matches q over artist, title and venue, case-insensitively, with % literal', async () => {

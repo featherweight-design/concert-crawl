@@ -10,8 +10,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const { clerkState, resendState } = vi.hoisted(() => ({
   clerkState: {
-    // userId → Clerk publicMetadata (drives role-comped plan derivation).
-    metadata: new Map<string, Record<string, unknown>>(),
     // userId → primary email address (absent = no recipient).
     emails: new Map<string, string>(),
   },
@@ -24,7 +22,6 @@ vi.mock('@clerk/backend', () => ({
   createClerkClient: () => ({
     users: {
       getUser: async (userId: string) => ({
-        publicMetadata: clerkState.metadata.get(userId) ?? {},
         primaryEmailAddressId: 'em_primary',
         emailAddresses: clerkState.emails.has(userId)
           ? [
@@ -55,14 +52,12 @@ import { and, eq, inArray } from 'drizzle-orm';
 import {
   costTracking,
   emailSendLog,
-  subscriptions,
   userArtistFollows,
   userNotificationPreferences,
   userSpotifyConnections,
 } from '@concert-crawl/db';
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical';
 import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js';
-import { setFeatureFlag } from '../test/helpers/feature-flags.js';
 import { testDb } from '../test/helpers/db.js';
 import { runSpotifyWeekly } from './spotify-weekly.js';
 
@@ -86,6 +81,21 @@ const ISO_WEEK = '2026-W30';
 let userSeq = 0;
 let USER = 'user-weekly-1';
 
+// The weekly digest is opt-in (migration 0124): nobody is mailed without a
+// preferences row that says so. An upsert, so a test can flip it after a
+// helper has already opted the user in.
+async function seedDigestOptIn(userId: string, enabled = true): Promise<void> {
+  await testDb
+    .insert(userNotificationPreferences)
+    .values({ userId, weeklyDigestEnabled: enabled })
+    .onConflictDoUpdate({
+      target: userNotificationPreferences.userId,
+      set: { weeklyDigestEnabled: enabled },
+    });
+}
+
+// Opts the user in as well: nearly every test here is about what happens to
+// someone who wants the mail.
 async function seedConnection(
   userId: string,
   overrides: Partial<typeof userSpotifyConnections.$inferInsert> = {},
@@ -97,17 +107,7 @@ async function seedConnection(
     digestEnabled: true,
     ...overrides,
   });
-}
-
-async function seedPremium(userId: string): Promise<void> {
-  await testDb.insert(subscriptions).values({
-    userId,
-    stripeCustomerId: `cus_${userId}`,
-    stripeSubscriptionId: `sub_${userId}`,
-    tier: 'premium',
-    status: 'active',
-    currentPeriodEnd: new Date('2027-01-01T00:00:00Z'),
-  });
+  await seedDigestOptIn(userId);
 }
 
 // Stands in for what connect and Refresh write — the job itself no longer
@@ -155,25 +155,19 @@ async function getSpotifyFollows(userId: string) {
 beforeEach(async () => {
   userSeq += 1;
   USER = `user-weekly-${userSeq}`;
-  clerkState.metadata.clear();
   clerkState.emails.clear();
   resendState.sends = [];
   await clearTables();
   // Not covered by clearTables' truncate list — clean up per test.
   await testDb.delete(emailSendLog);
-  await testDb.delete(subscriptions);
   // The drain-background setup installs a reject-all fetch guard in a
   // beforeAll that runs after this module evaluates; re-stub per test.
   vi.stubGlobal('fetch', rejectAllFetch);
   vi.stubEnv('RESEND_API_KEY', 're_test_key');
+  // sendTransactionalEmail resolves the recipient's address through Clerk.
   vi.stubEnv('CLERK_SECRET_KEY', 'sk_test_key');
   vi.stubEnv('EMAIL_UNSUBSCRIBE_SECRET', 'weekly-job-test-secret');
   vi.stubEnv('SPOTIFY_SYNC_DRY_RUN', '');
-  vi.stubEnv('NATIVE_DIGEST_ENABLED', '');
-  // clearTables truncates feature_flags, so the Spotify shape would be gated
-  // off for every case below. These suites are about digest behaviour, not the
-  // release gate; the gate has its own describe block.
-  await setFeatureFlag('spotify-sync', true);
 });
 
 afterEach(() => {
@@ -185,7 +179,6 @@ describe('runSpotifyWeekly — never imports from Spotify', () => {
     // The unfollow this job used to undo: the artist is gone from our table,
     // and a resurrecting run would put it back within the week.
     await seedConnection(USER);
-    await seedPremium(USER);
 
     await runSpotifyWeekly(NOW);
 
@@ -225,22 +218,8 @@ describe('runSpotifyWeekly — never imports from Spotify', () => {
 });
 
 describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
-  it('skips the digest phase cleanly when CLERK_SECRET_KEY is unset', async () => {
+  it('sends a matched-show digest, deduped per ISO week', async () => {
     await seedConnection(USER);
-    await seedPremium(USER);
-    clerkState.emails.set(USER, 'weekly@example.com');
-    await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
-    vi.stubEnv('CLERK_SECRET_KEY', '');
-
-    await expect(runSpotifyWeekly(NOW)).resolves.toBeUndefined();
-
-    expect(await getDigestLogRows(USER)).toHaveLength(0);
-    expect(resendState.sends).toHaveLength(0);
-  });
-
-  it('sends a matched-show digest to a premium user, deduped per ISO week', async () => {
-    await seedConnection(USER);
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'weekly@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
 
@@ -299,43 +278,8 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
     expect(summaries[1]?.metadata).toContain('"digestSent":0');
   });
 
-  it('ignores manual follows when matching — Spotify sources only (§8.1)', async () => {
-    await seedConnection(USER);
-    await seedPremium(USER);
-    clerkState.emails.set(USER, 'weekly@example.com');
-    // No Spotify-sourced follows at all — the manual row below is the user's
-    // only follow.
-
-    const venue = await seedVenue({ slug: `venue-${USER}` });
-    await seedEvent(venue.id, {
-      artist: 'Manual Fave',
-      canonicalArtist: 'manual fave',
-      date: '2026-07-22',
-    });
-    await testDb.insert(userArtistFollows).values({
-      userId: USER,
-      artistName: 'Manual Fave',
-      source: 'manual',
-      canonicalName: 'manual fave',
-    });
-
-    await runSpotifyWeekly(NOW);
-
-    // The manual follow must not read as a Spotify match — the week is a
-    // zero-week (the show may still appear as a taste pick).
-    const costs = await testDb
-      .select()
-      .from(costTracking)
-      .where(eq(costTracking.service, 'spotify'));
-    const summary = costs.find((row) =>
-      (row.metadata ?? '').includes('"job":"spotify-weekly"'),
-    );
-    expect(summary?.metadata).toContain('"digestZeroWeek":1');
-  });
-
   it('counts a failed send as digestFailures, not digestSent', async () => {
     await seedConnection(USER);
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'weekly@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
     const venue = await seedVenue({ slug: `venue-${USER}` });
@@ -363,7 +307,6 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
 
   it('matches via canonical_supporting overlap too (§9.1)', async () => {
     await seedConnection(USER);
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'support-slot@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp2', name: 'Lightning Bug' }]);
 
@@ -389,7 +332,6 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
     // which stays the event's display string. Matching on the equality arm
     // alone would never reach this row.
     await seedConnection(USER);
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'derived-headliner@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp3', name: 'Kokoroko' }]);
 
@@ -416,9 +358,17 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
     expect(resendState.sends[0]?.html).toContain('Jazz Series presents');
   });
 
-  it('skips free users at send time (premium gate)', async () => {
-    await seedConnection(USER);
-    clerkState.emails.set(USER, 'free@example.com');
+  it('skips a Spotify connection whose owner never opted in', async () => {
+    // A connection with the legacy digest flag on, and no preferences row:
+    // the state every connected user is in after migration 0124 until they
+    // turn the digest on.
+    await testDb.insert(userSpotifyConnections).values({
+      userId: USER,
+      spotifyUserId: `spotify-${USER}`,
+      status: 'connected',
+      digestEnabled: true,
+    });
+    clerkState.emails.set(USER, 'never-opted@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
     const venue = await seedVenue({ slug: `venue-${USER}` });
     await seedEvent(venue.id, {
@@ -433,27 +383,9 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
     expect(resendState.sends).toHaveLength(0);
   });
 
-  it('honours role-comped users via Clerk publicMetadata', async () => {
+  it('skips users who turned the digest off in preferences', async () => {
     await seedConnection(USER);
-    clerkState.metadata.set(USER, { role: 'admin' });
-    clerkState.emails.set(USER, 'comped@example.com');
-    await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
-    const venue = await seedVenue({ slug: `venue-${USER}` });
-    await seedEvent(venue.id, {
-      artist: 'Sleep Token',
-      canonicalArtist: 'sleep token',
-      date: '2026-07-22',
-    });
-
-    await runSpotifyWeekly(NOW);
-
-    expect(await getDigestLogRows(USER)).toHaveLength(1);
-    expect(resendState.sends).toHaveLength(1);
-  });
-
-  it('skips users who turned the digest off', async () => {
-    await seedConnection(USER, { digestEnabled: false });
-    await seedPremium(USER);
+    await seedDigestOptIn(USER, false);
     clerkState.emails.set(USER, 'off@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
     const venue = await seedVenue({ slug: `venue-${USER}` });
@@ -471,7 +403,6 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
 
   it('sends the zero-week light variant with up to 2 taste picks', async () => {
     await seedConnection(USER);
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'quiet@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp9', name: 'Nobody Playing' }]);
 
@@ -508,7 +439,6 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
 
   it('skips the send entirely on a zero-match week with no taste picks', async () => {
     await seedConnection(USER);
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'empty@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp9', name: 'Nobody Playing' }]);
     // No events at all in the window.
@@ -520,40 +450,26 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 1)', () => {
   });
 });
 
-// PR 9 step 3. Both halves of the digest were Spotify-shaped: the recipient
-// query inner-joined user_spotify_connections for digestEnabled, and the
-// match query filtered follows to the two spotify_* sources. Fixing either
-// alone drops every native follower while still reporting success (#1515).
-describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () => {
-  const seedFollow = async (userId: string, name: string): Promise<void> => {
+// #1515: the digest was once Spotify-shaped (recipients joined through
+// user_spotify_connections, matches filtered to the spotify_* sources), which
+// dropped every native follower while still reporting success. These cover
+// followers with no Spotify connection at all.
+describe('runSpotifyWeekly — native followers (#1515)', () => {
+  const seedFollow = async (
+    userId: string,
+    name: string,
+    { optedIn = true }: { optedIn?: boolean } = {},
+  ): Promise<void> => {
     await testDb.insert(userArtistFollows).values({
       userId,
       artistName: name,
       source: 'manual',
       canonicalName: canonicalizeArtist(name),
     });
+    if (optedIn) await seedDigestOptIn(userId);
   };
 
-  it('sends nothing to a native-only follower while the flag is off', async () => {
-    await seedPremium(USER);
-    clerkState.emails.set(USER, 'native@example.com');
-    const venue = await seedVenue({ slug: `venue-${USER}` });
-    await seedEvent(venue.id, {
-      artist: 'Sleep Token',
-      canonicalArtist: 'sleep token',
-      date: '2026-07-22',
-    });
-    await seedFollow(USER, 'Sleep Token');
-
-    await runSpotifyWeekly(NOW);
-
-    expect(await getDigestLogRows(USER)).toHaveLength(0);
-    expect(resendState.sends).toHaveLength(0);
-  });
-
   it('sends to a follower with no Spotify connection at all', async () => {
-    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'native@example.com');
     const venue = await seedVenue({ slug: `venue-${USER}` });
     await seedEvent(venue.id, {
@@ -579,9 +495,8 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
     expect(resendState.sends[0]?.html).toContain('Sleep Token');
   });
 
-  it('reaches a follower who never opened Settings (no preferences row)', async () => {
-    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
-    await seedPremium(USER);
+  // Opt-in (migration 0124): a missing preferences row is off, not on.
+  it('skips a follower who never opened Settings (no preferences row)', async () => {
     clerkState.emails.set(USER, 'lazy-row@example.com');
     const venue = await seedVenue({ slug: `venue-${USER}` });
     await seedEvent(venue.id, {
@@ -589,7 +504,7 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
       canonicalArtist: 'sleep token',
       date: '2026-07-22',
     });
-    await seedFollow(USER, 'Sleep Token');
+    await seedFollow(USER, 'Sleep Token', { optedIn: false });
 
     await runSpotifyWeekly(NOW);
 
@@ -599,27 +514,13 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
         .from(userNotificationPreferences)
         .where(eq(userNotificationPreferences.userId, USER)),
     ).toHaveLength(0);
-    expect(await getDigestLogRows(USER)).toHaveLength(1);
+    expect(await getDigestLogRows(USER)).toHaveLength(0);
+    expect(resendState.sends).toHaveLength(0);
   });
 
-  it('honours weekly_digest_enabled=false from the preferences table', async () => {
-    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
-    await seedPremium(USER);
-    clerkState.emails.set(USER, 'opted-out@example.com');
-    // The legacy column stays true: a regression back to reading the
-    // connection would send this email anyway.
-    await seedConnection(USER, { digestEnabled: true });
-    await testDb.insert(userNotificationPreferences).values({
-      userId: USER,
-      weeklyDigestEnabled: false,
-    });
-    const venue = await seedVenue({ slug: `venue-${USER}` });
-    await seedEvent(venue.id, {
-      artist: 'Sleep Token',
-      canonicalArtist: 'sleep token',
-      date: '2026-07-22',
-    });
-    await seedFollow(USER, 'Sleep Token');
+  it('mails nobody who opted in but follows no artist', async () => {
+    clerkState.emails.set(USER, 'no-follows@example.com');
+    await seedDigestOptIn(USER);
 
     await runSpotifyWeekly(NOW);
 
@@ -627,10 +528,29 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
     expect(resendState.sends).toHaveLength(0);
   });
 
-  // Free holds `following` but is still denied `spotify-sync`, so a free
-  // follower receiving the digest proves the gate reads the former.
-  it('gates on the following entitlement, not spotify-sync (free now sends)', async () => {
-    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
+  it('honours weekly_digest_enabled=false from the preferences table', async () => {
+    clerkState.emails.set(USER, 'opted-out@example.com');
+    // The legacy column stays true: a regression back to reading the
+    // connection would send this email anyway.
+    await seedConnection(USER, { digestEnabled: true });
+    await seedDigestOptIn(USER, false);
+    const venue = await seedVenue({ slug: `venue-${USER}` });
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    });
+    // optedIn: false, or the helper would flip the row back on.
+    await seedFollow(USER, 'Sleep Token', { optedIn: false });
+
+    await runSpotifyWeekly(NOW);
+
+    expect(await getDigestLogRows(USER)).toHaveLength(0);
+    expect(resendState.sends).toHaveLength(0);
+  });
+
+  // Following is free, so a follower with no subscription row is mailed.
+  it('sends to a free user: there is no plan gate', async () => {
     clerkState.emails.set(USER, 'free-native@example.com');
     const venue = await seedVenue({ slug: `venue-${USER}` });
     await seedEvent(venue.id, {
@@ -653,14 +573,11 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
     const summary = costs.find((row) =>
       (row.metadata ?? '').includes('"job":"spotify-weekly"'),
     );
-    expect(summary?.metadata).toContain('"digestSkippedEntitlement":0');
-    expect(summary?.metadata).toContain('"nativeDigest":true');
+    expect(summary?.metadata).toContain('"digestSent":1');
   });
 
-  it('still sends to a Spotify follower once generalized', async () => {
-    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
+  it('still sends to a Spotify follower', async () => {
     await seedConnection(USER);
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'both@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
     const venue = await seedVenue({ slug: `venue-${USER}` });
@@ -677,92 +594,10 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
   });
 });
 
-describe('runSpotifyWeekly — spotify-sync flag', () => {
-  const seedSpotifyDigestRecipient = async (): Promise<void> => {
-    await seedConnection(USER);
-    await seedPremium(USER);
-    clerkState.emails.set(USER, 'flagged@example.com');
-    await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
-    const venue = await seedVenue({ slug: `venue-${USER}` });
-    await seedEvent(venue.id, {
-      artist: 'Sleep Token',
-      canonicalArtist: 'sleep token',
-      date: '2026-07-22',
-    });
-  };
-
-  const seedNativeDigestRecipient = async (): Promise<void> => {
-    await seedPremium(USER);
-    clerkState.emails.set(USER, 'flagged-native@example.com');
-    const venue = await seedVenue({ slug: `venue-${USER}` });
-    await seedEvent(venue.id, {
-      artist: 'Sleep Token',
-      canonicalArtist: 'sleep token',
-      date: '2026-07-22',
-    });
-    await testDb.insert(userArtistFollows).values({
-      userId: USER,
-      artistName: 'Sleep Token',
-      source: 'manual',
-      canonicalName: canonicalizeArtist('Sleep Token'),
-    });
-  };
-
-  it('sends no Spotify digest when the flag is off', async () => {
-    await setFeatureFlag('spotify-sync', false);
-    await seedSpotifyDigestRecipient();
-
-    await runSpotifyWeekly(NOW);
-
-    expect(await getDigestLogRows(USER)).toHaveLength(0);
-    expect(resendState.sends).toHaveLength(0);
-  });
-
-  it('sends the Spotify digest once the flag is on', async () => {
-    await setFeatureFlag('spotify-sync', true);
-    await seedSpotifyDigestRecipient();
-
-    await runSpotifyWeekly(NOW);
-
-    expect(resendState.sends.length).toBeGreaterThan(0);
-  });
-
-  // The locked decision: native following is not coupled to Spotify.
-  it('still sends the native digest when spotify-sync is off', async () => {
-    await setFeatureFlag('spotify-sync', false);
-    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
-    await seedNativeDigestRecipient();
-
-    await runSpotifyWeekly(NOW);
-
-    expect(resendState.sends.length).toBeGreaterThan(0);
-  });
-
-  // Phase 2 is not part of the gate: a suppressed digest still has to leave a
-  // summary row saying why the run mailed nobody.
-  it('still writes the observability row, marked as flag-skipped', async () => {
-    await setFeatureFlag('spotify-sync', false);
-    await seedSpotifyDigestRecipient();
-
-    await runSpotifyWeekly(NOW);
-
-    const costs = await testDb
-      .select()
-      .from(costTracking)
-      .where(eq(costTracking.service, 'spotify'));
-    const summary = costs.find((row) =>
-      (row.metadata ?? '').includes('"job":"spotify-weekly"'),
-    );
-    expect(summary?.metadata).toContain('"digestSkippedFlag":true');
-    expect(summary?.metadata).toContain('"digestCandidates":0');
-  });
-});
-
 describe('runSpotifyWeekly — dry run + observability (§8.1 phase 2)', () => {
   it('SPOTIFY_SYNC_DRY_RUN=1 sends no emails but still records the summary row', async () => {
     vi.stubEnv('SPOTIFY_SYNC_DRY_RUN', '1');
     await seedConnection(USER);
-    await seedPremium(USER);
     clerkState.emails.set(USER, 'dry@example.com');
     await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }]);
     const venue = await seedVenue({ slug: `venue-${USER}` });

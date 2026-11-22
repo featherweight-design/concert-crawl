@@ -4,10 +4,9 @@
 // not a per-event roll-call, so nothing here writes an attendance signal:
 // crew shows are derived from the shipped user_events.attending_at (plan D1).
 //
-// Entitlement placement is deliberate and load-bearing: requireFeature('crews')
-// gates POST / and NOTHING else. Reading, leaving, and muting stay open on
-// every plan, which is how a lapsed creator keeps every crew they already made
-// (plan D6). Do not "fix" the apparent gap by gating the reads.
+// Every route is signed-in only, with no plan gate (going free, 2026-10-29).
+// If a plan gate ever returns, gate POST / only (plan D6): reading, leaving and
+// muting stay open so a lapsed creator keeps every crew they already made.
 
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
@@ -36,8 +35,6 @@ import type {
 } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
 import { requireFlag } from '../middleware/feature-flag.js';
-import { requireFeature } from '../middleware/entitlement.js';
-import type { EntitlementVariables } from '../middleware/entitlement.js';
 import {
   loadCrewGoingForEvent,
   loadCrewShows,
@@ -91,11 +88,10 @@ const isUniqueViolation = (err: unknown): boolean => {
   return err instanceof Error && 'cause' in err ? matches(err.cause) : false;
 };
 
-export const crewsRouter = new Hono<{ Variables: EntitlementVariables }>();
+export const crewsRouter = new Hono();
 
-// Release gate. Mounted first so a flagged-off crews API answers 404 and never
-// the 403 that requireFeature('crews') would give, which would advertise a
-// feature customers cannot reach.
+// Release gate. Mounted first so a flagged-off crews API answers 404 before
+// the 401, and never advertises a feature customers cannot reach.
 crewsRouter.use('*', requireFlag('crews'));
 
 crewsRouter.use('*', clerkMiddleware());
@@ -183,8 +179,8 @@ crewsRouter.get('/', async (ctx) => {
   return ctx.json({ success: true, data: { crews: summaries } });
 });
 
-// POST /v1/crews — the one entitlement-gated route in this file (plan D6).
-crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
+// POST /v1/crews
+crewsRouter.post('/', async (ctx) => {
   const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);

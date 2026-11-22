@@ -1,8 +1,6 @@
-// The browse shelf card box, shared by the two shelves that compete for the
-// single shelf slot on browse — the Spotify taste shelf (spotify/
-// DiscoveryShelf.tsx) and the native follow shelf (following/FollowShelf.tsx) —
-// and by the skeleton that reserves the slot before either paints
-// (spotify/DiscoveryShelfSkeleton.tsx).
+// The browse shelf card box, shared by the native follow shelf
+// (following/FollowShelf.tsx) and the skeleton that reserves its slot before it
+// paints.
 
 import { slotScaleFor } from '@/components/consumer/image-slot/lib/slot-metrics';
 

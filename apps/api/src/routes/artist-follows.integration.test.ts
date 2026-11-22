@@ -54,10 +54,8 @@ const follow = async (slug: string): Promise<Response> =>
 const unfollow = async (slug: string): Promise<Response> =>
   app.request(`/v1/artists/${slug}/follow`, { method: 'DELETE' });
 
-// POST is gated on the `following` entitlement, which every signed-in plan now
-// holds (free included). The free plan is modelled by the ABSENCE of a
-// subscriptions row; tests that seed premium keep doing so to exercise the
-// paid path, not because free would be denied.
+// POST has no plan gate. The free plan is modelled by the ABSENCE of a
+// subscriptions row; tests that seed premium show a paid plan follows the same.
 const seedPremiumPlan = async (userId = USER_ID): Promise<void> => {
   await testDb.insert(subscriptions).values({
     userId,
@@ -89,6 +87,10 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     const res = await follow('gate-act');
     expect(res.status).toBe(401);
     expect(await followRows()).toHaveLength(0);
+  });
+
+  it('401s without a session before validating the slug', async () => {
+    expect((await follow('Not_A_Slug')).status).toBe(401);
   });
 
   it('404s an unknown slug', async () => {
@@ -195,7 +197,7 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
   });
 });
 
-describe('POST /v1/artists/:slug/follow — entitlement gate', () => {
+describe('POST /v1/artists/:slug/follow — every plan', () => {
   beforeEach(async () => {
     authState.current = null;
     spotifyMock.createSpotifyClient.mockClear();
@@ -249,6 +251,10 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
     await seedArtist({ name: 'Gate Act' });
     const res = await unfollow('gate-act');
     expect(res.status).toBe(401);
+  });
+
+  it('401s without a session before validating the slug', async () => {
+    expect((await unfollow('Not_A_Slug')).status).toBe(401);
   });
 
   it('removes the manual row and is idempotent when there is nothing to remove', async () => {

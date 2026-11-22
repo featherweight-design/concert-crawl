@@ -4,9 +4,9 @@
 // OVERLAY on the same endpoint — that one annotates rows, this one narrows them.
 //
 // The filter matches follow rows from EVERY source (manual and both spotify_*
-// values), which is the deliberate difference from `taste=1`. It is
-// entitlement-gated inline — /v1/events stays a public route — so anonymous
-// callers get 401 only when the flag is present.
+// values), which is the deliberate difference from `taste=1`. It has no plan
+// gate; /v1/events stays a public route, so anonymous callers get 401 only
+// when the flag is present.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 interface MockAuth {

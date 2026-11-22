@@ -38,7 +38,9 @@ const COLUMNS = [
   { name: 'artist_alerts_enabled', expected: 'true' },
   // Asymmetric on purpose — following must never silently mutate Watching.
   { name: 'artist_auto_watch', expected: 'false' },
-  { name: 'weekly_digest_enabled', expected: 'true' },
+  // Added default true here; migration 0124 made the digest opt-in, so the
+  // migrated schema now reads false.
+  { name: 'weekly_digest_enabled', expected: 'false' },
 ];
 
 const seedConnection = async (

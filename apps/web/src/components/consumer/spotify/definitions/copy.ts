@@ -227,48 +227,4 @@ export const SPOTIFY_COPY = {
     strip: (artists: readonly string[]) =>
       `You follow ${formatArtistList(artists)} on Spotify`,
   },
-  // "Based on your taste" shelf pinned atop Browse (#763 PR 8, from the
-  // discovery-surface.jsx mock). Premium + connected only.
-  discovery: {
-    title: 'Based on your taste',
-    eyebrow: (count: number) => `${count} PICKS · REFRESHED WEEKLY`,
-    eyebrowSingular: '1 PICK · REFRESHED WEEKLY',
-    // Reason chip labels — richer than follows alone, so reasons vary.
-    reasonTopFive: 'In your top 5',
-    reasonTop: 'You play them a lot',
-    reasonFollowed: 'Following',
-    // Screen-reader context — the bare chip label is ambiguous without the
-    // Spotify mark.
-    reasonAriaPrefix: 'Picked because: ',
-    priceTba: 'tba',
-    venueDateSeparator: ' · ',
-    listAria: 'Shows picked for your taste',
-    allShowsDivider: 'All Denver shows',
-    empty: {
-      eyebrow: 'QUIET MONTH',
-      title: 'Your artists are lying low.',
-      body: 'Nobody from your taste has a Denver date this month. We refresh picks weekly, or dig through everything yourself.',
-      cta: 'Browse all shows',
-    },
-    failure: {
-      eyebrow: 'TASTE ON PAUSE',
-      title: "Can't read your taste right now.",
-      body: "Your Spotify link needs a refresh, so picks are paused. The shows you're watching are untouched. Reconnect to bring taste back.",
-      primaryCta: 'Reconnect Spotify',
-      secondaryCta: 'Browse all shows',
-    },
-    // Cold-hydration/mid-session-upgrade loading state — entitled + connected
-    // + picks pending. Reserves the shelf footprint so real data lands with
-    // zero shift. Timeout chip after 8s per the design handoff.
-    loading: {
-      eyebrow: 'READING YOUR SPOTIFY FOLLOWS…',
-      eyebrowTimeout: 'TAKING LONGER THAN USUAL',
-      ariaLabel: 'Loading picks based on your taste',
-      timeout: {
-        eyebrow: 'STILL TUNING',
-        title: 'Picks are taking a beat.',
-        retryCta: 'Retry',
-      },
-    },
-  },
 } as const;

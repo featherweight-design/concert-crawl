@@ -33,9 +33,8 @@ import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { db, artists, userEvents, events, venues } from '@concert-crawl/db';
 import type { HistoryShow, HistoryResponse } from '@concert-crawl/types';
 import { validationHook } from '../lib/validator.js';
+import { requireSignedIn } from '../middleware/auth.js';
 import { loadPastShows } from '../lib/past-shows.js';
-import { requireFeature } from '../middleware/entitlement.js';
-import type { EntitlementVariables } from '../middleware/entitlement.js';
 import {
   displayHeadliner,
   portraitCanonicalName,
@@ -181,13 +180,10 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
   return { past, upcoming };
 };
 
-export const historyRouter = new Hono<{ Variables: EntitlementVariables }>();
+export const historyRouter = new Hono();
 
 historyRouter.use('*', clerkMiddleware());
 
-// export.ics is gated on its own matrix key — a user can be entitled to read
-// their history without being entitled to export it.
-historyRouter.use('/export.ics', requireFeature('calendar-export'));
 historyRouter.get('/export.ics', async (ctx) => {
   const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
@@ -206,7 +202,6 @@ historyRouter.get('/export.ics', async (ctx) => {
   });
 });
 
-historyRouter.use('/', requireFeature('concert-history'));
 historyRouter.get('/', async (ctx) => {
   const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
@@ -247,15 +242,10 @@ const pastShowsQuerySchema = z
   })
   .strict();
 
-// The Add-a-show list. The follows scope has its own entitlement, the same
-// gate `following=1` meets on the events list.
-historyRouter.use('/past-shows', requireFeature('concert-history'));
+// The Add-a-show list.
 historyRouter.get(
   '/past-shows',
-  async (ctx, next) =>
-    ctx.req.query('scope') === 'follows'
-      ? requireFeature('following')(ctx, next)
-      : next(),
+  requireSignedIn,
   zValidator('query', pastShowsQuerySchema, validationHook),
   async (ctx) => {
     const authInfo = getAuth(ctx);

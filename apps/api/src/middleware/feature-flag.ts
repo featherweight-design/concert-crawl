@@ -8,8 +8,8 @@ import { apiLogger } from '../lib/logger.js';
 
 /**
  * Gates a router on a release flag. Mount this with `router.use('*', ...)` at
- * the top of the router file so it runs ahead of any per-route
- * `requireFeature`: a flagged-off premium route must answer 404, not leak a
+ * the top of the router file so it runs ahead of any per-route plan
+ * gate: a flagged-off premium route must answer 404, not leak a
  * 403 upsell for something customers cannot buy yet.
  *
  * A flag at Me or Beta is on for some people only, so the gate needs to know

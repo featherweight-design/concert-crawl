@@ -7,13 +7,12 @@ import { STALE_30_MIN } from '@/lib/query-client';
 import { apiClient, publicApiClient } from '@/lib/api';
 import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection';
 import { buildEventsApiParams } from '@/lib/events-api-params';
-import { useSpotifyConnection } from './use-spotify-connection';
 
-// personalizedFor is the viewer's userId when the response carries their
-// followedArtists overlay, null for the shared anonymous shape. Scoping the
-// personalized entry by userId matters because the app-level QueryClient
-// outlives sign-in sessions — an account switch must not briefly serve the
-// previous user's followedArtists (same reasoning as planStateQueryKey).
+// personalizedFor is the viewer's userId when the request is scoped to their
+// follows, null for the shared anonymous shape. Scoping the personalized entry
+// by userId matters because the app-level QueryClient outlives sign-in
+// sessions — an account switch must not briefly serve the previous user's
+// scoped list (same reasoning as planStateQueryKey).
 export function eventsQueryKey(
   paramsString: string,
   personalizedFor: string | null,
@@ -35,21 +34,6 @@ export function useEvents({
   initialOffset = 0,
 }: UseEventsOptions) {
   const { getToken, userId } = useAuth();
-  // The /v1/events list route personalizes for viewers with Spotify taste rows
-  // (#763 PR 6: optional followedArtists per event). Only those viewers need a
-  // credentialed fetch — everyone else keeps the anonymous request so the
-  // service worker can cache the response for offline browsing (it refuses to
-  // cache credentialed responses). `error`-status connections still retain
-  // follow rows server-side, so they count as having taste; a `revoked` one is
-  // treated as no taste because the user cannot refresh it. artistCount is the
-  // count of Spotify-sourced rows persisted at the last sync — a connection
-  // with zero of them gets no followedArtists from the API, so it keeps the
-  // cacheable anonymous fetch.
-  const { data: connection } = useSpotifyConnection();
-  const hasTaste =
-    connection != null &&
-    (connection.status === 'connected' || connection.status === 'error') &&
-    connection.artistCount > 0;
   // The retired taste filter's `filterTaste` page param is ignored: a stored
   // ?filterTaste=1 link loads the plain list.
   const pageParams = new URLSearchParams(searchParamsString);
@@ -61,14 +45,12 @@ export function useEvents({
   const followingRequested =
     pageParams.get('filterFollowing') === '1' && userId != null;
   const scopeRequested = followingRequested;
-  const personalizedFor =
-    (hasTaste || scopeRequested) && userId != null ? userId : null;
+  const personalizedFor = scopeRequested && userId != null ? userId : null;
   return useInfiniteQuery({
-    // personalizedFor is part of the key so pages fetched anonymously before
-    // the connection query resolves aren't reused for the personalized view,
-    // and personalized pages are never shared across viewers.
+    // personalizedFor is part of the key so anonymous pages aren't reused for
+    // the scoped view, and scoped pages are never shared across viewers.
     queryKey: eventsQueryKey(searchParamsString, personalizedFor),
-    // Fetch anonymously when the viewer has no Spotify taste: an anonymous
+    // Fetch anonymously unless a follow scope is requested: an anonymous
     // request returns identical data AND stays cacheable by the service
     // worker, which keeps offline browsing working for the (default,
     // protected) signed-in case. GET /v1/events is unconditionally public
@@ -91,9 +73,8 @@ export function useEvents({
         const token = await getToken();
         // Throw instead of falling back to the anonymous fetch — with
         // staleTime, a cached anonymous page under the personalized key
-        // would stick (no followedArtists) after a transient token gap.
-        // Throwing lets React Query retry (same reasoning as
-        // useSpotifyConnection).
+        // would stick (unscoped) after a transient token gap. Throwing lets
+        // React Query retry.
         if (!token) {
           throw new Error('Auth token unavailable while fetching events');
         }

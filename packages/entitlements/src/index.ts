@@ -67,6 +67,10 @@ export const USER_PLANS: readonly UserPlan[] = [
 //   - 2026-10-29 going free (Hugh): every feature is visible-active for free
 //     and supporter accounts, except spotify-sync (sync retired 2026-10-29).
 //     Logged-out cells are unchanged: anything personal needs an account.
+//   - 2026-11-21: the API stopped enforcing the keys every signed-in plan
+//     passes (following, concert-history, calendar-export, crews), and the
+//     spotify-sync routes and gate were removed with the sync. Changing a row
+//     here no longer changes what the API accepts.
 // Single point of truth for both the boolean entitlement and the locked-tap
 // UX routing — edits here must update the test table in lockstep.
 export const ENTITLEMENTS_MATRIX: Record<
@@ -129,10 +133,10 @@ export const ENTITLEMENTS_MATRIX: Record<
     founder: 'visible-active',
     gifted: 'visible-active',
   },
-  // Gates the act of CREATING a crew and nothing else (#1226 D6). Joining,
-  // reading, leaving, and muting are un-gated on every plan, and a lapsed
-  // creator keeps every crew they already made — so the apparent gap here is
-  // the design, not an oversight. Do not "fix" it by gating reads.
+  // Was the gate on CREATING a crew (#1226 D6). No API route enforces it since
+  // going free; web UI reads it. If a paid gate returns, gate creation only:
+  // joining, reading, leaving and muting stay open so a lapsed creator keeps
+  // every crew they made.
   crews: {
     'logged-out': 'tier-picker-on-tap',
     free: 'visible-active',

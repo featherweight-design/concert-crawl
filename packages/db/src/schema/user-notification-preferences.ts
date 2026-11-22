@@ -27,9 +27,12 @@ export const userNotificationPreferences = pgTable(
       .notNull()
       .default(true),
     artistAutoWatch: boolean('artist_auto_watch').notNull().default(false),
+    // Opt-in (migration 0124, Hugh 2026-11-15): every follower is eligible
+    // for the weekly digest, nobody gets it until they turn it on. A missing
+    // row reads as off too; the digest recipient query inner-joins this.
     weeklyDigestEnabled: boolean('weekly_digest_enabled')
       .notNull()
-      .default(true),
+      .default(false),
     // #967. Gated the 'product' email family (winback, gifting-ending-notice,
     // welcome-gifted), all retired 2026-11-10 going free, so nothing reads it
     // now. Kept, with its Settings toggle, until the redesign decides.

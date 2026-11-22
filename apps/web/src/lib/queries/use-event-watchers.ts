@@ -20,7 +20,7 @@ export const eventWatchersEventKey = (eventId: string) =>
 // Scoped by userId: the response excludes the viewer from their own roster, so
 // the app-level QueryClient outliving a sign-in session must not serve the
 // previous account's exclusion set after a switch (same reasoning as
-// tastePicksQueryKey).
+// planStateQueryKey).
 export const eventWatchersQueryKey = (
   eventId: string,
   userId: string | null | undefined,
