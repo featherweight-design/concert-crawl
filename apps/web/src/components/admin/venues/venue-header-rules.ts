@@ -44,12 +44,33 @@ export const recrawlOff = (venue: HeaderVenue): RecrawlOff | null => {
 };
 
 /**
- * View on site opens our public venue page, not the venue's own website: the
- * handoff hides it for hidden (and, once 3e lands, draft) venues, which only
- * makes sense of a page we publish. Null when there is no page to open.
+ * On Concert Crawl opens our public venue page. A hidden or taken-down venue
+ * has none (the page 404s), so it gets no link; the venue's own site still
+ * shows for every venue (`venueSiteLink`). `08/venue-header-links`.
  */
-export const viewOnSiteHref = (venue: HeaderVenue): string | null =>
+export const concertCrawlHref = (venue: HeaderVenue): string | null =>
   offSite(venue) ? null : `/venues/${encodeURIComponent(venue.slug)}`;
+
+/** On the venue's site: where it opens, and the phone link's text. */
+export interface VenueSiteLink {
+  href: string;
+  /** The bare host, "ballarena.com" on the board. */
+  host: string;
+}
+
+/**
+ * The venue's own site, from the origin of the URL we crawl (Hugh,
+ * 2026-11-22: no new field), so a calendar or feed path never opens. Null
+ * when the URL isn't a full http(s) one: "No website, no link".
+ */
+export const venueSiteLink = (
+  venue: Pick<VenueWithCrawlHealth, 'websiteUrl'>,
+): VenueSiteLink | null => {
+  if (!URL.canParse(venue.websiteUrl)) return null;
+  const url = new URL(venue.websiteUrl);
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+  return { href: url.origin, host: url.hostname.replace(/^www\./, '') };
+};
 
 const startedAtSchema = z.iso.datetime({ offset: true });
 

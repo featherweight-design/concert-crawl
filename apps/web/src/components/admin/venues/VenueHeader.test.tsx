@@ -187,13 +187,34 @@ describe('VenueHeader — idle', () => {
     );
   });
 
-  it('offers Re-crawl and View on site, which opens our venue page', () => {
+  it('offers Re-crawl, On Concert Crawl and On the venue’s site', () => {
     render(<VenueHeader venue={buildVenue()} />);
     expect(recrawlButton().hasAttribute('disabled')).toBe(false);
     expect(recrawlButton().textContent).toBe(COPY.recrawl);
     expect(recrawlButton().hasAttribute('aria-describedby')).toBe(false);
-    const link = screen.getByRole('link', { name: COPY.viewOnSite });
-    expect(link.getAttribute('href')).toBe('/venues/ball-arena');
+    const fan = screen.getByRole('link', { name: COPY.onConcertCrawl });
+    expect(fan.getAttribute('href')).toBe('/venues/ball-arena');
+    const site = screen.getByRole('link', { name: COPY.onVenueSite });
+    expect(site.getAttribute('href')).toBe('https://ballarena.example.com');
+  });
+
+  it('on the phone, draws the pair as links, the second one reading the host', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      ...matchMediaStub(query),
+      matches: true,
+    }));
+    render(<VenueHeader venue={buildVenue()} />);
+    expect(
+      screen
+        .getByRole('link', { name: COPY.onConcertCrawl })
+        .getAttribute('href'),
+    ).toBe('/venues/ball-arena');
+    expect(
+      screen
+        .getByRole('link', { name: 'ballarena.example.com' })
+        .getAttribute('href'),
+    ).toBe('https://ballarena.example.com');
+    expect(screen.queryByRole('link', { name: COPY.onVenueSite })).toBeNull();
   });
 
   it('keeps an empty live region mounted while idle', () => {
@@ -352,13 +373,16 @@ describe('VenueHeader — Re-crawl off', () => {
     );
   });
 
-  it('is disabled on a hidden venue, and View on site is gone', () => {
+  it('is disabled on a hidden venue: no fan page link, the venue’s site stays', () => {
     render(<VenueHeader venue={buildVenue({ active: false })} />);
     expect(recrawlButton().hasAttribute('disabled')).toBe(true);
     expect(screen.getByTestId('venue-header-line').textContent).toBe(
       COPY.recrawlOff.hidden,
     );
-    expect(screen.queryByRole('link', { name: COPY.viewOnSite })).toBeNull();
+    expect(
+      screen.queryByRole('link', { name: COPY.onConcertCrawl }),
+    ).toBeNull();
+    expect(screen.getByRole('link', { name: COPY.onVenueSite })).toBeTruthy();
   });
 
   it('is disabled on an active but unverified venue, with the reason', () => {

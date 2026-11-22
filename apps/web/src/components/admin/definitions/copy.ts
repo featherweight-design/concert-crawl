@@ -513,7 +513,10 @@ export const ADMIN_COPY = {
     // about 2 min" on the board; the wait is left off when it is unknown.
     startsAfterRun: 'Starts after the run in progress',
     aboutMinutes: (minutes: number) => `about ${minutes} min`,
-    viewOnSite: 'View on site',
+    // `08/venue-header-links`: the same pair as Event edit. The phone's second
+    // link reads the venue's host instead ("ballarena.com").
+    onConcertCrawl: 'On Concert Crawl',
+    onVenueSite: 'On the venue’s site',
     // Why Re-crawl is off. The API refuses all four (paused 409, robots 409,
     // hidden or unverified 400). The board's "/events" has no source, so no
     // path is named.
