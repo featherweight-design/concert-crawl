@@ -808,6 +808,19 @@ export const CONSUMER_COPY = {
     showCount: (count: number) => `${count} ${count === 1 ? 'show' : 'shows'}`,
     showCountMatch: (count: number) =>
       `${count} ${count === 1 ? 'show matches' : 'shows match'}`,
+    // The legend for an active Vibe filter (`04-genre-and-vibe`, COPY.md):
+    // the visible form is each pick's dot and name in the count row, and this
+    // sentence is what a screen reader hears beside them. DRAFT copy for
+    // Hugh's call; two picks read "A and B", more read "A, B and C".
+    vibeLegend: (genres: readonly string[]) => {
+      const names = genres.map((genre) => genre.toLowerCase());
+      const last = names[names.length - 1];
+      const list =
+        names.length > 1
+          ? `${names.slice(0, -1).join(', ')} and ${last}`
+          : (last ?? '');
+      return `Only ${list} shows, each marked by its dot.`;
+    },
     // The count line while Browse loads (`load_browse_d`).
     showCountPending: '… shows',
     clearAll: 'Clear all',
