@@ -2315,6 +2315,7 @@ export const AUDIT_ACTION_KEYS = [
   'venue.fault.acknowledge',
   'venue.fault.unacknowledge',
   'venue.guide.save',
+  'venue.guide.draft',
   'venue.guide.publish',
   'venue.guide.unpublish',
   'venue.platform_changed',

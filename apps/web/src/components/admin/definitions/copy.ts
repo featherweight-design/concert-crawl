@@ -3263,6 +3263,7 @@ export const ADMIN_COPY = {
           '',
         ],
         'venue.guide.save': ['Saved the guide for ', ''],
+        'venue.guide.draft': ['Drafted the guide for ', ''],
         'venue.guide.publish': ['Published the guide for ', ''],
         'venue.guide.unpublish': ['Unpublished the guide for ', ''],
         'venue.platform_changed': ['Changed the ticket platform of ', ''],
