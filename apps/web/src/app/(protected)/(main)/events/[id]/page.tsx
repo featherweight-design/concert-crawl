@@ -48,6 +48,7 @@ import {
 import {
   formatEventDate,
   formatShowTime,
+  isEventPast,
 } from '@/components/consumer/definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from '@/components/consumer/event-title-block';
@@ -222,6 +223,9 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   // and the watch strip with "Watch to track the price") and the price card.
   // Their boards (more-st-ev_canc, more-st-ev_post) draw neither: the card,
   // then one CTA (refund info, or Watching for the new date).
+  // A past show keeps its price but gets no outbound CTA, as on /e: there is
+  // nothing left to buy (Hugh, 2026-11-22).
+  const past = isEventPast(event.date, event.venue.timezone);
   const leadsWithStatus =
     event.status === 'cancelled' || event.status === 'postponed';
   // Where it's sold (B+ TS3): empty, so no card, below two sellers.
@@ -243,36 +247,38 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   );
 
   // The one CTA. A status-led page puts it right under the status card.
-  const primaryCta = (
-    <>
-      {/* Primary CTA — always renders on all events. Postponed swaps it for
+  const primaryCta =
+    past && event.status !== 'postponed' ? null : (
+      <>
+        {/* Primary CTA — renders on every show still to come, and on a past
+        postponed one, whose Watch toggle is not a purchase link. Postponed swaps it for
         the Watch toggle (no date to buy for yet); cancelled relabels the
         ticket link as refund info, since the vendor handles refunds.
         Sold out → disabled button. ticketUrl or eventUrl → "Get Tickets ↗"
         (eventUrl deep-links the venue's specific event page when there's
         no direct ticket link, #1152). Fallback → venue website. No URL →
         disabled "No tickets available". */}
-      <div className="mt-5">
-        {event.status === 'postponed' ? (
-          <WatchShowButton
-            eventId={event.id}
-            initialWatching={event.isWatching}
-            artist={event.artist}
-            variant="cta"
-          />
-        ) : (
-          <EventTicketCta
-            status={event.status}
-            delistedAt={event.delistedAt}
-            ticketHref={safeTicketUrl}
-            soldOut={event.priceStatus === 'soldout'}
-            href={ctaHref}
-            hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
-          />
-        )}
-      </div>
-    </>
-  );
+        <div className="mt-5">
+          {event.status === 'postponed' ? (
+            <WatchShowButton
+              eventId={event.id}
+              initialWatching={event.isWatching}
+              artist={event.artist}
+              variant="cta"
+            />
+          ) : (
+            <EventTicketCta
+              status={event.status}
+              delistedAt={event.delistedAt}
+              ticketHref={safeTicketUrl}
+              soldOut={event.priceStatus === 'soldout'}
+              href={ctaHref}
+              hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
+            />
+          )}
+        </div>
+      </>
+    );
 
   // event-nll-m: a No longer listed phone hero ends under the title; the genre
   // chips and the date line sit below it, above the dashed card.

@@ -102,10 +102,10 @@ export const PublicEventDetail = ({
     safeEventUrl ??
     (isSafeHttpUrl(event.venue.websiteUrl) ? event.venue.websiteUrl : null);
 
-  // A poster link is often opened days after the gig. The protected page keeps
-  // its CTA on past shows because a signed-in browser navigated there
-  // deliberately; here the whole CTA is dropped, since a "Get tickets" button
-  // pointing at a dead vendor page is the first thing a new visitor would tap.
+  // A poster link is often opened days after the gig, and a "Get tickets"
+  // button pointing at a dead vendor page is the first thing a new visitor
+  // would tap, so a past show drops the whole CTA. The protected page does the
+  // same (Hugh, 2026-11-22).
   const past = isEventPast(event.date, event.venue.timezone);
 
   // Sold out beats a stale number: a shared link is often opened after the
