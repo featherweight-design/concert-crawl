@@ -19,7 +19,6 @@ import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../lib/validator.js';
 import {
   db,
-  founderWindow,
   userProfiles,
   userCred,
   priceSubmissions,
@@ -30,7 +29,6 @@ import {
 import { createClerkClient } from '@clerk/backend';
 import type {
   DisplayRole,
-  FounderWindowView,
   RoleBadge,
   SubmissionCounts,
   UserProfileResponse,
@@ -44,7 +42,6 @@ import { deleteUserData } from '../lib/user-data.js';
 import { getStripeClient, isStripeConfigured } from '../lib/stripe.js';
 import { isClerkNotFound } from '../lib/clerk-errors.js';
 import { loadPlanContext } from '../lib/plan.js';
-import { resolveFounderWindowView } from './billing-founder-window.js';
 import {
   AVATAR_COLORS,
   fanStoredStatus,
@@ -155,33 +152,6 @@ function formatJoined(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-// The profile surface must not 500 over a billing read — a missing
-// founder_window singleton falls back to the pre-launch view.
-const FOUNDER_WINDOW_FALLBACK: FounderWindowView = {
-  state: 'pre-launch',
-  seatsTotal: 100,
-  closesAt: null,
-};
-
-// A missing or unreadable row yields the fallback view.
-async function loadFounderWindow(now: Date): Promise<FounderWindowView> {
-  try {
-    const [windowRow] = await db
-      .select()
-      .from(founderWindow)
-      .where(eq(founderWindow.id, 1))
-      .limit(1);
-    if (!windowRow) {
-      apiLogger.error({}, 'users/me: founder_window singleton row missing');
-      return FOUNDER_WINDOW_FALLBACK;
-    }
-    return resolveFounderWindowView(windowRow, now);
-  } catch (err) {
-    apiLogger.error({ err }, 'users/me: founder_window read failed');
-    return FOUNDER_WINDOW_FALLBACK;
-  }
-}
-
 // GET /v1/users/me
 usersRouter.get('/me', async (ctx) => {
   const auth = getAuth(ctx);
@@ -195,9 +165,6 @@ usersRouter.get('/me', async (ctx) => {
     .from(userProfiles)
     .where(eq(userProfiles.userId, auth.userId))
     .limit(1);
-
-  const now = new Date();
-  const founderWindowView = await loadFounderWindow(now);
 
   const accountCreatedAt =
     clerkUser.createdAt === undefined || clerkUser.createdAt === null
@@ -247,7 +214,6 @@ usersRouter.get('/me', async (ctx) => {
     submissionCount: submissionCounts.total,
     submissionCounts,
     cred: credRow?.priceCredScore ?? 0,
-    founderWindow: founderWindowView,
   };
 
   return ctx.json({ success: true, data: response });

@@ -205,14 +205,14 @@ eventsRouter.get(
     //
     // taste=1 (#763 PR 7, §9.3) narrows the list to events matching the
     // viewer's Spotify-sourced follow rows. following=1 (native following,
-    // §7.1) does the same over follow rows of EVERY source. Both are
-    // entitlement-gated inline — this route is public, so requireFeature can't
-    // mount route-wide: anonymous → 401, a plan without the feature → 403 with
-    // the same typed body the middleware emits, so the web client's
-    // locked-surface routing works identically. An entitled viewer with zero
-    // matching rows gets an empty 200 (the EXISTS matches nothing).
+    // §7.1) does the same over follow rows of EVERY source. Both need a
+    // signed-in viewer (anonymous → 401). taste=1 is also entitlement-gated
+    // inline — this route is public, so requireFeature can't mount route-wide —
+    // and a plan without it gets a 403 with the same typed body the middleware
+    // emits. A viewer with zero matching rows gets an empty 200 (the EXISTS
+    // matches nothing).
     //
-    // Both flags can arrive together, so plan state is resolved at most once.
+    // Only taste=1 reads plan state, resolved lazily.
     const scopeConditions: SQL[] = [];
     let cachedPlanState: PlanState | null = null;
     const listPlanState = async (userId: string): Promise<PlanState> => {
@@ -255,22 +255,6 @@ eventsRouter.get(
     if (following) {
       if (!listAuth?.userId) {
         return ctx.json({ success: false, error: 'Unauthorized' }, 401);
-      }
-      const planState = await listPlanState(listAuth.userId);
-      if (!canUseFeature(planState, 'following')) {
-        apiLogger.debug(
-          { userId: listAuth.userId, plan: planState.plan },
-          'following filter entitlement denied',
-        );
-        return ctx.json(
-          {
-            success: false,
-            error: 'This feature requires an upgraded plan',
-            code: ENTITLEMENT_REQUIRED_CODE,
-            feature: 'following',
-          },
-          403,
-        );
       }
       scopeConditions.push(followedArtistsCondition(listAuth.userId));
     }

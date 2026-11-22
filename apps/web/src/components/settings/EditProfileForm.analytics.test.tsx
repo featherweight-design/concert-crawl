@@ -60,7 +60,6 @@ const PROFILE: UserProfileResponse = {
     closed: 0,
   },
   cred: 0,
-  founderWindow: { state: 'pre-launch', seatsTotal: 100, closesAt: null },
 };
 
 describe('EditProfileForm and the analytics name', () => {

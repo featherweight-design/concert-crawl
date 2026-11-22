@@ -6,8 +6,6 @@ import { z } from 'zod';
 import { db, userEvents, events } from '@concert-crawl/db';
 import type { AttendingToggleResponse } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
-import { requireFeature } from '../middleware/entitlement.js';
-import type { EntitlementVariables } from '../middleware/entitlement.js';
 import { releaseAttendance } from '../lib/user-events.js';
 import { notifyCrewGoing } from '../lib/crew-notifications.js';
 import { idSchema } from '../lib/id-schema.js';
@@ -58,12 +56,11 @@ const readAttendingAt = async (
 };
 
 // Attending ("I'm going!") is what Concert History is built from — it is never
-// derived from the watch list (#70 locked concept). Gated on the entitlement
-// key, never a hardcoded tier: ENTITLEMENTS_MATRIX owns the tier answer.
-export const attendingRouter = new Hono<{ Variables: EntitlementVariables }>();
+// derived from the watch list (#70 locked concept). Signed-in only; each
+// handler answers 401 for an anonymous caller.
+export const attendingRouter = new Hono();
 
 attendingRouter.use('*', clerkMiddleware());
-attendingRouter.use('*', requireFeature('concert-history'));
 
 // PUT /v1/attending/:eventId — mark attendance. Idempotent: a second call
 // leaves the original timestamp alone, so History keeps the moment the user
