@@ -1,3 +1,21 @@
+## [1.539.1](https://github.com/featherweight-design/concert-crawl/compare/v1.539.0...v1.539.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **api:** price a Concerts night from its cheapest tier, as Watching does ([685aff4](https://github.com/featherweight-design/concert-crawl/commit/685aff43fa20e26a4806ba00e20fb9f042eb10ff))
+* **web:** a past No longer listed show drops its ticket CTA ([ef6f468](https://github.com/featherweight-design/concert-crawl/commit/ef6f4685e3c3a44bfa1d65f6a2032a74adf80397))
+* **web:** keep the refund link on a past cancelled show ([e1e0256](https://github.com/featherweight-design/concert-crawl/commit/e1e025698b1e0a86d7dcefb516a715f43da730cf))
+* **web:** no outbound ticket link on a past show ([d0cf00f](https://github.com/featherweight-design/concert-crawl/commit/d0cf00f7fd60910aba500ccc6ecd1f97b9a4bfda))
+* **web:** no seller link in a past show's price attribution ([e0c7819](https://github.com/featherweight-design/concert-crawl/commit/e0c78199d9857b213d037c995a5126316ed01a95))
+* **web:** only an http(s) ticket URL becomes a link in the price card ([54cbb0a](https://github.com/featherweight-design/concert-crawl/commit/54cbb0a9f74076fd69682ed521363abfaffff7dd))
+
+
+### Performance Improvements
+
+* **web:** cache the rendered passport card per account and contents ([3e11ba0](https://github.com/featherweight-design/concert-crawl/commit/3e11ba0b8fb7a7d3d25e4ad25e73f57550487b26))
+* **web:** load fonts inside the cached render, true LRU, process-stamped key ([9b703c7](https://github.com/featherweight-design/concert-crawl/commit/9b703c70ca466ac77cf7499b4017ce8e7a8fa86f))
+
 # [1.539.0](https://github.com/featherweight-design/concert-crawl/compare/v1.538.0...v1.539.0) (2026-11-22)
 
 
