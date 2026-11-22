@@ -224,8 +224,9 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   // Their boards (more-st-ev_canc, more-st-ev_post) draw neither: the card,
   // then one CTA (refund info, or Watching for the new date).
   // A past show keeps its price but gets no outbound CTA, as on /e: there is
-  // nothing left to buy (Hugh, 2026-11-22). That includes a past cancelled
-  // show's refund link; a past postponed show keeps its Watch toggle.
+  // nothing left to buy (Hugh, 2026-11-22). A status-led page keeps its CTA:
+  // a past cancelled show's refund link and a past postponed show's Watch
+  // toggle are not purchase links.
   const past = isEventPast(event.date, event.venue.timezone);
   const leadsWithStatus =
     event.status === 'cancelled' || event.status === 'postponed';
@@ -249,10 +250,11 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
 
   // The one CTA. A status-led page puts it right under the status card.
   const primaryCta =
-    past && event.status !== 'postponed' ? null : (
+    past && !leadsWithStatus ? null : (
       <>
         {/* Primary CTA — renders on every show still to come, and on a past
-        postponed one, whose Watch toggle is not a purchase link. Postponed swaps it for
+        cancelled or postponed one, whose refund link and Watch toggle are not
+        purchase links. Postponed swaps it for
         the Watch toggle (no date to buy for yet); cancelled relabels the
         ticket link as refund info, since the vendor handles refunds.
         Sold out → disabled button. ticketUrl or eventUrl → "Get Tickets ↗"
