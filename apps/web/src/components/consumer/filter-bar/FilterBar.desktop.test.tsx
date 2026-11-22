@@ -293,6 +293,22 @@ describe('FilterBar desktop segmented bar', () => {
     expect(query.get('filterFollowing')).toBe('1');
   });
 
+  it('draws the Vibe legend on both count rows while a Vibe is on, and not otherwise', () => {
+    renderBar({ showCount: 5 });
+    expect(screen.queryByTestId('vibe-legend')).toBeNull();
+    expect(screen.queryByTestId('filter-count-line-phone')).toBeNull();
+    cleanup();
+    searchParams.current = new URLSearchParams(
+      'filterVibe=indie&filterVibe=rock',
+    );
+    renderBar({ showCount: 5 });
+    // The phone row and the desktop bar both render in jsdom (CSS shows one).
+    expect(screen.getAllByTestId('vibe-legend')).toHaveLength(2);
+    expect(screen.getByTestId('filter-count-line-phone').textContent).toBe(
+      copy.showCount(5),
+    );
+  });
+
   it('says "match" and lights the bar when only the follow scope narrows', () => {
     searchParams.current = new URLSearchParams('filterFollowing=1');
     renderBar({ showCount: 9 });
