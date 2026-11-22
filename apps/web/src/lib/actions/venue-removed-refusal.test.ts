@@ -104,6 +104,7 @@ describe('updateVenue', () => {
       success: false,
       error: 'Slug already in use',
       field: 'slug',
+      conflict: true,
     });
   });
 });
