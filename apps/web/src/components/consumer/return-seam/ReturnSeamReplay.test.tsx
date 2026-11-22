@@ -263,7 +263,7 @@ describe('ReturnSeamReplay: replaying a follow', () => {
     expect(screen.getByTestId('return-seam-strip').textContent).toContain(
       'Now following TOKiMONSTA.',
     );
-    // No "My shows" action: a follow does not live there.
+    // No View link: a follow does not live there.
     expect(
       within(screen.getByTestId('return-seam-strip')).queryByRole('link'),
     ).toBeNull();
@@ -336,12 +336,15 @@ describe('ReturnSeamReplay: replaying a follow', () => {
       expect(screen.queryByTestId('return-seam-strip')).toBeNull();
     });
 
-    it('is gone on any navigation', () => {
+    it('is gone on any navigation, wherever the layout first mounted', () => {
+      pathname = '/';
+      const view = render(<ReturnSeamReplay />);
+      pathname = '/artists/geese';
       withIntent(`watch:${EVENT_ID}`, 'Geese');
       mutate.mockImplementation((_id, opts) => opts.onSuccess());
-      const view = render(<ReturnSeamReplay />);
+      view.rerender(<ReturnSeamReplay />);
       expect(screen.getByTestId('return-seam-strip')).toBeDefined();
-      pathname = '/events';
+      pathname = '/';
       view.rerender(<ReturnSeamReplay />);
       expect(screen.queryByTestId('return-seam-strip')).toBeNull();
     });
