@@ -1,0 +1,59 @@
+{
+  "feature": "Settings: masked account email",
+  "note": "The account Email row shows the address masked as the B+ settings board draws it (h•••••@gmail.com). Boards (design/design_handoff_bplus_redesign/screens/): 07-more-screens/more-s-settings_m (phone), 07-more-screens/more-s-d_account (desktop). /me mounts ThemeSync, so the audit account's saved theme must be Electric.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 760
+    },
+    {
+      "label": "phone-390",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "label": "desktop-1300",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "rows": [
+    {
+      "id": "account-phone",
+      "label": "/me: Account rows (phone)",
+      "widths": ["phone-320", "phone-390"],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/me",
+          "wait": ":is(#notifications, main h2):visible"
+        },
+        {
+          "wait": "body:not(:has(#notifications [aria-busy=\"true\"]))"
+        }
+      ]
+    },
+    {
+      "id": "account-desktop",
+      "label": "/me: Account section (desktop)",
+      "widths": ["desktop-1300"],
+      "steps": [
+        {
+          "goto": "/me?section=account",
+          "wait": "h2:text-is(\"Account\")"
+        }
+      ]
+    }
+  ]
+}
