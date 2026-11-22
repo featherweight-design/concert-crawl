@@ -24,13 +24,15 @@ const StatTile = ({
   value,
   label,
   gradient,
+  wide,
 }: {
   value: string;
   label: string;
   gradient: boolean;
+  wide: boolean;
 }) => (
   <div
-    className="flex min-w-0 flex-col-reverse gap-0.5"
+    className={`flex min-w-0 flex-col-reverse gap-0.5 ${wide ? 'col-span-2 lg:col-span-1 lg:max-w-[300px]' : ''}`}
     data-stat-gradient={gradient || undefined}
   >
     <dt
@@ -49,9 +51,9 @@ const StatTile = ({
     <dd
       // A long venue wraps onto a second line in its third on a phone, as the
       // boards draw "Mission Ballroom", rather than cutting to "Larim…".
-      // The values are 28px on the phone and about 44 from sm up
-      // (`bp-concerts`), not 28 at every width.
-      className="truncate text-[28px] max-lg:whitespace-normal lg:text-[44px]"
+      // The values are 22px on the phone and 30px from lg up
+      // (`concerts-stats`).
+      className="truncate text-[22px] max-lg:whitespace-normal lg:text-[30px]"
       style={{
         fontFamily: 'var(--font-ui)',
         fontWeight: 900,
@@ -129,15 +131,6 @@ export const historyTilesFor = (stats: HistoryStats): Tile[] => {
       gradient: true,
     });
   }
-  if (stats.totalSpent !== null) {
-    tiles.push({
-      key: 'spent',
-      value: `$${Math.round(stats.totalSpent)}`,
-      label: COPY.stats.spent,
-      gradient: false,
-    });
-  }
-
   return tiles;
 };
 
@@ -180,16 +173,18 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
         </p>
       </div>
 
-      {/* A phone sets the tiles in equal thirds, three to a row, as the boards
-          do; from `sm` they flow at their natural width. Either way it wraps
-          instead of scrolling at 320px: six tiles never fit one row. */}
-      <dl className="m-0 grid grid-cols-3 items-start gap-x-4 gap-y-4 lg:flex lg:flex-wrap lg:items-center lg:gap-x-5">
+      {/* A phone sets Nights, Venues and Artists in thirds, then Top genre and
+          Top venue (spanning two) under them; desktop draws the five in one
+          row. A missing stat gets no tile, so a missing pair drops row two
+          (`concerts-stats-missing`). */}
+      <dl className="m-0 grid grid-cols-3 items-start gap-x-4 gap-y-4 lg:flex lg:items-center lg:gap-x-8">
         {tiles.map((tile) => (
           <StatTile
             key={tile.key}
             value={tile.value}
             label={tile.label}
             gradient={tile.gradient}
+            wide={tile.key === 'topVenue'}
           />
         ))}
       </dl>
