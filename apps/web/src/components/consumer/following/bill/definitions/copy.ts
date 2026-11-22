@@ -25,11 +25,11 @@ export const BILL_FOLLOW_COPY = {
   // visible label does not change, because a width change mid-tap moves the
   // button out from under the finger that is still on it.
   followAllPendingAria: 'Following them now',
-  // What the block is for, said once. It is the only line that explains the
-  // payoff, so it names the trigger ("book a Denver date") rather than
-  // gesturing at alerts in general.
   // Role tags, drawn only on a bill with more than one headliner.
   roleHeadliner: 'CO-HEADLINER',
   roleSupport: 'SUPPORT',
+  // What the block is for, said once. It is the only line that explains the
+  // payoff, so it names the trigger ("book a Denver date") rather than
+  // gesturing at alerts in general.
   body: "We'll tell you the day any of them book another Denver date.",
 } as const;

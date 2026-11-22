@@ -284,7 +284,7 @@ export const BillFollowBlock = ({
             ) : (
               <Link
                 href={`/artists/${artist.slug}`}
-                className="flex min-w-0 items-baseline gap-2 underline-offset-4 hover:underline focus-visible:underline"
+                className="flex min-w-0 gap-2 underline-offset-4 hover:underline focus-visible:underline"
                 style={{ alignSelf: 'stretch', alignItems: 'center' }}
               >
                 <span className={NAME_CLASS} style={NAME_STYLE}>
