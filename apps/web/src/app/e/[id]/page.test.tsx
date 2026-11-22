@@ -126,7 +126,7 @@ describe('/e/[id] — public event mirror (#72)', () => {
     mockPublicGet.mockImplementation((path: string) =>
       path.endsWith('/related')
         ? Promise.resolve({ data: [] })
-        : Promise.resolve({ id: EVENT_ID }),
+        : Promise.resolve({ id: EVENT_ID, headliners: null }),
     );
     const Page = await loadPage();
 
@@ -140,7 +140,7 @@ describe('/e/[id] — public event mirror (#72)', () => {
     mockPublicGet.mockImplementation((path: string) =>
       path.endsWith('/related')
         ? Promise.resolve({ data: [] })
-        : Promise.resolve({ id: EVENT_ID }),
+        : Promise.resolve({ id: EVENT_ID, headliners: null }),
     );
     const Page = await loadPage();
 
@@ -241,7 +241,7 @@ describe('/e/[id] — public event mirror (#72)', () => {
     mockPublicGet.mockImplementation((path: string) =>
       path.endsWith('/related')
         ? Promise.reject(new Error('boom'))
-        : Promise.resolve({ id: EVENT_ID }),
+        : Promise.resolve({ id: EVENT_ID, headliners: null }),
     );
     const Page = await loadPage();
 
