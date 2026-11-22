@@ -389,6 +389,12 @@ export const VenuesList = ({
     (key) => key !== 'needsLook' || needsYou !== null,
   );
   const upcoming = listed.reduce((sum, venue) => sum + venue.eventCount, 0);
+  // The subtitle counts venues on the way to the site; drafts are counted
+  // apart (`A3/03/drafts-in-list-d`: All 22, "21 venues").
+  const drafts = listed.filter((venue) =>
+    matchesFilter(venue, 'drafts'),
+  ).length;
+  const nonDrafts = listed.length - drafts;
   const sorted = useMemo(
     () =>
       sortWorstFirst(
@@ -546,8 +552,10 @@ export const VenuesList = ({
             }}
           >
             {isPhone
-              ? COPY.subtitlePhone(listed.length)
-              : COPY.subtitle(listed.length, upcoming)}
+              ? drafts > 0
+                ? COPY.subtitlePhoneWithDrafts(nonDrafts, drafts)
+                : COPY.subtitlePhone(nonDrafts)
+              : COPY.subtitle(nonDrafts, upcoming)}
           </p>
         </div>
         {isPhone ? (

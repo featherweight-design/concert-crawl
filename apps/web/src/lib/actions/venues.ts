@@ -109,6 +109,54 @@ export async function createVenue(
   }
 }
 
+/**
+ * Add a venue's first save (3e-1, plan decision 2): Basics creates the venue
+ * as a draft (`active=false`, `went_live_at=NULL`, audited `{draft: true}`),
+ * which no fan read and no nightly crawl sees. Later saves go through
+ * `updateVenue`. The body is parsed the way `updateVenue` parses its own.
+ */
+export async function createDraftVenue(formData: FormData): Promise<{
+  success: boolean;
+  id?: string;
+  error?: string;
+  field?: string;
+  conflict?: boolean;
+}> {
+  const token = await getToken();
+  try {
+    const venue = await apiClient.post<Venue>('/v1/admin/venues', token, {
+      ...buildUpdateVenueBody(formData),
+      draft: true,
+    });
+    revalidatePath('/admin/venues');
+    return { success: true, id: venue.id };
+  } catch (err: unknown) {
+    if (err instanceof ApiError && err.status === 409) {
+      return {
+        success: false,
+        error: 'Slug already in use',
+        field: 'slug',
+        conflict: true,
+      };
+    }
+    // A 400 names its input, as `updateVenue` reads it, so the first save
+    // marks the same field a later save would.
+    if (err instanceof ApiError && err.status === 400) {
+      const zodPath = err.zodIssues?.[0]?.path[0];
+      const field =
+        err.field ?? (typeof zodPath === 'string' ? zodPath : undefined);
+      console.warn('createDraftVenue: rejected', { field });
+      return {
+        success: false,
+        error: err.message,
+        ...(field === undefined ? {} : { field }),
+      };
+    }
+    console.warn('createDraftVenue: draft not created', { err });
+    return { success: false, error: 'Draft not created' };
+  }
+}
+
 export async function createVenueAndCrawl(
   formData: FormData,
 ): Promise<CreateVenueResult> {
@@ -139,6 +187,8 @@ export async function updateVenue(
   // Any input the API names; the form marks the ones it renders and shows the
   // message at the top for the rest.
   field?: string;
+  /** The slug belongs to another venue (409), not a malformed value. */
+  conflict?: boolean;
 }> {
   const token = await getToken();
 
@@ -160,7 +210,12 @@ export async function updateVenue(
     }
     if (err instanceof ApiError && err.status === 409) {
       console.warn('updateVenue: slug conflict', { id });
-      return { success: false, error: 'Slug already in use', field: 'slug' };
+      return {
+        success: false,
+        error: 'Slug already in use',
+        field: 'slug',
+        conflict: true,
+      };
     }
     if (err instanceof ApiError && err.status === 400 && err.zodIssues) {
       const apiAccountIdIssue = err.zodIssues.find(
