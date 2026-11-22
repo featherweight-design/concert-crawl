@@ -1339,6 +1339,27 @@ export const CONSUMER_COPY = {
     // The gone page's tile and eyebrow (B+ B8, bp-s-public_gone_m).
     notFoundCode: '404',
     notFoundEyebrow: 'Shared link',
+    // The price card's seller lines (B+ addendum 10). `{tier}` is the stored
+    // tier (GA, Reserved, VIP, Pit, Lawn) and the card sets the qualifier in
+    // mono capitals; `{seller}` is the vendor's display name, set in bold.
+    priceQualifier: '{tier} · all-in',
+    priceQualifierBoxOffice: '{tier} · no fees',
+    soldBy: 'Sold by {seller}',
+    // The card splits the line around `resaleWord` and sets it in the Resale
+    // trust colour, as the Where it's sold line does.
+    soldByResale: 'Sold by {seller} · resale',
+    resaleWord: 'resale',
+    soldByBoxOffice: 'Sold by {seller} · face value',
+    // The box office as the subject of "Sold by". An Also row names it as
+    // the vendor map does ("Venue box office").
+    boxOfficeSeller: 'the venue box office',
+    alsoLabel: 'Also',
+    alsoMore: '+{count} more',
+    // Case C: every listed price is resale.
+    resaleOnlyNote: 'Only resale is listed so far, usually above face value.',
+    // Case D: under "Sold out". `aboveFaceValue` is set in the Resale colour.
+    soldOutResale: 'Resale from {price} on {seller} · above face value',
+    aboveFaceValue: 'above face value',
   },
 
   // ── PendingCardB ────────────────────────────────────────────────

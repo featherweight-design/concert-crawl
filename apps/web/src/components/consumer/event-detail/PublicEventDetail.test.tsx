@@ -539,3 +539,218 @@ describe('PublicEventDetail status card privacy', () => {
     expect(card.textContent ?? '').toMatch(/3 confirms/);
   });
 });
+
+// B+ addendum 10 (boards/01-public-resale): the price card names the kind of
+// price and who sells it. The board builders above stay the flat cases.
+describe('PublicEventDetail price card, Sold by (B+ addendum 10)', () => {
+  type Category = 'boxoffice' | 'standard' | 'resale';
+  const listed = (
+    submissionId: string,
+    vendor: 'VenueBoxOffice' | 'Ticketmaster' | 'AXS' | 'StubHub' | 'SeatGeek',
+    priceMin: string,
+    sourceCategory: Category,
+  ) => ({
+    submissionId,
+    priceMin,
+    priceMax: null,
+    vendor,
+    sourceCategory,
+    submitterHandle: null,
+    observedAt: '2026-06-01T00:00:00.000Z',
+    approvedAt: '2026-06-01T00:00:00.000Z',
+    approvalKind: 'admin' as const,
+    confirmsCount: 1,
+  });
+  const gaBlock = (
+    head: ReturnType<typeof listed>,
+    alternates: ReturnType<typeof listed>[] = [],
+  ) => ({
+    tier: 'GA' as const,
+    headline: head,
+    alternates,
+    pending: [],
+    counterSubmission: null,
+    reports: 0,
+  });
+  const card = () => screen.getByTestId('public-event-price');
+
+  it('draws the box office pill, the no-fees qualifier and Sold by (case A)', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          priceSubmissionId: 'vbo',
+          priceByTier: [
+            gaBlock(listed('vbo', 'VenueBoxOffice', '38.00', 'boxoffice')),
+          ],
+        })}
+        related={[]}
+      />,
+    );
+    expect(
+      card().querySelector('[data-testid="trust-pill-boxoffice"]'),
+    ).not.toBeNull();
+    expect(screen.getByTestId('public-price-amount').textContent).toBe('$38');
+    expect(screen.getByTestId('public-price-qualifier').textContent).toBe(
+      copy.priceQualifierBoxOffice.replace('{tier}', 'GA'),
+    );
+    expect(screen.getByTestId('public-price-sold-by').textContent).toBe(
+      copy.soldByBoxOffice.replace('{seller}', copy.boxOfficeSeller),
+    );
+    expect(screen.queryByTestId('public-price-also')).toBeNull();
+  });
+
+  it("draws a 'standard' headline with the Community pill", () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          priceByTier: [
+            gaBlock(listed('tm', 'Ticketmaster', '45.00', 'standard')),
+          ],
+        })}
+        related={[]}
+      />,
+    );
+    expect(
+      card().querySelector('[data-testid="trust-pill-community"]'),
+    ).not.toBeNull();
+    expect(screen.getByTestId('public-price-sold-by').textContent).toBe(
+      copy.soldBy.replace('{seller}', 'Ticketmaster'),
+    );
+  });
+
+  it('lists the other sellers under Also, cheapest first (case B)', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          priceSubmissionId: 'sh',
+          priceByTier: [gaBlock(listed('sh', 'StubHub', '80.00', 'resale'))],
+          priceAlternates: [
+            {
+              id: 'axs',
+              tier: 'GA',
+              vendor: 'AXS',
+              priceMin: '47.00',
+              priceMax: null,
+              sourceCategory: 'standard',
+            },
+            {
+              id: 'sg',
+              tier: 'GA',
+              vendor: 'SeatGeek',
+              priceMin: '95.00',
+              priceMax: null,
+              sourceCategory: 'resale',
+            },
+          ],
+        })}
+        related={[]}
+      />,
+    );
+    expect(
+      card().querySelector('[data-testid="trust-pill-resale"]'),
+    ).not.toBeNull();
+    expect(screen.getByTestId('public-price-resale-word').textContent).toBe(
+      copy.resaleWord,
+    );
+    const rows = screen.getAllByTestId('public-price-also-row');
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('AXS'),
+      expect.stringContaining('SeatGeek'),
+    ]);
+    // The Resale pill marks only the resale row.
+    expect(
+      rows[0]?.querySelector('[data-testid="trust-pill-resale"]'),
+    ).toBeNull();
+    expect(
+      rows[1]?.querySelector('[data-testid="trust-pill-resale"]'),
+    ).not.toBeNull();
+    // Face value is listed, so this is not the resale-only case.
+    expect(screen.queryByTestId('public-price-resale-only')).toBeNull();
+  });
+
+  it('notes when resale is the only price listed (case C)', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          priceByTier: [gaBlock(listed('sh', 'StubHub', '80.00', 'resale'))],
+        })}
+        related={[]}
+      />,
+    );
+    expect(screen.getByTestId('public-price-resale-only').textContent).toBe(
+      copy.resaleOnlyNote,
+    );
+  });
+
+  it('caps Also at three rows and counts the rest', () => {
+    const alternates = (
+      [
+        { id: 'axs', vendor: 'AXS', priceMin: '47.00' },
+        { id: 'dice', vendor: 'DICE', priceMin: '50.00' },
+        { id: 'etix', vendor: 'Etix', priceMin: '52.00' },
+        { id: 'sg', vendor: 'SeatGeek', priceMin: '60.00' },
+        { id: 'vs', vendor: 'VividSeats', priceMin: '70.00' },
+      ] as const
+    ).map((row) => ({
+      ...row,
+      tier: 'GA' as const,
+      priceMax: null,
+      sourceCategory: 'standard' as const,
+    }));
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          priceSubmissionId: 'tm',
+          priceByTier: [
+            gaBlock(listed('tm', 'Ticketmaster', '45.00', 'standard')),
+          ],
+          priceAlternates: alternates,
+        })}
+        related={[]}
+      />,
+    );
+    expect(screen.getAllByTestId('public-price-also-row')).toHaveLength(3);
+    expect(screen.getByTestId('public-price-also-more').textContent).toBe(
+      copy.alsoMore.replace('{count}', '2'),
+    );
+  });
+
+  it('names the cheapest resale under Sold out (case D)', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          priceStatus: 'soldout',
+          ticketPriceMin: '25',
+          priceByTier: [
+            gaBlock(listed('vbo', 'VenueBoxOffice', '25.00', 'boxoffice'), [
+              listed('sg', 'SeatGeek', '120.00', 'resale'),
+              listed('sh', 'StubHub', '95.00', 'resale'),
+            ]),
+          ],
+        })}
+        related={[]}
+      />,
+    );
+    expect(card().textContent).toContain(detailCopy.soldOut);
+    expect(
+      card().querySelector('[data-testid="trust-pill-resale"]'),
+    ).not.toBeNull();
+    expect(screen.getByTestId('public-price-soldout-resale').textContent).toBe(
+      copy.soldOutResale
+        .replace('{price}', '$95')
+        .replace('{seller}', 'StubHub'),
+    );
+  });
+
+  // Orchestrator ruling 1: the flat fallback keeps the pre-addendum card.
+  it('draws no pill and no Sold by on the flat fallback', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({ ticketPriceMin: '25', ticketPriceMax: null })}
+        related={[]}
+      />,
+    );
+    expect(card().querySelector('[data-testid^="trust-pill-"]')).toBeNull();
+    expect(screen.queryByTestId('public-price-sold-by')).toBeNull();
+  });
+});

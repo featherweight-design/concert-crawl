@@ -64,9 +64,15 @@ export function resolvePendingKind(
   return kindFromSourceCategory(sourceCategory, vendor);
 }
 
+/**
+ * The trust kind of a listed price: box office, resale or community, never
+ * primary. A `standard` ticket is Community, and a row from before
+ * `sourceCategory` falls back to the vendor. The alternates, the Where it's
+ * sold line and the public price card (B+ addendum 10) all read it.
+ */
 export function resolveAlternateKind(
   vendor: string | null,
   sourceCategory?: SourceCategory | null,
-): SourceKind {
+): Exclude<SourceKind, 'primary'> {
   return kindFromSourceCategory(sourceCategory, vendor);
 }
