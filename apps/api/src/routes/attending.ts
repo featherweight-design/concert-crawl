@@ -135,8 +135,8 @@ attendingRouter.put('/:eventId', async (ctx) => {
     // sweep brings it back on its detail page as No longer listed. A past one
     // happened whatever the crawler later did with the listing, so only a
     // cancelled show is refused. A show at a venue that asked us to remove
-    // its data (venues.removed_at) is refused whatever its date: no surface
-    // shows it. Same 404 as an unknown id either way.
+    // its data (venues.removed_at) is refused whatever its date. Same 404 as
+    // an unknown id either way.
     const markable =
       !eventRow.hiddenFromConsumer &&
       eventRow.venueRemovedAt === null &&
