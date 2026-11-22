@@ -166,5 +166,141 @@
   "note": "",
   "w": 1220,
   "h": 760
+ },
+ {
+  "section": "02-passport-height",
+  "name": "passport-zero-m",
+  "title": "Passport · no stamp pages yet",
+  "note": "Spread 1 is always ID + page 1, so the card is 601px from the start.",
+  "w": 1220,
+  "h": 920
+ },
+ {
+  "section": "02-passport-height",
+  "name": "passport-id-320",
+  "title": "Passport · ID page at 320px",
+  "note": "Long top genre ellipsizes; stamps step to 108px.",
+  "w": 320,
+  "h": 760
+ },
+ {
+  "section": "03-share-image",
+  "name": "share-avatar-handle",
+  "title": "Share image · photo, no photo, no handle",
+  "note": "",
+  "w": 1180,
+  "h": 720
+ },
+ {
+  "section": "03-share-image",
+  "name": "share-long-names",
+  "title": "Share image · long names on the arc",
+  "note": "",
+  "w": 1180,
+  "h": 760
+ },
+ {
+  "section": "03-share-image",
+  "name": "share-alt-text",
+  "title": "Share image · alt text",
+  "note": "",
+  "w": 1180,
+  "h": 640
+ },
+ {
+  "section": "04-concerts-stats",
+  "name": "concerts-stats-missing",
+  "title": "Concerts header · missing Top genre or Top venue",
+  "note": "Phone and desktop, all four cases.",
+  "w": 1560,
+  "h": 1000
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-unmatched",
+  "title": "Co-billed heading · unmatched acts and older shows",
+  "note": "",
+  "w": 1360,
+  "h": 820
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-expand-m",
+  "title": "Co-billed heading · +N more expands in place",
+  "note": "Supersedes the scroll-to-bill rule in cobill-3plus-m.",
+  "w": 900,
+  "h": 680
+ },
+ {
+  "section": "06-following",
+  "name": "follow-browse-m",
+  "title": "Followed artists · Browse, phone",
+  "note": "① the hero card, ② both co-headliners followed, ③ only a support act followed.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-browse-320",
+  "title": "Followed artists · Browse, 320px",
+  "note": "",
+  "w": 320,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-browse-signed-out",
+  "title": "Followed artists · signed out, nothing shown",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-browse-d",
+  "title": "Followed artists · Browse, desktop",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-event-m",
+  "title": "Followed artists · event page, one co-headliner followed",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-event-support-m",
+  "title": "Followed artists · event page, only a support act followed",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-event-many-m",
+  "title": "Followed artists · event page, three acts followed",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-event-d",
+  "title": "Followed artists · event page, desktop",
+  "note": "A co-headliner and a support act followed.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-following",
+  "name": "follow-spec",
+  "title": "Followed artists · the marks and rules",
+  "note": "",
+  "w": 1180,
+  "h": 960
  }
 ]
