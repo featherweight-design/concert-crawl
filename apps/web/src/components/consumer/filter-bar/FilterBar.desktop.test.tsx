@@ -979,7 +979,7 @@ describe('FilterBar multi-select Where and Vibe', () => {
     expect(where.textContent).not.toContain('+');
   });
 
-  it('the phone chips read "2 venues" and "2 vibes"', () => {
+  it('the phone chips read "2 venues" and the two Vibe names', () => {
     searchParams.current = new URLSearchParams(
       'filterWhere=bluebird-theater&filterWhere=ogden-theatre&filterVibe=electronic&filterVibe=indie',
     );
@@ -990,11 +990,10 @@ describe('FilterBar multi-select Where and Vibe', () => {
     expect(
       phoneChipText.some((text) => text.includes(copy.venueCount(2))),
     ).toBe(true);
-    expect(phoneChipText.some((text) => text.includes(copy.vibeCount(2)))).toBe(
-      true,
-    );
+    expect(
+      phoneChipText.some((text) => text.includes('Electronic, Indie')),
+    ).toBe(true);
     expect(copy.venueCount(2)).toBe('2 venues');
-    expect(copy.vibeCount(2)).toBe('2 vibes');
   });
 
   it("a segment's ✕ clears every value in its dimension", () => {

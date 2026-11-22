@@ -186,8 +186,9 @@ export function getSegmentLabel(
 }
 
 /**
- * The phone chip's value: one pick reads as its name, several as a count
- * ("2 venues", "2 vibes").
+ * The phone chip's value: one pick reads as its name, two Vibes as both names
+ * ("Electronic, Hip-hop", `bp-vibe-browse_vibe_m`), several picks as a count
+ * ("2 venues", "3 vibes").
  */
 export function getChipLabel(
   key: FilterKey,
@@ -197,7 +198,15 @@ export function getChipLabel(
 ): string | null {
   if (values.length > 1) {
     if (key === 'where') return copy.venueCount(values.length);
-    if (key === 'vibe') return copy.vibeCount(values.length);
+    if (key === 'vibe') {
+      const names = values.flatMap((value) => {
+        const name = getActiveFilterLabel(key, value, venues, genres);
+        return name === null ? [] : [name];
+      });
+      return values.length === 2 && names.length === 2
+        ? copy.vibeNames(names)
+        : copy.vibeCount(values.length);
+    }
   }
   return getSegmentLabel(key, values, venues, genres);
 }

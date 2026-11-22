@@ -567,7 +567,8 @@ export function FilterBar({
   for (const key of FILTER_ORDER) {
     if (key === 'when' && isCalendarView) continue;
     if (filterValues[key].length === 0) continue;
-    // One pick reads as its name, several as "2 venues" or "2 vibes". A pick
+    // One pick reads as its name, two Vibes as both names, more as "3 vibes" or
+    // "2 venues". A pick
     // that resolves to nothing (a venue since removed, an old link's value)
     // still narrows the list, so it keeps a chip under the dimension's name,
     // as the desktop segment stays active under its placeholder.

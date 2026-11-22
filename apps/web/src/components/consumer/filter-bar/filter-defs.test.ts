@@ -55,13 +55,16 @@ describe('multi-select labels (addendum 2, item 6)', () => {
     expect(getSegmentLabel('where', [], venues)).toBeNull();
   });
 
-  it('the phone chip counts several picks and names a single one', () => {
+  it('the phone chip names one or two Vibes and counts more picks', () => {
     expect(getChipLabel('where', ['bluebird', 'red-rocks'], venues)).toBe(
       '2 venues',
     );
     expect(getChipLabel('vibe', ['electronic', 'indie'], venues)).toBe(
-      '2 vibes',
+      'Electronic, Indie',
     );
+    expect(
+      getChipLabel('vibe', ['electronic', 'indie', 'hip-hop'], venues),
+    ).toBe('3 vibes');
     expect(getChipLabel('where', ['red-rocks'], venues)).toBe('Red Rocks');
     expect(getChipLabel('vibe', ['electronic'], venues)).toBe('Electronic');
   });
