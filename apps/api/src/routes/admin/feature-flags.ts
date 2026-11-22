@@ -330,8 +330,8 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
 
   audit(ctx, key, actorId, {
     kind: 'stage',
-    // The activity feed's "Turned X on/off" sentence reads this (log-search.ts),
-    // so it stays in the audit metadata after the column goes.
+    // Audit data, not the column: the activity feed's "Turned X on/off" sentence
+    // reads a boolean `enabled` from the metadata (flagOf, activity-sentences.ts).
     enabled: toStage === 'everyone',
     from: outcome.from,
     stage: toStage,
