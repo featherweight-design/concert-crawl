@@ -35,7 +35,7 @@
   "section": "02-send-failed",
   "name": "fb-send-failed-m",
   "title": "Send failed",
-  "note": "The form stays as the fan left it, with the banner just above the buttons. Try again resends; Save and come back closes the sheet with the draft kept.",
+  "note": "The note is saved on the phone the moment the send fails. The form stays as the fan left it; Try again resends; closing keeps the draft.",
   "w": 390,
   "h": 844
  },
@@ -44,6 +44,22 @@
   "name": "fb-draft-restored-m",
   "title": "Opened again · draft restored",
   "note": "Kind, text and screenshot come back. Discard draft clears it on the spot.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-send-failed",
+  "name": "fb-sending-m",
+  "title": "Sending",
+  "note": "Fields, kinds and the attach row lock and dim; Send shows a spinner and Sending… (live copy). Closing doesn’t stop it.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-send-failed",
+  "name": "fb-draft-restored-venue-m",
+  "title": "Opened again · a Suggest a venue draft",
+  "note": "Venue name, website and Anything else all come back.",
   "w": 390,
   "h": 844
  },
@@ -75,7 +91,7 @@
   "section": "05-desktop",
   "name": "fb-broken-d",
   "title": "Desktop · Something’s broken, screenshot attached",
-  "note": "Every kind uses the same 520px modal.",
+  "note": "Every kind uses the same 520px modal. No Cancel: ×, Esc and the scrim close it.",
   "w": 1280,
   "h": 860
  },
@@ -89,9 +105,17 @@
  },
  {
   "section": "05-desktop",
+  "name": "fb-sending-d",
+  "title": "Desktop · sending",
+  "note": "",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "05-desktop",
   "name": "fb-sent-d",
   "title": "Desktop · sent",
-  "note": "One sent state for every kind.",
+  "note": "One sent state for every kind. Done is the only action.",
   "w": 1280,
   "h": 860
  },

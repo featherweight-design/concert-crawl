@@ -1,0 +1,10 @@
+[
+ {
+  "section": "08-tier-check-outcome",
+  "name": "tier-check-outcome",
+  "title": "After a price check on one tier",
+  "note": "The outcome line under the tier row.",
+  "w": 1200,
+  "h": 700
+ }
+]

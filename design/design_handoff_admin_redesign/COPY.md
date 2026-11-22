@@ -7,7 +7,7 @@ Admin copy is exempt from the em-dash rule, but not from the locked vocabulary. 
 | Where | String |
 | --- | --- |
 | Account menu, App group | Send feedback |
-| Send feedback sheet | Send feedback; Something's broken, An idea, Suggest a venue, Something I love, Other; What happened?; Include a screenshot of this page; We read every note. If we answer, it shows up in What you missed. |
+| Send feedback sheet | Send feedback; Something's broken, An idea, Suggest a venue, Something I love, Other; What happened?; Attach a screenshot; We read every note. (The rest is in `feedback-modal-states/README.md`; the What you missed promise is cut, 2026-11-22.) |
 | What you missed, reply notice | Hugh replied to your feedback; FROM CONCERT CRAWL |
 | Reply sheet | Hugh from Concert Crawl; REPLIED TODAY; YOU WROTE · NOV 8; Send more feedback; Done; Replies can't be answered here; Send more feedback starts a new note. |
 | Reply email | Hugh replied to your feedback; You wrote on Nov 8: …; Replies to this email aren't read. To say more, use Send feedback in the app's menu. |
