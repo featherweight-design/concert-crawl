@@ -32,10 +32,6 @@ export const flagHistoryKindEnum = pgEnum('flag_history_kind', [
 
 export const featureFlags = pgTable('feature_flags', {
   key: text('key').primaryKey(),
-  // `enabled`, the old boolean, is nullable and unread since 0125 and is left
-  // out of the schema so no code can touch it again; 0126 drops the column.
-  // Until 0126 is written, `db:generate` emits that DROP COLUMN: delete it from
-  // any other generated migration, because the drop must wait for production.
   stage: flagStageEnum('stage').notNull().default('off'),
   /** Who "Me" is, read only while `stage` is `me`. */
   stageOwnerUserId: text('stage_owner_user_id'),
