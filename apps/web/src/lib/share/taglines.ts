@@ -1,6 +1,6 @@
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-export const POSTER_STATES = ['going', 'soldout', 'drop'] as const;
+export const POSTER_STATES = ['going', 'soldout'] as const;
 
 // Derived rather than declared alongside, so one edit to POSTER_STATES moves
 // the type, the guard and the copy lookups together.
@@ -8,7 +8,7 @@ export type PosterState = (typeof POSTER_STATES)[number];
 
 export const DEFAULT_POSTER_STATE: PosterState = 'going';
 
-/** Closed-set guard — no Zod in `apps/web`, and three members is a full set. */
+/** Closed-set guard — no Zod in `apps/web`, and two members is a full set. */
 export const isPosterState = (candidate: string): candidate is PosterState =>
   POSTER_STATES.some((state) => state === candidate);
 
