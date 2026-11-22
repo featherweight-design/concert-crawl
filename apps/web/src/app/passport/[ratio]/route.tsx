@@ -19,6 +19,13 @@ import {
   passportYear,
   resolvePassportTheme,
 } from '@/lib/passport/passport-request';
+import {
+  matchesEtag,
+  passportCacheKey,
+  passportEtag,
+  peekRendered,
+  renderOnce,
+} from '@/lib/passport/render-cache';
 import { toAttendedShows } from '@/lib/passport/select-shows';
 import { fetchMe } from '@/lib/users';
 
@@ -99,27 +106,62 @@ export const GET = async (
     profileTheme: profile.theme,
   });
 
-  let fonts: LoadedShareFont[];
-  try {
-    fonts = await loadShareFonts(originFontLoader(request));
-  } catch (err) {
-    console.error('[passport card] font load failed', { err });
-    return problem(502, 'share fonts unavailable');
+  const shows = toAttendedShows(history.past);
+  const year = passportYear();
+  const key = passportCacheKey({
+    userId: profile.id,
+    ratio,
+    handle: profile.handle,
+    year,
+    tokens,
+    shows,
+  });
+  const etag = passportEtag(key);
+  const headers = {
+    'Cache-Control': PASSPORT_CACHE_CONTROL,
+    Vary: PASSPORT_VARY,
+    ETag: etag,
+  };
+
+  // The browser already holds this exact card: nothing to render or send.
+  if (matchesEtag(request.headers.get('If-None-Match'), etag)) {
+    return new Response(null, { status: 304, headers });
   }
 
-  return new ImageResponse(
-    <PassportCard
-      mode={PASSPORT_PRINT_MODE}
-      scale={PASSPORT_PRINT_SCALE}
-      shows={toAttendedShows(history.past)}
-      tokens={tokens}
-      handle={profile.handle}
-      year={passportYear()}
-    />,
-    {
-      ...PASSPORT_DIMENSIONS[ratio],
-      fonts,
-      headers: { 'Cache-Control': PASSPORT_CACHE_CONTROL, Vary: PASSPORT_VARY },
-    },
-  );
+  // Fonts and satori are the expensive part, so they run only on a miss, and
+  // once for any requests that arrive for the same card together.
+  const hit = peekRendered(key);
+  if (hit === undefined) {
+    let fonts: LoadedShareFont[];
+    try {
+      fonts = await loadShareFonts(originFontLoader(request));
+    } catch (err) {
+      console.error('[passport card] font load failed', { err });
+      return problem(502, 'share fonts unavailable');
+    }
+    try {
+      const card = await renderOnce(key, () =>
+        new ImageResponse(
+          <PassportCard
+            mode={PASSPORT_PRINT_MODE}
+            scale={PASSPORT_PRINT_SCALE}
+            shows={shows}
+            tokens={tokens}
+            handle={profile.handle}
+            year={year}
+          />,
+          { ...PASSPORT_DIMENSIONS[ratio], fonts },
+        ).arrayBuffer(),
+      );
+      return new Response(card.png, {
+        headers: { ...headers, 'Content-Type': 'image/png' },
+      });
+    } catch (err) {
+      console.error('[passport card] render failed', { err });
+      return problem(502, 'passport render failed');
+    }
+  }
+  return new Response(hit.png, {
+    headers: { ...headers, 'Content-Type': 'image/png' },
+  });
 };
