@@ -373,9 +373,16 @@ describe('WhereItsSoldCard', () => {
   });
 
   describe('the › scrolls to the card for its own tier', () => {
+    const realMatchMedia = window.matchMedia;
+    const realScrollIntoView = Element.prototype.scrollIntoView;
+    afterEach(() => {
+      window.matchMedia = realMatchMedia;
+      Element.prototype.scrollIntoView = realScrollIntoView;
+    });
     const mockScroll = () => {
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
+        configurable: true,
         value: vi.fn().mockReturnValue({ matches: false }),
       });
       const scroll = vi.fn();
