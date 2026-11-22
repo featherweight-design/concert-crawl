@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { apiClient } from '@/lib/api';
+import { fetchFollowedArtists } from '@/lib/following';
 import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Eye } from 'lucide-react';
 import { EventImage } from '@/components/consumer/event-image/EventImage';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
@@ -62,6 +62,11 @@ export const ReturnSeamReplay = () => {
   const [action, setAction] = useState<IntentAction | null>(null);
   // The show the strip names, so it can draw that show's artwork.
   const [shownEventId, setShownEventId] = useState<string | null>(null);
+  // The artist the follow strip names: its page is where View goes, and its
+  // photo is the tile. The photo arrives after the follow, so the strip never
+  // waits on it (identity art stands in until it lands, or for good).
+  const [shownSlug, setShownSlug] = useState<string | null>(null);
+  const [followPhoto, setFollowPhoto] = useState<string | null>(null);
   // The effect must fire exactly once per intent: `useWatchToggle` is a toggle,
   // so a second run would quietly un-watch the show it just watched.
   const handled = useRef<string | null>(null);
@@ -79,6 +84,15 @@ export const ReturnSeamReplay = () => {
         invalidateFollowedNames();
         setReplayed(true);
         router.refresh();
+        // Best effort, after the strip is already up: no photo is not a failure.
+        try {
+          const follows = await fetchFollowedArtists(token);
+          setFollowPhoto(
+            follows.find((follow) => follow.slug === slug)?.photoUrl ?? null,
+          );
+        } catch {
+          setFollowPhoto(null);
+        }
       } catch (err) {
         // A plan that cannot follow, a hidden artist, a network drop: the
         // visitor stays on the page with no toast and no error, as for a
@@ -129,6 +143,8 @@ export const ReturnSeamReplay = () => {
     setLabel(rawLabel);
     setAction(intent.action);
     setShownEventId(intent.action === 'watch' ? intent.eventId : null);
+    setShownSlug(intent.action === 'follow' ? intent.artistSlug : null);
+    setFollowPhoto(null);
     // A second intent in the same SPA session starts clean: a stale `failed`
     // would suppress this replay's strip outright, and a stale `replayed` would
     // flash the previous show's confirmation while this one is in flight.
@@ -180,6 +196,7 @@ export const ReturnSeamReplay = () => {
     label: string;
     at: string;
     eventId: string | null;
+    slug: string | null;
   } | null>(null);
   const shown = useRef<string | null>(null);
   useEffect(() => {
@@ -187,8 +204,14 @@ export const ReturnSeamReplay = () => {
     const key = `${action}:${label}`;
     if (shown.current === key) return;
     shown.current = key;
-    setStrip({ action, label, at: pathname, eventId: shownEventId });
-  }, [replayed, failed, label, action, pathname, shownEventId]);
+    setStrip({
+      action,
+      label,
+      at: pathname,
+      eventId: shownEventId,
+      slug: shownSlug,
+    });
+  }, [replayed, failed, label, action, pathname, shownEventId, shownSlug]);
 
   useEffect(() => {
     if (strip === null) return;
@@ -209,56 +232,64 @@ export const ReturnSeamReplay = () => {
     strip.eventId !== null
       ? watchedShows?.find((show) => show.eventId === strip.eventId)
       : undefined;
+  // One tile for both verbs: the show's artwork, or the artist's photo, in a
+  // ring, with the identity art when there is no picture.
+  const tileSrc =
+    strip.action === 'watch' ? (stripShow?.imageUrl ?? null) : followPhoto;
+  const tileArtistPhoto =
+    strip.action === 'watch' ? (stripShow?.artistPhotoUrl ?? null) : null;
+  const viewHref =
+    strip.action === 'watch'
+      ? '/watching'
+      : strip.slug !== null
+        ? `/artists/${strip.slug}`
+        : null;
   return (
-    <div className="mx-auto w-full max-w-[640px] px-[14px] pt-2">
+    // The phone strip spans the screen inside the 16px gutters (board 10).
+    <div className="mx-auto w-full max-w-[640px] px-4 pt-2">
       <div
         role="status"
         aria-live="polite"
         data-testid="return-seam-strip"
-        className="flex items-center gap-2.5 rounded-[11px] border px-3 py-[11px]"
+        className="flex items-center gap-3 rounded-[14px] border px-3.5 py-3"
         style={{
           background:
             'color-mix(in oklch, var(--signal) 13%, var(--surface-1))',
           borderColor: 'color-mix(in oklch, var(--signal) 45%, transparent)',
         }}
       >
-        {strip.action === 'watch' ? (
-          // The board's tile: the show's artwork in its genre ring, with the
-          // identity art when it has no picture (EventImage's own fallback).
-          <div
-            data-testid="return-seam-strip-art"
-            className="h-11 w-11 shrink-0 overflow-hidden rounded-md"
-            style={{
-              boxShadow: genreRing(
-                genreColor(stripShow?.genres[0]) ?? NEUTRAL_GENRE_COLOR,
-              ),
-            }}
-          >
-            <EventImage
-              src={stripShow?.imageUrl ?? null}
-              artistPhotoUrl={stripShow?.artistPhotoUrl ?? null}
-              alt=""
-              artist={strip.label}
-              identityScale="tile"
-              className="h-full w-full"
-            />
-          </div>
-        ) : (
-          <Eye
-            size={17}
-            fill="currentColor"
-            aria-hidden="true"
-            style={{ color: 'var(--signal)', flexShrink: 0 }}
+        <div
+          data-testid="return-seam-strip-art"
+          className="h-10 w-10 shrink-0 overflow-hidden rounded-[10px]"
+          style={{
+            boxShadow: genreRing(
+              genreColor(stripShow?.genres[0]) ?? NEUTRAL_GENRE_COLOR,
+            ),
+          }}
+        >
+          <EventImage
+            src={tileSrc}
+            artistPhotoUrl={tileArtistPhoto}
+            alt=""
+            artist={strip.label}
+            identityScale="tile"
+            className="h-full w-full"
           />
-        )}
+        </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          {/* May wrap to two lines so the name is never cut; past two it ends in an ellipsis. */}
           <span
             className="ph-no-capture"
             style={{
               fontFamily: 'var(--font-ui)',
               fontSize: 14,
               fontWeight: 800,
+              lineHeight: 1.3,
               color: 'var(--fg)',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
             }}
           >
             {strip.action === 'watch'
@@ -268,17 +299,18 @@ export const ReturnSeamReplay = () => {
           <span
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              letterSpacing: '0.06em',
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: '0.02em',
               color: 'var(--fg-muted)',
             }}
           >
             {copy.kept}
           </span>
         </div>
-        {strip.action === 'watch' && (
+        {viewHref !== null && (
           <Link
-            href="/watching"
+            href={viewHref}
             className="flex min-h-11 items-center rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
             style={{
               fontFamily: 'var(--font-ui)',
