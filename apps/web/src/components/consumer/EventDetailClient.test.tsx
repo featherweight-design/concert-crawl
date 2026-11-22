@@ -446,6 +446,47 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getByText('$25')).toBeDefined();
   });
 
+  it('a live multi-tier price draws no vendor link under the card, even with a ticket link', () => {
+    // The boards draw the live price card with nothing under it
+    // (`14-tickets-available/event-tickets-back-live-m`); the vendor CTA stays
+    // on the sold-out and resale-only cards.
+    const event = buildBaseEvent({
+      ticketLinks: [
+        {
+          kind: 'primary',
+          vendor: 'Ticketmaster',
+          url: 'https://tm.example/event',
+        },
+      ],
+      priceByTier: [
+        makeTierBlock({
+          tier: 'GA',
+          headline: {
+            submissionId: 's1',
+            priceMin: '25',
+            priceMax: null,
+            vendor: 'VenueBoxOffice',
+            sourceCategory: 'boxoffice',
+            submitterHandle: 'ada',
+            observedAt: '2026-06-20T00:00:00Z',
+            approvedAt: '2026-06-20T00:00:00Z',
+            approvalKind: 'fan',
+            confirmsCount: 2,
+          },
+        }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    expect(screen.getByText('$25')).toBeDefined();
+    // Neither the vendor-named link nor any other ticket link: the card is the
+    // whole price region (the page's own Get Tickets button is elsewhere).
+    expect(
+      screen.queryByRole('link', { name: /ticketmaster|tickets|buy/i }),
+    ).toBeNull();
+  });
+
   it('priceByTier with resale-only headlines → MultiTierLiveCard kind=resale + FaceValueCard', () => {
     const event = buildBaseEvent({
       priceByTier: [

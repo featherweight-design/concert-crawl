@@ -1457,6 +1457,8 @@ export function EventDetailPriceBlock({
             : {}),
         };
       });
+      // The price-check card keeps its vendor link; only the plain live card
+      // below drops it (see the hold note on this change).
       const outboundLink = event.ticketLinks?.[0] ?? null;
       const outboundKind: ProvenanceCTAKind | null = outboundLink
         ? outboundLink.kind === 'boxoffice'
@@ -1568,16 +1570,6 @@ export function EventDetailPriceBlock({
                 : null
             }
           />
-          {outboundLink !== null && outboundKind !== null && (
-            <div className="mt-3">
-              <ProvenanceCTA
-                kind={outboundKind}
-                vendor={outboundLink.vendor ?? event.venue.name}
-                href={outboundLink.url}
-                outline={outboundKind === 'resale'}
-              />
-            </div>
-          )}
           {renderPendingSurface(priceDecision.priceByTier)}
           {submitSuccessSurface}
           {submitAnotherPriceCta}
