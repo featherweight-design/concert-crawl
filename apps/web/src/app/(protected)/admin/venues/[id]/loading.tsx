@@ -41,7 +41,7 @@ const CardSkeleton = () => (
 type Form = 'desktop' | 'phone';
 
 /**
- * The header at the loaded `VenueHeader`'s height (67 desktop, 129.75
+ * The header at the loaded `VenueHeader`'s height (67 desktop, 165.75
  * phone): the tile, then the name and its line. Both forms render; the
  * stylesheet shows the one for the viewport, so no inline `display` here.
  */

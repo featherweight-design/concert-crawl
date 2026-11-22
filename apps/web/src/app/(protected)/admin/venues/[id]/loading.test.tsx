@@ -40,7 +40,7 @@ describe('venue page loading (07/loading-venue-page)', () => {
     // Desktop: 26px name at 1.5 (39) + 6 + 22 chip, over the 56 tile.
     // Phone: 22px name (33) + 2 + 12.5px neighbourhood (18.75) + 6 + 22,
     // then 12 and the 36 buttons.
-    expect(VENUE_HEADER_HEIGHT).toEqual({ desktop: 67, phone: 129.75 });
+    expect(VENUE_HEADER_HEIGHT).toEqual({ desktop: 67, phone: 165.75 });
     expect(UNDERLINE_TAB_HEIGHT).toBe(40);
   });
 

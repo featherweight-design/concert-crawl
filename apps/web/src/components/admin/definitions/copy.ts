@@ -1341,7 +1341,6 @@ export const ADMIN_COPY = {
       guide: 'Guide',
     },
     actions: {
-      viewOnSite: 'View on site',
       makeFlagship: 'Make flagship',
       flagship: 'Flagship',
     },

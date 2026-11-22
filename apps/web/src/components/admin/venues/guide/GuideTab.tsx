@@ -212,12 +212,12 @@ export const GuideTab = ({
   const phone = useIsPhone();
   const router = useRouter();
   const [editing, setEditing] = useState<GuideSection | null>(null);
-  const siteHref = concertCrawlHref(venue);
+  const fanHref = concertCrawlHref(venue);
 
   const preview =
-    siteHref === null ? null : (
+    fanHref === null ? null : (
       <a
-        href={`${siteHref}#${GUIDE_ANCHOR_ID}`}
+        href={`${fanHref}#${GUIDE_ANCHOR_ID}`}
         target="_blank"
         rel="noopener noreferrer"
         style={{

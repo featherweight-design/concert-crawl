@@ -29,6 +29,7 @@ import {
   VENUE_HEADER_NAME_SIZE,
   VENUE_HEADER_NEIGHBORHOOD_GAP,
   VENUE_HEADER_NEIGHBORHOOD_SIZE,
+  VENUE_HEADER_PHONE_LINK_HEIGHT,
   VENUE_HEADER_PHONE_STACK_GAP,
   VENUE_HEADER_TILE,
 } from './venue-header-geometry';
@@ -48,7 +49,6 @@ const BUTTON: CSSProperties = {
   border: '1px solid var(--border-strong)',
 };
 
-/** Settled outcomes with nothing to retry, and the line each one reads. */
 // Desktop's pair, drawn as the header's buttons (`08/venue-header-links`).
 const LINK_BUTTON: CSSProperties = {
   ...BUTTON,
@@ -64,13 +64,14 @@ const PHONE_LINK: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: 5,
-  minHeight: 24,
+  minHeight: VENUE_HEADER_PHONE_LINK_HEIGHT,
   fontSize: 13,
   fontWeight: 600,
   color: 'var(--signal)',
   textDecoration: 'none',
 };
 
+/** Settled outcomes with nothing to retry, and the line each one reads. */
 const NOTICE: Partial<Record<RecrawlState, string>> = {
   ranFailed: COPY.notice.ranFailed,
   unknown: COPY.notice.unknown,
@@ -116,7 +117,8 @@ const RecrawlNotice = ({
 
 /**
  * The venue page header: glyph, name, both status chips and the line beside
- * them, then Re-crawl, View on site and the ⋯ menu per state
+ * them, then Re-crawl, On Concert Crawl, On the venue's site and the ⋯ menu
+ * per state
  * (`A3/03/re-crawl-states`, `A3/03/venue-menu-states`; phone
  * `A3/03/venue-overview-m`). Lifted out of `VenueDetailsClient`, whose old
  * danger zone the ⋯ replaces.
