@@ -92,7 +92,7 @@ export const costsAdminRouter = new Hono<AdminVariables>();
 // A day's spend is what the crawler's monthly LLM budget counts
 // (crawler-core lib/llm-budget.ts): extraction (crawl_runs.llm_cost_usd) plus
 // the cost_tracking rows of the services in LLM_SERVICES (artist
-// adjudication, genre tagging, venue About drafts). The same allow-list, so
+// adjudication, genre tagging, venue About drafts, venue glyph drafts). The same allow-list, so
 // the month the Health tile and chart show is the figure that trips "If it
 // runs out". The 'claude' row is extraction already in crawl_runs, and
 // non-LLM rows ('render', Spotify) are never LLM spend, so neither is summed.

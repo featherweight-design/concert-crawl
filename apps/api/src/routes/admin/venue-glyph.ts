@@ -176,11 +176,16 @@ export const checkDrafts = (
   return { drafts, hidden, asked: GLYPH_DRAFT_COUNT };
 };
 
-const isBadRequest = (err: unknown): boolean =>
-  typeof err === 'object' &&
-  err !== null &&
+/**
+ * Anthropic refused an image: a 400 that names one. Any other 400 (a spent
+ * credit balance, a malformed request) is an outage to the admin, not the image.
+ */
+const isImageRefused = (err: unknown, referenceCount: number): boolean =>
+  referenceCount > 0 &&
+  err instanceof Error &&
   'status' in err &&
-  err.status === 400;
+  err.status === 400 &&
+  /image/i.test(err.message);
 
 export const venueGlyphAdminRouter = new Hono<AdminVariables>();
 
@@ -224,7 +229,8 @@ venueGlyphAdminRouter.post(
       message = await anthropic.messages.create(
         {
           model: VENUE_GLYPH_MODEL,
-          max_tokens: 4096,
+          // Four drafts at the size cap fit, so a reply is never cut short.
+          max_tokens: 8192,
           messages: [
             {
               role: 'user',
@@ -254,9 +260,9 @@ venueGlyphAdminRouter.post(
         { err, venueId: id },
         'glyph-drafts: Anthropic call failed',
       );
-      // A 400 is the input (an image that doesn't match its type, or too
-      // big): retrying the same images won't help, so it says so.
-      if (isBadRequest(err)) {
+      // An image that doesn't match its type, or is too big: retrying the
+      // same images won't help, so it says so.
+      if (isImageRefused(err, references.length)) {
         return ctx.json(
           {
             success: false,
