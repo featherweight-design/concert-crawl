@@ -1,0 +1,62 @@
+{
+  "feature": "Admin 3e-1b: Add a venue, Start and the step shell",
+  "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (start-nobody-asked-yet, add-a-venue-start, start-mobile, basics-desktop, step-1-basics-mobile). Admin role (CONTACT_SHEET_ROLE=admin). The route is reachable by URL only until 3e-2 (plan decision 12), so every row starts at /admin/venues/new. 3e-1b draws Start and the step shell; the shell's body stays empty until Basics lands in 3e-1c, so nothing here writes to the scratch database.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 760,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "start",
+      "label": "Start: nobody asked yet, Start from scratch",
+      "steps": [
+        {
+          "goto": "/admin/venues/new",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-start\"]"
+        },
+        {
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "shell-empty",
+      "label": "Step shell on step 1, body empty until 3e-1c: steps 2 to 5 not open yet",
+      "steps": [
+        {
+          "goto": "/admin/venues/new",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-start\"]"
+        },
+        {
+          "settle": 1500
+        },
+        {
+          "click": "[data-testid=\"add-venue-from-scratch\"]"
+        },
+        {
+          "wait": "[data-testid=\"add-venue-shell\"]"
+        },
+        {
+          "settle": 1000
+        }
+      ]
+    }
+  ]
+}
