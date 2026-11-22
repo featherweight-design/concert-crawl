@@ -38,7 +38,6 @@ export interface PriceBlockPrice {
   sourceUrl?: string | null;
   sourceKind: 'primary' | 'resale' | 'community' | 'boxoffice';
   observedAt?: string | null;
-  openedAt?: number | null;
   range14d?: number[] | null;
   status?: 'live' | 'soldout';
   submitter?: { handle: string; url: string } | null;
@@ -82,7 +81,6 @@ interface PriceDisplayProps {
   observedAt?: string | null;
   range14d?: number[] | null;
   priceStatus?: 'live' | 'soldout' | null;
-  ticketPriceOpenedAt?: number | null;
   ticketFees?: number | null;
   priceVendor?: string | null;
   // The submitter's "Where's the price from?" answer. Drives the trust mark;
@@ -701,54 +699,6 @@ function AlternateSourceRow({
   );
 }
 
-// ── DropDotIcon ─────────────────────────────────────────────────
-function DropDotIcon({ size = 8 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 8 8" aria-hidden>
-      <circle cx="4" cy="4" r="3" fill="var(--success)" />
-    </svg>
-  );
-}
-
-// ── DeltaPill — price-vs-on-sale indicator ───────────────────────
-// Renders when openedAt differs from current face price.
-// Down (price dropped): success-colored. Up (price rose): muted/neutral.
-function DeltaPill({
-  face,
-  openedAt,
-}: {
-  face: number;
-  openedAt: number | null | undefined;
-}) {
-  if (openedAt == null || openedAt === face) return null;
-  const diff = face - openedAt;
-  const isDown = diff < 0;
-  const absDiff = Math.abs(diff);
-  const deltaStr = formatUSD(absDiff, { whole: absDiff >= 1 });
-  const text = isDown
-    ? `${deltaStr} ${copy.priceDisplay.cheaperThanOnSale}`
-    : `+${deltaStr} ${copy.priceDisplay.sinceOnSale}`;
-
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        flexShrink: 0,
-        whiteSpace: 'nowrap',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 10,
-        letterSpacing: '0.02em',
-        color: isDown ? 'var(--success)' : 'var(--fg-muted)',
-      }}
-    >
-      {isDown && <DropDotIcon />}
-      {text}
-    </span>
-  );
-}
-
 // ── BoxOfficeAttribution — in-person or phone purchase line ──────
 function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
   const {
@@ -1075,7 +1025,6 @@ export function PriceDisplay({
   observedAt,
   range14d,
   priceStatus,
-  ticketPriceOpenedAt,
   ticketFees,
   priceVendor,
   priceSourceCategory,
@@ -1128,7 +1077,6 @@ export function PriceDisplay({
     source: sourceName,
     sourceUrl,
     observedAt: effectiveObservedAt,
-    openedAt: ticketPriceOpenedAt ?? null,
     range14d: range14d ?? null,
     status: priceStatus ?? 'live',
     submitter: priceSubmitterHandle
@@ -1489,7 +1437,7 @@ export function PriceDisplay({
       {/* Price age, its own line (addendum 4 item 5) */}
       {ageLine}
 
-      {/* Fee breakdown + delta pill in a single flex row — mirrors design layout */}
+      {/* Fee breakdown row — mirrors design layout */}
       {!soldOut && !isBoxOffice && (
         <div
           style={{
@@ -1501,12 +1449,6 @@ export function PriceDisplay({
           }}
         >
           <FeeBreakdown price={priceObj} />
-          {priceObj.openedAt != null && priceObj.openedAt !== face && (
-            <>
-              <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>·</span>
-              <DeltaPill face={allInFace} openedAt={priceObj.openedAt} />
-            </>
-          )}
         </div>
       )}
 

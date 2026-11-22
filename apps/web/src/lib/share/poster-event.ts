@@ -28,8 +28,7 @@ export interface PosterEvent {
 
 /**
  * Which tagline state this event is in: sold out, else `going`, which is also
- * the tagline bank's fallback. Nothing records an opening price, so no event
- * reaches the bank's `drop` state.
+ * the tagline bank's fallback.
  */
 export const posterStateFor = (event: {
   priceStatus?: 'live' | 'soldout' | null;

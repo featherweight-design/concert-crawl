@@ -10,15 +10,12 @@ import {
 } from '../taglines';
 
 describe('poster taglines', () => {
-  it('ships the three signed-off taglines verbatim', () => {
+  it('ships the two signed-off taglines verbatim', () => {
     expect(posterTagline('going')).toBe(
       'found this one on Concert Crawl. see you in the pit.',
     );
     expect(posterTagline('soldout')).toBe(
       "sold out. now we're all refreshing stubhub at 2am together.",
-    );
-    expect(posterTagline('drop')).toBe(
-      "price dropped. so did my dignity, but that's unrelated.",
     );
   });
 
@@ -54,7 +51,7 @@ describe('resolvePosterState', () => {
     expect(resolvePosterState(state)).toBe(state);
   });
 
-  it.each([undefined, '', 'nope', '__proto__', 'GOING'])(
+  it.each([undefined, '', 'nope', 'drop', '__proto__', 'GOING'])(
     'falls back to going for %p',
     (raw) => {
       expect(resolvePosterState(raw)).toBe('going');
@@ -66,11 +63,10 @@ describe('state labels', () => {
   it('uses the locked labels', () => {
     expect(posterStateLabel('going')).toBe('Going');
     expect(posterStateLabel('soldout')).toBe('Sold out');
-    expect(posterStateLabel('drop')).toBe('Price drop');
   });
 
-  // `going` is the fallback for every event that is neither sold out nor
-  // discounted, and the route renders it with no session at all, so a
+  // `going` is the fallback for every event that is not sold out, and the
+  // route renders it with no session at all, so a
   // first-person label asserts an attendance nothing ever checked.
   it('keeps the going label out of the first person', () => {
     expect(posterStateLabel('going').toLowerCase()).not.toContain("i'm");

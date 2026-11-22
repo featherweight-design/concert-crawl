@@ -244,10 +244,6 @@ export const CONSUMER_COPY = {
     boxOfficeTrustLabel: 'box office',
     vendorLabel: 'vendor',
 
-    // Delta pill
-    cheaperThanOnSale: 'cheaper than on-sale',
-    sinceOnSale: 'since on-sale',
-
     // Box office attribution verbs
     boughtVerb: 'Bought',
     sawVerb: 'Saw',
@@ -2074,17 +2070,15 @@ export const CONSUMER_COPY = {
     taglines: {
       going: 'found this one on Concert Crawl. see you in the pit.',
       soldout: "sold out. now we're all refreshing stubhub at 2am together.",
-      drop: "price dropped. so did my dignity, but that's unrelated.",
     },
     // The badge drawn on the poster for each state. `going` is third-person
-    // on purpose: it is the fallback for every event that is neither sold out
-    // nor discounted, and the route renders it with no session at all for OG
+    // on purpose: it is the fallback for every event that is not sold out, and
+    // the route renders it with no session at all for OG
     // crawlers — so a first-person "I'm going" asserts an attendance the card
     // never checked. Handoff §1 locks this pill as `GOING`.
     stateLabels: {
       going: 'Going',
       soldout: 'Sold out',
-      drop: 'Price drop',
     },
     // The signature set into the foot of every poster. Not a logo glyph —
     // the handoff's §1 is explicit that the poster carries no mark.

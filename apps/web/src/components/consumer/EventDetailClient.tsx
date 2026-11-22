@@ -1036,7 +1036,6 @@ export function EventDetailPriceBlock({
           artist={event.artist}
           date={event.date}
           priceStatus={event.priceStatus ?? null}
-          ticketPriceOpenedAt={event.ticketPriceOpenedAt ?? null}
           ticketFees={event.ticketFees ?? null}
           priceVendor={event.priceVendor ?? null}
           priceSourceCategory={event.priceSourceCategory ?? null}
@@ -2170,7 +2169,6 @@ export function EventDetailPriceBlock({
         artist={event.artist}
         date={event.date}
         priceStatus={event.priceStatus ?? null}
-        ticketPriceOpenedAt={event.ticketPriceOpenedAt ?? null}
         ticketFees={event.ticketFees ?? null}
         priceVendor={event.priceVendor ?? null}
         priceSourceCategory={event.priceSourceCategory ?? null}
