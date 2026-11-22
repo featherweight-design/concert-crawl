@@ -1,0 +1,21 @@
+{
+  "feature": "Offline pill in the app header: \"Offline\" under 1024, \"Offline · cached OK\" from 1024",
+  "note": "Board: design/design_handoff_bplus_redesign cold-review README item 7 and the offline boards. Opens Browse, waits for it, then takes the browser offline, so the header pill appears.",
+  "widths": [
+    { "label": "xs", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "tablet", "width": 900, "height": 900 },
+    { "label": "desktop", "width": 1280, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "offline-browse",
+      "label": "Browse, offline: the header pill",
+      "steps": [
+        { "goto": "/events", "settle": 3000 },
+        { "offline": true, "settle": 800 },
+        { "wait": "[data-testid=\"offline-pill\"]:visible", "settle": 600 }
+      ]
+    }
+  ]
+}
