@@ -1,3 +1,10 @@
+# [1.538.0](https://github.com/featherweight-design/concert-crawl/compare/v1.537.0...v1.538.0) (2026-11-22)
+
+
+### Features
+
+* **web:** draw price check outcome under each price on the multi-source card ([f6fdb24](https://github.com/featherweight-design/concert-crawl/commit/f6fdb24a80af6bc8ca41a2f3978c95dda369a7ff))
+
 # [1.537.0](https://github.com/featherweight-design/concert-crawl/compare/v1.536.0...v1.537.0) (2026-11-22)
 
 
