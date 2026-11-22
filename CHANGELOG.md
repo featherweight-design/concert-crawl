@@ -1,3 +1,15 @@
+# [1.536.0](https://github.com/featherweight-design/concert-crawl/compare/v1.535.0...v1.536.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** settings row tests read the masked email; rename the web mask helper ([0c11bbb](https://github.com/featherweight-design/concert-crawl/commit/0c11bbb9c11e2cda845faa579ad6c71a8f4e85fa))
+
+
+### Features
+
+* **web:** mask the account email in Settings, as the B+ board draws it ([14b3b8b](https://github.com/featherweight-design/concert-crawl/commit/14b3b8b9189e2788081ba3ab87d2012baad019b8))
+
 # [1.535.0](https://github.com/featherweight-design/concert-crawl/compare/v1.534.0...v1.535.0) (2026-11-22)
 
 
