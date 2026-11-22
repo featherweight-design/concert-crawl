@@ -1,3 +1,17 @@
+# [1.541.0](https://github.com/featherweight-design/concert-crawl/compare/v1.540.0...v1.541.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **web:** list every other priced tier under Also on the public card ([a456075](https://github.com/featherweight-design/concert-crawl/commit/a456075c8f5aa770d95bb88418ad5a6a0a79aa87))
+* **web:** scope the Also comments to the shared rows, hold the release note for launch ([f64d039](https://github.com/featherweight-design/concert-crawl/commit/f64d0391c1acecad82c1b5285b21d0f223419d68))
+
+
+### Features
+
+* **web:** name who sells the price on the public event page ([170cd5c](https://github.com/featherweight-design/concert-crawl/commit/170cd5c833560e7173ac7e23098f4d13c6699f54))
+* **web:** vibe chip, segment and legend for three or more picks ([4f71278](https://github.com/featherweight-design/concert-crawl/commit/4f7127874e871ad8363101feb132d67663cf6805))
+
 # [1.540.0](https://github.com/featherweight-design/concert-crawl/compare/v1.539.2...v1.540.0) (2026-11-22)
 
 
