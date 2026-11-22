@@ -197,10 +197,10 @@ describe('LandingClientShell — private-beta invite landing (#794 launch gate)'
 
   it('counts the crawled venues, and drops the row when they could not be read', () => {
     const { unmount } = renderBeta();
-    expect(screen.getByText(/2 venues · crawled every morning/i)).toBeTruthy();
+    expect(screen.getByText(/2 venues · checked every night/i)).toBeTruthy();
     unmount();
     renderBeta(null);
-    expect(screen.queryByText(/crawled every morning/i)).toBeNull();
+    expect(screen.queryByText(/checked every night/i)).toBeNull();
   });
 
   it('treats an unset flag as beta mode', () => {
