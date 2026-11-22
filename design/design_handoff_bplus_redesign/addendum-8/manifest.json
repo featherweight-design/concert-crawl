@@ -1,0 +1,170 @@
+[
+ {
+  "section": "01-artist-past-row",
+  "name": "artist-past-m",
+  "title": "Artist page · past rows open the event, phone",
+  "note": "The middle row is pressed. ① the chevron, ② the I went pill, which keeps its own target.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "01-artist-past-row",
+  "name": "artist-past-d",
+  "title": "Artist page · past rows, desktop",
+  "note": "Past shows sits under Upcoming in the left column. The first row is hovered.",
+  "w": 1280,
+  "h": 1020
+ },
+ {
+  "section": "01-artist-past-row",
+  "name": "artist-past-states",
+  "title": "Past row · states and targets",
+  "note": "Rest, hover, pressed and focus, plus the two tap targets.",
+  "w": 1180,
+  "h": 1000
+ },
+ {
+  "section": "02-passport-height",
+  "name": "passport-hold-m",
+  "title": "Passport · option b, fixed page height (recommended)",
+  "note": "Both spreads at the same height: ID + page 1, then pages 2 and 3.",
+  "w": 1360,
+  "h": 1080
+ },
+ {
+  "section": "02-passport-height",
+  "name": "passport-later-m",
+  "title": "Passport · phone, spread 2",
+  "note": "Replaces addendum 2’s 04/passport-later-m.",
+  "w": 390,
+  "h": 1400
+ },
+ {
+  "section": "02-passport-height",
+  "name": "passport-odd-m",
+  "title": "Passport · phone, odd last page",
+  "note": "Page 4 is the last page, so its partner is a blank page 5 with four empty slots.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "02-passport-height",
+  "name": "passport-spread2-d",
+  "title": "Passport · desktop, spread 2",
+  "note": "Desktop already pairs leaves, so it holds; this pins both leaves at 340px so a short page can’t shrink it.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "02-passport-height",
+  "name": "passport-option-a-m",
+  "title": "Passport · option a, pinned ID strip (for comparison)",
+  "note": "Not recommended.",
+  "w": 1180,
+  "h": 720
+ },
+ {
+  "section": "03-share-image",
+  "name": "share-1-night",
+  "title": "Share image · 1 night",
+  "note": "",
+  "w": 1180,
+  "h": 760
+ },
+ {
+  "section": "03-share-image",
+  "name": "share-7-nights",
+  "title": "Share image · 7 nights, typical",
+  "note": "",
+  "w": 1180,
+  "h": 760
+ },
+ {
+  "section": "03-share-image",
+  "name": "share-24-nights",
+  "title": "Share image · 24 nights, full",
+  "note": "",
+  "w": 1180,
+  "h": 760
+ },
+ {
+  "section": "03-share-image",
+  "name": "share-fill-rule",
+  "title": "Share image · fill rule and dimensions",
+  "note": "Every step of the rule, 1 to 24 nights.",
+  "w": 1180,
+  "h": 1060
+ },
+ {
+  "section": "04-concerts-stats",
+  "name": "concerts-stats-m",
+  "title": "Concerts header · phone, no Spent",
+  "note": "Values at 22px; Top venue spans two columns.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "04-concerts-stats",
+  "name": "concerts-stats-320",
+  "title": "Concerts header · 320px",
+  "note": "",
+  "w": 320,
+  "h": 900
+ },
+ {
+  "section": "04-concerts-stats",
+  "name": "concerts-stats-d",
+  "title": "Concerts header · desktop, no Spent",
+  "note": "Values at 30px, one row of five.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "04-concerts-stats",
+  "name": "concerts-stats-spec",
+  "title": "Concerts header · before and after",
+  "note": "",
+  "w": 1180,
+  "h": 560
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-event-m",
+  "title": "Co-billed event · phone",
+  "note": "① two artist links in the heading, ② one Follow per act.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-event-d",
+  "title": "Co-billed event · desktop",
+  "note": "Galdive is hovered.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-links-states",
+  "title": "Co-billed heading · link states",
+  "note": "",
+  "w": 1180,
+  "h": 860
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-3plus-m",
+  "title": "Co-billed heading · 3 or more acts on a phone",
+  "note": "",
+  "w": 1360,
+  "h": 900
+ },
+ {
+  "section": "05-co-billed",
+  "name": "cobill-bill-rows",
+  "title": "On this bill · one Follow per act",
+  "note": "",
+  "w": 1220,
+  "h": 760
+ }
+]
