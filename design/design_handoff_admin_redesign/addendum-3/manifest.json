@@ -131,7 +131,7 @@
   "section": "02-suggest-a-venue",
   "name": "fan-suggest-a-venue-m",
   "title": "Send feedback · Suggest a venue",
-  "note": "Picking Suggest a venue swaps the box for Venue name, Website (optional) and Anything else. No screenshot option for this kind.",
+  "note": "Picking Suggest a venue swaps the box for Venue name, Website (optional) and Anything else. No screenshot option for this kind. Updated by feedback-modal-states.",
   "w": 390,
   "h": 844
  },
@@ -139,7 +139,7 @@
   "section": "02-suggest-a-venue",
   "name": "fan-suggest-a-venue-empty-m",
   "title": "Suggest a venue · empty fields",
-  "note": "Placeholders. Send stays off until there is a venue name.",
+  "note": "Placeholders. Send is never disabled: see feedback-modal-states 03 for the error.",
   "w": 390,
   "h": 844
  },

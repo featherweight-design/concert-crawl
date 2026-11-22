@@ -1035,7 +1035,7 @@
   "section": "07-people-flags-operations",
   "name": "fan-send-feedback",
   "title": "Fan · Send feedback",
-  "note": "The existing modal with plain kinds, including Suggest a venue. It says where an answer would appear.",
+  "note": "The modal with plain kinds, including Suggest a venue. Updated 2026-11-22 by feedback-modal-states: attach row, label above the box, What we send; the What you missed promise is cut.",
   "w": 390,
   "h": 760
  },
