@@ -6,6 +6,7 @@ import { formatShowTime, venueShort } from '../definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from '../event-title-block';
 import { MetaRow } from '../event-row/MetaRow';
+import { fromEventWithVenue } from '../event-row/lib/row-model';
 import { orderGenres, vibeBucketMembers } from '../event-row/lib/order-genres';
 import { genreRing } from '../event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
@@ -37,10 +38,10 @@ export function HeroEventCard({
   filterVibes = [],
 }: HeroEventCardProps) {
   const showTime = formatShowTime(event.showTime);
-  const priceDisplay =
-    event.ticketPriceMin != null
-      ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
-      : null;
+  // The same cheapest-tier price the rows show, so the spotlight can never
+  // disagree with its own row; the scalar is only the row model's fallback.
+  const rowPrice = fromEventWithVenue(event).price;
+  const priceDisplay = rowPrice ? `$${rowPrice.amount}` : null;
   // B+ rule 2: the lead genre rings the art and starts the card's edge, which
   // runs into the accent. The pair shares one chip, as on a row, ordered the
   // way the rows order it so an active Vibe filter leads both.
