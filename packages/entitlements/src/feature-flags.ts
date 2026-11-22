@@ -3,7 +3,7 @@ import type { PremiumFeature } from './index.js';
 // Its own namespace, deliberately not an alias of PremiumFeature: a flag must
 // be able to name a feature with no entitlement (release-notes) and a feature
 // that does not exist yet.
-export type FeatureFlagKey = 'spotify-sync' | 'crews' | 'release-notes';
+export type FeatureFlagKey = 'crews' | 'release-notes';
 
 export interface FeatureFlagDefinition {
   key: FeatureFlagKey;
@@ -18,14 +18,6 @@ export interface FeatureFlagDefinition {
 }
 
 export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
-  'spotify-sync': {
-    key: 'spotify-sync',
-    label: 'Spotify sync',
-    description:
-      'Connecting Spotify, taste picks, and the weekly digest email.',
-    entitlement: 'spotify-sync',
-    defaultEnabled: false,
-  },
   crews: {
     key: 'crews',
     label: 'Crews',
@@ -55,7 +47,6 @@ export const FEATURE_FLAG_KEYS: readonly FeatureFlagKey[] =
 
 /** The map every reader starts from before merging stored rows over it. */
 export const featureFlagDefaults = (): Record<FeatureFlagKey, boolean> => ({
-  'spotify-sync': FEATURE_FLAGS['spotify-sync'].defaultEnabled,
   crews: FEATURE_FLAGS.crews.defaultEnabled,
   'release-notes': FEATURE_FLAGS['release-notes'].defaultEnabled,
 });
@@ -90,13 +81,12 @@ export interface AdminFeatureFlag {
   key: FeatureFlagKey;
   label: string;
   description: string;
-  /** The old boolean: on only at Everyone. Kept until the contract step. */
-  enabled: boolean;
   updatedAt: string | null;
   updatedBy: string | null;
-  // The ladder (admin redesign Phase 5c). Optional so the first admin page that
-  // reads only `enabled` keeps compiling; the API always sends them.
-  stage?: 'off' | 'me' | 'beta' | 'everyone';
+  /** The flag's rung on the ladder (admin redesign Phase 5c). */
+  stage: 'off' | 'me' | 'beta' | 'everyone';
+  // Optional so a fixture can leave out what its test does not draw; the API
+  // always sends them.
   stageOwnerUserId?: string | null;
   verifiedAt?: string | null;
   verifiedBy?: string | null;

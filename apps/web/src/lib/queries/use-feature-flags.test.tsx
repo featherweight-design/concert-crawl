@@ -44,7 +44,6 @@ describe('useFeatureFlags', () => {
     auth.state = { isLoaded: true, userId: 'user_a' };
     auth.getToken.mockResolvedValue('tok_a');
     authedGet.mockResolvedValue({
-      'spotify-sync': false,
       crews: true,
       'release-notes': true,
     });
@@ -64,7 +63,6 @@ describe('useFeatureFlags', () => {
 
   it('returns the flag map from the public endpoint', async () => {
     get.mockResolvedValue({
-      'spotify-sync': false,
       crews: true,
       'release-notes': true,
     });

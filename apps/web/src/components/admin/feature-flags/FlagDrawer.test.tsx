@@ -62,7 +62,6 @@ const flag = (overrides: Partial<AdminFeatureFlag> = {}): AdminFeatureFlag => ({
   key: 'crews',
   label: 'Crews',
   description: 'The Crews tab and crew pages.',
-  enabled: false,
   updatedAt: null,
   updatedBy: null,
   stage: 'beta',

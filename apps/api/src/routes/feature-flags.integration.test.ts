@@ -113,7 +113,6 @@ describe('GET /v1/flags', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toEqual({
-      'spotify-sync': false,
       crews: false,
       'release-notes': true,
     });
@@ -122,7 +121,7 @@ describe('GET /v1/flags', () => {
   it('withholds the registry labels and descriptions', async () => {
     const res = await app.request('/v1/flags');
     const text = await res.text();
-    expect(text).not.toContain('Spotify sync');
+    expect(text).not.toContain('Release notes');
     expect(text).not.toContain('Browse crew lens');
   });
 
@@ -153,12 +152,12 @@ describe('admin feature flags', () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.data).toHaveLength(3);
+    expect(body.data).toHaveLength(2);
     const crews = body.data.find((row: { key: string }) => row.key === 'crews');
     expect(crews).toMatchObject({
       key: 'crews',
       label: 'Crews',
-      enabled: false,
+      stage: 'off',
       updatedAt: null,
       updatedBy: null,
     });
@@ -168,29 +167,29 @@ describe('admin feature flags', () => {
     const res = await app.request('/v1/admin/feature-flags/crews', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
-      body: JSON.stringify({ enabled: true }),
+      body: JSON.stringify({ stage: 'everyone' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.data.enabled).toBe(true);
+    expect(body.data.stage).toBe('everyone');
     expect(body.data.updatedAt).not.toBeNull();
   });
 
   it('moves updatedAt forward on a second toggle', async () => {
     // Asserting the status before reading the body keeps a failed PATCH from
     // surfacing as an opaque date-parse error further down.
-    const patch = async (enabled: boolean) => {
+    const patch = async (stage: 'everyone' | 'off') => {
       const res = await app.request('/v1/admin/feature-flags/crews', {
         method: 'PATCH',
         headers: { ...adminHeaders(), 'content-type': 'application/json' },
-        body: JSON.stringify({ enabled }),
+        body: JSON.stringify({ stage }),
       });
       expect(res.status).toBe(200);
       return res.json();
     };
-    const first = await patch(true);
+    const first = await patch('everyone');
     await new Promise((resolve) => setTimeout(resolve, 10));
-    const second = await patch(false);
+    const second = await patch('off');
     expect(new Date(second.data.updatedAt).getTime()).toBeGreaterThan(
       new Date(first.data.updatedAt).getTime(),
     );
@@ -200,7 +199,7 @@ describe('admin feature flags', () => {
     await app.request('/v1/admin/feature-flags/crews', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
-      body: JSON.stringify({ enabled: true }),
+      body: JSON.stringify({ stage: 'everyone' }),
     });
     const rows = await testDb.select().from(auditLog);
     expect(rows).toHaveLength(1);
@@ -215,16 +214,25 @@ describe('admin feature flags', () => {
     const res = await app.request('/v1/admin/feature-flags/not-a-flag', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
-      body: JSON.stringify({ enabled: true }),
+      body: JSON.stringify({ stage: 'everyone' }),
     });
     expect(res.status).toBe(404);
   });
 
-  it('400s on a non-boolean body', async () => {
+  it('400s on a stage that is not a rung', async () => {
     const res = await app.request('/v1/admin/feature-flags/crews', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
-      body: JSON.stringify({ enabled: 'yes' }),
+      body: JSON.stringify({ stage: 'sideways' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('400s on the old boolean body, which the contract step retired', async () => {
+    const res = await app.request('/v1/admin/feature-flags/crews', {
+      method: 'PATCH',
+      headers: { ...adminHeaders(), 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: true }),
     });
     expect(res.status).toBe(400);
   });
@@ -239,7 +247,7 @@ describe('admin feature flags', () => {
     await app.request('/v1/admin/feature-flags/crews', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
-      body: JSON.stringify({ enabled: true }),
+      body: JSON.stringify({ stage: 'everyone' }),
     });
     const res = await app.request('/v1/flags');
     const body = await res.json();

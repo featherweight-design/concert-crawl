@@ -15,7 +15,7 @@ import {
 } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { FlagDrawer } from './FlagDrawer';
-import { StageLadder, stageOf, type Stage } from './StageLadder';
+import { StageLadder, type Stage } from './StageLadder';
 
 const COPY = ADMIN_COPY.featureFlags;
 
@@ -114,7 +114,7 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
     );
 
   const pick = (flag: AdminFeatureFlag, stage: Stage) => {
-    const from = stageOf(flag);
+    const from = flag.stage;
     if (stage === from || pending !== null) return;
     // Production asks first before a flag goes to everyone.
     if (flag.environment === 'production' && stage === 'everyone') {
@@ -258,7 +258,7 @@ const FlagRow = ({
   onUndoVerified,
   saving,
 }: FlagRowProps) => {
-  const stage = stageOf(flag);
+  const { stage } = flag;
   // The verified mark is set on staging; the production control is not drawn.
   const onStaging = flag.environment !== 'production';
   const people = flag.people?.length ?? 0;

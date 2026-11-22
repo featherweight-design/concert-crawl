@@ -40,16 +40,12 @@ export const featureFlagsAdminRouter = new Hono<AdminVariables>();
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-// A flag's rung, written either as the new `stage` or as the old boolean
-// (`enabled`: true is Everyone, false is Off). Moving to Everyone in production
-// also needs `confirm: true`, the API half of the web dialog that asks first.
-const patchSchema = z
-  .object({
-    enabled: z.boolean().optional(),
-    stage: z.enum(FLAG_STAGES).optional(),
-    confirm: z.boolean().optional(),
-  })
-  .refine((body) => body.enabled !== undefined || body.stage !== undefined);
+// A flag's rung. Moving to Everyone in production also needs `confirm: true`,
+// the API half of the web dialog that asks first.
+const patchSchema = z.object({
+  stage: z.enum(FLAG_STAGES),
+  confirm: z.boolean().optional(),
+});
 
 const personSchema = z.object({ userId: z.string().trim().min(1).max(200) });
 
@@ -156,7 +152,6 @@ const toAdminFlag = (
     key,
     label: FEATURE_FLAGS[key].label,
     description: FEATURE_FLAGS[key].description,
-    enabled: row?.enabled ?? featureFlagDefaults()[key],
     updatedAt: row?.updatedAt.toISOString() ?? null,
     updatedBy: row?.updatedBy ?? null,
     stage,
@@ -187,7 +182,6 @@ const ensureRow = async (
     .insert(featureFlags)
     .values({
       key,
-      enabled: stage === 'everyone',
       stage,
       updatedBy: actorId,
     })
@@ -219,7 +213,7 @@ const audit = (
 featureFlagsAdminRouter.get('/', async (ctx) => {
   // Reads storage directly rather than through the 30s-memoized loader: an
   // admin toggling a flag has to see its own write, and mixing a cached
-  // `enabled` with a fresh `updatedAt` would show a row that never existed.
+  // `stage` with a fresh `updatedAt` would show a row that never existed.
   const [rows, people] = await Promise.all([
     db.select().from(featureFlags),
     db.select().from(featureFlagUsers),
@@ -248,17 +242,12 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
 
   const parsed = patchSchema.safeParse(await ctx.req.json().catch(() => null));
   if (!parsed.success) {
-    return ctx.json(
-      { success: false, error: 'send a stage, or enabled as a boolean' },
-      400,
-    );
+    return ctx.json({ success: false, error: 'send a stage' }, 400);
   }
 
   const auth = getAuth(ctx);
   const actorId = auth?.userId ?? 'unknown';
-  const { enabled, confirm } = parsed.data;
-  const toStage: FlagStage =
-    parsed.data.stage ?? (enabled ? 'everyone' : 'off');
+  const { stage: toStage, confirm } = parsed.data;
   const staging = isStagingEnvironment();
   // Set explicitly in both branches: DEFAULT now() fires on insert only, so an
   // update that omitted it would freeze the timestamp at the first toggle.
@@ -292,9 +281,6 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
     const [saved] = await tx
       .update(featureFlags)
       .set({
-        // `enabled` is the old boolean, kept until the contract step: on only
-        // at Everyone.
-        enabled: toStage === 'everyone',
         stage: toStage,
         // "Me" is the admin who set that rung; it is kept as the flag climbs
         // so they keep seeing it.
@@ -344,6 +330,8 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
 
   audit(ctx, key, actorId, {
     kind: 'stage',
+    // The activity feed's "Turned X on/off" sentence reads this (log-search.ts),
+    // so it stays in the audit metadata after the column goes.
     enabled: toStage === 'everyone',
     from: outcome.from,
     stage: toStage,

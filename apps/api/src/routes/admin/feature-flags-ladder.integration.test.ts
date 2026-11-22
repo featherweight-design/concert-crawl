@@ -116,11 +116,10 @@ describe('feature flag ladder (staging)', () => {
     asAdmin();
   });
 
-  it('turning a flag on is Everyone, and writes the first history row', async () => {
-    const res = await patch({ enabled: true });
+  it('moving a flag to Everyone writes the first history row', async () => {
+    const res = await patch({ stage: 'everyone' });
     expect(res.status).toBe(200);
     const row = await storedCrews();
-    expect(row?.enabled).toBe(true);
     expect(row?.stage).toBe('everyone');
     const history = await testDb.select().from(featureFlagHistory);
     expect(history).toHaveLength(1);
@@ -133,9 +132,9 @@ describe('feature flag ladder (staging)', () => {
     });
   });
 
-  it('turning it off is Off and adds a second entry from Everyone', async () => {
-    await patch({ enabled: true });
-    await patch({ enabled: false });
+  it('moving it to Off adds a second entry from Everyone', async () => {
+    await patch({ stage: 'everyone' });
+    await patch({ stage: 'off' });
     expect((await storedCrews())?.stage).toBe('off');
     const history = await testDb
       .select()
@@ -148,13 +147,13 @@ describe('feature flag ladder (staging)', () => {
   });
 
   it('a toggle that changes nothing adds no history entry', async () => {
-    await patch({ enabled: true });
-    await patch({ enabled: true });
+    await patch({ stage: 'everyone' });
+    await patch({ stage: 'everyone' });
     expect(await testDb.select().from(featureFlagHistory)).toHaveLength(1);
   });
 
   it('refuses a flag sitting at Me with nobody as Me', async () => {
-    await patch({ enabled: false });
+    await patch({ stage: 'off' });
     await expect(
       testDb
         .update(featureFlags)
@@ -312,7 +311,6 @@ describe('feature flag ladder (production lock)', () => {
       .insert(featureFlags)
       .values({
         key: 'crews',
-        enabled: true,
         stage: 'everyone',
         updatedBy: 'seed',
       })

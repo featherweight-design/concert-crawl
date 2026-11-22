@@ -32,11 +32,8 @@ export const flagHistoryKindEnum = pgEnum('flag_history_kind', [
 
 export const featureFlags = pgTable('feature_flags', {
   key: text('key').primaryKey(),
-  /**
-   * The old boolean. It stays until the contract step; the admin PATCH writes
-   * `stage` beside it so the two agree until the API reads `stage`.
-   */
-  enabled: boolean('enabled').notNull(),
+  // `enabled`, the old boolean, is nullable and unread since 0125 and is left
+  // out of the schema so no code can touch it again; 0126 drops the column.
   stage: flagStageEnum('stage').notNull().default('off'),
   /** Who "Me" is, read only while `stage` is `me`. */
   stageOwnerUserId: text('stage_owner_user_id'),

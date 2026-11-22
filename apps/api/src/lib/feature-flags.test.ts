@@ -31,7 +31,6 @@ const stored = (
 ) => ({ key, stage, ownerUserId });
 
 const DEFAULTS = {
-  'spotify-sync': false,
   crews: false,
   'release-notes': true,
 };
@@ -53,7 +52,7 @@ describe('loadFeatureFlags', () => {
     flagRows.mockResolvedValue([stored('crews', 'everyone')]);
     const flags = await loadFeatureFlags();
     expect(flags.crews).toBe(true);
-    expect(flags['spotify-sync']).toBe(false);
+    expect(flags['release-notes']).toBe(true);
   });
 
   it('lets an admin stage a default-on flag down to Off', async () => {
@@ -61,14 +60,12 @@ describe('loadFeatureFlags', () => {
     expect((await loadFeatureFlags())['release-notes']).toBe(false);
   });
 
+  // spotify-sync left the registry in the contract step; a database that has
+  // not run 0125 yet still has its row.
   it('ignores a stored row whose key left the registry', async () => {
-    flagRows.mockResolvedValue([stored('retired-thing', 'everyone')]);
+    flagRows.mockResolvedValue([stored('spotify-sync', 'everyone')]);
     const flags = await loadFeatureFlags();
-    expect(Object.keys(flags).sort()).toEqual([
-      'crews',
-      'release-notes',
-      'spotify-sync',
-    ]);
+    expect(Object.keys(flags).sort()).toEqual(['crews', 'release-notes']);
   });
 
   // The launch animation's flag was removed 2026-11-12 but its row stays in

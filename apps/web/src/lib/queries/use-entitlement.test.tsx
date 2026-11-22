@@ -86,22 +86,6 @@ describe('useEntitlement', () => {
     expect(result.current.surface).toBe('visible-active');
   });
 
-  // spotify-sync is the one feature the matrix still denies a signed-in
-  // account, so it carries the paywall-on-tap routing coverage.
-  it('locks spotify-sync for a free user with paywall-on-tap routing', async () => {
-    setProfilePlan(planState('free'));
-    mockFlagsResult = {
-      data: { ...featureFlagDefaults(), 'spotify-sync': true },
-      isPending: false,
-    };
-    const { result } = renderHook(() => useEntitlement('spotify-sync'), {
-      wrapper: withProvider(),
-    });
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.active).toBe(false);
-    expect(result.current.surface).toBe('paywall-on-tap');
-  });
-
   it('activates calendar-export for a supporter (a Supporter unlock since 2026-07-29)', async () => {
     setProfilePlan(planState('supporter', { status: 'active' }));
     const { result } = renderHook(() => useEntitlement('calendar-export'), {
@@ -306,10 +290,12 @@ describe('useEntitlement flag seam', () => {
     expect(result.current.surface).toBe('tier-picker-on-tap');
   });
 
+  // Logged out is the only plan the matrix still denies anything, now the
+  // retired spotify-sync row is gone.
   it('never grants a feature the matrix denies, flag on', async () => {
-    mockSignedIn({ plan: 'free', roleComped: false });
-    mockFlags({ 'spotify-sync': true });
-    const { result } = renderHook(() => useEntitlement('spotify-sync'), {
+    mockSignedOut();
+    mockFlags({ crews: true });
+    const { result } = renderHook(() => useEntitlement('crews'), {
       wrapper: withProvider(),
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));

@@ -32,7 +32,7 @@ const LOGGED_OUT_STATE: PlanStateLike = {
 
 // What a signed-in account is entitled to when its own plan state could not
 // be read. Every account is on the free plan now, and the free plan passes
-// every gate except the retired spotify-sync (flagged off by default).
+// every gate.
 const SIGNED_IN_FALLBACK_STATE: PlanStateLike = {
   plan: 'free',
   roleComped: false,

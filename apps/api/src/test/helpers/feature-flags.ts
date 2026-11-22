@@ -19,10 +19,10 @@ export const setFeatureFlag = async (
   const stage = enabled ? 'everyone' : 'off';
   await testDb
     .insert(featureFlags)
-    .values({ key, enabled, stage, updatedBy: 'test', updatedAt: now })
+    .values({ key, stage, updatedBy: 'test', updatedAt: now })
     .onConflictDoUpdate({
       target: featureFlags.key,
-      set: { enabled, stage, updatedAt: now, updatedBy: 'test' },
+      set: { stage, updatedAt: now, updatedBy: 'test' },
     });
   clearFeatureFlagCache();
 };

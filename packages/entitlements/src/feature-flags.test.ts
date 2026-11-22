@@ -39,9 +39,8 @@ describe('feature flag registry', () => {
     }
   });
 
-  it('defaults spotify-sync and crews off, release-notes on', () => {
+  it('defaults crews off, release-notes on', () => {
     expect(featureFlagDefaults()).toEqual({
-      'spotify-sync': false,
       crews: false,
       'release-notes': true,
     });
@@ -62,9 +61,14 @@ describe('feature flag registry', () => {
     expect(FEATURE_FLAG_KEYS).not.toContain('launch-animation');
   });
 
+  // spotify-sync left the registry in the contract step (0125).
+  it('does not recognise the retired spotify-sync key', () => {
+    expect(isFeatureFlagKey('spotify-sync')).toBe(false);
+    expect(FEATURE_FLAG_KEYS).not.toContain('spotify-sync');
+  });
+
   it('reverse-looks-up a flag by the entitlement it restricts', () => {
     expect(flagForEntitlement('crews')).toBe('crews');
-    expect(flagForEntitlement('spotify-sync')).toBe('spotify-sync');
     expect(flagForEntitlement('watching')).toBeNull();
   });
 });

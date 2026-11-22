@@ -40,12 +40,10 @@ describe('server-side getFeatureFlags', () => {
   it('forwards the signed-in viewer token for a flag not on for everyone, and never lets Next share the answer', async () => {
     session.current = { userId: 'user_beta', token: 'tok_beta' };
     get.mockResolvedValue({
-      'spotify-sync': false,
       crews: false,
       'release-notes': true,
     });
     authedGet.mockResolvedValue({
-      'spotify-sync': false,
       crews: true,
       'release-notes': true,
     });
@@ -61,7 +59,6 @@ describe('server-side getFeatureFlags', () => {
   it('does not ask per viewer when the flag is on for everyone', async () => {
     session.current = { userId: 'user_any', token: 'tok_any' };
     get.mockResolvedValue({
-      'spotify-sync': false,
       crews: false,
       'release-notes': true,
     });
@@ -72,7 +69,6 @@ describe('server-side getFeatureFlags', () => {
   it('gives a Me or Beta user the full map from getFeatureFlags', async () => {
     session.current = { userId: 'user_beta', token: 'tok_beta' };
     authedGet.mockResolvedValue({
-      'spotify-sync': false,
       crews: true,
       'release-notes': true,
     });
@@ -84,7 +80,6 @@ describe('server-side getFeatureFlags', () => {
 
   it('reads the signed-out map for a visitor, cached 30s as before', async () => {
     get.mockResolvedValue({
-      'spotify-sync': false,
       crews: false,
       'release-notes': true,
     });
@@ -112,7 +107,6 @@ describe('server-side getFeatureFlags', () => {
     get.mockImplementationOnce(async () => {
       order.push('fetch');
       return {
-        'spotify-sync': false,
         crews: true,
         'release-notes': true,
       };
@@ -136,7 +130,6 @@ describe('server-side getFeatureFlags', () => {
 
   it('returns the map the API gave it', async () => {
     get.mockResolvedValue({
-      'spotify-sync': false,
       crews: true,
       'release-notes': true,
     });
@@ -146,7 +139,6 @@ describe('server-side getFeatureFlags', () => {
   it('falls back to registry defaults when the fetch throws', async () => {
     get.mockRejectedValue(new Error('ECONNREFUSED'));
     await expect(getFeatureFlags()).resolves.toEqual({
-      'spotify-sync': false,
       crews: false,
       'release-notes': true,
     });
