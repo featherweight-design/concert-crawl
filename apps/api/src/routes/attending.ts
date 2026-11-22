@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
-import { db, userEvents, events } from '@concert-crawl/db';
+import { db, userEvents, events, venues } from '@concert-crawl/db';
 import type { AttendingToggleResponse } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
 import { releaseAttendance } from '../lib/user-events.js';
@@ -102,8 +102,10 @@ attendingRouter.put('/:eventId', async (ctx) => {
       status: events.status,
       firstMissingAt: events.firstMissingAt,
       hiddenFromConsumer: events.hiddenFromConsumer,
+      venueRemovedAt: venues.removedAt,
     })
     .from(events)
+    .leftJoin(venues, eq(events.venueId, venues.id))
     .where(eq(events.id, eventId))
     .limit(1);
 
@@ -132,9 +134,12 @@ attendingRouter.put('/:eventId', async (ctx) => {
     // seeing is not markable as a night you are going to, even once the stale
     // sweep brings it back on its detail page as No longer listed. A past one
     // happened whatever the crawler later did with the listing, so only a
-    // cancelled show is refused. Same 404 as an unknown id either way.
+    // cancelled show is refused. A show at a venue that asked us to remove
+    // its data (venues.removed_at) is refused whatever its date: no surface
+    // shows it. Same 404 as an unknown id either way.
     const markable =
       !eventRow.hiddenFromConsumer &&
+      eventRow.venueRemovedAt === null &&
       (isPast
         ? eventRow.status !== 'cancelled'
         : eventRow.firstMissingAt === null);
