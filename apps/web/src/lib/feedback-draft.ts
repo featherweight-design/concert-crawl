@@ -17,8 +17,9 @@ import {
 
 export const FEEDBACK_DRAFT_KEY = 'feedback-draft-v2';
 
-// v1 kept every draft, signed in or not, under one device-wide key. Such an
-// entry may hold a signed-in fan's note, so it is never read, only removed.
+// v1 kept every draft, signed in or not, under one device-wide key, and an
+// entry does not say whose it was. Any of them may hold a signed-in fan's note,
+// so each is removed unread, a signed-out fan's pending draft included.
 export const LEGACY_FEEDBACK_DRAFT_KEY = 'feedback-draft-v1';
 
 // A signed-in fan's draft is kept under their own user id, so the next person

@@ -391,6 +391,19 @@ describe('FeedbackModal — a failed send saves the draft (A4)', () => {
 
   // Hugh, 2026-11-22: on a shared phone the next fan to sign in never sees
   // the last one's note. A signed-in draft lives under its own user id.
+  it('clears what one fan typed when another signs in with the sheet open', () => {
+    clerkUser.current = { id: 'user_a' };
+    const { rerender } = render(
+      <FeedbackModal open={true} onClose={vi.fn()} />,
+    );
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'user a typing' },
+    });
+    clerkUser.current = { id: 'user_b' };
+    rerender(<FeedbackModal open={true} onClose={vi.fn()} />);
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
+  });
+
   it("never restores another signed-in user's draft", () => {
     localStorage.setItem(
       feedbackDraftKey('user_a'),

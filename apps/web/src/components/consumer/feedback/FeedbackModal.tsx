@@ -80,7 +80,15 @@ interface FeedbackModalProps {
   onClose: () => void;
 }
 
-export const FeedbackModal = ({ open, onClose }: FeedbackModalProps) => {
+// Keyed on who is signed in: an account switch while the sheet is open
+// remounts it, so no note, screenshot or venue field typed by one fan is shown
+// to, or saved as a draft for, the next one.
+export const FeedbackModal = (props: FeedbackModalProps) => {
+  const { user } = useUser();
+  return <FeedbackSheet key={user?.id ?? 'signed-out'} {...props} />;
+};
+
+const FeedbackSheet = ({ open, onClose }: FeedbackModalProps) => {
   const pathname = usePathname();
   // Never throws outside the provider: the modal mounts in the account menu.
   const theme = useThemeName();
