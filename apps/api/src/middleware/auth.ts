@@ -53,6 +53,16 @@ export const requireAuth: MiddlewareHandler = async (
   await next();
 };
 
+// requireSignedIn — 401 for a caller with no Clerk user, after clerkMiddleware.
+// Unlike requireAuth it does not insist on a Bearer header. Mount it ahead of a
+// validator so an anonymous request answers 401, never a 400 about its query.
+export const requireSignedIn: MiddlewareHandler = async (ctx, next) => {
+  if (!getAuth(ctx)?.userId) {
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+  await next();
+};
+
 // getAuthUser — call inside a route handler after requireAuth to get the userId
 export function getAuthUser(ctx: Context): { userId: string } {
   const auth = getAuth(ctx);

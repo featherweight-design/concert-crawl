@@ -33,6 +33,7 @@ import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { db, artists, userEvents, events, venues } from '@concert-crawl/db';
 import type { HistoryShow, HistoryResponse } from '@concert-crawl/types';
 import { validationHook } from '../lib/validator.js';
+import { requireSignedIn } from '../middleware/auth.js';
 import { loadPastShows } from '../lib/past-shows.js';
 import {
   displayHeadliner,
@@ -244,6 +245,7 @@ const pastShowsQuerySchema = z
 // The Add-a-show list.
 historyRouter.get(
   '/past-shows',
+  requireSignedIn,
   zValidator('query', pastShowsQuerySchema, validationHook),
   async (ctx) => {
     const authInfo = getAuth(ctx);

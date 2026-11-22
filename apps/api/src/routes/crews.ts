@@ -5,6 +5,8 @@
 // crew shows are derived from the shipped user_events.attending_at (plan D1).
 //
 // Every route is signed-in only, with no plan gate (going free, 2026-10-29).
+// If a plan gate ever returns, gate POST / only (plan D6): reading, leaving and
+// muting stay open so a lapsed creator keeps every crew they already made.
 
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
