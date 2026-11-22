@@ -111,10 +111,10 @@ const FOOTER_BLEED = {
 
 // The hairline under the close row once the body has scrolled (addendum 6
 // item 15, as ModalShell's rail). Item 15 is the rule for sheets with a pinned
-// main action, so only the `footer` slot draws it; sheets without a footer
+// main action, so only the `footer` slot draws it. Sheets without a footer
 // (Remove, Share Concert Crawl, the iPhone how-to, and Add a show, a pinned
-// search list with no main action) keep no rule. It runs edge to edge, so it reaches past the sheet's padding by the
-// same amounts as FOOTER_BLEED.
+// search list whose only action is Done) keep no rule. The rule spans the
+// sheet edge to edge, reaching past its padding by the FOOTER_BLEED amounts.
 const RULE_BLEED = {
   default: '-inset-x-6',
   tight: '-inset-x-4 min-[360px]:-inset-x-5',
@@ -270,7 +270,8 @@ export const BottomSheet = ({
             ? 'flex h-[92dvh] max-h-[92dvh] flex-col overflow-hidden lg:max-h-[calc(100dvh-80px)]'
             : // The sheet stops 24px below the top of the screen and taller
               // content scrolls inside it (addendum 6 item 15); from `lg` up
-              // it is the dialog, capped at the window less 80px as ModalShell.
+              // it is the dialog, capped at the window less 80px (ModalShell's
+              // calc(100% - 80px) inside its full-window overlay).
               `max-h-[calc(100dvh-24px)] lg:max-h-[calc(100dvh-80px)] ${
                 hasFooter ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'
               }`
