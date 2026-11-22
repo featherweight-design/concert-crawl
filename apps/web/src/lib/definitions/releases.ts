@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.75.0-beta',
+    date: 'Nov 22, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: 'Shows with an artist you follow now get a check on the photo and a highlighted name, and the event page says who you follow on the bill.',
+      },
+    ],
+  },
+  {
     version: 'v0.74.0-beta',
     date: 'Nov 21, 2026',
     headline: null,

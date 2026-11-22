@@ -45,6 +45,8 @@ interface SupportingLineProps {
    * exactly the markup they always have, whether slugs are available or not.
    */
   linkArtists?: boolean;
+  /** Names the viewer follows, as printed in `artists`: each takes --signal. */
+  followedNames?: readonly string[];
 }
 
 export const SupportingLine = ({
@@ -56,6 +58,7 @@ export const SupportingLine = ({
   dim = false,
   slugs = null,
   linkArtists = false,
+  followedNames = [],
 }: SupportingLineProps): React.JSX.Element | null => {
   const runRef = useRef<HTMLSpanElement>(null);
   const overArtLine = surface === 'detail';
@@ -102,7 +105,7 @@ export const SupportingLine = ({
   // step up a token. Rows and cards sit on flat ground and are unchanged.
   const overArt = surface === 'detail';
   const quietColor = overArt ? 'text-fg-muted' : 'text-fg-subtle';
-  const nameColor = dim && !overArt ? 'text-fg-subtle' : 'text-fg-muted';
+  const defaultNameColor = dim && !overArt ? 'text-fg-subtle' : 'text-fg-muted';
   // `detail` shows the full roster and may wrap to multiple lines (no clipping);
   // `card`/`hero` stay one line via `truncate`. Mirrors EventTitleBlock's headliner.
   const runClass = surface === 'detail' ? 'whitespace-normal' : 'truncate';
@@ -150,6 +153,9 @@ export const SupportingLine = ({
   );
   const renderName = (name: string, index: number) => {
     const slug = linkedSlugs[index] ?? null;
+    const nameColor = followedNames.includes(name)
+      ? 'text-signal'
+      : defaultNameColor;
     return slug === null ? (
       <span
         className={`${isRow ? 'font-bold' : 'font-semibold'} ${nameColor}`}

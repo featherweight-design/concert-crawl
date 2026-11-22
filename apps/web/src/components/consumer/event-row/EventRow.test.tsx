@@ -9,6 +9,7 @@ import { EventRow } from './EventRow';
 import type { EventRowShow } from './lib/row-model';
 import { rowChips } from './lib/row-chips';
 import { EVENT_ROW_COPY } from './definitions/copy';
+import { useFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 
 vi.mock('next/link', () => ({
   __esModule: true,
@@ -870,5 +871,45 @@ describe('EventRow — No longer listed (A5)', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+describe('EventRow Followed highlight (addendum-8 §6)', () => {
+  afterEach(() => {
+    vi.mocked(useFollowedArtistNames).mockReturnValue(new Set());
+  });
+
+  it('marks nothing when the viewer follows nobody on the bill', () => {
+    render(<EventRow show={makeShow()} surface="browse" />);
+    expect(screen.queryByTestId('followed-disc')).toBeNull();
+    expect(screen.queryByTestId('row-followed-label')).toBeNull();
+  });
+
+  it('marks a followed headliner: disc, signal name, spoken follow', () => {
+    vi.mocked(useFollowedArtistNames).mockReturnValue(new Set(['test artist']));
+    render(<EventRow show={makeShow()} surface="browse" />);
+    expect(screen.getByTestId('followed-disc')).toBeTruthy();
+    expect(screen.getByTestId('row-title').className).toContain('text-signal');
+    expect(screen.getByTestId('row-followed-label').textContent).toBe(
+      ', you follow Test Artist',
+    );
+  });
+
+  it('marks a row when only a support act is followed, and leaves the headliner alone', () => {
+    vi.mocked(useFollowedArtistNames).mockReturnValue(new Set(['opener one']));
+    render(
+      <EventRow
+        show={makeShow({ supports: ['Opener One', 'Opener Two'] })}
+        surface="browse"
+      />,
+    );
+    expect(screen.getByTestId('followed-disc')).toBeTruthy();
+    expect(screen.getByTestId('row-title').className).not.toContain(
+      'text-signal',
+    );
+    expect(screen.getByText('Opener One').className).toContain('text-signal');
+    expect(screen.getByText('Opener Two').className).not.toContain(
+      'text-signal',
+    );
   });
 });

@@ -11,6 +11,10 @@ import { orderGenres, vibeBucketMembers } from '../event-row/lib/order-genres';
 import { genreRing } from '../event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { EventImage } from '../event-image';
+import { FollowedDisc } from '../followed-mark/FollowedDisc';
+import { EVENT_ROW_COPY } from '../event-row/definitions/copy';
+import { followedOnBill } from '@/lib/followed-on-bill';
+import { useFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 import { HERO_BACKDROP_STYLE, heroFrame, heroWash } from './lib/hero-frame';
 
 const copy = CONSUMER_COPY;
@@ -38,6 +42,11 @@ export function HeroEventCard({
   filterVibes = [],
 }: HeroEventCardProps) {
   const showTime = formatShowTime(event.showTime);
+  const followedNames = followedOnBill(
+    useFollowedArtistNames(),
+    event.artist,
+    event.supportingArtists ?? [],
+  );
   // The same cheapest-tier price the rows show, so the spotlight can never
   // disagree with its own row; the scalar is only the row model's fallback.
   const rowPrice = fromEventWithVenue(event).price;
@@ -93,25 +102,36 @@ export function HeroEventCard({
             each takes the detail density its own size derives (97 is tile,
             130 is hero); one panel at '100%' could only guess. The hidden one
             is display:none, so its lazy image is never fetched. */}
-        <div
-          data-testid="hero-image-ring"
-          className="shrink-0 overflow-hidden rounded-[12px]"
-          style={{
-            boxShadow: genreRing(genre),
-          }}
-        >
-          {HERO_ART_SIZES.map(({ size, className }) => (
-            <span key={size} data-hero-art={size} className={className}>
-              <Panel
-                surface="event"
-                name={event.artist}
-                artworkUrl={event.imageUrl}
-                photoUrl={event.artistPhotoUrl ?? null}
-                size={size}
-                radius={12}
-              />
-            </span>
-          ))}
+        <div className="relative shrink-0">
+          <div
+            data-testid="hero-image-ring"
+            className="overflow-hidden rounded-[12px]"
+            style={{
+              boxShadow: genreRing(genre),
+            }}
+          >
+            {HERO_ART_SIZES.map(({ size, className }) => (
+              <span key={size} data-hero-art={size} className={className}>
+                <Panel
+                  surface="event"
+                  name={event.artist}
+                  artworkUrl={event.imageUrl}
+                  photoUrl={event.artistPhotoUrl ?? null}
+                  size={size}
+                  radius={12}
+                />
+              </span>
+            ))}
+          </div>
+          {followedNames.length > 0 && (
+            // 20px on the spotlight art (addendum-8 §6); ★ TONIGHT is untouched.
+            <FollowedDisc
+              size={20}
+              ring={2.5}
+              className="absolute"
+              style={{ right: -4, bottom: -4 }}
+            />
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -136,6 +156,7 @@ export function HeroEventCard({
             fallbackTitle={event.title}
             status={event.status}
             surface="hero"
+            followedNames={followedNames}
             maxInline={3}
             supportClassName="hidden lg:block"
           />
@@ -186,6 +207,11 @@ export function HeroEventCard({
             />
           )}
         </div>
+        {followedNames.length > 0 && (
+          <span className="sr-only">
+            {EVENT_ROW_COPY.a11y.youFollow(followedNames)}
+          </span>
+        )}
       </Link>
 
       {/* Watch button — outside Link so clicks don't navigate */}

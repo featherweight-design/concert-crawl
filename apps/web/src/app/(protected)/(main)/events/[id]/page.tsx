@@ -51,6 +51,8 @@ import {
 } from '@/components/consumer/definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from '@/components/consumer/event-title-block';
+import { FollowedLine } from '@/components/consumer/followed-mark/FollowedLine';
+import { followedOnBill } from '@/lib/followed-on-bill';
 import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 import { localDateString } from '@/lib/time';
 import {
@@ -283,6 +285,13 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
       status={event.status}
     />
   );
+  // The viewer's own follows against every act on the bill; signed out (no
+  // token) the seed is undefined and nothing is marked.
+  const followedNames = followedOnBill(
+    new Set((follows ?? []).map((follow) => follow.canonicalName)),
+    event.artist,
+    event.supportingArtists ?? [],
+  );
   const stageChips = (
     <GenreChips
       genres={event.genre}
@@ -348,12 +357,14 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           headSize="var(--stage-head)"
           centered
           beforePill={stageChips}
+          followedNames={followedNames}
         />
         {delistedStage ? (
           <div className="max-lg:hidden">{stageMetaEl}</div>
         ) : (
           stageMetaEl
         )}
+        <FollowedLine names={followedNames} />
       </EventStage>
 
       <div className="flex-1">

@@ -56,6 +56,10 @@ export const EVENT_ROW_COPY = {
   },
   a11y: {
     watchingTick: (artist: string) => `You are watching ${artist}`,
+    // Appended to the row's link name, so it reads "…, you follow J.I.D".
+    // The disc is decorative; this is the only place the follow is spoken.
+    youFollow: (names: readonly string[]) =>
+      `, you follow ${names.join(' and ')}`,
     // Replaces the "N going" chip, so it has to restate the count as well as
     // name who. Members without a handle are counted and never named, so the
     // remainder is reported as "and N more" rather than silently dropped.
