@@ -24,6 +24,13 @@ vi.mock('@/lib/api', () => {
       public readonly status: number,
       message: string,
       public readonly code?: string,
+      // The real ApiError's argument list, so the call sites below type-check
+      // against it: only the 8th (`retryAfterSeconds`) matters here.
+      _zodIssues?: unknown,
+      _reason?: string,
+      _field?: string,
+      _body?: unknown,
+      public readonly retryAfterSeconds?: number,
     ) {
       super(message);
     }
@@ -195,5 +202,65 @@ describe('useArtistFollow', () => {
     });
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(del).not.toHaveBeenCalled();
+  });
+
+  describe('refusals', () => {
+    const refuse = async (err: unknown) => {
+      post.mockRejectedValueOnce(err);
+      const hook = renderHook(() => useArtistFollow('wax-harbour', false));
+      act(() => {
+        hook.result.current.toggle();
+      });
+      await waitFor(() => expect(hook.result.current.pending).toBe(false));
+      return hook;
+    };
+
+    it.each([
+      [404, 'not_found'],
+      [409, 'name_held'],
+      [503, 'unavailable'],
+    ])('maps a %i to %s and rolls back', async (status, kind) => {
+      const { result } = await refuse(new ApiError(status, 'x'));
+      expect(result.current.following).toBe(false);
+      expect(result.current.error).toEqual({ kind });
+    });
+
+    it('maps a 429 to a retry time from Retry-After', async () => {
+      const now = Date.now();
+      const { result } = await refuse(
+        new ApiError(
+          429,
+          'x',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          900,
+        ),
+      );
+      expect(result.current.following).toBe(false);
+      const error = result.current.error;
+      expect(error?.kind).toBe('rate_limited');
+      if (error?.kind !== 'rate_limited') return;
+      expect(error.retryAt.getTime() - now).toBeGreaterThanOrEqual(899_000);
+      expect(error.retryAt.getTime() - now).toBeLessThan(905_000);
+    });
+
+    it('leaves an unmapped failure silent', async () => {
+      const { result } = await refuse(new ApiError(500, 'x'));
+      expect(result.current.error).toBeNull();
+    });
+
+    it('clears the message on the next tap', async () => {
+      const { result } = await refuse(new ApiError(503, 'x'));
+      expect(result.current.error).not.toBeNull();
+      post.mockResolvedValueOnce({ following: true });
+      act(() => {
+        result.current.toggle();
+      });
+      expect(result.current.error).toBeNull();
+      await waitFor(() => expect(result.current.following).toBe(true));
+    });
   });
 });

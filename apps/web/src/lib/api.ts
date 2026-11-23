@@ -1,4 +1,5 @@
 import { startApiTimer, type ApiTimer } from './perf/timing';
+import { parseRetryAfterSeconds } from './retry-after';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 /**
@@ -43,6 +44,10 @@ export class ApiError extends Error {
   // `body` is the whole error body, for a refusal that carries data beside its
   // message (the venue delete guard's 409 sends `{pastShows, watchers}`).
   // Unknown on purpose: the caller narrows it itself.
+  //
+  // `retryAfterSeconds` is the 429's `Retry-After`, read on every error so a
+  // rate-limited caller can name the wait (missing or unusable: the full hour).
+  // Undefined on any other status.
   constructor(
     public readonly status: number,
     message: string,
@@ -51,6 +56,7 @@ export class ApiError extends Error {
     public readonly reason?: string,
     public readonly field?: string,
     public readonly body?: unknown,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -187,6 +193,11 @@ export async function adminFetch(
   return res;
 }
 
+const retryAfterFor = (res: Response): number | undefined =>
+  res.status === 429
+    ? parseRetryAfterSeconds(res.headers.get('Retry-After'))
+    : undefined;
+
 async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
   timer.headers(res.status);
   reportUnauthorized(res);
@@ -201,7 +212,16 @@ async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
   // Guard against non-JSON responses (e.g. plain-text 500 from the server)
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('application/json')) {
-    throw new ApiError(res.status, `Request failed with status ${res.status}`);
+    throw new ApiError(
+      res.status,
+      `Request failed with status ${res.status}`,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      retryAfterFor(res),
+    );
   }
 
   // Parse as `unknown` and narrow with the runtime guard rather than casting
@@ -238,6 +258,7 @@ async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
       reasonField,
       fieldName,
       body,
+      retryAfterFor(res),
     );
   }
 

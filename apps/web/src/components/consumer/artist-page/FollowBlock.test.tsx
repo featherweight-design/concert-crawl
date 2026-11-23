@@ -69,4 +69,36 @@ describe('FollowBlock', () => {
     expect(sub).not.toBeNull();
     expect(sub?.getAttribute('style')).toContain('font-size: 12.5px');
   });
+  it('swaps the pitch for the refusal and greys Follow on a final one', () => {
+    const { getByRole, container } = render(
+      <FollowBlock
+        name="Wax Harbour"
+        following={false}
+        signedOut={false}
+        onToggle={noop}
+        error={{ kind: 'not_found' }}
+      />,
+    );
+    expect(container.textContent).not.toContain(ARTIST_COPY.followPitch);
+    expect(
+      container.querySelector('[data-follow-error="not_found"]'),
+    ).not.toBeNull();
+    expect(getByRole('button').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('keeps Follow live on a retryable refusal', () => {
+    const { getByRole, container } = render(
+      <FollowBlock
+        name="Wax Harbour"
+        following={false}
+        signedOut={false}
+        onToggle={noop}
+        error={{ kind: 'unavailable' }}
+      />,
+    );
+    expect(
+      container.querySelector('[data-follow-error="unavailable"]'),
+    ).not.toBeNull();
+    expect(getByRole('button').hasAttribute('disabled')).toBe(false);
+  });
 });

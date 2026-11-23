@@ -1,4 +1,5 @@
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { parseRetryAfterSeconds } from '@/lib/retry-after';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
@@ -20,8 +21,6 @@ export const formatWait = (seconds: number): string =>
     ? COPY.waitMinutes(Math.ceil(seconds / 60))
     : COPY.waitSeconds(Math.max(1, seconds));
 
-const FALLBACK_RETRY_AFTER_SECONDS = 3600;
-
 export async function downloadUserDataExport(token: string): Promise<void> {
   const res = await fetch(`${API_URL}/v1/users/me/export`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -31,11 +30,8 @@ export async function downloadUserDataExport(token: string): Promise<void> {
   });
 
   if (res.status === 429) {
-    const header = Number(res.headers.get('Retry-After'));
     throw new ExportRateLimitedError(
-      Number.isFinite(header) && header > 0
-        ? header
-        : FALLBACK_RETRY_AFTER_SECONDS,
+      parseRetryAfterSeconds(res.headers.get('Retry-After')),
     );
   }
 

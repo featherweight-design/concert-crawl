@@ -56,6 +56,27 @@ export const ARTIST_COPY = {
   // aria-describedby, never rendered visibly.
   followGate: 'Following artists needs your account.',
 
+  // A refused follow (addendum 13 section 2). `row` is the one-line form that
+  // replaces a search row's second line; `page` is the longer form that
+  // replaces the pitch under the Follow. The wait is a clock time in the
+  // viewer's own timezone, formatted by the caller.
+  followError: {
+    row: {
+      notFound: "We can't find this act any more.",
+      nameHeld: "Can't follow: another act we list has this name.",
+      rateLimited: (time: string) =>
+        `Lots of follows this hour. Try again at ${time}.`,
+      unavailable: "That didn't go through. Try again.",
+    },
+    page: {
+      notFound: "We can't find this act any more.",
+      nameHeld: "Can't follow: another act we list has this name.",
+      rateLimited: (time: string) =>
+        `Lots of follows this hour. Try again at ${time}.`,
+      unavailable: "That didn't go through. Tap Follow to try again.",
+    },
+  },
+
   // History line — prose. `since` is DATA (crawl start), never hardcoded here,
   // so a licensed backfill changes the number without touching this string.
   historyNone: (since: string) =>

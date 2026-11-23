@@ -76,7 +76,7 @@ export const ArtistPageContent = ({
   // `null` is the API's word for "nobody is signed in" — distinct from `false`,
   // which is a real signed-in user who does not follow this artist.
   const signedOut = data.following === null;
-  const { following, toggle } = useArtistFollow(
+  const { following, toggle, error } = useArtistFollow(
     artist.slug,
     data.following ?? false,
   );
@@ -151,7 +151,9 @@ export const ArtistPageContent = ({
           ring={ring}
           back={<BackChip inline fallbackHref="/events" />}
           actions={<ArtistShareButton slug={artist.slug} name={artist.name} />}
-          aside={isDesktop ? <FollowBlock {...followProps} /> : null}
+          aside={
+            isDesktop ? <FollowBlock {...followProps} error={error} /> : null
+          }
         >
           <p className="ap-eyebrow">{ARTIST_COPY.eyebrow}</p>
           <h1 className="ap-name">{artist.name}</h1>
@@ -163,7 +165,7 @@ export const ArtistPageContent = ({
       <div className="ap-shell">
         {inlineFollow ? (
           <div className="ap-block-follow">
-            <FollowBlock {...followProps} />
+            <FollowBlock {...followProps} error={error} />
           </div>
         ) : null}
         {isDesktop ? null : (
