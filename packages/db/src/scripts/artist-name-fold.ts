@@ -37,7 +37,9 @@ export type FoldableColumn =
   | 'billing.billed_name'
   | 'input.value'
   | 'spotify.spotify_name'
-  | 'artists.name';
+  | 'artists.name'
+  | 'mb.name'
+  | 'alias.value';
 
 export const foldedArtistName = (column: FoldableColumn): SQL => {
   const marksStripped = `regexp_replace(normalize(${column}, NFD), '[' || chr(768) || '-' || chr(879) || ']', '', 'g')`;

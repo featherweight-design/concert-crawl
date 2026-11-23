@@ -71,6 +71,11 @@
       "import": "./dist/scripts/load-mb-artists.js",
       "default": "./dist/scripts/load-mb-artists.js"
     },
+    "./scripts/backfill-artist-mbids": {
+      "types": "./dist/scripts/backfill-artist-mbids.d.ts",
+      "import": "./dist/scripts/backfill-artist-mbids.js",
+      "default": "./dist/scripts/backfill-artist-mbids.js"
+    },
     "./scripts/mb-dump": {
       "types": "./dist/scripts/mb-dump.d.ts",
       "import": "./dist/scripts/mb-dump.js",
@@ -92,7 +97,8 @@
     "db:auto-match-ambiguous": "tsx src/scripts/run-auto-match-ambiguous.ts",
     "db:musicbrainz-disambiguate": "tsx src/scripts/run-musicbrainz-disambiguate.ts",
     "db:resolve-photo-tiebreak": "tsx src/scripts/run-resolve-photo-tiebreak.ts",
-    "db:load-mb-artists": "tsx src/scripts/run-load-mb-artists.ts"
+    "db:load-mb-artists": "tsx src/scripts/run-load-mb-artists.ts",
+    "db:backfill-artist-mbids": "tsx src/scripts/run-backfill-artist-mbids.ts"
   },
   "dependencies": {
     "@concert-crawl/types": "workspace:*",
