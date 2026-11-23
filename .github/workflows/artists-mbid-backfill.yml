@@ -1,0 +1,87 @@
+# Fills `artists.mbid` from `mb_artists`, the slim MusicBrainz copy
+# (docs/superpowers/plans/2026-11-22-artist-search-musicbrainz.md, PR 3).
+#
+# Runs packages/db/src/scripts/run-backfill-artist-mbids.ts. A dispatch is a
+# dry run unless `apply` is ticked: the dry run decides every row, writes
+# nothing, and puts the counts by bucket and every name-bucket fill on the
+# run's summary page, so the name matches can be read before an apply.
+#
+# STAGING ONLY, and dispatch only. The job runs in the `staging` environment
+# and reads its DATABASE_URL_DIRECT, the direct URL the MusicBrainz refresh
+# also uses: the decision is one long statement, and it runs with no statement
+# timeout on its own session. There is no production target; adding one is its
+# own PR, after Hugh has the staging figures.
+#
+# Guards:
+# - Only main's copy of this workflow may read the secret: any other ref is
+#   skipped.
+# - It shares the MusicBrainz refresh's concurrency group, so it never reads
+#   `mb_artists` while a load is swapping it.
+# - The backfill only fills null `mbid`s, never clears one, and a re-run
+#   reconsiders only the rows still null.
+#
+# Rollback: the rows it wrote are the rows whose `mbid` was null before the
+# run; `UPDATE artists SET mbid = NULL` restores the pre-backfill state, since
+# nothing else writes `mbid` yet.
+name: Artist MBID backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write the fills. Unticked is a dry run that writes nothing.'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mb-artists-refresh-staging
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    name: Artist MBID backfill (staging)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: staging
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the db package's dependencies
+        run: pnpm exec turbo run build --filter=@concert-crawl/db^...
+
+      - name: Verify configuration
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: |
+          if [ -z "$DATABASE_URL_DIRECT" ]; then
+            echo "Missing staging-environment secret: DATABASE_URL_DIRECT"; exit 1
+          fi
+          if [[ "$DATABASE_URL_DIRECT" == *-pooler.* ]]; then
+            echo "DATABASE_URL_DIRECT points at a -pooler host. The backfill needs the direct URL."; exit 1
+          fi
+
+      - name: Backfill
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          args=(--summary-file="$GITHUB_STEP_SUMMARY")
+          if [ "$APPLY" = "true" ]; then args+=(--apply); fi
+          pnpm --filter @concert-crawl/db run db:backfill-artist-mbids -- "${args[@]}"
