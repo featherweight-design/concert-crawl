@@ -84,7 +84,11 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     () => new Map(),
   );
   useEffect(() => {
-    if (!open) setPreview(null);
+    if (!open) {
+      setPreview(null);
+      // Closed: what was followed here may be undone elsewhere before it reopens.
+      setFollowed((prev) => (prev.size === 0 ? prev : new Map()));
+    }
   }, [open]);
   // `null` is an unfollow in the drill-in: the act reads as unfollowed again.
   const rememberFollowed = useCallback((mbid: string, slug: string | null) => {
@@ -427,6 +431,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           <SearchTypedBody
             search={shown}
             onOpenPreview={setPreview}
+            onFollowed={rememberFollowed}
             useVenueFirst
             selectedIdx={selectedIdx}
             onHover={select}

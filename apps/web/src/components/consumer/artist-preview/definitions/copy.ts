@@ -7,9 +7,6 @@ export const ARTIST_PREVIEW_COPY = {
   eyebrow: 'Artist',
   typeLabel: 'Type',
   fromLabel: 'From',
-  // MusicBrainz's Person and Group, in a fan's words.
-  typePerson: 'Solo artist',
-  typeGroup: 'Band',
   // The one-line card. Bold lead, then what a follow is for. It does not
   // promise a notification: a follow delivers none (the page's honesty rail).
   notOnABillLead: 'Not on a Denver bill yet.',

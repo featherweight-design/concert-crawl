@@ -10,7 +10,7 @@
 // there is no `unavailable` state to render instead. A MusicBrainz-only act
 // (kind 3, no slug) has no page to open: its name half opens the preview.
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import { FollowErrorMessage } from '@/components/consumer/artist-page/FollowErrorMessage';
@@ -113,6 +113,11 @@ interface ArtistResultRowProps {
   iconOnly: boolean;
   /** The typed query, lit in the name (B19). */
   query?: string;
+  /**
+   * A MusicBrainz-only act's follow changed: its slug once followed, null once
+   * unfollowed. The palette keeps this so its drill-in agrees with the row.
+   */
+  onFollowed?: (mbid: string, slug: string | null) => void;
 }
 
 export const ArtistResultRow = ({
@@ -127,8 +132,16 @@ export const ArtistResultRow = ({
   size,
   iconOnly,
   query,
+  onFollowed,
 }: ArtistResultRowProps) => {
   const follow = useArtistFollow(artist.slug, artist.following, artist.mbid);
+  const { mbid } = artist;
+  const { slug: followSlug, following: isFollowing } = follow;
+  useEffect(() => {
+    if (onFollowed && artist.slug === null && mbid && followSlug) {
+      onFollowed(mbid, isFollowing ? followSlug : null);
+    }
+  }, [onFollowed, artist.slug, mbid, followSlug, isFollowing]);
   // A MusicBrainz-only act has no page, so its name half opens the preview
   // (addendum 13) instead of navigating. The preview reads this row's follow
   // state, so the row and the sheet never disagree.

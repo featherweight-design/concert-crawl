@@ -218,6 +218,7 @@ describe('useArtistFollow', () => {
       expect(post.mock.calls[0]?.[2]).toEqual({ mbid: 'mbid-1' });
       await waitFor(() => expect(result.current.pending).toBe(false));
       expect(result.current.following).toBe(true);
+      expect(result.current.slug).toBe('new-act');
 
       del.mockResolvedValueOnce({ following: false });
       act(() => {
