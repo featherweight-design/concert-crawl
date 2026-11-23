@@ -3,13 +3,51 @@
 import { useCallback, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 
-import { apiClient } from '@/lib/api';
+import { ApiError, apiClient } from '@/lib/api';
 import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
+
+/**
+ * The four refusals a follow can come back with that the viewer can act on
+ * (addendum 13 section 2). `not_found` and `name_held` are final, so the
+ * control greys out; the other two leave it live for a retry. Anything else
+ * (a network error, a 5xx that is not 503) rolls back with no message, as it
+ * always has.
+ */
+export type FollowError =
+  | { kind: 'not_found' }
+  | { kind: 'name_held' }
+  | { kind: 'rate_limited'; retryAt: Date }
+  | { kind: 'unavailable' };
+
+/** A retry cannot succeed, so the Follow beside the message greys out. */
+export const followErrorIsFinal = (error: FollowError | null): boolean =>
+  error?.kind === 'not_found' || error?.kind === 'name_held';
+
+const followErrorFor = (err: unknown): FollowError | null => {
+  if (!(err instanceof ApiError)) return null;
+  switch (err.status) {
+    case 404:
+      return { kind: 'not_found' };
+    case 409:
+      return { kind: 'name_held' };
+    case 429:
+      return {
+        kind: 'rate_limited',
+        retryAt: new Date(Date.now() + (err.retryAfterSeconds ?? 3600) * 1000),
+      };
+    case 503:
+      return { kind: 'unavailable' };
+    default:
+      return null;
+  }
+};
 
 interface ArtistFollowResult {
   following: boolean;
   /** True while a request is in flight — a second click is swallowed. */
   pending: boolean;
+  /** The last refusal, until the next tap. The state has already rolled back. */
+  error: FollowError | null;
   toggle: () => void;
 }
 
@@ -34,6 +72,7 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
   const invalidateFollowedNames = useInvalidateFollowedArtistNames();
   const [following, setFollowing] = useState(initialFollowing);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<FollowError | null>(null);
   const inFlight = useRef(false);
 
   // The server's answer can change under a mounted hook: the sign-in replay
@@ -52,6 +91,7 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
     if (inFlight.current) return;
     inFlight.current = true;
     setPending(true);
+    setError(null);
 
     const previous = following;
     const next = !previous;
@@ -75,6 +115,7 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
         invalidateFollowedNames();
       } catch (err) {
         setFollowing(previous);
+        setError(followErrorFor(err));
         // Following is free on every signed-in plan, so a 403 is an ordinary
         // failure: it rolls back like any other, with no upgrade path.
         console.warn('artist follow toggle failed; rolling back', err);
@@ -85,6 +126,6 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
     })();
   }, [following, getToken, slug, invalidateFollowedNames]);
 
-  const result: ArtistFollowResult = { following, pending, toggle };
+  const result: ArtistFollowResult = { following, pending, error, toggle };
   return result;
 };

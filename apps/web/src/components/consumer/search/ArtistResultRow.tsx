@@ -13,7 +13,11 @@
 
 import type { ArtistSearchResult } from '@concert-crawl/types';
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
-import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
+import { FollowErrorMessage } from '@/components/consumer/artist-page/FollowErrorMessage';
+import {
+  followErrorIsFinal,
+  useArtistFollow,
+} from '@/components/consumer/artist-page/lib/use-artist-follow';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { AvatarSlot } from '@/components/consumer/image-slot';
 import { GenreChips } from '../GenreChips';
@@ -142,20 +146,35 @@ export const ArtistResultRow = ({
               "Artists" row this is, on one line as B+ draws it. The no-dates
               line is quieter than a real count, not louder: it is an absence,
               and the live button beside it is the point. */}
-          <span style={RESULT_META_STYLE}>
-            <span
+          {follow.error ? (
+            // The refusal replaces the second line and may wrap to two, so
+            // the row grows rather than clipping the words (addendum 13 s2).
+            <FollowErrorMessage
+              error={follow.error}
+              variant="row"
               style={{
-                color:
-                  artist.upcomingShowCount > 0
-                    ? 'var(--fg-muted)'
-                    : 'var(--fg-subtle)',
+                ...RESULT_META_STYLE,
+                display: 'flex',
+                whiteSpace: 'normal',
+                overflow: 'visible',
               }}
-            >
-              {meta}
+            />
+          ) : (
+            <span style={RESULT_META_STYLE}>
+              <span
+                style={{
+                  color:
+                    artist.upcomingShowCount > 0
+                      ? 'var(--fg-muted)'
+                      : 'var(--fg-subtle)',
+                }}
+              >
+                {meta}
+              </span>
+              {' · '}
+              <span>{copy.artistPageRowTag}</span>
             </span>
-            {' · '}
-            <span>{copy.artistPageRowTag}</span>
-          </span>
+          )}
           <GenreChips genres={genres} maxChips={1} />
         </span>
       </button>
@@ -166,6 +185,7 @@ export const ArtistResultRow = ({
         signedOut={signedOut}
         size={size}
         iconOnly={iconOnly}
+        disabled={followErrorIsFinal(follow.error)}
         onToggle={resolving ? () => undefined : follow.toggle}
       />
     </div>

@@ -3,6 +3,8 @@
 import React from 'react';
 
 import { ARTIST_COPY } from './definitions/copy';
+import { FollowErrorMessage } from './FollowErrorMessage';
+import { followErrorIsFinal, type FollowError } from './lib/use-artist-follow';
 import {
   FollowButton,
   type FollowButtonBaseProps,
@@ -11,8 +13,14 @@ import {
 
 // Omit the base, then re-attach the lock union: `Omit` over a union is not
 // distributive and would flatten it back into two optionals.
-type FollowBlockProps = Omit<FollowButtonBaseProps, 'size' | 'tone' | 'full'> &
-  FollowButtonLockProps;
+type FollowBlockProps = Omit<
+  FollowButtonBaseProps,
+  'size' | 'tone' | 'full' | 'disabled'
+> &
+  FollowButtonLockProps & {
+    /** The last refusal: replaces the pitch, and greys the Follow if final. */
+    error?: FollowError | null;
+  };
 
 /**
  * The full-width follow bar plus the one line that says what a follow actually
@@ -20,7 +28,8 @@ type FollowBlockProps = Omit<FollowButtonBaseProps, 'size' | 'tone' | 'full'> &
  * an automatic entry in Watching, because a manual follow delivers neither.
  */
 export const FollowBlock = (props: FollowBlockProps) => {
-  const { following, signedOut, locked = false } = props;
+  const { error = null, ...buttonProps } = props;
+  const { following, signedOut, locked = false } = buttonProps;
   // A locked plan cannot be following, whatever the prop says, so it never gets
   // the "you're following" line.
   const pitch = signedOut
@@ -31,7 +40,13 @@ export const FollowBlock = (props: FollowBlockProps) => {
 
   return (
     <div>
-      <FollowButton {...props} size="primary" tone="hero" full />
+      <FollowButton
+        {...buttonProps}
+        size="primary"
+        tone="hero"
+        full
+        disabled={followErrorIsFinal(error)}
+      />
       <p
         data-follow-pitch=""
         style={{
@@ -47,7 +62,15 @@ export const FollowBlock = (props: FollowBlockProps) => {
           textWrap: 'pretty',
         }}
       >
-        {pitch}
+        {error ? (
+          <FollowErrorMessage
+            error={error}
+            variant="page"
+            style={{ textAlign: 'left' }}
+          />
+        ) : (
+          pitch
+        )}
       </p>
     </div>
   );

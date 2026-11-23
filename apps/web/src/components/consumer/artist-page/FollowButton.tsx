@@ -69,6 +69,11 @@ export interface FollowButtonBaseProps {
    */
   iconOnly?: boolean;
   /**
+   * A refusal a retry cannot fix (404, 409): the control greys out and takes
+   * no tap. Native `disabled`, because there is nothing left to offer.
+   */
+  disabled?: boolean;
+  /**
    * Signed-in activation. Never called while signed out or locked. The caller
    * owns optimism — `useArtistFollow` flips its own state before the request
    * and reconciles to the server's answer, which it has to, because unfollow
@@ -108,6 +113,7 @@ export const FollowButton = (props: FollowButtonProps) => {
     tone = 'quiet',
     full = false,
     iconOnly = false,
+    disabled = false,
     onToggle,
   } = props;
   const locked = props.locked === true;
@@ -205,7 +211,8 @@ export const FollowButton = (props: FollowButtonProps) => {
   const style: React.CSSProperties = {
     all: 'unset',
     boxSizing: 'border-box',
-    cursor: 'pointer',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.45 : 1,
     // The hit overlay below is absolute against this.
     position: 'relative',
     display: 'inline-flex',
@@ -262,6 +269,7 @@ export const FollowButton = (props: FollowButtonProps) => {
         // puts it back. A :focus-visible rule cannot be expressed inline.
         className="ap-follow"
         onClick={onClick}
+        disabled={disabled}
         // Signed out and locked this is a dialog trigger, not a toggle —
         // `aria-pressed` is omitted entirely rather than set to false, which
         // would announce an off switch the visitor cannot turn on.

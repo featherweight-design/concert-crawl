@@ -35,20 +35,29 @@ vi.mock(
   },
 );
 
-const { toggle } = vi.hoisted(() => ({ toggle: vi.fn() }));
-vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
-  useArtistFollow: () => ({
-    following: false,
-    pending: false,
-    toggle,
-  }),
+const { toggle, follow } = vi.hoisted(() => ({
+  toggle: vi.fn(),
+  follow: { error: null as unknown },
 }));
+vi.mock(
+  '@/components/consumer/artist-page/lib/use-artist-follow',
+  async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    useArtistFollow: () => ({
+      following: false,
+      pending: false,
+      error: follow.error,
+      toggle,
+    }),
+  }),
+);
 
 import { ArtistResultRow } from './ArtistResultRow';
 
 afterEach(() => {
   cleanup();
   toggle.mockClear();
+  follow.error = null;
 });
 
 const ARTIST: ArtistSearchResult = {
@@ -129,5 +138,30 @@ describe('<ArtistResultRow /> imagery', () => {
 
     expect(container.querySelector('img')).toBeNull();
     expect(container.querySelector('svg')).not.toBeNull();
+  });
+});
+
+describe('<ArtistResultRow /> follow refusals', () => {
+  it('replaces the second line with the refusal and greys a final one', () => {
+    follow.error = { kind: 'name_held' };
+    const { container } = renderRow(ARTIST, true);
+    expect(
+      screen.getByText("Can't follow: another act we list has this name."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Hi-Dive/)).toBeNull();
+    expect(
+      container.querySelector('[data-follow-error="name_held"]'),
+    ).toBeTruthy();
+  });
+
+  it('names a rate-limited wait as a clock time', () => {
+    follow.error = {
+      kind: 'rate_limited',
+      retryAt: new Date('2027-01-01T21:15:00Z'),
+    };
+    renderRow(ARTIST, true);
+    expect(screen.getByRole('status').textContent).toMatch(
+      /Lots of follows this hour\. Try again at \d{1,2}:15/,
+    );
   });
 });

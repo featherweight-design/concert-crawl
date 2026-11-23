@@ -1,0 +1,229 @@
+{
+  "feature": "U1 follow errors on a search row",
+  "note": "Plan docs/superpowers/plans/2026-11-23-artist-search-ui.md. Boards: addendum-13/boards/02-follow-errors. Search and follow responses are mocked (route verb); the 429 has no Retry-After header, so it shows the one-hour fallback time. Walk by hand: no-shows artist page error (needs an artist with no shows and a refused follow), 429 with a real Retry-After.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "widths": [
+    {
+      "label": "xs",
+      "width": 320,
+      "height": 700,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 800
+    }
+  ],
+  "rows": [
+    {
+      "id": "row-404",
+      "label": "/search row: 404 not found",
+      "steps": [
+        {
+          "goto": "/search",
+          "wait": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "settle": 2500
+        },
+        {
+          "route": "**/v1/search/artists*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "name": "Wax Harbour",
+                "slug": "wax-harbour",
+                "photoUrl": null,
+                "upcomingShowCount": 0,
+                "nextShow": null,
+                "following": false
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/artists/wax-harbour/follow",
+          "status": 404,
+          "body": {
+            "success": false,
+            "error": "Artist not found"
+          },
+          "settle": 0
+        },
+        {
+          "fill": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "text": "wax"
+        },
+        {
+          "wait": "button[aria-label=\"Follow Wax Harbour\"]"
+        },
+        {
+          "click": "button[aria-label=\"Follow Wax Harbour\"]",
+          "settle": 800
+        },
+        {
+          "wait": "[data-follow-error]"
+        }
+      ]
+    },
+    {
+      "id": "row-409",
+      "label": "/search row: 409 name held",
+      "steps": [
+        {
+          "goto": "/search",
+          "wait": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "settle": 2500
+        },
+        {
+          "route": "**/v1/search/artists*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "name": "Wax Harbour",
+                "slug": "wax-harbour",
+                "photoUrl": null,
+                "upcomingShowCount": 0,
+                "nextShow": null,
+                "following": false
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/artists/wax-harbour/follow",
+          "status": 409,
+          "body": {
+            "success": false,
+            "error": "Name held"
+          },
+          "settle": 0
+        },
+        {
+          "fill": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "text": "wax"
+        },
+        {
+          "wait": "button[aria-label=\"Follow Wax Harbour\"]"
+        },
+        {
+          "click": "button[aria-label=\"Follow Wax Harbour\"]",
+          "settle": 800
+        },
+        {
+          "wait": "[data-follow-error]"
+        }
+      ]
+    },
+    {
+      "id": "row-429",
+      "label": "/search row: 429 rate limited",
+      "steps": [
+        {
+          "goto": "/search",
+          "wait": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "settle": 2500
+        },
+        {
+          "route": "**/v1/search/artists*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "name": "Wax Harbour",
+                "slug": "wax-harbour",
+                "photoUrl": null,
+                "upcomingShowCount": 0,
+                "nextShow": null,
+                "following": false
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/artists/wax-harbour/follow",
+          "status": 429,
+          "body": {
+            "success": false,
+            "error": "Too many requests"
+          },
+          "settle": 0
+        },
+        {
+          "fill": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "text": "wax"
+        },
+        {
+          "wait": "button[aria-label=\"Follow Wax Harbour\"]"
+        },
+        {
+          "click": "button[aria-label=\"Follow Wax Harbour\"]",
+          "settle": 800
+        },
+        {
+          "wait": "[data-follow-error]"
+        }
+      ]
+    },
+    {
+      "id": "row-503",
+      "label": "/search row: 503 try again",
+      "steps": [
+        {
+          "goto": "/search",
+          "wait": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "settle": 2500
+        },
+        {
+          "route": "**/v1/search/artists*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "name": "Wax Harbour",
+                "slug": "wax-harbour",
+                "photoUrl": null,
+                "upcomingShowCount": 0,
+                "nextShow": null,
+                "following": false
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/artists/wax-harbour/follow",
+          "status": 503,
+          "body": {
+            "success": false,
+            "error": "Try again"
+          },
+          "settle": 0
+        },
+        {
+          "fill": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "text": "wax"
+        },
+        {
+          "wait": "button[aria-label=\"Follow Wax Harbour\"]"
+        },
+        {
+          "click": "button[aria-label=\"Follow Wax Harbour\"]",
+          "settle": 800
+        },
+        {
+          "wait": "[data-follow-error]"
+        }
+      ]
+    }
+  ]
+}
