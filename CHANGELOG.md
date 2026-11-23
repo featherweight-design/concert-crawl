@@ -1,3 +1,10 @@
+# [1.549.0](https://github.com/featherweight-design/concert-crawl/compare/v1.548.0...v1.549.0) (2026-11-23)
+
+
+### Features
+
+* **web:** save the Add a venue draft on Continue and resume it from ?id ([9ceb2c2](https://github.com/featherweight-design/concert-crawl/commit/9ceb2c23568c622f295bce7cf0911667ddebf78f))
+
 # [1.548.0](https://github.com/featherweight-design/concert-crawl/compare/v1.547.0...v1.548.0) (2026-11-23)
 
 
