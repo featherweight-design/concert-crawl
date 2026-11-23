@@ -1,3 +1,11 @@
+## [1.558.1](https://github.com/featherweight-design/concert-crawl/compare/v1.558.0...v1.558.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* **api:** give the artist photo refresh its own budget, oldest first ([722b245](https://github.com/featherweight-design/concert-crawl/commit/722b2457bbd6c4f5c54cff3f7dc64770da2b6679))
+* **api:** state the photo budget cap's limit, tie the invariant test to the real constants ([017803c](https://github.com/featherweight-design/concert-crawl/commit/017803ccde96c57a18d077a2058840bc6345782d))
+
 # [1.558.0](https://github.com/featherweight-design/concert-crawl/compare/v1.557.0...v1.558.0) (2026-11-23)
 
 
