@@ -198,15 +198,18 @@ export interface ArtistSearchAllResult extends Omit<
   hasShows: boolean;
 }
 
+/** Response body for POST/DELETE `/v1/artists/:slug/follow`. */
+export interface ArtistFollowResponse {
+  following: boolean;
+}
+
 /**
- * Response body for POST/DELETE `/v1/artists/:slug/follow` and POST
- * `/v1/artists/follow`. `slug` is set only by the MBID follow: the follow may
+ * Response body for POST `/v1/artists/follow` (follow by MBID). The follow may
  * have just created the artist's row, so the client learns the slug here, to
  * open the page and to unfollow (`DELETE /v1/artists/:slug/follow`).
  */
-export interface ArtistFollowResponse {
-  following: boolean;
-  slug?: string;
+export interface ArtistFollowByMbidResponse extends ArtistFollowResponse {
+  slug: string;
 }
 
 /**
