@@ -8,12 +8,15 @@
 // goes back to whatever opened it. ↑↓ walk the rows (the popular list before
 // anything is typed, the results after), and Enter opens the selected one.
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import { ChevronLeft, Search, X } from 'lucide-react';
 import { useSearch } from '../../../lib/search/useSearch';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { CCMark } from '@/components/brand/cc-mark';
 import { CCWordmark } from '@/components/brand/cc-wordmark';
+import { PalettePreview } from '../artist-preview/PalettePreview';
 import { SearchDefaultState } from '../search/SearchDefaultState';
 import { SearchKeepTyping } from '../search/SearchKeepTyping';
 import { SearchTypedBody } from '../search/SearchTypedBody';
@@ -69,7 +72,25 @@ const hintStyle: React.CSSProperties = {
 export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   const search = useSearch();
   const sheet = useMediaQuery(PALETTE_SHEET_QUERY);
+  const { isSignedIn } = useAuth();
   const [selectedIdx, setSelectedIdx] = useState(-1);
+  // The drill-in (addendum 13): a MusicBrainz-only act's preview in place of
+  // the list. `followed` remembers the acts followed there (mbid to slug), so
+  // the list shows them as ours when the palette steps back.
+  const [preview, setPreview] = useState<ArtistSearchAllResult | null>(null);
+  const previewRef = useRef<ArtistSearchAllResult | null>(null);
+  previewRef.current = preview;
+  const [followed, setFollowed] = useState<ReadonlyMap<string, string>>(
+    () => new Map(),
+  );
+  useEffect(() => {
+    if (!open) setPreview(null);
+  }, [open]);
+  const rememberFollowed = useCallback((mbid: string, slug: string) => {
+    setFollowed((prev) =>
+      prev.get(mbid) === slug ? prev : new Map(prev).set(mbid, slug),
+    );
+  }, []);
   const selectedIdxRef = useRef(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -210,11 +231,12 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
       const listCount = artistList.length;
       if (rawIdx < listCount) {
         const listed = artistList[rawIdx];
-        // A MusicBrainz-only act has no page yet: Enter does nothing until
-        // the preview (U3) gives it somewhere to go.
+        // A MusicBrainz-only act has no page yet: Enter drills into its preview.
         if (listed?.slug) {
           navigateTo('artistPage', { slug: listed.slug });
           onClose();
+        } else if (listed?.mbid) {
+          setPreview(listed);
         }
         return;
       }
@@ -243,7 +265,14 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        onClose();
+        // In the drill-in, the first Escape steps back to the results; the
+        // second closes.
+        if (previewRef.current) setPreview(null);
+        else onClose();
+      } else if (previewRef.current && event.key !== 'Tab') {
+        // The list's arrows and Enter mean nothing while the preview is up:
+        // its own controls take Enter.
+        return;
       } else if (event.key === 'Tab') {
         trapTab(event);
       } else if (event.key === 'ArrowDown') {
@@ -285,6 +314,20 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   ]);
 
   if (!open) return null;
+
+  // Acts followed in the drill-in read as ours when the list comes back: a
+  // slug and Following, exactly what the next query would return (kind 2).
+  const shown = followed.size
+    ? {
+        ...search,
+        artistList: artistList.map((act) => {
+          const slug = act.mbid ? followed.get(act.mbid) : undefined;
+          return act.slug === null && slug
+            ? { ...act, slug, following: true }
+            : act;
+        }),
+      }
+    : search;
 
   const input = (
     <input
@@ -339,7 +382,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     </button>
   ) : null;
 
-  const body = (
+  const listBody = (
     <ListboxRowsContext.Provider value>
       <div
         id={LISTBOX_ID}
@@ -370,7 +413,8 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         {browsing && query.trim().length === 1 && <SearchKeepTyping />}
         {!browsing && (
           <SearchTypedBody
-            search={search}
+            search={shown}
+            onOpenPreview={setPreview}
             useVenueFirst
             selectedIdx={selectedIdx}
             onHover={select}
@@ -383,6 +427,22 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         )}
       </div>
     </ListboxRowsContext.Provider>
+  );
+
+  const body = preview ? (
+    <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <PalettePreview
+        key={preview.mbid ?? preview.name}
+        artist={preview}
+        query={query}
+        isSignedIn={isSignedIn}
+        onBack={() => setPreview(null)}
+        onFollowed={rememberFollowed}
+        onOpenPage={onClose}
+      />
+    </div>
+  ) : (
+    listBody
   );
 
   if (sheet) {
