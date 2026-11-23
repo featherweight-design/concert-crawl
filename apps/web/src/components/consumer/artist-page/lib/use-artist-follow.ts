@@ -52,6 +52,8 @@ interface ArtistFollowResult {
   pending: boolean;
   /** The last refusal, until the next tap. The state has already rolled back. */
   error: FollowError | null;
+  /** The artist's slug: the one given, or the one a by-MBID follow created. */
+  slug: string | null;
   toggle: () => void;
 }
 
@@ -88,6 +90,7 @@ export const useArtistFollow = (
   const [error, setError] = useState<FollowError | null>(null);
   const inFlight = useRef(false);
   const knownSlug = useRef(slug);
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null);
 
   // The server's answer can change under a mounted hook: the sign-in replay
   // follows on arrival and then `router.refresh()`es, which re-renders with
@@ -129,6 +132,7 @@ export const useArtistFollow = (
             throw new Error('Unexpected follow response shape');
           }
           knownSlug.current = created;
+          setCreatedSlug(created);
         } else {
           const path = `/v1/artists/${heldSlug}/follow`;
           result = next
@@ -156,6 +160,12 @@ export const useArtistFollow = (
     })();
   }, [following, getToken, slug, mbid, invalidateFollowedNames]);
 
-  const result: ArtistFollowResult = { following, pending, error, toggle };
+  const result: ArtistFollowResult = {
+    following,
+    pending,
+    error,
+    slug: createdSlug ?? slug,
+    toggle,
+  };
   return result;
 };
