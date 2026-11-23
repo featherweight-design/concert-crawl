@@ -2,6 +2,8 @@
 
 The two surfaces that `docs/superpowers/plans/2026-11-22-artist-search-musicbrainz.md` (PR #805) says need Design before any UI PR: the artist search box, now searching our acts and the slim MusicBrainz copy as one list, and the artist page for an act with no shows, which today 404s.
 
+**Live canvas (source of truth for review):** https://claude.ai/artifact/GkFMLJRt91HVF3gmBFXuZS, two pages (Artist search, No-shows artist page), built from the same sources by `dc.py`.
+
 Boards are in `boards/` (HTML) and `screens/` (2x JPG), listed in `manifest.json`. Sources: project files `design/addendum-12/a12.py` (`python3 a12.py <dest>`, then `node render.js <dest>`). **All wording here is placeholder** for copy review. **Every act except Clipse is invented sample data**, and the Commons photo is a drawn stand-in, not a real file. `01/search-spec` means `screens/01-artist-search/search-spec.jpg`. The dashed pink outline on the boards only marks the piece under discussion; it is not UI.
 
 No new colours and no new motion: every colour is an existing B+ Electric token, and the skeletons use the existing loading treatment.
