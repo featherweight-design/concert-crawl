@@ -709,6 +709,13 @@
   flex-direction: column;
   gap: 30px;
 }
+/* Unlayered like .ap-block-side, so it wins over it; a Tailwind
+   `max-lg:hidden` utility sits in a layer and would lose. */
+@media (max-width: 1023.98px) {
+  .ap-block-side--desktop {
+    display: none;
+  }
+}
 .ap-block-past {
   margin-top: 30px;
 }
