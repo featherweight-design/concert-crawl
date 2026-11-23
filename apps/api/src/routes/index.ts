@@ -5,6 +5,7 @@ import { eventsRouter } from './events.js';
 import { venuesPublicRouter } from './venues-public.js';
 import { artistReportsRouter } from './artist-reports.js';
 import { artistsPublicRouter } from './artists-public.js';
+import { artistInfoRouter } from './artist-info.js';
 import {
   artistFollowsRouter,
   meArtistFollowsRouter,
@@ -49,6 +50,7 @@ export function registerRoutes(app: Hono) {
   // public read router, which must stay free of a 401 guard (#1115 PR-D).
   app.route('/v1/artists', artistFollowsRouter);
   app.route('/v1/artists', artistReportsRouter);
+  app.route('/v1/artists', artistInfoRouter);
   app.route('/v1/artists', artistsPublicRouter);
   app.route('/v1/submissions', submissionsRouter);
   app.route('/v1/waitlist', waitlistRouter);
