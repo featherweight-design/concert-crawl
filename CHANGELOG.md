@@ -1,3 +1,15 @@
+# [1.553.0](https://github.com/featherweight-design/concert-crawl/compare/v1.552.0...v1.553.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **db:** recheck backfill rows at write time and trust only matched Spotify ids ([26b1eb7](https://github.com/featherweight-design/concert-crawl/commit/26b1eb72b6a0ef5f3f582616916de7f8c6b6d8ec))
+
+
+### Features
+
+* **db:** backfill artists.mbid from the slim MusicBrainz copy ([2cef333](https://github.com/featherweight-design/concert-crawl/commit/2cef333aa45cbcb572913788c054d1adac16a6c2))
+
 # [1.552.0](https://github.com/featherweight-design/concert-crawl/compare/v1.551.0...v1.552.0) (2026-11-23)
 
 
