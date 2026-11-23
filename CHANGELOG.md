@@ -1,3 +1,10 @@
+# [1.557.0](https://github.com/featherweight-design/concert-crawl/compare/v1.556.0...v1.557.0) (2026-11-23)
+
+
+### Features
+
+* **api:** fetch chain and memo for artist info over Wikimedia (artist-search PR 6a-2) ([3360a7f](https://github.com/featherweight-design/concert-crawl/commit/3360a7fb7148b5e445b9c16ef85dbcf4b159d76a))
+
 # [1.556.0](https://github.com/featherweight-design/concert-crawl/compare/v1.555.0...v1.556.0) (2026-11-23)
 
 
