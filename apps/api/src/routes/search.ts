@@ -155,8 +155,8 @@ const artistSearchQuerySchema = z.string().trim().min(2).max(200);
 // search palette and the artist picker until the UI PR switches a caller.
 const artistSearchScopeSchema = z.enum(['shows', 'all']).default('shows');
 
-// A placeholder until Design's artist-search handoff sets the number.
-const ARTIST_SEARCH_ALL_LIMIT = 10;
+// The drawn cap (addendum 13): eight rows in the whole `scope=all` list.
+const ARTIST_SEARCH_ALL_LIMIT = 8;
 
 // pg_trgm indexes a pattern only when it holds a whole trigram. A two-character
 // "%ab%" has none, so the slim table's GIN indexes cannot help and the query
@@ -183,6 +183,14 @@ const topGenre = (tally: Map<string, number> | undefined): string | null => {
 // anywhere in the name or an alias. The alias match goes through the IMMUTABLE
 // wrapper `mb_artist_aliases_text()`, the expression the alias trigram index
 // is built on; `array_to_string()` here would read every row instead.
+// MusicBrainz's `type` is Person, Group, Orchestra, Choir, Character or Other.
+// The preview words only the first two; anything else reads as missing.
+const toArtistKind = (type: string | null): ArtistSearchAllResult['type'] => {
+  if (type === 'Person') return 'person';
+  if (type === 'Group') return 'group';
+  return null;
+};
+
 const searchMbArtists = async (
   query: string,
   limit: number,
@@ -201,6 +209,7 @@ const searchMbArtists = async (
       name: mbArtists.name,
       disambiguation: mbArtists.disambiguation,
       area: mbArtists.area,
+      type: mbArtists.type,
     })
     .from(mbArtists)
     .where(
@@ -232,6 +241,7 @@ const searchMbArtists = async (
     mbid: row.mbid,
     disambiguation: row.disambiguation,
     area: row.area,
+    type: toArtistKind(row.type),
     hasShows: false,
   }));
 };
@@ -455,6 +465,8 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
         ? (mbLines.get(row.mbid)?.disambiguation ?? null)
         : null,
       area: row.mbid ? (mbLines.get(row.mbid)?.area ?? null) : null,
+      // Ours open their page, not the preview, so nothing reads the kind.
+      type: null,
       hasShows: hasVisibleEvent.has(row.canonicalName),
     }));
     const mbRows = await searchMbArtists(

@@ -186,15 +186,27 @@ export interface ArtistSearchAllResult extends Omit<
   /** MusicBrainz's area name (a country, sometimes a city), when known. */
   area: string | null;
   /**
+   * MusicBrainz's kind of act, for the preview's TYPE line. Only a person or
+   * a group is carried; Orchestra, Choir, Character, Other and a missing
+   * value are null. Always null for one of our own artists.
+   */
+  type: 'person' | 'group' | null;
+  /**
    * Whether the act has at least one consumer-visible event, past or
    * upcoming: the same gate the default scope applies to every row.
    */
   hasShows: boolean;
 }
 
-/** Response body for POST/DELETE `/v1/artists/:slug/follow`. */
+/**
+ * Response body for POST/DELETE `/v1/artists/:slug/follow` and POST
+ * `/v1/artists/follow`. `slug` is set only by the MBID follow: the follow may
+ * have just created the artist's row, so the client learns the slug here, to
+ * open the page and to unfollow (`DELETE /v1/artists/:slug/follow`).
+ */
 export interface ArtistFollowResponse {
   following: boolean;
+  slug?: string;
 }
 
 /**
