@@ -60,3 +60,35 @@ A contract step (keying follows on MBID instead of `canonical_name`) is not plan
 - Search latency over our rows plus the slim table at the p95 the current search hits.
 - The dump's download size and the job's runtime on a GitHub-hosted runner (disk and the job time limit).
 - How many staging artists gain an MBID in PR 3, by match bucket.
+
+## Addendum 13 build: API-A and U3 (lane 9d)
+
+Source: `design/design_handoff_bplus_redesign/addendum-13/` (READINESS Yellow; it also answers addendum 12). Lane 47 owns U1 (follow errors), U2 (search lists) and U4 (no-shows page) and writes its own section; this one covers only the two PRs below. Neither PR adds a route, a migration or a feature switch.
+
+### Split
+
+| PR | Branch | Contents | Review | Depends on |
+| --- | --- | --- | --- | --- |
+| API-A | `feat/artist-search-api-a` | The three API changes below, with tests. Ships dark: no caller reads the new fields until U3 | risky (API route): `/code-review medium` + checklist | none |
+| U3 | `feat/artist-search-u3` | `ArtistPreview`: the tap on a MusicBrainz-only row. Release note on this PR, not on API-A | UI: `## Design review` + contact sheet, Claude review | API-A; rebases on whichever of U1 and U2 has merged |
+
+### API-A
+
+1. **`type` on MusicBrainz search rows.** `searchMbArtists` (`apps/api/src/routes/search.ts`) selects `mb_artists.type` and `ArtistSearchAllResult` (`packages/types/src/artist.ts`) gains `type: 'person' | 'group' | null`. MusicBrainz's `Person` maps to `'person'` and `Group` to `'group'`; every other value (Orchestra, Choir, Character, Other) and a missing one read `null`, which the preview drops ("each dropped when missing"). The words shown for the two values are copy, decided in U3 through copy-review, so the API carries a closed value and no label. Rows from our own half of the list (`ourRows`) read `null`: they open their page, not the preview.
+2. **Follow by MBID returns the slug.** `ArtistFollowResponse` becomes `{ following: boolean; slug?: string }`; `POST /v1/artists/follow` returns `{ following: true, slug }` with the slug of the row it reused or created, so Open their page has a target and the same session can unfollow with `DELETE /v1/artists/:slug/follow`. The slug follow and the delete are unchanged.
+3. **`ARTIST_SEARCH_ALL_LIMIT` 10 to 8**, the drawn cap (addendum 13, "Also settled"). `searchMbArtists` already takes the remainder after our rows, so the cap holds for the whole list.
+
+Tests: the mapping (Person, Group, other, null), our-half rows read `type: null`, the follow response carries the slug for a created row and for a reused row, and the cap is 8 for a query that matches more.
+
+### U3 inventory (route by viewport)
+
+| Surface | 320 / 360 / 390 | 1280 |
+| --- | --- | --- |
+| `/search` list, kind-3 row tap | Sheet (the built sheet, blue-to-pink top edge) | Centred card over the page (ModalShell) |
+| Command palette | n/a (phone has no palette) | Drill-in with a "Results for ..." back row; Esc goes back, a second Esc closes |
+
+Each surface is drawn unfollowed and Following (Following adds "Their dates will live on their page." and Open their page). Boards: `boards/01-musicbrainz-tap`. One `ArtistPreview` body serves all three surfaces and takes the search row and nothing else. Follow sits inside the preview. Signed out, Follow uses the existing Follow sign-in prompt. Unfollow from the Following preview goes through the page's Following toggle, by the slug the follow returned. No new route.
+
+### Out of scope
+
+Active years and the extra link pills (no data reload ruled), a page-by-MBID route, any new endpoint, the MusicBrainz production load and backfill. Two Hugh calls are open and do not block: unheld acts get a preview rather than a page, and whether 404 and 409 grey out Follow.
