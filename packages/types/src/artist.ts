@@ -162,10 +162,13 @@ export interface ArtistSearchResult {
 }
 
 /**
- * One row of `GET /v1/search/artists?scope=all` (artist-search plan PR 4): any
- * act the search box can offer, ours or MusicBrainz's. Rows come in one ranked
+ * One row of `GET /v1/search/artists?scope=all` (artist-search plan PR 4): an
+ * act the search box offers, ours or MusicBrainz's. Rows come in one ranked
  * list: our artists with shows, then our artists without shows, then acts from
- * the slim MusicBrainz table that no `artists` row holds yet.
+ * the slim MusicBrainz table whose MBID no `artists` row holds yet. Our half is
+ * drawn from the 25 best name matches, so it is not every act we hold. One of
+ * ours with no MBID can sit beside its own MusicBrainz act; `disambiguation`
+ * and `area` tell the two apart.
  *
  * Shares every field with `ArtistSearchResult` except `slug`, which is null
  * for a MusicBrainz-only act: it has no page until a follow creates its row.
