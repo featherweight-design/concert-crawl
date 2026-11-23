@@ -1,3 +1,15 @@
+# [1.551.0](https://github.com/featherweight-design/concert-crawl/compare/v1.550.0...v1.551.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **db:** pick the lowest relationship id and check every url row ([83d6c5d](https://github.com/featherweight-design/concert-crawl/commit/83d6c5d4bd58f34ed9cfc99e22f117fffa0a32b5))
+
+
+### Features
+
+* **db:** musicbrainz dump reader for the slim artist table ([64d265f](https://github.com/featherweight-design/concert-crawl/commit/64d265fcc101c9bd85319e3b7f218c896c97dce2))
+
 # [1.550.0](https://github.com/featherweight-design/concert-crawl/compare/v1.549.0...v1.550.0) (2026-11-23)
 
 
