@@ -408,7 +408,6 @@ describe('SearchPalette — artist list', () => {
   });
 
   it('opens the page, not the preview, for an act followed in the drill-in', () => {
-    createdSlug.value = 'clip';
     mockHookState.artistList = [
       makeArtist({
         name: 'Clip',
@@ -419,8 +418,11 @@ describe('SearchPalette — artist list', () => {
         hasShows: false,
       }),
     ];
-    render(<SearchPalette open onClose={onClose} />);
+    const view = render(<SearchPalette open onClose={onClose} />);
     fireEvent.keyDown(window, { key: 'Enter' });
+    // The follow lands inside the drill-in, then Esc steps back to the list.
+    createdSlug.value = 'clip';
+    view.rerender(<SearchPalette open onClose={onClose} />);
     fireEvent.keyDown(window, { key: 'Escape' });
 
     fireEvent.keyDown(window, { key: 'Enter' });
