@@ -1,11 +1,31 @@
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { z } from 'zod';
-import { db, artists, events, userEvents, venues } from '@concert-crawl/db';
+import {
+  db,
+  artists,
+  events,
+  mbArtists,
+  userEvents,
+  venues,
+} from '@concert-crawl/db';
 import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events';
-import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  isNull,
+  notExists,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { canonicalizeArtist } from '@concert-crawl/types';
-import type { ArtistSearchResult } from '@concert-crawl/types';
+import type {
+  ArtistSearchAllResult,
+  ArtistSearchResult,
+} from '@concert-crawl/types';
 import {
   loadFollowedCanonicalNames,
   loadNextShowByCanonical,
@@ -128,6 +148,21 @@ const UPCOMING_STATUSES = new Set(['upcoming', 'cancelled', 'postponed']);
 // repo's `id-length` rule bans as an object key.
 const artistSearchQuerySchema = z.string().trim().min(2).max(200);
 
+// `scope=all` is the artist-search box's list (artist-search plan PR 4): our
+// artists with shows, then ours without, then MusicBrainz acts from the slim
+// table. The default `shows` keeps the gated three-row garnish above for the
+// search palette and the artist picker until the UI PR switches a caller.
+const artistSearchScopeSchema = z.enum(['shows', 'all']).default('shows');
+
+// A placeholder until Design's artist-search handoff sets the number.
+const ARTIST_SEARCH_ALL_LIMIT = 10;
+
+// pg_trgm indexes a pattern only when it holds a whole trigram. A two-character
+// "%ab%" has none, so the slim table's GIN indexes cannot help and the query
+// would read every MusicBrainz row. Below three characters, `scope=all` lists
+// our own artists only.
+const MB_SEARCH_MIN_LENGTH = 3;
+
 // The most common genre in a tally; the first one counted wins a tie.
 const topGenre = (tally: Map<string, number> | undefined): string | null => {
   let best: string | null = null;
@@ -141,6 +176,65 @@ const topGenre = (tally: Map<string, number> | undefined): string | null => {
   return best;
 };
 
+// The slim MusicBrainz table's half of `scope=all`: acts no `artists` row
+// holds, because one that a row holds is already offered (or deliberately
+// hidden) as ours. Same ranking as ours: exact name, then prefix, then
+// anywhere in the name or an alias. The alias match goes through the IMMUTABLE
+// wrapper `mb_artist_aliases_text()`, the expression the alias trigram index
+// is built on; `array_to_string()` here would read every row instead.
+const searchMbArtists = async (
+  query: string,
+  limit: number,
+): Promise<ArtistSearchAllResult[]> => {
+  if (limit <= 0 || query.length < MB_SEARCH_MIN_LENGTH) return [];
+  const pattern = containsPattern(query);
+  const lowered = query.toLowerCase();
+  const mbRank = sql<number>`case
+      when lower(${mbArtists.name}) = ${lowered} then 0
+      when lower(${mbArtists.name}) like ${`${escapeLikePattern(lowered)}%`} then 1
+      else 2
+    end`;
+  const rows = await db
+    .select({
+      mbid: mbArtists.mbid,
+      name: mbArtists.name,
+      disambiguation: mbArtists.disambiguation,
+      area: mbArtists.area,
+    })
+    .from(mbArtists)
+    .where(
+      and(
+        or(
+          ilike(mbArtists.name, pattern),
+          sql`public.mb_artist_aliases_text(${mbArtists.aliases}) ilike ${pattern}`,
+        ),
+        notExists(
+          db
+            .select({ mbid: artists.mbid })
+            .from(artists)
+            .where(eq(artists.mbid, mbArtists.mbid)),
+        ),
+      ),
+    )
+    .orderBy(asc(mbRank), asc(mbArtists.name), asc(mbArtists.mbid))
+    .limit(limit);
+  return rows.map((row) => ({
+    name: row.name,
+    slug: null,
+    photoUrl: null,
+    upcomingShowCount: 0,
+    nextShow: null,
+    // A follow of an MBID creates its `artists` row (plan PR 5), which moves
+    // the act into our half of the list. An act still here has no follow.
+    following: false,
+    genre: null,
+    mbid: row.mbid,
+    disambiguation: row.disambiguation,
+    area: row.area,
+    hasShows: false,
+  }));
+};
+
 // GET /v1/search/artists?q= — artists with their own page, no auth required.
 // clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so a
 // signed-in caller gets `following` stamped on each row; anonymous requests
@@ -151,6 +245,11 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   if (!parsed.success) {
     return ctx.json({ success: false, error: 'Invalid search query' }, 400);
   }
+  const scopeParsed = artistSearchScopeSchema.safeParse(ctx.req.query('scope'));
+  if (!scopeParsed.success) {
+    return ctx.json({ success: false, error: 'Invalid search scope' }, 400);
+  }
+  const scope = scopeParsed.data;
   const query = parsed.data;
   const canonicalQuery = canonicalizeArtist(query);
   const pattern = containsPattern(query);
@@ -170,8 +269,15 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       slug: artists.slug,
       canonicalName: artists.canonicalName,
       photoUrl: servableArtistPhotoUrl(),
+      matchStatus: artists.matchStatus,
+      mbid: artists.mbid,
+      disambiguation: mbArtists.disambiguation,
+      area: mbArtists.area,
     })
     .from(artists)
+    // Only `scope=all` reads the MusicBrainz columns. A left join on the
+    // primary key, so it adds no rows and drops none.
+    .leftJoin(mbArtists, eq(mbArtists.mbid, artists.mbid))
     .where(
       and(
         or(ilike(artists.name, pattern), ilike(artists.canonicalName, pattern)),
@@ -183,7 +289,12 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
     .limit(ARTIST_CANDIDATE_LIMIT);
 
   if (candidates.length === 0) {
-    return ctx.json({ success: true, data: [] });
+    if (scope === 'shows') return ctx.json({ success: true, data: [] });
+    const data: ArtistSearchAllResult[] = await searchMbArtists(
+      query,
+      ARTIST_SEARCH_ALL_LIMIT,
+    );
+    return ctx.json({ success: true, data });
   }
 
   const canonicalNames = candidates.map((row) => row.canonicalName);
@@ -299,6 +410,44 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   const visible = candidates.filter((row) =>
     hasVisibleEvent.has(row.canonicalName),
   );
+
+  if (scope === 'all') {
+    // Ours with shows, then ours without. A row a human marked as no act at
+    // all (`not_an_artist`) has nothing to offer without shows, so it stays
+    // out, exactly as it would have no page to land on.
+    const withoutShows = candidates.filter(
+      (row) =>
+        !hasVisibleEvent.has(row.canonicalName) &&
+        row.matchStatus !== 'not_an_artist',
+    );
+    const ours = [...visible, ...withoutShows].slice(
+      0,
+      ARTIST_SEARCH_ALL_LIMIT,
+    );
+    const ourNextShows = await loadNextShowByCanonical(
+      ours.map((row) => row.canonicalName),
+    );
+    const ourRows: ArtistSearchAllResult[] = ours.map((row) => ({
+      name: row.name,
+      slug: row.slug,
+      photoUrl: row.photoUrl,
+      upcomingShowCount: upcomingCounts.get(row.canonicalName) ?? 0,
+      nextShow: ourNextShows.get(row.canonicalName) ?? null,
+      following: followed?.has(row.canonicalName) ?? false,
+      genre: topGenre(genreTallies.get(row.canonicalName)),
+      mbid: row.mbid,
+      disambiguation: row.disambiguation,
+      area: row.area,
+      hasShows: hasVisibleEvent.has(row.canonicalName),
+    }));
+    const mbRows = await searchMbArtists(
+      query,
+      ARTIST_SEARCH_ALL_LIMIT - ourRows.length,
+    );
+    const data: ArtistSearchAllResult[] = [...ourRows, ...mbRows];
+    return ctx.json({ success: true, data });
+  }
+
   const nextShows = await loadNextShowByCanonical(
     visible.slice(0, ARTIST_RESULT_LIMIT).map((row) => row.canonicalName),
   );

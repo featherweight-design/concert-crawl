@@ -161,6 +161,34 @@ export interface ArtistSearchResult {
   genre?: string | null;
 }
 
+/**
+ * One row of `GET /v1/search/artists?scope=all` (artist-search plan PR 4): any
+ * act the search box can offer, ours or MusicBrainz's. Rows come in one ranked
+ * list: our artists with shows, then our artists without shows, then acts from
+ * the slim MusicBrainz table that no `artists` row holds yet.
+ *
+ * Shares every field with `ArtistSearchResult` except `slug`, which is null
+ * for a MusicBrainz-only act: it has no page until a follow creates its row.
+ */
+export interface ArtistSearchAllResult extends Omit<
+  ArtistSearchResult,
+  'slug'
+> {
+  /** Null exactly for a MusicBrainz-only act (`hasShows` false, `mbid` set). */
+  slug: string | null;
+  /** The MusicBrainz identity, or null for one of our artists not yet matched. */
+  mbid: string | null;
+  /** MusicBrainz's line for telling same-named acts apart, when it has one. */
+  disambiguation: string | null;
+  /** MusicBrainz's area name (a country, sometimes a city), when known. */
+  area: string | null;
+  /**
+   * Whether the act has at least one consumer-visible event, past or
+   * upcoming: the same gate the default scope applies to every row.
+   */
+  hasShows: boolean;
+}
+
 /** Response body for POST/DELETE `/v1/artists/:slug/follow`. */
 export interface ArtistFollowResponse {
   following: boolean;
