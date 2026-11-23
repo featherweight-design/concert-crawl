@@ -2,12 +2,13 @@
 
 import { ChevronRight } from 'lucide-react';
 import { useAuth } from '@clerk/nextjs';
-import type { ArtistSearchResult } from '@concert-crawl/types';
+import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { ArtistResultRow } from './ArtistResultRow';
+import { isSharedName, sharedNames } from './artist-line';
 import { GenreChips } from '../GenreChips';
 import { VenueTile } from '../venue-glyph';
 import {
@@ -36,11 +37,10 @@ const copy = CONSUMER_COPY.search;
 interface SearchResultsStateProps {
   artistResults: ArtistResult[];
   /**
-   * #1115 PR-G — artists that have their own page. Rendered as its own section
-   * above the event-derived rows; optional so callers that predate the endpoint
-   * (and the tests for them) keep working unchanged.
+   * The artist list (addendum 12): ours and MusicBrainz's, ranked, kinds 1 to
+   * 3. It leads the results and owns the first keyboard indices.
    */
-  artistPageResults?: ArtistSearchResult[];
+  artistList?: ArtistSearchAllResult[];
   venueResults: VenueResult[];
   venueFirst?: boolean;
   /**
@@ -59,24 +59,20 @@ interface SearchResultsStateProps {
   ) => void;
 }
 
-// #1115 PR-G, extended by native following PR 5. Deliberately not folded into
-// ArtistSection: these rows carry a photo, an upcoming-show count, an "Artist
-// page" tag and a Follow button, and they route to `/artists/{slug}` rather
-// than a filtered browse — a reader has to be able to tell at a glance which of
-// the two an "Artists"-looking row is.
+// The one artist list (addendum 12). Kinds 1 and 2 open `/artists/{slug}`; a
+// MusicBrainz-only act (kind 3) has no page, so its row is Follow-only until
+// the preview lands (U3 joins at `onNavigate`).
 //
 // The section owns the gate and the sheet; the rows own their own follow state.
-// One sheet for the whole list, one entitlement read, and no row can open a
-// picker its neighbours disagree with.
-function ArtistPageSection({
-  artistPageResults,
+function ArtistListSection({
+  artistList,
   selectedIdx,
   baseIdx,
   query,
   onHover,
   onNavigateTo,
 }: {
-  artistPageResults: ArtistSearchResult[];
+  artistList: ArtistSearchAllResult[];
   selectedIdx: number;
   baseIdx: number;
   query?: string | undefined;
@@ -88,27 +84,32 @@ function ArtistPageSection({
   const iconOnly = useMediaQuery(SEARCH_FOLLOW_ICON_ONLY_QUERY);
   const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY);
 
-  if (artistPageResults.length === 0) return null;
+  if (artistList.length === 0) return null;
+  const shared = sharedNames(artistList);
   return (
     <>
       <SectionLabel
-        label={`${copy.artistPagesSectionPrefix} · ${artistPageResults.length}`}
+        label={`${copy.artistsSectionPrefix} · ${artistList.length}`}
       />
-      {artistPageResults.map((artist, idx) => {
+      {artistList.map((artist, idx) => {
         const itemIdx = baseIdx + idx;
         const hoverProps = onHover ? { onHover: () => onHover(itemIdx) } : {};
         return (
-          <div key={artist.slug}>
+          <div key={artist.slug ?? artist.mbid ?? artist.name}>
             <ArtistResultRow
               {...(query === undefined ? {} : { query })}
               artist={artist}
+              sharedName={isSharedName(shared, artist)}
               selected={selectedIdx === itemIdx}
               itemIdx={itemIdx}
               listbox={listbox}
               {...hoverProps}
-              onNavigate={() =>
-                onNavigateTo('artistPage', { slug: artist.slug })
-              }
+              {...(artist.slug === null
+                ? {}
+                : {
+                    onNavigate: () =>
+                      onNavigateTo('artistPage', { slug: artist.slug ?? '' }),
+                  })}
               isSignedIn={isSignedIn}
               size={isDesktop ? 'rowWide' : 'row'}
               iconOnly={iconOnly}
@@ -224,7 +225,7 @@ function ArtistSection({
   return (
     <>
       <SectionLabel
-        label={`${copy.artistsSectionPrefix} · ${artistResults.length}`}
+        label={`${copy.showsSectionPrefix} · ${artistResults.length}`}
       />
       {artistResults.map((artist, idx) => {
         const itemIdx = baseIdx + idx;
@@ -354,7 +355,7 @@ function VenueSection({
 
 export function SearchResultsState({
   artistResults,
-  artistPageResults = [],
+  artistList = [],
   venueResults,
   venueFirst = false,
   withExplainerRail = false,
@@ -368,15 +369,18 @@ export function SearchResultsState({
   // The explanation is owed whenever the list has artist rows to explain. With
   // none there is nothing to say, and an empty second column would just narrow
   // the shows. Only the SHAPE forks on viewport: a rail beside, a footnote below.
-  const explain = withExplainerRail && artistPageResults.length > 0;
+  const explain = withExplainerRail && artistList.length > 0;
   const showRail = explain && isDesktop;
 
-  // B+ draws Artists, Venues, then Artist pages (`more-r3-palette_typed`).
-  // `venueFirst` swaps the first two; the artist pages always close the list
-  // and own the keyboard indices after both.
-  const venueBaseIdx = venueFirst ? 0 : artistResults.length;
-  const artistBaseIdx = venueFirst ? venueResults.length : 0;
-  const pageBaseIdx = artistResults.length + venueResults.length;
+  // B+ draws Artists, Shows, then Venues. The artist list always leads and
+  // owns the first keyboard indices; `venueFirst` swaps Shows and Venues.
+  const listLength = artistList.length;
+  const showBaseIdx = venueFirst
+    ? listLength + venueResults.length
+    : listLength;
+  const venueBaseIdx = venueFirst
+    ? listLength
+    : listLength + artistResults.length;
 
   const hoverProp = onHover ? { onHover } : {};
   const queryProp = query === undefined ? {} : { query };
@@ -389,6 +393,14 @@ export function SearchResultsState({
         padding: '0 8px 10px',
       }}
     >
+      <ArtistListSection
+        artistList={artistList}
+        selectedIdx={selectedIdx}
+        baseIdx={0}
+        {...hoverProp}
+        {...queryProp}
+        onNavigateTo={(type, value) => onNavigateTo(type, value)}
+      />
       {venueFirst ? (
         <>
           <VenueSection
@@ -402,7 +414,7 @@ export function SearchResultsState({
           <ArtistSection
             artistResults={artistResults}
             selectedIdx={selectedIdx}
-            baseIdx={artistBaseIdx}
+            baseIdx={showBaseIdx}
             {...hoverProp}
             {...queryProp}
             onNavigateTo={(type, value) => onNavigateTo(type, value)}
@@ -413,7 +425,7 @@ export function SearchResultsState({
           <ArtistSection
             artistResults={artistResults}
             selectedIdx={selectedIdx}
-            baseIdx={artistBaseIdx}
+            baseIdx={showBaseIdx}
             {...hoverProp}
             {...queryProp}
             onNavigateTo={(type, value) => onNavigateTo(type, value)}
@@ -428,14 +440,6 @@ export function SearchResultsState({
           />
         </>
       )}
-      <ArtistPageSection
-        artistPageResults={artistPageResults}
-        selectedIdx={selectedIdx}
-        baseIdx={pageBaseIdx}
-        {...hoverProp}
-        {...queryProp}
-        onNavigateTo={(type, value) => onNavigateTo(type, value)}
-      />
       {explain && !isDesktop && <ExplainerFootnote />}
     </div>
   );

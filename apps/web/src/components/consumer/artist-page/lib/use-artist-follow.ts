@@ -71,13 +71,23 @@ const isFollowResponse = (value: unknown): value is { following: boolean } =>
   'following' in value &&
   typeof Reflect.get(value, 'following') === 'boolean';
 
-export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
+/**
+ * `slug` is null for a MusicBrainz-only act: it has no artist row until a
+ * follow creates one, so its first follow goes out by `mbid` and the answer
+ * carries the new slug, which a later unfollow uses.
+ */
+export const useArtistFollow = (
+  slug: string | null,
+  initialFollowing: boolean,
+  mbid: string | null = null,
+) => {
   const { getToken } = useAuth();
   const invalidateFollowedNames = useInvalidateFollowedArtistNames();
   const [following, setFollowing] = useState(initialFollowing);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<FollowError | null>(null);
   const inFlight = useRef(false);
+  const knownSlug = useRef(slug);
 
   // The server's answer can change under a mounted hook: the sign-in replay
   // follows on arrival and then `router.refresh()`es, which re-renders with
@@ -105,10 +115,26 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
       try {
         const token = await getToken();
         if (!token) throw new Error('Not authenticated');
-        const path = `/v1/artists/${slug}/follow`;
-        const result = next
-          ? await apiClient.post<unknown>(path, token, {})
-          : await apiClient.delete<unknown>(path, token);
+        const heldSlug = knownSlug.current ?? slug;
+        let result: unknown;
+        if (heldSlug === null) {
+          if (mbid === null) throw new Error('Nothing to follow');
+          result = await apiClient.post<unknown>('/v1/artists/follow', token, {
+            mbid,
+          });
+          const created = isFollowResponse(result)
+            ? Reflect.get(result, 'slug')
+            : undefined;
+          if (typeof created !== 'string') {
+            throw new Error('Unexpected follow response shape');
+          }
+          knownSlug.current = created;
+        } else {
+          const path = `/v1/artists/${heldSlug}/follow`;
+          result = next
+            ? await apiClient.post<unknown>(path, token, {})
+            : await apiClient.delete<unknown>(path, token);
+        }
         // A 2xx whose body we can't read is not a success we can act on —
         // keeping the optimistic guess would strand the UI out of sync with a
         // server we just failed to understand. Throw into the rollback below.
@@ -128,7 +154,7 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
         setPending(false);
       }
     })();
-  }, [following, getToken, slug, invalidateFollowedNames]);
+  }, [following, getToken, slug, mbid, invalidateFollowedNames]);
 
   const result: ArtistFollowResult = { following, pending, error, toggle };
   return result;

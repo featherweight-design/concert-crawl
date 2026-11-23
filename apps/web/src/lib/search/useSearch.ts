@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ArtistSearchResult, TierPriceBlock } from '@concert-crawl/types';
+import type {
+  ArtistSearchAllResult,
+  TierPriceBlock,
+} from '@concert-crawl/types';
 import { pickApprovedHeadline } from '@/components/consumer/price-region/lib/pick-headline';
 import { useAuthToken } from './useAuthToken';
 
@@ -124,8 +127,8 @@ const foldName = (text: string): string =>
  * Whether the query starts a venue's name, is the whole name, or reads on past
  * it ("bluebird", "red rocks", "bluebird theater tonight"). A word in the middle
  * of the name does not count. This is also what puts Venues ahead of Artists in
- * the results (`venueFirst`): the board's order is Artists, Venues, then Artist
- * pages, and only a query that names a venue from its start earns the swap.
+ * the results (`venueFirst`): the board's order is Artists, Shows, then Venues,
+ * and only a query that names a venue from its start puts Venues ahead of Shows.
  */
 export function venueLeadsQuery(venueName: string, query: string): boolean {
   const name = foldName(venueName);
@@ -200,9 +203,11 @@ export function useSearch() {
     getTokenRef.current = getToken;
   }, [getToken]);
 
-  const [artistPageResults, setArtistPageResults] = useState<
-    ArtistSearchResult[]
-  >([]);
+  // The artist list (addendum 12): our acts and MusicBrainz's in one ranked
+  // list, `scope=all`. Its own request, so its own failure.
+  const [artistList, setArtistList] = useState<ArtistSearchAllResult[]>([]);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [venueResults, setVenueResults] = useState<VenueResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -239,13 +244,15 @@ export function useSearch() {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setArtistResults([]);
-      setArtistPageResults([]);
+      setArtistList([]);
       setVenueResults([]);
       setIsLoading(false);
+      setFailed(false);
       return;
     }
 
     setIsLoading(true);
+    setFailed(false);
     debounceRef.current = setTimeout(() => {
       const controller = new AbortController();
       abortRef.current = controller;
@@ -254,54 +261,51 @@ export function useSearch() {
       // or failed request would otherwise leave rows from the old query on
       // screen once isLoading flips false.
       setArtistResults([]);
-      setArtistPageResults([]);
+      setArtistList([]);
       setVenueResults([]);
       void (async () => {
         try {
           const token = await getTokenRef.current();
-          fetch(
+          const headers: HeadersInit = token
+            ? { Authorization: `Bearer ${token}` }
+            : {};
+          const settle = (request: Promise<unknown>) =>
+            request.catch((err: unknown) => {
+              if (err instanceof DOMException && err.name === 'AbortError') {
+                return;
+              }
+              console.error(err);
+              if (!controller.signal.aborted) setFailed(true);
+            });
+
+          const shows = fetch(
             `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
-            {
-              signal: controller.signal,
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            },
+            { signal: controller.signal, headers },
           )
             .then((res) => res.json())
             .then((body: { success: boolean; data: { data: EventRow[] } }) => {
-              if (body.success) {
-                setArtistResults(deriveArtistResults(body.data.data));
-                setVenueResults(deriveVenueResults(body.data.data, trimmed));
-              }
-            })
-            .catch((err: unknown) => {
-              if (err instanceof DOMException && err.name === 'AbortError')
-                return;
-              console.error(err);
-            })
-            .finally(() => {
-              if (!controller.signal.aborted) setIsLoading(false);
+              if (!body.success) throw new Error('events search failed');
+              setArtistResults(deriveArtistResults(body.data.data));
+              setVenueResults(deriveVenueResults(body.data.data, trimmed));
             });
 
-          // #1115 PR-G — artist pages, fetched alongside (not chained after)
-          // the event query. It is a garnish on a search whose primary answer
-          // is shows, so it shares the abort signal but never gates isLoading:
-          // a slow or failed artist lookup must not hold back the event rows.
-          fetch(
-            `${API_URL}/v1/search/artists?q=${encodeURIComponent(trimmed)}`,
-            {
-              signal: controller.signal,
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            },
+          const artists = fetch(
+            `${API_URL}/v1/search/artists?q=${encodeURIComponent(trimmed)}&scope=all`,
+            { signal: controller.signal, headers },
           )
             .then((res) => res.json())
-            .then((body: { success: boolean; data: ArtistSearchResult[] }) => {
-              if (body.success) setArtistPageResults(body.data);
-            })
-            .catch((err: unknown) => {
-              if (err instanceof DOMException && err.name === 'AbortError')
-                return;
-              console.error(err);
-            });
+            .then(
+              (body: { success: boolean; data: ArtistSearchAllResult[] }) => {
+                if (!body.success) throw new Error('artist search failed');
+                setArtistList(body.data);
+              },
+            );
+
+          // Both sections gate the loading state: the artist list is the
+          // primary section now, not a garnish that lands later.
+          void Promise.all([settle(shows), settle(artists)]).then(() => {
+            if (!controller.signal.aborted) setIsLoading(false);
+          });
         } catch (err) {
           if (err instanceof DOMException && err.name === 'AbortError') return;
           console.error(err);
@@ -318,12 +322,14 @@ export function useSearch() {
     // unstable one makes this effect a function of the render rather than of
     // the query: it re-runs, aborts its own in-flight request and starts
     // another, which reads as a slow search rather than a bug.
-  }, [query]);
+  }, [query, attempt]);
+
+  const retry = useCallback(() => setAttempt((count) => count + 1), []);
 
   const clearQuery = useCallback(() => {
     setQuery('');
     setArtistResults([]);
-    setArtistPageResults([]);
+    setArtistList([]);
     setVenueResults([]);
   }, []);
 
@@ -375,10 +381,12 @@ export function useSearch() {
     removeRecent,
     popularEvents,
     artistResults,
-    artistPageResults,
+    artistList,
     venueResults,
     venueFirst,
     isLoading,
+    failed,
+    retry,
     navigateTo,
   };
 }
