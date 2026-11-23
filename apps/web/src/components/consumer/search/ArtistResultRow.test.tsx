@@ -53,6 +53,7 @@ vi.mock(
       following: false,
       pending: false,
       error: follow.error,
+      slug: null,
       toggle,
     }),
   }),
@@ -225,6 +226,7 @@ describe('<ArtistResultRow /> kinds', () => {
       { navigable: false },
     );
     expect(screen.getByText('Band · Baltimore')).toBeTruthy();
+    expect(screen.getByTestId('follow-stub')).toBeTruthy();
     stubMatchMedia(false);
     fireEvent.click(screen.getByRole('button', { name: /Turnstile/ }));
     expect(screen.getByText(ARTIST_PREVIEW_COPY.notOnABillLead)).toBeTruthy();

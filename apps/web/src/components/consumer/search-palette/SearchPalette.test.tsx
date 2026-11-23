@@ -57,9 +57,11 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
 }));
 // `createdSlug` stands in for the slug a by-MBID follow creates.
-const { createdSlug } = vi.hoisted(() => ({
-  createdSlug: { value: null as string | null },
-}));
+const { createdSlug } = vi.hoisted(
+  (): { createdSlug: { value: string | null } } => ({
+    createdSlug: { value: null },
+  }),
+);
 vi.mock(
   '@/components/consumer/artist-page/lib/use-artist-follow',
   async (importOriginal) => ({
@@ -398,6 +400,9 @@ describe('SearchPalette — artist list', () => {
     // The preview replaces the list; nothing navigated and nothing closed.
     expect(screen.getByText(/^Results for/)).toBeTruthy();
     expect(screen.getByText('Not on a Denver bill yet.')).toBeTruthy();
+    // Focus is on Follow, not the back row above it.
+    expect(document.activeElement?.tagName).toBe('BUTTON');
+    expect(document.activeElement?.textContent).toBe('Follow');
     expect(mockNavigateTo).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });

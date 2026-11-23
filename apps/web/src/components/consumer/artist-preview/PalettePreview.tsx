@@ -20,8 +20,8 @@ interface PalettePreviewProps {
   /** Clerk's answer, `undefined` while it is still resolving. */
   isSignedIn: boolean | undefined;
   onBack: () => void;
-  /** The act now has a page: remember its slug for the list. */
-  onFollowed: (mbid: string, slug: string) => void;
+  /** The act has a page: its slug for the list, or null once unfollowed. */
+  onFollowed: (mbid: string, slug: string | null) => void;
   /** Open their page was taken: the palette closes itself. */
   onOpenPage: () => void;
 }
@@ -35,6 +35,7 @@ export const PalettePreview = ({
   onOpenPage,
 }: PalettePreviewProps) => {
   const follow = useArtistFollow(null, artist.following, artist.mbid);
+  // The preview body only: the back row above it also holds a button.
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const resolving = isSignedIn === undefined;
   const signedOut = isSignedIn === false && !artist.following;
@@ -54,11 +55,11 @@ export const PalettePreview = ({
   const { mbid } = artist;
   const { slug, following } = follow;
   useEffect(() => {
-    if (mbid && slug && following) onFollowed(mbid, slug);
+    if (mbid && slug) onFollowed(mbid, following ? slug : null);
   }, [mbid, slug, following, onFollowed]);
 
   return (
-    <div ref={bodyRef} style={{ padding: '4px 16px 16px' }}>
+    <div style={{ padding: '4px 16px 16px' }}>
       <button
         type="button"
         onClick={onBack}
@@ -76,15 +77,17 @@ export const PalettePreview = ({
         <ChevronLeft size={16} strokeWidth={1.75} aria-hidden />
         {ARTIST_PREVIEW_COPY.backToResults(query.trim())}
       </button>
-      <ArtistPreview
-        artist={artist}
-        following={follow.following}
-        signedOut={signedOut}
-        onToggle={resolving ? () => undefined : follow.toggle}
-        error={follow.error}
-        pageHref={pageHref}
-        onOpenPage={onOpenPage}
-      />
+      <div ref={bodyRef}>
+        <ArtistPreview
+          artist={artist}
+          following={follow.following}
+          signedOut={signedOut}
+          onToggle={resolving ? () => undefined : follow.toggle}
+          error={follow.error}
+          pageHref={pageHref}
+          onOpenPage={onOpenPage}
+        />
+      </div>
     </div>
   );
 };
