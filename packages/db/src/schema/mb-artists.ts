@@ -49,18 +49,19 @@ export const mbArtists = pgTable(
     ),
     // mb_artist_aliases_text() is migration 0128's IMMUTABLE wrapper around
     // array_to_string(). A search must call it, not array_to_string(), or the
-    // planner cannot use these two alias indexes.
+    // planner cannot use these two alias indexes. Column names are written
+    // bare, as in the migration: an index expression takes no table prefix.
     aliasesTrgmIdx: index('mb_artists_aliases_trgm_idx').using(
       'gin',
-      sql`mb_artist_aliases_text(${table.aliases}) gin_trgm_ops`,
+      sql`public.mb_artist_aliases_text(aliases) gin_trgm_ops`,
     ),
     nameFtsIdx: index('mb_artists_name_fts_idx').using(
       'gin',
-      sql`to_tsvector('simple', ${table.name})`,
+      sql`to_tsvector('simple', name)`,
     ),
     aliasesFtsIdx: index('mb_artists_aliases_fts_idx').using(
       'gin',
-      sql`to_tsvector('simple', mb_artist_aliases_text(${table.aliases}))`,
+      sql`to_tsvector('simple', public.mb_artist_aliases_text(aliases))`,
     ),
   }),
 );
