@@ -15,7 +15,6 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { CCMark } from '@/components/brand/cc-mark';
 import { CCWordmark } from '@/components/brand/cc-wordmark';
 import { SearchDefaultState } from '../search/SearchDefaultState';
-import { SearchResultsState } from '../search/SearchResultsState';
 import { SearchKeepTyping } from '../search/SearchKeepTyping';
 import { SearchTypedBody } from '../search/SearchTypedBody';
 import {

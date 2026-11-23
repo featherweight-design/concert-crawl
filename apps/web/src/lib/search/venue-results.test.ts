@@ -80,7 +80,7 @@ describe('venue results answer to the venue name', () => {
   });
 });
 
-// The board orders Artists, Venues, Artist pages. Venues leads only when the
+// The board orders Artists, Shows, Venues. Venues leads only when the
 // query names a venue from its start (or whole): "red rocks", not "rocks".
 describe('venueLeadsQuery (venueFirst)', () => {
   it('leads for a query that starts the name or is the whole name', () => {

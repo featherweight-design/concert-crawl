@@ -204,6 +204,43 @@ describe('useArtistFollow', () => {
     expect(del).not.toHaveBeenCalled();
   });
 
+  describe('by mbid (slug null)', () => {
+    it('follows by mbid, then unfollows through the slug it learned', async () => {
+      post.mockResolvedValueOnce({ following: true, slug: 'new-act' });
+      const { result } = renderHook(() =>
+        useArtistFollow(null, false, 'mbid-1'),
+      );
+      act(() => {
+        result.current.toggle();
+      });
+      await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+      expect(post.mock.calls[0]?.[0]).toBe('/v1/artists/follow');
+      expect(post.mock.calls[0]?.[2]).toEqual({ mbid: 'mbid-1' });
+      await waitFor(() => expect(result.current.pending).toBe(false));
+      expect(result.current.following).toBe(true);
+
+      del.mockResolvedValueOnce({ following: false });
+      act(() => {
+        result.current.toggle();
+      });
+      await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+      expect(del.mock.calls[0]?.[0]).toBe('/v1/artists/new-act/follow');
+      await waitFor(() => expect(result.current.following).toBe(false));
+    });
+
+    it('rolls back when the answer carries no slug', async () => {
+      post.mockResolvedValueOnce({ following: true });
+      const { result } = renderHook(() =>
+        useArtistFollow(null, false, 'mbid-1'),
+      );
+      act(() => {
+        result.current.toggle();
+      });
+      await waitFor(() => expect(result.current.pending).toBe(false));
+      expect(result.current.following).toBe(false);
+    });
+  });
+
   describe('refusals', () => {
     const refuse = async (err: unknown) => {
       post.mockRejectedValueOnce(err);
