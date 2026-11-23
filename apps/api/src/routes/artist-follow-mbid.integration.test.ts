@@ -17,6 +17,7 @@ import { eq } from 'drizzle-orm';
 import { artists, mbArtists, userArtistFollows } from '@concert-crawl/db';
 import { pruneArtists } from '@concert-crawl/db/scripts/prune-artists';
 import { createApp } from '../app.js';
+import { MBID_FOLLOW_LIMIT } from './artist-follows.js';
 import { testDb } from '../test/helpers/db.js';
 import { clearTables, seedArtist } from '../test/helpers/seed.js';
 
@@ -166,6 +167,35 @@ describe('POST /v1/artists/follow — integration', () => {
     expect(await followRows()).toHaveLength(0);
   });
 
+  it('404s a hidden row holding the name with another MBID, never a 409', async () => {
+    authState.current = { userId: USER_ID };
+    await testDb.insert(mbArtists).values({ mbid: MBID, name: 'Big Thief' });
+    await seedArtist({ name: 'Big Thief', mbid: OTHER_MBID, hidden: true });
+
+    const res = await followMbid({ mbid: MBID });
+    expect(res.status).toBe(404);
+  });
+
+  it('404s a row a human ruled not an artist', async () => {
+    authState.current = { userId: USER_ID };
+    await testDb.insert(mbArtists).values({ mbid: MBID, name: 'Big Thief' });
+    await seedArtist({ name: 'Big Thief', matchStatus: 'not_an_artist' });
+
+    const res = await followMbid({ mbid: MBID });
+    expect(res.status).toBe(404);
+    expect(await followRows()).toHaveLength(0);
+  });
+
+  it('429s past the hourly limit', async () => {
+    authState.current = { userId: USER_ID };
+    for (let i = 0; i < MBID_FOLLOW_LIMIT; i++) {
+      expect((await followMbid({ mbid: MBID })).status).toBe(404);
+    }
+    const res = await followMbid({ mbid: MBID });
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).not.toBeNull();
+  });
+
   it('records the MBID on an existing slug follow of the same row', async () => {
     authState.current = { userId: USER_ID };
     await testDb.insert(mbArtists).values({ mbid: MBID, name: 'Big Thief' });
@@ -243,6 +273,26 @@ describe('a row an MBID follow holds', () => {
       .where(eq(userArtistFollows.userId, USER_ID));
     const freed = await pruneArtists(testDb, { dryRun: false });
     expect(freed.deleted).toBe(1);
+  });
+
+  it('serves the page of a no-MBID row followed by name', async () => {
+    await seedArtist({ name: 'Big Thief' });
+    await followMbid({ mbid: MBID });
+    const res = await app.request('/v1/artists/big-thief');
+    expect(res.status).toBe(200);
+  });
+
+  it('stops holding a row that later gains a different MBID', async () => {
+    const row = await seedArtist({ name: 'Big Thief' });
+    await followMbid({ mbid: MBID });
+    await testDb
+      .update(artists)
+      .set({ mbid: OTHER_MBID })
+      .where(eq(artists.id, row.id));
+
+    expect((await app.request('/v1/artists/big-thief')).status).toBe(404);
+    const result = await pruneArtists(testDb, { dryRun: false });
+    expect(result.deleted).toBe(1);
   });
 
   it('survives prune when followed by name onto a row with no MBID', async () => {

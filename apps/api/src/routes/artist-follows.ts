@@ -19,6 +19,7 @@ import type {
 } from '@concert-crawl/types';
 import { loadNextShowByCanonical } from '../lib/artist-follows.js';
 import { requireSignedIn } from '../middleware/auth.js';
+import { checkRateLimit } from '../lib/rate-limit.js';
 import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
 
 /**
@@ -130,6 +131,17 @@ const mbidValidator = zValidator('json', mbidBodySchema, (result, ctx) => {
   }
 });
 
+/**
+ * Follows by MBID per user per hour. A follow can create an `artists` row for
+ * any of the slim table's millions of acts, and that row then holds against
+ * prune and gets matched against Spotify, so the route is bounded before any
+ * client can call it. A placeholder until the search UI shows real use.
+ */
+export const MBID_FOLLOW_LIMIT = 30;
+const MBID_FOLLOW_WINDOW_MS = 60 * 60 * 1000;
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 interface FollowTarget {
   name: string;
   canonicalName: string;
@@ -148,7 +160,15 @@ const targetColumns = {
   spotifyArtistId: artists.spotifyArtistId,
   mbid: artists.mbid,
   hidden: artists.hidden,
+  matchStatus: artists.matchStatus,
 };
+
+/**
+ * No page, no follow: a row an admin hid (#1342) or ruled not an act reads as
+ * not found, exactly as it does on the artist page.
+ */
+const unfollowable = (row: { hidden: boolean; matchStatus: string }) =>
+  row.hidden || row.matchStatus === 'not_an_artist';
 
 /**
  * Finds the `artists` row a follow of this MBID lands on, without writing.
@@ -162,17 +182,18 @@ const targetColumns = {
  * is unique, so the follow is refused rather than merged into the wrong act
  * (orchestrator ruling, 2026-11-22). No row at all means one is created.
  */
-const lookUpTarget = async (mbid: string): Promise<TargetLookup> => {
-  const [byMbid] = await db
+const lookUpTarget = async (tx: Tx, mbid: string): Promise<TargetLookup> => {
+  const [byMbid] = await tx
     .select(targetColumns)
     .from(artists)
     .where(eq(artists.mbid, mbid));
   if (byMbid) {
-    // Hidden reads as not found, like the slug follow: no page, no follow.
-    return byMbid.hidden ? { kind: 'not_found' } : { kind: 'row', row: byMbid };
+    return unfollowable(byMbid)
+      ? { kind: 'not_found' }
+      : { kind: 'row', row: byMbid };
   }
 
-  const [act] = await db
+  const [act] = await tx
     .select({ name: mbArtists.name })
     .from(mbArtists)
     .where(eq(mbArtists.mbid, mbid));
@@ -181,13 +202,15 @@ const lookUpTarget = async (mbid: string): Promise<TargetLookup> => {
   const canonicalName = canonicalizeArtist(act.name);
   if (canonicalName === '') return { kind: 'not_found' };
 
-  const [byName] = await db
+  const [byName] = await tx
     .select(targetColumns)
     .from(artists)
     .where(eq(artists.canonicalName, canonicalName));
   if (!byName) return { kind: 'absent', name: act.name, canonicalName };
+  // Checked before the conflict, so a hidden row answers 404 whatever MBID it
+  // holds rather than confirming it exists with a 409.
+  if (unfollowable(byName)) return { kind: 'not_found' };
   if (byName.mbid !== null) return { kind: 'conflict' };
-  if (byName.hidden) return { kind: 'not_found' };
   return { kind: 'row', row: byName };
 };
 
@@ -197,6 +220,7 @@ const lookUpTarget = async (mbid: string): Promise<TargetLookup> => {
  * so the daily match job picks it up like any new row.
  */
 const createArtistRow = async (
+  tx: Tx,
   mbid: string,
   name: string,
   canonicalName: string,
@@ -205,7 +229,7 @@ const createArtistRow = async (
   const takenRows =
     base === ''
       ? []
-      : await db
+      : await tx
           .select({ slug: artists.slug })
           .from(artists)
           .where(or(eq(artists.slug, base), like(artists.slug, `${base}-%`)));
@@ -214,7 +238,7 @@ const createArtistRow = async (
     new Set(takenRows.map((row) => row.slug)),
     canonicalName,
   );
-  await db
+  await tx
     .insert(artists)
     .values({ name, canonicalName, slug, mbid })
     // Untargeted: a concurrent follow (or crawl write-through) may claim the
@@ -222,42 +246,33 @@ const createArtistRow = async (
     .onConflictDoNothing();
 };
 
+type FollowOutcome = 'followed' | 'not_found' | 'conflict' | 'retry';
+
 /**
- * POST /v1/artists/follow — follow a MusicBrainz act by MBID (artist-search
- * plan PR 5). The act may have no Denver show and no `artists` row yet.
- *
- * Dark until the search UI ships: no client calls it. To reverse it, remove
- * this route; the rows it wrote are ordinary manual follows plus `artists`
- * rows that the next prune run reaps once no MBID follow holds them.
+ * One transaction, so a new row and the follow that holds it commit together:
+ * a prune run between the two can never see the row unheld and reap it.
  */
-artistFollowsRouter.post(
-  '/follow',
-  requireSignedIn,
-  mbidValidator,
-  async (ctx) => {
-    const authInfo = getAuth(ctx);
-    if (!authInfo?.userId) return ctx.json(unauthorized, 401);
-
-    const { mbid } = ctx.req.valid('json');
-
-    let target = await lookUpTarget(mbid);
+const followByMbid = async (
+  userId: string,
+  mbid: string,
+): Promise<FollowOutcome> =>
+  db.transaction(async (tx) => {
+    let target = await lookUpTarget(tx, mbid);
     if (target.kind === 'absent') {
-      await createArtistRow(mbid, target.name, target.canonicalName);
-      target = await lookUpTarget(mbid);
+      await createArtistRow(tx, mbid, target.name, target.canonicalName);
+      target = await lookUpTarget(tx, mbid);
     }
-    if (target.kind === 'not_found') return ctx.json(notFound, 404);
-    if (target.kind === 'conflict') return ctx.json(conflict, 409);
-    if (target.kind === 'absent') {
-      // The insert lost a race on the slug alone and nothing holds the name:
-      // rare enough that a retry from the client is the right answer.
-      return ctx.json({ success: false, error: 'Try again' }, 503);
-    }
+    if (target.kind === 'not_found') return 'not_found';
+    if (target.kind === 'conflict') return 'conflict';
+    // The insert lost a race on the slug alone and nothing holds the name:
+    // rare enough that a retry from the client is the right answer.
+    if (target.kind === 'absent') return 'retry';
 
     const { row } = target;
-    await db
+    await tx
       .insert(userArtistFollows)
       .values({
-        userId: authInfo.userId,
+        userId,
         artistName: row.name,
         // The join key every follow reader uses, so it must be the row's own.
         canonicalName: row.canonicalName,
@@ -267,19 +282,59 @@ artistFollowsRouter.post(
       })
       .onConflictDoNothing();
 
-    // A user who followed this row by slug before now has its MBID recorded too,
-    // so the follow holds the row against prune like any MBID follow.
-    await db
+    // A user who followed this row by slug before now has its MBID recorded
+    // too, so the follow holds the row against prune like any MBID follow.
+    await tx
       .update(userArtistFollows)
       .set({ mbid })
       .where(
         and(
-          eq(userArtistFollows.userId, authInfo.userId),
+          eq(userArtistFollows.userId, userId),
           eq(userArtistFollows.canonicalName, row.canonicalName),
           eq(userArtistFollows.source, 'manual'),
           isNull(userArtistFollows.mbid),
         ),
       );
+    return 'followed';
+  });
+
+/**
+ * POST /v1/artists/follow — follow a MusicBrainz act by MBID (artist-search
+ * plan PR 5). The act may have no Denver show and no `artists` row yet.
+ *
+ * Dark until the search UI ships: no client calls it yet. To reverse it,
+ * remove this route and clear `user_artist_follows.mbid` (an expand-only
+ * column nothing else reads); the follows stay as ordinary manual follows, and
+ * the next prune run reaps the rows no event bills.
+ */
+artistFollowsRouter.post(
+  '/follow',
+  requireSignedIn,
+  mbidValidator,
+  async (ctx) => {
+    const authInfo = getAuth(ctx);
+    if (!authInfo?.userId) return ctx.json(unauthorized, 401);
+
+    const limit = await checkRateLimit(
+      `artist-follow-mbid:${authInfo.userId}`,
+      MBID_FOLLOW_LIMIT,
+      MBID_FOLLOW_WINDOW_MS,
+      // Fail closed: the limit is what bounds row creation, and the follow
+      // writes to the same database the limiter could not reach.
+      { onStoreError: 'deny', userId: authInfo.userId },
+    );
+    if (!limit.allowed) {
+      ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)));
+      return ctx.json({ success: false, error: 'Too many requests' }, 429);
+    }
+
+    const { mbid } = ctx.req.valid('json');
+    const outcome = await followByMbid(authInfo.userId, mbid);
+    if (outcome === 'not_found') return ctx.json(notFound, 404);
+    if (outcome === 'conflict') return ctx.json(conflict, 409);
+    if (outcome === 'retry') {
+      return ctx.json({ success: false, error: 'Try again' }, 503);
+    }
 
     const data: ArtistFollowResponse = { following: true };
     return ctx.json({ success: true, data });

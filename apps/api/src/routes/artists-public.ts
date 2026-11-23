@@ -330,7 +330,6 @@ artistsPublicRouter.get(
         spotifyArtistId: artists.spotifyArtistId,
         photoUrl: servableArtistPhotoUrl(),
         spotifyCandidates: artists.spotifyCandidates,
-        heldByMbidFollow: sql<boolean>`${heldByMbidFollow}`,
       })
       .from(artists)
       // A hidden row (#1342) answers exactly like a slug that never existed —
@@ -514,16 +513,25 @@ artistsPublicRouter.get(
     //
     // One exception: a row a follow made by MBID holds (artist-search plan
     // PR 5). Following an act before Denver bills it is the point of that
-    // follow, so its page answers with no shows. Only that dark endpoint
-    // writes such a follow, so no row reachable today changes.
-    if (shows.length === 0 && past.length === 0 && !artist.heldByMbidFollow) {
+    // follow, so its page answers with no shows. Only that endpoint writes
+    // such a follow, and no client calls it until the search UI ships. Read
+    // here rather than in the artist select, so a page with shows never pays
+    // for it.
+    if (shows.length === 0 && past.length === 0) {
       const [billed] = await db
         .select({ id: events.id })
         .from(events)
         .where(and(appearsOnBill, consumerVisible))
         .limit(1);
 
-      if (!billed) {
+      const [held] = billed
+        ? []
+        : await db
+            .select({ id: artists.id })
+            .from(artists)
+            .where(and(eq(artists.id, artist.id), heldByMbidFollow));
+
+      if (!billed && !held) {
         return ctx.json({ success: false, error: 'Artist not found' }, 404);
       }
     }
