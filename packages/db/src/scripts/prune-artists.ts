@@ -49,6 +49,7 @@
 
 import { sql } from 'drizzle-orm';
 import type { Database } from '../client.js';
+import { heldByMbidFollow } from '../artist-follow-hold.js';
 
 export interface PruneArtistsResult {
   /** Rows the predicate condemns. Equals `deleted` unless this was a dry run. */
@@ -200,11 +201,22 @@ const BILLED_IN_LIVE_TITLE = sql`
  */
 const HUMAN_RULED_NOT_AN_ARTIST = sql`artists.match_status = 'not_an_artist'`;
 
-/** Unreferenced by the backfill's reckoning, not billed in a live title, and not tombstoned. */
+/**
+ * A user followed this act by MBID (artist-search plan PR 5). The row may have
+ * no event yet, and that is the point: following an act before it is billed
+ * in Denver. Reaping it would strand the follow without a page.
+ */
+const HELD_BY_MBID_FOLLOW = heldByMbidFollow;
+
+/**
+ * Unreferenced by the backfill's reckoning, not billed in a live title, not
+ * tombstoned, and not held by a follow made by MBID.
+ */
 const DOOMED = sql`
   ${UNREFERENCED}
   AND NOT ${BILLED_IN_LIVE_TITLE}
   AND NOT ${HUMAN_RULED_NOT_AN_ARTIST}
+  AND NOT ${HELD_BY_MBID_FOLLOW}
 `;
 
 export async function pruneArtists(
