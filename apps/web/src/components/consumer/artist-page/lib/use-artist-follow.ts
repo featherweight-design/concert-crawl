@@ -24,7 +24,7 @@ export type FollowError =
 export const followErrorIsFinal = (error: FollowError | null): boolean =>
   error?.kind === 'not_found' || error?.kind === 'name_held';
 
-const followErrorFor = (err: unknown): FollowError | null => {
+export const followErrorFor = (err: unknown): FollowError | null => {
   if (!(err instanceof ApiError)) return null;
   switch (err.status) {
     case 404:
