@@ -374,7 +374,7 @@ describe('SearchPalette — artist list', () => {
     });
   });
 
-  it('does nothing on Enter for a MusicBrainz-only row', () => {
+  it('drills into the preview on Enter for a MusicBrainz-only row', () => {
     mockHookState.artistList = [
       makeArtist({
         name: 'Clip',
@@ -389,8 +389,33 @@ describe('SearchPalette — artist list', () => {
 
     fireEvent.keyDown(window, { key: 'Enter' });
 
+    // The preview replaces the list; nothing navigated and nothing closed.
+    expect(screen.getByText(/^Results for/)).toBeTruthy();
+    expect(screen.getByText('Not on a Denver bill yet.')).toBeTruthy();
     expect(mockNavigateTo).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('Escape steps back from the preview; a second Escape closes', () => {
+    mockHookState.artistList = [
+      makeArtist({
+        name: 'Clip',
+        slug: null,
+        mbid: '22222222-2222-4222-8222-222222222222',
+        upcomingShowCount: 0,
+        nextShow: null,
+        hasShows: false,
+      }),
+    ];
+    render(<SearchPalette open onClose={onClose} />);
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByText(/^Results for/)).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
