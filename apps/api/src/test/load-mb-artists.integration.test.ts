@@ -32,6 +32,38 @@ const RADIOHEAD = 'a74b1b7f-71a5-4011-9441-d0b5e4122711';
 const THE_THE = 'f8c5a9b8-6f0a-4c8e-9a4e-2f1d6c3b9e10';
 const OPTIONS = { minRows: 0, minShareOfCurrent: 0.9 };
 
+// Migration 0128's key and indexes as pg_indexes reports them, copied from a
+// database the migration built (staging, 2026-11-22) and held as literals:
+// the test database persists between runs, so a definition read from it may
+// already be the loader's own.
+const MIGRATION_0128_INDEXES = [
+  {
+    indexname: 'mb_artists_aliases_fts_idx',
+    indexdef:
+      "CREATE INDEX mb_artists_aliases_fts_idx ON public.mb_artists USING gin (to_tsvector('simple'::regconfig, mb_artist_aliases_text(aliases)))",
+  },
+  {
+    indexname: 'mb_artists_aliases_trgm_idx',
+    indexdef:
+      'CREATE INDEX mb_artists_aliases_trgm_idx ON public.mb_artists USING gin (mb_artist_aliases_text(aliases) gin_trgm_ops)',
+  },
+  {
+    indexname: 'mb_artists_name_fts_idx',
+    indexdef:
+      "CREATE INDEX mb_artists_name_fts_idx ON public.mb_artists USING gin (to_tsvector('simple'::regconfig, name))",
+  },
+  {
+    indexname: 'mb_artists_name_trgm_idx',
+    indexdef:
+      'CREATE INDEX mb_artists_name_trgm_idx ON public.mb_artists USING gin (name gin_trgm_ops)',
+  },
+  {
+    indexname: 'mb_artists_pkey',
+    indexdef:
+      'CREATE UNIQUE INDEX mb_artists_pkey ON public.mb_artists USING btree (mbid)',
+  },
+];
+
 const indexDefinitions = () =>
   sql<{ indexname: string; indexdef: string }[]>`
     SELECT indexname, indexdef FROM pg_indexes
@@ -48,16 +80,6 @@ const shadowExists = async () => {
 
 describe('load-mb-artists integration', () => {
   it('swaps in a fresh load with the migration’s key and indexes', async () => {
-    // Migration 0128's definitions, read before the loader has ever replaced the table.
-    const before = await indexDefinitions();
-    expect(before.map((index) => index.indexname)).toEqual([
-      'mb_artists_aliases_fts_idx',
-      'mb_artists_aliases_trgm_idx',
-      'mb_artists_name_fts_idx',
-      'mb_artists_name_trgm_idx',
-      'mb_artists_pkey',
-    ]);
-
     const result = await loadMbArtists(
       sql,
       rowsOf(
@@ -68,7 +90,7 @@ describe('load-mb-artists integration', () => {
     );
     expect(result.loadedRows).toBe(2);
 
-    expect(await indexDefinitions()).toEqual(before);
+    expect(await indexDefinitions()).toEqual(MIGRATION_0128_INDEXES);
     expect(await shadowExists()).toBe(false);
 
     const rows = await sql<

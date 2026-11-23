@@ -12,7 +12,10 @@ name: MusicBrainz artists refresh
 # go to the run's summary page.
 #
 # STAGING ONLY. The job runs in the `staging` environment and reads that
-# environment's CRAWLER_DATABASE_URL. There is no production target: the first
+# environment's DATABASE_URL_DIRECT: the direct (non-pooler) URL for the
+# migration role that owns `mb_artists`. The loader holds one session for its
+# COPY, index build and session SETs, which Neon's transaction-mode pooler
+# cannot keep, and only the table's owner may drop and replace it. There is no production target: the first
 # production load waits for Hugh's OK after the staging load is measured, and
 # adding production is its own PR.
 #
@@ -28,9 +31,11 @@ name: MusicBrainz artists refresh
 
 on:
   schedule:
-    # Mondays 09:17 UTC (02:17 or 03:17 MT), clear of the 3 AM MT crawl's
-    # database writes and after MusicBrainz's twice-weekly export lands.
-    - cron: '17 9 * * 1'
+    # Mondays 05:17 UTC (22:17 or 23:17 MT on Sunday). With the 150-minute
+    # timeout the run ends by 07:47 UTC, before the crawl's 09:07 UTC Vercel
+    # Cron and 12:07 UTC backup. MusicBrainz exports twice a week, so any
+    # Monday slot loads that week's latest.
+    - cron: '17 5 * * 1'
   workflow_dispatch:
     inputs:
       dump:
@@ -73,11 +78,17 @@ jobs:
 
       - name: Verify configuration
         env:
-          CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
           DUMP: ${{ inputs.dump }}
         run: |
-          if [ -z "$CRAWLER_DATABASE_URL" ]; then
-            echo "Missing staging-environment secret: CRAWLER_DATABASE_URL"; exit 1
+          if [ -z "$DATABASE_URL_DIRECT" ]; then
+            echo "Missing staging-environment secret: DATABASE_URL_DIRECT"; exit 1
+          fi
+          # Neon's pooler runs PgBouncer in transaction mode, which drops the
+          # loader's session settings; refuse a -pooler host, as the deploy
+          # workflows do.
+          if [[ "$DATABASE_URL_DIRECT" == *-pooler.* ]]; then
+            echo "DATABASE_URL_DIRECT points at a -pooler host. The loader needs the direct URL."; exit 1
           fi
           if [ -n "$DUMP" ] && ! [[ "$DUMP" =~ ^[0-9]{8}-[0-9]{6}$ ]]; then
             echo "dump must look like 20261118-001001 (got '$DUMP')"; exit 1
@@ -127,7 +138,7 @@ jobs:
 
       - name: Load and swap
         env:
-          DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
           WORK: ${{ steps.download.outputs.work }}
           DUMP: ${{ steps.download.outputs.dump }}
           # The alias and link lookups are held in memory before the artist
