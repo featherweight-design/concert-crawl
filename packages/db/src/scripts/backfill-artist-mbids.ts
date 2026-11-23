@@ -4,7 +4,8 @@
  *
  * Two buckets, tried in this order, and only on rows whose `mbid` is still null:
  *
- *   1. **Spotify.** A Spotify-matched artist takes the MBID of the one
+ *   1. **Spotify.** A Spotify-matched artist (`match_status = 'matched'`, the
+ *      only status whose Spotify id is trusted) takes the MBID of the one
  *      MusicBrainz act whose Spotify relation is our `spotify_artist_id`. When
  *      several MB acts carry that Spotify id, the row stays null.
  *   2. **Name.** An artist with no Spotify id takes the MBID of the one MB act
@@ -19,7 +20,8 @@
  *
  * `artists_mbid_idx` lets one MBID belong to one row. An MBID another row
  * already holds, or one two rows would claim in the same run, is left unfilled
- * on every row that wanted it, and a Spotify claim beats a name claim.
+ * on every row that wanted it. A Spotify claim beats a name claim: a name row
+ * never takes an MBID a Spotify row matched, even one the Spotify row lost.
  *
  * Everything is decided and written in one statement, so a dry run reports
  * exactly what an apply would write, and an apply can never half-finish. It is
@@ -55,7 +57,10 @@ export interface BackfillArtistMbidsResult {
   dryRun: boolean;
   /** Rows considered, by outcome. Every outcome is present, zero or not. */
   outcomes: Record<MbidOutcome, number>;
-  /** Rows written. Zero on a dry run. */
+  /**
+   * Rows written. Zero on a dry run. Can be below the `filled` outcomes when a
+   * row changed while the run was deciding, and so was not written.
+   */
   updated: number;
   /** Name-bucket fills, name-ordered, so a dry run can be read before an apply. */
   nameFills: MbidFill[];
@@ -93,6 +98,7 @@ export async function backfillArtistMbids(
     by_spotify AS (
       SELECT
         artists.id,
+        artists.spotify_artist_id AS spotify_id,
         CASE
           WHEN spotify_acts.acts IS NULL THEN 'spotify:no-hit'
           WHEN spotify_acts.acts > 1 THEN 'spotify:several-acts'
@@ -101,7 +107,9 @@ export async function backfillArtistMbids(
         CASE WHEN spotify_acts.acts = 1 THEN spotify_acts.mbid END AS mbid
       FROM artists
       LEFT JOIN spotify_acts ON spotify_acts.spotify_id = artists.spotify_artist_id
-      WHERE artists.mbid IS NULL AND artists.spotify_artist_id IS NOT NULL
+      WHERE artists.mbid IS NULL
+        AND artists.spotify_artist_id IS NOT NULL
+        AND artists.match_status = 'matched'
     ),
     spotify_claims AS (
       SELECT mbid, count(*) AS claims
@@ -111,6 +119,7 @@ export async function backfillArtistMbids(
     spotify_decided AS (
       SELECT
         by_spotify.id,
+        by_spotify.spotify_id,
         by_spotify.mbid,
         CASE
           WHEN by_spotify.outcome <> 'spotify:hit' THEN by_spotify.outcome
@@ -155,7 +164,7 @@ export async function backfillArtistMbids(
           WHEN name_hits.acts > 1 THEN 'name:several-acts'
           WHEN name_hits.mbid IN (SELECT mbid FROM held)
             OR name_hits.mbid IN (
-              SELECT mbid FROM spotify_decided WHERE outcome = 'spotify:filled'
+              SELECT mbid FROM by_spotify WHERE outcome = 'spotify:hit'
             )
             OR name_claims.claims > 1 THEN 'name:act-taken'
           ELSE 'name:filled'
@@ -164,9 +173,9 @@ export async function backfillArtistMbids(
       LEFT JOIN name_claims ON name_claims.mbid = name_hits.mbid
     ),
     decided AS (
-      SELECT id, mbid, outcome FROM spotify_decided
+      SELECT id, spotify_id, mbid, outcome FROM spotify_decided
       UNION ALL
-      SELECT id, mbid, outcome FROM name_decided
+      SELECT id, NULL::text, mbid, outcome FROM name_decided
     ),
     filled AS (
       UPDATE artists
@@ -175,6 +184,14 @@ export async function backfillArtistMbids(
       WHERE ${apply}::boolean
         AND decided.id = artists.id
         AND decided.outcome IN ('spotify:filled', 'name:filled')
+        -- Re-checked on the row as it is now: the decision reads a snapshot
+        -- minutes old, and the matcher or an admin may have moved the row.
+        AND artists.mbid IS NULL
+        AND artists.spotify_artist_id IS NOT DISTINCT FROM decided.spotify_id
+        AND (
+          artists.match_status = 'matched'
+          OR (decided.spotify_id IS NULL AND artists.match_status <> 'not_an_artist')
+        )
       RETURNING artists.id
     )
     SELECT
@@ -202,14 +219,14 @@ export async function backfillArtistMbids(
     'name:act-taken': 0,
   };
   const nameFills: MbidFill[] = [];
-  let updated = 0;
+  // The scalar subquery repeats the same count on every row.
+  const updated = Number(rows[0]?.updated ?? 0);
 
   for (const row of rows) {
     if (!isOutcome(row.outcome)) {
       throw new Error(`[mbid-backfill] unexpected outcome "${row.outcome}"`);
     }
     outcomes[row.outcome] += 1;
-    updated = Number(row.updated);
     if (row.outcome === 'name:filled' && row.mbid && row.mb_name) {
       nameFills.push({
         name: row.name,

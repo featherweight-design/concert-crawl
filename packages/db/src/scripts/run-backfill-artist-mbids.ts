@@ -42,6 +42,12 @@ const argValue = (name: string): string | undefined => {
     ?.slice(prefix.length);
 };
 
+/**
+ * GitHub caps a step summary at 1 MiB, so the summary lists this many name
+ * fills and the console log lists them all.
+ */
+const SUMMARY_FILL_ROWS = 500;
+
 /** Pipes and newlines would break the Markdown table a name sits in. */
 const cell = (value: string | null): string =>
   (value ?? '').replace(/[|\r\n]+/g, ' ').trim() || '·';
@@ -49,7 +55,10 @@ const cell = (value: string | null): string =>
 export function formatReport(
   result: BackfillArtistMbidsResult,
   elapsedMs: number,
+  maxFillRows = Infinity,
 ): string {
+  const shownFills = result.nameFills.slice(0, maxFillRows);
+  const hiddenFills = result.nameFills.length - shownFills.length;
   const considered = MBID_OUTCOMES.reduce(
     (sum, outcome) => sum + result.outcomes[outcome],
     0,
@@ -71,11 +80,14 @@ export function formatReport(
     '',
     '| Our artist | MusicBrainz act | Area | Disambiguation | MBID |',
     '| --- | --- | --- | --- | --- |',
-    ...result.nameFills.map(
+    ...shownFills.map(
       (fill) =>
         `| ${cell(fill.name)} | ${cell(fill.mbName)} | ${cell(fill.area)} | ${cell(fill.disambiguation)} | ${fill.mbid} |`,
     ),
     '',
+    ...(hiddenFills > 0
+      ? [`${hiddenFills} more name fills are in the job log.`, '']
+      : []),
   ];
   return lines.join('\n');
 }
@@ -96,14 +108,21 @@ async function main(): Promise<void> {
 
   try {
     await client`SET statement_timeout = 0`;
+    // A cancelled job drops the connection; without this the server would
+    // keep running (and writing) the statement after the job let go of the
+    // concurrency group it shares with the MusicBrainz refresh.
+    await client`SET client_connection_check_interval = '10s'`;
     const started = Date.now();
     const result = await backfillArtistMbids(drizzle(client, { schema }), {
       dryRun,
     });
-    const report = formatReport(result, Date.now() - started);
-    console.log(report);
+    const elapsedMs = Date.now() - started;
+    console.log(formatReport(result, elapsedMs));
     const summaryFile = argValue('summary-file');
-    if (summaryFile) await appendFile(summaryFile, `${report}\n`);
+    if (summaryFile) {
+      const summary = formatReport(result, elapsedMs, SUMMARY_FILL_ROWS);
+      await appendFile(summaryFile, `${summary}\n`);
+    }
   } finally {
     await client.end();
   }

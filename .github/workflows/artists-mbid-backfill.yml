@@ -16,13 +16,15 @@
 # - Only main's copy of this workflow may read the secret: any other ref is
 #   skipped.
 # - It shares the MusicBrainz refresh's concurrency group, so it never reads
-#   `mb_artists` while a load is swapping it.
+#   `mb_artists` while a load is swapping it. GitHub keeps one pending run
+#   per group, so a dispatch made while a refresh runs is cancelled if another
+#   run queues behind it: re-dispatch after the refresh ends.
 # - The backfill only fills null `mbid`s, never clears one, and a re-run
 #   reconsiders only the rows still null.
 #
-# Rollback: the rows it wrote are the rows whose `mbid` was null before the
-# run; `UPDATE artists SET mbid = NULL` restores the pre-backfill state, since
-# nothing else writes `mbid` yet.
+# Rollback: until Follow by MBID ships (plan PR 5), this backfill is the only
+# writer of `artists.mbid`, so every non-null value came from it, and
+# clearing them all undoes it. `updated_at` on the filled rows is not restored.
 name: Artist MBID backfill
 
 on:
