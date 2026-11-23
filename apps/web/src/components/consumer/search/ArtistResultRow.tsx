@@ -7,9 +7,9 @@
 //
 // An artist with nothing upcoming keeps a normal LIVE Follow button and says so
 // in the muted meta line. That is the clearest case the feature exists for, and
-// there is no `unavailable` state to render instead: artists are a projection
-// off event billing strings, so an artist with no Denver history cannot be in
-// the index at all.
+// there is no `unavailable` state to render instead. A MusicBrainz-only act
+// (kind 3, no slug) has no page to open: its row is Follow-only until U3's
+// preview, and its name half is not a control.
 
 import type { CSSProperties, ReactNode } from 'react';
 import type { ArtistSearchAllResult } from '@concert-crawl/types';
