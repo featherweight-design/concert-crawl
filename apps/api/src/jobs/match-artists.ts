@@ -112,9 +112,11 @@ export const PHOTO_BUDGET_CAP = 400;
 
 /**
  * A run's photo budget: enough that no photo reaches the readers' 30-day
- * ceiling in steady state, whatever the catalogue size. Derived from the count
- * of refreshable photos so it grows with the catalogue, within the floor and
- * cap above.
+ * ceiling in steady state. Derived from the count of refreshable photos so it
+ * grows with the catalogue, within the floor and cap above. The cap bounds
+ * that promise: at 400 a day the 20-day refetch holds up to 8,000 photos, and
+ * past that the cap needs raising (after checking the run still finishes
+ * inside the cron function's limit).
  */
 export const photoBudgetFor = (refreshablePhotos: number): number =>
   Math.min(

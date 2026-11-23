@@ -7,11 +7,13 @@ import { artists, auditLog } from '@concert-crawl/db';
 import { testDb } from '../test/helpers/db.js';
 import { apiLogger } from '../lib/logger.js';
 import { MATCH_ATTEMPT_LIMIT } from '../lib/artist-exhaustion.js';
+import { PHOTO_MAX_AGE_DAYS } from '../lib/artist-photo.js';
 import {
   AMBIGUOUS_RECHECK_DAYS,
   MATCH_BATCH_SIZE,
   NO_MATCH_RETRY_DAYS,
   PHOTO_BUDGET_CAP,
+  PHOTO_BUDGET_CYCLE_DAYS,
   PHOTO_BUDGET_FLOOR,
   PHOTO_REFETCH_DAYS,
   photoBudgetFor,
@@ -1060,11 +1062,11 @@ describe('runMatchArtists', () => {
 
   it('keeps every photo under the readers 30-day ceiling across a simulated cycle', async () => {
     // 60 photos aged 0..29 days, two of each, and the budget the sizing rule
-    // gives for 60 photos (ceil(60 / 15) = 4), passed explicitly because it
+    // gives for 60 photos (ceil(60 / cycle days) = 4), passed explicitly because it
     // is below the production floor.
     const total = 60;
-    const budget = Math.ceil(total / 15);
-    const ceilingDays = 30;
+    const budget = Math.ceil(total / PHOTO_BUDGET_CYCLE_DAYS);
+    const ceilingDays = PHOTO_MAX_AGE_DAYS;
     for (let n = 0; n < total; n += 1) {
       await seedArtist({
         canonicalName: `photo ${String(n).padStart(2, '0')}`,
