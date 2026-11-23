@@ -1,0 +1,194 @@
+[
+ {
+  "section": "01-musicbrainz-tap",
+  "name": "tap-spec",
+  "title": "MusicBrainz-only row · what a tap does",
+  "note": "Three options weighed; the preview wins. How the row reads, what Follow does next, and the one API ask.",
+  "w": 1180,
+  "h": 860
+ },
+ {
+  "section": "01-musicbrainz-tap",
+  "name": "preview-320",
+  "title": "Preview · 320px",
+  "note": "A kind-3 row tapped: the sheet over the results. Plate, identity line, TYPE and FROM, the empty line, Follow.",
+  "w": 320,
+  "h": 720
+ },
+ {
+  "section": "01-musicbrainz-tap",
+  "name": "preview-360",
+  "title": "Preview · 360px",
+  "note": "The same sheet at 360.",
+  "w": 360,
+  "h": 740
+ },
+ {
+  "section": "01-musicbrainz-tap",
+  "name": "preview-360-following",
+  "title": "Preview · 360px, after Follow",
+  "note": "Following, the pitch changes, and Open their page appears. The row behind reads Following too.",
+  "w": 360,
+  "h": 780
+ },
+ {
+  "section": "01-musicbrainz-tap",
+  "name": "palette-preview-d",
+  "title": "Preview · desktop palette",
+  "note": "Enter on a kind-3 row drills in inside the palette. Esc goes back to the results.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "01-musicbrainz-tap",
+  "name": "palette-preview-d-following",
+  "title": "Preview · desktop palette, after Follow",
+  "note": "Enter now opens their page.",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "01-musicbrainz-tap",
+  "name": "search-page-preview-d",
+  "title": "Preview · desktop /search",
+  "note": "The /search page at desktop, with the preview as a centred card (ModalShell).",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "02-follow-errors",
+  "name": "errors-spec",
+  "title": "Follow errors · the rules",
+  "note": "Four outcomes, two existing colours, where each message goes, what the Follow does after.",
+  "w": 1180,
+  "h": 900
+ },
+ {
+  "section": "02-follow-errors",
+  "name": "search-errors-320",
+  "title": "Follow errors · 320px search rows",
+  "note": "Each outcome on a kind-3 row: the message replaces the second line.",
+  "w": 320,
+  "h": 600
+ },
+ {
+  "section": "02-follow-errors",
+  "name": "palette-errors-d",
+  "title": "Follow errors · desktop palette rows",
+  "note": "The same four in the palette.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "02-follow-errors",
+  "name": "page-errors-320",
+  "title": "Follow errors · no-shows page, 320px",
+  "note": "The Follow bar with each message in the pitch line&#39;s place. The preview sheet is the same.",
+  "w": 1320,
+  "h": 330
+ },
+ {
+  "section": "02-follow-errors",
+  "name": "page-errors-d",
+  "title": "Follow errors · no-shows page, desktop rail",
+  "note": "The rail with each message.",
+  "w": 1220,
+  "h": 320
+ },
+ {
+  "section": "03-states",
+  "name": "states-spec",
+  "title": "States · marker, two letters, credit, cap",
+  "note": "The past-shows-only row, every photo-credit case, the cap, the two-letter rule and what leaves the first build.",
+  "w": 1180,
+  "h": 860
+ },
+ {
+  "section": "03-states",
+  "name": "search-rest-320",
+  "title": "Search · 320px, nothing typed",
+  "note": "Recent, the hint card and Popular at 320.",
+  "w": 320,
+  "h": 640
+ },
+ {
+  "section": "03-states",
+  "name": "search-two-360",
+  "title": "Search · 360px, two letters",
+  "note": "\"Cl\": our acts only, Clover Static has past shows only (no marker). One line says a third letter searches every act.",
+  "w": 360,
+  "h": 520
+ },
+ {
+  "section": "03-states",
+  "name": "search-two-none-320",
+  "title": "Search · 320px, two letters, none of ours",
+  "note": "Nothing of ours matches: the card points at the third letter instead of saying nobody exists.",
+  "w": 320,
+  "h": 420
+ },
+ {
+  "section": "03-states",
+  "name": "palette-rest-d",
+  "title": "Palette · nothing typed",
+  "note": "Recent and Popular as built, plus the hint line.",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "03-states",
+  "name": "palette-one-d",
+  "title": "Palette · one letter",
+  "note": "Below the floor: no request, \"Keep typing\".",
+  "w": 1280,
+  "h": 420
+ },
+ {
+  "section": "03-states",
+  "name": "palette-two-d",
+  "title": "Palette · two letters",
+  "note": "Our acts only, then the hint line.",
+  "w": 1280,
+  "h": 620
+ },
+ {
+  "section": "03-states",
+  "name": "palette-error-d",
+  "title": "Palette · search failed",
+  "note": "The request failed: one retry, never \"nobody by that name\".",
+  "w": 1280,
+  "h": 460
+ },
+ {
+  "section": "03-states",
+  "name": "search-page-d",
+  "title": "Search · desktop /search page",
+  "note": "The standalone page: a 720px column, the same list at rowWide, then Shows and Venues.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "03-states",
+  "name": "page-plate-320",
+  "title": "No-shows page · 320px, plate",
+  "note": "A followed MusicBrainz act: the plate, identity line, TYPE and FROM.",
+  "w": 320,
+  "h": 1060
+ },
+ {
+  "section": "03-states",
+  "name": "page-plate-360-following",
+  "title": "No-shows page · 360px, plate, Following",
+  "note": "After Follow: Following in the bar, the empty card&#39;s line changes.",
+  "w": 360,
+  "h": 1080
+ },
+ {
+  "section": "03-states",
+  "name": "page-plate-d-following",
+  "title": "No-shows page · desktop, plate, Following",
+  "note": "Rail reads Following; no credit, no summary, no Listen.",
+  "w": 1280,
+  "h": 860
+ }
+]
