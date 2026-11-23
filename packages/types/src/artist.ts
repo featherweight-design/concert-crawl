@@ -304,3 +304,62 @@ export interface BulkFollowResponse {
 
 /** Hard cap on `POST /v1/me/artist-follows/bulk` body length. */
 export const BULK_FOLLOW_MAX_SLUGS = 50;
+
+/**
+ * GET /v1/artists/:slug/info (artist-search plan PR 6). Ships dark: no client
+ * reads it until Design's no-shows artist page lands.
+ *
+ * `image` follows plan decision 5: the Spotify photo, then a Commons photo
+ * whose file licence permits reuse, then null (the client draws the
+ * IdentityArt plate). A Commons image always carries what its credit line
+ * needs; a non-free or English-Wikipedia-only upload is never returned.
+ */
+export type ArtistInfoImage =
+  | { source: 'spotify'; url: string }
+  | {
+      source: 'commons';
+      /** A thumbnail on upload.wikimedia.org. */
+      url: string;
+      /** The file's author, as plain text. Null only for public-domain and CC0 files. */
+      credit: string | null;
+      /** The licence's short name, e.g. "CC BY-SA 4.0". */
+      license: string;
+      licenseUrl: string | null;
+      /** The file's Commons description page, which the credit links to. */
+      fileUrl: string;
+    };
+
+/** MusicBrainz facts from the slim table (plan decision 6, first tier). */
+export interface ArtistInfoFacts {
+  mbid: string;
+  /** Person, Group, Orchestra, Choir, Character or Other. */
+  type: string | null;
+  area: string | null;
+  disambiguation: string | null;
+  links: {
+    musicbrainz: string;
+    wikidata: string | null;
+    spotify: string | null;
+  };
+}
+
+/**
+ * The English Wikipedia lead summary, unmodified (plan decision 6, second
+ * tier). The text is CC BY-SA, so it is only ever shown with its credit and
+ * link: `articleUrl`, `license` and `licenseUrl` are part of the extract.
+ */
+export interface ArtistInfoSummary {
+  extract: string;
+  articleTitle: string;
+  articleUrl: string;
+  license: 'CC BY-SA 4.0';
+  licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/';
+}
+
+export interface ArtistInfoResponse {
+  image: ArtistInfoImage | null;
+  /** Null when the artist has no MBID or the slim table has no row for it. */
+  facts: ArtistInfoFacts | null;
+  /** Null when there is no Wikidata link, no English article, or Wikimedia did not answer. */
+  summary: ArtistInfoSummary | null;
+}
