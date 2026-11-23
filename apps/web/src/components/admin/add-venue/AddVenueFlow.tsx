@@ -1,17 +1,19 @@
 'use client';
 
 /**
- * Add a venue (3e-1c-i): Start, then Basics in the step shell. Continue checks
- * Basics and marks what is wrong; saving the draft on Continue, and resuming
- * one from `?id`, land in 3e-1c-ii (plan decision 2). Steps 2 to 5 land in
+ * Add a venue (3e-1): Start, then Basics in the step shell. The venue is
+ * saved as a draft on Basics' first Continue (plan decision 2), and the URL
+ * becomes `?id=…&step=basics` so a reload resumes it. Steps 2 to 5 land in
  * later PRs; until then the rail draws them as not-yet steps.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { useIsPhone } from '@/components/admin/primitives';
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { slugify } from '@/components/admin/venues/details/details-rules';
+import { createDraftVenue, updateVenue } from '@/lib/actions/venues';
 import { AddVenueShell } from './AddVenueShell';
 import { BasicsStep } from './BasicsStep';
 import { StartScreen } from './StartScreen';
@@ -19,8 +21,14 @@ import {
   BASICS_FIELD_ORDER,
   basicsFieldId,
   EMPTY_BASICS,
+  addVenueHref,
+  basicsColumnsOf,
+  basicsFormData,
+  changedBasics,
+  saveErrorOf,
   validateBasics,
   type AddVenueStep,
+  type BasicsColumns,
   type BasicsDraft,
   type BasicsErrors,
 } from './add-venue-rules';
@@ -28,6 +36,19 @@ import {
 const COPY = ADMIN_COPY.addVenue;
 const VENUES_HREF = '/admin/venues';
 const NOTHING_DONE: ReadonlySet<AddVenueStep> = new Set();
+const BASICS_DONE: ReadonlySet<AddVenueStep> = new Set(['basics']);
+
+export interface AddVenueDraft {
+  id: string;
+  basics: BasicsDraft;
+}
+
+type SaveOutcome = {
+  success: boolean;
+  id?: string;
+  field?: string;
+  conflict?: boolean;
+};
 
 /** Moves focus to the first field Basics marked, so the error is announced. */
 const focusFirstInvalid = (errors: BasicsErrors) => {
@@ -36,14 +57,28 @@ const focusFirstInvalid = (errors: BasicsErrors) => {
     document.getElementById(basicsFieldId(first))?.focus();
 };
 
-export const AddVenueFlow = () => {
+export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
+  const router = useRouter();
   const phone = useIsPhone();
   const { setPageTitle, setPhoneBack } = usePageTitle();
-  const [stage, setStage] = useState<'start' | 'basics'>('start');
-  const [basics, setBasics] = useState<BasicsDraft>(EMPTY_BASICS);
-  // Once the admin types a link, the name no longer remakes it.
-  const [slugEdited, setSlugEdited] = useState(false);
+  const [stage, setStage] = useState<'start' | 'basics'>(
+    draft === null ? 'start' : 'basics',
+  );
+  const [venueId, setVenueId] = useState<string | null>(draft?.id ?? null);
+  const [basics, setBasics] = useState<BasicsDraft>(
+    draft?.basics ?? EMPTY_BASICS,
+  );
+  const [saved, setSaved] = useState<BasicsColumns | null>(
+    draft === null ? null : basicsColumnsOf(draft.basics),
+  );
+  // A saved link is the admin's, never remade from the name.
+  const [slugEdited, setSlugEdited] = useState(draft !== null);
   const [errors, setErrors] = useState<BasicsErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // State is stale inside a click's closure, so a second tap before the
+  // re-render would start a second create; the ref closes that window.
+  const saving = useRef(false);
 
   // "Venues / Add a venue" (`basics-desktop`'s crumbs).
   useEffect(() => {
@@ -79,20 +114,65 @@ export const AddVenueFlow = () => {
       if (patch.name !== undefined && !slugEdited) delete rest.slug;
       return rest;
     });
+    setFormError(null);
   };
 
-  // Continue marks what Basics is missing. A valid Basics stays put until
-  // 3e-1c-ii saves it as a draft; the route has no link to it until then
-  // (plan decision 12).
-  const check = () => {
+  /** True once Basics is saved as shown; false when it can't be. */
+  const save = async (): Promise<boolean> => {
+    if (saving.current) return false;
     const found = validateBasics(basics);
     setErrors(found);
-    focusFirstInvalid(found);
+    setFormError(null);
+    if (Object.keys(found).length > 0) {
+      focusFirstInvalid(found);
+      return false;
+    }
+    const next = basicsColumnsOf(basics);
+    const keys = changedBasics(next, saved);
+    if (keys.length === 0) return true;
+    saving.current = true;
+    setBusy(true);
+    let outcome: SaveOutcome;
+    try {
+      const body = basicsFormData(next, keys);
+      outcome =
+        venueId === null
+          ? await createDraftVenue(body)
+          : await updateVenue(venueId, body);
+    } catch {
+      outcome = { success: false };
+    }
+    saving.current = false;
+    setBusy(false);
+    if (!outcome.success) {
+      const field = saveErrorOf(outcome);
+      if (field !== null) {
+        setErrors(field);
+        focusFirstInvalid(field);
+      } else setFormError(COPY.errors.saveFailed);
+      return false;
+    }
+    setSaved(next);
+    if (venueId === null && outcome.id !== undefined) {
+      setVenueId(outcome.id);
+      // The link is set once saved; a later name edit no longer remakes it.
+      setSlugEdited(true);
+      // A replace, so Back leaves the flow rather than returning to an
+      // unsaved Basics (plan decision 2).
+      router.replace(addVenueHref(outcome.id, 'basics'));
+    }
+    return true;
   };
 
-  const back = () => {
-    setErrors({});
-    setStage('start');
+  // Before the draft exists, Back returns to Start; after, it saves any edits
+  // ("Saved as you go") and leaves for Venues, where the draft waits under
+  // Drafts. An edit that can't be saved keeps the admin here with its error.
+  const back = async () => {
+    if (venueId === null) {
+      setErrors({});
+      setFormError(null);
+      setStage('start');
+    } else if (await save()) router.push(VENUES_HREF);
   };
 
   if (stage === 'start') {
@@ -102,18 +182,18 @@ export const AddVenueFlow = () => {
     <AddVenueShell
       phone={phone}
       step="basics"
-      done={NOTHING_DONE}
+      done={saved === null ? NOTHING_DONE : BASICS_DONE}
       name={basics.name}
-      busy={false}
-      onBack={back}
-      onContinue={check}
+      busy={busy}
+      onBack={() => void back()}
+      onContinue={() => void save()}
     >
       <BasicsStep
         phone={phone}
         draft={basics}
         errors={errors}
-        formError={null}
-        busy={false}
+        formError={formError}
+        busy={busy}
         onChange={change}
       />
     </AddVenueShell>

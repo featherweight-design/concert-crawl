@@ -1,8 +1,34 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+
+type Outcome = {
+  success: boolean;
+  id?: string;
+  field?: string;
+  conflict?: boolean;
+};
+const mockCreateDraft = vi.fn<(body: FormData) => Promise<Outcome>>();
+const mockUpdateVenue =
+  vi.fn<(id: string, body: FormData) => Promise<Outcome>>();
+vi.mock('@/lib/actions/venues', () => ({
+  createDraftVenue: (body: FormData) => mockCreateDraft(body),
+  updateVenue: (id: string, body: FormData) => mockUpdateVenue(id, body),
+}));
+
+const mockReplace = vi.fn();
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: mockReplace, push: mockPush }),
+}));
 
 vi.mock('@/components/admin/shell/PageTitleContext', () => ({
   usePageTitle: () => ({ setPageTitle: vi.fn(), setPhoneBack: vi.fn() }),
@@ -21,9 +47,9 @@ const FIELDS = ADMIN_COPY.venueDetails.fields;
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
-const openBasics = () => {
-  render(<AddVenueFlow />);
-  fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
+const fillDazzle = () => {
+  type(FIELDS.name, 'Dazzle Jazz');
+  type(FIELDS.website, 'dazzledenver.com');
 };
 
 beforeEach(() => {
@@ -33,21 +59,25 @@ beforeEach(() => {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   }));
+  mockCreateDraft.mockReset();
+  mockUpdateVenue.mockReset();
+  mockReplace.mockReset();
+  mockPush.mockReset();
 });
 afterEach(cleanup);
 
 describe('AddVenueFlow', () => {
-  it('opens on Start, then Start from scratch opens Basics', () => {
-    render(<AddVenueFlow />);
+  it('opens on Start, with Nobody asked yet and Start from scratch', () => {
+    render(<AddVenueFlow draft={null} />);
     expect(screen.getByText(COPY.start.emptyTitle)).toBeTruthy();
-    expect(screen.queryByTestId('add-venue-shell')).toBeNull();
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     expect(screen.getByTestId('add-venue-shell')).toBeTruthy();
     expect(screen.getByText(COPY.basics.title)).toBeTruthy();
   });
 
   it('makes the link from the name until the link is edited', () => {
-    openBasics();
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     type(FIELDS.name, 'Dazzle Jazz');
     const link = screen.getByLabelText<HTMLInputElement>(FIELDS.link.label);
     expect(link.value).toBe('dazzle-jazz');
@@ -56,18 +86,98 @@ describe('AddVenueFlow', () => {
     expect(link.value).toBe('dazzle');
   });
 
-  it('shows what is missing on Continue and stays on Basics', () => {
-    openBasics();
+  it('shows what is missing and sends nothing', () => {
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     fireEvent.click(screen.getByTestId('add-venue-continue'));
     expect(screen.getByText(COPY.errors.nameRequired)).toBeTruthy();
     expect(screen.getByText(COPY.errors.websiteRequired)).toBeTruthy();
+    expect(mockCreateDraft).not.toHaveBeenCalled();
+  });
+
+  it('saves the draft on Continue, moves the URL to it and checks Basics off', async () => {
+    mockCreateDraft.mockResolvedValue({ success: true, id: 'v-9' });
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
+    fillDazzle();
+    fireEvent.click(screen.getByTestId('add-venue-continue'));
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenCalledWith(
+        '/admin/venues/new?id=v-9&step=basics',
+      ),
+    );
+    const body = mockCreateDraft.mock.calls.at(0)?.[0];
+    expect(body?.get('slug')).toBe('dazzle-jazz');
+    expect(body?.get('websiteUrl')).toBe('https://dazzledenver.com');
+    const basics = screen.getByTestId('add-venue-step-basics');
+    expect(basics.getAttribute('data-done')).toBe('true');
+    expect(basics.getAttribute('aria-current')).toBe('step');
+  });
+
+  it('patches only what changed on a resumed draft', async () => {
+    mockUpdateVenue.mockResolvedValue({ success: true });
+    render(
+      <AddVenueFlow
+        draft={{
+          id: 'v-9',
+          basics: {
+            name: 'Dazzle',
+            slug: 'dazzle',
+            address: '',
+            capacityType: '',
+            capacity: '',
+            website: 'dazzledenver.com',
+          },
+        }}
+      />,
+    );
+    type(FIELDS.name, 'Dazzle Jazz');
+    // A saved link stays the admin's.
     expect(
-      screen.getByTestId('add-venue-step-basics').getAttribute('aria-current'),
-    ).toBe('step');
+      screen.getByLabelText<HTMLInputElement>(FIELDS.link.label).value,
+    ).toBe('dazzle');
+    fireEvent.click(screen.getByTestId('add-venue-continue'));
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalled());
+    const [id, body] = mockUpdateVenue.mock.calls.at(0) ?? [];
+    expect(id).toBe('v-9');
+    expect(Array.from(body?.keys() ?? [])).toEqual(['name']);
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('creates one draft however fast Continue is pressed twice', async () => {
+    let finish: (outcome: Outcome) => void = () => {};
+    mockCreateDraft.mockReturnValue(
+      new Promise<Outcome>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
+    fillDazzle();
+    const go = screen.getByTestId('add-venue-continue');
+    fireEvent.click(go);
+    fireEvent.click(go);
+    finish({ success: true, id: 'v-9' });
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    expect(mockCreateDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops remaking the link from the name once the draft is saved', async () => {
+    mockCreateDraft.mockResolvedValue({ success: true, id: 'v-9' });
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
+    fillDazzle();
+    fireEvent.click(screen.getByTestId('add-venue-continue'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    type(FIELDS.name, 'Dazzle Jazz Club');
+    expect(
+      screen.getByLabelText<HTMLInputElement>(FIELDS.link.label).value,
+    ).toBe('dazzle-jazz');
   });
 
   it('focuses the first field it marks', () => {
-    openBasics();
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     fireEvent.click(screen.getByTestId('add-venue-continue'));
     const name = screen.getByLabelText(FIELDS.name);
     expect(document.activeElement).toBe(name);
@@ -75,24 +185,91 @@ describe('AddVenueFlow', () => {
   });
 
   it('clears a field error once the field is edited', () => {
-    openBasics();
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     fireEvent.click(screen.getByTestId('add-venue-continue'));
     type(FIELDS.name, 'Dazzle Jazz');
     expect(screen.queryByText(COPY.errors.nameRequired)).toBeNull();
     expect(screen.getByText(COPY.errors.websiteRequired)).toBeTruthy();
   });
 
-  it('goes back to Start from Basics and forgets the errors', () => {
-    openBasics();
-    fireEvent.click(screen.getByTestId('add-venue-continue'));
-    fireEvent.click(screen.getByTestId('add-venue-back'));
-    expect(screen.getByTestId('add-venue-start')).toBeTruthy();
+  it('puts a taken link on the link field', async () => {
+    mockCreateDraft.mockResolvedValue({
+      success: false,
+      field: 'slug',
+      conflict: true,
+    });
+    render(<AddVenueFlow draft={null} />);
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
-    expect(screen.queryByText(COPY.errors.nameRequired)).toBeNull();
+    fillDazzle();
+    fireEvent.click(screen.getByTestId('add-venue-continue'));
+    expect(await screen.findByText(COPY.errors.linkTaken)).toBeTruthy();
   });
 
-  it('marks Basics current and draws steps 2 to 5 as not open yet', () => {
-    openBasics();
+  it('puts a website the API refused on the website field', async () => {
+    mockCreateDraft.mockResolvedValue({ success: false, field: 'websiteUrl' });
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
+    fillDazzle();
+    fireEvent.click(screen.getByTestId('add-venue-continue'));
+    expect(await screen.findByText(COPY.errors.websiteInvalid)).toBeTruthy();
+  });
+
+  it('says a failed save failed', async () => {
+    mockCreateDraft.mockRejectedValue(new Error('network'));
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
+    fillDazzle();
+    fireEvent.click(screen.getByTestId('add-venue-continue'));
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      COPY.errors.saveFailed,
+    );
+  });
+
+  it('goes back to Start before the draft exists, and to Venues after', async () => {
+    const { unmount } = render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
+    fireEvent.click(screen.getByTestId('add-venue-back'));
+    expect(screen.getByTestId('add-venue-start')).toBeTruthy();
+    unmount();
+    render(
+      <AddVenueFlow
+        draft={{ id: 'v-9', basics: { ...emptyWithName('Dazzle') } }}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('add-venue-back'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/admin/venues'));
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
+  });
+
+  it('saves an edit before Back leaves a saved draft', async () => {
+    mockUpdateVenue.mockResolvedValue({ success: true });
+    render(
+      <AddVenueFlow
+        draft={{ id: 'v-9', basics: { ...emptyWithName('Dazzle') } }}
+      />,
+    );
+    type(FIELDS.name, 'Dazzle Jazz');
+    fireEvent.click(screen.getByTestId('add-venue-back'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/admin/venues'));
+    expect(mockUpdateVenue).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the admin on Basics when Back cannot save the edit', () => {
+    render(
+      <AddVenueFlow
+        draft={{ id: 'v-9', basics: { ...emptyWithName('Dazzle') } }}
+      />,
+    );
+    type(FIELDS.name, '');
+    fireEvent.click(screen.getByTestId('add-venue-back'));
+    expect(screen.getByText(COPY.errors.nameRequired)).toBeTruthy();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('draws steps 2 to 5 as not open yet', () => {
+    render(<AddVenueFlow draft={null} />);
+    fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     for (const step of ['source', 'icon', 'guide', 'review']) {
       expect(
         screen
@@ -102,3 +279,14 @@ describe('AddVenueFlow', () => {
     }
   });
 });
+
+function emptyWithName(name: string) {
+  return {
+    name,
+    slug: 'dazzle',
+    address: '',
+    capacityType: '',
+    capacity: '',
+    website: 'dazzledenver.com',
+  };
+}
