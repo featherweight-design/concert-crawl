@@ -15,6 +15,10 @@ vi.mock('next/link', () => ({
     children: React.ReactNode;
   }) => <a href={href}>{children}</a>,
 }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/search',
+}));
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => 'token', isSignedIn: true }),
 }));
