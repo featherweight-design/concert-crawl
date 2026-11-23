@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ArtistSearchResult } from '@concert-crawl/types';
+import type { FollowError } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import type * as FollowButtonModule from '@/components/consumer/artist-page/FollowButton';
 
 // The stub reports what the row hands the real button: whether it would send
@@ -35,10 +36,12 @@ vi.mock(
   },
 );
 
-const { toggle, follow } = vi.hoisted(() => ({
-  toggle: vi.fn(),
-  follow: { error: null as unknown },
-}));
+const { toggle, follow } = vi.hoisted(
+  (): { toggle: Mock; follow: { error: FollowError | null } } => ({
+    toggle: vi.fn(),
+    follow: { error: null },
+  }),
+);
 vi.mock(
   '@/components/consumer/artist-page/lib/use-artist-follow',
   async (importOriginal) => ({

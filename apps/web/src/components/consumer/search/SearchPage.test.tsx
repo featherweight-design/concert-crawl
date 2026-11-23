@@ -75,18 +75,23 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
 // A stand-in for the real optimistic hook: it flips in place, which is exactly
 // the behaviour the row is required to show (no collapse, no re-order).
 const mockToggle = vi.fn();
-vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
-  useArtistFollow: (_slug: string, initialFollowing: boolean) => {
-    const [following, setFollowing] = React.useState(initialFollowing);
-    return {
-      following,
-      toggle: () => {
-        mockToggle();
-        setFollowing((prev) => !prev);
-      },
-    };
-  },
-}));
+vi.mock(
+  '@/components/consumer/artist-page/lib/use-artist-follow',
+  async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    useArtistFollow: (_slug: string, initialFollowing: boolean) => {
+      const [following, setFollowing] = React.useState(initialFollowing);
+      return {
+        following,
+        error: null,
+        toggle: () => {
+          mockToggle();
+          setFollowing((prev) => !prev);
+        },
+      };
+    },
+  }),
+);
 
 // jsdom has no matchMedia, and `useMediaQuery` reads it during render. `false`
 // for every query is the widest-first default the hook itself ships.

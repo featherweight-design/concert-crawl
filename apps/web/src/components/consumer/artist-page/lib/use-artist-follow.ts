@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 
 import { ApiError, apiClient } from '@/lib/api';
+import { FALLBACK_RETRY_AFTER_SECONDS } from '@/lib/retry-after';
 import { useInvalidateFollowedArtistNames } from '@/lib/queries/use-followed-artist-names';
 
 /**
@@ -33,7 +34,10 @@ const followErrorFor = (err: unknown): FollowError | null => {
     case 429:
       return {
         kind: 'rate_limited',
-        retryAt: new Date(Date.now() + (err.retryAfterSeconds ?? 3600) * 1000),
+        retryAt: new Date(
+          Date.now() +
+            (err.retryAfterSeconds ?? FALLBACK_RETRY_AFTER_SECONDS) * 1000,
+        ),
       };
     case 503:
       return { kind: 'unavailable' };
