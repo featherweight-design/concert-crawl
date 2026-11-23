@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useState, type CSSProperties } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminCard, StatusBadge } from '@/components/admin/primitives';
 import type { StatusKind } from '@/components/admin/primitives/utils';
@@ -34,10 +35,38 @@ const COPY = ADMIN_COPY.addVenue;
 const FIELDS = ADMIN_COPY.venueDetails.fields;
 const ROBOTS = COPY.basics.robots;
 
-const selectStyle = (invalid: boolean): CSSProperties => ({
+/** iOS Safari zooms a focused input under 16px, so the phone draws 16. */
+const fieldFontSize = (phone: boolean) => (phone ? 16 : 13.5);
+
+const boxStyle = (invalid: boolean, phone: boolean): CSSProperties => ({
   ...inputStyle(invalid),
-  appearance: 'auto',
+  fontSize: fieldFontSize(phone),
 });
+
+// The boards draw the type control as a plain box; the phone adds its own
+// chevron (`step-1-basics-mobile`), so the native one is dropped on both.
+const selectStyle = (phone: boolean): CSSProperties => ({
+  ...boxStyle(false, phone),
+  appearance: 'none',
+  paddingRight: phone ? 32 : 12,
+});
+
+/** The phone board's chevron: 13px, muted, 1.8 stroke, at the box's right. */
+const SelectChevron = () => (
+  <ChevronDown
+    aria-hidden
+    size={13}
+    strokeWidth={1.8}
+    style={{
+      position: 'absolute',
+      right: 12,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      color: 'var(--fg-muted)',
+      pointerEvents: 'none',
+    }}
+  />
+);
 
 const idOf = basicsFieldId;
 
@@ -179,7 +208,7 @@ export const BasicsStep = ({
       aria-describedby={describedBy(field, errors)}
       inputMode={field === 'capacity' ? 'numeric' : undefined}
       onChange={(evt) => onChange({ [field]: evt.target.value })}
-      style={inputStyle(errors[field] !== undefined)}
+      style={boxStyle(errors[field] !== undefined, phone)}
     />
   );
   const capacityType = (
@@ -189,7 +218,7 @@ export const BasicsStep = ({
       value={draft.capacityType}
       disabled={busy}
       onChange={(evt) => onChange({ capacityType: evt.target.value })}
-      style={selectStyle(false)}
+      style={selectStyle(phone)}
     >
       <option value="">{FIELDS.capacityType.none}</option>
       {CAPACITY_TYPES.map((type) => (
@@ -224,7 +253,7 @@ export const BasicsStep = ({
         <div
           className={SLUG_BOX_FOCUS}
           style={{
-            ...inputStyle(errors.slug !== undefined),
+            ...boxStyle(errors.slug !== undefined, phone),
             display: 'flex',
             alignItems: 'center',
           }}
@@ -244,7 +273,7 @@ export const BasicsStep = ({
               flex: 1,
               minWidth: 0,
               height: '100%',
-              fontSize: 13.5,
+              fontSize: fieldFontSize(phone),
             }}
           />
         </div>
@@ -258,7 +287,10 @@ export const BasicsStep = ({
           error={errors.capacity}
         >
           <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1.2, minWidth: 0 }}>{capacityType}</div>
+            <div style={{ flex: 1.2, minWidth: 0, position: 'relative' }}>
+              {capacityType}
+              <SelectChevron />
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>{text('capacity')}</div>
           </div>
         </Field>
@@ -295,7 +327,7 @@ export const BasicsStep = ({
           aria-invalid={errors.website !== undefined}
           aria-describedby={describedBy('website', errors)}
           onChange={(evt) => onChange({ website: evt.target.value })}
-          style={inputStyle(errors.website !== undefined)}
+          style={boxStyle(errors.website !== undefined, phone)}
         />
       </Field>
     </div>
