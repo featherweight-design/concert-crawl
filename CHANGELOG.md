@@ -1,3 +1,16 @@
+# [1.561.0](https://github.com/featherweight-design/concert-crawl/compare/v1.560.0...v1.561.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **web:** kind 3 row option props, narrow slug, copy grammar, picker comment ([8e2dca5](https://github.com/featherweight-design/concert-crawl/commit/8e2dca5894d45d67f763bf0c15ab92b24dfd988c))
+* **web:** token read failure is a failed search; comment and note accuracy ([97bd8fd](https://github.com/featherweight-design/concert-crawl/commit/97bd8fdb11f833afd2a65bb97266554f2745ef83))
+
+
+### Features
+
+* **web:** artist search list, kinds 1 to 3, failed and one-letter states ([79ba3cb](https://github.com/featherweight-design/concert-crawl/commit/79ba3cb6ff4282b4baab31ff4186670a61d26392))
+
 # [1.560.0](https://github.com/featherweight-design/concert-crawl/compare/v1.559.0...v1.560.0) (2026-11-23)
 
 
