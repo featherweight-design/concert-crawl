@@ -11,7 +11,10 @@ import {
   AMBIGUOUS_RECHECK_DAYS,
   MATCH_BATCH_SIZE,
   NO_MATCH_RETRY_DAYS,
+  PHOTO_BUDGET_CAP,
+  PHOTO_BUDGET_FLOOR,
   PHOTO_REFETCH_DAYS,
+  photoBudgetFor,
   runMatchArtists,
   type MatchArtistsSummary,
 } from './match-artists.js';
@@ -984,6 +987,116 @@ describe('runMatchArtists', () => {
     expect(summary.failures).toBe(1);
     expect(summary.noMatch).toBe(1);
     expect((await readArtist(okId))?.matchStatus).toBe('no_match');
+  });
+
+  it('sizes the photo budget from the catalogue, within a floor and a cap', () => {
+    expect(photoBudgetFor(0)).toBe(PHOTO_BUDGET_FLOOR);
+    expect(photoBudgetFor(100)).toBe(PHOTO_BUDGET_FLOOR);
+    // ceil(3400 / 15): enough to walk the catalogue in 15 days.
+    expect(photoBudgetFor(3400)).toBe(227);
+    expect(photoBudgetFor(1_000_000)).toBe(PHOTO_BUDGET_CAP);
+  });
+
+  it('gives photo refreshes a budget that identity rows cannot spend', async () => {
+    await seedArtist({ canonicalName: 'unmatched one' });
+    await seedArtist({ canonicalName: 'unmatched two' });
+    for (const name of ['photo a', 'photo b']) {
+      await seedArtist({
+        canonicalName: name,
+        matchStatus: 'matched',
+        spotifyArtistId: `sp_${name}`,
+        photoUrl: 'https://i.scdn.co/image/old',
+        photoFetchedAt: new Date(NOW.getTime() - 25 * DAY_MS),
+      });
+    }
+    const lookup = vi.fn(async () => ({
+      found: true as const,
+      imageUrl: 'https://i.scdn.co/image/renewed',
+    }));
+    const searched: string[] = [];
+
+    const summary = await runMatchArtists({
+      batchSize: 1,
+      photoBudget: 2,
+      now: () => NOW,
+      client: stubClient(async (query) => {
+        searched.push(query);
+        return [];
+      }, lookup),
+    });
+
+    expect(searched).toHaveLength(1);
+    expect(lookup).toHaveBeenCalledTimes(2);
+    expect(summary.photosRefreshed).toBe(2);
+    expect(summary.considered).toBe(3);
+    expect(bucketTotal(summary)).toBe(summary.considered);
+  });
+
+  it('refreshes the oldest photo first, unstamped rows ahead of all', async () => {
+    const days = { unstamped: null, oldest: 28, middle: 24, newest: 21 };
+    for (const [name, age] of Object.entries(days)) {
+      await seedArtist({
+        canonicalName: name,
+        matchStatus: 'matched',
+        spotifyArtistId: `sp_${name}`,
+        photoUrl: 'https://i.scdn.co/image/old',
+        photoFetchedAt:
+          age === null ? null : new Date(NOW.getTime() - age * DAY_MS),
+      });
+    }
+    const asked: string[] = [];
+
+    await runMatchArtists({
+      photoBudget: 2,
+      now: () => NOW,
+      client: stubClient(noSearch, async (spotifyId) => {
+        asked.push(spotifyId);
+        return { found: true as const, imageUrl: 'https://i.scdn.co/image/n' };
+      }),
+    });
+
+    expect(asked).toEqual(['sp_unstamped', 'sp_oldest']);
+  });
+
+  it('keeps every photo under the readers 30-day ceiling across a simulated cycle', async () => {
+    // 60 photos aged 0..29 days, two of each, and the budget the sizing rule
+    // gives for 60 photos (ceil(60 / 15) = 4), passed explicitly because it
+    // is below the production floor.
+    const total = 60;
+    const budget = Math.ceil(total / 15);
+    const ceilingDays = 30;
+    for (let n = 0; n < total; n += 1) {
+      await seedArtist({
+        canonicalName: `photo ${String(n).padStart(2, '0')}`,
+        matchStatus: 'matched',
+        spotifyArtistId: `sp_${n}`,
+        photoUrl: 'https://i.scdn.co/image/old',
+        photoFetchedAt: new Date(NOW.getTime() - (n % 30) * DAY_MS),
+      });
+    }
+    const lookup = vi.fn(async () => ({
+      found: true as const,
+      imageUrl: 'https://i.scdn.co/image/renewed',
+    }));
+
+    for (let day = 0; day < 45; day += 1) {
+      const runAt = new Date(NOW.getTime() + day * DAY_MS);
+      await runMatchArtists({
+        photoBudget: budget,
+        now: () => runAt,
+        client: stubClient(noSearch, lookup),
+      });
+      // The next night's run is the next chance to refresh: nothing may be
+      // past the ceiling by then.
+      const nextRun = runAt.getTime() + DAY_MS;
+      const rows = await testDb.select().from(artists);
+      for (const row of rows) {
+        const ageDays =
+          (nextRun - (row.photoFetchedAt?.getTime() ?? nextRun)) / DAY_MS;
+        expect(ageDays).toBeLessThan(ceilingDays);
+      }
+    }
+    expect(lookup.mock.calls.length).toBeLessThanOrEqual(45 * budget);
   });
 
   it('defaults the batch size to the exported constant', () => {
