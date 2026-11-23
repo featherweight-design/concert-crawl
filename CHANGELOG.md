@@ -1,3 +1,15 @@
+# [1.552.0](https://github.com/featherweight-design/concert-crawl/compare/v1.551.0...v1.552.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **db:** load over the direct url, clear the crawl window, pin 0128's indexes as literals ([2bc91ee](https://github.com/featherweight-design/concert-crawl/commit/2bc91eef953926d52b6510f8f889f071b471c3f4))
+
+
+### Features
+
+* **db:** mb_artists loader and weekly staging refresh job ([f94107b](https://github.com/featherweight-design/concert-crawl/commit/f94107bb1e4f5308f390c66faeb244939babae3f))
+
 # [1.551.0](https://github.com/featherweight-design/concert-crawl/compare/v1.550.0...v1.551.0) (2026-11-23)
 
 
