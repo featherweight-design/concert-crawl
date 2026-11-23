@@ -60,9 +60,10 @@ describe('PhotoCredit', () => {
       '[data-testid="photo-credit-author"]',
     );
     expect(author?.style.textOverflow).toBe('ellipsis');
-    const fixed = Array.from(el.querySelectorAll<HTMLElement>('a')).map(
-      (link) => link.style.flex,
+    const links = Array.from(el.querySelectorAll<HTMLElement>('a'));
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.every((link) => link.style.whiteSpace === 'nowrap')).toBe(
+      true,
     );
-    expect(fixed.every((flex) => flex.startsWith('none'))).toBe(true);
   });
 });
