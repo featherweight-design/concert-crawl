@@ -118,4 +118,37 @@ describe('apiClient', () => {
       'crawlWaitForSelector',
     );
   });
+
+  it('reads Retry-After seconds onto a 429 ApiError', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ success: false, error: 'Too many' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': '900',
+        },
+      }),
+    );
+
+    const { apiClient } = await import('./api.js');
+    await expect(apiClient.get('/v1/x', 'test-token')).rejects.toMatchObject({
+      status: 429,
+      retryAfterSeconds: 900,
+    });
+  });
+
+  it('leaves retryAfterSeconds unset on other statuses', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ success: false, error: 'No' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': '900' },
+      }),
+    );
+
+    const { apiClient } = await import('./api.js');
+    await expect(apiClient.get('/v1/x', 'test-token')).rejects.toMatchObject({
+      status: 404,
+      retryAfterSeconds: undefined,
+    });
+  });
 });
