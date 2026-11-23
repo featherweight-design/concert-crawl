@@ -3,29 +3,13 @@
 import { useSearch } from '../../../lib/search/useSearch';
 import { SearchBar } from '../../../components/consumer/search/SearchBar';
 import { SearchDefaultState } from '../../../components/consumer/search/SearchDefaultState';
-import { SearchResultsState } from '../../../components/consumer/search/SearchResultsState';
-import { SearchEmptyState } from '../../../components/consumer/search/SearchEmptyState';
-import { SearchLoadingState } from '../../../components/consumer/search/SearchLoadingState';
+import { SearchKeepTyping } from '../../../components/consumer/search/SearchKeepTyping';
+import { SearchTypedBody } from '../../../components/consumer/search/SearchTypedBody';
 
 export default function SearchPage() {
-  const {
-    query,
-    setQuery,
-    clearQuery,
-    recentSearches,
-    removeRecent,
-    popularEvents,
-    artistResults,
-    artistPageResults,
-    venueResults,
-    isLoading,
-    navigateTo,
-  } = useSearch();
-
-  const hasResults =
-    artistPageResults.length > 0 ||
-    artistResults.length > 0 ||
-    venueResults.length > 0;
+  const search = useSearch();
+  const { query, setQuery, clearQuery, navigateTo } = search;
+  const trimmed = query.trim();
 
   return (
     <div
@@ -48,28 +32,24 @@ export default function SearchPage() {
       />
 
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-        {query.trim() === '' && (
-          <SearchDefaultState
-            recentSearches={recentSearches}
-            popularEvents={popularEvents}
-            onPickQuery={setQuery}
-            onPickEvent={navigateTo}
-            onRemoveRecent={removeRecent}
-          />
+        {trimmed.length < 2 && (
+          <>
+            <SearchDefaultState
+              recentSearches={search.recentSearches}
+              popularEvents={search.popularEvents}
+              onPickQuery={setQuery}
+              onPickEvent={navigateTo}
+              onRemoveRecent={search.removeRecent}
+            />
+            {trimmed.length === 1 && <SearchKeepTyping />}
+          </>
         )}
-        {query.trim() !== '' && isLoading && <SearchLoadingState />}
-        {query.trim() !== '' && !isLoading && hasResults && (
-          <SearchResultsState
-            artistResults={artistResults}
-            artistPageResults={artistPageResults}
-            venueResults={venueResults}
+        {trimmed.length >= 2 && (
+          <SearchTypedBody
+            search={search}
             withExplainerRail
-            query={query}
             onNavigateTo={navigateTo}
           />
-        )}
-        {query.trim() !== '' && !isLoading && !hasResults && (
-          <SearchEmptyState query={query} />
         )}
       </div>
     </div>

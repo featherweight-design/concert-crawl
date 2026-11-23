@@ -121,9 +121,13 @@ export const CONSUMER_COPY = {
 
   // ── Search ─────────────────────────────────────────────────────────
   searchNoResultsEyebrow: 'No results',
-  searchNoResultsTitle: 'Nothing under that name.',
+  searchNoResultsTitle: 'Nobody by that name.',
   searchNoResultsBody:
-    "No bookings right now. Try another spelling, or browse what's on tonight.",
+    'Not an act or a venue we can find. Check the spelling, or try part of the name.',
+  searchFailedEyebrow: 'Search',
+  searchFailedTitle: "Search didn't load.",
+  searchFailedBody: 'Something went wrong on our end. Give it another go.',
+  searchFailedRetry: 'Try again',
   searchNoResultsCta: 'Browse all shows',
 
   // ── Shared / misc ──────────────────────────────────────────────────
@@ -726,21 +730,29 @@ export const CONSUMER_COPY = {
     // SearchDefaultState price fallback
     priceNotAnnounced: 'TBA',
 
-    // SearchResultsState section headers (count appended at runtime)
+    // SearchResultsState section headers (count appended at runtime). Artists
+    // is the one artist list (ours and MusicBrainz's); Shows is the rows
+    // derived from events, which open a filtered Browse.
     artistsSectionPrefix: 'Artists',
+    showsSectionPrefix: 'Shows',
     venuesSectionPrefix: 'Venues',
-    // #1115 PR-G — artists that have their own page. A separate section from
-    // the event-derived "Artists" rows above, which route to a filtered browse.
-    artistPagesSectionPrefix: 'Artist pages',
 
     // SearchResultsState venue sub-label
     upcomingShowSingular: 'upcoming show',
     upcomingShowPlural: 'upcoming shows',
 
-    // SearchResultsState artist-page row — sub-label when the artist has a page
-    // but nothing on the calendar, and the trailing tag on every such row.
-    artistPageNoUpcoming: 'Past shows only',
-    artistPageRowTag: 'Artist page',
+    // The artist row's second line. The marker is kind 1 only (an act with
+    // shows); the rest read from MusicBrainz when it has a line for the act.
+    showsMarker: (count: number) =>
+      `${count} ${count === 1 ? 'show' : 'shows'}`,
+    nextShowLine: (date: string, venue: string) => `Next ${date} · ${venue}`,
+    noUpcomingDates: 'No upcoming Denver dates',
+    noDatesYet: 'No Denver dates yet',
+    artistTypeLabel: { person: 'Solo artist', group: 'Band' },
+    artistFallbackLine: 'Artist',
+
+    // Search states
+    keepTyping: 'Keep typing. Two letters starts the search.',
   },
 
   // ── Filter bar ──────────────────────────────────────────────────

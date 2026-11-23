@@ -16,8 +16,8 @@ import { CCMark } from '@/components/brand/cc-mark';
 import { CCWordmark } from '@/components/brand/cc-wordmark';
 import { SearchDefaultState } from '../search/SearchDefaultState';
 import { SearchResultsState } from '../search/SearchResultsState';
-import { SearchEmptyState } from '../search/SearchEmptyState';
-import { SearchLoadingState } from '../search/SearchLoadingState';
+import { SearchKeepTyping } from '../search/SearchKeepTyping';
+import { SearchTypedBody } from '../search/SearchTypedBody';
 import {
   SEARCH_FIELD_BOX,
   SEARCH_FIELD_FONT_SIZE,
@@ -135,12 +135,14 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     query,
     popularEvents,
     artistResults,
-    artistPageResults,
+    artistList,
     venueResults,
     venueFirst,
     navigateTo,
   } = search;
-  const browsing = query.trim() === '';
+  // One letter is not a search (addendum 12): the default list stays and the
+  // keyboard keeps walking it.
+  const browsing = query.trim().length < 2;
 
   // On a wide screen the first result is highlighted as soon as typed results
   // arrive (more-r3-palette_typed: the yellow edge and wash on row one), so
@@ -151,7 +153,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   // and highlighting one of those would let Enter open a result for text that
   // is no longer in the box.
   const typedResultCount =
-    artistResults.length + artistPageResults.length + venueResults.length;
+    artistResults.length + artistList.length + venueResults.length;
   const settled = !search.isLoading;
   useEffect(() => {
     if (!open || sheet || browsing || !settled || typedResultCount === 0) {
@@ -168,7 +170,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
 
     const totalResults = browsing
       ? popularEvents.length
-      : artistPageResults.length + artistResults.length + venueResults.length;
+      : artistList.length + artistResults.length + venueResults.length;
 
     // Tab stays inside the dialog: `aria-modal` tells assistive tech the page
     // behind is inert, and this makes the keyboard agree.
@@ -204,23 +206,26 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         }
         return;
       }
-      // B+ order: Artists and Venues (`venueFirst` swaps them), then the
-      // artist pages, which own the indices after both.
-      const firstCount = venueFirst
-        ? venueResults.length
-        : artistResults.length;
-      const eventCount = artistResults.length + venueResults.length;
-      if (rawIdx >= eventCount) {
-        const artistPage = artistPageResults[rawIdx - eventCount];
-        if (artistPage) {
-          navigateTo('artistPage', { slug: artistPage.slug });
+      // B+ order: the artist list, then Shows and Venues (`venueFirst` swaps
+      // those two). The list owns the first indices.
+      const listCount = artistList.length;
+      if (rawIdx < listCount) {
+        const listed = artistList[rawIdx];
+        // A MusicBrainz-only act has no page yet: Enter does nothing until
+        // the preview (U3) gives it somewhere to go.
+        if (listed?.slug) {
+          navigateTo('artistPage', { slug: listed.slug });
           onClose();
         }
         return;
       }
-      const pickVenue = venueFirst ? rawIdx < firstCount : rawIdx >= firstCount;
+      const rest = rawIdx - listCount;
+      const firstCount = venueFirst
+        ? venueResults.length
+        : artistResults.length;
+      const pickVenue = venueFirst ? rest < firstCount : rest >= firstCount;
       if (pickVenue) {
-        const venue = venueResults[venueFirst ? rawIdx : rawIdx - firstCount];
+        const venue = venueResults[venueFirst ? rest : rest - firstCount];
         if (venue) {
           navigateTo('venue', {
             slug: venue.slug,
@@ -229,7 +234,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           onClose();
         }
       } else {
-        const artist = artistResults[venueFirst ? rawIdx - firstCount : rawIdx];
+        const artist = artistResults[venueFirst ? rest - firstCount : rest];
         if (artist) {
           navigateTo('artist', artist.name);
           onClose();
@@ -273,7 +278,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     browsing,
     popularEvents,
     artistResults,
-    artistPageResults,
+    artistList,
     venueResults,
     venueFirst,
     navigateTo,
@@ -281,11 +286,6 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   ]);
 
   if (!open) return null;
-
-  const hasResults =
-    artistPageResults.length > 0 ||
-    artistResults.length > 0 ||
-    venueResults.length > 0;
 
   const input = (
     <input
@@ -368,24 +368,19 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             onHover={select}
           />
         )}
-        {!browsing && search.isLoading && <SearchLoadingState />}
-        {!browsing && !search.isLoading && hasResults && (
-          <SearchResultsState
-            artistResults={artistResults}
-            artistPageResults={artistPageResults}
-            venueResults={venueResults}
-            venueFirst={venueFirst}
+        {browsing && query.trim().length === 1 && <SearchKeepTyping />}
+        {!browsing && (
+          <SearchTypedBody
+            search={search}
+            useVenueFirst
             selectedIdx={selectedIdx}
-            query={query}
             onHover={select}
             onNavigateTo={(type, value) => {
               navigateTo(type, value);
               onClose();
             }}
+            onCtaClick={onClose}
           />
-        )}
-        {!browsing && !search.isLoading && !hasResults && (
-          <SearchEmptyState query={query} onCtaClick={onClose} />
         )}
       </div>
     </ListboxRowsContext.Provider>

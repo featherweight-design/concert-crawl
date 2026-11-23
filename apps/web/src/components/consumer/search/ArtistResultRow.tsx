@@ -11,7 +11,8 @@
 // off event billing strings, so an artist with no Denver history cannot be in
 // the index at all.
 
-import type { ArtistSearchResult } from '@concert-crawl/types';
+import type { CSSProperties, ReactNode } from 'react';
+import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import { FollowErrorMessage } from '@/components/consumer/artist-page/FollowErrorMessage';
 import {
@@ -31,17 +32,79 @@ import {
   ringColorFor,
 } from './ResultParts';
 
+import { artistLine } from './artist-line';
+
 const copy = CONSUMER_COPY.search;
 
+/** The N SHOWS marker: signal at 12% fill and 35% border, mono 9px, 6px dot. */
+const ShowsMarker = ({ count }: { count: number }) => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      marginRight: 6,
+      padding: '1px 5px',
+      borderRadius: 4,
+      border: '1px solid color-mix(in oklch, var(--signal) 35%, transparent)',
+      background: 'color-mix(in oklch, var(--signal) 12%, transparent)',
+      color: 'var(--signal)',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 9,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      flexShrink: 0,
+    }}
+  >
+    <span
+      aria-hidden
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: 'var(--signal)',
+      }}
+    />
+    {copy.showsMarker(count)}
+  </span>
+);
+
+/** The row's name half: a button when it opens something, else plain. */
+const Target = ({
+  onNavigate,
+  rowProps,
+  style,
+  children,
+}: {
+  onNavigate: (() => void) | undefined;
+  rowProps: ReturnType<typeof resultRowProps>;
+  style: CSSProperties;
+  children: ReactNode;
+}) =>
+  onNavigate ? (
+    <button type="button" onClick={onNavigate} {...rowProps} style={style}>
+      {children}
+    </button>
+  ) : (
+    <div style={style}>{children}</div>
+  );
+
 interface ArtistResultRowProps {
-  artist: ArtistSearchResult;
+  artist: ArtistSearchAllResult;
+  /** Another listed row carries this name (computed over the list). */
+  sharedName: boolean;
   selected: boolean;
   /** The row's keyboard index, for its option id. */
   itemIdx: number;
   /** Inside the palette's listbox (the row is then an `option`). */
   listbox: boolean;
   onHover?: () => void;
-  onNavigate: () => void;
+  /**
+   * Opens the artist. Absent for a MusicBrainz-only act (no page yet): the row
+   * is then Follow-only and its name half is not a control. U3's preview joins
+   * here.
+   */
+  onNavigate?: (() => void) | undefined;
   /** Clerk's answer, `undefined` while it is still resolving. */
   isSignedIn: boolean | undefined;
   size: 'row' | 'rowWide';
@@ -52,6 +115,7 @@ interface ArtistResultRowProps {
 
 export const ArtistResultRow = ({
   artist,
+  sharedName,
   selected,
   itemIdx,
   listbox,
@@ -62,7 +126,7 @@ export const ArtistResultRow = ({
   iconOnly,
   query,
 }: ArtistResultRowProps) => {
-  const follow = useArtistFollow(artist.slug, artist.following);
+  const follow = useArtistFollow(artist.slug, artist.following, artist.mbid);
 
   // Until Clerk answers, a tap does nothing, as on the follow shelf: a toggle
   // with no token yet dies on `Error('Not authenticated')`, and sending a
@@ -75,14 +139,7 @@ export const ArtistResultRow = ({
   const resolving = isSignedIn === undefined;
   const signedOut = isSignedIn === false && !artist.following;
 
-  const meta =
-    artist.upcomingShowCount > 0
-      ? `${artist.upcomingShowCount} ${
-          artist.upcomingShowCount === 1
-            ? copy.upcomingShowSingular
-            : copy.upcomingShowPlural
-        }`
-      : copy.artistPageNoUpcoming;
+  const line = artistLine(artist, sharedName);
 
   // The artist's own genre (the search API derives it from their shows) rings
   // the portrait and fills the chip; an artist with none keeps the neutral
@@ -95,13 +152,12 @@ export const ArtistResultRow = ({
       style={{ ...resultRowStyle(selected, ring), cursor: 'default' }}
       onMouseEnter={onHover}
     >
-      <button
-        type="button"
-        onClick={onNavigate}
-        {...resultRowProps(listbox, itemIdx, selected)}
+      <Target
+        onNavigate={onNavigate}
+        rowProps={resultRowProps(listbox, itemIdx, selected)}
         style={{
           all: 'unset',
-          cursor: 'pointer',
+          cursor: onNavigate ? 'pointer' : 'default',
           display: 'flex',
           alignItems: 'center',
           gap: 14,
@@ -161,26 +217,25 @@ export const ArtistResultRow = ({
             />
           ) : (
             <span style={RESULT_META_STYLE}>
+              {line.kind === 'shows' && <ShowsMarker count={line.count} />}
               <span
                 style={{
                   color:
-                    artist.upcomingShowCount > 0
+                    line.kind === 'shows'
                       ? 'var(--fg-muted)'
                       : 'var(--fg-subtle)',
                 }}
               >
-                {meta}
+                {line.text}
               </span>
-              {' · '}
-              <span>{copy.artistPageRowTag}</span>
             </span>
           )}
           <GenreChips genres={genres} maxChips={1} />
         </span>
-      </button>
+      </Target>
       <FollowButton
         name={artist.name}
-        slug={artist.slug}
+        {...(artist.slug === null ? {} : { slug: artist.slug })}
         following={follow.following}
         signedOut={signedOut}
         size={size}
