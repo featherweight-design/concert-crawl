@@ -1,3 +1,15 @@
+# [1.558.0](https://github.com/featherweight-design/concert-crawl/compare/v1.557.0...v1.558.0) (2026-11-23)
+
+
+### Features
+
+* **api:** artist info route for facts, summary and photo (artist-search PR 6b) ([7d8a5e8](https://github.com/featherweight-design/concert-crawl/commit/7d8a5e879c3bdeb0d464f1ebb792c6106a1448e6))
+
+
+### Performance Improvements
+
+* **api:** read the slim row alongside the artist info visibility check ([e518607](https://github.com/featherweight-design/concert-crawl/commit/e518607af2cca90691662c284a6ed0a5ef9bb4f8))
+
 # [1.557.0](https://github.com/featherweight-design/concert-crawl/compare/v1.556.0...v1.557.0) (2026-11-23)
 
 
