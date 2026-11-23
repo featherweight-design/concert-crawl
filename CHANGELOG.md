@@ -1,3 +1,15 @@
+# [1.560.0](https://github.com/featherweight-design/concert-crawl/compare/v1.559.0...v1.560.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **web:** keep the use-artist-follow mocks whole, share the fallback hour ([965a422](https://github.com/featherweight-design/concert-crawl/commit/965a42209b64a2a3df9bde416e381d96ec74d0b2))
+
+
+### Features
+
+* **web:** show why a follow was refused, on the search row and the artist page ([25c4b32](https://github.com/featherweight-design/concert-crawl/commit/25c4b32efe28fe50fcbc6bdd33853da8978306ea))
+
 # [1.559.0](https://github.com/featherweight-design/concert-crawl/compare/v1.558.1...v1.559.0) (2026-11-23)
 
 
