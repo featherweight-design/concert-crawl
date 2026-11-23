@@ -89,7 +89,7 @@ This is the built artist page (`09-artist`, `ArtistPageContent.tsx`) with the ga
 ### Photo and credit
 
 - Order (plan decision 5): Spotify photo under 30 days old, then a Commons photo whose licence allows reuse, then the IdentityArt plate.
-- **A Commons photo carries a credit line directly under the card**: `Photo: {author} · {licence} · Wikimedia Commons`, mono 10px `subtle`, each part a link (author page, licence deed, file page). Centred on the phone, under the card on desktop. It wraps; it never truncates (`02/page-commons-360`, `02/page-commons-d`).
+- **A Commons photo carries a credit line directly under the card**: `Photo: {author} · {licence} · Wikimedia Commons`, mono 8.5px `subtle`, each part a link (author page, licence deed, file page). Centred under the card on phone and desktop. **Always one line**: if it cannot fit, the author name ellipsises; the licence and "Wikimedia Commons" never truncate (`02/page-commons-360`, `02/page-commons-d`).
 - Spotify photos and the plate carry no credit, as today.
 
 ### Ring
