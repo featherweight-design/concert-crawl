@@ -15,6 +15,10 @@ import { capacityTypeLabel, type MapPinState } from './details-rules';
 const COPY = ADMIN_COPY.venueDetails;
 const PIN_COPY = COPY.fields.mapPin;
 
+/** The id of a field's error or hint line, for its input's `aria-describedby`. */
+export const fieldErrorId = (id: string) => `${id}-error`;
+export const fieldHintId = (id: string) => `${id}-hint`;
+
 /** A label over its input, then the input's error, else its hint. */
 export const Field = ({
   id,
@@ -35,11 +39,15 @@ export const Field = ({
     </label>
     {children}
     {error !== undefined ? (
-      <div role="alert" style={errorStyle}>
+      <div id={fieldErrorId(id)} role="alert" style={errorStyle}>
         {error}
       </div>
     ) : (
-      hint !== undefined && <div style={hintStyle}>{hint}</div>
+      hint !== undefined && (
+        <div id={fieldHintId(id)} style={hintStyle}>
+          {hint}
+        </div>
+      )
     )}
   </div>
 );

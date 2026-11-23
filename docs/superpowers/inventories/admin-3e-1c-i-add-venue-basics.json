@@ -1,0 +1,121 @@
+{
+  "feature": "Admin 3e-1c-i: Add a venue, the Basics form",
+  "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (start-nobody-asked-yet, basics-desktop, step-1-basics-mobile). Admin role (CONTACT_SHEET_ROLE=admin). URL-only until 3e-2 (plan decision 12). 3e-1c-i draws the Basics form; Continue checks it, and the draft save lands in 3e-1c-ii, so nothing here writes to the database.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 760,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "start",
+      "label": "Start: nobody asked yet, Start from scratch",
+      "steps": [
+        {
+          "goto": "/admin/venues/new",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-start\"]"
+        },
+        {
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "basics-empty",
+      "label": "Basics on step 1, empty: steps 2 to 5 not open yet",
+      "steps": [
+        {
+          "goto": "/admin/venues/new",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-start\"]"
+        },
+        {
+          "settle": 1500
+        },
+        {
+          "click": "[data-testid=\"add-venue-from-scratch\"]"
+        },
+        {
+          "wait": "[data-testid=\"add-venue-shell\"]"
+        },
+        {
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "basics-errors",
+      "label": "Basics, Continue on an empty form: field errors, stays on Basics",
+      "steps": [
+        {
+          "goto": "/admin/venues/new",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-start\"]"
+        },
+        {
+          "settle": 1500
+        },
+        {
+          "click": "[data-testid=\"add-venue-from-scratch\"]"
+        },
+        {
+          "click": "[data-testid=\"add-venue-continue\"]"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "basics-filled",
+      "label": "Basics, filled: link made from the name, robots.txt checked",
+      "steps": [
+        {
+          "goto": "/admin/venues/new",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-start\"]"
+        },
+        {
+          "settle": 1500
+        },
+        {
+          "click": "[data-testid=\"add-venue-from-scratch\"]"
+        },
+        {
+          "fill": "#add-venue-name",
+          "text": "Dazzle Jazz"
+        },
+        {
+          "fill": "#add-venue-address",
+          "text": "1512 Curtis St, Denver"
+        },
+        {
+          "fill": "#add-venue-capacity",
+          "text": "300"
+        },
+        {
+          "fill": "#add-venue-website",
+          "text": "dazzledenver.com"
+        },
+        {
+          "settle": 3500
+        }
+      ]
+    }
+  ]
+}
