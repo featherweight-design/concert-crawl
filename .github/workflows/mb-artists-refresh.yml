@@ -1,0 +1,139 @@
+name: MusicBrainz artists refresh
+
+# Weekly reload of `mb_artists`, the slim MusicBrainz copy behind artist search
+# (docs/superpowers/plans/2026-11-22-artist-search-musicbrainz.md, PR 2).
+#
+# Downloads MusicBrainz's latest full export (or a named earlier one), checks
+# it against the export's SHA256SUMS, extracts only the six CC0 core tables the
+# loader reads (artist, artist_alias, area, artist_type, url, l_artist_url),
+# and runs packages/db/src/scripts/run-load-mb-artists.ts. The loader builds a
+# shadow table and swaps it in inside one transaction, so a failed run leaves
+# the previous copy serving. Row counts, timings and the table and index size
+# go to the run's summary page.
+#
+# STAGING ONLY. The job runs in the `staging` environment and reads that
+# environment's CRAWLER_DATABASE_URL. There is no production target: the first
+# production load waits for Hugh's OK after the staging load is measured, and
+# adding production is its own PR.
+#
+# Rollback: dispatch with `dump` set to an earlier export's directory name
+# (listed at https://data.metabrainz.org/pub/musicbrainz/data/fullexport/).
+#
+# Guards:
+# - Only main's copy of this workflow may read the secret: any other ref is
+#   skipped.
+# - One run at a time; a dispatch queues behind a running load.
+# - The loader refuses the swap when the load holds under 1,000,000 rows, or
+#   under 90% of the rows already serving.
+
+on:
+  schedule:
+    # Mondays 09:17 UTC (02:17 or 03:17 MT), clear of the 3 AM MT crawl's
+    # database writes and after MusicBrainz's twice-weekly export lands.
+    - cron: '17 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      dump:
+        description: 'Export directory to load, e.g. 20261118-001001. Blank loads LATEST.'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mb-artists-refresh-staging
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: MusicBrainz artists refresh (staging)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: staging
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the db package's dependencies
+        run: pnpm exec turbo run build --filter=@concert-crawl/db^...
+
+      - name: Verify configuration
+        env:
+          CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          DUMP: ${{ inputs.dump }}
+        run: |
+          if [ -z "$CRAWLER_DATABASE_URL" ]; then
+            echo "Missing staging-environment secret: CRAWLER_DATABASE_URL"; exit 1
+          fi
+          if [ -n "$DUMP" ] && ! [[ "$DUMP" =~ ^[0-9]{8}-[0-9]{6}$ ]]; then
+            echo "dump must look like 20261118-001001 (got '$DUMP')"; exit 1
+          fi
+
+      - name: Install lbzip2
+        run: sudo apt-get install -y --no-install-recommends lbzip2
+
+      # The export is several GB: it goes to the runner's larger scratch disk.
+      - name: Download and verify the export
+        id: download
+        env:
+          DUMP: ${{ inputs.dump }}
+        run: |
+          base=https://data.metabrainz.org/pub/musicbrainz/data/fullexport
+          if [ -z "$DUMP" ]; then DUMP=$(curl -sSfL "$base/LATEST" | tr -d '[:space:]'); fi
+          if ! [[ "$DUMP" =~ ^[0-9]{8}-[0-9]{6}$ ]]; then
+            echo "Unexpected export name: '$DUMP'"; exit 1
+          fi
+          work=/mnt/mbdump
+          sudo mkdir -p "$work" && sudo chown "$USER" "$work"
+          df -h "$work"
+          started=$(date +%s)
+          curl -sSfL --retry 3 -o "$work/mbdump.tar.bz2" "$base/$DUMP/mbdump.tar.bz2"
+          curl -sSfL --retry 3 -o "$work/SHA256SUMS" "$base/$DUMP/SHA256SUMS"
+          (cd "$work" && grep ' \*\?mbdump.tar.bz2$' SHA256SUMS | sha256sum -c -)
+          bytes=$(stat -c %s "$work/mbdump.tar.bz2")
+          echo "dump=$DUMP" >> "$GITHUB_OUTPUT"
+          echo "work=$work" >> "$GITHUB_OUTPUT"
+          {
+            echo "Export \`$DUMP\`: $(( bytes / 1024 / 1024 )) MB, downloaded and verified in $(( $(date +%s) - started )) s."
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Extract the six tables
+        env:
+          WORK: ${{ steps.download.outputs.work }}
+        run: |
+          started=$(date +%s)
+          tar -I lbzip2 -xf "$WORK/mbdump.tar.bz2" -C "$WORK" \
+            mbdump/artist mbdump/artist_alias mbdump/area mbdump/artist_type \
+            mbdump/url mbdump/l_artist_url
+          rm "$WORK/mbdump.tar.bz2"
+          ls -l "$WORK/mbdump"
+          echo "Extracted in $(( $(date +%s) - started )) s." >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Load and swap
+        env:
+          DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          WORK: ${{ steps.download.outputs.work }}
+          DUMP: ${{ steps.download.outputs.dump }}
+          # The alias and link lookups are held in memory before the artist
+          # table streams; leave headroom on the 16 GB runner.
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          pnpm --filter @concert-crawl/db run db:load-mb-artists -- \
+            --dump-dir="$WORK/mbdump" --dump-label="$DUMP" \
+            --summary-file="$GITHUB_STEP_SUMMARY"
