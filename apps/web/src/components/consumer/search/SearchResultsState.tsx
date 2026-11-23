@@ -57,6 +57,8 @@ interface SearchResultsStateProps {
     type: 'artist' | 'artistPage' | 'venue',
     value: string | { slug: string; matchingEventId?: string },
   ) => void;
+  /** The palette drills into a MusicBrainz-only act rather than opening a sheet. */
+  onOpenPreview?: (artist: ArtistSearchAllResult) => void;
 }
 
 // The one artist list (addendum 12). Kinds 1 and 2 open `/artists/{slug}`; a
@@ -71,6 +73,7 @@ function ArtistListSection({
   query,
   onHover,
   onNavigateTo,
+  onOpenPreview,
 }: {
   artistList: ArtistSearchAllResult[];
   selectedIdx: number;
@@ -78,6 +81,7 @@ function ArtistListSection({
   query?: string | undefined;
   onHover?: (idx: number) => void;
   onNavigateTo: (type: 'artistPage', value: { slug: string }) => void;
+  onOpenPreview?: ((artist: ArtistSearchAllResult) => void) | undefined;
 }) {
   const listbox = useListboxRows();
   const { isSignedIn } = useAuth();
@@ -106,7 +110,9 @@ function ArtistListSection({
               listbox={listbox}
               {...hoverProps}
               {...(slug === null
-                ? {}
+                ? onOpenPreview
+                  ? { onNavigate: () => onOpenPreview(artist) }
+                  : {}
                 : { onNavigate: () => onNavigateTo('artistPage', { slug }) })}
               isSignedIn={isSignedIn}
               size={isDesktop ? 'rowWide' : 'row'}
@@ -361,6 +367,7 @@ export function SearchResultsState({
   onHover,
   query,
   onNavigateTo,
+  onOpenPreview,
 }: SearchResultsStateProps) {
   const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY);
 
@@ -398,6 +405,7 @@ export function SearchResultsState({
         {...hoverProp}
         {...queryProp}
         onNavigateTo={(type, value) => onNavigateTo(type, value)}
+        onOpenPreview={onOpenPreview}
       />
       {venueFirst ? (
         <>

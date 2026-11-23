@@ -39,6 +39,8 @@ interface ArtistPreviewProps {
    * slug. Null before that: the link is not drawn.
    */
   pageHref: string | null;
+  /** Fired when Open their page is taken (the palette closes itself). */
+  onOpenPage?: () => void;
 }
 
 const AboutRow = ({
@@ -86,6 +88,7 @@ export const ArtistPreview = ({
   onToggle,
   error = null,
   pageHref,
+  onOpenPage,
 }: ArtistPreviewProps) => {
   const identity = identityLine(artist);
   const type = typeLabel(artist.type);
@@ -211,6 +214,7 @@ export const ArtistPreview = ({
         {following && pageHref && (
           <Link
             href={pageHref}
+            {...(onOpenPage ? { onClick: onOpenPage } : {})}
             style={{
               marginTop: 10,
               minHeight: 44,

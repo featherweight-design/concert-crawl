@@ -1,5 +1,6 @@
 'use client';
 
+import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import type { useSearch } from '../../../lib/search/useSearch';
 import { SearchEmptyState } from './SearchEmptyState';
 import { SearchFailedState } from './SearchFailedState';
@@ -17,6 +18,8 @@ interface SearchTypedBodyProps {
   /** The palette closes itself when the empty state's CTA is taken. */
   onCtaClick?: () => void;
   useVenueFirst?: boolean;
+  /** The palette drills into a MusicBrainz-only act instead of a sheet. */
+  onOpenPreview?: (artist: ArtistSearchAllResult) => void;
 }
 
 /**
@@ -32,6 +35,7 @@ export function SearchTypedBody({
   onNavigateTo,
   onCtaClick,
   useVenueFirst = false,
+  onOpenPreview,
 }: SearchTypedBodyProps) {
   const { artistList, artistResults, venueResults, venueFirst, query } = search;
   const hasResults =
@@ -57,6 +61,7 @@ export function SearchTypedBody({
       {...(onHover ? { onHover } : {})}
       query={query}
       onNavigateTo={onNavigateTo}
+      {...(onOpenPreview ? { onOpenPreview } : {})}
     />
   );
 }
