@@ -56,6 +56,17 @@ export interface Release {
 // resale marking (B+ addendum 10) sit behind the same gate and join that entry.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.79.0-beta',
+    date: 'Nov 23, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: 'Tap an artist with no Denver dates in search to see who they are and follow them.',
+      },
+    ],
+  },
+  {
     version: 'v0.78.0-beta',
     date: 'Nov 23, 2026',
     headline: null,

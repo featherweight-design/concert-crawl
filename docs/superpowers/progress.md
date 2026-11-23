@@ -11,3 +11,4 @@ The full phase log up to 2026-10-31 is kept in the private archive. New rows go 
 | Photo | Spotify photos re-fetched by stored id, dropped when Spotify no longer has them, never served past 30 days (artist-search PR 7)                     | ✅     |
 | Photo | Spotify photo refresh keeps up: own daily budget sized from the catalogue, oldest photo first, refetch at day 20 so none reaches the 30-day ceiling | ✅     |
 | Find  | Artist search API-A: MusicBrainz rows carry a type, follow-by-MBID returns the slug, list cap 8 (dark)                                              | ✅     |
+| Find  | Artist search U3: tap an act with no page for a preview, Follow in it, sheet, card and palette drill-in                                             | ✅     |
