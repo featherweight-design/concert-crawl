@@ -253,7 +253,7 @@ describe('SearchDefaultState', () => {
 });
 
 describe('SearchResultsState', () => {
-  it('renders artist section with count', () => {
+  it('renders the event-derived rows as a Shows section with count', () => {
     const artists = [
       { name: 'Radiohead', nextDate: '2027-06-01', venueShort: 'Red Rocks' },
     ];
@@ -264,7 +264,7 @@ describe('SearchResultsState', () => {
         onNavigateTo={mockNavigateTo}
       />,
     );
-    expect(screen.getByText('Artists · 1')).toBeTruthy();
+    expect(screen.getByText('Shows · 1')).toBeTruthy();
     expect(screen.getByText('Radiohead')).toBeTruthy();
   });
 

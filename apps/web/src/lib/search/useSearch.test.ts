@@ -443,8 +443,10 @@ describe('useSearch — artist list (scope=all)', () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => {});
-    stableGetToken.mockRejectedValueOnce(new Error('clerk down'));
     const { result } = renderHook(() => useSearch());
+    await flush();
+    // After mount, so only the search's own token read rejects.
+    stableGetToken.mockRejectedValue(new Error('clerk down'));
 
     act(() => {
       result.current.setQuery('radio');
