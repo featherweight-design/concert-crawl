@@ -59,6 +59,8 @@ interface SearchResultsStateProps {
   ) => void;
   /** The palette drills into a MusicBrainz-only act rather than opening a sheet. */
   onOpenPreview?: (artist: ArtistSearchAllResult) => void;
+  /** Palette only: a MusicBrainz-only row's follow changed (slug, or null). */
+  onFollowed?: (mbid: string, slug: string | null) => void;
 }
 
 // The one artist list (addendum 12). Kinds 1 and 2 open `/artists/{slug}`; a
@@ -74,6 +76,7 @@ function ArtistListSection({
   onHover,
   onNavigateTo,
   onOpenPreview,
+  onFollowed,
 }: {
   artistList: ArtistSearchAllResult[];
   selectedIdx: number;
@@ -82,6 +85,7 @@ function ArtistListSection({
   onHover?: (idx: number) => void;
   onNavigateTo: (type: 'artistPage', value: { slug: string }) => void;
   onOpenPreview?: ((artist: ArtistSearchAllResult) => void) | undefined;
+  onFollowed?: ((mbid: string, slug: string | null) => void) | undefined;
 }) {
   const listbox = useListboxRows();
   const { isSignedIn } = useAuth();
@@ -114,6 +118,7 @@ function ArtistListSection({
                   ? { onNavigate: () => onOpenPreview(artist) }
                   : {}
                 : { onNavigate: () => onNavigateTo('artistPage', { slug }) })}
+              {...(onFollowed ? { onFollowed } : {})}
               isSignedIn={isSignedIn}
               size={isDesktop ? 'rowWide' : 'row'}
               iconOnly={iconOnly}
@@ -368,6 +373,7 @@ export function SearchResultsState({
   query,
   onNavigateTo,
   onOpenPreview,
+  onFollowed,
 }: SearchResultsStateProps) {
   const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY);
 
@@ -406,6 +412,7 @@ export function SearchResultsState({
         {...queryProp}
         onNavigateTo={(type, value) => onNavigateTo(type, value)}
         onOpenPreview={onOpenPreview}
+        onFollowed={onFollowed}
       />
       {venueFirst ? (
         <>

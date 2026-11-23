@@ -20,6 +20,7 @@ interface SearchTypedBodyProps {
   useVenueFirst?: boolean;
   /** The palette drills into a MusicBrainz-only act instead of a sheet. */
   onOpenPreview?: (artist: ArtistSearchAllResult) => void;
+  onFollowed?: (mbid: string, slug: string | null) => void;
 }
 
 /**
@@ -36,6 +37,7 @@ export function SearchTypedBody({
   onCtaClick,
   useVenueFirst = false,
   onOpenPreview,
+  onFollowed,
 }: SearchTypedBodyProps) {
   const { artistList, artistResults, venueResults, venueFirst, query } = search;
   const hasResults =
@@ -62,6 +64,7 @@ export function SearchTypedBody({
       query={query}
       onNavigateTo={onNavigateTo}
       {...(onOpenPreview ? { onOpenPreview } : {})}
+      {...(onFollowed ? { onFollowed } : {})}
     />
   );
 }

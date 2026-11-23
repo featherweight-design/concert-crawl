@@ -63,6 +63,8 @@ export const PalettePreview = ({
       <button
         type="button"
         onClick={onBack}
+        // Stepping back mid-request would drop the answer that carries the slug.
+        disabled={follow.pending}
         style={{
           all: 'unset',
           cursor: 'pointer',
