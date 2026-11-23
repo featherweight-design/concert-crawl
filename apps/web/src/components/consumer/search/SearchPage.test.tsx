@@ -493,7 +493,7 @@ describe('SearchResultsState — artist list', () => {
     expect(screen.getByText('Band · Ohio')).toBeTruthy();
     expect(screen.getByLabelText(ARTIST_COPY.followAria('Clip'))).toBeTruthy();
     // The act has no page: the name opens the preview and never navigates.
-    fireEvent.click(screen.getByRole('button', { name: /Clip/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Clip/ }));
     expect(screen.getByText(ARTIST_PREVIEW_COPY.notOnABillLead)).toBeTruthy();
     expect(mockNavigateTo).not.toHaveBeenCalled();
   });
