@@ -62,8 +62,8 @@ interface SearchResultsStateProps {
 }
 
 // The one artist list (addendum 12). Kinds 1 and 2 open `/artists/{slug}`; a
-// MusicBrainz-only act (kind 3) has no page, so its row is Follow-only until
-// the preview lands (U3 joins at `onNavigate`).
+// MusicBrainz-only act (kind 3) has no page, so its row opens the preview (the
+// palette drills in through `onOpenPreview` instead).
 //
 // The section owns the gate and the sheet; the rows own their own follow state.
 function ArtistListSection({

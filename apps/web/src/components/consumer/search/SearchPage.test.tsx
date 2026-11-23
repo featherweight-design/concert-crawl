@@ -86,6 +86,7 @@ vi.mock(
       return {
         following,
         error: null,
+        slug: null,
         toggle: () => {
           mockToggle();
           setFollowing((prev) => !prev);

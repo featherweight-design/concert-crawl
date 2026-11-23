@@ -86,10 +86,17 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   useEffect(() => {
     if (!open) setPreview(null);
   }, [open]);
-  const rememberFollowed = useCallback((mbid: string, slug: string) => {
-    setFollowed((prev) =>
-      prev.get(mbid) === slug ? prev : new Map(prev).set(mbid, slug),
-    );
+  // `null` is an unfollow in the drill-in: the act reads as unfollowed again.
+  const rememberFollowed = useCallback((mbid: string, slug: string | null) => {
+    setFollowed((prev) => {
+      if (slug === null) {
+        if (!prev.has(mbid)) return prev;
+        const next = new Map(prev);
+        next.delete(mbid);
+        return next;
+      }
+      return prev.get(mbid) === slug ? prev : new Map(prev).set(mbid, slug);
+    });
   }, []);
   const selectedIdxRef = useRef(-1);
   const inputRef = useRef<HTMLInputElement>(null);

@@ -20,7 +20,6 @@ export const ARTIST_PREVIEW_COPY = {
   pitchFollowing: 'Their dates will live on their page.',
   // Shown once the follow has returned the new slug.
   openPage: 'Open their page',
-  closeAriaLabel: 'Close',
   // Palette drill-in back row, `Results for “Clip”`.
   backToResults: (query: string) => `Results for “${query}”`,
 } as const;

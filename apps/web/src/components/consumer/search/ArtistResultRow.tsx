@@ -8,8 +8,7 @@
 // An artist with nothing upcoming keeps a normal LIVE Follow button and says so
 // in the muted meta line. That is the clearest case the feature exists for, and
 // there is no `unavailable` state to render instead. A MusicBrainz-only act
-// (kind 3, no slug) has no page to open: its row is Follow-only until U3's
-// preview, and its name half is not a control.
+// (kind 3, no slug) has no page to open: its name half opens the preview.
 
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import type { ArtistSearchAllResult } from '@concert-crawl/types';
@@ -104,9 +103,8 @@ interface ArtistResultRowProps {
   listbox: boolean;
   onHover?: () => void;
   /**
-   * Opens the artist. Absent for a MusicBrainz-only act (no page yet): the row
-   * is then Follow-only and its name half is not a control. U3's preview joins
-   * here.
+   * Opens the artist. Absent for a MusicBrainz-only act (no page yet): its
+   * name half then opens the preview, which the row owns.
    */
   onNavigate?: (() => void) | undefined;
   /** Clerk's answer, `undefined` while it is still resolving. */
