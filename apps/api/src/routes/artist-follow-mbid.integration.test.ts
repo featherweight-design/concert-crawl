@@ -236,26 +236,28 @@ describe('POST /v1/artists/follow — integration', () => {
   it('returns the slug of a row adopted by name', async () => {
     authState.current = { userId: USER_ID };
     await testDb.insert(mbArtists).values({ mbid: MBID, name: 'Big Thief' });
-    await seedArtist({ name: 'Big Thief', slug: 'big-thief-band' });
+    const seeded = await seedArtist({ name: 'Big Thief' });
 
     const res = await followMbid({ mbid: MBID });
     expect(res.status).toBe(200);
+    expect(await testDb.select().from(artists)).toHaveLength(1);
     expect(await res.json()).toEqual({
       success: true,
-      data: { following: true, slug: 'big-thief-band' },
+      data: { following: true, slug: seeded.slug },
     });
   });
 
   it('returns the slug of a row that already holds the MBID', async () => {
     authState.current = { userId: USER_ID };
     await testDb.insert(mbArtists).values({ mbid: MBID, name: 'Big Thief' });
-    await seedArtist({ name: 'Big Thief', slug: 'the-big-thief', mbid: MBID });
+    const seeded = await seedArtist({ name: 'Big Thief', mbid: MBID });
 
     const res = await followMbid({ mbid: MBID });
     expect(res.status).toBe(200);
+    expect(await testDb.select().from(artists)).toHaveLength(1);
     expect(await res.json()).toEqual({
       success: true,
-      data: { following: true, slug: 'the-big-thief' },
+      data: { following: true, slug: seeded.slug },
     });
   });
 });
