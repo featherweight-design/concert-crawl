@@ -1,6 +1,6 @@
 {
   "feature": "Admin 3e-1c-ii: Add a venue, the Basics draft save and resume",
-  "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (start-nobody-asked-yet, basics-desktop, step-1-basics-mobile). Admin role (CONTACT_SHEET_ROLE=admin). URL-only until 3e-2 (plan decision 12). The resume-missing row loads ?id for a venue that does not exist and must 404, which proves the page reads ?id without writing anything. The other rows repeat 3e-1c-i to show the form still reads the same with the save wired. No row presses Continue with a valid form: that writes a draft venue to the shared dev database, and a second cell would hit its taken link. The saved state (?id=&step=basics, Basics checked on the rail), the ?id resume, Back saving and every save error are covered by AddVenueFlow.test.tsx.",
+  "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (start-nobody-asked-yet, basics-desktop, step-1-basics-mobile). Admin role (CONTACT_SHEET_ROLE=admin). URL-only until 3e-2 (plan decision 12). The resume-missing row loads ?id for a venue that does not exist and must render the admin not-found screen (HTTP 200, because the admin loading.tsx streams the page), which proves the page reads ?id without writing anything. The other rows repeat 3e-1c-i to show the form still reads the same with the save wired. No row presses Continue with a valid form: that writes a draft venue to the shared dev database, and a second cell would hit its taken link. The saved state (?id=&step=basics, Basics checked on the rail), the ?id resume, Back saving and every save error are covered by AddVenueFlow.test.tsx.",
   "widths": [
     {
       "label": "phone-320",
@@ -119,14 +119,12 @@
     },
     {
       "id": "resume-missing",
-      "label": "Resume from ?id with no such venue: 404",
+      "label": "Resume from ?id with no such venue: the admin not-found screen",
       "steps": [
         {
           "goto": "/admin/venues/new?id=00000000-0000-0000-0000-000000000000",
-          "expectStatus": 404
-        },
-        {
-          "settle": 1500
+          "expectStatus": 200,
+          "wait": "[data-testid=\"admin-not-found\"]"
         }
       ]
     }
