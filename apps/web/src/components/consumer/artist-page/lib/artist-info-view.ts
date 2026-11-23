@@ -22,7 +22,8 @@ export const typeWord = (type: string | null): string | null => {
 
 /**
  * The one mono line under the name where a booked act's genre chips sit. The
- * same rule as the search row's second line, with "Artist" when MusicBrainz has
+ * same order as the search row's second line (disambiguation or type, then
+ * area), with "Artist" when MusicBrainz has
  * a row but nothing to say. Null when there are no facts at all.
  */
 export const identityLineFor = (

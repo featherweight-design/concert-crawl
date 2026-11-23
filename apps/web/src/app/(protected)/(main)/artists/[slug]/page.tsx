@@ -73,7 +73,11 @@ const fetchInfo = async (slug: string): Promise<ArtistInfoResponse | null> => {
     return await publicApiClient.get<ArtistInfoResponse>(
       `/v1/artists/${slug}/info`,
     );
-  } catch {
+  } catch (err) {
+    // A 404 is the info route hiding the act: expected, not worth a line.
+    if (!(err instanceof ApiError && err.status === 404)) {
+      console.error('[artist page] info fetch failed', { slug, err });
+    }
     return null;
   }
 };
