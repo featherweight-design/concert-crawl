@@ -37,6 +37,8 @@ const followCopy = () => [
   ARTIST_COPY.followSignedOutPitch,
   ARTIST_COPY.emptyBody,
   ARTIST_COPY.emptyBodyFollowing,
+  ARTIST_COPY.emptyNever.body,
+  ARTIST_COPY.emptyNever.bodyFollowing,
   ARTIST_COPY.upcomingNote,
   ARTIST_COPY.upcomingNoteFollowing,
   ARTIST_COPY.followAria('Nightjar Choir'),

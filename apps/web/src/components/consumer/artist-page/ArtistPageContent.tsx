@@ -1,6 +1,9 @@
 'use client';
 
-import type { ArtistDetailResponse } from '@concert-crawl/types';
+import type {
+  ArtistDetailResponse,
+  ArtistInfoResponse,
+} from '@concert-crawl/types';
 import { useAuth } from '@clerk/nextjs';
 import React, { useRef } from 'react';
 
@@ -19,12 +22,14 @@ import {
 import { ARTIST_COPY } from './definitions/copy';
 import { ArtistReportCard } from './ArtistReportCard';
 import { ArtistShareButton } from './ArtistShareButton';
+import { AboutBlock } from './AboutBlock';
 import { ArtistStage } from './ArtistStage';
 import { artistGenres } from './lib/artist-genres';
 import { ArtistEmbed } from './embed/ArtistEmbed';
 import { EmptyUpcoming } from './EmptyUpcoming';
 import { FollowBlock } from './FollowBlock';
 import { historyLine } from './lib/history-line';
+import { aboutFactsFor, identityLineFor } from './lib/artist-info-view';
 import { useArtistFollow } from './lib/use-artist-follow';
 import {
   useIsDesktop,
@@ -32,6 +37,7 @@ import {
   useScrolledPast,
 } from './lib/use-viewport';
 import { PastShows } from './PastShows';
+import { PhotoCredit } from './PhotoCredit';
 import { StickyBar } from './StickyBar';
 import { UpcomingShows } from './UpcomingShows';
 
@@ -60,9 +66,15 @@ import { UpcomingShows } from './UpcomingShows';
  */
 export const ArtistPageContent = ({
   data,
+  info = null,
   olderHref,
 }: {
   data: ArtistDetailResponse;
+  /**
+   * `/v1/artists/:slug/info`, fetched only for an act with nothing upcoming.
+   * Null when not asked for or when it failed: the page then reads as built.
+   */
+  info?: ArtistInfoResponse | null;
   /** "Show older" target: the next past-shows window; absent when none. */
   olderHref?: string | undefined;
 }) => {
@@ -72,6 +84,20 @@ export const ArtistPageContent = ({
   // The lead bucket's color. Every bucket owns a token, so `find` only falls
   // through to the neutral ring when there are no genres at all.
   const ring = genres.map(genreColor).find(Boolean) ?? NEUTRAL_GENRE_COLOR;
+
+  // Photo order: Spotify (already `artist.photoUrl`), then a Commons photo with
+  // its credit, then the plate. `info.image` repeats Spotify when it holds one,
+  // so only a Commons image is read from it, and only when there is no photo.
+  const commons =
+    !artist.photoUrl && info?.image?.source === 'commons' ? info.image : null;
+  const photoUrl = artist.photoUrl ?? commons?.url ?? null;
+  // No genres means no chips; the identity line stands where they would.
+  const identityLine =
+    genres.length === 0 ? identityLineFor(info?.facts ?? null) : null;
+  const aboutFacts = aboutFactsFor(info?.facts ?? null);
+  const hasAbout = aboutFacts.length > 0 || info?.summary != null;
+  // Nothing upcoming and nothing past: an act we have never seen on a bill.
+  const neverBilled = !hasShows && past.length === 0;
 
   // `null` is the API's word for "nobody is signed in" — distinct from `false`,
   // which is a real signed-in user who does not follow this artist.
@@ -110,7 +136,10 @@ export const ArtistPageContent = ({
   // (addendum 2, item 27); desktop keeps it in the stage.
   const inlineFollow = !isDesktop;
 
-  const historyText = historyLine(history, CRAWL_SINCE);
+  const historyText =
+    neverBilled && !history.count
+      ? ARTIST_COPY.historyNeverBilled(CRAWL_SINCE)
+      : historyLine(history, CRAWL_SINCE);
   const historyNode = (
     <p className="ap-history">
       <span aria-hidden="true" className="ap-history-dot" />
@@ -147,8 +176,9 @@ export const ArtistPageContent = ({
       <div ref={bandRef}>
         <ArtistStage
           name={artist.name}
-          photoUrl={artist.photoUrl}
+          photoUrl={photoUrl}
           ring={ring}
+          credit={commons ? <PhotoCredit image={commons} /> : null}
           back={<BackChip inline fallbackHref="/events" />}
           actions={<ArtistShareButton slug={artist.slug} name={artist.name} />}
           aside={
@@ -157,7 +187,11 @@ export const ArtistPageContent = ({
         >
           <p className="ap-eyebrow">{ARTIST_COPY.eyebrow}</p>
           <h1 className="ap-name">{artist.name}</h1>
-          <GenreChips genres={genres} className="ap-genres" />
+          {identityLine ? (
+            <p className="ap-identity">{identityLine}</p>
+          ) : (
+            <GenreChips genres={genres} className="ap-genres" />
+          )}
           {isDesktop ? historyNode : null}
         </ArtistStage>
       </div>
@@ -182,18 +216,29 @@ export const ArtistPageContent = ({
                 note={upcomingNote}
               />
             ) : (
-              <EmptyUpcoming {...followProps} inlineFollow={false} />
+              <EmptyUpcoming
+                {...followProps}
+                inlineFollow={false}
+                neverBilled={neverBilled}
+              />
             )}
           </div>
 
-          <div className="ap-block-player">
-            <ArtistEmbed
-              name={artist.name}
-              spotifyArtistId={artist.spotifyArtistId}
-              // Past the player to whatever follows it in the reading order.
-              skipTo={past.length > 0 ? 'previously' : 'artist-report'}
-              themeKey={theme}
-            />
+          {/* About, then the player: after Upcoming on a phone, and the right
+              column's top on desktop, above Listen. */}
+          <div className="ap-block-side">
+            {hasAbout ? (
+              <AboutBlock facts={aboutFacts} summary={info?.summary ?? null} />
+            ) : null}
+            <div className="ap-block-player">
+              <ArtistEmbed
+                name={artist.name}
+                spotifyArtistId={artist.spotifyArtistId}
+                // Past the player to whatever follows it in the reading order.
+                skipTo={past.length > 0 ? 'previously' : 'artist-report'}
+                themeKey={theme}
+              />
+            </div>
           </div>
 
           {/* The wrapper carries the top margin, so it has to disappear with

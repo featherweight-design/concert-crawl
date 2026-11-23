@@ -2,6 +2,7 @@
 
 import type {
   ArtistDetailResponse,
+  ArtistInfoResponse,
   ArtistShow,
   PlanState,
 } from '@concert-crawl/types';
@@ -586,7 +587,7 @@ describe('ArtistPageContent', () => {
     });
 
     it('places the history line once: under the follow on mobile, in the stage on desktop', () => {
-      const line = ARTIST_COPY.historyNone(CRAWL_SINCE);
+      const line = ARTIST_COPY.historyNeverBilled(CRAWL_SINCE);
       const mobile = render(<ArtistPageContent data={base} />).container;
       expect(mobile.querySelectorAll('.ap-history')).toHaveLength(1);
       expect(mobile.querySelector('.ap-history-card')?.textContent).toBe(line);
@@ -828,6 +829,97 @@ describe('ArtistPageContent', () => {
       expect(card).not.toBeUndefined();
       // Announced, not drawn: the visible title is the same.
       expect(card?.textContent).toContain(copy.card.title);
+    });
+  });
+
+  describe('artist info (no-shows page)', () => {
+    const info: ArtistInfoResponse = {
+      image: {
+        source: 'commons',
+        url: 'https://upload.wikimedia.org/x.jpg',
+        credit: 'Jane Photographer',
+        license: 'CC BY-SA 4.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+        fileUrl: 'https://commons.wikimedia.org/wiki/File:X.jpg',
+      },
+      facts: {
+        mbid: 'm',
+        type: 'Group',
+        area: 'Denver',
+        disambiguation: null,
+        links: {
+          musicbrainz: 'https://musicbrainz.org/artist/m',
+          wikidata: null,
+          spotify: null,
+        },
+      },
+      summary: {
+        extract: 'A band from Denver.',
+        articleTitle: 'Neal Francis',
+        articleUrl: 'https://en.wikipedia.org/wiki/Neal_Francis',
+        license: 'CC BY-SA 4.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+      },
+    };
+
+    it('draws the credit, the identity line and About, with the never-billed words', () => {
+      const { container } = render(
+        <ArtistPageContent data={base} info={info} />,
+      );
+
+      expect(
+        container.querySelector('[data-testid="photo-credit"]'),
+      ).not.toBeNull();
+      expect(container.querySelector('.ap-identity')?.textContent).toBe(
+        'Band · Denver',
+      );
+      expect(
+        container.querySelector('[data-testid="about-block"]'),
+      ).not.toBeNull();
+      expect(container.textContent).toContain(ARTIST_COPY.emptyNever.title);
+    });
+
+    it('puts About before the player in the side column', () => {
+      const { container } = render(
+        <ArtistPageContent data={base} info={info} />,
+      );
+      const side = container.querySelector('.ap-block-side');
+      expect(side?.children[0]?.getAttribute('data-testid')).toBe(
+        'about-block',
+      );
+      expect(side?.children[1]?.className).toContain('ap-block-player');
+    });
+
+    it('credits no photo when Spotify supplied one', () => {
+      const withPhoto: ArtistDetailResponse = {
+        ...base,
+        artist: { ...base.artist, photoUrl: 'https://i.scdn.co/x.jpg' },
+      };
+      const { container } = render(
+        <ArtistPageContent data={withPhoto} info={info} />,
+      );
+      expect(
+        container.querySelector('[data-testid="photo-credit"]'),
+      ).toBeNull();
+    });
+
+    it('reads as built with no info: no About, no identity line, no credit', () => {
+      const { container } = render(
+        <ArtistPageContent data={base} info={null} />,
+      );
+      expect(container.querySelector('[data-testid="about-block"]')).toBeNull();
+      expect(container.querySelector('.ap-identity')).toBeNull();
+      expect(
+        container.querySelector('[data-testid="photo-credit"]'),
+      ).toBeNull();
+    });
+
+    it('keeps the genre chips for an act that has genres', () => {
+      const booked: ArtistDetailResponse = { ...withShows };
+      const { container } = render(
+        <ArtistPageContent data={booked} info={info} />,
+      );
+      expect(container.querySelector('.ap-identity')).toBeNull();
     });
   });
 });

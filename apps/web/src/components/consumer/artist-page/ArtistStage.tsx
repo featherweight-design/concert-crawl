@@ -122,6 +122,8 @@ export type ArtistStageShellProps = {
   actions?: ReactNode;
   /** Desktop only: the follow block on the stage's right. */
   aside?: ReactNode;
+  /** The photo credit, directly under the card. */
+  credit?: ReactNode;
 };
 
 /**
@@ -136,6 +138,7 @@ export const ArtistStageShell = ({
   back,
   actions,
   aside,
+  credit,
 }: ArtistStageShellProps) => (
   <div
     data-testid="hero-band"
@@ -168,6 +171,7 @@ export const ArtistStageShell = ({
           />
         )}
         {card}
+        {credit}
       </div>
       <div
         data-testid="stage-column"
@@ -193,6 +197,8 @@ export type ArtistStageProps = {
   back?: ReactNode;
   actions?: ReactNode;
   aside?: ReactNode;
+  /** The Commons credit; absent for a Spotify photo and the plate. */
+  credit?: ReactNode;
 };
 
 export const ArtistStage = ({
@@ -203,6 +209,7 @@ export const ArtistStage = ({
   back,
   actions,
   aside,
+  credit,
 }: ArtistStageProps) => (
   <ArtistStageShell
     backdrop={<ArtistBackdrop art={{ name, photoUrl }} />}
@@ -210,6 +217,7 @@ export const ArtistStage = ({
     back={back}
     actions={actions}
     aside={aside}
+    credit={credit}
     card={
       <div data-testid="stage-card" style={artistCardFrame(ring)}>
         <Panel
