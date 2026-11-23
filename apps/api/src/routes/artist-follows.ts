@@ -154,14 +154,16 @@ type TargetLookup =
   | { kind: 'conflict' }
   | { kind: 'absent'; name: string; canonicalName: string };
 
-const targetColumns = {
+// A function, not a module constant: reading `artists.*` at import time breaks
+// every suite that mocks `@concert-crawl/db` without the table.
+const targetColumns = () => ({
   name: artists.name,
   canonicalName: artists.canonicalName,
   spotifyArtistId: artists.spotifyArtistId,
   mbid: artists.mbid,
   hidden: artists.hidden,
   matchStatus: artists.matchStatus,
-};
+});
 
 /**
  * No page, no follow: a row an admin hid (#1342) or ruled not an act reads as
@@ -184,7 +186,7 @@ const unfollowable = (row: { hidden: boolean; matchStatus: string }) =>
  */
 const lookUpTarget = async (tx: Tx, mbid: string): Promise<TargetLookup> => {
   const [byMbid] = await tx
-    .select(targetColumns)
+    .select(targetColumns())
     .from(artists)
     .where(eq(artists.mbid, mbid));
   if (byMbid) {
@@ -203,7 +205,7 @@ const lookUpTarget = async (tx: Tx, mbid: string): Promise<TargetLookup> => {
   if (canonicalName === '') return { kind: 'not_found' };
 
   const [byName] = await tx
-    .select(targetColumns)
+    .select(targetColumns())
     .from(artists)
     .where(eq(artists.canonicalName, canonicalName));
   if (!byName) return { kind: 'absent', name: act.name, canonicalName };
