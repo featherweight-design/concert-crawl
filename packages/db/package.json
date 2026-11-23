@@ -65,6 +65,16 @@
       "types": "./dist/scripts/resolve-photo-tiebreak.d.ts",
       "import": "./dist/scripts/resolve-photo-tiebreak.js",
       "default": "./dist/scripts/resolve-photo-tiebreak.js"
+    },
+    "./scripts/load-mb-artists": {
+      "types": "./dist/scripts/load-mb-artists.d.ts",
+      "import": "./dist/scripts/load-mb-artists.js",
+      "default": "./dist/scripts/load-mb-artists.js"
+    },
+    "./scripts/mb-dump": {
+      "types": "./dist/scripts/mb-dump.d.ts",
+      "import": "./dist/scripts/mb-dump.js",
+      "default": "./dist/scripts/mb-dump.js"
     }
   },
   "scripts": {
@@ -81,7 +91,8 @@
     "db:lock-artist-names": "tsx src/scripts/run-lock-artist-names.ts",
     "db:auto-match-ambiguous": "tsx src/scripts/run-auto-match-ambiguous.ts",
     "db:musicbrainz-disambiguate": "tsx src/scripts/run-musicbrainz-disambiguate.ts",
-    "db:resolve-photo-tiebreak": "tsx src/scripts/run-resolve-photo-tiebreak.ts"
+    "db:resolve-photo-tiebreak": "tsx src/scripts/run-resolve-photo-tiebreak.ts",
+    "db:load-mb-artists": "tsx src/scripts/run-load-mb-artists.ts"
   },
   "dependencies": {
     "@concert-crawl/types": "workspace:*",
