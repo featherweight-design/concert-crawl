@@ -12,6 +12,7 @@ import {
   resolveSlug,
 } from '@concert-crawl/types';
 import type {
+  ArtistFollowByMbidResponse,
   ArtistFollowResponse,
   BulkFollowResponse,
   BulkFollowResult,
@@ -344,7 +345,10 @@ artistFollowsRouter.post(
       return ctx.json({ success: false, error: 'Try again' }, 503);
     }
 
-    const data: ArtistFollowResponse = { following: true, slug: outcome.slug };
+    const data: ArtistFollowByMbidResponse = {
+      following: true,
+      slug: outcome.slug,
+    };
     return ctx.json({ success: true, data });
   },
 );
