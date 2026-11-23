@@ -18,6 +18,7 @@ vi.mock('next/link', () => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/search',
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => 'token', isSignedIn: true }),
