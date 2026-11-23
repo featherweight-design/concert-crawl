@@ -177,12 +177,6 @@ const topGenre = (tally: Map<string, number> | undefined): string | null => {
   return best;
 };
 
-// The slim MusicBrainz table's half of `scope=all`: acts no `artists` row
-// holds, because one that a row holds is already offered (or deliberately
-// hidden) as ours. Same ranking as ours: exact name, then prefix, then
-// anywhere in the name or an alias. The alias match goes through the IMMUTABLE
-// wrapper `mb_artist_aliases_text()`, the expression the alias trigram index
-// is built on; `array_to_string()` here would read every row instead.
 // MusicBrainz's `type` is Person, Group, Orchestra, Choir, Character or Other.
 // The preview words only the first two; anything else reads as missing.
 const toArtistKind = (type: string | null): ArtistSearchAllResult['type'] => {
@@ -191,6 +185,12 @@ const toArtistKind = (type: string | null): ArtistSearchAllResult['type'] => {
   return null;
 };
 
+// The slim MusicBrainz table's half of `scope=all`: acts no `artists` row
+// holds, because one that a row holds is already offered (or deliberately
+// hidden) as ours. Same ranking as ours: exact name, then prefix, then
+// anywhere in the name or an alias. The alias match goes through the IMMUTABLE
+// wrapper `mb_artist_aliases_text()`, the expression the alias trigram index
+// is built on; `array_to_string()` here would read every row instead.
 const searchMbArtists = async (
   query: string,
   limit: number,
