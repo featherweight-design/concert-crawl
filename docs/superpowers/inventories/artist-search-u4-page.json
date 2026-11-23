@@ -1,0 +1,134 @@
+{
+  "feature": "U4 no-shows artist page",
+  "note": "Plan docs/superpowers/plans/2026-11-23-artist-search-ui.md. Boards: addendum-12/boards/02-no-shows-page. The page is server-rendered, so the sheet runs against a local stand-in API (scratch script, not committed) that serves /v1/artists/:slug and /info for fixed slugs; the Commons photo is a Wikimedia URL.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "widths": [
+    {
+      "label": "xs",
+      "width": 320,
+      "height": 700,
+      "touch": true
+    },
+    {
+      "label": "sm",
+      "width": 360,
+      "height": 780,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1280,
+      "height": 800
+    }
+  ],
+  "rows": [
+    {
+      "id": "commons-photo",
+      "label": "Commons photo, credit, identity line, About",
+      "steps": [
+        {
+          "goto": "/artists/cm-photo",
+          "wait": "[data-testid=\"photo-credit\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "commons-following",
+      "label": "Commons photo, Following",
+      "steps": [
+        {
+          "goto": "/artists/cm-following",
+          "wait": "[data-testid=\"photo-credit\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "commons-null-credit",
+      "label": "Commons photo, null credit and null licence link",
+      "steps": [
+        {
+          "goto": "/artists/cm-nullcredit",
+          "wait": "[data-testid=\"photo-credit\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "commons-long-author",
+      "label": "Commons photo, long author (ellipsis)",
+      "steps": [
+        {
+          "goto": "/artists/cm-longauthor",
+          "wait": "[data-testid=\"photo-credit\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "plate-full",
+      "label": "Plate, identity line, About",
+      "steps": [
+        {
+          "goto": "/artists/plate-full",
+          "wait": "[data-testid=\"about-block\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "plate-following",
+      "label": "Plate, Following",
+      "steps": [
+        {
+          "goto": "/artists/plate-following",
+          "wait": "[data-testid=\"about-block\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "plate-person",
+      "label": "Plate, disambiguation line, no summary",
+      "steps": [
+        {
+          "goto": "/artists/plate-person",
+          "wait": "[data-testid=\"about-block\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "plate-bare",
+      "label": "Plate, no facts and no summary (no About, no identity line)",
+      "steps": [
+        {
+          "goto": "/artists/plate-bare",
+          "wait": "[data-testid=\"stage-card\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "booked-regression",
+      "label": "Booked artist (regression, unchanged)",
+      "steps": [
+        {
+          "goto": "/artists/booked",
+          "wait": "[data-show-item]",
+          "settle": 2500
+        }
+      ]
+    }
+  ]
+}
