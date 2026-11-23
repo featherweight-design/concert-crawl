@@ -1660,7 +1660,7 @@ export const CONSUMER_COPY = {
     submissionsFilterEmpty: {
       // The same eyebrow Browse's filtered-empty state wears (`emptyFilteredEyebrow`).
       eyebrow: 'Filtered',
-      // Echoes the search empty title ("Nothing under that name."). The chip's
+      // Echoes the old search empty title ("Nothing under that name."). The chip's
       // own label fills it, so it reads for Live, Pending and Price checks
       // alike; All is never empty when the page has rows.
       title: (label: string): string => `Nothing under ${label}.`,

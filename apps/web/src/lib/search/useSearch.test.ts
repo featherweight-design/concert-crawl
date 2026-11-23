@@ -13,10 +13,10 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: vi.fn().mockResolvedValue(null) }),
 }));
 
-vi.mock('./useAuthToken', () => {
-  const stableGetToken = vi.fn().mockResolvedValue(null);
-  return { useAuthToken: () => stableGetToken };
-});
+const { stableGetToken } = vi.hoisted(() => ({
+  stableGetToken: vi.fn(),
+}));
+vi.mock('./useAuthToken', () => ({ useAuthToken: () => stableGetToken }));
 
 import { useSearch } from './useSearch';
 
@@ -111,6 +111,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   localStorage.clear();
   mockPush.mockReset();
+  stableGetToken.mockReset().mockResolvedValue(null);
 
   global.fetch = vi.fn().mockImplementation((url: string) => {
     if ((url as string).includes('/v1/search/popular')) {
@@ -433,6 +434,23 @@ describe('useSearch — artist list (scope=all)', () => {
     await flush();
 
     expect(result.current.artistList).toHaveLength(0);
+    expect(result.current.failed).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+    consoleError.mockRestore();
+  });
+
+  it('fails rather than loading forever when the token read rejects', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    stableGetToken.mockRejectedValueOnce(new Error('clerk down'));
+    const { result } = renderHook(() => useSearch());
+
+    act(() => {
+      result.current.setQuery('radio');
+    });
+    await flush();
+
     expect(result.current.failed).toBe(true);
     expect(result.current.isLoading).toBe(false);
     consoleError.mockRestore();

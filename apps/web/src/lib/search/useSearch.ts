@@ -309,6 +309,11 @@ export function useSearch() {
         } catch (err) {
           if (err instanceof DOMException && err.name === 'AbortError') return;
           console.error(err);
+          // A rejected token read is a failed search, not an endless skeleton.
+          if (!controller.signal.aborted) {
+            setFailed(true);
+            setIsLoading(false);
+          }
         }
       })();
     }, DEBOUNCE_MS);

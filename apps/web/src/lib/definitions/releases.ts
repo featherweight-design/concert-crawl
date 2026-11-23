@@ -62,7 +62,7 @@ export const RELEASES: Release[] = [
     items: [
       {
         kind: 'changed',
-        text: 'Search now lists artists first, each with a Follow button and how many shows they have coming. Shows and venues follow below.',
+        text: 'Search now lists artists first, each with a Follow button. Shows and venues follow below.',
       },
     ],
   },
