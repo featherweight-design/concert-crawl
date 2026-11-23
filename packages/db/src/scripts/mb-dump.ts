@@ -6,9 +6,12 @@
  * Each table in the dump is one file named after the table, in Postgres COPY
  * text format: one row per line, tab-separated, `\N` for null, with
  * backslash escapes. There is no header, so columns are read by position from
- * MusicBrainz's `CreateTables.sql`. Every position this reader uses is checked
- * against the value's shape (a uuid, an integer id, a URL), so a schema change
- * that moves a column fails the load loudly instead of loading wrong data.
+ * MusicBrainz's `CreateTables.sql`. Every id, key and URL position this reader
+ * uses is checked on every row against its shape (a uuid, an integer id, a
+ * URL), so a schema change that moves one of them fails the load loudly
+ * instead of loading wrong data. Free-text columns (names, sort names,
+ * comments) have no shape to check; the column-count floor on each table is
+ * their only guard.
  *
  * Only CC0 core tables are read (plan decision 1): artist, artist_alias, area,
  * artist_type, url and l_artist_url. Tags, ratings and annotations are in the
@@ -175,7 +178,7 @@ async function readLinkedUrls(dumpDir: string): Promise<{
     minColumns: 3,
   })) {
     const url = fields[2] ?? '';
-    if (lineNumber === 1 && !/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
       throw new MbDumpShapeError('url', lineNumber, 'column 3 is not a URL');
     }
     const spotifyMatch = SPOTIFY_ARTIST_URL.exec(url);
@@ -191,14 +194,24 @@ async function readLinkedUrls(dumpDir: string): Promise<{
 /**
  * artist id to its Spotify id and Wikidata item, through l_artist_url. When an
  * artist links more than one of a kind, the lowest relationship id (the
- * oldest, and the first in the file) wins, so a reload picks the same one.
+ * oldest) wins whatever the file order, so a reload picks the same one.
  */
 async function readArtistUrls(
   dumpDir: string,
   urls: { spotify: Map<number, string>; wikidata: Map<number, string> },
 ): Promise<{ spotify: Map<number, string>; wikidata: Map<number, string> }> {
-  const spotify = new Map<number, string>();
-  const wikidata = new Map<number, string>();
+  // artist id to the winning relationship's id and the value it links.
+  const spotify = new Map<number, { relId: number; value: string }>();
+  const wikidata = new Map<number, { relId: number; value: string }>();
+  const keepLowest = (
+    into: Map<number, { relId: number; value: string }>,
+    artistId: number,
+    relId: number,
+    value: string,
+  ) => {
+    const held = into.get(artistId);
+    if (!held || relId < held.relId) into.set(artistId, { relId, value });
+  };
   // l_artist_url: id, link, entity0 (artist), entity1 (url), ...
   for await (const { fields, lineNumber } of readTable(dumpDir, {
     table: 'l_artist_url',
@@ -217,12 +230,20 @@ async function readArtistUrls(
       fields[3] ?? null,
     );
     const spotifyId = urls.spotify.get(urlId);
-    if (spotifyId && !spotify.has(artistId)) spotify.set(artistId, spotifyId);
     const wikidataId = urls.wikidata.get(urlId);
-    if (wikidataId && !wikidata.has(artistId))
-      wikidata.set(artistId, wikidataId);
+    if (!spotifyId && !wikidataId) continue;
+    const relId = requireId(
+      'l_artist_url',
+      lineNumber,
+      'id',
+      fields[0] ?? null,
+    );
+    if (spotifyId) keepLowest(spotify, artistId, relId, spotifyId);
+    if (wikidataId) keepLowest(wikidata, artistId, relId, wikidataId);
   }
-  return { spotify, wikidata };
+  const values = (from: Map<number, { relId: number; value: string }>) =>
+    new Map([...from].map(([artistId, held]) => [artistId, held.value]));
+  return { spotify: values(spotify), wikidata: values(wikidata) };
 }
 
 /** artist id to its alias names, in file order, exact duplicates removed. */
