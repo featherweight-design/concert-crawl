@@ -253,9 +253,9 @@ export const ArtistResultRow = ({
         disabled={followErrorIsFinal(follow.error)}
         onToggle={resolving ? () => undefined : follow.toggle}
       />
-      {opensPreview && (
+      {opensPreview && previewOpen && (
         <ModalShell
-          open={previewOpen}
+          open
           onClose={() => setPreviewOpen(false)}
           ariaLabel={artist.name}
           sheetHeight="fit"

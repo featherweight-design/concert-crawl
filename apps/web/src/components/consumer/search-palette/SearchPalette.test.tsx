@@ -56,13 +56,18 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
 }));
+// `createdSlug` stands in for the slug a by-MBID follow creates.
+const { createdSlug } = vi.hoisted(() => ({
+  createdSlug: { value: null as string | null },
+}));
 vi.mock(
   '@/components/consumer/artist-page/lib/use-artist-follow',
   async (importOriginal) => ({
     ...(await importOriginal<Record<string, unknown>>()),
-    useArtistFollow: (_slug: string | null, initialFollowing: boolean) => ({
-      following: initialFollowing,
+    useArtistFollow: (slug: string | null, initialFollowing: boolean) => ({
+      following: initialFollowing || createdSlug.value !== null,
       error: null,
+      slug: slug ?? createdSlug.value,
       toggle: vi.fn(),
     }),
   }),
@@ -123,6 +128,7 @@ const onClose = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  createdSlug.value = null;
   // jsdom has no matchMedia, and the artist rows size their follow control off
   // one. `false` is the hook's own widest-first default. The shared helper
   // rather than a local literal: its listeners are real, so a later test that
@@ -394,6 +400,30 @@ describe('SearchPalette — artist list', () => {
     expect(screen.getByText('Not on a Denver bill yet.')).toBeTruthy();
     expect(mockNavigateTo).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('opens the page, not the preview, for an act followed in the drill-in', () => {
+    createdSlug.value = 'clip';
+    mockHookState.artistList = [
+      makeArtist({
+        name: 'Clip',
+        slug: null,
+        mbid: '22222222-2222-4222-8222-222222222222',
+        upcomingShowCount: 0,
+        nextShow: null,
+        hasShows: false,
+      }),
+    ];
+    render(<SearchPalette open onClose={onClose} />);
+    fireEvent.keyDown(window, { key: 'Enter' });
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    expect(mockNavigateTo).toHaveBeenCalledWith('artistPage', {
+      slug: 'clip',
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('Escape steps back from the preview; a second Escape closes', () => {

@@ -231,9 +231,13 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
       const listCount = artistList.length;
       if (rawIdx < listCount) {
         const listed = artistList[rawIdx];
+        // An act followed in the drill-in has a page by now (`shown` below).
+        const listedSlug =
+          listed?.slug ??
+          (listed?.mbid ? followed.get(listed.mbid) : undefined);
         // A MusicBrainz-only act has no page yet: Enter drills into its preview.
-        if (listed?.slug) {
-          navigateTo('artistPage', { slug: listed.slug });
+        if (listedSlug) {
+          navigateTo('artistPage', { slug: listedSlug });
           onClose();
         } else if (listed?.mbid) {
           setPreview(listed);
@@ -307,6 +311,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     popularEvents,
     artistResults,
     artistList,
+    followed,
     venueResults,
     venueFirst,
     navigateTo,

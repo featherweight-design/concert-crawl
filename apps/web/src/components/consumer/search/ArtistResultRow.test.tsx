@@ -58,6 +58,8 @@ vi.mock(
   }),
 );
 
+import { stubMatchMedia } from '@/test-utils/match-media';
+import { ARTIST_PREVIEW_COPY } from '@/components/consumer/artist-preview/definitions/copy';
 import { ArtistResultRow } from './ArtistResultRow';
 
 afterEach(() => {
@@ -223,8 +225,9 @@ describe('<ArtistResultRow /> kinds', () => {
       { navigable: false },
     );
     expect(screen.getByText('Band · Baltimore')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Turnstile/ })).toBeTruthy();
-    expect(screen.getByTestId('follow-stub')).toBeTruthy();
+    stubMatchMedia(false);
+    fireEvent.click(screen.getByRole('button', { name: /Turnstile/ }));
+    expect(screen.getByText(ARTIST_PREVIEW_COPY.notOnABillLead)).toBeTruthy();
   });
 
   it('a shared name swaps the venue for the identity line', () => {

@@ -123,6 +123,7 @@ import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import { SearchDefaultState } from './SearchDefaultState';
 import { SearchResultsState } from './SearchResultsState';
 import { SearchEmptyState } from './SearchEmptyState';
+import { ARTIST_PREVIEW_COPY } from '@/components/consumer/artist-preview/definitions/copy';
 import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { SEARCH_DESKTOP_QUERY } from './definitions/constants';
@@ -490,7 +491,9 @@ describe('SearchResultsState — artist list', () => {
     );
     expect(screen.getByText('Band · Ohio')).toBeTruthy();
     expect(screen.getByLabelText(ARTIST_COPY.followAria('Clip'))).toBeTruthy();
-    // The act has no page: the name never navigates (it opens the preview).
+    // The act has no page: the name opens the preview and never navigates.
+    fireEvent.click(screen.getByRole('button', { name: /Clip/ }));
+    expect(screen.getByText(ARTIST_PREVIEW_COPY.notOnABillLead)).toBeTruthy();
     expect(mockNavigateTo).not.toHaveBeenCalled();
   });
 
