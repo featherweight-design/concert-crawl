@@ -16,6 +16,7 @@ import {
   desc,
   eq,
   ilike,
+  inArray,
   isNull,
   notExists,
   or,
@@ -188,10 +189,10 @@ const searchMbArtists = async (
 ): Promise<ArtistSearchAllResult[]> => {
   if (limit <= 0 || query.length < MB_SEARCH_MIN_LENGTH) return [];
   const pattern = containsPattern(query);
-  const lowered = query.toLowerCase();
+  // Lowered in SQL on both sides, so Postgres's case folding is the only one.
   const mbRank = sql<number>`case
-      when lower(${mbArtists.name}) = ${lowered} then 0
-      when lower(${mbArtists.name}) like ${`${escapeLikePattern(lowered)}%`} then 1
+      when lower(${mbArtists.name}) = lower(${query}) then 0
+      when lower(${mbArtists.name}) like lower(${`${escapeLikePattern(query)}%`}) then 1
       else 2
     end`;
   const rows = await db
@@ -245,7 +246,10 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   if (!parsed.success) {
     return ctx.json({ success: false, error: 'Invalid search query' }, 400);
   }
-  const scopeParsed = artistSearchScopeSchema.safeParse(ctx.req.query('scope'));
+  // An empty `?scope=` reads as absent, so it takes the default.
+  const scopeParsed = artistSearchScopeSchema.safeParse(
+    ctx.req.query('scope') || undefined,
+  );
   if (!scopeParsed.success) {
     return ctx.json({ success: false, error: 'Invalid search scope' }, 400);
   }
@@ -271,13 +275,8 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       photoUrl: servableArtistPhotoUrl(),
       matchStatus: artists.matchStatus,
       mbid: artists.mbid,
-      disambiguation: mbArtists.disambiguation,
-      area: mbArtists.area,
     })
     .from(artists)
-    // Only `scope=all` reads the MusicBrainz columns. A left join on the
-    // primary key, so it adds no rows and drops none.
-    .leftJoin(mbArtists, eq(mbArtists.mbid, artists.mbid))
     .where(
       and(
         or(ilike(artists.name, pattern), ilike(artists.canonicalName, pattern)),
@@ -427,6 +426,22 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
     const ourNextShows = await loadNextShowByCanonical(
       ours.map((row) => row.canonicalName),
     );
+    // Our rows' MusicBrainz lines, read here rather than joined into the
+    // candidate query so the default scope never touches the slim table.
+    const ourMbids = ours.flatMap((row) => (row.mbid ? [row.mbid] : []));
+    const mbLines = new Map(
+      (ourMbids.length === 0
+        ? []
+        : await db
+            .select({
+              mbid: mbArtists.mbid,
+              disambiguation: mbArtists.disambiguation,
+              area: mbArtists.area,
+            })
+            .from(mbArtists)
+            .where(inArray(mbArtists.mbid, ourMbids))
+      ).map((row) => [row.mbid, row]),
+    );
     const ourRows: ArtistSearchAllResult[] = ours.map((row) => ({
       name: row.name,
       slug: row.slug,
@@ -436,8 +451,10 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       following: followed?.has(row.canonicalName) ?? false,
       genre: topGenre(genreTallies.get(row.canonicalName)),
       mbid: row.mbid,
-      disambiguation: row.disambiguation,
-      area: row.area,
+      disambiguation: row.mbid
+        ? (mbLines.get(row.mbid)?.disambiguation ?? null)
+        : null,
+      area: row.mbid ? (mbLines.get(row.mbid)?.area ?? null) : null,
       hasShows: hasVisibleEvent.has(row.canonicalName),
     }));
     const mbRows = await searchMbArtists(

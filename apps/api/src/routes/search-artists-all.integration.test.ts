@@ -105,6 +105,14 @@ describe('GET /v1/search/artists?scope=all', () => {
     }
   });
 
+  it('reads an empty scope as the default', async () => {
+    await testDb
+      .insert(mbArtists)
+      .values([mbAct(MBID.wolfParade, 'Wolf Parade')]);
+    const rows = await search('/v1/search/artists?q=wolf&scope=');
+    expect(rows).toEqual([]);
+  });
+
   it('rejects an unknown scope', async () => {
     const res = await app.request('/v1/search/artists?q=wolf&scope=everything');
     expect(res.status).toBe(400);
@@ -164,6 +172,26 @@ describe('GET /v1/search/artists?scope=all', () => {
 
     const rows = await search('/v1/search/artists?q=doors&scope=all');
     expect(rows).toEqual([]);
+
+    const venue = await seedVenue({ slug: 'not-an-artist-venue' });
+    await seedArtist({ name: 'Doors Late', matchStatus: 'not_an_artist' });
+    await seedEvent(venue.id, { artist: 'Doors Late', date: '2027-09-03' });
+
+    // A row marked not an artist still holds its MBID, so its MusicBrainz
+    // act is not offered either.
+    await seedArtist({
+      name: 'Doors Held',
+      matchStatus: 'not_an_artist',
+      mbid: MBID.heldByOurs,
+    });
+    await testDb
+      .insert(mbArtists)
+      .values([mbAct(MBID.heldByOurs, 'Doors Held')]);
+
+    const withShows = await search('/v1/search/artists?q=doors&scope=all');
+    expect(withShows.map((row) => [row.slug, row.hasShows])).toEqual([
+      ['doors-late', true],
+    ]);
   });
 
   it('finds a MusicBrainz act by alias', async () => {
@@ -204,5 +232,18 @@ describe('GET /v1/search/artists?scope=all', () => {
       'Capall MB 0',
       'Capall MB 1',
     ]);
+  });
+
+  it('caps our own rows at ten and then offers no MusicBrainz act', async () => {
+    for (let i = 10; i < 22; i += 1) {
+      await seedArtist({ name: `Brimful Ours ${i}` });
+    }
+    await testDb
+      .insert(mbArtists)
+      .values([mbAct(MBID.wolfmother, 'Brimful MB')]);
+
+    const rows = await search('/v1/search/artists?q=brimful&scope=all');
+    expect(rows).toHaveLength(10);
+    expect(rows.every((row) => row.slug !== null)).toBe(true);
   });
 });
