@@ -1,7 +1,28 @@
-// Unit tests for the artist info resolver's pure checks (artist-search plan
-// PR 6): claim ranking, the credit line, and decision 5's Commons licence check.
-import { describe, it, expect } from 'vitest';
-import { commonsImageFrom, pickImageFile, plainCredit } from './artist-info.js';
+// Unit tests for the artist info resolver (artist-search plan PR 6): the
+// Commons licence check, the Wikimedia lookup chain, and the bounded memo.
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
+import {
+  MEMO_FAILURE_TTL_MS,
+  MEMO_MAX_ENTRIES,
+  MEMO_TTL_MS,
+  commonsImageFrom,
+  lookupWikimedia,
+  pickImageFile,
+  plainCredit,
+  resetArtistInfoMemo,
+  resolveWikimediaInfo,
+  type FetchLike,
+} from './artist-info.js';
+
+const MBID = '0383dadf-2a4e-4d10-a46a-e9e041da8eb3';
+const QID = 'Q1299';
+
+const json = (body: unknown, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 
 const commonsPage = (
   meta: Record<string, string>,
@@ -135,5 +156,274 @@ describe('commonsImageFrom (plan decision 5)', () => {
       );
       expect(image).toMatchObject({ source: 'commons', credit: null });
     }
+  });
+});
+
+const wikidataBody = (
+  title: string | null,
+  file: string | null,
+  qid: string = QID,
+) => ({
+  entities: {
+    [qid]: {
+      sitelinks: title ? { enwiki: { title } } : {},
+      claims: file
+        ? {
+            P18: [{ rank: 'normal', mainsnak: { datavalue: { value: file } } }],
+          }
+        : {},
+    },
+  },
+});
+
+const summaryBody = (type = 'standard') => ({
+  type,
+  title: 'The Beatles',
+  extract: 'The Beatles were an English rock band.',
+  content_urls: {
+    desktop: { page: 'https://en.wikipedia.org/wiki/The_Beatles' },
+  },
+});
+
+/** A fake Wikimedia that answers by host, recording every call. */
+const fakeWikimedia = (answers: {
+  wikidata?: () => Response;
+  summary?: () => Response;
+  commons?: () => Response;
+}) => {
+  const calls: { url: string; userAgent: string | undefined }[] = [];
+  const fetchImpl: FetchLike = async (url, init) => {
+    calls.push({ url, userAgent: init.headers['User-Agent'] });
+    const host = new URL(url).hostname;
+    const answer =
+      host === 'www.wikidata.org'
+        ? answers.wikidata
+        : host === 'en.wikipedia.org'
+          ? answers.summary
+          : host === 'commons.wikimedia.org'
+            ? answers.commons
+            : undefined;
+    if (!answer) throw new Error(`unexpected call to ${url}`);
+    return answer();
+  };
+  return { calls, fetchImpl };
+};
+
+describe('lookupWikimedia', () => {
+  it('follows the sitelink and the image claim, with the bot User-Agent on every call', async () => {
+    const { calls, fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody('The Beatles', 'Band.jpg')),
+      summary: () => json(summaryBody()),
+      commons: () => json(commonsPage(FREE_META)),
+    });
+
+    const info = await lookupWikimedia(QID, fetchImpl);
+    expect(info.summary).toEqual({
+      extract: 'The Beatles were an English rock band.',
+      articleTitle: 'The Beatles',
+      articleUrl: 'https://en.wikipedia.org/wiki/The_Beatles',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    });
+    expect(info.image?.credit).toBe('Jo & Co');
+    expect(calls).toHaveLength(3);
+    expect(calls.every((call) => call.userAgent === CRAWLER_USER_AGENT)).toBe(
+      true,
+    );
+    expect(calls[1]?.url).toContain('/page/summary/The_Beatles');
+  });
+
+  it('drops a disambiguation page', async () => {
+    const { fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody('Queen', null)),
+      summary: () => json(summaryBody('disambiguation')),
+    });
+    expect((await lookupWikimedia(QID, fetchImpl)).summary).toBeNull();
+  });
+
+  it('drops a no-extract page, which carries no text or link', async () => {
+    const { fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody('The Beatles', null)),
+      summary: () => json({ type: 'no-extract', title: 'The Beatles' }),
+    });
+    expect((await lookupWikimedia(QID, fetchImpl)).summary).toBeNull();
+  });
+
+  it('treats a deleted item as no data, not a failure', async () => {
+    const { fetchImpl } = fakeWikimedia({
+      wikidata: () => json({ error: { code: 'no-such-entity' } }),
+    });
+    expect(await lookupWikimedia(QID, fetchImpl)).toEqual({
+      summary: null,
+      image: null,
+    });
+  });
+
+  it('keeps the summary when the Commons half fails, and reports the failure', async () => {
+    const failures: unknown[] = [];
+    const { fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody('The Beatles', 'Band.jpg')),
+      summary: () => json(summaryBody()),
+      commons: () => json({}, 500),
+    });
+    const info = await lookupWikimedia(QID, fetchImpl, (err) =>
+      failures.push(err),
+    );
+    expect(info.summary?.articleTitle).toBe('The Beatles');
+    expect(info.image).toBeNull();
+    expect(failures).toHaveLength(1);
+  });
+
+  it('drops a summary whose article link is off en.wikipedia.org', async () => {
+    const { fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody('The Beatles', null)),
+      summary: () =>
+        json({
+          ...summaryBody(),
+          content_urls: { desktop: { page: 'https://example.com/x' } },
+        }),
+    });
+    expect((await lookupWikimedia(QID, fetchImpl)).summary).toBeNull();
+  });
+
+  it('reads a merged item under the id it redirects to', async () => {
+    const { calls, fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody('The Beatles', null, 'Q999')),
+      summary: () => json(summaryBody()),
+    });
+    expect((await lookupWikimedia(QID, fetchImpl)).summary).not.toBeNull();
+    expect(calls).toHaveLength(2);
+  });
+
+  it('makes no further call when the item has no article and no image', async () => {
+    const { calls, fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody(null, null)),
+    });
+    expect(await lookupWikimedia(QID, fetchImpl)).toEqual({
+      summary: null,
+      image: null,
+    });
+    expect(calls).toHaveLength(1);
+  });
+
+  it('makes no call at all for a malformed Wikidata id', async () => {
+    const { calls, fetchImpl } = fakeWikimedia({});
+    await lookupWikimedia('Q1299&action=delete', fetchImpl);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('throws on an HTTP error so the memo can keep it for less time', async () => {
+    const { fetchImpl } = fakeWikimedia({
+      wikidata: () => json({}, 503),
+    });
+    await expect(lookupWikimedia(QID, fetchImpl)).rejects.toThrow('HTTP 503');
+  });
+});
+
+describe('resolveWikimediaInfo (memo)', () => {
+  beforeEach(() => {
+    resetArtistInfoMemo();
+  });
+
+  it('answers a repeat from the memo and refetches once the day is up', async () => {
+    let clock = 1_000;
+    const now = () => clock;
+    const { calls, fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody(null, null)),
+    });
+
+    await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    expect(calls).toHaveLength(1);
+
+    clock += MEMO_TTL_MS + 1;
+    await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('shares one in-flight lookup between concurrent requests', async () => {
+    const { calls, fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody(null, null)),
+    });
+    await Promise.all([
+      resolveWikimediaInfo(MBID, QID, fetchImpl),
+      resolveWikimediaInfo(MBID, QID, fetchImpl),
+    ]);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('answers empty on a failure, never rejects, and retries after the short window', async () => {
+    let clock = 1_000;
+    const now = () => clock;
+    const { calls, fetchImpl } = fakeWikimedia({
+      wikidata: () => json({}, 500),
+    });
+
+    expect(await resolveWikimediaInfo(MBID, QID, fetchImpl, now)).toEqual({
+      summary: null,
+      image: null,
+    });
+    clock += MEMO_FAILURE_TTL_MS - 1;
+    await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    expect(calls).toHaveLength(1);
+
+    clock += 2;
+    await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('keeps a partial failure for the short window only', async () => {
+    let clock = 1_000;
+    const now = () => clock;
+    const { calls, fetchImpl } = fakeWikimedia({
+      wikidata: () => json(wikidataBody('The Beatles', 'Band.jpg')),
+      summary: () => json(summaryBody()),
+      commons: () => json({}, 500),
+    });
+
+    const info = await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    expect(info.summary).not.toBeNull();
+    expect(calls).toHaveLength(3);
+
+    clock += MEMO_FAILURE_TTL_MS + 1;
+    await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    expect(calls).toHaveLength(6);
+  });
+
+  it('keeps a deleted item for the full day', async () => {
+    let clock = 1_000;
+    const now = () => clock;
+    const { calls, fetchImpl } = fakeWikimedia({
+      wikidata: () => json({ error: { code: 'no-such-entity' } }),
+    });
+    await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    clock += MEMO_FAILURE_TTL_MS + 1;
+    await resolveWikimediaInfo(MBID, QID, fetchImpl, now);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('gives a malformed id no memo slot', async () => {
+    const fetchImpl = vi.fn<FetchLike>(async () => json({ entities: {} }));
+    for (let i = 0; i < MEMO_MAX_ENTRIES; i += 1) {
+      await resolveWikimediaInfo(`mbid-${i}`, QID, fetchImpl);
+    }
+    await resolveWikimediaInfo('mbid-bad', 'not-a-qid', fetchImpl);
+    // mbid-0 is still held, so the bad id evicted nothing.
+    await resolveWikimediaInfo('mbid-0', QID, fetchImpl);
+    expect(fetchImpl).toHaveBeenCalledTimes(MEMO_MAX_ENTRIES);
+  });
+
+  it('stays bounded, evicting the oldest act first', async () => {
+    const fetchImpl = vi.fn<FetchLike>(async () => json({ entities: {} }));
+    for (let i = 0; i <= MEMO_MAX_ENTRIES; i += 1) {
+      await resolveWikimediaInfo(`mbid-${i}`, QID, fetchImpl);
+    }
+    expect(fetchImpl).toHaveBeenCalledTimes(MEMO_MAX_ENTRIES + 1);
+
+    // The newest is still held; the first was evicted to make room.
+    await resolveWikimediaInfo(`mbid-${MEMO_MAX_ENTRIES}`, QID, fetchImpl);
+    expect(fetchImpl).toHaveBeenCalledTimes(MEMO_MAX_ENTRIES + 1);
+    await resolveWikimediaInfo('mbid-0', QID, fetchImpl);
+    expect(fetchImpl).toHaveBeenCalledTimes(MEMO_MAX_ENTRIES + 2);
   });
 });
