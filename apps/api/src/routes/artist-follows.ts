@@ -2,11 +2,14 @@ import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
-import { db, artists, userArtistFollows } from '@concert-crawl/db';
+import { and, asc, desc, eq, inArray, isNull, like, ne, or } from 'drizzle-orm';
+import { db, artists, mbArtists, userArtistFollows } from '@concert-crawl/db';
 import {
   ARTIST_SLUG_MAX_LENGTH,
   BULK_FOLLOW_MAX_SLUGS,
+  artistSlug,
+  canonicalizeArtist,
+  resolveSlug,
 } from '@concert-crawl/types';
 import type {
   ArtistFollowResponse,
@@ -108,6 +111,175 @@ artistFollowsRouter.post(
         // a concurrent double-tap trips, so neither request 500s.
         .onConflictDoNothing();
     }
+
+    const data: ArtistFollowResponse = { following: true };
+    return ctx.json({ success: true, data });
+  },
+);
+
+const mbidBodySchema = z.object({ mbid: z.string().uuid() });
+
+const conflict = {
+  success: false,
+  error: 'Another artist already holds this name',
+} as const;
+
+const mbidValidator = zValidator('json', mbidBodySchema, (result, ctx) => {
+  if (!result.success) {
+    return ctx.json({ success: false, error: 'Invalid request' }, 400);
+  }
+});
+
+interface FollowTarget {
+  name: string;
+  canonicalName: string;
+  spotifyArtistId: string | null;
+}
+
+type TargetLookup =
+  | { kind: 'row'; row: FollowTarget }
+  | { kind: 'not_found' }
+  | { kind: 'conflict' }
+  | { kind: 'absent'; name: string; canonicalName: string };
+
+const targetColumns = {
+  name: artists.name,
+  canonicalName: artists.canonicalName,
+  spotifyArtistId: artists.spotifyArtistId,
+  mbid: artists.mbid,
+  hidden: artists.hidden,
+};
+
+/**
+ * Finds the `artists` row a follow of this MBID lands on, without writing.
+ *
+ * The row that already holds the MBID wins. Failing that, the MusicBrainz act
+ * is looked up in the slim table, and its canonical name decides: a row with
+ * that name and no MBID is the same act as far as anything can tell, so the
+ * follow lands on it by name and the MBID goes on the follow only (one user's
+ * pick never rewrites the identity every reader sees). A row with that name
+ * and a different MBID is a different act holding the name, and `canonical_name`
+ * is unique, so the follow is refused rather than merged into the wrong act
+ * (orchestrator ruling, 2026-11-22). No row at all means one is created.
+ */
+const lookUpTarget = async (mbid: string): Promise<TargetLookup> => {
+  const [byMbid] = await db
+    .select(targetColumns)
+    .from(artists)
+    .where(eq(artists.mbid, mbid));
+  if (byMbid) {
+    // Hidden reads as not found, like the slug follow: no page, no follow.
+    return byMbid.hidden ? { kind: 'not_found' } : { kind: 'row', row: byMbid };
+  }
+
+  const [act] = await db
+    .select({ name: mbArtists.name })
+    .from(mbArtists)
+    .where(eq(mbArtists.mbid, mbid));
+  if (!act) return { kind: 'not_found' };
+
+  const canonicalName = canonicalizeArtist(act.name);
+  if (canonicalName === '') return { kind: 'not_found' };
+
+  const [byName] = await db
+    .select(targetColumns)
+    .from(artists)
+    .where(eq(artists.canonicalName, canonicalName));
+  if (!byName) return { kind: 'absent', name: act.name, canonicalName };
+  if (byName.mbid !== null) return { kind: 'conflict' };
+  if (byName.hidden) return { kind: 'not_found' };
+  return { kind: 'row', row: byName };
+};
+
+/**
+ * Creates the lightweight row for an act we have never billed: name, canonical
+ * name, slug and MBID, nothing from Spotify. `match_status` stays `unmatched`,
+ * so the daily match job picks it up like any new row.
+ */
+const createArtistRow = async (
+  mbid: string,
+  name: string,
+  canonicalName: string,
+): Promise<void> => {
+  const base = artistSlug(canonicalName);
+  const takenRows =
+    base === ''
+      ? []
+      : await db
+          .select({ slug: artists.slug })
+          .from(artists)
+          .where(or(eq(artists.slug, base), like(artists.slug, `${base}-%`)));
+  const slug = resolveSlug(
+    base,
+    new Set(takenRows.map((row) => row.slug)),
+    canonicalName,
+  );
+  await db
+    .insert(artists)
+    .values({ name, canonicalName, slug, mbid })
+    // Untargeted: a concurrent follow (or crawl write-through) may claim the
+    // name, the slug or the MBID first. The caller looks the row up again.
+    .onConflictDoNothing();
+};
+
+/**
+ * POST /v1/artists/follow — follow a MusicBrainz act by MBID (artist-search
+ * plan PR 5). The act may have no Denver show and no `artists` row yet.
+ *
+ * Dark until the search UI ships: no client calls it. To reverse it, remove
+ * this route; the rows it wrote are ordinary manual follows plus `artists`
+ * rows that the next prune run reaps once no MBID follow holds them.
+ */
+artistFollowsRouter.post(
+  '/follow',
+  requireSignedIn,
+  mbidValidator,
+  async (ctx) => {
+    const authInfo = getAuth(ctx);
+    if (!authInfo?.userId) return ctx.json(unauthorized, 401);
+
+    const { mbid } = ctx.req.valid('json');
+
+    let target = await lookUpTarget(mbid);
+    if (target.kind === 'absent') {
+      await createArtistRow(mbid, target.name, target.canonicalName);
+      target = await lookUpTarget(mbid);
+    }
+    if (target.kind === 'not_found') return ctx.json(notFound, 404);
+    if (target.kind === 'conflict') return ctx.json(conflict, 409);
+    if (target.kind === 'absent') {
+      // The insert lost a race on the slug alone and nothing holds the name:
+      // rare enough that a retry from the client is the right answer.
+      return ctx.json({ success: false, error: 'Try again' }, 503);
+    }
+
+    const { row } = target;
+    await db
+      .insert(userArtistFollows)
+      .values({
+        userId: authInfo.userId,
+        artistName: row.name,
+        // The join key every follow reader uses, so it must be the row's own.
+        canonicalName: row.canonicalName,
+        spotifyArtistId: row.spotifyArtistId,
+        source: 'manual',
+        mbid,
+      })
+      .onConflictDoNothing();
+
+    // A user who followed this row by slug before now has its MBID recorded too,
+    // so the follow holds the row against prune like any MBID follow.
+    await db
+      .update(userArtistFollows)
+      .set({ mbid })
+      .where(
+        and(
+          eq(userArtistFollows.userId, authInfo.userId),
+          eq(userArtistFollows.canonicalName, row.canonicalName),
+          eq(userArtistFollows.source, 'manual'),
+          isNull(userArtistFollows.mbid),
+        ),
+      );
 
     const data: ArtistFollowResponse = { following: true };
     return ctx.json({ success: true, data });

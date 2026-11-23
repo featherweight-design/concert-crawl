@@ -8,3 +8,4 @@ export * from './union-bill.js';
 export * from './event-venue-move.js';
 export * from './event-artists-sync.js';
 export * from './email-send-count.js';
+export * from './artist-follow-hold.js';

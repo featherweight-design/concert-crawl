@@ -7,6 +7,7 @@ import {
   db,
   artists,
   events,
+  heldByMbidFollow,
   userArtistFollows,
   userEvents,
   venues,
@@ -329,6 +330,7 @@ artistsPublicRouter.get(
         spotifyArtistId: artists.spotifyArtistId,
         photoUrl: servableArtistPhotoUrl(),
         spotifyCandidates: artists.spotifyCandidates,
+        heldByMbidFollow: sql<boolean>`${heldByMbidFollow}`,
       })
       .from(artists)
       // A hidden row (#1342) answers exactly like a slug that never existed —
@@ -509,7 +511,12 @@ artistsPublicRouter.get(
     // still billed to a real performer, and the two lists are additionally
     // capped by LIMIT. Only "nothing consumer-visible bills them at all" is a
     // 404 — the same question search.ts asks.
-    if (shows.length === 0 && past.length === 0) {
+    //
+    // One exception: a row a follow made by MBID holds (artist-search plan
+    // PR 5). Following an act before Denver bills it is the point of that
+    // follow, so its page answers with no shows. Only that dark endpoint
+    // writes such a follow, so no row reachable today changes.
+    if (shows.length === 0 && past.length === 0 && !artist.heldByMbidFollow) {
       const [billed] = await db
         .select({ id: events.id })
         .from(events)
