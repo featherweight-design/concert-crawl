@@ -129,10 +129,12 @@ describe('readMbArtists', () => {
       '12\t33333333-3333-3333-3333-333333333333\thttps://open.spotify.com/artist/0000000000000000000000\t0\t\\N',
       '13\t44444444-4444-4444-4444-444444444444\thttps://www.radiohead.com/\t0\t\\N',
     ],
+    // The later Spotify link (url 12) comes first in the file with a higher
+    // relationship id, so the lowest id has to win on id, not file order.
     l_artist_url: [
+      '102\t1\t1\t12\t0\t\\N\t0\t\\N\t\\N',
       '100\t1\t1\t10\t0\t\\N\t0\t\\N\t\\N',
       '101\t1\t1\t11\t0\t\\N\t0\t\\N\t\\N',
-      '102\t1\t1\t12\t0\t\\N\t0\t\\N\t\\N',
       '103\t1\t1\t13\t0\t\\N\t0\t\\N\t\\N',
     ],
     artist_alias: [
@@ -168,7 +170,7 @@ describe('readMbArtists', () => {
         type: 'Group',
         area: 'United Kingdom',
         disambiguation: 'English rock band',
-        // The first linked Spotify artist wins over a later one.
+        // The lowest relationship id wins over one earlier in the file.
         spotifyId: '4Z8W4fKeB5YxbusRsdQVPb',
         wikidataId: 'Q44190',
       },
@@ -224,8 +226,10 @@ describe('readMbArtists', () => {
 
   it('fails loudly when the url table is not URLs', async () => {
     const files = baseFiles();
+    // A good first row, then a shifted one: every row is checked, not line 1.
     files['url'] = [
-      '10\thttps://example.com/\t11111111-1111-1111-1111-111111111111\t0\t\\N',
+      ...(files['url'] ?? []),
+      '14\thttps://example.com/\t55555555-5555-5555-5555-555555555555\t0\t\\N',
     ];
     write(dir, files);
     await expect(readAll(dir)).rejects.toThrow(/column 3 is not a URL/);
