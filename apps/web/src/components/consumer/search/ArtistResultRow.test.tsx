@@ -207,7 +207,7 @@ describe('<ArtistResultRow /> kinds', () => {
     expect(screen.queryByText(/shows?$/)).toBeNull();
   });
 
-  it('kind 3 reads its identity line and has no navigate button', () => {
+  it('kind 3 reads its identity line and its name opens the preview', () => {
     renderRow(
       {
         ...ARTIST,
@@ -223,7 +223,7 @@ describe('<ArtistResultRow /> kinds', () => {
       { navigable: false },
     );
     expect(screen.getByText('Band · Baltimore')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Turnstile/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Turnstile/ })).toBeTruthy();
     expect(screen.getByTestId('follow-stub')).toBeTruthy();
   });
 

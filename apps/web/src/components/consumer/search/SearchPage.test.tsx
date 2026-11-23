@@ -470,7 +470,7 @@ describe('SearchResultsState — artist list', () => {
     expect(screen.getByText('No upcoming Denver dates')).toBeTruthy();
   });
 
-  it('draws a MusicBrainz-only act Follow-only, with its identity line', () => {
+  it('draws a MusicBrainz-only act with its identity line and a Follow', () => {
     render(
       <SearchResultsState
         artistResults={[]}
@@ -490,7 +490,7 @@ describe('SearchResultsState — artist list', () => {
     );
     expect(screen.getByText('Band · Ohio')).toBeTruthy();
     expect(screen.getByLabelText(ARTIST_COPY.followAria('Clip'))).toBeTruthy();
-    fireEvent.click(screen.getByText('Clip'));
+    // The act has no page: the name never navigates (it opens the preview).
     expect(mockNavigateTo).not.toHaveBeenCalled();
   });
 
