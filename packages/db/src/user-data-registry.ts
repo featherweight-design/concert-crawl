@@ -460,6 +460,17 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     reason: 'Public artist catalogue.',
   },
   {
+    tableName: 'mb_artists',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: [],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'A local copy of MusicBrainz public artist data (CC0) for artist ' +
+      'search; no user is named.',
+  },
+  {
     tableName: 'crawl_runs',
     disposition: 'none',
     userIdColumn: null,
