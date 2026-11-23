@@ -46,7 +46,7 @@ const artist = (
   extra: {
     spotifyArtistId?: string;
     mbid?: string;
-    matchStatus?: 'matched' | 'unmatched' | 'not_an_artist';
+    matchStatus?: 'matched' | 'unmatched' | 'ambiguous' | 'not_an_artist';
   } = {},
 ): typeof artists.$inferInsert => {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -175,20 +175,75 @@ describe('backfill-artist-mbids integration', () => {
     });
   });
 
-  it('skips a row a human ruled is not an act', async () => {
+  it('counts an alias that is another act name as several acts, and never matches a blank fold', async () => {
     await testDb
       .insert(mbArtists)
-      .values([mbAct(MBID.notAnAct, 'Trivia Night')]);
+      .values([
+        mbAct(MBID.ghostA, 'Ghost'),
+        mbAct(MBID.ghostB, 'Ghost Band', { aliases: ['Ghost'] }),
+        mbAct(MBID.twinA, 'Blank', { aliases: ['   '] }),
+      ]);
+    await testDb.insert(artists).values([artist('Ghost'), artist(' ')]);
+
+    const result = await backfillArtistMbids(testDb, { dryRun: false });
+
+    expect(result.outcomes['name:several-acts']).toBe(1);
+    expect(result.outcomes['name:no-hit']).toBe(1);
+    expect(result.updated).toBe(0);
+  });
+
+  it('a name row never takes an MBID a Spotify row matched, even one the Spotify rows lost', async () => {
+    await testDb
+      .insert(mbArtists)
+      .values([
+        mbAct(MBID.sharedAct, 'Shared Act', { spotifyId: 'sp-shared' }),
+      ]);
     await testDb
       .insert(artists)
-      .values([artist('Trivia Night', { matchStatus: 'not_an_artist' })]);
+      .values([
+        artist('Shared One', { spotifyArtistId: 'sp-shared' }),
+        artist('Shared Two', { spotifyArtistId: 'sp-shared' }),
+        artist('Shared Act'),
+      ]);
+
+    const result = await backfillArtistMbids(testDb, { dryRun: false });
+
+    expect(result.outcomes['spotify:act-taken']).toBe(2);
+    expect(result.outcomes['name:act-taken']).toBe(1);
+    expect(result.updated).toBe(0);
+  });
+
+  it('skips rows a human ruled are not an act and rows whose Spotify id is not trusted', async () => {
+    await testDb
+      .insert(mbArtists)
+      .values([
+        mbAct(MBID.notAnAct, 'Trivia Night'),
+        mbAct(MBID.heldAct, 'Karaoke', { spotifyId: 'sp-karaoke' }),
+        mbAct(MBID.radiohead, 'Radiohead', { spotifyId: 'sp-radiohead' }),
+      ]);
+    await testDb.insert(artists).values([
+      artist('Trivia Night', { matchStatus: 'not_an_artist' }),
+      artist('Karaoke', {
+        spotifyArtistId: 'sp-karaoke',
+        matchStatus: 'not_an_artist',
+      }),
+      // A tentative Spotify id on an ambiguous row is not a match.
+      artist('Radiohead', {
+        spotifyArtistId: 'sp-radiohead',
+        matchStatus: 'ambiguous',
+      }),
+    ]);
 
     const result = await backfillArtistMbids(testDb, { dryRun: false });
 
     expect(Object.values(result.outcomes).every((count) => count === 0)).toBe(
       true,
     );
-    expect(await mbidsByName()).toEqual({ 'Trivia Night': null });
+    expect(await mbidsByName()).toEqual({
+      Karaoke: null,
+      Radiohead: null,
+      'Trivia Night': null,
+    });
   });
 
   it('a dry run reports what an apply writes and writes nothing; a re-run reconsiders only null rows', async () => {
