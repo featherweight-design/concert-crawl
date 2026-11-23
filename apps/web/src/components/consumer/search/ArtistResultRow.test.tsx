@@ -18,14 +18,17 @@ vi.mock(
       FollowButton: ({
         signedOut,
         slug,
+        disabled,
         onToggle,
       }: {
         signedOut: boolean;
         slug?: string;
+        disabled?: boolean;
         onToggle: () => void;
       }) => (
         <button
           data-testid="follow-stub"
+          disabled={disabled}
           data-signed-out={String(signedOut)}
           data-slug={slug}
           type="button"
@@ -155,17 +158,17 @@ describe('<ArtistResultRow /> follow refusals', () => {
     expect(
       container.querySelector('[data-follow-error="name_held"]'),
     ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: /^Follow / }).hasAttribute('disabled'),
-    ).toBe(true);
+    expect(screen.getByTestId('follow-stub').hasAttribute('disabled')).toBe(
+      true,
+    );
   });
 
   it('keeps Follow live on a retryable refusal', () => {
     follow.error = { kind: 'unavailable' };
     renderRow(ARTIST, true);
-    expect(
-      screen.getByRole('button', { name: /^Follow / }).hasAttribute('disabled'),
-    ).toBe(false);
+    expect(screen.getByTestId('follow-stub').hasAttribute('disabled')).toBe(
+      false,
+    );
   });
 
   it('names a rate-limited wait as a clock time', () => {
