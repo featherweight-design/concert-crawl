@@ -1,3 +1,10 @@
+# [1.559.0](https://github.com/featherweight-design/concert-crawl/compare/v1.558.1...v1.559.0) (2026-11-23)
+
+
+### Features
+
+* **api:** type on MusicBrainz search rows, slug from follow-by-MBID, cap 8 ([69864a8](https://github.com/featherweight-design/concert-crawl/commit/69864a879df2809cf0aafeb13aa5dd5c2e31b6f8))
+
 ## [1.558.1](https://github.com/featherweight-design/concert-crawl/compare/v1.558.0...v1.558.1) (2026-11-23)
 
 
