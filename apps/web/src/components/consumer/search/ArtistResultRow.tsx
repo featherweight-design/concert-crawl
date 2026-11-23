@@ -11,7 +11,7 @@
 // (kind 3, no slug) has no page to open: its row is Follow-only until U3's
 // preview, and its name half is not a control.
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import { FollowErrorMessage } from '@/components/consumer/artist-page/FollowErrorMessage';
@@ -20,7 +20,9 @@ import {
   useArtistFollow,
 } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { ArtistPreview } from '@/components/consumer/artist-preview/ArtistPreview';
 import { AvatarSlot } from '@/components/consumer/image-slot';
+import { ModalShell } from '@/components/consumer/modal-shell';
 import { GenreChips } from '../GenreChips';
 import {
   Highlight,
@@ -129,6 +131,12 @@ export const ArtistResultRow = ({
   query,
 }: ArtistResultRowProps) => {
   const follow = useArtistFollow(artist.slug, artist.following, artist.mbid);
+  // A MusicBrainz-only act has no page, so its name half opens the preview
+  // (addendum 13) instead of navigating. The preview reads this row's follow
+  // state, so the row and the sheet never disagree.
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const opensPreview = onNavigate === undefined && artist.slug === null;
+  const openTarget = opensPreview ? () => setPreviewOpen(true) : onNavigate;
 
   // Until Clerk answers, a tap does nothing, as on the follow shelf: a toggle
   // with no token yet dies on `Error('Not authenticated')`, and sending a
@@ -155,11 +163,11 @@ export const ArtistResultRow = ({
       onMouseEnter={onHover}
     >
       <Target
-        onNavigate={onNavigate}
+        onNavigate={openTarget}
         rowProps={resultRowProps(listbox, itemIdx, selected)}
         style={{
           all: 'unset',
-          cursor: onNavigate ? 'pointer' : 'default',
+          cursor: openTarget ? 'pointer' : 'default',
           display: 'flex',
           alignItems: 'center',
           gap: 14,
@@ -245,6 +253,26 @@ export const ArtistResultRow = ({
         disabled={followErrorIsFinal(follow.error)}
         onToggle={resolving ? () => undefined : follow.toggle}
       />
+      {opensPreview && (
+        <ModalShell
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          ariaLabel={artist.name}
+          sheetHeight="fit"
+          desktopWidth={420}
+        >
+          <ArtistPreview
+            artist={artist}
+            following={follow.following}
+            signedOut={signedOut}
+            onToggle={resolving ? () => undefined : follow.toggle}
+            error={follow.error}
+            pageHref={
+              follow.following && follow.slug ? `/artists/${follow.slug}` : null
+            }
+          />
+        </ModalShell>
+      )}
     </div>
   );
 };

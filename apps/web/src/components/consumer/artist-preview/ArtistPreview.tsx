@@ -9,6 +9,11 @@ import Link from 'next/link';
 import type { ArtistSearchAllResult } from '@concert-crawl/types';
 
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
+import { FollowErrorMessage } from '@/components/consumer/artist-page/FollowErrorMessage';
+import {
+  followErrorIsFinal,
+  type FollowError,
+} from '@/components/consumer/artist-page/lib/use-artist-follow';
 import { Panel } from '@/components/consumer/image-slot';
 import { SLOT_RADIUS } from '@/components/consumer/image-slot/definitions/constants';
 
@@ -27,6 +32,8 @@ interface ArtistPreviewProps {
   /** Clerk's answer is "signed out": a Follow tap goes to sign-in. */
   signedOut: boolean;
   onToggle: () => void;
+  /** The last refusal: it replaces the pitch line, and a final one greys Follow. */
+  error?: FollowError | null;
   /**
    * Where Open their page goes, known only once a follow has returned the new
    * slug. Null before that: the link is not drawn.
@@ -77,6 +84,7 @@ export const ArtistPreview = ({
   following,
   signedOut,
   onToggle,
+  error = null,
   pageHref,
 }: ArtistPreviewProps) => {
   const identity = identityLine(artist);
@@ -177,20 +185,29 @@ export const ArtistPreview = ({
           size="primary"
           tone="hero"
           full
+          disabled={followErrorIsFinal(error)}
           onToggle={onToggle}
         />
-        <p
-          data-follow-pitch=""
-          style={{
-            margin: '9px 0 0',
-            textAlign: 'center',
-            fontSize: 12.5,
-            lineHeight: 1.45,
-            color: 'var(--fg-muted)',
-          }}
-        >
-          {following ? copy.pitchFollowing : copy.pitch}
-        </p>
+        {error ? (
+          <FollowErrorMessage
+            error={error}
+            variant="page"
+            style={{ marginTop: 9, justifyContent: 'center' }}
+          />
+        ) : (
+          <p
+            data-follow-pitch=""
+            style={{
+              margin: '9px 0 0',
+              textAlign: 'center',
+              fontSize: 12.5,
+              lineHeight: 1.45,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {following ? copy.pitchFollowing : copy.pitch}
+          </p>
+        )}
         {following && pageHref && (
           <Link
             href={pageHref}
