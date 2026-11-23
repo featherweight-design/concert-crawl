@@ -1,0 +1,145 @@
+{
+  "feature": "U3 artist preview: the tap on a MusicBrainz-only search row",
+  "note": "Plan docs/superpowers/plans/2026-11-22-artist-search-musicbrainz.md (U3 inventory). Boards: addendum-13/boards/01-musicbrainz-tap. Signed out, API mocked (route verb): the preview unfollowed with all fields, then a row with no type or area. NOT on this sheet (no key verb, no signed-in mock of a follow): the Following preview, Open their page, the follow errors, the palette drill-in with its back row and Escape steps. Those are covered by unit tests and walked by hand.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "widths": [
+    {
+      "label": "xs",
+      "width": 320,
+      "height": 700,
+      "touch": true
+    },
+    {
+      "label": "md",
+      "width": 390,
+      "height": 800,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1280,
+      "height": 800
+    }
+  ],
+  "rows": [
+    {
+      "id": "preview-full",
+      "label": "/search: preview of an act with type, area and disambiguation",
+      "steps": [
+        {
+          "goto": "/search",
+          "wait": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "settle": 2500
+        },
+        {
+          "route": "**/v1/search/artists*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "name": "Clip",
+                "slug": null,
+                "photoUrl": null,
+                "upcomingShowCount": 0,
+                "nextShow": null,
+                "following": false,
+                "mbid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "disambiguation": "Detroit rapper",
+                "area": "Michigan",
+                "type": "person",
+                "hasShows": false
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/events*",
+          "body": {
+            "success": true,
+            "data": {
+              "data": [],
+              "total": 0
+            }
+          }
+        },
+        {
+          "fill": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "text": "clip"
+        },
+        {
+          "settle": 1500
+        },
+        {
+          "click": "button:has-text(\"Clip\")"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "preview-sparse",
+      "label": "/search: preview of an act with no type or area",
+      "steps": [
+        {
+          "goto": "/search",
+          "wait": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "settle": 2500
+        },
+        {
+          "route": "**/v1/search/artists*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "name": "Quiet Act",
+                "slug": null,
+                "photoUrl": null,
+                "upcomingShowCount": 0,
+                "nextShow": null,
+                "following": false,
+                "mbid": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                "disambiguation": null,
+                "area": null,
+                "type": null,
+                "hasShows": false
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/events*",
+          "body": {
+            "success": true,
+            "data": {
+              "data": [],
+              "total": 0
+            }
+          }
+        },
+        {
+          "fill": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "text": "clip"
+        },
+        {
+          "settle": 1500
+        },
+        {
+          "click": "button:has-text(\"Quiet Act\")"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}
