@@ -1,3 +1,15 @@
+# [1.547.0](https://github.com/featherweight-design/concert-crawl/compare/v1.546.0...v1.547.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **web:** match the Add a venue start card and shell to the boards ([32004b9](https://github.com/featherweight-design/concert-crawl/commit/32004b9c782cd46687d89918f87504e1c3caf921))
+
+
+### Features
+
+* **web:** add the Add a venue page with Start and the step shell ([d8b2fe2](https://github.com/featherweight-design/concert-crawl/commit/d8b2fe2b2346f9d3b7ed77e9875110a412cdc49e))
+
 # [1.546.0](https://github.com/featherweight-design/concert-crawl/compare/v1.545.0...v1.546.0) (2026-11-22)
 
 
