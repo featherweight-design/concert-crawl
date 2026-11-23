@@ -144,6 +144,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 interface FollowTarget {
   name: string;
+  slug: string;
   canonicalName: string;
   spotifyArtistId: string | null;
 }
@@ -158,6 +159,7 @@ type TargetLookup =
 // every suite that mocks `@concert-crawl/db` without the table.
 const targetColumns = () => ({
   name: artists.name,
+  slug: artists.slug,
   canonicalName: artists.canonicalName,
   spotifyArtistId: artists.spotifyArtistId,
   mbid: artists.mbid,
@@ -248,7 +250,11 @@ const createArtistRow = async (
     .onConflictDoNothing();
 };
 
-type FollowOutcome = 'followed' | 'not_found' | 'conflict' | 'retry';
+type FollowOutcome =
+  | { kind: 'followed'; slug: string }
+  | { kind: 'not_found' }
+  | { kind: 'conflict' }
+  | { kind: 'retry' };
 
 /**
  * One transaction, so a new row and the follow that holds it commit together:
@@ -264,11 +270,11 @@ const followByMbid = async (
       await createArtistRow(tx, mbid, target.name, target.canonicalName);
       target = await lookUpTarget(tx, mbid);
     }
-    if (target.kind === 'not_found') return 'not_found';
-    if (target.kind === 'conflict') return 'conflict';
+    if (target.kind === 'not_found') return { kind: 'not_found' };
+    if (target.kind === 'conflict') return { kind: 'conflict' };
     // The insert lost a race on the slug alone and nothing holds the name:
     // rare enough that a retry from the client is the right answer.
-    if (target.kind === 'absent') return 'retry';
+    if (target.kind === 'absent') return { kind: 'retry' };
 
     const { row } = target;
     await tx
@@ -297,7 +303,7 @@ const followByMbid = async (
           isNull(userArtistFollows.mbid),
         ),
       );
-    return 'followed';
+    return { kind: 'followed', slug: row.slug };
   });
 
 /**
@@ -332,13 +338,13 @@ artistFollowsRouter.post(
 
     const { mbid } = ctx.req.valid('json');
     const outcome = await followByMbid(authInfo.userId, mbid);
-    if (outcome === 'not_found') return ctx.json(notFound, 404);
-    if (outcome === 'conflict') return ctx.json(conflict, 409);
-    if (outcome === 'retry') {
+    if (outcome.kind === 'not_found') return ctx.json(notFound, 404);
+    if (outcome.kind === 'conflict') return ctx.json(conflict, 409);
+    if (outcome.kind === 'retry') {
       return ctx.json({ success: false, error: 'Try again' }, 503);
     }
 
-    const data: ArtistFollowResponse = { following: true };
+    const data: ArtistFollowResponse = { following: true, slug: outcome.slug };
     return ctx.json({ success: true, data });
   },
 );

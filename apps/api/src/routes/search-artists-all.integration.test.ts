@@ -42,6 +42,7 @@ type Row = {
   mbid?: string | null;
   disambiguation?: string | null;
   area?: string | null;
+  type?: string | null;
   hasShows?: boolean;
   upcomingShowCount: number;
   following: boolean;
@@ -213,8 +214,8 @@ describe('GET /v1/search/artists?scope=all', () => {
     expect(rows.map((row) => row.name)).toEqual(['Ox']);
   });
 
-  it('caps the list at ten, ours first', async () => {
-    for (let i = 0; i < 8; i += 1) {
+  it('caps the list at eight, ours first', async () => {
+    for (let i = 0; i < 6; i += 1) {
       await seedArtist({ name: `Capall Ours ${i}` });
     }
     await testDb
@@ -226,15 +227,15 @@ describe('GET /v1/search/artists?scope=all', () => {
       );
 
     const rows = await search('/v1/search/artists?q=capall&scope=all');
-    expect(rows).toHaveLength(10);
-    expect(rows.slice(0, 8).every((row) => row.slug !== null)).toBe(true);
-    expect(rows.slice(8).map((row) => row.name)).toEqual([
+    expect(rows).toHaveLength(8);
+    expect(rows.slice(0, 6).every((row) => row.slug !== null)).toBe(true);
+    expect(rows.slice(6).map((row) => row.name)).toEqual([
       'Capall MB 0',
       'Capall MB 1',
     ]);
   });
 
-  it('caps our own rows at ten and then offers no MusicBrainz act', async () => {
+  it('caps our own rows at eight and then offers no MusicBrainz act', async () => {
     for (let i = 10; i < 22; i += 1) {
       await seedArtist({ name: `Brimful Ours ${i}` });
     }
@@ -243,7 +244,40 @@ describe('GET /v1/search/artists?scope=all', () => {
       .values([mbAct(MBID.wolfmother, 'Brimful MB')]);
 
     const rows = await search('/v1/search/artists?q=brimful&scope=all');
-    expect(rows).toHaveLength(10);
+    expect(rows).toHaveLength(8);
     expect(rows.every((row) => row.slug !== null)).toBe(true);
+  });
+
+  it('maps the MusicBrainz type to person or group, and anything else to null', async () => {
+    await testDb.insert(mbArtists).values([
+      mbAct('00000000-0000-4000-8000-0000000002a0', 'Typed Act A', {
+        type: 'Person',
+      }),
+      mbAct('00000000-0000-4000-8000-0000000002a1', 'Typed Act B', {
+        type: 'Group',
+      }),
+      mbAct('00000000-0000-4000-8000-0000000002a2', 'Typed Act C', {
+        type: 'Orchestra',
+      }),
+      mbAct('00000000-0000-4000-8000-0000000002a3', 'Typed Act D', {
+        type: null,
+      }),
+    ]);
+
+    const rows = await search('/v1/search/artists?q=typed act&scope=all');
+    expect(rows.map((row) => [row.name, row.type])).toEqual([
+      ['Typed Act A', 'person'],
+      ['Typed Act B', 'group'],
+      ['Typed Act C', null],
+      ['Typed Act D', null],
+    ]);
+  });
+
+  it('reads type null on one of our own artists', async () => {
+    await seedArtist({ name: 'Typed Ours' });
+    const rows = await search('/v1/search/artists?q=typed ours&scope=all');
+    expect(rows.map((row) => [row.name, row.type])).toEqual([
+      ['Typed Ours', null],
+    ]);
   });
 });
