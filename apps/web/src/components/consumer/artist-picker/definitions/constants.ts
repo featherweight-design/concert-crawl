@@ -60,7 +60,8 @@ export const SEARCH_MIN_QUERY = 2;
  * Skeleton rows while a query is in flight — a count, not a spinner, so the
  * body keeps its height and the rail below does not walk up the screen.
  *
- * THREE, matching `ARTIST_RESULT_LIMIT` on `/v1/search/artists`. At four, every
+ * THREE, matching `ARTIST_RESULT_LIMIT` on `/v1/search/artists`'s default scope
+ * (the picker sends no `scope`; search and the palette send `scope=all`, cap 8). At four, every
  * successful query replaced four skeletons with at most three rows and the body
  * contracted by a row's height — the exact jump this constant exists to
  * prevent, caused by the constant itself.

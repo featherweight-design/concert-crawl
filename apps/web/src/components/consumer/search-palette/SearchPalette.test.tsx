@@ -401,7 +401,7 @@ describe('SearchPalette — one letter and failure', () => {
     mockHookState.venueResults = [];
     render(<SearchPalette open onClose={onClose} />);
     expect(
-      screen.getByText('Keep typing. Two letters starts the search.'),
+      screen.getByText('Keep typing. Two letters start the search.'),
     ).toBeTruthy();
     expect(screen.queryByText('Nobody by that name.')).toBeNull();
   });

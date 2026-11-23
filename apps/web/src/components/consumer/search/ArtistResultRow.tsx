@@ -86,7 +86,9 @@ const Target = ({
       {children}
     </button>
   ) : (
-    <div style={style}>{children}</div>
+    <div {...rowProps} style={style}>
+      {children}
+    </div>
   );
 
 interface ArtistResultRowProps {

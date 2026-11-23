@@ -752,7 +752,7 @@ export const CONSUMER_COPY = {
     artistFallbackLine: 'Artist',
 
     // Search states
-    keepTyping: 'Keep typing. Two letters starts the search.',
+    keepTyping: 'Keep typing. Two letters start the search.',
   },
 
   // ── Filter bar ──────────────────────────────────────────────────

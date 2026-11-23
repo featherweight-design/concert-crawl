@@ -94,6 +94,7 @@ function ArtistListSection({
       {artistList.map((artist, idx) => {
         const itemIdx = baseIdx + idx;
         const hoverProps = onHover ? { onHover: () => onHover(itemIdx) } : {};
+        const { slug } = artist;
         return (
           <div key={artist.slug ?? artist.mbid ?? artist.name}>
             <ArtistResultRow
@@ -104,12 +105,9 @@ function ArtistListSection({
               itemIdx={itemIdx}
               listbox={listbox}
               {...hoverProps}
-              {...(artist.slug === null
+              {...(slug === null
                 ? {}
-                : {
-                    onNavigate: () =>
-                      onNavigateTo('artistPage', { slug: artist.slug ?? '' }),
-                  })}
+                : { onNavigate: () => onNavigateTo('artistPage', { slug }) })}
               isSignedIn={isSignedIn}
               size={isDesktop ? 'rowWide' : 'row'}
               iconOnly={iconOnly}
