@@ -45,7 +45,7 @@ export class ApiError extends Error {
   // message (the venue delete guard's 409 sends `{pastShows, watchers}`).
   // Unknown on purpose: the caller narrows it itself.
   //
-  // `retryAfterSeconds` is the 429's `Retry-After`, read on every error so a
+  // `retryAfterSeconds` is the 429's `Retry-After`, read on a 429 so a
   // rate-limited caller can name the wait (missing or unusable: the full hour).
   // Undefined on any other status.
   constructor(

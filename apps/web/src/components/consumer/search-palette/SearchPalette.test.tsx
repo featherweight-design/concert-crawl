@@ -30,12 +30,17 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
 }));
-vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
-  useArtistFollow: (_slug: string, initialFollowing: boolean) => ({
-    following: initialFollowing,
-    toggle: vi.fn(),
+vi.mock(
+  '@/components/consumer/artist-page/lib/use-artist-follow',
+  async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    useArtistFollow: (_slug: string, initialFollowing: boolean) => ({
+      following: initialFollowing,
+      error: null,
+      toggle: vi.fn(),
+    }),
   }),
-}));
+);
 vi.mock('next/link', () => ({
   default: ({
     children,
