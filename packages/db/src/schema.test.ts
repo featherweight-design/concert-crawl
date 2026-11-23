@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { getTableConfig } from 'drizzle-orm/pg-core';
 import {
   venues,
   events,
@@ -384,6 +385,27 @@ describe('artist search schema expand (migration 0128)', () => {
     ]) {
       expect(column.notNull).toBe(false);
     }
+  });
+
+  it('mb_artists declares the four search indexes, all GIN', () => {
+    const indexes = getTableConfig(mbArtists).indexes.map((idx) => ({
+      name: idx.config.name,
+      method: idx.config.method,
+    }));
+    expect(indexes).toEqual([
+      { name: 'mb_artists_name_trgm_idx', method: 'gin' },
+      { name: 'mb_artists_aliases_trgm_idx', method: 'gin' },
+      { name: 'mb_artists_name_fts_idx', method: 'gin' },
+      { name: 'mb_artists_aliases_fts_idx', method: 'gin' },
+    ]);
+  });
+
+  it('artists_mbid_idx is unique and partial on a set mbid', () => {
+    const mbidIdx = getTableConfig(artists).indexes.find(
+      (idx) => idx.config.name === 'artists_mbid_idx',
+    );
+    expect(mbidIdx?.config.unique).toBe(true);
+    expect(mbidIdx?.config.where).toBeDefined();
   });
 
   it('artists.mbid and user_artist_follows.mbid are nullable (expand only)', () => {

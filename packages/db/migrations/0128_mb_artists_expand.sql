@@ -15,8 +15,9 @@
 -- An index expression must be IMMUTABLE and array_to_string() is only STABLE
 -- (an element type's output function could, in general, read a setting). For
 -- text[] the output never varies, so `mb_artist_aliases_text` wraps it as
--- IMMUTABLE, the standard Postgres pattern for this. The search query must
--- call the same function for the planner to use the alias indexes.
+-- IMMUTABLE, the standard Postgres pattern for this. It is schema-qualified
+-- so the index never depends on a connection's search_path. The search query
+-- must call the same function for the planner to use the alias indexes.
 --
 -- The 'simple' text search config does no stemming or stop words: artist
 -- names are proper nouns, and "The The" must not lose both words.
@@ -34,7 +35,7 @@
 -- extension may stay; nothing else depends on it.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 --> statement-breakpoint
-CREATE FUNCTION "mb_artist_aliases_text"(aliases text[]) RETURNS text
+CREATE FUNCTION "public"."mb_artist_aliases_text"(aliases text[]) RETURNS text
   LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
   AS $$ SELECT array_to_string(aliases, ' ') $$;
 --> statement-breakpoint
@@ -53,11 +54,11 @@ CREATE TABLE "mb_artists" (
 --> statement-breakpoint
 CREATE INDEX "mb_artists_name_trgm_idx" ON "mb_artists" USING gin ("name" gin_trgm_ops);
 --> statement-breakpoint
-CREATE INDEX "mb_artists_aliases_trgm_idx" ON "mb_artists" USING gin ("mb_artist_aliases_text"("aliases") gin_trgm_ops);
+CREATE INDEX "mb_artists_aliases_trgm_idx" ON "mb_artists" USING gin ("public"."mb_artist_aliases_text"("aliases") gin_trgm_ops);
 --> statement-breakpoint
 CREATE INDEX "mb_artists_name_fts_idx" ON "mb_artists" USING gin (to_tsvector('simple', "name"));
 --> statement-breakpoint
-CREATE INDEX "mb_artists_aliases_fts_idx" ON "mb_artists" USING gin (to_tsvector('simple', "mb_artist_aliases_text"("aliases")));
+CREATE INDEX "mb_artists_aliases_fts_idx" ON "mb_artists" USING gin (to_tsvector('simple', "public"."mb_artist_aliases_text"("aliases")));
 --> statement-breakpoint
 ALTER TABLE "artists" ADD COLUMN "mbid" uuid;
 --> statement-breakpoint
