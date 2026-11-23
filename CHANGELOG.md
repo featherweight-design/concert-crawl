@@ -1,3 +1,16 @@
+# [1.555.0](https://github.com/featherweight-design/concert-crawl/compare/v1.554.0...v1.555.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **api:** bound and harden the MBID follow ([ccdb305](https://github.com/featherweight-design/concert-crawl/commit/ccdb305671c4ca1b1b0e09cd22326c872b9ba516))
+* **api:** build the follow target columns lazily so db mocks still load ([de922c8](https://github.com/featherweight-design/concert-crawl/commit/de922c8e338c5fca3c0a09ff44b2cc3a79f52485))
+
+
+### Features
+
+* **api:** follow an artist by MBID, held against prune and served with no shows ([6c74e52](https://github.com/featherweight-design/concert-crawl/commit/6c74e524f976fc620ca3036b7eb315ebb511d328))
+
 # [1.554.0](https://github.com/featherweight-design/concert-crawl/compare/v1.553.0...v1.554.0) (2026-11-23)
 
 
