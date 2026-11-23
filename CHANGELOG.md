@@ -1,3 +1,17 @@
+# [1.562.0](https://github.com/featherweight-design/concert-crawl/compare/v1.561.0...v1.562.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **web:** hide the artist-page skeleton side block below desktop ([be54a85](https://github.com/featherweight-design/concert-crawl/commit/be54a85e6b5df0d49bbdfa9c2e5f7adb1d36aeaf))
+* **web:** log info fetch failures, test safeHref, tidy comments ([a474bbc](https://github.com/featherweight-design/concert-crawl/commit/a474bbc094a9c4d5b5c20f002659e0e43ec149a4))
+
+
+### Features
+
+* **web:** no-shows artist page with About, Commons credit, identity line ([1714ab0](https://github.com/featherweight-design/concert-crawl/commit/1714ab0f81a716cbbc052e328dc61b8d75f03dc1))
+* **web:** release note and contact-sheet inventory for the no-shows page ([1095a71](https://github.com/featherweight-design/concert-crawl/commit/1095a71eb070458e525c029613626885a37651a1))
+
 # [1.561.0](https://github.com/featherweight-design/concert-crawl/compare/v1.560.0...v1.561.0) (2026-11-23)
 
 
