@@ -1,3 +1,15 @@
+# [1.548.0](https://github.com/featherweight-design/concert-crawl/compare/v1.547.0...v1.548.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **web:** draw the phone capacity chevron and keep Basics inputs at 16px on phone ([5833bfe](https://github.com/featherweight-design/concert-crawl/commit/5833bfe3451bf72a3f5c82353d3430e7a0c97ff8))
+
+
+### Features
+
+* **web:** build the Add a venue Basics form ([44b3b60](https://github.com/featherweight-design/concert-crawl/commit/44b3b60774a9d787bad9331d8885c47fa85f9d69))
+
 # [1.547.0](https://github.com/featherweight-design/concert-crawl/compare/v1.546.0...v1.547.0) (2026-11-23)
 
 
