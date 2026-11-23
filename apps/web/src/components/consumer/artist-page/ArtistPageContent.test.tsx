@@ -915,7 +915,13 @@ describe('ArtistPageContent', () => {
     });
 
     it('keeps the genre chips for an act that has genres', () => {
-      const booked: ArtistDetailResponse = { ...withShows };
+      const booked: ArtistDetailResponse = {
+        ...withShows,
+        shows: withShows.shows.map((item) => ({
+          ...item,
+          genres: ['electronic'],
+        })),
+      };
       const { container } = render(
         <ArtistPageContent data={booked} info={info} />,
       );
