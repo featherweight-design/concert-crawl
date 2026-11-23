@@ -11,7 +11,10 @@
 //
 // Data fetching is token-optional from day one so the flip changes the
 // directory, not this file's logic.
-import type { ArtistDetailResponse } from '@concert-crawl/types';
+import type {
+  ArtistDetailResponse,
+  ArtistInfoResponse,
+} from '@concert-crawl/types';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
@@ -60,6 +63,21 @@ const fetchArtist = async (
   }
 };
 
+/**
+ * The About block, the Commons photo and the identity line: garnish for an act
+ * with nothing on the calendar. Any failure (a 404 for an act the info route
+ * hides, a Wikimedia outage, a timeout) is "no info", never a broken page.
+ */
+const fetchInfo = async (slug: string): Promise<ArtistInfoResponse | null> => {
+  try {
+    return await publicApiClient.get<ArtistInfoResponse>(
+      `/v1/artists/${slug}/info`,
+    );
+  } catch {
+    return null;
+  }
+};
+
 const ArtistPage = async ({
   params,
   searchParams,
@@ -75,9 +93,14 @@ const ArtistPage = async ({
   const data = await fetchArtist(slug, token, past);
   if (!data) notFound();
 
+  // Only an act with nothing upcoming reads from the info route; a booked
+  // artist's page is as built.
+  const info = data.shows.length === 0 ? await fetchInfo(slug) : null;
+
   return (
     <ArtistPageContent
       data={data}
+      info={info}
       olderHref={data.pastHasMore ? `?past=${past + PAST_STEP}` : undefined}
     />
   );

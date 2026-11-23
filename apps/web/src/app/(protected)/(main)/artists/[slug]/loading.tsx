@@ -139,7 +139,7 @@ const ArtistLoading = () => (
         </div>
         {/* The framed player card. Desktop only: on mobile it sits below the
             fold, and the board stops at the rows. */}
-        <div className="ap-block-player hidden lg:block">
+        <div className="ap-block-side max-lg:hidden">
           <SkeletonBlock height={176} radius={16} />
         </div>
       </div>

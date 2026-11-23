@@ -9,15 +9,33 @@ export type ArtistLine =
   | { kind: 'shows'; count: number; text: string }
   | { kind: 'plain'; text: string };
 
-/** The act's identity text from MusicBrainz, or null when it has none. */
-const identityLine = (artist: ArtistSearchAllResult): string | null => {
-  const typeWord = artist.type ? copy.artistTypeLabel[artist.type] : null;
-  const lead = artist.disambiguation ?? typeWord;
-  const parts = [lead, artist.area].filter(
+/**
+ * The identity rule, shared by the search row and the artist page's identity
+ * line: disambiguation or the type word, then the area. Null when there is
+ * nothing to say.
+ */
+export const identityFromParts = ({
+  typeWord,
+  disambiguation,
+  area,
+}: {
+  typeWord: string | null;
+  disambiguation: string | null;
+  area: string | null;
+}): string | null => {
+  const parts = [disambiguation ?? typeWord, area].filter(
     (part): part is string => part !== null && part !== '',
   );
   return parts.length > 0 ? parts.join(' · ') : null;
 };
+
+/** The act's identity text from MusicBrainz, or null when it has none. */
+const identityLine = (artist: ArtistSearchAllResult): string | null =>
+  identityFromParts({
+    typeWord: artist.type ? copy.artistTypeLabel[artist.type] : null,
+    disambiguation: artist.disambiguation,
+    area: artist.area,
+  });
 
 const normalise = (name: string): string => name.trim().toLowerCase();
 

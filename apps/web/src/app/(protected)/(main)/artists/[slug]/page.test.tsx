@@ -246,4 +246,55 @@ describe('ArtistPage', () => {
 
     expect(heads).toEqual([ARTIST_COPY.upcomingTitle, ARTIST_COPY.pastTitle]);
   });
+
+  describe('artist info (the About block, the Commons photo)', () => {
+    const info = {
+      image: null,
+      facts: {
+        mbid: 'mbid-1',
+        type: 'Group',
+        area: 'Denver',
+        disambiguation: null,
+        links: { musicbrainz: 'https://musicbrainz.org/artist/mbid-1' },
+      },
+      summary: null,
+    };
+    const noShows = payload({ shows: [], past: [] });
+
+    it('reads the info route for an act with nothing upcoming and draws About', async () => {
+      mockPublicGet.mockImplementation(async (path: string) =>
+        path.endsWith('/info') ? info : noShows,
+      );
+
+      const html = renderToString(await ArtistPage({ params }));
+
+      expect(mockPublicGet).toHaveBeenCalledWith(
+        '/v1/artists/nightjar-choir/info',
+      );
+      expect(html).toContain(ARTIST_COPY.about.title);
+    });
+
+    it('never reads it for an act with upcoming shows', async () => {
+      mockPublicGet.mockResolvedValue(payload());
+
+      await ArtistPage({ params });
+
+      expect(mockPublicGet).not.toHaveBeenCalledWith(
+        '/v1/artists/nightjar-choir/info',
+      );
+    });
+
+    it('renders the page without About when the info route fails', async () => {
+      mockPublicGet.mockImplementation(async (path: string) => {
+        if (path.endsWith('/info')) throw new ApiError(503, 'wikimedia down');
+        return noShows;
+      });
+
+      const html = renderToString(await ArtistPage({ params }));
+
+      expect(html).toContain(NAME);
+      expect(html).not.toContain(ARTIST_COPY.about.title);
+      expect(mockNotFound).not.toHaveBeenCalled();
+    });
+  });
 });

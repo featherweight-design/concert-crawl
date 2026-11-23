@@ -149,6 +149,37 @@ export const ARTIST_COPY = {
   emptyBodyFollowing:
     "No dates booked that we can see. You're following, so check back. This page is where the next one turns up.",
 
+  // An act we have never seen on a Denver bill (addendum 12, `02/page-spec`):
+  // nothing upcoming and nothing past. An act with past shows keeps the copy
+  // above. The card carries no second Follow.
+  emptyNever: {
+    title: 'No Denver dates yet.',
+    body: "We haven't seen them on a Denver bill. Follow them to hear the day they book one.",
+    bodyFollowing:
+      "You're following, so you'll hear the day they book one. This page is where it turns up.",
+  },
+  historyNeverBilled: (since: string) =>
+    `Not on a Denver bill since we started looking in ${since}.`,
+
+  // The About card (addendum 12). Facts first, then the Wikipedia summary with
+  // the attribution its licence requires.
+  about: {
+    title: 'About',
+    typeLabel: 'Type',
+    fromLabel: 'From',
+    wikipediaFrom: 'From',
+    wikipedia: 'Wikipedia',
+    licenseSeparator: '·',
+  },
+
+  // The credit under a Wikimedia Commons photo. The author is dropped when the
+  // file is public domain and names nobody.
+  photoCredit: {
+    prefix: 'Photo:',
+    source: 'Wikimedia Commons',
+    separator: '·',
+  },
+
   // Loading
   loadingArtist: 'Finding them…',
 

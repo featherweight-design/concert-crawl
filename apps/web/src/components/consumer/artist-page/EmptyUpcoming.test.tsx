@@ -45,6 +45,35 @@ describe('EmptyUpcoming', () => {
     expect(active.textContent).not.toContain(ARTIST_COPY.emptyBody);
   });
 
+  it('uses its own words for an act never seen on a Denver bill', () => {
+    const { container, unmount } = render(
+      <EmptyUpcoming
+        name="Wax Harbour"
+        following={false}
+        signedOut={false}
+        inlineFollow={false}
+        neverBilled
+        onToggle={noop}
+      />,
+    );
+    expect(container.textContent).toContain(ARTIST_COPY.emptyNever.title);
+    expect(container.textContent).toContain(ARTIST_COPY.emptyNever.body);
+    expect(container.textContent).not.toContain(ARTIST_COPY.emptyTitle);
+    unmount();
+
+    const { container: active } = render(
+      <EmptyUpcoming
+        name="Wax Harbour"
+        following
+        signedOut={false}
+        inlineFollow={false}
+        neverBilled
+        onToggle={noop}
+      />,
+    );
+    expect(active.textContent).toContain(ARTIST_COPY.emptyNever.bodyFollowing);
+  });
+
   it('is a radius-14 card under an uncounted Upcoming head', () => {
     const { container } = render(
       <EmptyUpcoming
