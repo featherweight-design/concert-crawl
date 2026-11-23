@@ -1,3 +1,15 @@
+# [1.554.0](https://github.com/featherweight-design/concert-crawl/compare/v1.553.0...v1.554.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **api:** keep the default artist search off the slim table, read empty scope as default ([5bb9ae0](https://github.com/featherweight-design/concert-crawl/commit/5bb9ae09a9bd2f6c9270258b31900028ebd444b3))
+
+
+### Features
+
+* **api:** artist search scope=all joins the slim MusicBrainz table ([0dec9c1](https://github.com/featherweight-design/concert-crawl/commit/0dec9c1949a7691abff536dfaa33ca84954c36fa))
+
 # [1.553.0](https://github.com/featherweight-design/concert-crawl/compare/v1.552.0...v1.553.0) (2026-11-23)
 
 
