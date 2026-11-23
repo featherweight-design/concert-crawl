@@ -9,7 +9,10 @@
 //                  MATCH_BATCH_SIZE. Each gets a confidence-gated match
 //                  (lib/artist-match.ts) and its verdict written back.
 //   2. PHOTO     — matched rows whose photoUrl is older than
-//                  PHOTO_REFETCH_DAYS, looked up by their stored Spotify id
+//                  PHOTO_REFETCH_DAYS (or unstamped), oldest first, on a budget
+//                  of its own (photoBudgetFor) that identity work never eats
+//                  into, so a photo cannot reach the readers' 30-day ceiling
+//                  while the identity queue is busy. Looked up by stored Spotify id
 //                  (never re-searched by name). Spotify's terms allow only
 //                  temporary caching, so when Spotify no longer returns the
 //                  artist, or returns it with no image, the photo and its
@@ -53,7 +56,7 @@
 
 import { pathToFileURL } from 'node:url';
 import * as Sentry from '@sentry/hono/node';
-import { and, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import { artists, auditLog, db } from '@concert-crawl/db';
 import {
   AUTO_MATCH_ACTOR,
@@ -78,8 +81,49 @@ import {
 /** Rows touched per run. Spotify's app-token search quota is the constraint. */
 export const MATCH_BATCH_SIZE = 100;
 
-/** Cached Spotify photo URLs older than this are re-fetched. */
-export const PHOTO_REFETCH_DAYS = 7;
+/**
+ * Cached Spotify photo URLs older than this are re-fetched.
+ *
+ * The public readers stop serving a photo at 30 days (lib/artist-photo.ts), so
+ * this leaves a 10-day margin for a missed night, a rate-limited run or a
+ * deploy. It is also what sets the steady-state spend: a photo costs one call
+ * per cycle, so 20 days is about 5% of the catalogue a day where 7 would be
+ * about 14%.
+ */
+export const PHOTO_REFETCH_DAYS = 20;
+
+/**
+ * The photo pass is sized to walk the whole catalogue in this many days, which
+ * is faster than PHOTO_REFETCH_DAYS needs (a photo only becomes due at day 20).
+ * The difference is headroom: a backlog drains instead of standing still.
+ */
+export const PHOTO_BUDGET_CYCLE_DAYS = 15;
+
+/** The photo pass always has at least this many calls a run. */
+export const PHOTO_BUDGET_FLOOR = 50;
+
+/**
+ * The most by-id photo calls one run makes. They are serial, so 400 calls is a
+ * few minutes against the cron function's 800-second limit, and Spotify's
+ * rolling-window limit has to be cleared by one run's pace, not its count: a
+ * 429 aborts the run and the rest waits for the next one, oldest first.
+ */
+export const PHOTO_BUDGET_CAP = 400;
+
+/**
+ * A run's photo budget: enough that no photo reaches the readers' 30-day
+ * ceiling in steady state, whatever the catalogue size. Derived from the count
+ * of refreshable photos so it grows with the catalogue, within the floor and
+ * cap above.
+ */
+export const photoBudgetFor = (refreshablePhotos: number): number =>
+  Math.min(
+    PHOTO_BUDGET_CAP,
+    Math.max(
+      PHOTO_BUDGET_FLOOR,
+      Math.ceil(refreshablePhotos / PHOTO_BUDGET_CYCLE_DAYS),
+    ),
+  );
 
 /**
  * How long a 'no_match' verdict stands before the job asks Spotify again.
@@ -97,9 +141,9 @@ export const NO_MATCH_RETRY_DAYS = 30;
  * gaining a disambiguating release is enough, where a no_match needs the artist
  * to appear in the catalogue at all.
  *
- * Not 7. PHOTO_REFETCH_DAYS is already 7, so a weekly cadence here would put
- * two recurring populations into the same batch and squeeze the unmatched rows
- * that MATCH_BATCH_SIZE exists to serve.
+ * Not 7: a weekly cadence here would add a recurring population to the
+ * identity batch and squeeze the unmatched rows that MATCH_BATCH_SIZE exists
+ * to serve. (Photo refreshes have their own budget and no longer share it.)
  */
 export const AMBIGUOUS_RECHECK_DAYS = 14;
 
@@ -131,7 +175,10 @@ export interface MatchArtistsSummary {
 }
 
 export interface RunMatchArtistsOptions {
+  /** Identity rows per run (unmatched, no_match and ambiguous retries). */
   batchSize?: number;
+  /** Photo refreshes per run. Default: sized from the catalogue, see photoBudgetFor. */
+  photoBudget?: number;
   /** Injected in tests; production mints its own app-token client. */
   client?: SpotifyAppClient | null;
   now?: () => Date;
@@ -197,20 +244,30 @@ export const runMatchArtists = async (
     selectedAt - AMBIGUOUS_RECHECK_DAYS * DAY_MS,
   );
 
-  const rows = await db
-    .select({
-      id: artists.id,
-      name: artists.name,
-      canonicalName: artists.canonicalName,
-      matchStatus: artists.matchStatus,
-      spotifyArtistId: artists.spotifyArtistId,
-      hidden: artists.hidden,
-      autoMatchedAt: artists.autoMatchedAt,
-      // The concurrency token for the best-effort writes: every admin write
-      // moves it, so a write guarded on it never lands on a row a human
-      // touched while Spotify was searching.
-      updatedAt: artists.updatedAt,
-    })
+  const rowFields = {
+    id: artists.id,
+    name: artists.name,
+    canonicalName: artists.canonicalName,
+    matchStatus: artists.matchStatus,
+    spotifyArtistId: artists.spotifyArtistId,
+    hidden: artists.hidden,
+    autoMatchedAt: artists.autoMatchedAt,
+    // The concurrency token for the best-effort writes: every admin write
+    // moves it, so a write guarded on it never lands on a row a human
+    // touched while Spotify was searching.
+    updatedAt: artists.updatedAt,
+  };
+
+  // Matched rows that carry a photo and an id are the photo pass's catalogue.
+  const refreshablePhoto = and(
+    eq(artists.matchStatus, 'matched'),
+    isNotNull(artists.photoUrl),
+    isNotNull(artists.spotifyArtistId),
+  );
+
+  // Identity work: the Spotify search quota is what batchSize rations.
+  const identityRows = await db
+    .select(rowFields)
     .from(artists)
     .where(
       or(
@@ -230,20 +287,6 @@ export const runMatchArtists = async (
           lt(artists.matchCheckedAt, ambiguousBefore),
           isNotExhaustedExpr(),
         ),
-        // The photo refresh is deliberately outside the attempt budget: it
-        // maintains an identity that is already established, and a row whose
-        // image keeps failing to re-resolve still needs its next attempt.
-        and(
-          eq(artists.matchStatus, 'matched'),
-          isNotNull(artists.photoUrl),
-          isNotNull(artists.spotifyArtistId),
-          // A photo with no fetch stamp has no age to trust, so it is refreshed
-          // too (every writer stamps it; this repairs a stray row).
-          or(
-            isNull(artists.photoFetchedAt),
-            lt(artists.photoFetchedAt, staleBefore),
-          ),
-        ),
       ),
     )
     // Oldest first: never-checked rows lead, then the least recently checked.
@@ -252,6 +295,45 @@ export const runMatchArtists = async (
     // only ever spend budget the first-pass work didn't want.
     .orderBy(sql`${artists.matchCheckedAt} asc nulls first`, artists.createdAt)
     .limit(batchSize);
+
+  // Photo work, on its own budget and ordered by the photo's own age. Sharing
+  // the identity batch (ordered by matchCheckedAt) let a backlog of unmatched
+  // rows starve the refresh until photos aged past the readers' ceiling and
+  // vanished. The photo refresh is deliberately outside the attempt budget: it
+  // maintains an identity that is already established.
+  const photoBudget =
+    options.photoBudget ??
+    photoBudgetFor(
+      (
+        await db
+          .select({ total: count() })
+          .from(artists)
+          .where(refreshablePhoto)
+      )[0]?.total ?? 0,
+    );
+  const photoRows = await db
+    .select(rowFields)
+    .from(artists)
+    .where(
+      and(
+        refreshablePhoto,
+        // A photo with no fetch stamp has no age to trust, so it is refreshed
+        // too (every writer stamps it; this repairs a stray row).
+        or(
+          isNull(artists.photoFetchedAt),
+          lt(artists.photoFetchedAt, staleBefore),
+        ),
+      ),
+    )
+    // Oldest photo first, unstamped ones ahead of all: the rows the readers
+    // already hide come back before the ones still showing.
+    .orderBy(sql`${artists.photoFetchedAt} asc nulls first`, artists.createdAt)
+    .limit(photoBudget);
+
+  // Photos first: they are the user-visible regression, and a rate-limit abort
+  // mid-run leaves the identity queue (which has nothing to lose by waiting)
+  // for tomorrow rather than the other way round.
+  const rows = [...photoRows, ...identityRows];
 
   // The photo pass: look the stored Spotify id up directly rather than
   // re-searching by name, so a photo can never outlive its source. One call per
