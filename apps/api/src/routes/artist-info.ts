@@ -68,27 +68,10 @@ artistInfoRouter.get(
       );
     if (!artist) return ctx.json(notFound, 404);
 
-    const [billed] = await db
-      .select({ id: events.id })
-      .from(events)
-      .where(
-        and(
-          billsCanonicalName(artist.canonicalName),
-          eq(events.hiddenFromConsumer, false),
-          isNull(events.firstMissingAt),
-        ),
-      )
-      .limit(1);
-    const [held] = billed
-      ? []
-      : await db
-          .select({ id: artists.id })
-          .from(artists)
-          .where(and(eq(artists.id, artist.id), heldByMbidFollow));
-    if (!billed && !held) return ctx.json(notFound, 404);
-
-    const [slim] = artist.mbid
-      ? await db
+    // The slim row depends only on the MBID, so it is read alongside the
+    // visibility check rather than after it.
+    const slimQuery = artist.mbid
+      ? db
           .select({
             type: mbArtists.type,
             area: mbArtists.area,
@@ -98,7 +81,30 @@ artistInfoRouter.get(
           })
           .from(mbArtists)
           .where(eq(mbArtists.mbid, artist.mbid))
-      : [];
+      : Promise.resolve([]);
+
+    const isVisible = async (): Promise<boolean> => {
+      const [billed] = await db
+        .select({ id: events.id })
+        .from(events)
+        .where(
+          and(
+            billsCanonicalName(artist.canonicalName),
+            eq(events.hiddenFromConsumer, false),
+            isNull(events.firstMissingAt),
+          ),
+        )
+        .limit(1);
+      if (billed) return true;
+      const [held] = await db
+        .select({ id: artists.id })
+        .from(artists)
+        .where(and(eq(artists.id, artist.id), heldByMbidFollow));
+      return held !== undefined;
+    };
+
+    const [[slim], visible] = await Promise.all([slimQuery, isVisible()]);
+    if (!visible) return ctx.json(notFound, 404);
 
     // Ours first: it is the match the page already shows, and plan decision 7
     // never lets MusicBrainz overrule it.
