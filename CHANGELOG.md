@@ -1,3 +1,10 @@
+# [1.556.0](https://github.com/featherweight-design/concert-crawl/compare/v1.555.0...v1.556.0) (2026-11-23)
+
+
+### Features
+
+* **api:** licence and credit checks for artist photos from Commons (artist-search PR 6a-1) ([e94d779](https://github.com/featherweight-design/concert-crawl/commit/e94d7797e8f3b73ce9dee992751f54143ec8d134))
+
 # [1.555.0](https://github.com/featherweight-design/concert-crawl/compare/v1.554.0...v1.555.0) (2026-11-23)
 
 
