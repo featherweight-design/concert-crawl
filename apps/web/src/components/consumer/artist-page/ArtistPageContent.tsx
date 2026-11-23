@@ -72,7 +72,8 @@ export const ArtistPageContent = ({
   data: ArtistDetailResponse;
   /**
    * `/v1/artists/:slug/info`, fetched only for an act with nothing upcoming.
-   * Null when not asked for or when it failed: the page then reads as built.
+   * Null when not asked for or when it failed: About, the Commons photo and
+   * the identity line are then simply absent.
    */
   info?: ArtistInfoResponse | null;
   /** "Show older" target: the next past-shows window; absent when none. */

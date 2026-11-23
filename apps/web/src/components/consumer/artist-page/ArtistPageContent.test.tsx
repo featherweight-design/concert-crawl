@@ -920,6 +920,7 @@ describe('ArtistPageContent', () => {
         <ArtistPageContent data={booked} info={info} />,
       );
       expect(container.querySelector('.ap-identity')).toBeNull();
+      expect(container.querySelector('.ap-genres')).not.toBeNull();
     });
   });
 });
