@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -159,6 +160,13 @@ export const artists = pgTable(
     spotifyCandidatesFetchedAt: timestamp('spotify_candidates_fetched_at', {
       withTimezone: true,
     }),
+    /**
+     * The MusicBrainz identity (`mb_artists.mbid`) this row is, when known
+     * (artist-search plan, decision 4). Null until the MBID backfill or a
+     * follow by MBID sets it. A plain value rather than a foreign key, because
+     * the weekly MusicBrainz reload replaces `mb_artists` wholesale.
+     */
+    mbid: uuid('mbid'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -173,5 +181,10 @@ export const artists = pgTable(
     slugIdx: uniqueIndex('artists_slug_idx').on(table.slug),
     // The admin match-review queue scans by status.
     matchStatusIdx: index('artists_match_status_idx').on(table.matchStatus),
+    // Partial: every row from before 0128 is null, and two rows may not claim
+    // one MusicBrainz act.
+    mbidIdx: uniqueIndex('artists_mbid_idx')
+      .on(table.mbid)
+      .where(sql`mbid IS NOT NULL`),
   }),
 );

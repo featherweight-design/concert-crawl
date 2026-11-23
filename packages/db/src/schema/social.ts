@@ -102,6 +102,10 @@ export const userArtistFollows = pgTable(
     // 1-based position for source='spotify_top'; NULL otherwise.
     rank: integer('rank'),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+    // The MusicBrainz identity followed, when the follow came by MBID
+    // (artist-search plan, decision 4; written from its PR 5). Null on every
+    // follow before that. Dedupe stays on manualCanonicalIdx below.
+    mbid: uuid('mbid'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
