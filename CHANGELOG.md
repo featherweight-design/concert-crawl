@@ -1,3 +1,16 @@
+# [1.550.0](https://github.com/featherweight-design/concert-crawl/compare/v1.549.0...v1.550.0) (2026-11-23)
+
+
+### Bug Fixes
+
+* **db:** classify mb_artists in the user data registry ([b01481c](https://github.com/featherweight-design/concert-crawl/commit/b01481cc6679d6bfadd8d1bbed0e2e6d7c57ca86))
+* **db:** schema-qualify the alias wrapper and assert the 0128 indexes ([1c7603a](https://github.com/featherweight-design/concert-crawl/commit/1c7603a24f3081bb3d9d87f9947d6a2b2472cd41))
+
+
+### Features
+
+* **db:** add the mb_artists table and nullable mbid columns for artist search ([5e0ead3](https://github.com/featherweight-design/concert-crawl/commit/5e0ead3899cdd6016966cdfa79f83204e9cfaf22))
+
 # [1.549.0](https://github.com/featherweight-design/concert-crawl/compare/v1.548.0...v1.549.0) (2026-11-23)
 
 
