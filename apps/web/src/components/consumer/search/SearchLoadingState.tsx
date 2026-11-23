@@ -1,5 +1,6 @@
 import { SkeletonBlock } from '../skeleton/SkeletonBlock';
-import { RESULT_ART_SIZE } from './ResultParts';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { RESULT_ART_SIZE, SectionLabel } from './ResultParts';
 
 const SKELETON_ROWS = 4;
 
@@ -51,6 +52,7 @@ export function SearchLoadingState() {
         padding: '10px 8px',
       }}
     >
+      <SectionLabel label={CONSUMER_COPY.search.artistsSectionPrefix} />
       {Array.from({ length: SKELETON_ROWS }, (_, idx) => (
         <SkeletonRow key={idx} />
       ))}

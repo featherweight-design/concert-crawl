@@ -3,9 +3,35 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import { stubMatchMedia } from '@/test-utils/match-media';
 
 const mockPush = vi.fn();
+const mockRetry = vi.fn();
+const noArtists = (): ArtistSearchAllResult[] => [];
+const makeArtist = (
+  overrides: Partial<ArtistSearchAllResult> = {},
+): ArtistSearchAllResult => ({
+  name: 'Radiohead',
+  slug: 'radiohead',
+  photoUrl: null,
+  upcomingShowCount: 2,
+  nextShow: {
+    eventId: '11111111-1111-4111-8111-111111111111',
+    iso: '2027-09-15',
+    venue: 'Hi-Dive',
+    venueSlug: 'hi-dive',
+    price: null,
+    genres: [],
+  },
+  following: false,
+  mbid: null,
+  disambiguation: null,
+  area: null,
+  type: null,
+  hasShows: true,
+  ...overrides,
+});
 const mockNavigateTo = vi.fn();
 
 vi.mock('next/navigation', () => ({
@@ -34,7 +60,7 @@ vi.mock(
   '@/components/consumer/artist-page/lib/use-artist-follow',
   async (importOriginal) => ({
     ...(await importOriginal<Record<string, unknown>>()),
-    useArtistFollow: (_slug: string, initialFollowing: boolean) => ({
+    useArtistFollow: (_slug: string | null, initialFollowing: boolean) => ({
       following: initialFollowing,
       error: null,
       toggle: vi.fn(),
@@ -69,14 +95,9 @@ const mockHookState = {
     { name: 'Radiohead', nextDate: '2027-06-01', venueShort: 'Red Rocks' },
     { name: 'Godspeed', nextDate: '2027-06-05', venueShort: 'Bluebird' },
   ],
-  // #1115 PR-G — artists with their own page. Empty by default so the existing
-  // keyboard-arithmetic tests below keep asserting the pre-PR-G index layout.
-  artistPageResults: [] as Array<{
-    name: string;
-    slug: string;
-    photoUrl: string | null;
-    upcomingShowCount: number;
-  }>,
+  // The artist list (scope=all). Empty by default so the keyboard-arithmetic
+  // tests below keep asserting the Shows-then-Venues index layout.
+  artistList: noArtists(),
   venueResults: [
     {
       name: 'Red Rocks',
@@ -87,6 +108,8 @@ const mockHookState = {
   ],
   venueFirst: false,
   isLoading: false,
+  failed: false,
+  retry: mockRetry,
   navigateTo: mockNavigateTo,
 };
 
@@ -121,7 +144,8 @@ beforeEach(() => {
     },
   ];
   mockHookState.venueFirst = false;
-  mockHookState.artistPageResults = [];
+  mockHookState.artistList = noArtists();
+  mockHookState.failed = false;
   mockHookState.popularEvents = [];
 });
 
@@ -308,27 +332,16 @@ describe('SearchPalette', () => {
   });
 });
 
-describe('SearchPalette — artist pages (#1115 PR-G)', () => {
+describe('SearchPalette — artist list', () => {
   beforeEach(() => {
-    mockHookState.artistPageResults = [
-      {
-        name: 'Radiohead',
-        slug: 'radiohead',
-        photoUrl: null,
-        upcomingShowCount: 2,
-      },
-    ];
+    mockHookState.artistList = [makeArtist()];
   });
 
-  // B+ order (`more-r3-palette_typed`): Artists, Venues, then Artist pages.
-  // The fixture has 2 artists and 1 venue, so the artist page is index 3.
-  it('opens the artist page when the last row, after artists and venues, is selected', () => {
+  // Order: the artist list, then Shows, then Venues. The list owns index 0.
+  it('opens the artist page for the first row, ahead of the shows', () => {
     render(<SearchPalette open onClose={onClose} />);
 
-    // Row 0 is already highlighted on a wide screen: three steps reach row 3.
-    for (let step = 0; step < 3; step++) {
-      fireEvent.keyDown(window, { key: 'ArrowDown' });
-    }
+    // Row 0 is already highlighted on a wide screen.
     fireEvent.keyDown(window, { key: 'Enter' });
 
     expect(mockNavigateTo).toHaveBeenCalledWith('artistPage', {
@@ -337,13 +350,71 @@ describe('SearchPalette — artist pages (#1115 PR-G)', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('reaches the event-derived artist rows ahead of the artist pages', () => {
+  it('reaches the event-derived rows after the list', () => {
     render(<SearchPalette open onClose={onClose} />);
 
-    // The first row is highlighted already; Enter opens it.
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
     fireEvent.keyDown(window, { key: 'Enter' });
 
     expect(mockNavigateTo).toHaveBeenCalledWith('artist', 'Radiohead');
+  });
+
+  it('reaches the venue last', () => {
+    render(<SearchPalette open onClose={onClose} />);
+
+    // 1 list row + 2 shows + 1 venue: three steps from row 0.
+    for (let step = 0; step < 3; step++) {
+      fireEvent.keyDown(window, { key: 'ArrowDown' });
+    }
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    expect(mockNavigateTo).toHaveBeenCalledWith('venue', {
+      slug: 'red-rocks',
+      matchingEventId: 'ev-1',
+    });
+  });
+
+  it('does nothing on Enter for a MusicBrainz-only row', () => {
+    mockHookState.artistList = [
+      makeArtist({
+        name: 'Clip',
+        slug: null,
+        mbid: '22222222-2222-4222-8222-222222222222',
+        upcomingShowCount: 0,
+        nextShow: null,
+        hasShows: false,
+      }),
+    ];
+    render(<SearchPalette open onClose={onClose} />);
+
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    expect(mockNavigateTo).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe('SearchPalette — one letter and failure', () => {
+  it('keeps the default state and says to keep typing on one letter', () => {
+    mockHookState.query = 'r';
+    mockHookState.artistResults = [];
+    mockHookState.venueResults = [];
+    render(<SearchPalette open onClose={onClose} />);
+    expect(
+      screen.getByText('Keep typing. Two letters starts the search.'),
+    ).toBeTruthy();
+    expect(screen.queryByText('Nobody by that name.')).toBeNull();
+  });
+
+  it('shows the failed state with a retry, never "nobody by that name"', () => {
+    mockHookState.artistResults = [];
+    mockHookState.venueResults = [];
+    mockHookState.failed = true;
+    render(<SearchPalette open onClose={onClose} />);
+    expect(screen.getByText("Search didn't load.")).toBeTruthy();
+    expect(screen.queryByText('Nobody by that name.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(mockRetry).toHaveBeenCalledTimes(1);
   });
 });
 

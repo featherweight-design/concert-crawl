@@ -44,9 +44,11 @@ const baseHook = {
   recentSearches: [],
   popularEvents: [],
   artistResults: [],
-  artistPageResults: [],
+  artistList: [],
   venueResults: [],
   isLoading: false,
+  failed: false,
+  retry: vi.fn(),
   navigateTo: mockNavigateTo,
 };
 
@@ -79,7 +81,7 @@ vi.mock(
   '@/components/consumer/artist-page/lib/use-artist-follow',
   async (importOriginal) => ({
     ...(await importOriginal<Record<string, unknown>>()),
-    useArtistFollow: (_slug: string, initialFollowing: boolean) => {
+    useArtistFollow: (_slug: string | null, initialFollowing: boolean) => {
       const [following, setFollowing] = React.useState(initialFollowing);
       return {
         following,
@@ -117,7 +119,7 @@ beforeEach(() => {
   };
 });
 
-import type { ArtistSearchResult } from '@concert-crawl/types';
+import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import { SearchDefaultState } from './SearchDefaultState';
 import { SearchResultsState } from './SearchResultsState';
 import { SearchEmptyState } from './SearchEmptyState';
@@ -326,50 +328,58 @@ describe('SearchResultsState', () => {
 });
 
 describe('SearchEmptyState', () => {
-  it('renders the query in the no-results title', () => {
-    render(<SearchEmptyState query="thee oh sees" />);
-    expect(screen.getByText(/No results for "thee oh sees"/)).toBeTruthy();
-  });
-
-  it('falls back to generic title when query is empty', () => {
-    render(<SearchEmptyState query="" />);
-    expect(screen.getByText(/Nothing under that name/)).toBeTruthy();
+  it('says nobody by that name', () => {
+    render(<SearchEmptyState />);
+    expect(screen.getByText('Nobody by that name.')).toBeTruthy();
   });
 
   it('browse CTA runs the caller hook, then goes to /events', () => {
     const onCtaClick = vi.fn();
-    render(<SearchEmptyState query="thee oh sees" onCtaClick={onCtaClick} />);
+    render(<SearchEmptyState onCtaClick={onCtaClick} />);
     fireEvent.click(screen.getByRole('button', { name: /Browse all shows/i }));
     expect(onCtaClick).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith('/events');
   });
 });
 
-describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
-  const ARTIST_PAGES = [
-    {
-      name: 'Radiohead',
-      slug: 'radiohead',
-      photoUrl: null,
-      upcomingShowCount: 2,
-      // Stated rather than null: the contract says nextShow is null exactly
-      // when the count is 0, and a fixture that breaks it lets the component
-      // be written against a payload the API cannot produce.
-      nextShow: {
-        eventId: '11111111-1111-4111-8111-111111111111',
-        iso: '2027-09-15',
-        venue: 'Hi-Dive',
-        venueSlug: 'hi-dive',
-        price: null,
-        genres: [],
-      },
-      // PR 5 renders the inline Follow button off this; PR 3 only adds the
-      // field to the contract.
-      following: false,
-    },
-  ];
+const NEXT_SHOW = {
+  eventId: '11111111-1111-4111-8111-111111111111',
+  iso: '2027-09-15',
+  venue: 'Hi-Dive',
+  venueSlug: 'hi-dive',
+  price: null,
+  genres: [],
+};
 
-  it('draws Artists, Venues, then Artist pages', () => {
+// Kind 1 by default: ours, with shows. `nextShow` is null exactly when the
+// count is 0, so the overrides below pair them.
+const makeArtist = (
+  overrides: Partial<ArtistSearchAllResult> = {},
+): ArtistSearchAllResult => ({
+  name: 'Radiohead',
+  slug: 'radiohead',
+  photoUrl: null,
+  upcomingShowCount: 2,
+  nextShow: NEXT_SHOW,
+  following: false,
+  mbid: null,
+  disambiguation: null,
+  area: null,
+  type: null,
+  hasShows: true,
+  ...overrides,
+});
+
+const NO_SHOWS = {
+  upcomingShowCount: 0,
+  nextShow: null,
+  hasShows: false,
+} as const;
+
+describe('SearchResultsState — artist list', () => {
+  const ARTIST_LIST = [makeArtist()];
+
+  it('draws Artists, Shows, then Venues', () => {
     render(
       <SearchResultsState
         artistResults={[
@@ -379,7 +389,7 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
             venueShort: 'Red Rocks',
           },
         ]}
-        artistPageResults={ARTIST_PAGES}
+        artistList={ARTIST_LIST}
         venueResults={[
           {
             name: 'Cervantes',
@@ -393,18 +403,18 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     );
     const text = document.body.textContent ?? '';
     const artists = text.indexOf('Artists · 1');
+    const shows = text.indexOf('Shows · 1');
     const venues = text.indexOf('Venues · 1');
-    const pages = text.indexOf('Artist pages · 1');
     expect(artists).toBeGreaterThanOrEqual(0);
-    expect(artists).toBeLessThan(venues);
-    expect(venues).toBeLessThan(pages);
+    expect(artists).toBeLessThan(shows);
+    expect(shows).toBeLessThan(venues);
   });
 
-  it('chips an artist page row with the artist genre, and none without one', () => {
+  it('chips an artist row with the artist genre, and none without one', () => {
     const { rerender } = render(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={[{ ...ARTIST_PAGES[0]!, genre: 'hip-hop' }]}
+        artistList={[makeArtist({ genre: 'hip-hop' })]}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
       />,
@@ -413,7 +423,7 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     rerender(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={[{ ...ARTIST_PAGES[0]!, genre: null }]}
+        artistList={[makeArtist({ genre: null })]}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
       />,
@@ -421,33 +431,67 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     expect(screen.queryAllByTestId('genre-chip')).toHaveLength(0);
   });
 
-  it('renders the artist-pages section with its own header and count', () => {
+  it('renders the artist section with its own header, marker and count', () => {
     render(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={ARTIST_PAGES}
+        artistList={ARTIST_LIST}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
       />,
     );
-    expect(screen.getByText('Artist pages · 1')).toBeTruthy();
+    expect(screen.getByText('Artists · 1')).toBeTruthy();
     expect(screen.getByText('Radiohead')).toBeTruthy();
-    expect(screen.getByText('2 upcoming shows')).toBeTruthy();
-    expect(screen.getByText('Artist page')).toBeTruthy();
+    expect(screen.getByText('2 shows')).toBeTruthy();
+    expect(screen.getByText(/Next .* · Hi-Dive/)).toBeTruthy();
   });
 
-  it('shows the past-shows-only label when nothing is upcoming', () => {
+  it('says no Denver dates yet for an artist of ours with nothing booked', () => {
     render(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={[
-          { ...ARTIST_PAGES[0]!, upcomingShowCount: 0, nextShow: null },
+        artistList={[makeArtist(NO_SHOWS)]}
+        venueResults={[]}
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    expect(screen.getByText('No Denver dates yet')).toBeTruthy();
+  });
+
+  it('says no upcoming Denver dates for one who has played here', () => {
+    render(
+      <SearchResultsState
+        artistResults={[]}
+        artistList={[makeArtist({ ...NO_SHOWS, hasShows: true })]}
+        venueResults={[]}
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    expect(screen.getByText('No upcoming Denver dates')).toBeTruthy();
+  });
+
+  it('draws a MusicBrainz-only act Follow-only, with its identity line', () => {
+    render(
+      <SearchResultsState
+        artistResults={[]}
+        artistList={[
+          makeArtist({
+            ...NO_SHOWS,
+            name: 'Clip',
+            slug: null,
+            mbid: '22222222-2222-4222-8222-222222222222',
+            type: 'group',
+            area: 'Ohio',
+          }),
         ]}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
       />,
     );
-    expect(screen.getByText('Past shows only')).toBeTruthy();
+    expect(screen.getByText('Band · Ohio')).toBeTruthy();
+    expect(screen.getByLabelText(ARTIST_COPY.followAria('Clip'))).toBeTruthy();
+    fireEvent.click(screen.getByText('Clip'));
+    expect(mockNavigateTo).not.toHaveBeenCalled();
   });
 
   // Conformance, not a design call: a photoless artist gets the same
@@ -456,7 +500,7 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     const { container } = render(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={ARTIST_PAGES}
+        artistList={ARTIST_LIST}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
       />,
@@ -469,9 +513,7 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     const { container } = render(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={[
-          { ...ARTIST_PAGES[0]!, photoUrl: 'https://i.scdn.co/image/rh' },
-        ]}
+        artistList={[makeArtist({ photoUrl: 'https://i.scdn.co/image/rh' })]}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
       />,
@@ -484,11 +526,11 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     expect(container.querySelector('img')?.getAttribute('alt')).toBe('');
   });
 
-  it('routes an artist-page row to the page, not a filtered browse', () => {
+  it('routes an artist row to the page, not a filtered browse', () => {
     render(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={ARTIST_PAGES}
+        artistList={ARTIST_LIST}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
       />,
@@ -499,7 +541,7 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     });
   });
 
-  it('renders nothing extra when there are no artist pages', () => {
+  it('renders no Artists section when the list is empty', () => {
     render(
       <SearchResultsState
         artistResults={[
@@ -513,63 +555,77 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
         onNavigateTo={mockNavigateTo}
       />,
     );
-    expect(screen.queryByText(/Artist pages/)).toBeNull();
+    expect(screen.queryByText(/Artists ·/)).toBeNull();
+    expect(screen.getByText('Shows · 1')).toBeTruthy();
   });
 
-  it('puts the artist pages after the event-derived sections so keyboard indices stay unique', () => {
-    render(
+  it('numbers the list first, then Shows, then Venues, so keyboard indices stay unique', () => {
+    const shows = [
+      { name: 'Ratbag', nextDate: '2027-06-01', venueShort: 'Red Rocks' },
+    ];
+    const venues = [
+      {
+        name: 'Cervantes',
+        slug: 'cervantes',
+        showCount: 18,
+        matchingEventId: 'ev-1',
+      },
+    ];
+    const { rerender } = render(
       <SearchResultsState
-        artistResults={[
-          {
-            name: 'Radiohead',
-            nextDate: '2027-06-01',
-            venueShort: 'Red Rocks',
-          },
-        ]}
-        artistPageResults={ARTIST_PAGES}
-        venueResults={[]}
+        artistResults={shows}
+        artistList={ARTIST_LIST}
+        venueResults={venues}
         selectedIdx={1}
         onNavigateTo={mockNavigateTo}
       />,
     );
-    // B+ order: index 0 is the event-derived row, index 1 the artist-page row.
-    const selected = document.querySelectorAll('[data-selected="true"]');
+    // Index 0 is the list row, 1 the show row, 2 the venue.
+    let selected = document.querySelectorAll('[data-selected="true"]');
     expect(selected).toHaveLength(1);
-    expect(selected[0]?.textContent).toContain('Artist page');
-    expect(selected[0]?.textContent).not.toContain('Red Rocks');
+    expect(selected[0]?.textContent).toContain('Ratbag');
+
+    rerender(
+      <SearchResultsState
+        artistResults={shows}
+        artistList={ARTIST_LIST}
+        venueResults={venues}
+        selectedIdx={2}
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    selected = document.querySelectorAll('[data-selected="true"]');
+    expect(selected).toHaveLength(1);
+    expect(selected[0]?.textContent).toContain('Cervantes');
+
+    // venueFirst swaps Shows and Venues, never the list.
+    rerender(
+      <SearchResultsState
+        artistResults={shows}
+        artistList={ARTIST_LIST}
+        venueResults={venues}
+        venueFirst
+        selectedIdx={1}
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    selected = document.querySelectorAll('[data-selected="true"]');
+    expect(selected).toHaveLength(1);
+    expect(selected[0]?.textContent).toContain('Cervantes');
   });
 });
 
 describe('SearchResultsState — inline following (native following PR 5)', () => {
-  const artistPage = (
-    overrides: Partial<ArtistSearchResult> = {},
-  ): ArtistSearchResult => ({
-    name: 'Radiohead',
-    slug: 'radiohead',
-    photoUrl: null,
-    upcomingShowCount: 2,
-    // Paired with the count, per the contract on ArtistSearchResult. The
-    // `upcomingShowCount: 0` override below pairs its own null.
-    nextShow: {
-      eventId: '11111111-1111-4111-8111-111111111111',
-      iso: '2027-09-15',
-      venue: 'Hi-Dive',
-      venueSlug: 'hi-dive',
-      price: null,
-      genres: [],
-    },
-    following: false,
-    ...overrides,
-  });
+  const artistPage = makeArtist;
 
   const renderRows = (
-    artistPageResults: ArtistSearchResult[] = [artistPage()],
+    artistList: ArtistSearchAllResult[] = [artistPage()],
     props: Partial<React.ComponentProps<typeof SearchResultsState>> = {},
   ) =>
     render(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={artistPageResults}
+        artistList={artistList}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
         {...props}
@@ -586,8 +642,8 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
   // The clearest case the whole feature exists for: nothing on the books yet.
   // The row says so and still lets you follow.
   it('keeps the button live for an artist with nothing upcoming', () => {
-    renderRows([artistPage({ upcomingShowCount: 0, nextShow: null })]);
-    expect(screen.getByText('Past shows only')).toBeTruthy();
+    renderRows([artistPage(NO_SHOWS)]);
+    expect(screen.getByText('No Denver dates yet')).toBeTruthy();
     const button = screen.getByLabelText(ARTIST_COPY.followAria('Radiohead'));
     expect(button.hasAttribute('disabled')).toBe(false);
     fireEvent.click(button);
@@ -713,7 +769,6 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
             venueShort: 'Red Rocks',
           },
         ]}
-        artistPageResults={[]}
         venueResults={[]}
         withExplainerRail
         onNavigateTo={mockNavigateTo}
@@ -848,7 +903,7 @@ describe('Search — B+ rows', () => {
   });
 
   it('wears the B+ state card when nothing matches', () => {
-    render(<SearchEmptyState query="bjork orkestra" />);
+    render(<SearchEmptyState />);
     expect(screen.getByTestId('state-card')).toBeTruthy();
     expect(screen.getByText('No results')).toBeTruthy();
   });

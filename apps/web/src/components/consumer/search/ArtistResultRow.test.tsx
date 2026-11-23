@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import type { ArtistSearchResult } from '@concert-crawl/types';
+import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import type { FollowError } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import type * as FollowButtonModule from '@/components/consumer/artist-page/FollowButton';
 
@@ -66,9 +66,14 @@ afterEach(() => {
   follow.error = null;
 });
 
-const ARTIST: ArtistSearchResult = {
+const ARTIST: ArtistSearchAllResult = {
   name: 'Turnstile',
   slug: 'turnstile',
+  mbid: null,
+  disambiguation: null,
+  area: null,
+  type: null,
+  hasShows: true,
   photoUrl: null,
   upcomingShowCount: 2,
   // Paired with the count: ArtistSearchResult says null means zero upcoming,
@@ -87,16 +92,18 @@ const ARTIST: ArtistSearchResult = {
 // No default: a default parameter would swallow an explicit `undefined`, the
 // unresolved-Clerk case the tests below need.
 const renderRow = (
-  artist: ArtistSearchResult,
+  artist: ArtistSearchAllResult,
   isSignedIn: boolean | undefined,
+  options: { sharedName?: boolean; navigable?: boolean } = {},
 ) =>
   render(
     <ArtistResultRow
       artist={artist}
+      sharedName={options.sharedName ?? false}
       selected={false}
       itemIdx={0}
       listbox={false}
-      onNavigate={() => {}}
+      {...(options.navigable === false ? {} : { onNavigate: () => {} })}
       isSignedIn={isSignedIn}
       size="rowWide"
       iconOnly={false}
@@ -180,5 +187,51 @@ describe('<ArtistResultRow /> follow refusals', () => {
     expect(screen.getByRole('status').textContent).toMatch(
       /Lots of follows this hour\. Try again at \d{1,2}:\d{2}/,
     );
+  });
+});
+
+describe('<ArtistResultRow /> kinds', () => {
+  it('kind 1 shows the N SHOWS marker and the next show line', () => {
+    renderRow(ARTIST, true);
+    expect(screen.getByText('2 shows')).toBeTruthy();
+    expect(screen.getByText(/Next .* · Hi-Dive/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Turnstile/ })).toBeTruthy();
+  });
+
+  it('kind 2 says there are no Denver dates yet', () => {
+    renderRow(
+      { ...ARTIST, upcomingShowCount: 0, nextShow: null, hasShows: false },
+      true,
+    );
+    expect(screen.getByText('No Denver dates yet')).toBeTruthy();
+    expect(screen.queryByText(/shows?$/)).toBeNull();
+  });
+
+  it('kind 3 reads its identity line and has no navigate button', () => {
+    renderRow(
+      {
+        ...ARTIST,
+        slug: null,
+        mbid: '22222222-2222-4222-8222-222222222222',
+        upcomingShowCount: 0,
+        nextShow: null,
+        hasShows: false,
+        type: 'group',
+        area: 'Baltimore',
+      },
+      true,
+      { navigable: false },
+    );
+    expect(screen.getByText('Band · Baltimore')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Turnstile/ })).toBeNull();
+    expect(screen.getByTestId('follow-stub')).toBeTruthy();
+  });
+
+  it('a shared name swaps the venue for the identity line', () => {
+    renderRow({ ...ARTIST, disambiguation: 'hardcore band' }, true, {
+      sharedName: true,
+    });
+    expect(screen.getByText(/Next .* · hardcore band/)).toBeTruthy();
+    expect(screen.queryByText(/Hi-Dive/)).toBeNull();
   });
 });
