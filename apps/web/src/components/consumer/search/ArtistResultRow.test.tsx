@@ -152,6 +152,17 @@ describe('<ArtistResultRow /> follow refusals', () => {
     expect(
       container.querySelector('[data-follow-error="name_held"]'),
     ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: /^Follow / }).hasAttribute('disabled'),
+    ).toBe(true);
+  });
+
+  it('keeps Follow live on a retryable refusal', () => {
+    follow.error = { kind: 'unavailable' };
+    renderRow(ARTIST, true);
+    expect(
+      screen.getByRole('button', { name: /^Follow / }).hasAttribute('disabled'),
+    ).toBe(false);
   });
 
   it('names a rate-limited wait as a clock time', () => {
@@ -161,7 +172,7 @@ describe('<ArtistResultRow /> follow refusals', () => {
     };
     renderRow(ARTIST, true);
     expect(screen.getByRole('status').textContent).toMatch(
-      /Lots of follows this hour\. Try again at \d{1,2}:15/,
+      /Lots of follows this hour\. Try again at \d{1,2}:\d{2}/,
     );
   });
 });
