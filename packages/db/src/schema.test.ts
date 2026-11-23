@@ -27,6 +27,8 @@ import {
   userSpotifyConnections,
   pushSubscriptions,
   spotifyAlertLog,
+  mbArtists,
+  artists,
 } from './index.js';
 
 describe('database schema exports', () => {
@@ -364,5 +366,30 @@ describe('spotify sync schema (eng spec §4, PR 1)', () => {
     expect(userArtistFollows.canonicalName.default).toBe('');
     expect(userArtistFollows.rank.notNull).toBe(false);
     expect(userArtistFollows.lastSyncedAt.notNull).toBe(false);
+  });
+});
+
+describe('artist search schema expand (migration 0128)', () => {
+  it('mb_artists has the plan decision 1 columns, mbid as primary key', () => {
+    expect(mbArtists.mbid.primary).toBe(true);
+    expect(mbArtists.name.notNull).toBe(true);
+    expect(mbArtists.aliases.notNull).toBe(true);
+    for (const column of [
+      mbArtists.sortName,
+      mbArtists.type,
+      mbArtists.area,
+      mbArtists.disambiguation,
+      mbArtists.spotifyId,
+      mbArtists.wikidataId,
+    ]) {
+      expect(column.notNull).toBe(false);
+    }
+  });
+
+  it('artists.mbid and user_artist_follows.mbid are nullable (expand only)', () => {
+    expect(artists.mbid.notNull).toBe(false);
+    expect(artists.mbid.hasDefault).toBe(false);
+    expect(userArtistFollows.mbid.notNull).toBe(false);
+    expect(userArtistFollows.mbid.hasDefault).toBe(false);
   });
 });

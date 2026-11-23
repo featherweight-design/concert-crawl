@@ -5,6 +5,7 @@ export * from './event-artists.js';
 export * from './event-redirects.js';
 export * from './artist-reports.js';
 export * from './artists.js';
+export * from './mb-artists.js';
 export * from './crawl-runs.js';
 export * from './crawl-run-pages.js';
 export * from './admin-settings.js';
