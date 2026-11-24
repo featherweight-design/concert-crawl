@@ -2686,6 +2686,29 @@ describe('crawlVenue — a test crawl of a draft venue', () => {
     expect(row?.blockedAt).toBeNull();
   });
 
+  it('does not let a test make the first real crawl read as unchanged', async () => {
+    const venue = await seedDraftVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [makeEvent('Same Page Band', futureDate(10), venue.url)],
+      usage: { inputTokens: 1, outputTokens: 1 },
+    });
+    await crawlTest(venue.id);
+    await db
+      .update(venues)
+      .set({ active: true, wentLiveAt: new Date(), verified: true })
+      .where(eq(venues.id, venue.id));
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.reason).not.toBe('page_unchanged');
+    expect(run.eventsInserted).toBe(1);
+  });
+
   it('a draft that stops before the page still reports a result', async () => {
     const venue = await seedDraftVenue({
       crawlPausedAt: new Date('2026-11-01T09:00:00.000Z'),

@@ -47,7 +47,7 @@ export const buildTestResult = (input: {
 /** The result of a test crawl that could not read the listing at all. */
 export const buildFailedTestResult = (input: {
   error: string;
-  crawlRunId: string;
+  crawlRunId: string | null;
 }): TestCrawlResult => ({
   status: 'failed',
   strategy: null,

@@ -1189,7 +1189,13 @@ export async function crawlVenue(
         })
         .from(crawlRuns)
         .where(
-          and(eq(crawlRuns.venueId, venueId), eq(crawlRuns.status, 'success')),
+          and(
+            eq(crawlRuns.venueId, venueId),
+            eq(crawlRuns.status, 'success'),
+            // A test or trial run stored nothing, so its hash must not make
+            // the first real crawl of a venue read as an unchanged page.
+            eq(crawlRuns.trial, false),
+          ),
         )
         .orderBy(desc(crawlRuns.createdAt))
         .limit(1);
@@ -1414,12 +1420,30 @@ export async function crawlVenue(
         fetchLog,
       );
       if (tokenUsage && testCostUsd !== null) {
-        await db.insert(costTracking).values({
-          service: 'claude',
-          costUsd: testCostUsd.toFixed(6),
-          tokensUsed: String(tokenUsage.inputTokens + tokenUsage.outputTokens),
-          metadata: JSON.stringify({ crawlRunId: id, venueId, ...tokenUsage }),
-        });
+        // The run row is written already, so a failed cost row must not reach
+        // the catch below, which would record the same run id a second time.
+        try {
+          await db.insert(costTracking).values({
+            service: 'claude',
+            costUsd: testCostUsd.toFixed(6),
+            tokensUsed: String(
+              tokenUsage.inputTokens + tokenUsage.outputTokens,
+            ),
+            metadata: JSON.stringify({
+              crawlRunId: id,
+              venueId,
+              ...tokenUsage,
+            }),
+          });
+        } catch (costErr: unknown) {
+          console.error(
+            JSON.stringify({
+              event: 'crawl.test_cost_insert_failed',
+              venueId,
+              error: String(costErr),
+            }),
+          );
+        }
       }
       return {
         ...crawlRun,

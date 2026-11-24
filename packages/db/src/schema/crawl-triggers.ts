@@ -43,7 +43,7 @@ export interface TestCrawlResult {
   counts: { html: number; jsonLd: number; haiku: number };
   samples: TestCrawlSample[];
   costUsd: number;
-  crawlRunId: string;
+  crawlRunId: string | null;
   error: string | null;
 }
 
