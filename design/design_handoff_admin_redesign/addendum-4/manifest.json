@@ -1,0 +1,122 @@
+[
+ {
+  "section": "01-venue-heroes",
+  "name": "hero-settings-spec",
+  "title": "Hero settings · Theater, Club, Gallery",
+  "note": "Each setting at the phone size beside its rules, plus the shared system.",
+  "w": 1240,
+  "h": 1060
+ },
+ {
+  "section": "01-venue-heroes",
+  "name": "hero-theater-d",
+  "title": "Venue hero · Theater · desktop",
+  "note": "The 1200x420 asset, Ogden Theatre as the sample venue.",
+  "w": 1200,
+  "h": 420
+ },
+ {
+  "section": "01-venue-heroes",
+  "name": "hero-theater-m",
+  "title": "Venue hero · Theater · phone",
+  "note": "The phone hero, Ogden Theatre as the sample venue.",
+  "w": 390,
+  "h": 380
+ },
+ {
+  "section": "01-venue-heroes",
+  "name": "hero-club-d",
+  "title": "Venue hero · Club · desktop",
+  "note": "The 1200x420 asset, Hi-Dive as the sample venue.",
+  "w": 1200,
+  "h": 420
+ },
+ {
+  "section": "01-venue-heroes",
+  "name": "hero-club-m",
+  "title": "Venue hero · Club · phone",
+  "note": "The phone hero, Hi-Dive as the sample venue.",
+  "w": 390,
+  "h": 380
+ },
+ {
+  "section": "01-venue-heroes",
+  "name": "hero-gallery-d",
+  "title": "Venue hero · Gallery · desktop",
+  "note": "The 1200x420 asset, Meow Wolf Denver as the sample venue.",
+  "w": 1200,
+  "h": 420
+ },
+ {
+  "section": "01-venue-heroes",
+  "name": "hero-gallery-m",
+  "title": "Venue hero · Gallery · phone",
+  "note": "The phone hero, Meow Wolf Denver as the sample venue.",
+  "w": 390,
+  "h": 380
+ },
+ {
+  "section": "01-venue-heroes",
+  "name": "hero-venue-page-crop-d",
+  "title": "Venue hero · as cropped on the venue page",
+  "note": "The 1300x340 page crop: the scene slices from the bottom, the top strip is its own layer. The glyph is placed as built and left off here.",
+  "w": 1380,
+  "h": 1300
+ },
+ {
+  "section": "02-add-a-venue-start-basics",
+  "name": "card-fill-ruling",
+  "title": "2a · Right-column card fill",
+  "note": "Canonical: --bg-elevated for every admin card.",
+  "w": 1100,
+  "h": 520
+ },
+ {
+  "section": "02-add-a-venue-start-basics",
+  "name": "basics-desktop-canonical",
+  "title": "2a · Basics, canonical card fill",
+  "note": "Board 05 basics-desktop with --bg-elevated cards. Nothing else changes.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "02-add-a-venue-start-basics",
+  "name": "robots-pill-states",
+  "title": "2b · robots.txt pill, every state",
+  "note": "Allowed, disallowed, couldn&#39;t check, checking. Tint 16/35 confirmed.",
+  "w": 1420,
+  "h": 440
+ },
+ {
+  "section": "02-add-a-venue-start-basics",
+  "name": "rail-done-step-d",
+  "title": "2c · Rail, a done step",
+  "note": "After Basics saves: Basics shows the success check and stays clickable; Source is current.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "02-add-a-venue-start-basics",
+  "name": "saving-d",
+  "title": "2d · Basics, saving",
+  "note": "While the save runs: fields disabled at 50%, Back disabled, Continue keeps its width and shows a spinner.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "02-add-a-venue-start-basics",
+  "name": "phone-saved-as-you-go",
+  "title": "2e · Phone, Saved as you go",
+  "note": "Proposal accepted: one quiet line above Continue, shown after the first save lands.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-add-a-venue-start-basics",
+  "name": "phone-saving",
+  "title": "2e · Phone, saving",
+  "note": "While a save runs the line reads Saving… with a ring spinner; fields disable as on desktop. A failure is addendum 3 row 9&#39;s toast; the line goes.",
+  "w": 390,
+  "h": 844
+ }
+]
