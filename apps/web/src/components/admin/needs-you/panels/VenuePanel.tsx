@@ -192,7 +192,7 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
         busy={busy}
         note={blocked ? PANEL.venue.blockedNote : PANEL.venue.failingNote}
         // A blocked venue leads with Ask the venue: it notes the ask on the
-        // draft-less venue and opens the permission note in the admin's mail.
+        // venue and opens the permission note in the admin's mail.
         extraFirst={blocked}
         extra={
           blocked ? (
