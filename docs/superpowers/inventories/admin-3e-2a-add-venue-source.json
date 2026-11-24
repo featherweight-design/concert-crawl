@@ -1,0 +1,53 @@
+{
+  "feature": "Admin 3e-2a: Add a venue, Source step",
+  "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (step-2-source, robots-stopped). Admin role (CONTACT_SHEET_ROLE=admin). Rows open the scratch draft by ?id and ?step. The draft's calendar page is a robots.txt-disallowed path, so the test crawl is refused at once and the Stopped card draws without a crawler. The found, none, running and failed cards need a live crawler or a seeded trigger and are covered by SourceStep.test.tsx. No row writes.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 760,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "source-stopped",
+      "label": "Source: robots.txt stopped the test, Continue off",
+      "steps": [
+        {
+          "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=source",
+          "expectStatus": 200,
+          "wait": "[data-state=\"robots\"]"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "basics-resume",
+      "label": "Basics on a resumed draft: Source is open on the rail",
+      "steps": [
+        {
+          "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=basics",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-continue\"]"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}

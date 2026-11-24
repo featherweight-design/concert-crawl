@@ -26,10 +26,13 @@ export const OPTIONAL_STEPS: ReadonlySet<AddVenueStep> = new Set([
 ]);
 
 /**
- * The steps that open in this build. 3e-1 ships Basics only; the rest draw
- * as the rail's not-yet steps until their PRs land (plan decision 12).
+ * The steps that open in this build: Basics (3e-1) and Source (3e-2a). The
+ * rest draw as the rail's not-yet steps until their PRs land (plan decision 12).
  */
-export const OPEN_STEPS: ReadonlySet<AddVenueStep> = new Set(['basics']);
+export const OPEN_STEPS: ReadonlySet<AddVenueStep> = new Set([
+  'basics',
+  'source',
+]);
 
 /** "Step 1 of 5": a step's place in the flow, counted from one. */
 export const stepNumber = (step: AddVenueStep): number =>
@@ -182,6 +185,10 @@ export const basicsFormData = (
   for (const key of keys) formData.set(key, String(next[key] ?? ''));
   return formData;
 };
+
+/** The `?step=` a resumed draft opens on: Source, or Basics for anything else. */
+export const resumeStepOf = (param: unknown): 'basics' | 'source' =>
+  param === 'source' ? 'source' : 'basics';
 
 /** The flow's address once the draft exists, so a reload resumes it. */
 export const addVenueHref = (id: string, step: AddVenueStep): string =>

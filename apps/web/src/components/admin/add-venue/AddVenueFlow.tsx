@@ -16,6 +16,7 @@ import { slugify } from '@/components/admin/venues/details/details-rules';
 import { createDraftVenue, updateVenue } from '@/lib/actions/venues';
 import { AddVenueShell } from './AddVenueShell';
 import { BasicsStep } from './BasicsStep';
+import { SourceStep } from './SourceStep';
 import { StartScreen } from './StartScreen';
 import {
   BASICS_FIELD_ORDER,
@@ -26,6 +27,7 @@ import {
   basicsFormData,
   changedBasics,
   saveErrorOf,
+  normalizeWebsite,
   validateBasics,
   type AddVenueStep,
   type BasicsColumns,
@@ -37,10 +39,13 @@ const COPY = ADMIN_COPY.addVenue;
 const VENUES_HREF = '/admin/venues';
 const NOTHING_DONE: ReadonlySet<AddVenueStep> = new Set();
 const BASICS_DONE: ReadonlySet<AddVenueStep> = new Set(['basics']);
+const SOURCE_STEP = 'source';
 
 export interface AddVenueDraft {
   id: string;
   basics: BasicsDraft;
+  /** The step the address names: Source resumes there, anything else on Basics. */
+  step?: 'basics' | 'source';
 }
 
 type SaveOutcome = {
@@ -61,8 +66,8 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   const router = useRouter();
   const phone = useIsPhone();
   const { setPageTitle, setPhoneBack } = usePageTitle();
-  const [stage, setStage] = useState<'start' | 'basics'>(
-    draft === null ? 'start' : 'basics',
+  const [stage, setStage] = useState<'start' | 'basics' | 'source'>(
+    draft === null ? 'start' : (draft.step ?? 'basics'),
   );
   const [venueId, setVenueId] = useState<string | null>(draft?.id ?? null);
   const [basics, setBasics] = useState<BasicsDraft>(
@@ -79,6 +84,8 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   // State is stale inside a click's closure, so a second tap before the
   // re-render would start a second create; the ref closes that window.
   const saving = useRef(false);
+  // The draft's id the moment a create returns, before `venueId` re-renders.
+  const idRef = useRef<string | null>(draft?.id ?? null);
 
   // "Venues / Add a venue" (`basics-desktop`'s crumbs).
   useEffect(() => {
@@ -155,6 +162,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     setSaved(next);
     if (venueId === null && outcome.id !== undefined) {
       setVenueId(outcome.id);
+      idRef.current = outcome.id;
       // The link is set once saved; a later name edit no longer remakes it.
       setSlugEdited(true);
       // A replace, so Back leaves the flow rather than returning to an
@@ -164,11 +172,24 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     return true;
   };
 
-  // Before the draft exists, Back returns to Start; after, it saves any edits
+  // Continue: Basics saved as shown, then Source, which tests the page at once.
+  const toSource = async () => {
+    if (!(await save())) return;
+    const id = venueId ?? idRef.current;
+    if (id === null) return;
+    setStage('source');
+    router.replace(addVenueHref(id, SOURCE_STEP));
+  };
+
+  // From Source, Back returns to Basics. Before the draft exists, Back returns
+  // to Start; after, it saves any edits
   // ("Saved as you go") and leaves for Venues, where the draft waits under
   // Drafts. An edit that can't be saved keeps the admin here with its error.
   const back = async () => {
-    if (venueId === null) {
+    if (stage === 'source') {
+      setStage('basics');
+      if (venueId !== null) router.replace(addVenueHref(venueId, 'basics'));
+    } else if (venueId === null) {
       setErrors({});
       setFormError(null);
       setStage('start');
@@ -178,24 +199,43 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   if (stage === 'start') {
     return <StartScreen phone={phone} onStart={() => setStage('basics')} />;
   }
+  const onSource = stage === 'source' && venueId !== null;
   return (
-    <AddVenueShell
-      phone={phone}
-      step="basics"
-      done={saved === null ? NOTHING_DONE : BASICS_DONE}
-      name={basics.name}
-      busy={busy}
-      onBack={() => void back()}
-      onContinue={() => void save()}
-    >
-      <BasicsStep
+    <>
+      <AddVenueShell
         phone={phone}
-        draft={basics}
-        errors={errors}
-        formError={formError}
+        step={onSource ? 'source' : 'basics'}
+        done={saved === null ? NOTHING_DONE : BASICS_DONE}
+        name={basics.name}
         busy={busy}
-        onChange={change}
-      />
-    </AddVenueShell>
+        onBack={() => void back()}
+        onContinue={() => void toSource()}
+        continueDisabled={onSource}
+      >
+        {onSource ? (
+          <SourceStep
+            phone={phone}
+            venueId={venueId}
+            venueName={basics.name}
+            pageUrl={normalizeWebsite(basics.website) ?? basics.website}
+            onPageSaved={(url) => {
+              setBasics((prev) => ({ ...prev, website: url }));
+              setSaved((prev) =>
+                prev === null ? prev : { ...prev, websiteUrl: url },
+              );
+            }}
+          />
+        ) : (
+          <BasicsStep
+            phone={phone}
+            draft={basics}
+            errors={errors}
+            formError={formError}
+            busy={busy}
+            onChange={change}
+          />
+        )}
+      </AddVenueShell>
+    </>
   );
 };

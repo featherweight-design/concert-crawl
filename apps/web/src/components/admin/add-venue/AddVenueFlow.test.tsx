@@ -19,9 +19,13 @@ type Outcome = {
 const mockCreateDraft = vi.fn<(body: FormData) => Promise<Outcome>>();
 const mockUpdateVenue =
   vi.fn<(id: string, body: FormData) => Promise<Outcome>>();
+// Source tests its page the moment it opens; a refused test keeps these flows
+// on what they check (SourceStep.test.tsx covers the test card).
 vi.mock('@/lib/actions/venues', () => ({
   createDraftVenue: (body: FormData) => mockCreateDraft(body),
   updateVenue: (id: string, body: FormData) => mockUpdateVenue(id, body),
+  testCrawlVenue: () => Promise.resolve({ ok: false, code: 'not_draft' }),
+  readTestCrawl: () => Promise.resolve(null),
 }));
 
 const mockReplace = vi.fn();
@@ -95,7 +99,7 @@ describe('AddVenueFlow', () => {
     expect(mockCreateDraft).not.toHaveBeenCalled();
   });
 
-  it('saves the draft on Continue, moves the URL to it and checks Basics off', async () => {
+  it('saves the draft on Continue, moves the URL to it, checks Basics off and opens Source', async () => {
     mockCreateDraft.mockResolvedValue({ success: true, id: 'v-9' });
     render(<AddVenueFlow draft={null} />);
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
@@ -109,9 +113,21 @@ describe('AddVenueFlow', () => {
     const body = mockCreateDraft.mock.calls.at(0)?.[0];
     expect(body?.get('slug')).toBe('dazzle-jazz');
     expect(body?.get('websiteUrl')).toBe('https://dazzledenver.com');
-    const basics = screen.getByTestId('add-venue-step-basics');
-    expect(basics.getAttribute('data-done')).toBe('true');
-    expect(basics.getAttribute('aria-current')).toBe('step');
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenCalledWith(
+        '/admin/venues/new?id=v-9&step=source',
+      ),
+    );
+    expect(
+      screen.getByTestId('add-venue-step-basics').getAttribute('data-done'),
+    ).toBe('true');
+    expect(
+      screen.getByTestId('add-venue-step-source').getAttribute('aria-current'),
+    ).toBe('step');
+    // Source's Continue has no step to open yet.
+    expect(
+      screen.getByTestId<HTMLButtonElement>('add-venue-continue').disabled,
+    ).toBe(true);
   });
 
   it('patches only what changed on a resumed draft', async () => {
@@ -141,7 +157,11 @@ describe('AddVenueFlow', () => {
     const [id, body] = mockUpdateVenue.mock.calls.at(0) ?? [];
     expect(id).toBe('v-9');
     expect(Array.from(body?.keys() ?? [])).toEqual(['name']);
-    expect(mockReplace).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenCalledWith(
+        '/admin/venues/new?id=v-9&step=source',
+      ),
+    );
   });
 
   it('creates one draft however fast Continue is pressed twice', async () => {
@@ -168,7 +188,13 @@ describe('AddVenueFlow', () => {
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     fillDazzle();
     fireEvent.click(screen.getByTestId('add-venue-continue'));
-    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenCalledWith(
+        '/admin/venues/new?id=v-9&step=source',
+      ),
+    );
+    // Back from Source returns to Basics, where the name can change again.
+    fireEvent.click(screen.getByTestId('add-venue-back'));
     type(FIELDS.name, 'Dazzle Jazz Club');
     expect(
       screen.getByLabelText<HTMLInputElement>(FIELDS.link.label).value,
@@ -267,10 +293,13 @@ describe('AddVenueFlow', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('draws steps 2 to 5 as not open yet', () => {
+  it('draws steps 3 to 5 as not open yet, and Source as open', () => {
     render(<AddVenueFlow draft={null} />);
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
-    for (const step of ['source', 'icon', 'guide', 'review']) {
+    expect(
+      screen.getByTestId('add-venue-step-source').getAttribute('aria-disabled'),
+    ).not.toBe('true');
+    for (const step of ['icon', 'guide', 'review']) {
       expect(
         screen
           .getByTestId(`add-venue-step-${step}`)

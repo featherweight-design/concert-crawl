@@ -10,6 +10,7 @@ import {
   changedBasics,
   hostAndPath,
   normalizeWebsite,
+  resumeStepOf,
   sampleDateLabel,
   saveErrorOf,
   stepNumber,
@@ -215,6 +216,15 @@ describe('addVenueHref', () => {
     expect(addVenueHref('v-1', 'basics')).toBe(
       '/admin/venues/new?id=v-1&step=basics',
     );
+  });
+});
+
+describe('resumeStepOf', () => {
+  it('opens Source only when the address says so', () => {
+    expect(resumeStepOf('source')).toBe('source');
+    expect(resumeStepOf('basics')).toBe('basics');
+    expect(resumeStepOf(undefined)).toBe('basics');
+    expect(resumeStepOf(['source'])).toBe('basics');
   });
 });
 

@@ -3,10 +3,13 @@ import type { Venue } from '@concert-crawl/types';
 import { auth, requireAdminUser } from '@/lib/auth';
 import { ApiError, apiClient } from '@/lib/api';
 import { AddVenueFlow } from '@/components/admin/add-venue/AddVenueFlow';
-import { basicsOf } from '@/components/admin/add-venue/add-venue-rules';
+import {
+  basicsOf,
+  resumeStepOf,
+} from '@/components/admin/add-venue/add-venue-rules';
 
 interface Props {
-  searchParams: Promise<{ id?: string | string[] }>;
+  searchParams: Promise<{ id?: string | string[]; step?: string | string[] }>;
 }
 
 /**
@@ -16,7 +19,7 @@ interface Props {
  */
 export default async function AddVenuePage({ searchParams }: Props) {
   await requireAdminUser();
-  const { id } = await searchParams;
+  const { id, step } = await searchParams;
   if (typeof id !== 'string' || id === '') return <AddVenueFlow draft={null} />;
 
   const { getToken } = await auth();
@@ -37,5 +40,13 @@ export default async function AddVenuePage({ searchParams }: Props) {
   }
   // Only an explicit null is a draft (`deriveVenueStatusChips`).
   if (venue.wentLiveAt !== null) redirect(`/admin/venues/${venue.id}`);
-  return <AddVenueFlow draft={{ id: venue.id, basics: basicsOf(venue) }} />;
+  return (
+    <AddVenueFlow
+      draft={{
+        id: venue.id,
+        basics: basicsOf(venue),
+        step: resumeStepOf(step),
+      }}
+    />
+  );
 }
