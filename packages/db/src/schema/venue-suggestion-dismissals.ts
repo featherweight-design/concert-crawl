@@ -8,7 +8,7 @@ import {
 import { sql } from 'drizzle-orm';
 
 // "Not for us" on the Add a venue Start list (admin redesign decision A7,
-// migration 0130). Fans suggest venues as free text in `feedback`, so a
+// migration 0132). Fans suggest venues as free text in `feedback`, so a
 // dismissal is keyed by the venue name, normalized by the API: lower case,
 // letters and digits only. At most one active row per key; Undo sets
 // `cleared_at`, and a later dismissal inserts a new row.
