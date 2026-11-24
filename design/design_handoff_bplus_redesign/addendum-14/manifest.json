@@ -1,0 +1,154 @@
+[
+ {
+  "section": "01-light-stamps",
+  "name": "stamps-light-spec",
+  "title": "3a · Stamps on Light, darker ink",
+  "note": "The rule and every board venue&#39;s computed ink.",
+  "w": 1100,
+  "h": 620
+ },
+ {
+  "section": "01-light-stamps",
+  "name": "stamps-light-m",
+  "title": "3a · Stamps on Light, phone",
+  "note": "Before and after on the Light surface.",
+  "w": 390,
+  "h": 700
+ },
+ {
+  "section": "01-light-stamps",
+  "name": "stamps-light-d",
+  "title": "3a · Stamps on Light, desktop",
+  "note": "Before and after on the Light Passport.",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "02-page-glow",
+  "name": "page-glow-m",
+  "title": "3b · Page glow per theme, phone",
+  "note": "All nine themes at phone size, with values.",
+  "w": 1720,
+  "h": 700
+ },
+ {
+  "section": "02-page-glow",
+  "name": "page-glow-d",
+  "title": "3b · Page glow per theme, desktop",
+  "note": "All nine themes at desktop size, with values.",
+  "w": 1420,
+  "h": 1200
+ },
+ {
+  "section": "03-sheet-grabber",
+  "name": "grabber-spec",
+  "title": "3c · One grabber for every draggable sheet",
+  "note": "Keep the strip; one spec for every sheet that drags.",
+  "w": 1100,
+  "h": 460
+ },
+ {
+  "section": "03-sheet-grabber",
+  "name": "account-sheet-m",
+  "title": "3c · Account sheet, at rest",
+  "note": "The grabber inside the gradient top edge.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-sheet-grabber",
+  "name": "account-sheet-drag-m",
+  "title": "3c · Account sheet, dragging",
+  "note": "Pulled 120px: grabber brightens, scrim lightens.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-sheet-grabber",
+  "name": "account-menu-d",
+  "title": "3c · Account menu, desktop",
+  "note": "A popover: no grabber.",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "04-card-placeholder",
+  "name": "card-placeholder-spec",
+  "title": "3d · Show card with no image",
+  "note": "The venue&#39;s night and glyph behind the scrim.",
+  "w": 1100,
+  "h": 640
+ },
+ {
+  "section": "04-card-placeholder",
+  "name": "invite-light-m",
+  "title": "3d · Invite landing, Light, phone",
+  "note": "Middle card with no image.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "04-card-placeholder",
+  "name": "invite-electric-m",
+  "title": "3d · Invite landing, Electric, phone",
+  "note": "Same card on Electric.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "04-card-placeholder",
+  "name": "invite-light-d",
+  "title": "3d · Invite landing, Light, desktop",
+  "note": "Two cards with no image.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "05-search-clear",
+  "name": "search-clear-m",
+  "title": "3e · Phone palette keeps the clear",
+  "note": "As addendum 12 draws it.",
+  "w": 360,
+  "h": 720
+ },
+ {
+  "section": "05-search-clear",
+  "name": "search-clear-d",
+  "title": "3e · Desktop palette, clear beside ESC",
+  "note": "x clears, ESC closes.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "06-desktop-install",
+  "name": "install-desktop",
+  "title": "3f · Launch animation in an installed desktop window",
+  "note": "Start, grow, land; plus a small and a large window.",
+  "w": 1520,
+  "h": 1080
+ },
+ {
+  "section": "06-desktop-install",
+  "name": "install-phone-ref",
+  "title": "3f · Phone reference",
+  "note": "Unchanged; windows under 600 wide use it.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-profile-no-handle",
+  "name": "profile-no-handle-m",
+  "title": "3g · Settings profile, no handle, phone",
+  "note": "Ring, banner overlap, placeholder.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-profile-no-handle",
+  "name": "profile-no-handle-d",
+  "title": "3g · Settings profile, no handle, desktop",
+  "note": "Same card in the desktop Settings panel.",
+  "w": 1280,
+  "h": 520
+ }
+]
