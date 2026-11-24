@@ -89,6 +89,17 @@ describe('venue name helpers', () => {
     });
     expect(parseSuggestion('  \n site.com')).toBeNull();
   });
+
+  it('drops a website that is not a web address', () => {
+    expect(
+      parseSuggestion('Dazzle\njavascript:alert(1)')?.websiteUrl,
+    ).toBeNull();
+    expect(parseSuggestion('Dazzle\ndata:text/html,x')?.websiteUrl).toBeNull();
+    expect(parseSuggestion('Dazzle\nnot a site')?.websiteUrl).toBeNull();
+    expect(
+      parseSuggestion('Dazzle\nhttps://dazzledenver.com/x')?.websiteUrl,
+    ).toBe('https://dazzledenver.com/x');
+  });
 });
 
 describe('admin venues API, 3c-3', () => {
@@ -306,6 +317,20 @@ describe('admin venues API, 3c-3', () => {
       expect(data.find((row) => row.name === 'Dazzle')?.websiteUrl).toBe(
         'dazzledenver.com',
       );
+    });
+
+    it('skips a suggestion an admin already handled', async () => {
+      await suggest('fan_1', 'Dazzle');
+      await testDb.insert(feedback).values({
+        userId: 'fan_2',
+        pageUrl: '/venues',
+        category: 'venue_suggestion',
+        message: 'Cervantes',
+        status: 'resolved',
+      });
+      const res = await request('GET', '/v1/admin/venues/suggestions');
+      const { data } = (await res.json()) as { data: { name: string }[] };
+      expect(data.map((row) => row.name)).toEqual(['Dazzle']);
     });
 
     it('is empty when nobody asked', async () => {

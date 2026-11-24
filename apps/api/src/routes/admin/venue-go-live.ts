@@ -5,9 +5,11 @@ import {
   venueSuggestionDismissals,
   venues,
 } from '@concert-crawl/db';
-import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { idSchema } from '../../lib/id-schema.js';
+import { apiLogger } from '../../lib/logger.js';
 import { validationHook } from '../../lib/validator.js';
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
@@ -23,7 +25,7 @@ import { queueVenueCrawl } from './lib/crawl-trigger.js';
 
 export const venueGoLiveAdminRouter = new Hono<AdminVariables>();
 
-const idParamSchema = z.object({ id: z.uuid() });
+const idParamSchema = z.object({ id: idSchema });
 
 const permissionAnswerSchema = z.object({
   answer: z.enum(['yes', 'no']),
@@ -50,14 +52,31 @@ export const parseSuggestion = (
   const [first = '', second = ''] = message.split('\n');
   const name = first.trim().slice(0, 120);
   if (venueNameKey(name) === '') return null;
-  const site = second.trim();
-  return { name, websiteUrl: site === '' ? null : site.slice(0, 300) };
+  return { name, websiteUrl: suggestedWebsite(second) };
+};
+
+/**
+ * The website a fan typed, kept as typed when it is a web address and dropped
+ * otherwise. Fan input is free text, so a `javascript:` or `data:` value must
+ * never reach the admin as a link.
+ */
+const suggestedWebsite = (raw: string): string | null => {
+  const site = raw.trim().slice(0, 300);
+  if (site === '') return null;
+  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(site);
+  if (hasScheme && !/^https?:\/\//i.test(site)) return null;
+  try {
+    const url = new URL(hasScheme ? site : `https://${site}`);
+    return url.hostname.includes('.') ? site : null;
+  } catch {
+    return null;
+  }
 };
 
 type DraftVenue = { id: string; robotsTxtAllowed: boolean | null };
 
 /** Why a venue is not a draft: it is missing, removed, or already live. */
-const notDraftResponse = async (id: string) => {
+const venueRefusal = async (id: string) => {
   const [venue] = await db
     .select({ removedAt: venues.removedAt })
     .from(venues)
@@ -124,7 +143,7 @@ venueGoLiveAdminRouter.post(
       )
       .returning({ id: venues.id });
     if (!venue) {
-      const refusal = await notDraftResponse(id);
+      const refusal = await venueRefusal(id);
       return ctx.json(
         {
           success: false,
@@ -145,6 +164,24 @@ venueGoLiveAdminRouter.post(
   },
 );
 
+/** Queues the first crawl; a failure is logged and reported, never thrown. */
+const queueAfterGoLive = async (
+  id: string,
+  actor: string,
+): Promise<
+  { queued: true; triggerId: string } | { queued: false; reason: string }
+> => {
+  try {
+    const queued = await queueVenueCrawl(id, actor, false);
+    return queued.ok === 'queued'
+      ? { queued: true, triggerId: queued.triggerId }
+      : { queued: false, reason: queued.ok };
+  } catch (err) {
+    apiLogger.error({ err, venueId: id }, 'go-live: first crawl not queued');
+    return { queued: false, reason: 'error' };
+  }
+};
+
 // POST /v1/admin/venues/:id/go-live: the only writer that sets `active` and
 // `went_live_at` together (decision 1). Option A (decision 4): the venue goes
 // live and a normal crawl is queued at once; test rows are never published.
@@ -161,7 +198,7 @@ venueGoLiveAdminRouter.post(
       .from(venues)
       .where(draftWhere(id));
     if (!draft) {
-      const refusal = await notDraftResponse(id);
+      const refusal = await venueRefusal(id);
       return ctx.json(
         {
           success: false,
@@ -191,26 +228,35 @@ venueGoLiveAdminRouter.post(
     const [live] = await db
       .update(venues)
       .set({ active: true, wentLiveAt: new Date(), permissionAskedAt: null })
-      .where(draftWhere(id))
+      .where(
+        and(
+          draftWhere(id),
+          // Never override a robots.txt disallow recorded since the read above.
+          or(
+            isNull(venues.robotsTxtAllowed),
+            eq(venues.robotsTxtAllowed, true),
+          ),
+        ),
+      )
       .returning({ id: venues.id, wentLiveAt: venues.wentLiveAt });
     if (!live) {
+      const refusal = await venueRefusal(id);
       return ctx.json(
-        {
-          success: false,
-          error: 'This venue is already live',
-          code: 'not_draft',
-        },
-        409,
+        refusal.status === 404
+          ? { success: false, error: 'Venue not found' }
+          : {
+              success: false,
+              error:
+                'This venue is already live, or robots.txt now disallows it',
+              code: 'not_draft',
+            },
+        refusal.status,
       );
     }
 
     // The venue is live whatever happens next. A crawl that could not be
     // queued is reported, not rolled back: the nightly crawl picks the venue up.
-    const queued = await queueVenueCrawl(id, actor, false);
-    const crawl =
-      queued.ok === 'queued'
-        ? { queued: true as const, triggerId: queued.triggerId }
-        : { queued: false as const, reason: queued.ok };
+    const crawl = await queueAfterGoLive(id, actor);
 
     ctx.set('auditAction', 'venue.go_live');
     ctx.set('auditTargetId', id);
@@ -235,7 +281,13 @@ venueGoLiveAdminRouter.get('/suggestions', async (ctx) => {
       createdAt: feedback.createdAt,
     })
     .from(feedback)
-    .where(eq(feedback.category, 'venue_suggestion'))
+    .where(
+      and(
+        eq(feedback.category, 'venue_suggestion'),
+        // Done (issue opened, resolved, archived) is handled, not still asked.
+        notInArray(feedback.status, ['issue_opened', 'resolved', 'archived']),
+      ),
+    )
     .orderBy(desc(feedback.createdAt));
 
   const dismissed = await db
@@ -328,7 +380,7 @@ venueGoLiveAdminRouter.post(
           isNull(venueSuggestionDismissals.clearedAt),
         ),
       )
-      .returning({ id: venueSuggestionDismissals.id });
+      .returning({ displayName: venueSuggestionDismissals.displayName });
     if (!cleared) {
       return ctx.json(
         { success: false, error: 'That suggestion is not dismissed' },
@@ -337,7 +389,7 @@ venueGoLiveAdminRouter.post(
     }
     ctx.set('auditAction', 'venue.suggestion.undo');
     ctx.set('auditActorId', actor);
-    ctx.set('auditMeta', { name });
+    ctx.set('auditMeta', { name: cleared.displayName });
     return ctx.json({ success: true, data: { name } });
   },
 );
