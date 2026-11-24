@@ -842,6 +842,11 @@ const WRITTEN_ACTIONS = [
   'venue.guide.publish',
   'venue.guide.unpublish',
   'venue.guide.draft',
+  'venue.ask_permission',
+  'venue.permission_answer',
+  'venue.go_live',
+  'venue.suggestion.dismiss',
+  'venue.suggestion.undo',
   'venue.platform_changed',
   'venue.platform_probe',
 ];
