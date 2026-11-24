@@ -87,7 +87,11 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
       if (!token) throw new Error('Not signed in');
       await apiClient.post(`/v1/admin/venues/${row.venueId}/ask`, token, {});
       window.location.href = permissionMailto(row.venueName, null);
-    } catch {
+    } catch (err) {
+      console.warn('VenuePanel: ask the venue failed', {
+        venueId: row.venueId,
+        err,
+      });
       setAskFailed(true);
     } finally {
       setAsking(false);
