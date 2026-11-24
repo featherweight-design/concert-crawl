@@ -1,3 +1,16 @@
+# [1.566.0](https://github.com/featherweight-design/concert-crawl/compare/v1.565.0...v1.566.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **api:** isolate and bound the MusicBrainz photo pass ([944041d](https://github.com/featherweight-design/concert-crawl/commit/944041decaf41c53d0705786bb1933f73150708c))
+* **db:** classify mb_artist_photos in the user-data registry ([c0579a4](https://github.com/featherweight-design/concert-crawl/commit/c0579a497bd5713f71c46d7269373916304ea8b3))
+
+
+### Features
+
+* **api:** photos for MusicBrainz-only artist search rows ([ba18c1c](https://github.com/featherweight-design/concert-crawl/commit/ba18c1cd2254ee3c94d71d4eb89fc11c5b33570f))
+
 # [1.565.0](https://github.com/featherweight-design/concert-crawl/compare/v1.564.0...v1.565.0) (2026-11-24)
 
 
