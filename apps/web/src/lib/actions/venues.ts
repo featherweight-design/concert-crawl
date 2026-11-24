@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { apiClient, ApiError } from '@/lib/api';
 import type {
   CrawlPauseRequest,
+  CrawlTrigger,
   PlatformProbeResult,
   Venue,
   VenueGuide,
@@ -19,9 +20,15 @@ import {
   type DeleteVenueOutcome,
 } from '@/components/admin/venues/delete-rules';
 import {
+  fetchCrawlTrigger,
   triggerVenueCrawl,
+  triggerVenueTest,
   triggerVenueTrial,
 } from '@/components/admin/crawl-trigger-button/lib/crawl';
+import {
+  testRefusalOf,
+  type TestOutcome,
+} from '@/components/admin/add-venue/source-test-rules';
 import {
   trialRefusalOf,
   type TrialOutcome,
@@ -656,5 +663,38 @@ export async function unpublishVenueGuide(
       success: false,
       ...(err instanceof ApiError ? { error: err.message } : {}),
     };
+  }
+}
+
+// --- Add a venue: Source (3e-2a) --------------------------------------------
+
+// Queues a draft's test crawl (POST /v1/admin/crawl/:id with `{ test: true }`).
+// The API's refusals (`not_draft`, `test_pending`, `robots_disallowed`, and 400
+// for a venue it cannot crawl) come back as a value so Source can say which;
+// anything else throws.
+export async function testCrawlVenue(id: string): Promise<TestOutcome> {
+  const token = await getToken();
+  try {
+    const { triggerId } = await triggerVenueTest(id, token);
+    return { ok: true, triggerId };
+  } catch (err: unknown) {
+    const code = testRefusalOf(err);
+    if (code === null) throw err;
+    console.warn('testCrawlVenue: refused', { id, code });
+    return { ok: false, code };
+  }
+}
+
+// One poll of a test crawl: the trigger, or null when it can't be read right
+// now (the caller keeps polling and gives up on its own clock).
+export async function readTestCrawl(
+  triggerId: string,
+): Promise<CrawlTrigger | null> {
+  try {
+    const token = await getToken();
+    return await fetchCrawlTrigger(triggerId, token);
+  } catch (err: unknown) {
+    console.warn('readTestCrawl: failed', { triggerId, err });
+    return null;
   }
 }
