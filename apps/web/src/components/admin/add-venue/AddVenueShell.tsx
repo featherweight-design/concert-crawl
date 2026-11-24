@@ -61,8 +61,12 @@ interface ShellProps {
   /** Back on desktop; Cancel (step 1) or Back on phone. */
   onBack: () => void;
   onContinue: () => void;
-  /** Source's Continue has no step to open yet (3e-2a); it draws as the board does, off. */
+  /** Continue draws off while Source's test runs, and Go live while Review isn't ready. */
   continueDisabled?: boolean;
+  /** The primary button's words: Continue, or Go live on Review. */
+  continueLabel?: string;
+  /** Its words while busy: Saving…, or Going live… on Review. */
+  busyLabel?: string;
   children: ReactNode;
 }
 
@@ -164,6 +168,8 @@ const DesktopShell = ({
   onBack,
   onContinue,
   continueDisabled = false,
+  continueLabel = COPY.footer.continue,
+  busyLabel = COPY.footer.saving,
   children,
 }: ShellProps) => (
   <div
@@ -284,7 +290,7 @@ const DesktopShell = ({
         data-testid="add-venue-continue"
         style={continueStyle(false, busy, continueDisabled)}
       >
-        {busy ? COPY.footer.saving : COPY.footer.continue}
+        {busy ? busyLabel : continueLabel}
       </button>
     </div>
   </div>
@@ -296,6 +302,8 @@ const PhoneShell = ({
   onBack,
   onContinue,
   continueDisabled = false,
+  continueLabel = COPY.footer.continue,
+  busyLabel = COPY.footer.saving,
   children,
 }: ShellProps) => {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -417,7 +425,7 @@ const PhoneShell = ({
           data-testid="add-venue-continue"
           style={continueStyle(true, busy, continueDisabled)}
         >
-          {busy ? COPY.footer.saving : COPY.footer.continue}
+          {busy ? busyLabel : continueLabel}
         </button>
       </div>
     </div>

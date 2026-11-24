@@ -1,0 +1,59 @@
+{
+  "feature": "Admin 3e-2b: Add a venue, Review and Go live; the modal retires",
+  "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (review-not-ready) and phone-addendum gap-3. Admin role (CONTACT_SHEET_ROLE=admin). The scratch draft's calendar page is robots.txt-disallowed, so Source stops at once and Continue opens Review not ready; no row presses Go live or Save as draft. Review ready, Going live, Go-live failed and Gone live need a passing test crawl and a live venue write, which the scratch seed cannot give (neon-prod-guard), and are covered by ReviewStep.test.tsx and AddVenueFlow.test.tsx.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 760,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "venues-add-link",
+      "label": "Venues list: Add a venue links to the flow (the modal is gone)",
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venues-add\"]"
+        },
+        {
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "review-not-ready",
+      "label": "Review not ready: Source has not passed, Fix Source and Save as draft",
+      "steps": [
+        {
+          "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=source",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-ask\"]"
+        },
+        {
+          "click": "[data-testid=\"add-venue-continue\"]"
+        },
+        {
+          "wait": "[data-testid=\"add-venue-fix-source\"]"
+        },
+        {
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}

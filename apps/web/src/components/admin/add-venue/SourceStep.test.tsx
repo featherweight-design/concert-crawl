@@ -61,6 +61,7 @@ const mount = (
       pageUrl={pageUrl}
       onPageSaved={onPageSaved}
       onAsk={onAsk}
+      onStateChange={vi.fn()}
     />,
   );
 

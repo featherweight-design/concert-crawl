@@ -58,6 +58,8 @@ interface SourceStepProps {
   onPageSaved: (url: string) => void;
   /** Opens Ask the venue, offered on a robots.txt refusal. */
   onAsk: () => void;
+  /** Every state the test card shows, so the flow knows when Review is ready. */
+  onStateChange: (state: TestState) => void;
 }
 
 const costLabel = (usd: number): string =>
@@ -189,6 +191,7 @@ export const SourceStep = ({
   pageUrl,
   onPageSaved,
   onAsk,
+  onStateChange,
 }: SourceStepProps) => {
   const [page, setPage] = useState(pageUrl);
   const [saved, setSaved] = useState(pageUrl);
@@ -264,6 +267,10 @@ export const SourceStep = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open: `run` reads the page as first shown
   }, []);
+
+  useEffect(() => {
+    onStateChange(state);
+  }, [state, onStateChange]);
 
   const busy = state.kind === 'running';
   return (

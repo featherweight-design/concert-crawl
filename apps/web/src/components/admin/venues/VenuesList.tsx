@@ -3,15 +3,15 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, Search, X } from 'lucide-react';
+import { Check, Plus, Search, X } from 'lucide-react';
 import type { NeedsYouItem } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { AddVenueModal } from '@/components/admin/AddVenueModal';
 import {
   CouldntLoad,
   CouldntLoadPage,
   EmptyState,
   VenueStatus,
+  adminButtonVariantStyle,
   useIsPhone,
 } from '@/components/admin/primitives';
 import { VenueTile } from '@/components/consumer/venue-glyph';
@@ -47,6 +47,35 @@ const SELECT_COLUMNS =
 
 /** The head's Select / Done button (`A3/03/venues-select-d`). */
 const HEAD_BUTTON: CSSProperties = { ...BULK_BUTTON, height: 36, fontSize: 13 };
+
+/** Add a venue: a link to the flow, drawn as the gradient button (`04/venues-desktop`). */
+const AddVenueLink = ({ iconOnly = false }: { iconOnly?: boolean }) => (
+  <Link
+    href="/admin/venues/new"
+    aria-label={iconOnly ? COPY.addVenue : undefined}
+    data-testid="venues-add"
+    style={{
+      ...adminButtonVariantStyle('gradient'),
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      height: 36,
+      padding: iconOnly ? 0 : '0 16px',
+      width: iconOnly ? 36 : undefined,
+      flex: iconOnly ? 'none' : undefined,
+      borderRadius: 9,
+      fontSize: 13.5,
+      fontWeight: 600,
+      fontFamily: "'Inter', sans-serif",
+      whiteSpace: 'nowrap',
+      textDecoration: 'none',
+    }}
+  >
+    <Plus size={14} strokeWidth={1.8} aria-hidden />
+    {iconOnly ? null : COPY.addVenue}
+  </Link>
+);
 
 const HEAD_CELL: CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
@@ -561,7 +590,7 @@ export const VenuesList = ({
         {isPhone ? (
           <div style={{ display: 'flex', gap: 8, width: '100%' }}>
             {search}
-            <AddVenueModal iconOnly />
+            <AddVenueLink iconOnly />
           </div>
         ) : (
           <>
@@ -579,7 +608,7 @@ export const VenuesList = ({
               {selecting ? COPY.done : COPY.select}
             </button>
             {/* `A3/03/venues-select-d` drops Add a venue while selecting. */}
-            {!selecting && <AddVenueModal />}
+            {!selecting && <AddVenueLink />}
           </>
         )}
       </div>
