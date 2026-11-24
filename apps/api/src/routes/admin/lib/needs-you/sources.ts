@@ -675,7 +675,7 @@ const venueNoReplyItems: Adapter = async ({ now }) => {
 
   const [tests, suggestions] = await Promise.all([
     db
-      .select({
+      .selectDistinctOn([crawlTriggers.venueId], {
         venueId: crawlTriggers.venueId,
         result: crawlTriggers.testResult,
       })
@@ -690,7 +690,7 @@ const venueNoReplyItems: Adapter = async ({ now }) => {
           ),
         ),
       )
-      .orderBy(desc(crawlTriggers.createdAt)),
+      .orderBy(crawlTriggers.venueId, desc(crawlTriggers.createdAt)),
     db
       .select({
         id: feedback.id,
@@ -701,7 +701,7 @@ const venueNoReplyItems: Adapter = async ({ now }) => {
       .where(eq(feedback.category, 'venue_suggestion')),
   ]);
 
-  // Newest first, so the first test per venue is the latest.
+  // One row per venue: its latest test.
   const foundByVenue = new Map<string, number>();
   for (const test of tests) {
     if (!foundByVenue.has(test.venueId) && test.result) {
