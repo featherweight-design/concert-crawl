@@ -19,7 +19,7 @@ export const NAME_MATCH_AREAS = ['United States', 'Colorado'] as const;
 export const nameMatchAreaAccepts = (area: string | null): boolean =>
   area === null ||
   area.trim() === '' ||
-  (NAME_MATCH_AREAS as readonly string[]).includes(area);
+  NAME_MATCH_AREAS.some((accepted) => accepted === area);
 
 /** The fixed column references the rule is applied to; never input. */
 export type NameMatchAreaColumn = 'mb_names.area';
