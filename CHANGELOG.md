@@ -1,3 +1,15 @@
+# [1.571.0](https://github.com/featherweight-design/concert-crawl/compare/v1.570.0...v1.571.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **admin:** address review on ask the venue ([0d3c3d6](https://github.com/featherweight-design/concert-crawl/commit/0d3c3d62f90e4b735cefa665c96815c0affe3cb9))
+
+
+### Features
+
+* **admin:** add ask the venue to the add a venue source step ([c7c8103](https://github.com/featherweight-design/concert-crawl/commit/c7c8103271e20b6e2739971b7727b2951966ae0d))
+
 # [1.570.0](https://github.com/featherweight-design/concert-crawl/compare/v1.569.0...v1.570.0) (2026-11-24)
 
 
