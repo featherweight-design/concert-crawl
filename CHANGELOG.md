@@ -1,3 +1,15 @@
+# [1.572.0](https://github.com/featherweight-design/concert-crawl/compare/v1.571.0...v1.572.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **admin:** code go-live refusals, drop nightly clock time, reset on add another ([cfdb609](https://github.com/featherweight-design/concert-crawl/commit/cfdb6095e6b0f49e403352a3edf6c3684a5a8f8b))
+
+
+### Features
+
+* **admin:** add a venue review, go live and gone live ([5fd9313](https://github.com/featherweight-design/concert-crawl/commit/5fd931353f315839513b6f671f62579f7b5e2565))
+
 # [1.571.0](https://github.com/featherweight-design/concert-crawl/compare/v1.570.0...v1.571.0) (2026-11-24)
 
 
