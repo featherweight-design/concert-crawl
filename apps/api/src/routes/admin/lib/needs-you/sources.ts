@@ -21,6 +21,7 @@ import {
   artists,
   crawlRunPages,
   crawlRuns,
+  crawlTriggers,
   db,
   events,
   feedback,
@@ -60,6 +61,7 @@ import {
 } from '../missing-events.js';
 import { TRIAGE_HISTORY_RUN_COUNT, deriveFaults } from '../triage.js';
 import { parseRunRows } from '../../triage.js';
+import { parseSuggestion, venueNameKey } from '../../venue-go-live.js';
 import { denverDate } from './keys.js';
 import {
   PRICE_BATCH_MAX_DAYS,
@@ -630,6 +632,130 @@ const venueFaultItems: Adapter = async ({ now }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Venues that have not answered
+// ---------------------------------------------------------------------------
+
+/** Days a permission note waits before it comes back as a decision (D7a). */
+export const NO_REPLY_DAYS = 14;
+
+const NO_REPLY_MS = NO_REPLY_DAYS * 24 * 60 * 60 * 1000;
+
+const askedDay = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Denver',
+  month: 'short',
+  day: 'numeric',
+});
+
+/**
+ * A draft whose permission note has gone unanswered for 14 days. It reads
+ * `permission_asked_at` only: nothing here pauses the venue or sets a resume
+ * date, so `venue-auto-resume.ts` never touches it.
+ */
+const venueNoReplyItems: Adapter = async ({ now }) => {
+  const cutoff = new Date(now.getTime() - NO_REPLY_MS);
+  const drafts = await db
+    .select({
+      id: venues.id,
+      name: venues.name,
+      contactEmail: venues.contactEmail,
+      robotsTxtAllowed: venues.robotsTxtAllowed,
+      permissionAskedAt: venues.permissionAskedAt,
+    })
+    .from(venues)
+    .where(
+      and(
+        eq(venues.active, false),
+        isNull(venues.wentLiveAt),
+        isNull(venues.removedAt),
+        isNotNull(venues.permissionAskedAt),
+        lte(venues.permissionAskedAt, cutoff),
+      ),
+    );
+  if (drafts.length === 0) return [];
+
+  const [tests, suggestions] = await Promise.all([
+    db
+      .select({
+        venueId: crawlTriggers.venueId,
+        result: crawlTriggers.testResult,
+      })
+      .from(crawlTriggers)
+      .where(
+        and(
+          eq(crawlTriggers.mode, 'test'),
+          isNotNull(crawlTriggers.testResult),
+          inArray(
+            crawlTriggers.venueId,
+            drafts.map((draft) => draft.id),
+          ),
+        ),
+      )
+      .orderBy(desc(crawlTriggers.createdAt)),
+    db
+      .select({
+        id: feedback.id,
+        userId: feedback.userId,
+        message: feedback.message,
+      })
+      .from(feedback)
+      .where(eq(feedback.category, 'venue_suggestion')),
+  ]);
+
+  // Newest first, so the first test per venue is the latest.
+  const foundByVenue = new Map<string, number>();
+  for (const test of tests) {
+    if (!foundByVenue.has(test.venueId) && test.result) {
+      foundByVenue.set(test.venueId, test.result.found);
+    }
+  }
+  const fansByName = new Map<string, Set<string>>();
+  for (const row of suggestions) {
+    const parsed = parseSuggestion(row.message);
+    if (!parsed) continue;
+    const key = venueNameKey(parsed.name);
+    const fans = fansByName.get(key) ?? new Set<string>();
+    fans.add(row.userId ?? row.id);
+    fansByName.set(key, fans);
+  }
+
+  return drafts.flatMap((draft): NeedsYouItem[] => {
+    if (draft.permissionAskedAt === null) return [];
+    const asked = draft.permissionAskedAt;
+    const found = foundByVenue.get(draft.id) ?? null;
+    const fans = fansByName.get(venueNameKey(draft.name))?.size ?? 0;
+    return [
+      {
+        key: `venue-no-reply:${draft.id}`,
+        kind: 'venue-no-reply',
+        title: `${draft.name} hasn't answered in ${NO_REPLY_DAYS} days`,
+        venueId: draft.id,
+        venueName: draft.name,
+        fanDate: null,
+        watchers: 0,
+        evidence: [
+          ...line('Asked', askedDay.format(asked)),
+          ...line('Sent to', draft.contactEmail),
+          ...line('Shows found', found),
+          ...line(
+            'robots.txt',
+            draft.robotsTxtAllowed === null
+              ? null
+              : draft.robotsTxtAllowed
+                ? 'Allows us'
+                : 'Disallows us',
+          ),
+          ...line('Asked for by', fans > 0 ? fans : null),
+        ],
+        answers: [
+          answer('they_said_yes', 'They said yes', { suggested: true }),
+          answer('ask_again', 'Ask again'),
+        ],
+      },
+    ];
+  });
+};
+
+// ---------------------------------------------------------------------------
 // Artists
 // ---------------------------------------------------------------------------
 
@@ -1113,6 +1239,7 @@ const bugItems: Adapter = async () => {
 const GROUPS: { kinds: NeedsYouKind[]; adapter: Adapter }[] = [
   { kinds: ['show-dropped', 'show-moved'], adapter: missingItems },
   { kinds: ['venue-failing', 'venue-blocked'], adapter: venueFaultItems },
+  { kinds: ['venue-no-reply'], adapter: venueNoReplyItems },
   { kinds: ['artist'], adapter: artistItems },
   { kinds: ['event-low-confidence'], adapter: lowConfidenceItems },
   { kinds: ['price-check'], adapter: priceCheckItems },

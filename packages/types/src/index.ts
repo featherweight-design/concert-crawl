@@ -2396,6 +2396,7 @@ export type NeedsYouKind =
   | 'show-moved'
   | 'venue-failing'
   | 'venue-blocked'
+  | 'venue-no-reply'
   | 'artist'
   | 'event-low-confidence'
   | 'price-check'
@@ -2529,6 +2530,11 @@ export type NeedsYouItem =
        * (`yes` blocked, `no`, `unchecked`), or null.
        */
       robots?: NeedsYouRobotsResult | null;
+      evidence: NeedsYouEvidenceLine[];
+    })
+  | (NeedsYouItemBase & {
+      kind: 'venue-no-reply';
+      /** Asked, Sent to, Shows found, robots.txt, Asked for by: each only when known. */
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {

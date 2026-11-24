@@ -14,3 +14,4 @@ The full phase log up to 2026-10-31 is kept in the private archive. New rows go 
 | Find  | Artist search U3: tap an act with no page for a preview, Follow in it, sheet, card and palette drill-in                                             | ✅     |
 | Admin | Add a venue 3c-2: test crawl of a draft venue keeps nothing and moves no streak, pause or block (migration 0129)                                    | ✅     |
 | Admin | Add a venue 3c-3a: Ask the venue, Go live and the suggested-venues list, with Not for us and Undo (migration 0132)                                  | ✅     |
+| Admin | Add a venue 3c-3b: a draft with no answer in 14 days reaches Needs you, and Ask the venue works on a blocked venue                                  | ✅     |

@@ -71,6 +71,7 @@ export const summarizeNeedsYou = async (
     'show-moved': 0,
     'venue-failing': 0,
     'venue-blocked': 0,
+    'venue-no-reply': 0,
     artist: 0,
     'event-low-confidence': 0,
     'price-check': 0,

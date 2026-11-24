@@ -1,5 +1,7 @@
 // Needs you answers: failing and blocked venues. See answer-kit.ts for the handler shape.
 
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { db, venues } from '@concert-crawl/db';
 import type { NeedsYouKind } from '@concert-crawl/types';
 import { queueVenueCrawl } from '../crawl-trigger.js';
 import {
@@ -71,3 +73,50 @@ export const pauseAnswer = (
       };
     },
   });
+
+// The venue answered. The draft stays a draft: the admin goes on from where
+// they left off, so this only ends the wait and the 14-day reminder.
+export const theySaidYes = define({
+  slug: 'they_said_yes',
+  kinds: ['venue-no-reply'],
+  schema: noParams,
+  run: async (item) => {
+    if (item.venueId === null) return fail(422, 'This item has no venue');
+    const [venue] = await db
+      .update(venues)
+      .set({ permissionAskedAt: null })
+      .where(
+        and(
+          eq(venues.id, item.venueId),
+          isNull(venues.removedAt),
+          isNotNull(venues.permissionAskedAt),
+        ),
+      )
+      .returning({ id: venues.id });
+    if (!venue) return fail(409, 'This venue is not waiting on an answer');
+    return { ok: true, params: {}, before: null };
+  },
+});
+
+// Ask again: the note goes out once more, so the 14 days start over.
+export const askAgain = define({
+  slug: 'ask_again',
+  kinds: ['venue-no-reply'],
+  schema: noParams,
+  run: async (item) => {
+    if (item.venueId === null) return fail(422, 'This item has no venue');
+    const [venue] = await db
+      .update(venues)
+      .set({ permissionAskedAt: new Date() })
+      .where(
+        and(
+          eq(venues.id, item.venueId),
+          isNull(venues.removedAt),
+          isNotNull(venues.permissionAskedAt),
+        ),
+      )
+      .returning({ id: venues.id });
+    if (!venue) return fail(409, 'This venue is not waiting on an answer');
+    return { ok: true, params: {}, before: null };
+  },
+});

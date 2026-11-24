@@ -7,6 +7,7 @@ const KIND_PRESENT: Record<NeedsYouKind, true> = {
   'show-moved': true,
   'venue-failing': true,
   'venue-blocked': true,
+  'venue-no-reply': true,
   artist: true,
   'event-low-confidence': true,
   'price-check': true,

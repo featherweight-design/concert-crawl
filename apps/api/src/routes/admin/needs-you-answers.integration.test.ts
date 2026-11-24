@@ -118,6 +118,53 @@ describe('admin needs-you answers', () => {
     expect(await auditRows('needs_you.answer')).toHaveLength(0);
   });
 
+  it('offers a draft with a 14-day-old ask, and They said yes ends the wait', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({
+      name: 'Quiet Hall',
+      slug: 'quiet-hall',
+      active: false,
+      wentLiveAt: null,
+      permissionAskedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+    });
+    const fresh = await seedVenue({
+      name: 'Fresh Hall',
+      slug: 'fresh-hall',
+      active: false,
+      wentLiveAt: null,
+      permissionAskedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    });
+    const key = `venue-no-reply:${venue.id}`;
+    const items = await itemsOf('venue-no-reply');
+    expect(items.map((item) => item.key)).toEqual([key]);
+    expect(items.map((item) => item.key)).not.toContain(
+      `venue-no-reply:${fresh.id}`,
+    );
+
+    const res = await answer(key, { answer: 'they_said_yes' });
+    expect(res.status).toBe(200);
+    expect(await itemsOf('venue-no-reply')).toEqual([]);
+    expect(await auditRows('needs_you.answer')).toHaveLength(1);
+
+    const again = await answer(key, { answer: 'they_said_yes' });
+    expect(again.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('Ask again restarts the 14 days', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({
+      name: 'Slow Hall',
+      slug: 'slow-hall',
+      active: false,
+      wentLiveAt: null,
+      permissionAskedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+    });
+    const key = `venue-no-reply:${venue.id}`;
+    const res = await answer(key, { answer: 'ask_again' });
+    expect(res.status).toBe(200);
+    expect(await itemsOf('venue-no-reply')).toEqual([]);
+  });
+
   it('does not offer a removed venue at all', async () => {
     setAuth('admin');
     const venue = await seedVenue({

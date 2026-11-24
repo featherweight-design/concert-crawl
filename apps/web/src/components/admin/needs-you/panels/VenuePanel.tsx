@@ -1,7 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { ExternalLink } from 'lucide-react';
+import { apiClient } from '@/lib/api';
+import { permissionMailto } from '@/lib/admin/permission-note';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton } from '@/components/admin/primitives';
 import { VenueStatus } from '@/components/admin/primitives/VenueStatus';
@@ -71,6 +75,24 @@ const RunRows = ({ row }: Pick<PanelProps, 'row'>) => {
 /** `02/venue-auto-paused-after-3-failures` and `02/venue-blocked-403-429`. */
 export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
   const blocked = row.kind === 'venue-blocked';
+  const { getToken } = useAuth();
+  const [asking, setAsking] = useState(false);
+  const [askFailed, setAskFailed] = useState(false);
+  const askVenue = async (): Promise<void> => {
+    if (!row.venueId || !row.venueName) return;
+    setAsking(true);
+    setAskFailed(false);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Not signed in');
+      await apiClient.post(`/v1/admin/venues/${row.venueId}/ask`, token, {});
+      window.location.href = permissionMailto(row.venueName, null);
+    } catch {
+      setAskFailed(true);
+    } finally {
+      setAsking(false);
+    }
+  };
   const status = httpStatusOf(row);
   const failures = failuresOf(row);
   // "Still allows /events": the stored check, with the path we crawl.
@@ -169,33 +191,34 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
         row={row}
         busy={busy}
         note={blocked ? PANEL.venue.blockedNote : PANEL.venue.failingNote}
-        // A blocked venue leads with Ask the venue, drawn disabled until Add a
-        // venue ships it (`10/venue-blocked-before-3c`).
-        // A blocked venue leads with Ask the venue, drawn disabled until Add a
-        // venue ships it (`10/venue-blocked-before-3c`).
+        // A blocked venue leads with Ask the venue: it notes the ask on the
+        // draft-less venue and opens the permission note in the admin's mail.
         extraFirst={blocked}
         extra={
           blocked ? (
             <>
               <AdminButton
                 variant="outline"
-                disabled
                 fullWidth
-                aria-describedby="ask-venue-why"
+                disabled={busy || asking}
+                data-testid="ask-venue"
+                onClick={() => void askVenue()}
               >
                 {PANEL.venue.askVenue}
               </AdminButton>
-              <p
-                id="ask-venue-why"
-                style={{
-                  margin: 0,
-                  fontSize: 13,
-                  lineHeight: 1.5,
-                  color: 'var(--fg-muted)',
-                }}
-              >
-                {PANEL.venue.askVenueLine}
-              </p>
+              {askFailed && (
+                <p
+                  role="alert"
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    color: 'var(--fg-muted)',
+                  }}
+                >
+                  {PANEL.venue.askVenueFailed}
+                </p>
+              )}
             </>
           ) : row.venueId ? (
             <Link
