@@ -1,3 +1,15 @@
+# [1.569.0](https://github.com/featherweight-design/concert-crawl/compare/v1.568.0...v1.569.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **admin:** name only the refusals a test crawl can get ([e93df18](https://github.com/featherweight-design/concert-crawl/commit/e93df185434a897253f0d81bbb6a6273450e926d))
+
+
+### Features
+
+* **admin:** test crawl plumbing for the add a venue source step ([2cba051](https://github.com/featherweight-design/concert-crawl/commit/2cba05107fe976f1161e49f7d6db8002dd863227))
+
 # [1.568.0](https://github.com/featherweight-design/concert-crawl/compare/v1.567.0...v1.568.0) (2026-11-24)
 
 
