@@ -37,10 +37,12 @@ const act = (
 });
 
 const responseSchema = z.object({
-  data: z.array(z.object({ name: z.string(), mbid: z.string() })),
+  data: z.array(z.object({ name: z.string(), mbid: z.string().nullable() })),
 });
 
-const search = async (q: string): Promise<{ name: string; mbid: string }[]> => {
+const search = async (
+  q: string,
+): Promise<{ name: string; mbid: string | null }[]> => {
   const res = await app.request(
     `/v1/search/artists?q=${encodeURIComponent(q)}&scope=all`,
   );
