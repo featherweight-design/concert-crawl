@@ -372,16 +372,24 @@ describe('AddVenueFlow', () => {
       );
       expect(mockGoLive).toHaveBeenCalledWith('v-9');
       expect(screen.getByText(COPY.gone.crawlQueued)).toBeTruthy();
+      const loc = { href: '' };
+      const original = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: loc,
+      });
       fireEvent.click(screen.getByTestId('add-venue-add-another'));
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.stringContaining('/admin/venues/new?fresh='),
-      );
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: original,
+      });
+      expect(loc.href).toBe('/admin/venues/new');
     });
 
     it('says nothing was published when Go live fails, and offers Try again', async () => {
       mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
       mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
-      mockGoLive.mockResolvedValue({ ok: false });
+      mockGoLive.mockResolvedValue({ ok: false, reason: 'failed' });
       resumeOnSource();
       const next = screen.getByTestId('add-venue-continue');
       await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {

@@ -24,7 +24,7 @@ const mount = (over: Partial<Parameters<typeof ReviewStep>[0]> = {}) => {
     basics,
     found: 14,
     going: false,
-    failed: false,
+    failed: null,
     onRetry: vi.fn(),
     onEditBasics: vi.fn(),
     onEditSource: vi.fn(),
@@ -66,20 +66,28 @@ describe('ReviewStep', () => {
   });
 
   it('says nothing was published on failure and retries', () => {
-    const props = mount({ failed: true });
+    const props = mount({ failed: 'failed' });
     expect(screen.getByText(REVIEW.failedTitle('Dazzle Jazz'))).toBeTruthy();
     fireEvent.click(screen.getByTestId('add-venue-go-live-retry'));
     expect(props.onRetry).toHaveBeenCalled();
   });
 
+  it('offers Fix Source, not Try again, when robots.txt now disallows the page', () => {
+    const props = mount({ failed: 'robots' });
+    expect(screen.getByText(REVIEW.failedRobots)).toBeTruthy();
+    expect(screen.queryByTestId('add-venue-go-live-retry')).toBeNull();
+    fireEvent.click(screen.getByTestId('add-venue-go-live-fix'));
+    expect(props.onEditSource).toHaveBeenCalled();
+  });
+
   it('hides the failure while going live', () => {
-    mount({ failed: true, going: true });
+    mount({ failed: 'failed', going: true });
     expect(screen.queryByTestId('add-venue-go-live-failed')).toBeNull();
   });
 });
 
 describe('GoneLive', () => {
-  const gone = (crawlQueued: boolean) =>
+  const gone = (crawlQueued: boolean | null) =>
     render(
       <GoneLive
         phone={false}
@@ -100,6 +108,11 @@ describe('GoneLive', () => {
       screen.getByTestId('add-venue-see-as-fan').getAttribute('href'),
     ).toBe('/v/dazzle');
     expect(screen.getByText(GONE.crawlQueued)).toBeTruthy();
+  });
+
+  it('does not claim a crawl state the answer did not give', () => {
+    gone(null);
+    expect(screen.getByText(GONE.crawlUnknown)).toBeTruthy();
   });
 
   it('says when the first crawl did not start', () => {

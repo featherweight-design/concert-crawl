@@ -80,7 +80,7 @@ interface ReviewStepProps {
   found: number | null;
   going: boolean;
   /** Go live was refused or failed: nothing was published. */
-  failed: boolean;
+  failed: 'failed' | 'robots' | null;
   onRetry: () => void;
   onEditBasics: () => void;
   onEditSource: () => void;
@@ -178,7 +178,7 @@ export const ReviewStep = ({
           <p style={lineStyle}>{REVIEW.when.note}</p>
         </Card>
       )}
-      {ready && failed && !going && (
+      {ready && failed !== null && !going && (
         <div
           role="alert"
           data-testid="add-venue-go-live-failed"
@@ -192,15 +192,27 @@ export const ReviewStep = ({
           }}
         >
           <strong style={{ fontSize: 14 }}>{REVIEW.failedTitle(name)}</strong>
-          <p style={lineStyle}>{REVIEW.failedBody}</p>
+          <p style={lineStyle}>
+            {failed === 'robots' ? REVIEW.failedRobots : REVIEW.failedBody}
+          </p>
           <div>
-            <AdminButton
-              variant="outline"
-              onClick={onRetry}
-              data-testid="add-venue-go-live-retry"
-            >
-              {REVIEW.tryAgain}
-            </AdminButton>
+            {failed === 'robots' ? (
+              <AdminButton
+                variant="outline"
+                onClick={onEditSource}
+                data-testid="add-venue-go-live-fix"
+              >
+                {REVIEW.fixSource}
+              </AdminButton>
+            ) : (
+              <AdminButton
+                variant="outline"
+                onClick={onRetry}
+                data-testid="add-venue-go-live-retry"
+              >
+                {REVIEW.tryAgain}
+              </AdminButton>
+            )}
           </div>
         </div>
       )}
