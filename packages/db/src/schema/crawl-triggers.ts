@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -24,6 +25,28 @@ export const crawlTriggerModeEnum = pgEnum('crawl_trigger_mode', [
   'test',
 ]);
 
+// What a draft venue's test crawl found (migration 0129). Counts are per
+// extraction stage: the stage that produced the shows holds the count, the
+// others are 0. `samples` is up to three shows, so the admin can judge the
+// Source before Go live. The run id opens the run in Inspect.
+export interface TestCrawlSample {
+  artist: string;
+  title: string | null;
+  date: string;
+  showTime: string | null;
+}
+
+export interface TestCrawlResult {
+  status: 'found' | 'none' | 'failed';
+  strategy: string | null;
+  found: number;
+  counts: { html: number; jsonLd: number; haiku: number };
+  samples: TestCrawlSample[];
+  costUsd: number;
+  crawlRunId: string;
+  error: string | null;
+}
+
 export const crawlTriggers = pgTable(
   'crawl_triggers',
   {
@@ -44,6 +67,8 @@ export const crawlTriggers = pgTable(
     trial: boolean('trial').notNull().default(false),
     mode: crawlTriggerModeEnum('mode').notNull().default('crawl'),
     crawlRunId: uuid('crawl_run_id'),
+    // Set once a mode 'test' trigger finishes (migration 0129); null otherwise.
+    testResult: jsonb('test_result').$type<TestCrawlResult>(),
     // Page progress the triggered re-crawl reports (migration 0120), so the
     // admin row can read "Page 2 of 4". Null means no progress reported yet.
     pagesDone: integer('pages_done'),

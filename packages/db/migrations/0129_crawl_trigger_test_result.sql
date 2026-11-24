@@ -1,0 +1,16 @@
+-- The result of a draft venue's test crawl (admin redesign 3c-2).
+--
+-- A trigger with mode 'test' crawls a draft venue's Source config and keeps no
+-- events. What it found has to live somewhere the Review step can read: the
+-- stage counts, up to three sample shows and the cost. `crawl_runs` has no
+-- column for the samples, so the result goes on the trigger as one jsonb
+-- document, written by the crawler when the test finishes. Its shape is
+-- `TestCrawlResult` in packages/db/src/schema/crawl-triggers.ts.
+--
+-- Expand-only: one nullable column with no default, so the add touches no
+-- existing row. Every existing trigger reads "no test result", which is true.
+-- Read only by code that ships with this migration.
+--
+-- Down:
+--   ALTER TABLE crawl_triggers DROP COLUMN IF EXISTS test_result;
+ALTER TABLE "crawl_triggers" ADD COLUMN IF NOT EXISTS "test_result" jsonb;

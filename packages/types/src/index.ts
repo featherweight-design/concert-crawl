@@ -2256,6 +2256,7 @@ export const AUDIT_ACTION_KEYS = [
   'crawl.daily_cron',
   'crawl.trigger',
   'crawl.trigger_all',
+  'crawl.trigger_test',
   'crawl.trigger_trial',
   'event.auto_cancel.stale',
   'event.bulk_auto_approve',

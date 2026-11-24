@@ -17,7 +17,11 @@ import { getAuthUser } from '../../middleware/auth.js';
 import { dispatchCrawlerInBackground } from '../../lib/crawler-dispatch.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
-import { queueVenueCrawl, queueVenueTrial } from './lib/crawl-trigger.js';
+import {
+  queueVenueCrawl,
+  queueVenueTest,
+  queueVenueTrial,
+} from './lib/crawl-trigger.js';
 import { venueRemovedBody } from './lib/venue-hide.js';
 import { crawlAllSkipReason } from './lib/crawl-all.js';
 import { readTriggerProgress } from './lib/crawl-trigger-progress.js';
@@ -36,22 +40,30 @@ const triggerIdSchema = z.object({ id: z.guid('id must be a UUID') });
 // short-circuits and re-extracts + re-upserts every event — used to reprocess
 // legacy rows whose listings are unchanged (e.g. backfilling supportingArtists).
 // `trial` (one venue only) queues a test re-crawl of a crawl-paused venue
-// (lib/crawl-trigger.ts queueVenueTrial); Crawl all never reads it.
+// (lib/crawl-trigger.ts queueVenueTrial); Crawl all never reads it. `test`
+// (one venue only) queues a draft venue's test crawl, which keeps nothing it
+// finds (queueVenueTest).
 //
 // The body must be an object; each field is then validated on its own by
 // `flagSchema`, so one bad field never resets the other.
 const triggerBodySchema = z.object({
   force: z.unknown().optional(),
   trial: z.unknown().optional(),
+  test: z.unknown().optional(),
 });
 const flagSchema = z.boolean().optional().default(false);
 
 interface TriggerBody {
   force: boolean;
   trial: boolean;
+  test: boolean;
 }
 
-const DEFAULT_TRIGGER_BODY: TriggerBody = { force: false, trial: false };
+const DEFAULT_TRIGGER_BODY: TriggerBody = {
+  force: false,
+  trial: false,
+  test: false,
+};
 
 /** One body flag: a boolean or absent, else a warning and false. */
 const readFlag = (name: keyof TriggerBody, value: unknown): boolean => {
@@ -98,6 +110,7 @@ async function parseTriggerBody(ctx: {
   return {
     force: readFlag('force', result.data.force),
     trial: readFlag('trial', result.data.trial),
+    test: readFlag('test', result.data.test),
   };
 }
 
@@ -246,12 +259,15 @@ crawlAdminRouter.post(
   async (ctx) => {
     const { venueId } = ctx.req.valid('param');
 
-    const { force, trial } = await parseTriggerBody(ctx);
+    const { force, trial, test } = await parseTriggerBody(ctx);
     const actor = getAuthUser(ctx).userId;
-    // A trial ignores `force`: it is the paused venue's check, not a backfill.
-    const queued = trial
-      ? await queueVenueTrial(venueId, actor)
-      : await queueVenueCrawl(venueId, actor, force);
+    // A test or a trial ignores `force`: neither is a backfill. A test wins
+    // over a trial, since a draft is never paused.
+    const queued = test
+      ? await queueVenueTest(venueId, actor)
+      : trial
+        ? await queueVenueTrial(venueId, actor)
+        : await queueVenueCrawl(venueId, actor, force);
 
     if (queued.ok === 'not_found') {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
@@ -277,6 +293,26 @@ crawlAdminRouter.post(
           success: false,
           error: 'A test re-crawl is only for a venue whose crawl is paused',
           code: 'not_paused',
+        },
+        409,
+      );
+    }
+    if (queued.ok === 'not_draft') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'A test crawl is only for a venue that has never gone live',
+          code: 'not_draft',
+        },
+        409,
+      );
+    }
+    if (queued.ok === 'test_pending') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'A test crawl of this venue is already queued',
+          code: 'test_pending',
         },
         409,
       );
@@ -320,7 +356,14 @@ crawlAdminRouter.post(
       );
     }
 
-    ctx.set('auditAction', trial ? 'crawl.trigger_trial' : 'crawl.trigger');
+    ctx.set(
+      'auditAction',
+      test
+        ? 'crawl.trigger_test'
+        : trial
+          ? 'crawl.trigger_trial'
+          : 'crawl.trigger',
+    );
     ctx.set('auditTargetId', venueId);
     ctx.set('auditActorId', actor);
 

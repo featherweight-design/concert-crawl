@@ -22,6 +22,15 @@ export type QueueVenueTrialResult =
   | { ok: 'robots_disallowed' }
   | { ok: 'failed' };
 
+export type QueueVenueTestResult =
+  | { ok: 'queued'; triggerId: string }
+  | { ok: 'not_found' }
+  | { ok: 'removed' }
+  | { ok: 'not_draft' }
+  | { ok: 'test_pending' }
+  | { ok: 'robots_disallowed' }
+  | { ok: 'failed' };
+
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 type Venue = typeof venues.$inferSelect;
@@ -61,7 +70,7 @@ const insertTrigger = async (
 
 /** Wake the crawler only once the trigger has committed: never for a refusal. */
 const wakeIfQueued = (
-  outcome: QueueVenueTrialResult | QueueVenueCrawlResult,
+  outcome: QueueVenueTrialResult | QueueVenueCrawlResult | QueueVenueTestResult,
 ) => {
   if (outcome.ok === 'queued') {
     dispatchCrawlerInBackground({ triggerIds: [outcome.triggerId] });
@@ -173,6 +182,67 @@ export const queueVenueTrial = async (
         triggeredBy,
         force: false,
         trial: true,
+      });
+    },
+  );
+
+  wakeIfQueued(outcome);
+  return outcome;
+};
+
+/**
+ * Queue a test crawl of a draft venue (admin redesign 3c-2) and wake the
+ * crawler. A test keeps nothing it finds, so it is allowed on a draft only:
+ * not active and never gone live. A live venue, or one that was live and is
+ * hidden now, is refused, since its ordinary crawl is the way to read it. One
+ * test per venue waits or runs at a time; robots.txt is never overridden.
+ */
+export const queueVenueTest = async (
+  venueId: string,
+  triggeredBy: string,
+): Promise<QueueVenueTestResult> => {
+  const outcome = await db.transaction(
+    async (tx): Promise<QueueVenueTestResult> => {
+      // Read under FOR UPDATE: a removal or Go live committing mid-request is
+      // waited out and seen, and two tests on one venue queue behind each
+      // other, so the second sees the first's trigger.
+      const [venue] = await tx
+        .select({
+          active: venues.active,
+          wentLiveAt: venues.wentLiveAt,
+          removedAt: venues.removedAt,
+          robotsTxtAllowed: venues.robotsTxtAllowed,
+        })
+        .from(venues)
+        .where(eq(venues.id, venueId))
+        .for('update');
+      if (!venue) return { ok: 'not_found' };
+      if (venue.removedAt !== null) return { ok: 'removed' };
+      if (venue.active || venue.wentLiveAt !== null) {
+        return { ok: 'not_draft' };
+      }
+      if (venue.robotsTxtAllowed === false) {
+        return { ok: 'robots_disallowed' };
+      }
+
+      const [open] = await tx
+        .select({ id: crawlTriggers.id })
+        .from(crawlTriggers)
+        .where(
+          and(
+            eq(crawlTriggers.venueId, venueId),
+            eq(crawlTriggers.mode, 'test'),
+            inArray(crawlTriggers.status, ['pending', 'processing']),
+          ),
+        )
+        .limit(1);
+      if (open) return { ok: 'test_pending' };
+
+      return insertTrigger(tx, {
+        venueId,
+        triggeredBy,
+        force: false,
+        mode: 'test',
       });
     },
   );
