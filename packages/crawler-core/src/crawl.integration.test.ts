@@ -2577,3 +2577,132 @@ describe('crawlVenue — system audit rows (admin 1b)', () => {
     expect(rows[0]?.targetId).toBe(venue.id);
   });
 });
+
+describe('crawlVenue — a test crawl of a draft venue', () => {
+  async function seedDraftVenue(
+    overrides: Partial<typeof venues.$inferInsert> = {},
+  ): Promise<{ id: string; url: string }> {
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `Draft Test ${crypto.randomUUID()}`,
+        slug: `draft-${crypto.randomUUID()}`,
+        websiteUrl: 'https://draft-test.example.com',
+        city: 'Denver',
+        timezone: 'America/Denver',
+        active: false,
+        wentLiveAt: null,
+        crawlMode: 'browser',
+        consecutiveFailures: 1,
+        ...overrides,
+      })
+      .returning();
+    if (!venue) throw new Error('venue insert returned no row');
+    return { id: venue.id, url: venue.websiteUrl };
+  }
+
+  const crawlTest = (venueId: string) =>
+    crawlVenue(
+      venueId,
+      mockBrowser,
+      undefined,
+      [],
+      false,
+      null,
+      false,
+      undefined,
+      true,
+    );
+
+  async function venueState(venueId: string) {
+    const [row] = await db
+      .select({
+        blockedAt: venues.blockedAt,
+        crawlPausedAt: venues.crawlPausedAt,
+        consecutiveFailures: venues.consecutiveFailures,
+        lastCrawledAt: venues.lastCrawledAt,
+      })
+      .from(venues)
+      .where(eq(venues.id, venueId));
+    return row;
+  }
+
+  it('reads the shows, writes no event, and records the result', async () => {
+    const venue = await seedDraftVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        makeEvent('Test Artist One', futureDate(10), venue.url),
+        makeEvent('Test Artist Two', futureDate(11), venue.url),
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+
+    const run = await crawlTest(venue.id);
+
+    expect(run.status).toBe('success');
+    expect(run.trial).toBe(true);
+    expect(run.eventsInserted).toBe(0);
+    expect(run.insertedEventIds).toEqual([]);
+    expect(run.testResult).toMatchObject({
+      status: 'found',
+      strategy: 'llm',
+      found: 2,
+      counts: { html: 0, jsonLd: 0, haiku: 2 },
+      crawlRunId: run.id,
+      error: null,
+    });
+    expect(run.testResult?.samples.map((sample) => sample.artist)).toEqual([
+      'Test Artist One',
+      'Test Artist Two',
+    ]);
+    const kept = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.venueId, venue.id));
+    expect(kept).toHaveLength(0);
+    const row = await venueState(venue.id);
+    expect(row?.consecutiveFailures).toBe(1);
+    expect(row?.lastCrawledAt).toBeNull();
+    expect(row?.crawlPausedAt).toBeNull();
+  });
+
+  it('a failing test reports the error and moves no venue state', async () => {
+    const venue = await seedDraftVenue();
+    mockFetchPage.mockRejectedValue(new Error('Request failed with 429'));
+
+    const run = await crawlTest(venue.id);
+
+    expect(run.status).toBe('failed');
+    expect(run.testResult?.status).toBe('failed');
+    expect(run.testResult?.error).toContain('429');
+    const row = await venueState(venue.id);
+    expect(row?.consecutiveFailures).toBe(1);
+    expect(row?.crawlPausedAt).toBeNull();
+    expect(row?.blockedAt).toBeNull();
+  });
+
+  it('refuses a live venue, even one that is hidden now', async () => {
+    const live = await seedDraftVenue({ active: true, wentLiveAt: new Date() });
+    const hidden = await seedDraftVenue({
+      active: false,
+      wentLiveAt: new Date(),
+    });
+
+    await expect(crawlTest(live.id)).rejects.toThrow(/not a draft/);
+    await expect(crawlTest(hidden.id)).rejects.toThrow(/not a draft/);
+    expect(mockFetchPage).not.toHaveBeenCalled();
+  });
+
+  it('a normal crawl refuses a draft', async () => {
+    const draft = await seedDraftVenue();
+
+    await expect(crawlVenue(draft.id, mockBrowser)).rejects.toThrow(
+      /not active\/verified/,
+    );
+  });
+});

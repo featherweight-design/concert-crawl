@@ -291,6 +291,9 @@ interface ClaimedTrigger {
   force: boolean;
   // A test re-crawl of a crawl-paused venue (crawlVenue's `trial`).
   trial: boolean;
+  // 'test' is a draft venue's test crawl: it keeps nothing, so it is never
+  // tagged, priced or fanned out, and its result is stored on the trigger.
+  mode: 'crawl' | 'test';
 }
 
 // Claim the oldest pending trigger (MAX_CONCURRENT is 1). Drizzle's update() has no limit(), so
@@ -314,6 +317,7 @@ async function claimPendingTriggers(): Promise<ClaimedTrigger[]> {
       venueId: crawlTriggers.venueId,
       force: crawlTriggers.force,
       trial: crawlTriggers.trial,
+      mode: crawlTriggers.mode,
     });
 }
 
@@ -485,6 +489,7 @@ async function processTrigger(
         llmBudget,
         trigger.trial,
         progress.report,
+        trigger.mode === 'test',
       );
     } finally {
       // The crawl is over: no held-back report should land after it.
@@ -523,8 +528,9 @@ async function processTrigger(
         llm_cost_usd: crawlRun.llmCostUsd ?? null,
       });
     }
+    const isTest = trigger.mode === 'test';
     try {
-      if (!llmStopped(llmBudget)) {
+      if (!isTest && !llmStopped(llmBudget)) {
         await tagEventsWithGenres(trigger.venueId, crawlRun.id);
       }
     } catch (tagErr) {
@@ -533,7 +539,7 @@ async function processTrigger(
         'Genre tagging failed — crawl data saved, genres skipped',
       );
     }
-    if (crawlRun.status !== 'failed') {
+    if (!isTest && crawlRun.status !== 'failed') {
       eventsInserted = crawlRun.eventsInserted ?? 0;
       // The run's own flag, not the trigger's: a trial whose venue was
       // resumed before it ran was crawled, and is priced, as a normal run.
@@ -545,11 +551,15 @@ async function processTrigger(
       await runArtistFanoutSafely(crawlRun.insertedEventIds);
     }
     const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done';
+    // A test's result is stored whether it found shows or failed, so Review
+    // can read it from the trigger row.
+    const testResult = isTest ? crawlRun.testResult : undefined;
     await db
       .update(crawlTriggers)
       .set({
         status: triggerStatus,
         crawlRunId: crawlRun.id,
+        ...(testResult === undefined ? {} : { testResult }),
         updatedAt: new Date(),
         // A finished crawl read every page it set out to, so a done trigger
         // never reads as partial even if its last progress write was held

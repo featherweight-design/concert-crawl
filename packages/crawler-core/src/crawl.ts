@@ -25,7 +25,12 @@ import {
   notifications,
   costTracking,
 } from '@concert-crawl/db';
-import type { CrawlRun, CrawlRunReason, TicketLink } from '@concert-crawl/db';
+import type {
+  CrawlRun,
+  CrawlRunReason,
+  TestCrawlResult,
+  TicketLink,
+} from '@concert-crawl/db';
 import { reportFailure } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT, showTimeKey } from '@concert-crawl/types';
 import {
@@ -75,6 +80,7 @@ import {
   type Adjudicator,
 } from './lib/derive-artists.js';
 import { calculateCost } from './lib/cost.js';
+import { buildFailedTestResult, buildTestResult } from './lib/test-result.js';
 import { dispatch } from './lib/fetchers/index.js';
 import { CalendarNotFoundError } from './lib/fetchers/detail-page.js';
 import { VenuePilotFetchError } from './lib/fetchers/venuepilot.js';
@@ -573,7 +579,13 @@ const billOwned = (column: AnyPgColumn, excluded: string): SQL =>
 // keys "new show" alerts off inserted rows only — an update to an existing
 // listing must never re-alert. Empty on the robots-blocked / page-hash-skip /
 // failed paths, where by definition nothing was inserted.
-export type CrawlVenueResult = CrawlRun & { insertedEventIds: string[] };
+//
+// `testResult` is set only by a draft venue's test crawl (`testRequested`):
+// what it found, for the trigger row.
+export type CrawlVenueResult = CrawlRun & {
+  insertedEventIds: string[];
+  testResult?: TestCrawlResult;
+};
 
 // A Browser, or a thunk that launches one on first use. Callers that may crawl
 // only `crawlMode: 'http'` venues pass the thunk so Chromium is never launched
@@ -772,6 +784,15 @@ export async function crawlVenue(
   // awaited, and a throw or rejection is ignored: progress never holds up or
   // fails a crawl.
   onPageProgress?: PageProgressCallback,
+  // A draft venue's test crawl (a trigger with mode 'test'; admin redesign
+  // 3c-2). It follows the same robots.txt check, pacing and extraction
+  // cascade, and stops once the shows are read: it writes no event, artist or
+  // price, never moves the failure streak, the pause or the blocked flag, and
+  // hands back what it found as `testResult`. It runs only on a draft (not
+  // active, never gone live), and a live venue is refused whatever the trigger
+  // says. Its run row is marked `trial`, so no streak or triage reader counts
+  // it, and it always re-extracts, since an unchanged page is what it tests.
+  testRequested = false,
 ): Promise<CrawlVenueResult> {
   const getBrowser = memoizeBrowser(browser);
   const reportPageProgress = safePageProgress(onPageProgress);
@@ -795,8 +816,10 @@ export async function crawlVenue(
     .where(
       and(
         eq(venues.id, venueId),
-        eq(venues.active, true),
-        eq(venues.verified, true),
+        testRequested
+          ? // A test admits a draft and nothing else.
+            and(eq(venues.active, false), isNull(venues.wentLiveAt))
+          : and(eq(venues.active, true), eq(venues.verified, true)),
         // A venue removed at its request is never fetched again, whatever
         // its other columns say (removal also hides and pauses it).
         isNull(venues.removedAt),
@@ -805,19 +828,23 @@ export async function crawlVenue(
 
   if (!venue) {
     throw new Error(
-      `Venue ${venueId} not found, removed, or not active/verified`,
+      testRequested
+        ? `Venue ${venueId} not found, removed, or not a draft`
+        : `Venue ${venueId} not found, removed, or not active/verified`,
     );
   }
+  const test = testRequested;
 
   // A trial exists to test a paused venue. One whose venue an admin resumed
   // after queueing it is an ordinary crawl and counts like one.
-  const trial = trialRequested && venue.crawlPausedAt !== null;
-  // Every run row this crawl writes carries the trial flag.
+  const trial = !test && trialRequested && venue.crawlPausedAt !== null;
+  // Every run row this crawl writes carries the trial flag. A test's rows
+  // carry it too, so the streak and triage readers leave them out.
   const recordRun = (
     values: CrawlRunValues,
     log: FetchLog,
   ): ReturnType<typeof insertCrawlRun> =>
-    insertCrawlRun({ ...values, trial }, log);
+    insertCrawlRun({ ...values, trial: trial || test }, log);
 
   // A blocked venue is not test-crawled: the site has told us to stop, and
   // only an admin clears that.
@@ -917,14 +944,17 @@ export async function crawlVenue(
       },
       fetchLog,
     );
-    await db
-      .update(venues)
-      .set({
-        robotsTxtAllowed: false,
-        robotsTxtCheckedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(venues.id, venueId));
+    // A test writes the run row only: the venue keeps what Source saved.
+    if (!test) {
+      await db
+        .update(venues)
+        .set({
+          robotsTxtAllowed: false,
+          robotsTxtCheckedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(venues.id, venueId));
+    }
     return { ...crawlRun, insertedEventIds: [] };
   }
 
@@ -1152,6 +1182,7 @@ export async function crawlVenue(
       if (
         !force &&
         !trial &&
+        !test &&
         shouldSkipUnchangedPage({
           hashMatches:
             lastRun?.pageHash !== undefined &&
@@ -1334,6 +1365,56 @@ export async function crawlVenue(
       );
       return false;
     });
+
+    // A test crawl stops here, with the shows read and nothing kept. This one
+    // return is what guarantees it writes no event, artist, price or venue
+    // column: everything below this point (the upsert, artist projection,
+    // stale-event marking, the venue's success update and the count alerts) is
+    // the ordinary crawl's. Only the run row and the extraction cost are
+    // recorded, and the result goes back for the trigger.
+    if (test) {
+      const testCostUsd = tokenUsage
+        ? calculateCost(tokenUsage, LLM_EXTRACTION_MODEL)
+        : null;
+      const crawlRun = await recordRun(
+        {
+          id,
+          venueId,
+          ...(survivingEvents.length === 0
+            ? { status: 'partial' as const, reason: 'no_events_found' as const }
+            : { status: 'success' as const }),
+          httpStatusCode: httpStatus,
+          robotsTxtBlocked: 'no',
+          extractionStrategyUsed: strategy,
+          pageHash,
+          eventsFound: survivingEvents.length,
+          eventsUsable: survivingEvents.length,
+          eventsInserted: 0,
+          eventsUpdated: 0,
+          llmCostUsd: testCostUsd,
+          durationMs: Date.now() - startedAt,
+        },
+        fetchLog,
+      );
+      if (tokenUsage && testCostUsd !== null) {
+        await db.insert(costTracking).values({
+          service: 'claude',
+          costUsd: testCostUsd.toFixed(6),
+          tokensUsed: String(tokenUsage.inputTokens + tokenUsage.outputTokens),
+          metadata: JSON.stringify({ crawlRunId: id, venueId, ...tokenUsage }),
+        });
+      }
+      return {
+        ...crawlRun,
+        insertedEventIds: [],
+        testResult: buildTestResult({
+          strategy,
+          shows: survivingEvents,
+          costUsd: testCostUsd,
+          crawlRunId: id,
+        }),
+      };
+    }
 
     // Every extraction path now REPORTS who it saw (`observedPerformers`) and
     // this one stage DECIDES who is on the bill. Running it here, after the
@@ -2491,6 +2572,47 @@ export async function crawlVenue(
 
     return { ...crawlRun, insertedEventIds };
   } catch (err) {
+    // A test crawl's failure is told to the admin through its result and
+    // touches nothing of the venue's: no strike, pause, block, notice or
+    // email. A 403 or 429 reads as an error here, and the draft is not
+    // crawled again until the admin tries it.
+    if (test) {
+      const crawlRun = await recordRun(
+        err instanceof CrawlSkipError
+          ? {
+              id,
+              venueId,
+              status: 'skipped',
+              reason: err.reason,
+              robotsTxtBlocked: 'unchecked',
+              eventsFound: 0,
+              eventsInserted: 0,
+              errorMessage: err.message,
+              durationMs: Date.now() - startedAt,
+            }
+          : {
+              id,
+              venueId,
+              status: 'failed',
+              reason: failureReason(err, false),
+              robotsTxtBlocked: 'no',
+              eventsFound: 0,
+              eventsInserted: 0,
+              errorMessage: String(err),
+              durationMs: Date.now() - startedAt,
+            },
+        fetchLog,
+      );
+      return {
+        ...crawlRun,
+        insertedEventIds: [],
+        testResult: buildFailedTestResult({
+          error: err instanceof Error ? err.message : String(err),
+          crawlRunId: id,
+        }),
+      };
+    }
+
     // A platform adapter that could not read the robots.txt governing its
     // endpoint, or was asked for a Crawl-delay above the cap, declines the
     // run. That is our choice not to crawl, not a venue failure: record it as
