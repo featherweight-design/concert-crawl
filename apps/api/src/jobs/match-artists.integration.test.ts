@@ -3,7 +3,12 @@
 // (per-worktree test DB), so every verdict is asserted against actual rows.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { asc, eq } from 'drizzle-orm';
-import { artists, auditLog } from '@concert-crawl/db';
+import {
+  artists,
+  auditLog,
+  mbArtistPhotos,
+  mbArtists,
+} from '@concert-crawl/db';
 import { testDb } from '../test/helpers/db.js';
 import { apiLogger } from '../lib/logger.js';
 import { MATCH_ATTEMPT_LIMIT } from '../lib/artist-exhaustion.js';
@@ -1103,5 +1108,63 @@ describe('runMatchArtists', () => {
 
   it('defaults the batch size to the exported constant', () => {
     expect(MATCH_BATCH_SIZE).toBeGreaterThan(0);
+  });
+  describe('MusicBrainz-row photo pass', () => {
+    const MB_ID = '00000000-0000-4000-8000-0000000000aa';
+    const seedNotableAct = () =>
+      testDb.insert(mbArtists).values({
+        mbid: MB_ID,
+        name: 'Notable Act',
+        spotifyId: 'sp_notable',
+        wikidataId: 'Q1',
+      });
+    const cleanMb = async () => {
+      await testDb.delete(mbArtistPhotos);
+      await testDb.delete(mbArtists);
+    };
+
+    it('runs after our own artists and counts its photos in the summary', async () => {
+      await cleanMb();
+      await seedNotableAct();
+      try {
+        const summary = await runMatchArtists({
+          now: () => NOW,
+          client: stubClient(noSearch, async () => ({
+            found: true,
+            imageUrl: 'https://i.scdn.co/image/mb',
+          })),
+        });
+
+        expect(summary).toMatchObject({
+          mbPhotosRefreshed: 1,
+          mbPhotosEmpty: 0,
+          abortedReason: null,
+        });
+        const [photo] = await testDb.select().from(mbArtistPhotos);
+        expect(photo?.photoUrl).toBe('https://i.scdn.co/image/mb');
+      } finally {
+        await cleanMb();
+      }
+    });
+
+    it('is skipped when our own artists pass hit a rate limit', async () => {
+      await cleanMb();
+      await seedNotableAct();
+      await seedArtist({ name: 'Ours', canonicalName: 'ours' });
+      try {
+        const summary = await runMatchArtists({
+          now: () => NOW,
+          client: stubClient(async () => {
+            throw new SpotifyRateLimitError();
+          }),
+        });
+
+        expect(summary.abortedReason).toBe('rate_limit');
+        expect(summary.mbPhotosRefreshed).toBe(0);
+        expect(await testDb.select().from(mbArtistPhotos)).toEqual([]);
+      } finally {
+        await cleanMb();
+      }
+    });
   });
 });

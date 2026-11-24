@@ -30,6 +30,8 @@ export const servableArtistPhotoUrl = (): SQL<string | null> =>
 /**
  * The same 30-day rule for a MusicBrainz-only row's photo, read through a left
  * join on `mb_artist_photos`. No row, no photo, or an aged one all read null.
+ * Unlike the artists version a NULL stamp is not servable here: it can only
+ * mean the join found no row.
  */
 export const servableMbPhotoUrl = (): SQL<string | null> =>
   sql<

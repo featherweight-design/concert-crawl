@@ -180,6 +180,9 @@ export interface MatchArtistsSummary {
   mbPhotosRefreshed: number;
   /** MusicBrainz-only lookups that found no photo. */
   mbPhotosEmpty: number;
+  mbPhotosFailed: number;
+  /** Why the MusicBrainz photo pass stopped early; never touches `abortedReason`. */
+  mbAbortedReason: 'rate_limit' | 'auth' | 'timeout' | null;
   spotifyCalls: number;
 }
 
@@ -220,6 +223,8 @@ export const runMatchArtists = async (
     abortedReason: null,
     mbPhotosRefreshed: 0,
     mbPhotosEmpty: 0,
+    mbPhotosFailed: 0,
+    mbAbortedReason: null,
     spotifyCalls: 0,
   };
   // Every row considered lands in exactly one bucket, so `considered` is
@@ -567,17 +572,37 @@ export const runMatchArtists = async (
   // Our own artists come first. A rate limit or auth failure above ends the
   // run: the MusicBrainz pass would only meet the same wall.
   if (summary.abortedReason === null) {
-    const mbPhotos = await refreshMbPhotos({
-      client,
-      budgetFor: (eligible) =>
-        options.mbPhotoBudget ?? photoBudgetFor(eligible),
-      staleBefore,
-      now,
-    });
-    summary.mbPhotosRefreshed = mbPhotos.refreshed;
-    summary.mbPhotosEmpty = mbPhotos.empty;
-    summary.failures += mbPhotos.failures;
-    summary.abortedReason = mbPhotos.abortedReason;
+    // Optional work on top of a finished run: whatever goes wrong here (a
+    // database blip, say) is logged and reported, never allowed to fail the
+    // cron after the artists' work is already committed.
+    try {
+      const mbPhotos = await refreshMbPhotos({
+        client,
+        // Sized like the artists' pass, but the two share one ceiling on
+        // by-id calls: they are serial, and PHOTO_BUDGET_CAP is what keeps a
+        // run inside the cron function's limit.
+        budgetFor: (eligible) =>
+          options.mbPhotoBudget ??
+          Math.min(
+            photoBudgetFor(eligible),
+            Math.max(0, PHOTO_BUDGET_CAP - photoRows.length),
+          ),
+        staleBefore,
+        now,
+      });
+      summary.mbPhotosRefreshed = mbPhotos.refreshed;
+      summary.mbPhotosEmpty = mbPhotos.empty;
+      summary.mbPhotosFailed = mbPhotos.failures;
+      // Kept apart from `abortedReason`: that field says the artists' work
+      // was cut short, and it was not.
+      summary.mbAbortedReason = mbPhotos.abortedReason;
+    } catch (err) {
+      summary.mbPhotosFailed += 1;
+      apiLogger.error({ err }, 'match-artists: MusicBrainz photo pass failed');
+      Sentry.captureException(err, {
+        tags: { job: 'match-artists', pass: 'mb-photos' },
+      });
+    }
   }
 
   summary.spotifyCalls = client.getCallCount();
