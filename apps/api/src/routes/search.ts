@@ -185,12 +185,36 @@ const toArtistKind = (type: string | null): ArtistSearchAllResult['type'] => {
   return null;
 };
 
+// A name this similar to the query (pg_trgm, 0 to 1) counts as a real match
+// even when it is a typo of it: "Metalica" against "Metallica" scores 0.73.
+// Below the floor a row is only a substring or alias hit, and notability must
+// not lift it over a real match ("Rezzo" scores 0.57 against "Rezz", so a
+// linked "Rezzo" never outranks an exact "Rezz").
+const MB_MATCH_FLOOR = 0.6;
+
+// The typo path is for longer queries. Short ones are covered by the
+// substring match, and a three or four letter query would otherwise pull in
+// every name sharing a trigram.
+const MB_FUZZY_MIN_LENGTH = 5;
+
 // The slim MusicBrainz table's half of `scope=all`: acts no `artists` row
 // holds, because one that a row holds is already offered (or deliberately
-// hidden) as ours. Same ranking as ours: exact name, then prefix, then
-// anywhere in the name or an alias. The alias match goes through the IMMUTABLE
-// wrapper `mb_artist_aliases_text()`, the expression the alias trigram index
-// is built on; `array_to_string()` here would read every row instead.
+// hidden) as ours.
+//
+// Order, best first:
+//   1. Real matches (exact name, or similar enough to be a typo) before mere
+//      substring and alias hits.
+//   2. Among real matches, notability: a row with both a Spotify and a
+//      Wikidata link, then one link, then neither. This is what puts the real
+//      Jack White above six namesakes, and Metallica above a parody spelled
+//      exactly as the typo.
+//   3. Then closeness (similarity), exact name, prefix, and name.
+// Rows are only ordered, never dropped.
+//
+// The alias match goes through the IMMUTABLE wrapper
+// `mb_artist_aliases_text()`, the expression the alias trigram index is built
+// on; `array_to_string()` here would read every row instead. The typo path
+// uses `%` (index-assisted, default 0.3 threshold) and then the floor.
 const searchMbArtists = async (
   query: string,
   limit: number,
@@ -203,6 +227,26 @@ const searchMbArtists = async (
       when lower(${mbArtists.name}) like lower(${`${escapeLikePattern(query)}%`}) then 1
       else 2
     end`;
+  const nameSimilarity = sql<number>`similarity(${mbArtists.name}, ${query})`;
+  const isRealMatch = sql<number>`case
+      when lower(${mbArtists.name}) = lower(${query}) then 0
+      when ${nameSimilarity} >= ${MB_MATCH_FLOOR} then 0
+      else 1
+    end`;
+  const notability = sql<number>`case
+      when ${mbArtists.spotifyId} is not null and ${mbArtists.wikidataId} is not null then 0
+      when ${mbArtists.spotifyId} is not null or ${mbArtists.wikidataId} is not null then 1
+      else 2
+    end`;
+  const fuzzy =
+    query.length >= MB_FUZZY_MIN_LENGTH
+      ? [
+          and(
+            sql`${mbArtists.name} % ${query}`,
+            sql`${nameSimilarity} >= ${MB_MATCH_FLOOR}`,
+          ),
+        ]
+      : [];
   const rows = await db
     .select({
       mbid: mbArtists.mbid,
@@ -217,6 +261,7 @@ const searchMbArtists = async (
         or(
           ilike(mbArtists.name, pattern),
           sql`public.mb_artist_aliases_text(${mbArtists.aliases}) ilike ${pattern}`,
+          ...fuzzy,
         ),
         notExists(
           db
@@ -226,7 +271,18 @@ const searchMbArtists = async (
         ),
       ),
     )
-    .orderBy(asc(mbRank), asc(mbArtists.name), asc(mbArtists.mbid))
+    .orderBy(
+      asc(isRealMatch),
+      // Notability orders real matches only; below the floor, the kind of
+      // match (exact, prefix, substring) leads, so a linked act with a weak
+      // match stays below.
+      sql`case when ${isRealMatch} = 0 then ${notability} else ${mbRank} end`,
+      desc(nameSimilarity),
+      asc(mbRank),
+      asc(notability),
+      asc(mbArtists.name),
+      asc(mbArtists.mbid),
+    )
     .limit(limit);
   return rows.map((row) => ({
     name: row.name,
