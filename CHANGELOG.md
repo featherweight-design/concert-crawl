@@ -1,3 +1,16 @@
+# [1.567.0](https://github.com/featherweight-design/concert-crawl/compare/v1.566.0...v1.567.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **admin:** harden go-live and the suggestions list after review ([52e91e2](https://github.com/featherweight-design/concert-crawl/commit/52e91e24910ba86bf2a303018ef34e363f37096e))
+* **db:** renumber the suggestion dismissals migration to 0132 ([3b1e00f](https://github.com/featherweight-design/concert-crawl/commit/3b1e00fc3dff27552478891e80ebb5a1aac0ca78))
+
+
+### Features
+
+* **admin:** ask the venue, go live and suggested venues api ([d964464](https://github.com/featherweight-design/concert-crawl/commit/d9644647d89deccacd0ad4f59cc8749c0ec229b9))
+
 # [1.566.0](https://github.com/featherweight-design/concert-crawl/compare/v1.565.0...v1.566.0) (2026-11-24)
 
 
