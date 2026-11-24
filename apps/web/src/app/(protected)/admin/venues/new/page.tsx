@@ -9,7 +9,11 @@ import {
 } from '@/components/admin/add-venue/add-venue-rules';
 
 interface Props {
-  searchParams: Promise<{ id?: string | string[]; step?: string | string[] }>;
+  searchParams: Promise<{
+    id?: string | string[];
+    step?: string | string[];
+    fresh?: string | string[];
+  }>;
 }
 
 /**
@@ -19,8 +23,13 @@ interface Props {
  */
 export default async function AddVenuePage({ searchParams }: Props) {
   await requireAdminUser();
-  const { id, step } = await searchParams;
-  if (typeof id !== 'string' || id === '') return <AddVenueFlow draft={null} />;
+  const { id, step, fresh } = await searchParams;
+  // Add another sends a new `fresh` value, so the flow starts over instead of
+  // keeping the last venue's state; the id change after a first save does not.
+  const key = typeof fresh === 'string' ? fresh : undefined;
+  if (typeof id !== 'string' || id === '') {
+    return <AddVenueFlow key={key} draft={null} />;
+  }
 
   const { getToken } = await auth();
   const token = await getToken();
@@ -42,6 +51,7 @@ export default async function AddVenuePage({ searchParams }: Props) {
   if (venue.wentLiveAt !== null) redirect(`/admin/venues/${venue.id}`);
   return (
     <AddVenueFlow
+      key={key}
       draft={{
         id: venue.id,
         basics: basicsOf(venue),

@@ -2,6 +2,7 @@
 
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { apiClient, ApiError } from '@/lib/api';
 import type {
   CrawlPauseRequest,
@@ -79,43 +80,6 @@ async function getCurrentUserName(): Promise<string | null> {
     : (user.emailAddresses[0]?.emailAddress ?? null);
 }
 
-export interface CreateVenueResult {
-  success: boolean;
-  data?: Venue;
-  error?: string;
-  field?: string;
-}
-
-export async function createVenue(
-  formData: FormData,
-): Promise<CreateVenueResult> {
-  const token = await getToken();
-
-  try {
-    const addressRaw = formData.get('address');
-    const address =
-      addressRaw !== null && String(addressRaw).trim()
-        ? String(addressRaw).trim()
-        : null;
-
-    const venue = await apiClient.post<Venue>('/v1/admin/venues', token, {
-      name: formData.get('name'),
-      slug: formData.get('slug'),
-      websiteUrl: formData.get('websiteUrl'),
-      city: formData.get('city') || 'Denver',
-      active: formData.get('active') !== 'false',
-      address,
-    });
-    revalidatePath('/admin/venues');
-    return { success: true, data: venue };
-  } catch (err: unknown) {
-    if (err instanceof ApiError && err.status === 409) {
-      return { success: false, error: 'Slug already in use', field: 'slug' };
-    }
-    throw err;
-  }
-}
-
 /**
  * Add a venue's first save (3e-1, plan decision 2): Basics creates the venue
  * as a draft (`active=false`, `went_live_at=NULL`, audited `{draft: true}`),
@@ -162,27 +126,6 @@ export async function createDraftVenue(formData: FormData): Promise<{
     console.warn('createDraftVenue: draft not created', { err });
     return { success: false, error: 'Draft not created' };
   }
-}
-
-export async function createVenueAndCrawl(
-  formData: FormData,
-): Promise<CreateVenueResult> {
-  const token = await getToken();
-
-  const result = await createVenue(formData);
-  if (!result.success || !result.data) return result;
-
-  try {
-    await triggerVenueCrawl(result.data.id, token);
-  } catch (err: unknown) {
-    // Crawl trigger failure is non-fatal — venue was created
-    console.warn('createVenueAndCrawl: first crawl not queued', {
-      id: result.data.id,
-      err,
-    });
-  }
-
-  return result;
 }
 
 export async function updateVenue(
@@ -715,4 +658,34 @@ export async function askVenuePermission(id: string): Promise<{ ok: boolean }> {
   revalidatePath('/admin/venues');
   revalidatePath('/admin/needs-you');
   return { ok: true };
+}
+
+// Go live (option A, plan decision 4): POST /v1/admin/venues/:id/go-live sets
+// `active` and `went_live_at` and queues a normal crawl at once. The venue is
+// live whether or not that crawl queued, so the outcome says which.
+export type GoLiveOutcome = { ok: true; crawlQueued: boolean } | { ok: false };
+
+const GoLiveResponse = z.object({
+  crawl: z.object({ queued: z.boolean() }),
+});
+
+export async function goLiveVenue(id: string): Promise<GoLiveOutcome> {
+  try {
+    const token = await getToken();
+    const data = await apiClient.post<unknown>(
+      `/v1/admin/venues/${id}/go-live`,
+      token,
+      {},
+    );
+    const parsed = GoLiveResponse.safeParse(data);
+    revalidatePath('/admin/venues');
+    revalidatePath('/admin/needs-you');
+    return {
+      ok: true,
+      crawlQueued: parsed.success && parsed.data.crawl.queued,
+    };
+  } catch (err: unknown) {
+    console.error('goLiveVenue: failed', { id, err });
+    return { ok: false };
+  }
 }

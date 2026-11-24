@@ -24,9 +24,6 @@ const { pauseCrawling, recrawlVenue } = vi.hoisted(() => ({
   recrawlVenue: vi.fn(),
 }));
 vi.mock('@/lib/actions/venues', () => ({ pauseCrawling, recrawlVenue }));
-vi.mock('@/components/admin/AddVenueModal', () => ({
-  AddVenueModal: () => null,
-}));
 
 const venue = (name: string, over: Partial<VenueListRow> = {}): VenueListRow =>
   ({
@@ -60,6 +57,15 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('VenuesList', () => {
+  it('links Add a venue to the flow, and drops the link while selecting', () => {
+    render(<VenuesList venues={twelveOk} />);
+    const add = screen.getByTestId('venues-add');
+    expect(add).toHaveAttribute('href', '/admin/venues/new');
+    expect(add).toHaveTextContent(COPY.addVenue);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    expect(screen.queryByTestId('venues-add')).toBeNull();
+  });
+
   it('folds OK venues past ten and expands them in place', () => {
     render(<VenuesList venues={twelveOk} />);
     expect(screen.getAllByTestId('venue-row')).toHaveLength(10);

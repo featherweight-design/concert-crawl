@@ -25,9 +25,14 @@ vi.mock('@/lib/actions/venues', () => ({
   createDraftVenue: (body: FormData) => mockCreateDraft(body),
   updateVenue: (id: string, body: FormData) => mockUpdateVenue(id, body),
   askVenuePermission: () => Promise.resolve({ ok: true }),
-  testCrawlVenue: () => Promise.resolve({ ok: false, code: 'not_draft' }),
-  readTestCrawl: () => Promise.resolve(null),
+  testCrawlVenue: () => mockTestCrawl(),
+  readTestCrawl: () => mockReadTest(),
+  goLiveVenue: (id: string) => mockGoLive(id),
 }));
+
+const mockTestCrawl = vi.fn();
+const mockReadTest = vi.fn();
+const mockGoLive = vi.fn();
 
 const mockReplace = vi.fn();
 const mockPush = vi.fn();
@@ -68,6 +73,11 @@ beforeEach(() => {
   mockUpdateVenue.mockReset();
   mockReplace.mockReset();
   mockPush.mockReset();
+  mockTestCrawl.mockReset();
+  mockReadTest.mockReset();
+  mockGoLive.mockReset();
+  mockTestCrawl.mockResolvedValue({ ok: false, code: 'not_draft' });
+  mockReadTest.mockResolvedValue(null);
 });
 afterEach(cleanup);
 
@@ -294,19 +304,101 @@ describe('AddVenueFlow', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('draws steps 3 to 5 as not open yet, and Source as open', () => {
+  it('draws Icon and Guide as not open yet, and Source and Review as open', () => {
     render(<AddVenueFlow draft={null} />);
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     expect(
       screen.getByTestId('add-venue-step-source').getAttribute('aria-disabled'),
     ).toBeNull();
-    for (const step of ['icon', 'guide', 'review']) {
+    for (const step of ['icon', 'guide']) {
       expect(
         screen
           .getByTestId(`add-venue-step-${step}`)
           .getAttribute('aria-disabled'),
       ).toBe('true');
     }
+  });
+
+  describe('Review and Go live', () => {
+    const FOUND = {
+      status: 'found',
+      found: 14,
+      samples: [],
+      counts: { jsonld: 14, llm: 0, html: 0 },
+      costUsd: 0,
+    };
+    const resumeOnSource = () =>
+      render(
+        <AddVenueFlow
+          draft={{
+            id: 'v-9',
+            step: 'source',
+            basics: emptyWithName('Dazzle Jazz'),
+          }}
+        />,
+      );
+
+    it('keeps Continue off until the test passes, then opens a ready Review', async () => {
+      mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
+      mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      resumeOnSource();
+      const next = screen.getByTestId('add-venue-continue');
+      expect(next.hasAttribute('disabled')).toBe(true);
+      await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {
+        timeout: 5000,
+      });
+      fireEvent.click(next);
+      expect(screen.getByText(COPY.review.title)).toBeTruthy();
+      expect(screen.getByTestId('add-venue-continue').textContent).toBe(
+        COPY.review.goLive,
+      );
+      vi.useRealTimers();
+    });
+
+    it('goes live and shows Gone live, then starts over on Add another', async () => {
+      mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
+      mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
+      mockGoLive.mockResolvedValue({ ok: true, crawlQueued: true });
+      resumeOnSource();
+      const next = screen.getByTestId('add-venue-continue');
+      await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {
+        timeout: 5000,
+      });
+      fireEvent.click(next);
+      fireEvent.click(screen.getByTestId('add-venue-continue'));
+      await waitFor(() =>
+        expect(screen.getByTestId('add-venue-gone-live')).toBeTruthy(),
+      );
+      expect(mockGoLive).toHaveBeenCalledWith('v-9');
+      expect(screen.getByText(COPY.gone.crawlQueued)).toBeTruthy();
+      fireEvent.click(screen.getByTestId('add-venue-add-another'));
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining('/admin/venues/new?fresh='),
+      );
+    });
+
+    it('says nothing was published when Go live fails, and offers Try again', async () => {
+      mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
+      mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
+      mockGoLive.mockResolvedValue({ ok: false });
+      resumeOnSource();
+      const next = screen.getByTestId('add-venue-continue');
+      await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {
+        timeout: 5000,
+      });
+      fireEvent.click(next);
+      fireEvent.click(screen.getByTestId('add-venue-continue'));
+      await waitFor(() =>
+        expect(screen.getByTestId('add-venue-go-live-failed')).toBeTruthy(),
+      );
+      expect(screen.queryByTestId('add-venue-gone-live')).toBeNull();
+      mockGoLive.mockResolvedValue({ ok: true, crawlQueued: false });
+      fireEvent.click(screen.getByTestId('add-venue-go-live-retry'));
+      await waitFor(() =>
+        expect(screen.getByText(COPY.gone.crawlNotQueued)).toBeTruthy(),
+      );
+    });
   });
 });
 

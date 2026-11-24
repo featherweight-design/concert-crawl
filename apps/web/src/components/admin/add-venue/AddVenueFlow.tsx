@@ -1,10 +1,12 @@
 'use client';
 
 /**
- * Add a venue (3e-1): Start, then Basics in the step shell. The venue is
- * saved as a draft on Basics' first Continue (plan decision 2), and the URL
- * becomes `?id=…&step=basics` so a reload resumes it. Steps 2 to 5 land in
- * later PRs; until then the rail draws them as not-yet steps.
+ * Add a venue: Start, Basics, Source and Review in the step shell, then Gone
+ * live. The venue is saved as a draft on Basics' first Continue (plan decision
+ * 2), and the URL becomes `?id=…&step=basics` so a reload resumes it. Review is
+ * never resumed: Source tests the page again on open, and only a passing test
+ * makes Go live available. Icon and Guide land in later PRs; until then the
+ * rail draws them as not-yet steps.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -13,11 +15,18 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { useIsPhone } from '@/components/admin/primitives';
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { slugify } from '@/components/admin/venues/details/details-rules';
-import { createDraftVenue, updateVenue } from '@/lib/actions/venues';
+import {
+  createDraftVenue,
+  goLiveVenue,
+  updateVenue,
+} from '@/lib/actions/venues';
 import { AddVenueShell } from './AddVenueShell';
 import { AskVenueSheet } from './AskVenueSheet';
 import { BasicsStep } from './BasicsStep';
+import { GoneLive } from './GoneLive';
+import { ReviewStep } from './ReviewStep';
 import { SourceStep } from './SourceStep';
+import type { TestState } from './source-test-rules';
 import { StartScreen } from './StartScreen';
 import {
   BASICS_FIELD_ORDER,
@@ -40,6 +49,7 @@ const COPY = ADMIN_COPY.addVenue;
 const VENUES_HREF = '/admin/venues';
 const NOTHING_DONE: ReadonlySet<AddVenueStep> = new Set();
 const BASICS_DONE: ReadonlySet<AddVenueStep> = new Set(['basics']);
+const SOURCE_DONE: ReadonlySet<AddVenueStep> = new Set(['basics', 'source']);
 const SOURCE_STEP = 'source';
 
 export interface AddVenueDraft {
@@ -67,11 +77,18 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   const router = useRouter();
   const phone = useIsPhone();
   const { setPageTitle, setPhoneBack } = usePageTitle();
-  const [stage, setStage] = useState<'start' | 'basics' | 'source'>(
+  const [stage, setStage] = useState<'start' | 'basics' | 'source' | 'review'>(
     draft === null ? 'start' : (draft.step ?? 'basics'),
   );
   const [venueId, setVenueId] = useState<string | null>(draft?.id ?? null);
   const [asking, setAsking] = useState(false);
+  // What Source's test card last showed; null until the step reports. Review
+  // is ready only on a passing test.
+  const [source, setSource] = useState<TestState | null>(null);
+  const [going, setGoing] = useState(false);
+  const [goLiveFailed, setGoLiveFailed] = useState(false);
+  const [gone, setGone] = useState<{ crawlQueued: boolean } | null>(null);
+  const goingRef = useRef(false);
   const [basics, setBasics] = useState<BasicsDraft>(
     draft?.basics ?? EMPTY_BASICS,
   );
@@ -102,6 +119,8 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
 
   const change = (patch: Partial<BasicsDraft>) => {
     const next = { ...basics, ...patch };
+    // A new calendar page is a new source: it has to pass its own test.
+    if (patch.website !== undefined) setSource(null);
     if (patch.slug !== undefined) setSlugEdited(true);
     else if (patch.name !== undefined && !slugEdited) {
       next.slug = slugify(patch.name);
@@ -179,16 +198,39 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     if (!(await save())) return;
     const id = venueId ?? idRef.current;
     if (id === null) return;
+    openSource(id);
+  };
+
+  // Source tests the page again on every open, so what it showed before goes.
+  const openSource = (id: string) => {
+    setSource(null);
+    setGoLiveFailed(false);
     setStage('source');
     router.replace(addVenueHref(id, SOURCE_STEP));
   };
+
+  const goLive = async () => {
+    if (goingRef.current || venueId === null) return;
+    goingRef.current = true;
+    setGoing(true);
+    setGoLiveFailed(false);
+    const outcome = await goLiveVenue(venueId);
+    goingRef.current = false;
+    setGoing(false);
+    if (outcome.ok) setGone({ crawlQueued: outcome.crawlQueued });
+    else setGoLiveFailed(true);
+  };
+
+  const addAnother = () => router.push(`/admin/venues/new?fresh=${Date.now()}`);
 
   // From Source, Back returns to Basics. Before the draft exists, Back returns
   // to Start; after, it saves any edits
   // ("Saved as you go") and leaves for Venues, where the draft waits under
   // Drafts. An edit that can't be saved keeps the admin here with its error.
   const back = async () => {
-    if (stage === 'source') {
+    if (stage === 'review') {
+      if (venueId !== null) openSource(venueId);
+    } else if (stage === 'source') {
       setStage('basics');
       if (venueId !== null) router.replace(addVenueHref(venueId, 'basics'));
     } else if (venueId === null) {
@@ -201,20 +243,69 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   if (stage === 'start') {
     return <StartScreen phone={phone} onStart={() => setStage('basics')} />;
   }
+  if (gone !== null && venueId !== null) {
+    return (
+      <GoneLive
+        phone={phone}
+        id={venueId}
+        name={basics.name.trim() || COPY.rail.unnamed}
+        slug={basics.slug}
+        crawlQueued={gone.crawlQueued}
+        onAddAnother={addAnother}
+      />
+    );
+  }
   const onSource = stage === 'source' && venueId !== null;
+  const onReview = stage === 'review' && venueId !== null;
+  const found = source?.kind === 'found' ? source.result.found : null;
+  const step = onReview ? 'review' : onSource ? 'source' : 'basics';
   return (
     <>
       <AddVenueShell
         phone={phone}
-        step={onSource ? 'source' : 'basics'}
-        done={saved === null ? NOTHING_DONE : BASICS_DONE}
+        step={step}
+        done={
+          saved === null
+            ? NOTHING_DONE
+            : found !== null
+              ? SOURCE_DONE
+              : BASICS_DONE
+        }
         name={basics.name}
-        busy={busy}
+        busy={busy || going}
         onBack={() => void back()}
-        onContinue={() => void toSource()}
-        continueDisabled={onSource}
+        onContinue={() =>
+          onReview
+            ? void goLive()
+            : onSource
+              ? setStage('review')
+              : void toSource()
+        }
+        continueDisabled={
+          onReview
+            ? found === null
+            : onSource && (source === null || source.kind === 'running')
+        }
+        continueLabel={onReview ? COPY.review.goLive : COPY.footer.continue}
+        busyLabel={going ? COPY.review.going : COPY.footer.saving}
       >
-        {onSource ? (
+        {onReview ? (
+          <ReviewStep
+            phone={phone}
+            basics={basics}
+            found={found}
+            going={going}
+            failed={goLiveFailed}
+            onRetry={() => void goLive()}
+            onEditBasics={() => {
+              setGoLiveFailed(false);
+              setStage('basics');
+              router.replace(addVenueHref(venueId, 'basics'));
+            }}
+            onEditSource={() => openSource(venueId)}
+            onSaveDraft={() => router.push(VENUES_HREF)}
+          />
+        ) : onSource ? (
           <SourceStep
             phone={phone}
             venueId={venueId}
@@ -227,6 +318,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
               );
             }}
             onAsk={() => setAsking(true)}
+            onStateChange={setSource}
           />
         ) : (
           <BasicsStep

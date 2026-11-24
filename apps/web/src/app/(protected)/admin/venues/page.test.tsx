@@ -19,9 +19,6 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock('@/components/admin/AddVenueModal', () => ({
-  AddVenueModal: () => null,
-}));
 vi.mock('@/lib/actions/venues', () => ({
   pauseCrawling: vi.fn(),
   recrawlVenue: vi.fn(),
