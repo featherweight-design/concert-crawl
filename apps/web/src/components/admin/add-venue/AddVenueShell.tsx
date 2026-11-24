@@ -26,7 +26,11 @@ import {
 const COPY = ADMIN_COPY.addVenue;
 
 /** The drawn call to action: the gradient fill, dark text (`basics-desktop`). */
-const continueStyle = (phone: boolean, busy: boolean): CSSProperties => ({
+const continueStyle = (
+  phone: boolean,
+  busy: boolean,
+  disabled: boolean,
+): CSSProperties => ({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -41,8 +45,8 @@ const continueStyle = (phone: boolean, busy: boolean): CSSProperties => ({
   fontSize: phone ? 15 : 13.5,
   fontWeight: 700,
   whiteSpace: 'nowrap',
-  cursor: busy ? 'progress' : 'pointer',
-  opacity: busy ? 0.7 : 1,
+  cursor: disabled ? 'not-allowed' : busy ? 'progress' : 'pointer',
+  opacity: disabled ? 0.5 : busy ? 0.7 : 1,
   flex: phone ? 1 : 'none',
 });
 
@@ -57,6 +61,8 @@ interface ShellProps {
   /** Back on desktop; Cancel (step 1) or Back on phone. */
   onBack: () => void;
   onContinue: () => void;
+  /** Source's Continue has no step to open yet (3e-2a); it draws as the board does, off. */
+  continueDisabled?: boolean;
   children: ReactNode;
 }
 
@@ -157,6 +163,7 @@ const DesktopShell = ({
   busy,
   onBack,
   onContinue,
+  continueDisabled = false,
   children,
 }: ShellProps) => (
   <div
@@ -272,9 +279,10 @@ const DesktopShell = ({
       <button
         type="button"
         onClick={onContinue}
+        disabled={continueDisabled}
         aria-busy={busy}
         data-testid="add-venue-continue"
-        style={continueStyle(false, busy)}
+        style={continueStyle(false, busy, continueDisabled)}
       >
         {busy ? COPY.footer.saving : COPY.footer.continue}
       </button>
@@ -287,6 +295,7 @@ const PhoneShell = ({
   busy,
   onBack,
   onContinue,
+  continueDisabled = false,
   children,
 }: ShellProps) => {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -403,9 +412,10 @@ const PhoneShell = ({
         <button
           type="button"
           onClick={onContinue}
+          disabled={continueDisabled}
           aria-busy={busy}
           data-testid="add-venue-continue"
-          style={continueStyle(true, busy)}
+          style={continueStyle(true, busy, continueDisabled)}
         >
           {busy ? COPY.footer.saving : COPY.footer.continue}
         </button>
