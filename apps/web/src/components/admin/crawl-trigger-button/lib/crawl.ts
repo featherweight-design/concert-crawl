@@ -29,6 +29,18 @@ export const triggerVenueTrial = async (
     trial: true,
   });
 
+/**
+ * Queues a draft venue's test crawl: the real crawler at its real pace, which
+ * keeps nothing it finds (admin 3c). The result lands on the trigger.
+ */
+export const triggerVenueTest = async (
+  venueId: string,
+  token: string,
+): Promise<{ triggerId: string }> =>
+  apiClient.post<{ triggerId: string }>(`/v1/admin/crawl/${venueId}`, token, {
+    test: true,
+  });
+
 export const fetchCrawlTrigger = async (
   triggerId: string,
   token: string,

@@ -218,3 +218,41 @@ export const BASICS_FIELD_ORDER: readonly BasicsField[] = [
   'capacity',
   'website',
 ];
+
+/**
+ * The stage a test crawl's shows came from, by name: the one whose count is
+ * above zero (the others are 0).
+ */
+export const viaOf = (counts: {
+  html: number;
+  jsonLd: number;
+  haiku: number;
+}): 'html' | 'jsonLd' | 'haiku' => {
+  if (counts.jsonLd > 0) return 'jsonLd';
+  if (counts.haiku > 0) return 'haiku';
+  return 'html';
+};
+
+/** A sample show's date as the board draws it ("Fri Nov 13"). Dates are calendar dates. */
+export const sampleDateLabel = (date: string): string => {
+  const parsed = new Date(`${date.slice(0, 10)}T12:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
+    .format(parsed)
+    .replace(',', '');
+};
+
+/** The host and path of the page being tested, for the robots.txt card. */
+export const hostAndPath = (url: string): { host: string; path: string } => {
+  try {
+    const parsed = new URL(url);
+    return { host: parsed.host, path: parsed.pathname || '/' };
+  } catch {
+    return { host: url, path: '/' };
+  }
+};

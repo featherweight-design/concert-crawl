@@ -1484,6 +1484,47 @@ export const ADMIN_COPY = {
         waiting: 'Add the website to check it.',
       },
     },
+    // Step 2, Source (`05/step-2-source` and its state boards).
+    source: {
+      title: (venue: string) => `How we read ${venue}`,
+      sub: 'We test it now, with the real crawler and the real rules, so you see the shows before anything goes live.',
+      where: 'Where are its shows?',
+      calendarPage: 'Calendar page',
+      testAgain: 'Test again',
+      test: {
+        title: 'Test crawl',
+        idle: 'Enter the calendar page link, then test it.',
+        running: 'Running',
+        runningTitle: (venue: string) => `Testing ${venue}…`,
+        runningSub: 'The real crawler, at the real pace. About 10 seconds.',
+        passed: 'Test passed',
+        found: (shows: number, via: string, cost: string) =>
+          `${shows} ${shows === 1 ? 'show' : 'shows'} found by ${via} · ${cost}`,
+        noCost: 'no LLM cost',
+        more: (count: number) =>
+          `…and ${count} more. Nothing is published until Review.`,
+        noneBadge: 'Test failed',
+        noneTitle: 'We couldn’t find any shows',
+        noneBody:
+          'The page loaded, but HTML, JSON-LD and Haiku found no dated events. It may be the wrong page, or the calendar loads later.',
+        failedTitle: 'The test crawl didn’t finish',
+        failedBody: 'Something went wrong reading the page. Test again.',
+        timedOut: 'The test is taking longer than usual. Test again.',
+      },
+      via: { html: 'HTML', jsonLd: 'JSON-LD', haiku: 'Haiku' },
+      robots: {
+        badge: 'Stopped',
+        title: 'robots.txt asks us not to read this page',
+        body: (host: string, path: string) =>
+          `${host}/robots.txt disallows ${path} for our crawler. We stop here and never override it.`,
+      },
+      refused: {
+        not_draft: 'This venue has already gone live.',
+        test_pending:
+          'A test of this venue is already running. Try again in a minute.',
+        not_crawlable: 'This page can’t be tested. Check the link.',
+      },
+    },
     errors: {
       nameRequired: 'Give the venue a name.',
       linkRequired: 'Give the venue a link.',

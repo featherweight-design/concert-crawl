@@ -817,8 +817,35 @@ export interface CrawlTrigger {
   startedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** 'test' tries a draft venue's config and keeps nothing (admin 3c). */
+  mode?: 'crawl' | 'test';
+  /** Set once a 'test' trigger settles; null on every other trigger. */
+  testResult?: TestCrawlResult | null;
   /** Present on GET /v1/admin/crawl/triggers/:id. */
   progress?: CrawlTriggerProgress;
+}
+
+/**
+ * What a draft venue's test crawl found (migration 0129), mirroring the
+ * crawler's result. Counts are per extraction stage: the stage that produced
+ * the shows holds the count, the others are 0. `samples` is up to three shows.
+ */
+export interface TestCrawlSample {
+  artist: string;
+  title: string | null;
+  date: string;
+  showTime: string | null;
+}
+
+export interface TestCrawlResult {
+  status: 'found' | 'none' | 'failed';
+  strategy: string | null;
+  found: number;
+  counts: { html: number; jsonLd: number; haiku: number };
+  samples: TestCrawlSample[];
+  costUsd: number;
+  crawlRunId: string | null;
+  error: string | null;
 }
 
 /**

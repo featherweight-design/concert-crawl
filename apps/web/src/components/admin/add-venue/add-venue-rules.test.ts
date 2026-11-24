@@ -8,10 +8,13 @@ import {
   basicsFormData,
   basicsOf,
   changedBasics,
+  hostAndPath,
   normalizeWebsite,
+  sampleDateLabel,
   saveErrorOf,
   stepNumber,
   validateBasics,
+  viaOf,
   type BasicsDraft,
 } from './add-venue-rules';
 
@@ -212,5 +215,37 @@ describe('addVenueHref', () => {
     expect(addVenueHref('v-1', 'basics')).toBe(
       '/admin/venues/new?id=v-1&step=basics',
     );
+  });
+});
+
+describe('viaOf', () => {
+  it('names the stage whose count is above zero', () => {
+    expect(viaOf({ html: 3, jsonLd: 0, haiku: 0 })).toBe('html');
+    expect(viaOf({ html: 0, jsonLd: 3, haiku: 0 })).toBe('jsonLd');
+    expect(viaOf({ html: 0, jsonLd: 0, haiku: 3 })).toBe('haiku');
+  });
+});
+
+describe('sampleDateLabel', () => {
+  it('draws a calendar date the way the board does', () => {
+    expect(sampleDateLabel('2026-11-13')).toBe('Fri Nov 13');
+    expect(sampleDateLabel('2026-11-13T00:00:00Z')).toBe('Fri Nov 13');
+  });
+
+  it('hands back what it cannot read', () => {
+    expect(sampleDateLabel('soon')).toBe('soon');
+  });
+});
+
+describe('hostAndPath', () => {
+  it('splits a link for the robots card', () => {
+    expect(hostAndPath('https://venue.com/shows?x=1')).toEqual({
+      host: 'venue.com',
+      path: '/shows',
+    });
+    expect(hostAndPath('not a link')).toEqual({
+      host: 'not a link',
+      path: '/',
+    });
   });
 });
