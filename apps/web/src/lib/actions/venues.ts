@@ -663,7 +663,11 @@ export async function askVenuePermission(id: string): Promise<{ ok: boolean }> {
 // Go live (option A, plan decision 4): POST /v1/admin/venues/:id/go-live sets
 // `active` and `went_live_at` and queues a normal crawl at once. The venue is
 // live whether or not that crawl queued, so the outcome says which.
-export type GoLiveOutcome = { ok: true; crawlQueued: boolean } | { ok: false };
+// `crawlQueued` is null when the answer did not say. A refusal is `live` (a
+// second admin got there first), `robots` (the page is disallowed) or `failed`.
+export type GoLiveOutcome =
+  | { ok: true; crawlQueued: boolean | null }
+  | { ok: false; reason: 'live' | 'robots' | 'failed' };
 
 const GoLiveResponse = z.object({
   crawl: z.object({ queued: z.boolean() }),
@@ -682,10 +686,16 @@ export async function goLiveVenue(id: string): Promise<GoLiveOutcome> {
     revalidatePath('/admin/needs-you');
     return {
       ok: true,
-      crawlQueued: parsed.success && parsed.data.crawl.queued,
+      crawlQueued: parsed.success ? parsed.data.crawl.queued : null,
     };
   } catch (err: unknown) {
+    if (err instanceof ApiError && err.status === 409) {
+      if (err.code === 'not_draft') return { ok: false, reason: 'live' };
+      if (err.code === 'robots_disallowed') {
+        return { ok: false, reason: 'robots' };
+      }
+    }
     console.error('goLiveVenue: failed', { id, err });
-    return { ok: false };
+    return { ok: false, reason: 'failed' };
   }
 }

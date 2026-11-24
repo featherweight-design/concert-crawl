@@ -1473,6 +1473,7 @@ export const ADMIN_COPY = {
     // live and go live failed). Under decision 4 option A nothing is on the site
     // until the first crawl lands, so the boards' "N shows appear now" is worded
     // as that crawl, and "Who's told" waits for the fan notice to exist.
+    // No clock time on the nightly crawl: it runs at 02:07 MST or 03:07 MDT.
     review: {
       title: 'Ready to go live',
       sub: 'Check it once. Skipped steps can be finished later.',
@@ -1500,26 +1501,30 @@ export const ADMIN_COPY = {
         shows: 'Shows on the site',
         showsValue: 'After the first crawl, which starts right away',
         nightly: 'First nightly crawl',
-        nightlyValue: 'Tonight, 3:00 AM',
+        nightlyValue: 'Tonight',
         note: 'Later steps wait as dots on the venue page.',
       },
       goLive: 'Go live',
       going: 'Going live…',
       goLiveSub:
-        'The first crawl starts right away. First nightly crawl tonight at 3 AM.',
+        'The first crawl starts right away. First nightly crawl is tonight.',
       fixSource: 'Fix Source',
       saveDraft: 'Save as draft',
       failedTitle: (name: string) => `${name} isn’t live yet`,
       failedBody: 'Nothing was published. Your setup is saved as a draft.',
+      failedRobots:
+        'The calendar page’s robots.txt now disallows it, so nothing was published. Fix Source or ask the venue.',
       tryAgain: 'Try again',
     },
     // `05/gone-live` and `phone-addendum` gone-live.
     gone: {
       title: (name: string) => `${name} is live`,
       crawlQueued:
-        'The first crawl is running, and its shows land on the site when it finishes. First nightly crawl tonight at 3:00 AM.',
+        'The first crawl is running, and its shows land on the site when it finishes. First nightly crawl is tonight.',
+      crawlUnknown:
+        'Its shows land on the site when the first crawl finishes. First nightly crawl is tonight.',
       crawlNotQueued:
-        'The first crawl didn’t start. Its shows land at the nightly crawl tonight at 3:00 AM.',
+        'The first crawl didn’t start. Its shows land at tonight’s nightly crawl.',
       open: 'Open the venue page',
       fan: 'See it as a fan',
       another: 'Add another',

@@ -47,7 +47,7 @@ export const GoneLive = ({
   id: string;
   name: string;
   slug: string;
-  crawlQueued: boolean;
+  crawlQueued: boolean | null;
   onAddAnother: () => void;
 }) => (
   <div
@@ -65,7 +65,11 @@ export const GoneLive = ({
       {GONE.title(name)}
     </h1>
     <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-muted)' }}>
-      {crawlQueued ? GONE.crawlQueued : GONE.crawlNotQueued}
+      {crawlQueued === null
+        ? GONE.crawlUnknown
+        : crawlQueued
+          ? GONE.crawlQueued
+          : GONE.crawlNotQueued}
     </p>
     <div
       style={{

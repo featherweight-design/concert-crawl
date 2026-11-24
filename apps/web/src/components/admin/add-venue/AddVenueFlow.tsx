@@ -86,8 +86,12 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   // is ready only on a passing test.
   const [source, setSource] = useState<TestState | null>(null);
   const [going, setGoing] = useState(false);
-  const [goLiveFailed, setGoLiveFailed] = useState(false);
-  const [gone, setGone] = useState<{ crawlQueued: boolean } | null>(null);
+  const [goLiveFailed, setGoLiveFailed] = useState<'failed' | 'robots' | null>(
+    null,
+  );
+  const [gone, setGone] = useState<{ crawlQueued: boolean | null } | null>(
+    null,
+  );
   const goingRef = useRef(false);
   const [basics, setBasics] = useState<BasicsDraft>(
     draft?.basics ?? EMPTY_BASICS,
@@ -204,7 +208,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   // Source tests the page again on every open, so what it showed before goes.
   const openSource = (id: string) => {
     setSource(null);
-    setGoLiveFailed(false);
+    setGoLiveFailed(null);
     setStage('source');
     router.replace(addVenueHref(id, SOURCE_STEP));
   };
@@ -213,15 +217,20 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     if (goingRef.current || venueId === null) return;
     goingRef.current = true;
     setGoing(true);
-    setGoLiveFailed(false);
+    setGoLiveFailed(null);
     const outcome = await goLiveVenue(venueId);
     goingRef.current = false;
     setGoing(false);
     if (outcome.ok) setGone({ crawlQueued: outcome.crawlQueued });
-    else setGoLiveFailed(true);
+    else if (outcome.reason === 'live') router.push(`/admin/venues/${venueId}`);
+    else setGoLiveFailed(outcome.reason);
   };
 
-  const addAnother = () => router.push(`/admin/venues/new?fresh=${Date.now()}`);
+  // A full load, so the next venue starts with none of this one's state.
+  const addAnother = () => {
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load is the point: a client push would keep this flow's state
+    window.location.href = '/admin/venues/new';
+  };
 
   // From Source, Back returns to Basics. Before the draft exists, Back returns
   // to Start; after, it saves any edits
@@ -298,7 +307,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
             failed={goLiveFailed}
             onRetry={() => void goLive()}
             onEditBasics={() => {
-              setGoLiveFailed(false);
+              setGoLiveFailed(null);
               setStage('basics');
               router.replace(addVenueHref(venueId, 'basics'));
             }}
