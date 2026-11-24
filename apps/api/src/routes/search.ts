@@ -5,6 +5,7 @@ import {
   db,
   artists,
   events,
+  mbArtistPhotos,
   mbArtists,
   userEvents,
   venues,
@@ -43,7 +44,10 @@ import {
   loadPriceByTierByEventId,
   resolveDisplayPrice,
 } from '../lib/price-aggregation/index.js';
-import { servableArtistPhotoUrl } from '../lib/artist-photo.js';
+import {
+  servableArtistPhotoUrl,
+  servableMbPhotoUrl,
+} from '../lib/artist-photo.js';
 
 export const searchRouter = new Hono();
 
@@ -254,8 +258,10 @@ const searchMbArtists = async (
       disambiguation: mbArtists.disambiguation,
       area: mbArtists.area,
       type: mbArtists.type,
+      photoUrl: servableMbPhotoUrl(),
     })
     .from(mbArtists)
+    .leftJoin(mbArtistPhotos, eq(mbArtistPhotos.mbid, mbArtists.mbid))
     .where(
       and(
         or(
@@ -287,7 +293,7 @@ const searchMbArtists = async (
   return rows.map((row) => ({
     name: row.name,
     slug: null,
-    photoUrl: null,
+    photoUrl: row.photoUrl,
     upcomingShowCount: 0,
     nextShow: null,
     // A follow of an MBID creates its `artists` row (plan PR 5), which moves

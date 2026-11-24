@@ -13,7 +13,7 @@
 // stray one is repaired rather than served forever.
 
 import { sql, type SQL } from 'drizzle-orm';
-import { artists } from '@concert-crawl/db';
+import { artists, mbArtistPhotos } from '@concert-crawl/db';
 
 /** A cached Spotify photo older than this is treated as absent. */
 export const PHOTO_MAX_AGE_DAYS = 30;
@@ -26,3 +26,12 @@ export const servableArtistPhotoUrl = (): SQL<string | null> =>
   sql<
     string | null
   >`CASE WHEN ${artists.photoFetchedAt} IS NULL OR ${artists.photoFetchedAt} > now() - ${PHOTO_MAX_AGE_DAYS} * interval '1 day' THEN ${artists.photoUrl} END`;
+
+/**
+ * The same 30-day rule for a MusicBrainz-only row's photo, read through a left
+ * join on `mb_artist_photos`. No row, no photo, or an aged one all read null.
+ */
+export const servableMbPhotoUrl = (): SQL<string | null> =>
+  sql<
+    string | null
+  >`CASE WHEN ${mbArtistPhotos.photoFetchedAt} > now() - ${PHOTO_MAX_AGE_DAYS} * interval '1 day' THEN ${mbArtistPhotos.photoUrl} END`;
