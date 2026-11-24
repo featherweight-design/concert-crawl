@@ -1,3 +1,10 @@
+# [1.564.0](https://github.com/featherweight-design/concert-crawl/compare/v1.563.0...v1.564.0) (2026-11-24)
+
+
+### Features
+
+* **db:** name-only mbid links need us, colorado or blank area ([0c57f6b](https://github.com/featherweight-design/concert-crawl/commit/0c57f6bebe6b2f014aa2e08f7dc4c99aaa30a828))
+
 # [1.563.0](https://github.com/featherweight-design/concert-crawl/compare/v1.562.0...v1.563.0) (2026-11-24)
 
 
