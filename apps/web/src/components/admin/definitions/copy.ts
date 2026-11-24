@@ -3334,6 +3334,20 @@ export const ADMIN_COPY = {
           'Took back a fault acknowledgement at ',
           '',
         ],
+        'venue.ask_permission': ['Asked ', ' for permission to crawl'],
+        'venue.permission_answer': [
+          'Recorded the answer from ',
+          ' on crawling',
+        ],
+        'venue.go_live': ['Took ', ' live'],
+        'venue.suggestion.dismiss': [
+          'Marked a suggested venue as not for us',
+          '',
+        ],
+        'venue.suggestion.undo': [
+          'Took back not for us on a suggested venue',
+          '',
+        ],
         'venue.guide.save': ['Saved the guide for ', ''],
         'venue.guide.draft': ['Drafted the guide for ', ''],
         'venue.guide.publish': ['Published the guide for ', ''],

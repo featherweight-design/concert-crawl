@@ -23,6 +23,7 @@ export * from './submission-confirms.js';
 export * from './event-reports.js';
 export * from './event-report-confirms.js';
 export * from './venue-fault-acknowledgements.js';
+export * from './venue-suggestion-dismissals.js';
 export * from './spotify.js';
 export * from './user-notification-preferences.js';
 export * from './crews.js';

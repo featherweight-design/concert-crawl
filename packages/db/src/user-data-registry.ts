@@ -554,6 +554,19 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'who acted — same basis as crawl_triggers.triggered_by.',
   },
   {
+    tableName: 'venue_suggestion_dismissals',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: ['dismissed_by', 'cleared_by'],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Admin judgement about a venue name fans asked for. `dismissed_by` and ' +
+      '`cleared_by` are the admin who acted, not a customer, and stay as the ' +
+      'record of who acted — same basis as venue_fault_acknowledgements. The ' +
+      'row holds the venue name only, never the fans who suggested it.',
+  },
+  {
     tableName: 'invite_codes',
     disposition: 'anonymize',
     userIdColumn: 'used_by',
