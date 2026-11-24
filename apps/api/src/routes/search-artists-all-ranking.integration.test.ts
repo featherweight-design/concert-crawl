@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { mbArtists } from '@concert-crawl/db';
 
 vi.mock('@hono/clerk-auth', () => ({
@@ -35,15 +36,16 @@ const act = (
   ...extra,
 });
 
+const responseSchema = z.object({
+  data: z.array(z.object({ name: z.string(), mbid: z.string() })),
+});
+
 const search = async (q: string): Promise<{ name: string; mbid: string }[]> => {
   const res = await app.request(
     `/v1/search/artists?q=${encodeURIComponent(q)}&scope=all`,
   );
   expect(res.status).toBe(200);
-  const body = (await res.json()) as {
-    data: { name: string; mbid: string }[];
-  };
-  return body.data;
+  return responseSchema.parse(await res.json()).data;
 };
 
 describe('scope=all MusicBrainz ranking', () => {
@@ -129,6 +131,23 @@ describe('scope=all MusicBrainz ranking', () => {
       ]);
 
     const rows = await search('Prof');
+    expect(rows.map((row) => row.mbid)).toEqual([id(2), id(1)]);
+  });
+
+  it('keeps an alias-only hit below a real match, however notable', async () => {
+    await testDb
+      .insert(mbArtists)
+      .values([
+        act(
+          1,
+          'Zed Band',
+          { spotify: true, wikidata: true },
+          { aliases: ['Quartz'] },
+        ),
+        act(2, 'Quartz'),
+      ]);
+
+    const rows = await search('Quartz');
     expect(rows.map((row) => row.mbid)).toEqual([id(2), id(1)]);
   });
 
