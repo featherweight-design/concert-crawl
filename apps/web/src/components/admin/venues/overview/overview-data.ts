@@ -24,6 +24,7 @@ const NEEDS_YOU_KINDS = [
   'show-moved',
   'venue-failing',
   'venue-blocked',
+  'venue-no-reply',
   'artist',
   'event-low-confidence',
   'price-check',

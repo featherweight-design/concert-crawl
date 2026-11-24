@@ -74,7 +74,10 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
   }));
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const open = (item: QueueRow, onAnswer = vi.fn(), ranksFirst = true) => {
   render(
@@ -409,7 +412,6 @@ describe('VenuePanel', () => {
         fetched.some((url) => url.endsWith('/v1/admin/venues/v1/ask')),
       ).toBe(true),
     );
-    vi.unstubAllGlobals();
     cleanup();
     open(failing);
     expect(screen.queryByRole('button', { name: 'Ask the venue' })).toBeNull();
