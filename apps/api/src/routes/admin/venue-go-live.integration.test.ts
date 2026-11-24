@@ -28,6 +28,7 @@ import { createApp } from '../../app.js';
 import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { parseSuggestion, venueNameKey } from './venue-go-live.js';
+import { VENUE_DRAFT_CODE } from './lib/venue-hide.js';
 
 // Admin 3c-3: Ask the venue, Go live and the suggestions list. Option A
 // (plan decision 4): Go live sets `active` and `went_live_at` and queues a
@@ -268,10 +269,13 @@ describe('admin venues API, 3c-3', () => {
     it('keeps the venue off the site until it goes live', async () => {
       const draft = await seedDraft();
       const show = await request('PATCH', `/v1/admin/venues/${draft.id}`, {
-        hidden: false,
+        active: true,
       });
       // Show (unhide) refuses a draft: Go live is the only way in.
-      expect([400, 409]).toContain(show.status);
+      expect(show.status).toBe(409);
+      expect(((await show.json()) as { code: string }).code).toBe(
+        VENUE_DRAFT_CODE,
+      );
       const [row] = await testDb
         .select()
         .from(venues)
