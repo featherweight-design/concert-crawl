@@ -373,7 +373,7 @@ describe('VenuePanel', () => {
       }),
       onAnswer,
     );
-    expect(screen.getByText('Source (31 shows found)')).toBeInTheDocument();
+    expect(screen.getByText(/Source \(31 shows found\)/)).toBeInTheDocument();
     expect(screen.getByText('3 fans')).toBeInTheDocument();
     expect(
       screen.getByText('Nobody yet. Dazzle is a draft.'),
