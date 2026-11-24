@@ -791,6 +791,7 @@ describe('runTriggeredCrawls', () => {
       false,
       // The trigger's page-progress writer.
       expect.any(Function),
+      false,
     );
     expect(mockCrawlVenue).toHaveBeenCalledWith(
       'venue-b',
@@ -801,6 +802,7 @@ describe('runTriggeredCrawls', () => {
       NO_LLM_BUDGET,
       false,
       expect.any(Function),
+      false,
     );
     // One budget read for the whole drain, not one per trigger.
     expect(mockReadLlmBudgetStatus).toHaveBeenCalledTimes(1);
@@ -1215,6 +1217,7 @@ describe('runTriggeredCrawls', () => {
         true,
         // The trigger's page-progress reporter (V4b).
         expect.any(Function),
+        false,
       );
     });
 
