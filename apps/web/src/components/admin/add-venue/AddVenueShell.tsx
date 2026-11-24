@@ -69,7 +69,7 @@ interface ShellProps {
 /**
  * A rail row's two marks, kept apart: the current step keeps its highlight
  * and bold name, and a saved step's dot turns to the check even while it is
- * still the current one (Basics after its first Continue, until Source opens).
+ * still the current one (Basics after its first Continue, while Source shows).
  */
 interface RailState {
   current: boolean;
@@ -91,8 +91,8 @@ const RailStep = ({
   state: RailState;
 }) => {
   const { current, done: isDone } = state;
-  // Steps that don't open yet draw as the board's future steps and take no
-  // press (3e-1: plan decision 12).
+  // A step outside OPEN_STEPS draws as the board's future steps and takes no
+  // press (plan decision 12).
   const unreachable = !OPEN_STEPS.has(item);
   return (
     <li

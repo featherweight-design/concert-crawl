@@ -42,7 +42,7 @@
         {
           "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=basics",
           "expectStatus": 200,
-          "wait": "[data-testid=\"add-venue-continue\"]"
+          "wait": "[data-testid=\"add-venue-step-source\"]:not([aria-disabled=\"true\"])"
         },
         {
           "settle": 800

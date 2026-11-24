@@ -298,7 +298,7 @@ describe('AddVenueFlow', () => {
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     expect(
       screen.getByTestId('add-venue-step-source').getAttribute('aria-disabled'),
-    ).not.toBe('true');
+    ).toBeNull();
     for (const step of ['icon', 'guide', 'review']) {
       expect(
         screen

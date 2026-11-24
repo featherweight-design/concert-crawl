@@ -121,8 +121,8 @@ describe('SourceStep', () => {
     expect(mockTest).not.toHaveBeenCalled();
     expect(screen.queryByText(SOURCE.test.running)).toBeNull();
     expect(screen.getByText(SOURCE.test.idle)).toBeTruthy();
-    const input = screen.getByLabelText(SOURCE.calendarPage);
-    expect((input as HTMLInputElement).disabled).toBe(false);
+    const input = screen.getByLabelText<HTMLInputElement>(SOURCE.calendarPage);
+    expect(input.disabled).toBe(false);
   });
 
   it('keeps the test card honest when saving the page fails', async () => {
