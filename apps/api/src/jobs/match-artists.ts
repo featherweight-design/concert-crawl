@@ -3,7 +3,9 @@
 // Spotify identity-match job for the artists projection table (#1115, plan
 // PR-C Task 9).
 //
-// Three kinds of work, one pass:
+// Three kinds of work, one pass (then a fourth, after them, in
+// refresh-mb-photos.ts: photos for MusicBrainz-only search rows, on its own
+// budget, skipped when this pass was aborted):
 //
 //   1. IDENTITY  — rows with matchStatus 'unmatched', oldest first, capped at
 //                  MATCH_BATCH_SIZE. Each gets a confidence-gated match
@@ -68,6 +70,7 @@ import { matchArtist } from '../lib/artist-match.js';
 import { apiLogger } from '../lib/logger.js';
 import { describeDbError } from '../lib/pg-errors.js';
 import { sweepExpiredRateLimitBuckets } from '../lib/rate-limit.js';
+import { refreshMbPhotos } from './refresh-mb-photos.js';
 import {
   createSpotifyAppClient,
   type SpotifyAppClient,
@@ -173,6 +176,10 @@ export interface MatchArtistsSummary {
   superseded: number;
   failures: number;
   abortedReason: 'rate_limit' | 'auth' | 'timeout' | null;
+  /** MusicBrainz-only search rows given a photo (refresh-mb-photos.ts). */
+  mbPhotosRefreshed: number;
+  /** MusicBrainz-only lookups that found no photo. */
+  mbPhotosEmpty: number;
   spotifyCalls: number;
 }
 
@@ -181,6 +188,8 @@ export interface RunMatchArtistsOptions {
   batchSize?: number;
   /** Photo refreshes per run. Default: sized from the catalogue, see photoBudgetFor. */
   photoBudget?: number;
+  /** MusicBrainz-row photo lookups per run. Default: sized like `photoBudget`. */
+  mbPhotoBudget?: number;
   /** Injected in tests; production mints its own app-token client. */
   client?: SpotifyAppClient | null;
   now?: () => Date;
@@ -209,6 +218,8 @@ export const runMatchArtists = async (
     superseded: 0,
     failures: 0,
     abortedReason: null,
+    mbPhotosRefreshed: 0,
+    mbPhotosEmpty: 0,
     spotifyCalls: 0,
   };
   // Every row considered lands in exactly one bucket, so `considered` is
@@ -551,6 +562,22 @@ export const runMatchArtists = async (
         extra: { artistId: row.id },
       });
     }
+  }
+
+  // Our own artists come first. A rate limit or auth failure above ends the
+  // run: the MusicBrainz pass would only meet the same wall.
+  if (summary.abortedReason === null) {
+    const mbPhotos = await refreshMbPhotos({
+      client,
+      budgetFor: (eligible) =>
+        options.mbPhotoBudget ?? photoBudgetFor(eligible),
+      staleBefore,
+      now,
+    });
+    summary.mbPhotosRefreshed = mbPhotos.refreshed;
+    summary.mbPhotosEmpty = mbPhotos.empty;
+    summary.failures += mbPhotos.failures;
+    summary.abortedReason = mbPhotos.abortedReason;
   }
 
   summary.spotifyCalls = client.getCallCount();
