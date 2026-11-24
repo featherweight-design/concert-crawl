@@ -845,6 +845,23 @@ export async function crawlVenue(
     log: FetchLog,
   ): ReturnType<typeof insertCrawlRun> =>
     insertCrawlRun({ ...values, trial: trial || test }, log);
+  // The result of a run that wrote no events. A test that stopped before it
+  // read the page (paused, robots, crawl delay) still hands the admin a
+  // result to show, never a blank.
+  const noEventsResult = (crawlRun: CrawlRun): CrawlVenueResult => ({
+    ...crawlRun,
+    insertedEventIds: [],
+    ...(test
+      ? {
+          testResult: buildFailedTestResult({
+            error:
+              crawlRun.errorMessage ??
+              `Not crawled: ${crawlRun.reason ?? crawlRun.status}`,
+            crawlRunId: crawlRun.id,
+          }),
+        }
+      : {}),
+  });
 
   // A blocked venue is not test-crawled: the site has told us to stop, and
   // only an admin clears that.
@@ -864,7 +881,7 @@ export async function crawlVenue(
       },
       fetchLog,
     );
-    return { ...crawlRun, insertedEventIds: [] };
+    return noEventsResult(crawlRun);
   }
 
   // A crawl pause (an admin's, or the crawler's own at the third consecutive
@@ -887,7 +904,7 @@ export async function crawlVenue(
       },
       fetchLog,
     );
-    return { ...crawlRun, insertedEventIds: [] };
+    return noEventsResult(crawlRun);
   }
 
   console.log(
@@ -921,7 +938,7 @@ export async function crawlVenue(
       },
       fetchLog,
     );
-    return { ...crawlRun, insertedEventIds: [] };
+    return noEventsResult(crawlRun);
   }
   if (robots.status === 'disallowed') {
     console.log(
@@ -955,7 +972,7 @@ export async function crawlVenue(
         })
         .where(eq(venues.id, venueId));
     }
-    return { ...crawlRun, insertedEventIds: [] };
+    return noEventsResult(crawlRun);
   }
 
   // Reconcile our own pacing with the site's stated Crawl-delay, once, and
@@ -983,7 +1000,7 @@ export async function crawlVenue(
       },
       fetchLog,
     );
-    return { ...crawlRun, insertedEventIds: [] };
+    return noEventsResult(crawlRun);
   }
 
   // Whether robots.txt lets text from a given URL go to an AI model. The
@@ -1231,7 +1248,7 @@ export async function crawlVenue(
         // on all upcoming events for this venue. Filtering by date >= today
         // matches the API surface — past events never go stale.
         await markEventsSeenForVenue(venueId, startedAtDate);
-        return { ...crawlRun, insertedEventIds: [] };
+        return noEventsResult(crawlRun);
       }
 
       // Extract events. In auto-detect mode, only check JSON-LD on the HTTP HTML
@@ -2632,7 +2649,7 @@ export async function crawlVenue(
         },
         fetchLog,
       );
-      return { ...crawlRun, insertedEventIds: [] };
+      return noEventsResult(crawlRun);
     }
 
     // A selector timeout carries the HTML the page was showing when it gave up.
@@ -2890,7 +2907,7 @@ export async function crawlVenue(
       durationMs,
     });
 
-    return { ...crawlRun, insertedEventIds: [] };
+    return noEventsResult(crawlRun);
   } finally {
     // One row per venue crawl, on success and on failure alike: a crawl that
     // adjudicated and then failed still spent the money. record() never

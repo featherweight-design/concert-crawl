@@ -495,7 +495,7 @@ async function processTrigger(
       // The crawl is over: no held-back report should land after it.
       progress.stop();
     }
-    if (crawlRun.status === 'failed') {
+    if (crawlRun.status === 'failed' && trigger.mode !== 'test') {
       const message = crawlRun.errorMessage ?? 'Crawl failed';
       const grouping = crawlFailureGrouping(message);
       // Grouped by cause, not by this call site.
