@@ -51,6 +51,7 @@ const trigger = (testResult: TestCrawlResult | null): PolledTrigger => ({
 const mount = (
   onPageSaved = vi.fn(),
   pageUrl = 'https://dazzledenver.com/events',
+  onAsk = vi.fn(),
 ) =>
   render(
     <SourceStep
@@ -59,6 +60,7 @@ const mount = (
       venueName="Dazzle"
       pageUrl={pageUrl}
       onPageSaved={onPageSaved}
+      onAsk={onAsk}
     />,
   );
 
@@ -92,11 +94,14 @@ describe('SourceStep', () => {
     expect(screen.getByText(SOURCE.test.more(2))).toBeTruthy();
   });
 
-  it('stops at robots.txt without reading a trigger', async () => {
+  it('stops at robots.txt, offers Ask the venue and reads no trigger', async () => {
     mockTest.mockResolvedValue({ ok: false, code: 'robots_disallowed' });
-    mount();
+    const onAsk = vi.fn();
+    mount(vi.fn(), 'https://dazzledenver.com/events', onAsk);
     await settle();
     expect(screen.getByText(SOURCE.robots.title)).toBeTruthy();
+    fireEvent.click(screen.getByTestId('add-venue-ask'));
+    expect(onAsk).toHaveBeenCalledTimes(1);
     expect(mockRead).not.toHaveBeenCalled();
   });
 

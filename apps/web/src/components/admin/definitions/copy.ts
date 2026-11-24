@@ -1517,12 +1517,29 @@ export const ADMIN_COPY = {
         title: 'robots.txt asks us not to read this page',
         body: (host: string, path: string) =>
           `${host}/robots.txt disallows ${path} for our crawler. We stop here and never override it.`,
+        what: 'What you can do',
+        ask: 'Ask the venue…',
       },
       refused: {
         not_draft: 'This venue has already gone live.',
         test_pending:
           'A test of this venue is already running. Try again in a minute.',
       },
+    },
+    ask: {
+      eyebrow: 'Ask the venue',
+      title: (venue: string) => `Ask ${venue} for permission`,
+      sub: 'A ready-to-send note. It opens in your own email, so it comes from you. We don’t send anything.',
+      to: 'To',
+      toPlaceholder: 'booking@venue.com',
+      subject: 'Subject',
+      open: 'Open in email',
+      copy: 'Copy',
+      copied: 'Copied',
+      close: 'Close',
+      after:
+        'The venue stays a draft, never crawled until you say they agreed. If you haven’t marked a reply in 14 days, it comes back in Needs you.',
+      failed: 'Couldn’t record the ask. Try again.',
     },
     errors: {
       nameRequired: 'Give the venue a name.',

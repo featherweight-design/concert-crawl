@@ -4,12 +4,12 @@
  * Add a venue, step 2: Source (`05/step-2-source` and its state boards). The
  * page is tested the moment the step opens, with the real crawler and the real
  * rules, and nothing it finds is published (plan decision 3). A robots.txt
- * refusal stops here.
+ * refusal stops here and offers Ask the venue.
  */
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { StatusBadge } from '@/components/admin/primitives';
+import { AdminButton, StatusBadge } from '@/components/admin/primitives';
 import {
   Card,
   errorStyle,
@@ -56,6 +56,8 @@ interface SourceStepProps {
   pageUrl: string;
   /** The page link as saved by this step, so the flow keeps Basics in step. */
   onPageSaved: (url: string) => void;
+  /** Opens Ask the venue, offered on a robots.txt refusal. */
+  onAsk: () => void;
 }
 
 const costLabel = (usd: number): string =>
@@ -64,9 +66,11 @@ const costLabel = (usd: number): string =>
 const TestBody = ({
   state,
   pageUrl,
+  onAsk,
 }: {
   state: TestState;
   pageUrl: string;
+  onAsk: () => void;
 }) => {
   const test = SOURCE.test;
   if (state.kind === 'idle') {
@@ -144,6 +148,20 @@ const TestBody = ({
         </StatusBadge>
         <strong style={{ fontSize: 14 }}>{SOURCE.robots.title}</strong>
         <p style={lineStyle}>{SOURCE.robots.body(host, path)}</p>
+        <div
+          style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--fg-muted)' }}
+        >
+          {SOURCE.robots.what}
+        </div>
+        <div>
+          <AdminButton
+            variant="outline"
+            onClick={onAsk}
+            data-testid="add-venue-ask"
+          >
+            {SOURCE.robots.ask}
+          </AdminButton>
+        </div>
       </>
     );
   }
@@ -170,6 +188,7 @@ export const SourceStep = ({
   venueName,
   pageUrl,
   onPageSaved,
+  onAsk,
 }: SourceStepProps) => {
   const [page, setPage] = useState(pageUrl);
   const [saved, setSaved] = useState(pageUrl);
@@ -320,7 +339,7 @@ export const SourceStep = ({
           data-state={state.kind}
           style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
         >
-          <TestBody state={state} pageUrl={saved} />
+          <TestBody state={state} pageUrl={saved} onAsk={onAsk} />
         </div>
       </Card>
     </>

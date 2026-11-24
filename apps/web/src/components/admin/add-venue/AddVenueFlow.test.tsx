@@ -24,6 +24,7 @@ const mockUpdateVenue =
 vi.mock('@/lib/actions/venues', () => ({
   createDraftVenue: (body: FormData) => mockCreateDraft(body),
   updateVenue: (id: string, body: FormData) => mockUpdateVenue(id, body),
+  askVenuePermission: () => Promise.resolve({ ok: true }),
   testCrawlVenue: () => Promise.resolve({ ok: false, code: 'not_draft' }),
   readTestCrawl: () => Promise.resolve(null),
 }));

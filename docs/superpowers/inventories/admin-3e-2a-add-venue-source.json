@@ -1,6 +1,6 @@
 {
-  "feature": "Admin 3e-2a: Add a venue, Source step",
-  "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (step-2-source, robots-stopped). Admin role (CONTACT_SHEET_ROLE=admin). Rows open the scratch draft by ?id and ?step. The draft's calendar page is a robots.txt-disallowed path, so the test crawl is refused at once and the Stopped card draws without a crawler. The found, none, running and failed cards need a live crawler or a seeded trigger and are covered by SourceStep.test.tsx. No row writes.",
+  "feature": "Admin 3e-2b: Add a venue, Ask the venue",
+  "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (step-2-source, robots-stopped). Admin role (CONTACT_SHEET_ROLE=admin). Rows open the scratch draft by ?id and ?step. The draft's calendar page is a robots.txt-disallowed path, so the test crawl is refused at once and the Stopped card draws without a crawler. The found, none, running and failed cards need a live crawler or a seeded trigger and are covered by SourceStep.test.tsx. Ask the venue records its ask only when the note is copied or opened, and no row presses either, so no row writes.",
   "widths": [
     {
       "label": "phone-320",
@@ -23,16 +23,30 @@
   "rows": [
     {
       "id": "source-stopped",
-      "label": "Source: robots.txt stopped the test, Continue off",
+      "label": "Source: robots.txt stopped the test, Ask the venue offered, Continue off",
       "steps": [
         {
           "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=source",
           "expectStatus": 200,
-          "wait": "[data-state=\"robots\"]"
+          "wait": "[data-testid=\"add-venue-ask\"]"
         },
         {
           "settle": 800
         }
+      ]
+    },
+    {
+      "id": "ask-the-venue",
+      "label": "Ask the venue: blank To, the note, Copy and Open in email",
+      "steps": [
+        {
+          "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=source",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-ask\"]"
+        },
+        { "click": "[data-testid=\"add-venue-ask\"]" },
+        { "wait": "[data-testid=\"add-venue-ask-note\"]" },
+        { "settle": 800 }
       ]
     },
     {
