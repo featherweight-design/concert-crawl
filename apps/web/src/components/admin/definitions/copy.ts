@@ -1522,7 +1522,6 @@ export const ADMIN_COPY = {
         not_draft: 'This venue has already gone live.',
         test_pending:
           'A test of this venue is already running. Try again in a minute.',
-        not_crawlable: 'This page can’t be tested. Check the link.',
       },
     },
     errors: {

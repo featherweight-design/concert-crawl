@@ -22,12 +22,9 @@ describe('testRefusalOf', () => {
     }
   });
 
-  it('calls a 400 not crawlable, whatever its code', () => {
-    expect(testRefusalOf(new ApiError(400, 'x'))).toBe('not_crawlable');
-  });
-
   it('leaves an unknown 409 and any other error unnamed', () => {
     expect(testRefusalOf(new ApiError(409, 'x', 'other'))).toBeNull();
+    expect(testRefusalOf(new ApiError(400, 'x'))).toBeNull();
     expect(testRefusalOf(new ApiError(500, 'x'))).toBeNull();
     expect(testRefusalOf(new Error('boom'))).toBeNull();
   });
