@@ -75,7 +75,7 @@
   "section": "04-card-placeholder",
   "name": "card-placeholder-spec",
   "title": "3d · Show card with no image",
-  "note": "The venue&#39;s night and glyph behind the scrim.",
+  "note": "The artist&#39;s generated art behind the scrim.",
   "w": 1100,
   "h": 640
  },
