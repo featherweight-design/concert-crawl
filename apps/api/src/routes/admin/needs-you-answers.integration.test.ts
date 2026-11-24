@@ -44,7 +44,7 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
-import { auditLog, events } from '@concert-crawl/db';
+import { auditLog, events, venues } from '@concert-crawl/db';
 import type { NeedsYouItem } from '@concert-crawl/types';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
 
@@ -163,6 +163,12 @@ describe('admin needs-you answers', () => {
     const res = await answer(key, { answer: 'ask_again' });
     expect(res.status).toBe(200);
     expect(await itemsOf('venue-no-reply')).toEqual([]);
+    const [after] = await testDb
+      .select({ askedAt: venues.permissionAskedAt })
+      .from(venues)
+      .where(eq(venues.id, venue.id));
+    expect(after?.askedAt).not.toBeNull();
+    expect(Date.now() - (after?.askedAt?.getTime() ?? 0)).toBeLessThan(60_000);
   });
 
   it('does not offer a removed venue at all', async () => {
