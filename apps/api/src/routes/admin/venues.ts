@@ -73,6 +73,7 @@ import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js';
 import { runBackgroundTask } from '../../lib/background-tasks.js';
 import type { AdminVariables } from './index.js';
 import { glyphSvgField } from './lib/glyph-style.js';
+import { venueGoLiveAdminRouter } from './venue-go-live.js';
 import { venueGuideAdminRouter } from './venue-guide.js';
 import { TRIAGE_CONDITIONS } from './lib/triage.js';
 import { idSchema } from '../../lib/id-schema.js';
@@ -490,6 +491,10 @@ export const venuesAdminRouter = new Hono<AdminVariables>();
 // #764 first-timer guide authoring — a distinct resource with its own publish
 // gate, so it lives in its own file rather than growing this one further.
 venuesAdminRouter.route('/:id/guide', venueGuideAdminRouter);
+
+// Admin 3c-3: Ask the venue, Go live and the suggestions list. Mounted ahead of
+// the `/:id` routes so `/suggestions` is never read as a venue id.
+venuesAdminRouter.route('/', venueGoLiveAdminRouter);
 
 // GET /v1/admin/venues — list all venues with upcoming event counts
 venuesAdminRouter.get('/', async (ctx) => {

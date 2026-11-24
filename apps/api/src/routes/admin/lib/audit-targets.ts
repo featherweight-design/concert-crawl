@@ -48,6 +48,9 @@ const LOOKUP_BY_ACTION: Readonly<Record<string, Lookup | null>> = {
   'event.drift_duplicates_merged': 'venue',
   'event.report.resolve': 'event-report',
   'crawl.trigger': 'venue',
+  // A suggestion is a venue name fans asked for, not a venue row.
+  'venue.suggestion.dismiss': null,
+  'venue.suggestion.undo': null,
   'crawl.trigger_test': 'venue',
   'crawl.trigger_trial': 'venue',
   // Adding a price, replacing the listed one and running the pipeline are
