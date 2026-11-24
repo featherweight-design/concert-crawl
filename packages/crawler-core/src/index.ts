@@ -1,6 +1,7 @@
 export type { NormalizedEvent, TokenUsage, LLMResult } from './types.js';
 export { isAllowed, MIN_CRAWL_DELAY_MS } from './lib/robots.js';
 export { fetchPage } from './lib/fetcher.js';
+export { buildFailedTestResult } from './lib/test-result.js';
 export type { FetchResult } from './lib/fetcher.js';
 export { extractJsonLd } from './lib/extractors/json-ld.js';
 export {

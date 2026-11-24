@@ -14,6 +14,7 @@ import {
   sweepExpiredPageBodies,
   tagEventsWithGenres,
   llmBudgetVerdict,
+  buildFailedTestResult,
   readLlmBudgetStatus,
   type CrossVenueCandidate,
   type LlmBudgetStatus,
@@ -515,7 +516,7 @@ async function processTrigger(
         events_found: crawlRun.eventsFound,
         duration_ms: crawlRun.durationMs,
       });
-    } else {
+    } else if (crawlRun.status !== 'failed') {
       Sentry.logger.info('crawl.complete', {
         venue_id: trigger.venueId,
         trigger_id: trigger.id,
@@ -572,15 +573,21 @@ async function processTrigger(
       })
       .where(eq(crawlTriggers.id, trigger.id));
   } catch (err) {
-    Sentry.captureException(err, {
-      tags: crawlTags(trigger.venueId),
-      extra: { triggerId: trigger.id, venueId: trigger.venueId },
-    });
-    Sentry.logger.error('crawl.error', {
-      venue_id: trigger.venueId,
-      trigger_id: trigger.id,
-      error: String(err),
-    });
+    const isTest = trigger.mode === 'test';
+    // A test that lost a race (the venue went live or was hidden after the
+    // test was queued) is refused by crawlVenue: an expected outcome, told to
+    // the admin through the result and not a Sentry error.
+    if (!isTest) {
+      Sentry.captureException(err, {
+        tags: crawlTags(trigger.venueId),
+        extra: { triggerId: trigger.id, venueId: trigger.venueId },
+      });
+      Sentry.logger.error('crawl.error', {
+        venue_id: trigger.venueId,
+        trigger_id: trigger.id,
+        error: String(err),
+      });
+    }
     logger.error(
       { err, triggerId: trigger.id, venueId: trigger.venueId },
       'Triggered crawl threw unexpectedly',
@@ -588,7 +595,18 @@ async function processTrigger(
     try {
       await db
         .update(crawlTriggers)
-        .set({ status: 'failed', updatedAt: new Date() })
+        .set({
+          status: 'failed',
+          ...(isTest
+            ? {
+                testResult: buildFailedTestResult({
+                  error: err instanceof Error ? err.message : String(err),
+                  crawlRunId: null,
+                }),
+              }
+            : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(crawlTriggers.id, trigger.id));
     } catch (markErr: unknown) {
       // The reaper fails the row on a later run; the drain carries on.
