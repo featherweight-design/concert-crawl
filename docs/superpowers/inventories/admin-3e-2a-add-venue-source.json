@@ -1,5 +1,5 @@
 {
-  "feature": "Admin 3e-2b: Add a venue, Ask the venue",
+  "feature": "Admin 3e-2a: Add a venue, Source and Ask the venue",
   "note": "Boards: design/design_handoff_admin_redesign/boards/05-add-a-venue (step-2-source, robots-stopped). Admin role (CONTACT_SHEET_ROLE=admin). Rows open the scratch draft by ?id and ?step. The draft's calendar page is a robots.txt-disallowed path, so the test crawl is refused at once and the Stopped card draws without a crawler. The found, none, running and failed cards need a live crawler or a seeded trigger and are covered by SourceStep.test.tsx. Ask the venue records its ask only when the note is copied or opened, and no row presses either, so no row writes.",
   "widths": [
     {

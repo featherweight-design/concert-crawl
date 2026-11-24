@@ -71,7 +71,8 @@ export const AskVenueSheet = ({
       await navigator.clipboard.writeText(NOTE.body(venueName));
       setCopied(true);
       void record();
-    } catch {
+    } catch (err) {
+      console.error('Ask the venue: clipboard write refused', err);
       setCopied(false);
     }
   };

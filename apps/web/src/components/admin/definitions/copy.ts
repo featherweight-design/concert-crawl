@@ -1538,7 +1538,7 @@ export const ADMIN_COPY = {
       copied: 'Copied',
       close: 'Close',
       after:
-        'The venue stays a draft, never crawled until you say they agreed. If you haven’t marked a reply in 14 days, it comes back in Needs you.',
+        'The venue stays a draft, with nothing published, until you say they agreed. If you haven’t marked a reply in 14 days, it comes back in Needs you.',
       failed: 'Couldn’t record the ask. Try again.',
     },
     errors: {

@@ -62,13 +62,38 @@ describe('AskVenueSheet', () => {
   });
 
   it('records nothing when the copy is refused', async () => {
-    Object.assign(navigator, {
-      clipboard: { writeText: vi.fn().mockRejectedValue(new Error('no')) },
-    });
+    const writeText = vi.fn().mockRejectedValue(new Error('no'));
+    Object.assign(navigator, { clipboard: { writeText } });
     mount();
     fireEvent.click(screen.getByText(ASK.copy));
-    await waitFor(() => expect(screen.getByText(ASK.copy)).toBeTruthy());
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    // Let the rejection reach the catch before asserting nothing was recorded.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockAsk).not.toHaveBeenCalled();
+    expect(screen.queryByText(ASK.copied)).toBeNull();
+  });
+
+  it('records the ask when Open in email is pressed', async () => {
+    mount();
+    fireEvent.change(screen.getByLabelText<HTMLInputElement>(ASK.to), {
+      target: { value: 'booking@dazzle.com' },
+    });
+    fireEvent.click(screen.getByTestId('add-venue-ask-open'));
+    await waitFor(() => expect(mockAsk).toHaveBeenCalledWith('v-1'));
+  });
+
+  it('draws the phone sheet with the same note', () => {
+    render(
+      <AskVenueSheet
+        phone
+        venueId="v-1"
+        venueName="Dazzle"
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('add-venue-ask-note').textContent).toBe(
+      ADMIN_COPY.permissionNote.body('Dazzle'),
+    );
   });
 
   it('says so when the ask could not be recorded', async () => {

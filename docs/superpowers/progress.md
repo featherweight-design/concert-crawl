@@ -16,4 +16,4 @@ The full phase log up to 2026-10-31 is kept in the private archive. New rows go 
 | Admin | Add a venue 3c-3a: Ask the venue, Go live and the suggested-venues list, with Not for us and Undo (migration 0132)                                  | ✅     |
 | Admin | Add a venue 3c-3b: a draft with no answer in 14 days reaches Needs you, and Ask the venue works on a blocked venue                                  | ✅     |
 | Admin | Add a venue 3e-2a: Source step with the live test crawl, and the draft resumes on it                                                                | ✅     |
-| Admin | Add a venue 3e-2b: Ask the venue sheet and dialog, recording the ask on Open in email or Copy                                                       | ✅     |
+| Admin | Add a venue 3e-2a: Ask the venue sheet and dialog, recording the ask on Open in email or Copy                                                       | ✅     |
