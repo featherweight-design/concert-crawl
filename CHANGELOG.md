@@ -1,3 +1,21 @@
+# [1.563.0](https://github.com/featherweight-design/concert-crawl/compare/v1.562.0...v1.563.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **web:** palette Enter opens a followed act's page; real tap assertions (artist search U3) ([ef14be6](https://github.com/featherweight-design/concert-crawl/commit/ef14be60dd9a17370d2515b180ea6602009f126a))
+* **web:** palette focus on Follow, clear unfollowed acts, drop dead close copy (artist search U3) ([ddd3435](https://github.com/featherweight-design/concert-crawl/commit/ddd34357412a0355a42a5e5589f87e66ddd2e49d))
+* **web:** palette list and drill-in agree on follows (artist search U3) ([064f05d](https://github.com/featherweight-design/concert-crawl/commit/064f05dc36750951ee9826d4bcd1e7cd7b26702d))
+
+
+### Features
+
+* **web:** artist preview body, copy and identity line (artist search U3) ([7a58c41](https://github.com/featherweight-design/concert-crawl/commit/7a58c41ea826eff75f5258a1c7d309ab1e3e515d))
+* **web:** by-MBID follow hook, preview panel and modal (artist search U3) ([a4f2a69](https://github.com/featherweight-design/concert-crawl/commit/a4f2a69065bc4bb3d01f12f3fec82abcf8536ee4))
+* **web:** open the artist preview from a MusicBrainz-only search row (artist search U3) ([b74634e](https://github.com/featherweight-design/concert-crawl/commit/b74634e7d92e807bea8284fe4c1c7b176961f8a6))
+* **web:** palette drill-in for a MusicBrainz-only act (artist search U3) ([e529b3c](https://github.com/featherweight-design/concert-crawl/commit/e529b3c011b09f5f99972d584c42d10365e7dc88))
+* **web:** release note and progress row for the artist preview (artist search U3) ([0413bdf](https://github.com/featherweight-design/concert-crawl/commit/0413bdf5354e99c4dff37d84a20bdfb62485a3c4))
+
 # [1.562.0](https://github.com/featherweight-design/concert-crawl/compare/v1.561.0...v1.562.0) (2026-11-23)
 
 
