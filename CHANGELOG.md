@@ -1,3 +1,17 @@
+# [1.565.0](https://github.com/featherweight-design/concert-crawl/compare/v1.564.0...v1.565.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **crawler:** a test run no longer trips the page-unchanged skip ([4d04281](https://github.com/featherweight-design/concert-crawl/commit/4d042812417e18228acc91742c9bb09df89428f9))
+* **crawler:** a test that stops early still reports a result ([61a3743](https://github.com/featherweight-design/concert-crawl/commit/61a3743c5e728c768322516c684796b15f45604b))
+
+
+### Features
+
+* **api:** rank MusicBrainz artist search by notability and match quality ([be4cbd4](https://github.com/featherweight-design/concert-crawl/commit/be4cbd4061fffdabff8bd8d3dc3dd0f0b0772573))
+* **crawler:** test crawl for draft venues ([4444855](https://github.com/featherweight-design/concert-crawl/commit/44448558cf9e06a405311d3667e0c33ef0922681))
+
 # [1.564.0](https://github.com/featherweight-design/concert-crawl/compare/v1.563.0...v1.564.0) (2026-11-24)
 
 
