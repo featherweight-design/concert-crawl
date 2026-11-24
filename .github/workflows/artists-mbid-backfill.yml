@@ -6,25 +6,30 @@
 # nothing, and puts the counts by bucket and every name-bucket fill on the
 # run's summary page, so the name matches can be read before an apply.
 #
-# STAGING ONLY, and dispatch only. The job runs in the `staging` environment
-# and reads its DATABASE_URL_DIRECT, the direct URL the MusicBrainz refresh
-# also uses: the decision is one long statement, and it runs with no statement
-# timeout on its own session. There is no production target; adding one is its
-# own PR, after Hugh has the staging figures.
+# Dispatch only, with a `target`: `staging` (the default) or `production`. The
+# job runs in the chosen target's environment and reads that environment's own
+# DATABASE_URL_DIRECT, the direct URL the MusicBrainz refresh also uses: the
+# decision is one long statement, and it runs with no statement timeout on its
+# own session. A production run, dry or not, refuses unless `confirm_prod` is
+# exactly "I have Hugh's OK to write prod". Dry run first: read the name-bucket
+# fills and the `name:out-of-area` count on the summary page before an apply.
+# A name-only link is accepted only for a US, Colorado or blank MusicBrainz
+# area (name-match-area.ts).
 #
 # Guards:
 # - Only main's copy of this workflow may read the secret: any other ref is
 #   skipped.
-# - It shares the MusicBrainz refresh's concurrency group, so it never reads
-#   `mb_artists` while a load is swapping it. GitHub keeps one pending run
+# - It shares the MusicBrainz refresh's concurrency group for the same target,
+#   so it never reads `mb_artists` while a load is swapping it. GitHub keeps one pending run
 #   per group, so a dispatch made while a refresh runs is cancelled if another
 #   run queues behind it: re-dispatch after the refresh ends.
 # - The backfill only fills null `mbid`s, never clears one, and a re-run
 #   reconsiders only the rows still null.
 #
-# Rollback: until Follow by MBID ships (plan PR 5), this backfill is the only
-# writer of `artists.mbid`, so every non-null value came from it, and
-# clearing them all undoes it. `updated_at` on the filled rows is not restored.
+# Rollback: Follow by MBID also writes `artists.mbid`, so clearing every
+# non-null value would undo those too. To undo one backfill, clear only the
+# rows it listed (the summary page names every name-bucket fill). `updated_at`
+# on the filled rows is not restored.
 name: Artist MBID backfill
 
 on:
@@ -34,20 +39,31 @@ on:
         description: 'Write the fills. Unticked is a dry run that writes nothing.'
         type: boolean
         default: false
+      target:
+        description: 'Which database. Staging is the default; production runs in the production environment against its own database.'
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      confirm_prod:
+        description: "Production only: type exactly  I have Hugh's OK to write prod"
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: mb-artists-refresh-staging
+  group: mb-artists-refresh-${{ inputs.target }}
   cancel-in-progress: false
 
 jobs:
   backfill:
-    name: Artist MBID backfill (staging)
+    name: ${{ inputs.apply && format('Artist MBID backfill ({0}, APPLY)', inputs.target) || format('Artist MBID backfill ({0}, dry run)', inputs.target) }}
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    environment: staging
+    environment: ${{ inputs.target }}
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -70,10 +86,21 @@ jobs:
 
       - name: Verify configuration
         env:
+          TARGET_ENV: ${{ inputs.target }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
           DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
         run: |
+          case "$TARGET_ENV" in production|staging) ;; *)
+            echo "target must be production or staging (got '$TARGET_ENV')"; exit 1 ;;
+          esac
+          # The production environment has no required reviewers, so this is
+          # the gate.
+          if [ "$TARGET_ENV" = "production" ] && [ "$CONFIRM_PROD" != "I have Hugh's OK to write prod" ]; then
+            echo "Refusing production: confirm_prod must be exactly: I have Hugh's OK to write prod"
+            exit 1
+          fi
           if [ -z "$DATABASE_URL_DIRECT" ]; then
-            echo "Missing staging-environment secret: DATABASE_URL_DIRECT"; exit 1
+            echo "Missing $TARGET_ENV-environment secret: DATABASE_URL_DIRECT"; exit 1
           fi
           if [[ "$DATABASE_URL_DIRECT" == *-pooler.* ]]; then
             echo "DATABASE_URL_DIRECT points at a -pooler host. The backfill needs the direct URL."; exit 1
@@ -83,7 +110,13 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
           APPLY: ${{ inputs.apply }}
+          TARGET_ENV: ${{ inputs.target }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
         run: |
+          # Re-checked here so --apply never reaches production without it.
+          if [ "$TARGET_ENV" = "production" ] && [ "$CONFIRM_PROD" != "I have Hugh's OK to write prod" ]; then
+            echo "Refusing production: confirm_prod does not match"; exit 1
+          fi
           args=(--summary-file="$GITHUB_STEP_SUMMARY")
           if [ "$APPLY" = "true" ]; then args+=(--apply); fi
           pnpm --filter @concert-crawl/db run db:backfill-artist-mbids -- "${args[@]}"

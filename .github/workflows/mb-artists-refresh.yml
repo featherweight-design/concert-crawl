@@ -11,13 +11,17 @@ name: MusicBrainz artists refresh
 # the previous copy serving. Row counts, timings and the table and index size
 # go to the run's summary page.
 #
-# STAGING ONLY. The job runs in the `staging` environment and reads that
-# environment's DATABASE_URL_DIRECT: the direct (non-pooler) URL for the
-# migration role that owns `mb_artists`. The loader holds one session for its
-# COPY, index build and session SETs, which Neon's transaction-mode pooler
-# cannot keep, and only the table's owner may drop and replace it. There is no production target: the first
-# production load waits for Hugh's OK after the staging load is measured, and
-# adding production is its own PR.
+# Two targets. The weekly schedule always loads STAGING. A manual dispatch
+# picks `target`: `staging` (the default) or `production`. The job runs in the
+# chosen target's GitHub environment and reads that environment's own
+# DATABASE_URL_DIRECT: the direct (non-pooler) URL for the migration role that
+# owns `mb_artists`. The loader holds one session for its COPY, index build and
+# session SETs, which Neon's transaction-mode pooler cannot keep, and only the
+# table's owner may drop and replace it. A production run refuses unless
+# `confirm_prod` is exactly "I have Hugh's OK to write prod" (the string the
+# merge-duplicate-nights and repair-event-artists workflows require). The
+# production load is dispatched by hand, never by the schedule, and only after
+# the name-match rule (backfill-artist-mbids) is on main.
 #
 # Rollback: dispatch with `dump` set to an earlier export's directory name
 # (listed at https://data.metabrainz.org/pub/musicbrainz/data/fullexport/).
@@ -25,7 +29,9 @@ name: MusicBrainz artists refresh
 # Guards:
 # - Only main's copy of this workflow may read the secret: any other ref is
 #   skipped.
-# - One run at a time; a dispatch queues behind a running load.
+# - A scheduled run has no inputs and always resolves to staging.
+# - One run per target at a time; a dispatch queues behind a running load of
+#   the same target, and a staging run never queues behind a production one.
 # - The loader refuses the swap when the load holds under 1,000,000 rows, or
 #   under 90% of the rows already serving.
 
@@ -42,20 +48,32 @@ on:
         description: 'Export directory to load, e.g. 20261118-001001. Blank loads LATEST.'
         type: string
         default: ''
+      target:
+        description: 'Which database. Staging is the default; production runs in the production environment against its own database.'
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      confirm_prod:
+        description: "Production only: type exactly  I have Hugh's OK to write prod"
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: mb-artists-refresh-staging
+  group: mb-artists-refresh-${{ inputs.target || 'staging' }}
   cancel-in-progress: false
 
 jobs:
   refresh:
-    name: MusicBrainz artists refresh (staging)
+    name: MusicBrainz artists refresh (${{ inputs.target || 'staging' }})
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    environment: staging
+    # A schedule has no inputs, so the fallback keeps it on staging.
+    environment: ${{ inputs.target || 'staging' }}
     timeout-minutes: 150
     steps:
       - name: Checkout
@@ -78,11 +96,22 @@ jobs:
 
       - name: Verify configuration
         env:
+          TARGET_ENV: ${{ inputs.target || 'staging' }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
           DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
           DUMP: ${{ inputs.dump }}
         run: |
+          case "$TARGET_ENV" in production|staging) ;; *)
+            echo "target must be production or staging (got '$TARGET_ENV')"; exit 1 ;;
+          esac
+          # The production environment has no required reviewers, so this is
+          # the gate.
+          if [ "$TARGET_ENV" = "production" ] && [ "$CONFIRM_PROD" != "I have Hugh's OK to write prod" ]; then
+            echo "Refusing production: confirm_prod must be exactly: I have Hugh's OK to write prod"
+            exit 1
+          fi
           if [ -z "$DATABASE_URL_DIRECT" ]; then
-            echo "Missing staging-environment secret: DATABASE_URL_DIRECT"; exit 1
+            echo "Missing $TARGET_ENV-environment secret: DATABASE_URL_DIRECT"; exit 1
           fi
           # Neon's pooler runs PgBouncer in transaction mode, which drops the
           # loader's session settings; refuse a -pooler host, as the deploy
@@ -144,7 +173,13 @@ jobs:
           # The alias and link lookups are held in memory before the artist
           # table streams; leave headroom on the 16 GB runner.
           NODE_OPTIONS: --max-old-space-size=6144
+          TARGET_ENV: ${{ inputs.target || 'staging' }}
+          CONFIRM_PROD: ${{ inputs.confirm_prod }}
         run: |
+          # Re-checked here so the swap never reaches production without it.
+          if [ "$TARGET_ENV" = "production" ] && [ "$CONFIRM_PROD" != "I have Hugh's OK to write prod" ]; then
+            echo "Refusing production: confirm_prod does not match"; exit 1
+          fi
           pnpm --filter @concert-crawl/db run db:load-mb-artists -- \
             --dump-dir="$WORK/mbdump" --dump-label="$DUMP" \
             --summary-file="$GITHUB_STEP_SUMMARY"
