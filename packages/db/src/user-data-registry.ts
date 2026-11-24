@@ -471,6 +471,17 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'search; no user is named.',
   },
   {
+    tableName: 'mb_artist_photos',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: [],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Cached public Spotify artist photo URLs for MusicBrainz artists in ' +
+      'search; no user is named.',
+  },
+  {
     tableName: 'crawl_runs',
     disposition: 'none',
     userIdColumn: null,
