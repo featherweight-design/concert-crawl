@@ -2686,6 +2686,22 @@ describe('crawlVenue — a test crawl of a draft venue', () => {
     expect(row?.blockedAt).toBeNull();
   });
 
+  it('a draft that stops before the page still reports a result', async () => {
+    const venue = await seedDraftVenue({
+      crawlPausedAt: new Date('2026-11-01T09:00:00.000Z'),
+    });
+
+    const run = await crawlTest(venue.id);
+
+    expect(run.status).toBe('skipped');
+    expect(run.testResult).toMatchObject({
+      status: 'failed',
+      crawlRunId: run.id,
+    });
+    expect(run.testResult?.error).toContain('paused');
+    expect(mockFetchPage).not.toHaveBeenCalled();
+  });
+
   it('refuses a live venue, even one that is hidden now', async () => {
     const live = await seedDraftVenue({ active: true, wentLiveAt: new Date() });
     const hidden = await seedDraftVenue({
