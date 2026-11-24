@@ -1,3 +1,15 @@
+# [1.570.0](https://github.com/featherweight-design/concert-crawl/compare/v1.569.0...v1.570.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **admin:** address review on the add venue source step ([54a8ec4](https://github.com/featherweight-design/concert-crawl/commit/54a8ec49c6f6c33067d5218812c74af210be95a9))
+
+
+### Features
+
+* **admin:** add a venue source step with a live test crawl ([589be35](https://github.com/featherweight-design/concert-crawl/commit/589be354ffec550e11a7a1f9b6f236db833e8341))
+
 # [1.569.0](https://github.com/featherweight-design/concert-crawl/compare/v1.568.0...v1.569.0) (2026-11-24)
 
 
