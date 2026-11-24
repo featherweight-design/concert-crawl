@@ -15,6 +15,7 @@ import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { slugify } from '@/components/admin/venues/details/details-rules';
 import { createDraftVenue, updateVenue } from '@/lib/actions/venues';
 import { AddVenueShell } from './AddVenueShell';
+import { AskVenueSheet } from './AskVenueSheet';
 import { BasicsStep } from './BasicsStep';
 import { SourceStep } from './SourceStep';
 import { StartScreen } from './StartScreen';
@@ -70,6 +71,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     draft === null ? 'start' : (draft.step ?? 'basics'),
   );
   const [venueId, setVenueId] = useState<string | null>(draft?.id ?? null);
+  const [asking, setAsking] = useState(false);
   const [basics, setBasics] = useState<BasicsDraft>(
     draft?.basics ?? EMPTY_BASICS,
   );
@@ -224,6 +226,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
                 prev === null ? prev : { ...prev, websiteUrl: url },
               );
             }}
+            onAsk={() => setAsking(true)}
           />
         ) : (
           <BasicsStep
@@ -236,6 +239,14 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
           />
         )}
       </AddVenueShell>
+      {asking && venueId !== null && (
+        <AskVenueSheet
+          phone={phone}
+          venueId={venueId}
+          venueName={basics.name}
+          onClose={() => setAsking(false)}
+        />
+      )}
     </>
   );
 };

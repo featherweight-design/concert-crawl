@@ -700,3 +700,19 @@ export async function readTestCrawl(
     return null;
   }
 }
+
+// Ask the venue: stamps `permission_asked_at` (POST /v1/admin/venues/:id/ask),
+// which the 14-day "no reply" reminder reads. The note itself goes out from
+// the admin's own mail app.
+export async function askVenuePermission(id: string): Promise<{ ok: boolean }> {
+  try {
+    const token = await getToken();
+    await apiClient.post(`/v1/admin/venues/${id}/ask`, token, {});
+  } catch (err: unknown) {
+    console.error('askVenuePermission: failed', { id, err });
+    return { ok: false };
+  }
+  revalidatePath('/admin/venues');
+  revalidatePath('/admin/needs-you');
+  return { ok: true };
+}
