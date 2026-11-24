@@ -1,0 +1,146 @@
+[
+ {
+  "section": "01-llm-budget-off",
+  "name": "budget-off-d",
+  "title": "G8b · If it runs out, off",
+  "note": "Haiku keeps running past the budget, with a warning only (Hugh; migration 0112).",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "01-llm-budget-off",
+  "name": "budget-off-m",
+  "title": "G8b · If it runs out, off, phone",
+  "note": "The same panel as a sheet.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-llm-budget-off",
+  "name": "budget-tiles",
+  "title": "G8b · The tile when off",
+  "note": "Will pass, over, and under budget.",
+  "w": 920,
+  "h": 260
+ },
+ {
+  "section": "02-artists-confirms",
+  "name": "exact-name-on-d",
+  "title": "4c · Exact name on",
+  "note": "A toggle; results narrow to exact matches.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "02-artists-confirms",
+  "name": "candidate-selected-d",
+  "title": "4c · A candidate selected",
+  "note": "Gradient border; its Use becomes Use selected.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "02-artists-confirms",
+  "name": "not-an-artist-confirm-d",
+  "title": "4c · Not an artist, confirm",
+  "note": "ConfirmDialog, no reason step.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "02-artists-confirms",
+  "name": "not-an-artist-confirm-m",
+  "title": "4c · Not an artist, confirm, phone",
+  "note": "The same confirm as a sheet.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-health-1c",
+  "name": "health-desktop-answers",
+  "title": "Health 1c · desktop with G3 and G4 applied",
+  "note": "Artists counts only; the Email tile.",
+  "w": 1280,
+  "h": 1220
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g3-artists",
+  "title": "G3 · Artists tile and panel",
+  "note": "Counts only; which buckets fold where.",
+  "w": 1180,
+  "h": 520
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g4-email-tile",
+  "title": "G4 · The Site tile, email only",
+  "note": "Four states and the panel.",
+  "w": 1180,
+  "h": 720
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g5-no-budget",
+  "title": "G5 · No budget set",
+  "note": "Tile, chart and panel.",
+  "w": 1440,
+  "h": 480
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g6-venue-groups",
+  "title": "G6 · Paused reasons and venue groups",
+  "note": "Blocked, robots.txt and hidden placed.",
+  "w": 1100,
+  "h": 880
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g12-phone-spec",
+  "title": "G12 · What the phone leaves off",
+  "note": "Deliberate or not, row by row.",
+  "w": 1000,
+  "h": 560
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g12-health-m",
+  "title": "G12 · Health on the phone, with links back",
+  "note": "Runs, a day and All links; tiles open sheets.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g12-artists-sheet-m",
+  "title": "G12 · Artists sheet from the tile",
+  "note": "The panel as a sheet.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g14-loading-m",
+  "title": "G14 · Health loading, phone",
+  "note": "Skeleton tiles, grid and chart.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g14-mid-900",
+  "title": "G14 · Health at 900",
+  "note": "Desktop shell, tiles 2×2, one column.",
+  "w": 900,
+  "h": 1240
+ },
+ {
+  "section": "03-health-1c",
+  "name": "g14-reflow-spec",
+  "title": "G14 · The two breakpoints",
+  "note": "Under 720, 720 to 1099, 1100 and up.",
+  "w": 1100,
+  "h": 380
+ }
+]
