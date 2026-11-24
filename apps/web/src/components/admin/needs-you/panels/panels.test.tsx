@@ -345,22 +345,71 @@ describe('VenuePanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('draws Ask the venue disabled, with why, on a blocked venue only', () => {
+  it('draws the no-reply panel from its evidence and answers Ask again', () => {
+    const onAnswer = vi.fn();
+    open(
+      row({
+        key: 'venue-no-reply:v1',
+        kind: 'venue-no-reply',
+        venueId: 'v1',
+        venueName: 'Dazzle',
+        evidence: [
+          { label: 'Asked', value: 'Nov 11' },
+          { label: 'Sent to', value: 'booking@dazzledenver.com' },
+          { label: 'Shows found', value: '31' },
+          { label: 'Asked for by', value: '3' },
+        ],
+        answers: [
+          answer({
+            slug: 'they_said_yes',
+            label: 'They said yes',
+            suggested: true,
+          }),
+          answer({ slug: 'ask_again', label: 'Ask again' }),
+        ],
+      }),
+      onAnswer,
+    );
+    expect(screen.getByText('Source (31 shows found)')).toBeInTheDocument();
+    expect(screen.getByText('3 fans')).toBeInTheDocument();
+    expect(
+      screen.getByText('Nobody yet. Dazzle is a draft.'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ask again' }));
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers Ask the venue on a blocked venue only, and it notes the ask', async () => {
+    const fetched: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        fetched.push(url);
+        return new Response(JSON.stringify({ success: true, data: {} }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
     open(
       row({
         key: 'venue-blocked:v1',
         kind: 'venue-blocked',
+        venueId: 'v1',
         venueName: 'The Ogden',
         evidence: [{ label: 'HTTP status', value: '429' }],
         answers: [answer({ slug: 're_crawl_once', label: 'Re-crawl once' })],
       }),
     );
-    expect(
-      screen.getByRole('button', { name: 'Ask the venue' }),
-    ).toBeDisabled();
-    expect(
-      screen.getByText(/Ask the venue arrives with Add a venue\./),
-    ).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Ask the venue' });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await vi.waitFor(() =>
+      expect(
+        fetched.some((url) => url.endsWith('/v1/admin/venues/v1/ask')),
+      ).toBe(true),
+    );
+    vi.unstubAllGlobals();
     cleanup();
     open(failing);
     expect(screen.queryByRole('button', { name: 'Ask the venue' })).toBeNull();
