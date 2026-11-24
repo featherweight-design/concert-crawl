@@ -669,9 +669,8 @@ export async function unpublishVenueGuide(
 // --- Add a venue: Source (3e-2a) --------------------------------------------
 
 // Queues a draft's test crawl (POST /v1/admin/crawl/:id with `{ test: true }`).
-// The API's refusals (`not_draft`, `test_pending`, `robots_disallowed`, and 400
-// for a venue it cannot crawl) come back as a value so Source can say which;
-// anything else throws.
+// The API's refusals (`not_draft`, `test_pending`, `robots_disallowed`) come
+// back as a value so Source can say which; anything else is logged and thrown.
 export async function testCrawlVenue(id: string): Promise<TestOutcome> {
   const token = await getToken();
   try {
@@ -679,7 +678,10 @@ export async function testCrawlVenue(id: string): Promise<TestOutcome> {
     return { ok: true, triggerId };
   } catch (err: unknown) {
     const code = testRefusalOf(err);
-    if (code === null) throw err;
+    if (code === null) {
+      console.error('testCrawlVenue: failed', { id, err });
+      throw err;
+    }
     console.warn('testCrawlVenue: refused', { id, code });
     return { ok: false, code };
   }
