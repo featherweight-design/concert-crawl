@@ -39,6 +39,7 @@ const KIND_FILTER: Record<NeedsYouKind, Exclude<FilterKey, 'all'>> = {
   'event-low-confidence': 'shows',
   'venue-failing': 'venues',
   'venue-blocked': 'venues',
+  'venue-no-reply': 'venues',
   artist: 'artists',
   'price-check': 'prices',
   'price-batch': 'prices',
@@ -52,6 +53,7 @@ const KIND_LABEL: Record<NeedsYouKind, Kind> = {
   'event-low-confidence': 'event',
   'venue-failing': 'venue',
   'venue-blocked': 'venue',
+  'venue-no-reply': 'venue',
   artist: 'artist',
   'price-check': 'priceCheck',
   'price-batch': 'prices',
@@ -187,7 +189,7 @@ export const evidenceText = (label: string, value: string): string => {
   return date ? metaDate(date) : value;
 };
 
-const evidenceValue = (row: QueueRow, label: string): string | null => {
+export const evidenceValue = (row: QueueRow, label: string): string | null => {
   const value = row.evidence.find((line) => line.label === label)?.value;
   return value === undefined ? null : evidenceText(label, value);
 };
@@ -233,6 +235,8 @@ export const whatOf = (row: QueueRow): string => {
       return what.venueFailing(evidenceValue(row, 'Consecutive failures'));
     case 'venue-blocked':
       return what.venueBlocked(evidenceValue(row, 'HTTP status'));
+    case 'venue-no-reply':
+      return what.venueNoReply;
     case 'artist':
       return what.artist(
         evidenceValue(row, 'Match status'),

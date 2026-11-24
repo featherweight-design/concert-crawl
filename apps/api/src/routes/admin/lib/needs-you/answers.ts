@@ -19,7 +19,12 @@ import {
   resolveContestAnswer,
   resolveOnly,
 } from './answers-prices.js';
-import { pauseAnswer, reCrawl } from './answers-venues.js';
+import {
+  askAgain,
+  pauseAnswer,
+  reCrawl,
+  theySaidYes,
+} from './answers-venues.js';
 
 export { NAVIGATION_SLUGS } from './answer-kit.js';
 export type { AnswerHandler } from './answer-kit.js';
@@ -35,6 +40,8 @@ export const ANSWER_HANDLERS: ReadonlyMap<string, AnswerHandler> = new Map(
     reCrawl('re_crawl_once', 'venue-blocked'),
     pauseAnswer('keep_paused', 'venue-failing'),
     pauseAnswer('pause_crawling', 'venue-blocked'),
+    theySaidYes,
+    askAgain,
     pickRightArtist,
     keepThisMatch,
     noPhoto,

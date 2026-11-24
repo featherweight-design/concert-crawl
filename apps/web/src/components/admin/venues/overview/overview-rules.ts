@@ -249,6 +249,7 @@ export const NEEDS_YOU_KIND_LABEL: Record<NeedsYouKind, Kind> = {
   'show-moved': 'show',
   'venue-failing': 'venue',
   'venue-blocked': 'venue',
+  'venue-no-reply': 'venue',
   'event-low-confidence': 'event',
   artist: 'artist',
   'price-batch': 'prices',

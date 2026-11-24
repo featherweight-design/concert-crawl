@@ -721,6 +721,7 @@ export const ADMIN_COPY = {
         'show-moved': 'Shows moving',
         'venue-failing': 'Failing crawls',
         'venue-blocked': 'Blocked crawls',
+        'venue-no-reply': 'Venues that have not replied',
         'event-low-confidence': 'Listings we’re unsure of',
         artist: 'Artist matches',
         'price-check': 'Price checks',
@@ -2189,6 +2190,8 @@ export const ADMIN_COPY = {
         status
           ? `The site refused the crawler (HTTP ${status}).`
           : 'The site refused the crawler.',
+      venueNoReply:
+        'You asked for permission to list their calendar. Nothing has come back.',
       // `status` arrives already in words (`matchStatus` below).
       artist: (status: string | null, reports: string | null) =>
         `${status ?? 'No match status'}${reports ? `. ${reports} open reports.` : '.'}`,
@@ -2439,8 +2442,7 @@ export const ADMIN_COPY = {
         runShows: (count: number) =>
           `${count} ${count === 1 ? 'show' : 'shows'}`,
         askVenue: 'Ask the venue',
-        askVenueLine:
-          'Ask the venue arrives with Add a venue. Until then, write to them from your own mail.',
+        askVenueFailed: 'Could not note the ask. Try again.',
         robotsTxt: 'robots.txt',
         robotsResult: {
           yes: 'Blocks the crawler',
@@ -2469,6 +2471,24 @@ export const ADMIN_COPY = {
         failingNote:
           'Re-crawl tries the HTML, JSON-LD and Haiku steps again. If the page changed, Check source opens the venue’s Source tab to fix the address or the selector.',
         blockedNote: 'Re-crawl once is a single, manual try.',
+        // `05/no-reply-d` and `no-reply-m`: a draft whose permission note has
+        // gone 14 days without an answer.
+        noReply: {
+          waitingChip: 'Paused: waiting on permission',
+          whatHappened: (venue: string | null, asked: string | null) =>
+            `You sent ${venue ?? 'the venue'} a permission note${asked ? ` on ${asked}` : ''} from your own mail. We saved it as a draft and set this reminder for 14 days later.`,
+          whereItStands: 'WHERE IT STANDS',
+          asked: 'Asked',
+          stepsDone: 'Steps done',
+          basics: 'Basics',
+          source: (found: string | null) =>
+            found ? `Source (${found} shows found)` : 'Source',
+          askedFor: 'Asked for by',
+          fans: (count: string) => `${count} ${count === '1' ? 'fan' : 'fans'}`,
+          nobodyYet: (venue: string | null) =>
+            `Nobody yet. ${venue ?? 'The venue'} is a draft.`,
+          note: 'They said yes ends the wait and leaves the draft where you left it. Ask again opens the note in your mail and restarts the 14 days.',
+        },
       },
     },
     list: 'Decisions waiting',
@@ -2567,6 +2587,7 @@ export const ADMIN_COPY = {
         'show-moved': 'Show moved',
         'venue-failing': 'Crawl failing',
         'venue-blocked': 'Venue blocked',
+        'venue-no-reply': 'No reply',
         artist: 'Photo reports',
         'event-low-confidence': 'Not sure it’s a concert',
         'price-check': 'Price check',
@@ -4035,6 +4056,13 @@ export const ADMIN_COPY = {
     },
   },
   // --- Admin redesign primitives (plan row 0b) ---
+  // The permission note an admin sends from their own mail (Ask the venue). The
+  // Needs you panel and the Add a venue flow open the same note.
+  permissionNote: {
+    subject: (venue: string) => `Listing ${venue} on Concert Crawl`,
+    body: (venue: string) =>
+      `Hi,\n\nI run Concert Crawl, a free calendar of live shows in Denver. I'd like to list the events on ${venue}'s public calendar page.\n\nOur crawler reads that page about once a day, waits between requests, and follows your robots.txt. More about it is at https://concertcrawl.app/bot\n\nIs that okay with you? A one-line reply is plenty.\n\nThanks`,
+  },
   venueStatus: {
     onSite: { live: 'Live', hidden: 'Hidden', draft: 'Draft' },
     crawling: {

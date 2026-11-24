@@ -31,6 +31,7 @@ describe('parseItemKey', () => {
       'show-moved',
       'venue-blocked',
       'venue-failing',
+      'venue-no-reply',
     ]);
   });
 });

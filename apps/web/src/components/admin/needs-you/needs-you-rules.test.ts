@@ -288,6 +288,7 @@ describe('countAfterRemoval', () => {
       'show-moved': 0,
       'venue-failing': 1,
       'venue-blocked': 0,
+      'venue-no-reply': 0,
       artist: 0,
       'event-low-confidence': 0,
       'price-check': 0,

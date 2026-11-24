@@ -24,6 +24,7 @@ import { ArtistPanel } from './panels/ArtistPanel';
 import { BugPanel } from './panels/BugPanel';
 import { EventPanel } from './panels/EventPanel';
 import { PriceCheckPanel } from './panels/PriceCheckPanel';
+import { VenueNoReplyPanel } from './panels/VenueNoReplyPanel';
 import { VenuePanel } from './panels/VenuePanel';
 import { SnoozeMenu } from './SnoozeMenu';
 
@@ -55,6 +56,8 @@ const drawnPanel = (kind: QueueRow['kind']) => {
     case 'venue-failing':
     case 'venue-blocked':
       return VenuePanel;
+    case 'venue-no-reply':
+      return VenueNoReplyPanel;
     case 'artist':
       return ArtistPanel;
     case 'event-low-confidence':
