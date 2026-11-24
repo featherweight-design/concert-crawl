@@ -28,14 +28,18 @@ const MBID = {
 const mbAct = (
   mbid: string,
   name: string,
-  extra: { aliases?: string[]; spotifyId?: string; area?: string } = {},
+  extra: {
+    aliases?: string[];
+    spotifyId?: string;
+    area?: string | null;
+  } = {},
 ) => ({
   mbid,
   name,
   sortName: name,
   aliases: extra.aliases ?? [],
   type: 'Group',
-  area: extra.area ?? 'Iceland',
+  area: extra.area === undefined ? 'United States' : extra.area,
   disambiguation: null,
   spotifyId: extra.spotifyId ?? null,
   wikidataId: null,
@@ -109,6 +113,7 @@ describe('backfill-artist-mbids integration', () => {
       'name:filled': 0,
       'name:several-acts': 1,
       'name:no-hit': 1,
+      'name:out-of-area': 0,
       // "Sigur Ros" and "SIGUR ROS BAND" both land on one act, so neither may
       // take it.
       'name:act-taken': 2,
@@ -141,11 +146,61 @@ describe('backfill-artist-mbids integration', () => {
         name: 'sigur ros',
         mbid: MBID.sigurRos,
         mbName: 'Sigur Rós',
-        area: 'Iceland',
+        area: 'United States',
         disambiguation: null,
       },
     ]);
     expect(await mbidsByName()).toEqual({ 'sigur ros': MBID.sigurRos });
+  });
+
+  it('accepts a name-only hit only for a US, Colorado or blank area (rule A)', async () => {
+    const abroad = '00000000-0000-4000-8000-0000000000b1';
+    const colorado = '00000000-0000-4000-8000-0000000000b2';
+    const blank = '00000000-0000-4000-8000-0000000000b3';
+    const usTwin = '00000000-0000-4000-8000-0000000000b4';
+    const abroadTwin = '00000000-0000-4000-8000-0000000000b5';
+    await testDb.insert(mbArtists).values([
+      mbAct(abroad, 'Far Away Band', { area: 'Iceland' }),
+      mbAct(colorado, 'Front Range Duo', { area: 'Colorado' }),
+      mbAct(blank, 'No Area Act', { area: null }),
+      // Two acts share the name: still ambiguous even though one is local.
+      mbAct(usTwin, 'Same Name', { area: 'United States' }),
+      mbAct(abroadTwin, 'Same Name', { area: 'Germany' }),
+    ]);
+    await testDb
+      .insert(artists)
+      .values([
+        artist('Far Away Band'),
+        artist('Front Range Duo'),
+        artist('No Area Act'),
+        artist('Same Name'),
+      ]);
+
+    const result = await backfillArtistMbids(testDb, { dryRun: false });
+
+    expect(result.outcomes['name:out-of-area']).toBe(1);
+    expect(result.outcomes['name:filled']).toBe(2);
+    expect(result.outcomes['name:several-acts']).toBe(1);
+    expect(await mbidsByName()).toEqual({
+      'Far Away Band': null,
+      'Front Range Duo': colorado,
+      'No Area Act': blank,
+      'Same Name': null,
+    });
+  });
+
+  it('a dry run counts an out-of-area act and lists no fill for it', async () => {
+    const act = '00000000-0000-4000-8000-0000000000c1';
+    await testDb
+      .insert(mbArtists)
+      .values([mbAct(act, 'Lone Act', { area: 'Japan' })]);
+    await testDb.insert(artists).values([artist('Lone Act')]);
+
+    const dry = await backfillArtistMbids(testDb, { dryRun: true });
+
+    expect(dry.outcomes['name:out-of-area']).toBe(1);
+    expect(dry.nameFills).toEqual([]);
+    expect(await mbidsByName()).toEqual({ 'Lone Act': null });
   });
 
   it('never takes an MBID another row holds, and a Spotify claim beats a name claim', async () => {

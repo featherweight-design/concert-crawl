@@ -11,7 +11,9 @@
  *   2. **Name.** An artist with no Spotify id takes the MBID of the one MB act
  *      whose name or one of whose aliases folds to the same string as our
  *      display name (`foldedArtistName`: case, accents and whitespace). Two or
- *      more MB acts with that name leave the row null.
+ *      more MB acts with that name leave the row null. The one act must also
+ *      pass the area rule (`name-match-area.ts`: US, Colorado or blank), or the
+ *      row stays null as `name:out-of-area`.
  *
  * A Spotify-matched artist never reaches the name bucket. Plan decision 7
  * accepts an MB answer for such a row only when its Spotify relation agrees
@@ -31,6 +33,7 @@
 import { sql } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import { foldedArtistName } from './artist-name-fold.js';
+import { nameMatchAreaSql } from './name-match-area.js';
 
 export const MBID_OUTCOMES = [
   'spotify:filled',
@@ -40,6 +43,7 @@ export const MBID_OUTCOMES = [
   'name:filled',
   'name:several-acts',
   'name:no-hit',
+  'name:out-of-area',
   'name:act-taken',
 ] as const;
 
@@ -138,30 +142,37 @@ export async function backfillArtistMbids(
         AND artists.match_status <> 'not_an_artist'
     ),
     mb_names AS (
-      SELECT mb.mbid, ${foldedArtistName('mb.name')} AS folded
+      SELECT mb.mbid, mb.area, ${foldedArtistName('mb.name')} AS folded
       FROM mb_artists AS mb
       UNION
-      SELECT mb.mbid, ${foldedArtistName('alias.value')} AS folded
+      SELECT mb.mbid, mb.area, ${foldedArtistName('alias.value')} AS folded
       FROM mb_artists AS mb, unnest(mb.aliases) AS alias(value)
     ),
     name_hits AS (
-      SELECT pool.id, count(DISTINCT mb_names.mbid) AS acts, min(mb_names.mbid::text)::uuid AS mbid
+      SELECT
+        pool.id,
+        count(DISTINCT mb_names.mbid) AS acts,
+        min(mb_names.mbid::text)::uuid AS mbid,
+        -- Read only when acts = 1, so it is that one act's area. Every other
+        -- act that shares the name still counts toward several-acts above.
+        coalesce(bool_or(${nameMatchAreaSql('mb_names.area')}), false) AS in_area
       FROM pool
       LEFT JOIN mb_names ON mb_names.folded = pool.folded AND pool.folded <> ''
       GROUP BY pool.id
     ),
     name_claims AS (
       SELECT mbid, count(*) AS claims
-      FROM name_hits WHERE acts = 1
+      FROM name_hits WHERE acts = 1 AND in_area
       GROUP BY mbid
     ),
     name_decided AS (
       SELECT
         name_hits.id,
-        CASE WHEN name_hits.acts = 1 THEN name_hits.mbid END AS mbid,
+        CASE WHEN name_hits.acts = 1 AND name_hits.in_area THEN name_hits.mbid END AS mbid,
         CASE
           WHEN name_hits.acts = 0 THEN 'name:no-hit'
           WHEN name_hits.acts > 1 THEN 'name:several-acts'
+          WHEN NOT name_hits.in_area THEN 'name:out-of-area'
           WHEN name_hits.mbid IN (SELECT mbid FROM held)
             OR name_hits.mbid IN (
               SELECT mbid FROM by_spotify WHERE outcome = 'spotify:hit'
@@ -216,6 +227,7 @@ export async function backfillArtistMbids(
     'name:filled': 0,
     'name:several-acts': 0,
     'name:no-hit': 0,
+    'name:out-of-area': 0,
     'name:act-taken': 0,
   };
   const nameFills: MbidFill[] = [];
