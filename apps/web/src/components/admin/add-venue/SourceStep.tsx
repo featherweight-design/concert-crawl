@@ -206,6 +206,8 @@ export const SourceStep = ({
         setPage(url);
         onPageSaved(url);
       }
+      // Back during the save: nothing is reading the test, so do not queue one.
+      if (cancelled.current) return;
       const started = await testCrawlVenue(venueId);
       if (!started.ok) {
         setState(
