@@ -161,6 +161,14 @@ export const refreshMbPhotos = async ({
         tags: { job: 'refresh-mb-photos' },
         extra: { mbid: row.mbid },
       });
+      // Stamp a row that has none, so a persistently bad Spotify id (a
+      // malformed or retired one) waits a cycle instead of leading the queue
+      // every night and eating the budget. A row that already has a photo is
+      // left alone: it stays due, and keeps its picture until it ages out.
+      await db
+        .insert(mbArtistPhotos)
+        .values({ mbid: row.mbid, photoUrl: null, photoFetchedAt: now() })
+        .onConflictDoNothing();
     }
   }
   return summary;

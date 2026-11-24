@@ -215,6 +215,15 @@ describe('refreshMbPhotos', () => {
     );
 
     expect(summary).toMatchObject({ refreshed: 1, failures: 1 });
+    // The failed row is stamped (no photo), so a bad id waits a cycle.
+    expect(await readPhotos()).toEqual([
+      { mbid: id(1), photoUrl: null, photoFetchedAt: NOW },
+      {
+        mbid: id(2),
+        photoUrl: 'https://i.scdn.co/image/ok',
+        photoFetchedAt: NOW,
+      },
+    ]);
   });
 
   it('keeps a photo row through a weekly mb_artists swap', async () => {
