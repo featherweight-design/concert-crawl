@@ -1,3 +1,16 @@
+# [1.568.0](https://github.com/featherweight-design/concert-crawl/compare/v1.567.0...v1.568.0) (2026-11-24)
+
+
+### Bug Fixes
+
+* **admin:** log a failed ask and assert ask again moves the clock ([4a4ea80](https://github.com/featherweight-design/concert-crawl/commit/4a4ea80edc2699a6d5af1cd7e5a97fed572ea17d))
+* **admin:** venue overview parses no-reply items, one test per draft ([23fd2b3](https://github.com/featherweight-design/concert-crawl/commit/23fd2b3d93be66302145c2fef10cb1ba4afb205b))
+
+
+### Features
+
+* **admin:** venue no-reply needs-you kind and working ask button ([ac8fe36](https://github.com/featherweight-design/concert-crawl/commit/ac8fe369adf09ff071f35ac6a0f80bbd6e8577e8))
+
 # [1.567.0](https://github.com/featherweight-design/concert-crawl/compare/v1.566.0...v1.567.0) (2026-11-24)
 
 
