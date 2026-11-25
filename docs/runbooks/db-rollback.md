@@ -2,6 +2,8 @@
 
 **When to use this:** A migration has been applied to staging or production that needs to be reversed — data loss risk, breakage in prod, or a schema change that went out before the matching code was deployed.
 
+This runbook covers schema rollback only. To restore data from a Neon snapshot or point in time, see [Neon Restore](./neon-restore.md).
+
 ---
 
 ## 0 — Stop the bleeding first
