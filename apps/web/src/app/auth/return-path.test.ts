@@ -4,7 +4,7 @@
 // code screen, and Clerk's own screens sit between that and the finished
 // account. A query param cannot cross them; a second signed cookie can. This
 // suite walks the two halves that carry it — the code action writes the
-// cookie, and /auth/complete spends it — so the four edits are not plumbing
+// cookie, and the /auth/complete Route Handler spends it — so the four edits are not plumbing
 // nobody exercises. The middleware's first hop has its own suite in
 // src/proxy.test.ts.
 import { existsSync } from 'node:fs';
@@ -101,6 +101,8 @@ const completePage = async (
 ): Promise<string> => {
   const response = await completeResponse(searchParams);
   expect(response.status).toBe(307);
+  // It spends cookies, so a cache must never replay it.
+  expect(response.headers.get('cache-control')).toBe('no-store');
   for (const header of response.headers.getSetCookie()) {
     const [pair] = header.split(';');
     const name = pair?.split('=')[0];
@@ -109,8 +111,11 @@ const completePage = async (
       cookieStore.delete(name);
     }
   }
-  const location = new URL(response.headers.get('location') ?? '');
-  return `${location.pathname}${location.search}`;
+  // Relative, as next/navigation emits it: the host never comes from the request.
+  const location = response.headers.get('location') ?? '';
+  expect(location.startsWith('/')).toBe(true);
+  const parsed = new URL(location, 'https://placeholder.invalid');
+  return `${parsed.pathname}${parsed.search}`;
 };
 
 /**

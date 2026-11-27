@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import {
   verifyInviteCookie,
   INVITE_COOKIE_NAME,
+  INVITE_COOKIE_PATH,
   RETURN_PATH_COOKIE_NAME,
 } from '@/lib/invite-cookie';
 import {
@@ -23,8 +24,16 @@ const isOnboardingPath = (destination: string): boolean => {
   return pathname === '/onboarding' || pathname.startsWith('/onboarding/');
 };
 
-const redirectTo = (path: string, request: NextRequest): NextResponse =>
-  NextResponse.redirect(new URL(path, request.url));
+/**
+ * A relative `Location`, as `redirect()` from `next/navigation` emits, so the
+ * target never depends on the host `request.url` happens to carry. `no-store`
+ * because the response spends cookies and must never be replayed from a cache.
+ */
+const redirectTo = (path: string): NextResponse =>
+  new NextResponse(null, {
+    status: 307,
+    headers: { Location: path, 'Cache-Control': 'no-store' },
+  });
 
 /**
  * Where every finished sign-up lands: it redeems the invite, spends the return
@@ -38,10 +47,10 @@ const redirectTo = (path: string, request: NextRequest): NextResponse =>
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const { userId, getToken } = await auth();
-  if (!userId) return redirectTo('/sign-in', request);
+  if (!userId) return redirectTo('/sign-in');
 
   const secret = process.env.INVITE_COOKIE_SECRET;
-  if (!secret) return redirectTo(DEFAULT_RETURN_PATH, request);
+  if (!secret) return redirectTo(DEFAULT_RETURN_PATH);
 
   const cookieValue = request.cookies.get(INVITE_COOKIE_NAME)?.value;
   const verified = cookieValue ? verifyInviteCookie(cookieValue, secret) : null;
@@ -123,13 +132,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const response = redirectTo(
     appendPendingTier(landing, decodePendingTier(rawTier)),
-    request,
   );
   // Same path the code action set them on, or the browser keeps the original.
-  if (clearInvite)
-    response.cookies.delete({ name: INVITE_COOKIE_NAME, path: '/' });
+  if (clearInvite) {
+    response.cookies.delete({
+      name: INVITE_COOKIE_NAME,
+      path: INVITE_COOKIE_PATH,
+    });
+  }
   if (returnCookie) {
-    response.cookies.delete({ name: RETURN_PATH_COOKIE_NAME, path: '/' });
+    response.cookies.delete({
+      name: RETURN_PATH_COOKIE_NAME,
+      path: INVITE_COOKIE_PATH,
+    });
   }
   return response;
 }
