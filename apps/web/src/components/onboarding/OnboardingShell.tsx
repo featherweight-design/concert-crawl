@@ -18,6 +18,7 @@ import { SkipRail, type SkipMode } from './SkipRail';
 import { useOnboardingSuggestions } from './lib/use-pick-suggestions';
 import { useArtistSearch } from '@/components/consumer/artist-picker/lib/use-artist-search';
 import { useArtistPicksCommit } from './lib/use-artist-picks-commit';
+import { useMarkOnboarded } from './lib/use-mark-onboarded';
 import type { ArtistSearchState } from '@/components/consumer/artist-picker/lib/use-artist-search';
 import {
   ARTIST_PICKS_KEY,
@@ -201,6 +202,7 @@ export function OnboardingShell({
 }: OnboardingShellProps = {}) {
   const [index, setIndex] = useState(0);
   const router = useRouter();
+  const markOnboarded = useMarkOnboarded();
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const total = FLOW.length;
   const isFirst = index === 0;
@@ -440,7 +442,9 @@ export function OnboardingShell({
       // anyone who comes back from the account menu in the same session.
       clearPicks(SEARCH_PICKS_KEY);
       clearPicks(STEP_INDEX_KEY);
-      router.push(finishHref);
+      // Stamped and the session refreshed before leaving, so the proxy lets the
+      // visitor through. It never throws, so Finish always navigates.
+      void markOnboarded().then(() => router.push(finishHref));
       return;
     }
     // The only step whose CTA writes anything. `commit` advances itself once

@@ -17,6 +17,13 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
 }));
 
+// The stamp write is its own suite's business (use-mark-onboarded). Here it
+// only has to settle before Finish navigates.
+const markOnboarded = vi.fn(async () => {});
+vi.mock('./lib/use-mark-onboarded', () => ({
+  useMarkOnboarded: () => markOnboarded,
+}));
+
 vi.mock('next/link', () => ({
   default: ({
     href,
@@ -152,6 +159,7 @@ Object.defineProperty(window, 'matchMedia', {
 
 beforeEach(() => {
   push.mockClear();
+  markOnboarded.mockClear();
   fetchArtistSuggestions.mockReset();
   fetchArtistSuggestions.mockResolvedValue(SUGGESTIONS);
   followArtistsBulk.mockReset();
@@ -244,15 +252,32 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     }
   });
 
-  it('ends on Start browsing when there is nothing pending', () => {
+  it('ends on Start browsing when there is nothing pending', async () => {
     renderShell();
     advanceToEnd();
     expect(primaryCtas()[0]!.textContent).toBe(nav.finishButton(null));
     next();
+    await waitFor(() => expect(markOnboarded).toHaveBeenCalledTimes(1));
     expect(push).toHaveBeenCalledWith('/events');
   });
 
-  it('ends on the destination a plain return path names, with no intent', () => {
+  it('records the tour as done before Finish leaves (onboarding required)', async () => {
+    // The proxy sends an unstamped new account back to the tour, so leaving
+    // before the stamp lands would bounce the visitor straight back here.
+    let release = () => {};
+    markOnboarded.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (release = resolve)),
+    );
+    renderShell();
+    advanceToEnd();
+    next();
+    expect(markOnboarded).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+    release();
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/events'));
+  });
+
+  it('ends on the destination a plain return path names, with no intent', async () => {
     // A new account that signed up from the front door arrives here with
     // `?return=` and nothing else — a pending watch or follow carries its own
     // intent and label, and has its own case below. Falling back to /events
@@ -261,17 +286,19 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     advanceToEnd();
     expect(primaryCtas()[0]!.textContent).toBe(nav.finishButton(null));
     next();
+    await waitFor(() => expect(markOnboarded).toHaveBeenCalledTimes(1));
     expect(push).toHaveBeenCalledWith('/events/e1');
   });
 
-  it('sends an unsafe return path to the default instead of following it', () => {
+  it('sends an unsafe return path to the default instead of following it', async () => {
     renderShell({ returnPath: '//evil.com' });
     advanceToEnd();
     next();
+    await waitFor(() => expect(markOnboarded).toHaveBeenCalledTimes(1));
     expect(push).toHaveBeenCalledWith('/events');
   });
 
-  it('ends by returning the visitor to their pending show, intent attached', () => {
+  it('ends by returning the visitor to their pending show, intent attached', async () => {
     renderShell({
       intent: `watch:${EVENT_ID}`,
       returnPath: '/events/e1',
@@ -280,12 +307,13 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     advanceToEnd();
     expect(primaryCtas()[0]!.textContent).toBe(nav.finishButton('Geese'));
     next();
+    await waitFor(() => expect(markOnboarded).toHaveBeenCalledTimes(1));
     expect(push).toHaveBeenCalledWith(
       `/events/e1?intent=watch%3A${EVENT_ID}&label=Geese`,
     );
   });
 
-  it('carries a tier chosen before sign-up past the tour (#1284)', () => {
+  it('carries a tier chosen before sign-up past the tour (#1284)', async () => {
     // The tour is a stop on the way, not the destination. Dropping the tier
     // here means the picker never reopens on the far side.
     renderShell({
@@ -296,6 +324,7 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     });
     advanceToEnd();
     next();
+    await waitFor(() => expect(markOnboarded).toHaveBeenCalledTimes(1));
     expect(push).toHaveBeenCalledWith(
       `/events/e1?intent=watch%3A${EVENT_ID}&label=Geese&tier=premium`,
     );

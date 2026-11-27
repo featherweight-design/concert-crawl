@@ -1149,3 +1149,75 @@ describe('proxy — invite short link', () => {
     expect(segments).not.toContain('i');
   });
 });
+
+describe('proxy — a new account owes the tour (onboarding required)', () => {
+  const NEW = Date.parse('2026-12-01T12:00:00Z');
+  const OLD = Date.parse('2026-11-01T12:00:00Z');
+
+  const signedIn = (sessionClaims: unknown) =>
+    Object.assign(async () => ({ userId: 'user_new', sessionClaims }), {
+      protect: vi.fn(async () => {}),
+    });
+
+  it('sends a new account with no stamp to the tour, keeping where it was going', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW, metadata: { role: 'user' } }),
+      new NextRequest('http://localhost/events/e1?tab=prices'),
+    );
+    const location = new URL(redirectLocation(result) ?? '');
+    expect(location.pathname).toBe('/onboarding');
+    expect(location.searchParams.get('return')).toBe('/events/e1?tab=prices');
+  });
+
+  it('lets a new account through once the tour is stamped', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({
+        created_at: NEW,
+        metadata: { onboardedAt: '2026-12-01T12:05:00.000Z' },
+      }),
+      new NextRequest('http://localhost/events'),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it('never forces an account created before the cutoff', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: OLD, metadata: {} }),
+      new NextRequest('http://localhost/events'),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it.each([
+    ['no created_at claim (template not edited yet)', { metadata: {} }],
+    ['no claims at all', undefined],
+    ['a created_at that is not a number', { created_at: '1764590400000' }],
+  ])('does not force with %s', async (_label, claims) => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn(claims),
+      new NextRequest('http://localhost/events'),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it.each([
+    '/onboarding',
+    '/onboarding?return=/events',
+    '/auth/complete',
+    '/legal/privacy',
+    '/bot',
+    '/~offline',
+    '/api/error-report',
+  ])('does not send an owed account away from %s', async (path) => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest(`http://localhost${path}`),
+    );
+    expect(result).toBeUndefined();
+  });
+});
