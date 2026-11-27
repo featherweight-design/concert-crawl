@@ -1,0 +1,20 @@
+{
+ "guides": [
+  "8 or more characters",
+  "A number or symbol",
+  "Not a common word, name, date or your email"
+ ],
+ "word": {
+  "weak": "Weak",
+  "fair": "Fair",
+  "good": "Good",
+  "strong": "Strong"
+ },
+ "line": {
+  "weak": "Too easy to guess. Try a longer one, or a few words together.",
+  "fair": "Not quite there. Add another word or a few more characters."
+ },
+ "tooShort": "Use at least 8 characters.",
+ "weakErr": "That password is too easy to guess. Try a longer one, or a few words together.",
+ "breached": "That password has appeared in a data breach, so it can’t be used. Choose a different one."
+}
