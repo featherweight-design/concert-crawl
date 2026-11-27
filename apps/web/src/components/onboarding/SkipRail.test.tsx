@@ -2,7 +2,23 @@
 
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
+
+const push = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+}));
+
+const markOnboarded = vi.fn(async () => {});
+vi.mock('./lib/use-mark-onboarded', () => ({
+  useMarkOnboarded: () => markOnboarded,
+}));
 
 vi.mock('next/link', () => ({
   default: ({
@@ -29,6 +45,8 @@ import { SkipRail } from './SkipRail';
 
 afterEach(() => {
   cleanup();
+  push.mockClear();
+  markOnboarded.mockReset().mockResolvedValue(undefined);
   window.sessionStorage.clear();
 });
 
@@ -103,6 +121,50 @@ describe('SkipRail — three weights, one position (#794)', () => {
 
       expect(readPicks(GENRE_PICKS_KEY)).toEqual([]);
       expect(readPicks(ARTIST_PICKS_KEY)).toEqual([]);
+    });
+  });
+
+  // Skipping is done, like finishing: the proxy sends an unstamped new account
+  // back to the tour, so the stamp has to land before the visitor leaves.
+  describe('skipping records the tour as done (onboarding required)', () => {
+    it('holds the navigation until the stamp lands, then goes', async () => {
+      let release = () => {};
+      markOnboarded.mockImplementationOnce(
+        () => new Promise<void>((resolve) => (release = resolve)),
+      );
+      render(<SkipRail mode={{ kind: 'default', href: '/events?tier=x' }} />);
+      const link = screen.getByRole('link', { name: /^skip$/i });
+      const event = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      });
+      link.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(markOnboarded).toHaveBeenCalledTimes(1);
+      expect(push).not.toHaveBeenCalled();
+      release();
+      await waitFor(() => expect(push).toHaveBeenCalledWith('/events?tier=x'));
+    });
+
+    it('leaves from the menu entry to the default path the same way', async () => {
+      render(<SkipRail mode={{ kind: 'menu' }} />);
+      fireEvent.click(screen.getByRole('link', { name: /^close$/i }));
+      await waitFor(() => expect(push).toHaveBeenCalledWith('/events'));
+      expect(markOnboarded).toHaveBeenCalledTimes(1);
+    });
+
+    it('lets a new-tab click through to the browser, still stamping', () => {
+      render(<SkipRail mode={{ kind: 'default', href: '/events' }} />);
+      const link = screen.getByRole('link', { name: /^skip$/i });
+      const event = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        metaKey: true,
+      });
+      link.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(markOnboarded).toHaveBeenCalledTimes(1);
+      expect(push).not.toHaveBeenCalled();
     });
   });
 });

@@ -10,6 +10,10 @@ import {
   isSafeReturnPath,
   sanitizeReturnPath,
 } from '@/lib/auth/intent';
+import {
+  needsOnboarding,
+  ONBOARDING_PATH,
+} from '@/lib/auth/onboarding-required';
 
 /**
  * Routes any visitor may reach, signed in or out, in either launch mode.
@@ -176,6 +180,22 @@ const isInviteGated = createRouteMatcher(['/sign-up(.*)']);
 const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)']);
 
 /**
+ * Where a signed-in account that still owes the tour may go without being
+ * sent to it: the tour itself, the auth funnel that leads there, the app's
+ * own API routes (a fetch must never be answered with a page), and every
+ * always-public page (legal, /bot, the offline fallback and the rest).
+ */
+const isOnboardingRoute = createRouteMatcher([
+  `${ONBOARDING_PATH}(.*)`,
+  '/auth/(.*)',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/(.*)',
+]);
+const isOnboardingExempt = (req: NextRequest): boolean =>
+  isOnboardingRoute(req) || isAlwaysPublic(req);
+
+/**
  * Every first URL segment this app actually serves, including the metadata
  * routes Next generates from `app/*.ts` and the one `public/` directory.
  *
@@ -239,7 +259,7 @@ const isKnownRoute = (pathname: string): boolean => {
  * Clerk's richer object is assignable to it, and tests can pass a small stub.
  */
 interface MiddlewareAuth {
-  (): Promise<{ userId: string | null }>;
+  (): Promise<{ userId: string | null; sessionClaims?: unknown }>;
   protect(options: { unauthenticatedUrl: string }): Promise<unknown>;
 }
 
@@ -287,7 +307,7 @@ export const middlewareHandler = async (
   // not skip Clerk entirely — only the redirect and the page render behind it.
   if (!isKnownRoute(req.nextUrl.pathname)) return;
 
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
   const launched = isPublicBrowseEnabled();
 
   // Authenticated users skip directly to the app; no reason to see pre-auth pages
@@ -297,6 +317,18 @@ export const middlewareHandler = async (
   if (userId) {
     if (isPreAuth(req) || req.nextUrl.pathname === '/') {
       return NextResponse.redirect(new URL('/events', req.url));
+    }
+    // A new account goes through the tour before the app opens, wherever it
+    // lands: /auth/complete sends it there once, and this catches every way
+    // past that (an error on the way, a typed URL, a bookmark). The claims come
+    // from the session token, so the check costs no request.
+    if (needsOnboarding(sessionClaims) && !isOnboardingExempt(req)) {
+      const tourUrl = new URL(ONBOARDING_PATH, req.url);
+      tourUrl.searchParams.set(
+        'return',
+        toSafeReturnPath(req.nextUrl.pathname, req.nextUrl.search),
+      );
+      return NextResponse.redirect(tourUrl);
     }
     return;
   }
