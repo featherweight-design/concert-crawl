@@ -1,3 +1,10 @@
+## [1.572.1](https://github.com/featherweight-design/concert-crawl/compare/v1.572.0...v1.572.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* **web:** gate the Venues filter popover to desktop so a phone sheet tap stays put ([0a8f87e](https://github.com/featherweight-design/concert-crawl/commit/0a8f87e35986b687c0c74e249935df5353abad77))
+
 # [1.572.0](https://github.com/featherweight-design/concert-crawl/compare/v1.571.0...v1.572.0) (2026-11-24)
 
 
