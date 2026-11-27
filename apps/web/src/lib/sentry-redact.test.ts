@@ -110,10 +110,13 @@ describe('beforeSend probe tag', () => {
     expect(result.tags).toEqual({ tier: 'free', ...tagged });
   });
 
-  it.each(['/probe-throwing', '/bot', '/events/probe-throw', 'GET /bot'])(
-    'leaves %s untagged',
-    (path) => {
-      expect(send({ transaction: path }).tags).toBeUndefined();
-    },
-  );
+  it.each([
+    '/probe-throwing',
+    '/bot',
+    '/events/probe-throw',
+    'GET /bot',
+    'http://[',
+  ])('leaves %s untagged', (path) => {
+    expect(send({ transaction: path }).tags).toBeUndefined();
+  });
 });

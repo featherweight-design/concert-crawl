@@ -24,6 +24,13 @@ export const isProbeThrowEnabled = (): boolean =>
  */
 export const isProbeThrowPath = (value: string): boolean => {
   const bare = value.replace(/^[A-Z]+ /, '');
-  const { pathname } = new URL(bare, 'http://local');
+  // beforeSend calls this on every event: a value that will not parse is not
+  // the probe page, and must never throw and cost Sentry the event.
+  let pathname: string;
+  try {
+    ({ pathname } = new URL(bare, 'http://local'));
+  } catch {
+    return false;
+  }
   return pathname === PROBE_THROW_PATH || pathname === `${PROBE_THROW_PATH}/`;
 };
