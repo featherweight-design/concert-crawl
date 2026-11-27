@@ -13,9 +13,10 @@ import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 import { THEMES } from '@/theme/themes';
 
 /**
- * Writes the stored theme's tokens onto <html>. It references nothing outside
- * itself, because it is also serialised into the pre-paint script below: one
- * body for both callers.
+ * Writes the stored theme's tokens onto <html>. It is also serialised into the
+ * pre-paint script below (one body for both callers), so it may touch browser
+ * globals only, never a module-scope name, and sticks to syntax no build
+ * target lowers into a helper call (no for-of, spread or destructuring).
  */
 function applyStoredTheme(themes: Record<string, Record<string, string>>) {
   const root = document.documentElement;
@@ -29,13 +30,14 @@ function applyStoredTheme(themes: Record<string, Record<string, string>>) {
       stored && Object.prototype.hasOwnProperty.call(themes, stored)
         ? stored
         : system;
-  } catch {
+  } catch (err) {
     // Storage or matchMedia blocked: keep the light default.
+    console.warn('global-error: stored theme unreadable', err);
   }
-  const tokens = themes[theme] ?? {};
-  for (const [key, value] of Object.entries(tokens)) {
-    root.style.setProperty(`--${key}`, value);
-  }
+  const tokens = themes[theme] || {};
+  Object.keys(tokens).forEach(function (key) {
+    root.style.setProperty('--' + key, tokens[key] || '');
+  });
   root.setAttribute('data-theme', theme);
 }
 
@@ -46,7 +48,13 @@ const themesJson = JSON.stringify(THEMES).replace(/</g, '\\u003c');
 // it renders on the client, and each time it mounts this page's <html> it
 // strips every attribute it did not render (the tokens and data-theme), so
 // the effect in GlobalError writes them again after every commit.
-const themeScript = `(${applyStoredTheme.toString()})(${themesJson});`;
+// The function's source cannot be escaped like the JSON (`<` is only
+// valid inside a string), so a `<` in its compiled body fails the build.
+const applySource = applyStoredTheme.toString();
+if (applySource.includes('<')) {
+  throw new Error('global-error: applyStoredTheme must not contain "<"');
+}
+const themeScript = `(${applySource})(${themesJson});`;
 
 // The cookie is read once per render; nothing on this page changes it.
 const subscribeNever = () => () => undefined;

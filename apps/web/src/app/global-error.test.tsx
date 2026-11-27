@@ -97,3 +97,48 @@ describe('global-error', () => {
     expect(screen.queryByText(copy.errorBody)).toBeNull();
   });
 });
+
+// A client render of this page (Try again, any client-side throw) never runs
+// its pre-paint script, and React strips <html>'s attributes when it mounts
+// it, so the effect must write the theme itself.
+describe('GlobalError theme', () => {
+  const root = document.documentElement;
+  const clearTheme = () => {
+    root.removeAttribute('data-theme');
+    root.removeAttribute('style');
+  };
+  beforeEach(() => {
+    clearTheme();
+    localStorage.setItem('cc-theme', 'jade');
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+  });
+  afterEach(() => {
+    localStorage.removeItem('cc-theme');
+    vi.unstubAllGlobals();
+    clearTheme();
+  });
+
+  it('writes the stored theme onto <html> after a client render', () => {
+    renderPage();
+    expect(root.getAttribute('data-theme')).toBe('jade');
+    expect(root.style.getPropertyValue('--bg')).not.toBe('');
+  });
+
+  it('writes it again when the page mounts a second time', () => {
+    renderPage();
+    cleanup();
+    clearTheme();
+    renderPage();
+    expect(root.getAttribute('data-theme')).toBe('jade');
+  });
+
+  it('ships a pre-paint script that runs on its own and themes the page', () => {
+    const { container } = renderPage();
+    const script = container.querySelector('script');
+    clearTheme();
+    // The script must run with no module scope: a stray reference throws here.
+    new Function(script?.textContent ?? '')();
+    expect(root.getAttribute('data-theme')).toBe('jade');
+    expect(root.style.getPropertyValue('--bg')).not.toBe('');
+  });
+});
