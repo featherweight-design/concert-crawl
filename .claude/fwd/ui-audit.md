@@ -18,7 +18,7 @@ The sweep command is `uiSweep` in `.claude/fwd.json`.
   pnpm's built-in `audit` subcommand and silently doesn't dispatch.
 - **Empty tags:** a bare `--tags=""` used to reach the parser as `[""]` (fixed in PR 3 of the
   ui-audit plan); stay defensive anyway.
-- Auth for admin routes needs `E2E_AUDIT_ADMIN_EMAIL` and `E2E_AUDIT_ADMIN_PASSWORD`; when unset,
+- Auth for admin routes needs `E2E_AUDIT_ADMIN_EMAIL` and `E2E_AUDIT_ADMIN_PASSWORD` (in `apps/e2e/.env.local`; `cp` it into a worktree); when unset,
   `prepareAuditAuth` reports an `auth` sweep error.
 
 ## Preflight checks

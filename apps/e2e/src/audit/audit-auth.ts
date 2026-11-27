@@ -1,4 +1,5 @@
 import { assertNotProdBaseUrl } from './assert-not-prod.js';
+import { loadE2eEnvLocal } from '../fixtures/env-local.js';
 import { auditStorageStatePath, loginAndSave } from '../fixtures/auth.js';
 
 /**
@@ -7,7 +8,7 @@ import { auditStorageStatePath, loginAndSave } from '../fixtures/auth.js';
  * or if PLAYWRIGHT_AUDIT_BASE_URL resolves to a production host (a mis-set
  * env var would otherwise log fixture creds into prod Clerk).
  *
- * Credentials come from env vars — never from CLI args or hardcoded values.
+ * Credentials come from env vars (the shell, else apps/e2e/.env.local) — never from CLI args or hardcoded values.
  *   user  → E2E_AUDIT_USER_EMAIL / E2E_AUDIT_USER_PASSWORD
  *   admin → E2E_AUDIT_ADMIN_EMAIL / E2E_AUDIT_ADMIN_PASSWORD
  *
@@ -15,6 +16,7 @@ import { auditStorageStatePath, loginAndSave } from '../fixtures/auth.js';
  * PLAYWRIGHT_AUDIT_BASE_URL.
  */
 export async function prepareAuditAuth(role: 'user' | 'admin'): Promise<void> {
+  loadE2eEnvLocal();
   const emailVar =
     role === 'admin' ? 'E2E_AUDIT_ADMIN_EMAIL' : 'E2E_AUDIT_USER_EMAIL';
   const passwordVar =
