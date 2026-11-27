@@ -1,0 +1,19 @@
+{
+  "feature": "Venues · the Sort sheet's option tap stays put (fix, no board)",
+  "note": "Invisible fix: no design change. The sheet (phone) and the popover (desktop) look as before; the sheet is open on Sort and the popover on Sort at 1300.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 640, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "venues-sort-open",
+      "label": "Venues, Sort control open",
+      "steps": [
+        { "goto": "/venues", "settle": 800 },
+        { "clickRole": "button", "name": "^Sort", "settle": 600 }
+      ]
+    }
+  ]
+}
