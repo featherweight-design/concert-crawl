@@ -7,7 +7,8 @@ import path from 'path';
  *
  * Real environment values win: `process.loadEnvFile` never overrides a variable
  * that is already set, so CI and an exported shell are unchanged. A missing
- * file is a no-op. Nothing is returned and nothing is printed.
+ * file is a no-op. Values must be single-quoted: an unquoted `#` starts a
+ * comment and cuts the value short. Nothing is returned and nothing is printed.
  *
  * Relative to the working directory, because this module is loaded as both ESM
  * (the contact-sheet hook) and CJS (Playwright), where `import.meta` and
