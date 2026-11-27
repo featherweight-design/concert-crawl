@@ -7,6 +7,8 @@
 // cookie, and /auth/complete spends it — so the four edits are not plumbing
 // nobody exercises. The middleware's first hop has its own suite in
 // src/proxy.test.ts.
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('server-only', () => ({}));
@@ -61,7 +63,8 @@ vi.mock('@clerk/nextjs/server', () => ({
 }));
 
 import { validateAndSetInviteCode } from './code/actions';
-import AuthCompletePage from './complete/page';
+import { NextRequest } from 'next/server';
+import { GET } from './complete/route';
 import {
   INVITE_COOKIE_NAME,
   RETURN_PATH_COOKIE_NAME,
@@ -73,10 +76,42 @@ const SECRET = 'test-secret-32-bytes-minimum-len';
 const CODE = 'BETA-AB12-CD34';
 const CREW_LINK = '/crew/join/abc123XYZ_-0';
 
-/** Next always supplies searchParams; most cases here have none to supply. */
-const completePage = (
-  searchParams: Record<string, string | string[] | undefined> = {},
-) => AuthCompletePage({ searchParams: Promise.resolve(searchParams) });
+/** The raw response, for the cases that read its headers directly. */
+const completeResponse = (
+  searchParams: Record<string, string> = {},
+): Promise<Response> => {
+  const url = new URL('https://concertcrawl.test/auth/complete');
+  for (const [key, value] of Object.entries(searchParams)) {
+    url.searchParams.set(key, value);
+  }
+  const cookie = [...cookieStore.entries()]
+    .map(([name, value]) => `${name}=${value}`)
+    .join('; ');
+  return GET(new NextRequest(url, { headers: cookie ? { cookie } : {} }));
+};
+
+/**
+ * Walks /auth/complete the way a browser would: sends the jar, applies the
+ * response's cookie clears back to it, and returns where it was sent. The
+ * clears are read off `Set-Cookie`, not off a mocked store, because the bug
+ * this guards (CONCERT-CRAWL-WEB-E) was a clear Next refused to make.
+ */
+const completePage = async (
+  searchParams: Record<string, string> = {},
+): Promise<string> => {
+  const response = await completeResponse(searchParams);
+  expect(response.status).toBe(307);
+  for (const header of response.headers.getSetCookie()) {
+    const [pair] = header.split(';');
+    const name = pair?.split('=')[0];
+    if (name && /Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(header)) {
+      expect(header).toMatch(/Path=\//);
+      cookieStore.delete(name);
+    }
+  }
+  const location = new URL(response.headers.get('location') ?? '');
+  return `${location.pathname}${location.search}`;
+};
 
 /**
  * Where /auth/complete now sends a finished signup: into the tour, with the
@@ -123,7 +158,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     // clear-and-editable sense the query param was.
     expect(cookieStore.get(RETURN_PATH_COOKIE_NAME)).not.toBe(CREW_LINK);
 
-    const landing = await runToRedirect(() => completePage());
+    const landing = await completePage();
     expect(landing).toBe(tourTo(CREW_LINK));
     // A return path is spent once — a later visit must not replay it.
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
@@ -138,7 +173,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     await runToRedirect(() => validateAndSetInviteCode(CODE, withQuery));
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(true);
 
-    const landing = await runToRedirect(() => completePage());
+    const landing = await completePage();
     expect(landing).toBe(tourTo(withQuery));
   });
 
@@ -177,7 +212,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     await runToRedirect(() => validateAndSetInviteCode(CODE));
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
 
-    const landing = await runToRedirect(() => completePage());
+    const landing = await completePage();
     expect(landing).toBe(tourTo('/events'));
   });
 
@@ -207,7 +242,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     await runToRedirect(() => validateAndSetInviteCode(CODE));
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
 
-    const landing = await runToRedirect(() => completePage());
+    const landing = await completePage();
     expect(landing).toBe(tourTo('/events'));
   });
 
@@ -222,7 +257,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
         signInviteCookie(hostile, SECRET),
       );
 
-      const landing = await runToRedirect(() => completePage());
+      const landing = await completePage();
       expect(landing).toBe(tourTo('/events'));
     },
   );
@@ -233,7 +268,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     // on every subsequent visit.
     cookieStore.set(RETURN_PATH_COOKIE_NAME, '');
 
-    const landing = await runToRedirect(() => completePage());
+    const landing = await completePage();
     expect(landing).toBe(tourTo('/events'));
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
   });
@@ -241,7 +276,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
   it('ignores a forged cookie and clears it', async () => {
     cookieStore.set(RETURN_PATH_COOKIE_NAME, 'forged.payload');
 
-    const landing = await runToRedirect(() => completePage());
+    const landing = await completePage();
     expect(landing).toBe(tourTo('/events'));
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
   });
@@ -249,18 +284,16 @@ describe('the beta funnel carries a crew link across Clerk', () => {
   it('lands a launched signup back on the shared show', async () => {
     // No invite step once /sign-up is public, so nothing writes the cookie and
     // the destination arrives as a param forwarded by the sign-up page.
-    const landing = await runToRedirect(() =>
-      completePage({ return: '/e/11111111-1111-4111-8111-111111111111' }),
-    );
+    const landing = await completePage({
+      return: '/e/11111111-1111-4111-8111-111111111111',
+    });
     expect(landing).toBe(tourTo('/e/11111111-1111-4111-8111-111111111111'));
   });
 
   it.each(['//evil.com', '/\\evil.com', 'https://evil.com', '/%0Aevil'])(
     'sends a hostile return param %s to the fallback',
     async (hostile) => {
-      const landing = await runToRedirect(() =>
-        completePage({ return: hostile }),
-      );
+      const landing = await completePage({ return: hostile });
       expect(landing).toBe(tourTo('/events'));
     },
   );
@@ -273,9 +306,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
       signInviteCookie(CREW_LINK, SECRET),
     );
 
-    const landing = await runToRedirect(() =>
-      completePage({ return: '/e/abc' }),
-    );
+    const landing = await completePage({ return: '/e/abc' });
     expect(landing).toBe(tourTo(CREW_LINK));
   });
 
@@ -286,23 +317,17 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     const pendingWatch =
       '/onboarding?intent=watch%3A11111111-1111-4111-8111-111111111111&return=%2Fe%2Fabc&label=Geese';
 
-    const landing = await runToRedirect(() =>
-      completePage({ return: pendingWatch }),
-    );
+    const landing = await completePage({ return: pendingWatch });
     expect(landing).toBe(pendingWatch);
   });
 
   it("still wraps a route that merely starts with the tour's name", async () => {
-    const landing = await runToRedirect(() =>
-      completePage({ return: '/onboardingxyz' }),
-    );
+    const landing = await completePage({ return: '/onboardingxyz' });
     expect(landing).toBe(tourTo('/onboardingxyz'));
   });
 
   it('carries a chosen tier on to the destination (#1284)', async () => {
-    const landing = await runToRedirect(() =>
-      completePage({ return: '/e/abc', tier: 'premium' }),
-    );
+    const landing = await completePage({ return: '/e/abc', tier: 'premium' });
     expect(landing).toBe(tourTo('/e/abc', 'premium'));
   });
 
@@ -314,9 +339,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
       signInviteCookie(CREW_LINK, SECRET),
     );
 
-    const landing = await runToRedirect(() =>
-      completePage({ tier: 'founder' }),
-    );
+    const landing = await completePage({ tier: 'founder' });
     expect(landing).toBe(tourTo(CREW_LINK, 'founder'));
   });
 
@@ -325,9 +348,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     async (tier) => {
       // It lands in a `Location` header, so an unknown value is dropped at the
       // boundary rather than passed along for someone else to validate.
-      const landing = await runToRedirect(() =>
-        completePage({ return: '/e/abc', tier }),
-      );
+      const landing = await completePage({ return: '/e/abc', tier });
       expect(landing).toBe(tourTo('/e/abc'));
     },
   );
@@ -339,7 +360,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
       signInviteCookie(CREW_LINK, SECRET),
     );
 
-    const landing = await runToRedirect(() => completePage());
+    const landing = await completePage();
 
     expect(landing).toBe(tourTo(CREW_LINK));
     expect(cookieStore.has(INVITE_COOKIE_NAME)).toBe(false);
@@ -347,6 +368,77 @@ describe('the beta funnel carries a crew link across Clerk', () => {
       expect.stringContaining('/v1/auth/redeem-code'),
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+});
+
+// CONCERT-CRAWL-WEB-E: as a Server Component page, the first cookie clear
+// threw ("Cookies can only be modified in a Server Action or Route Handler")
+// after the code had already been redeemed, so every invited sign-up ended on
+// the error screen and a retry met a spent code.
+describe('/auth/complete clears its cookies on the redirect itself', () => {
+  it('is a Route Handler, not a page that cannot modify cookies', () => {
+    expect(
+      existsSync(
+        fileURLToPath(new URL('./complete/page.tsx', import.meta.url)),
+      ),
+    ).toBe(false);
+    expect(typeof GET).toBe('function');
+  });
+
+  it('sends both clears as Set-Cookie on the redirect after a redeem', async () => {
+    cookieStore.set(INVITE_COOKIE_NAME, signInviteCookie(CODE, SECRET));
+    cookieStore.set(
+      RETURN_PATH_COOKIE_NAME,
+      signInviteCookie(CREW_LINK, SECRET),
+    );
+
+    const response = await completeResponse();
+
+    const cleared = response.headers
+      .getSetCookie()
+      .map((header) => header.split('=')[0]);
+    expect(cleared).toEqual(
+      expect.arrayContaining([INVITE_COOKIE_NAME, RETURN_PATH_COOKIE_NAME]),
+    );
+  });
+
+  it('still lands a retry whose code was already redeemed', async () => {
+    // "Try again" after the first pass redeemed the code: the API answers 409,
+    // which is a definitive answer, so the visitor goes on rather than being
+    // stranded on a used code.
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 409 }));
+    cookieStore.set(INVITE_COOKIE_NAME, signInviteCookie(CODE, SECRET));
+    cookieStore.set(
+      RETURN_PATH_COOKIE_NAME,
+      signInviteCookie(CREW_LINK, SECRET),
+    );
+
+    const landing = await completePage();
+
+    expect(landing).toBe(tourTo(CREW_LINK));
+    expect(cookieStore.has(INVITE_COOKIE_NAME)).toBe(false);
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
+  });
+
+  it('keeps the invite cookie for a retry when the API fails', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 500 }));
+    cookieStore.set(INVITE_COOKIE_NAME, signInviteCookie(CODE, SECRET));
+
+    const landing = await completePage();
+
+    expect(landing).toBe(tourTo('/events'));
+    expect(cookieStore.has(INVITE_COOKIE_NAME)).toBe(true);
+  });
+
+  it('sends a signed-out visitor to sign in without touching cookies', async () => {
+    authState.userId = null;
+    cookieStore.set(INVITE_COOKIE_NAME, signInviteCookie(CODE, SECRET));
+
+    const landing = await completePage();
+
+    expect(landing).toBe('/sign-in');
+    expect(cookieStore.has(INVITE_COOKIE_NAME)).toBe(true);
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
   });
 });
 
