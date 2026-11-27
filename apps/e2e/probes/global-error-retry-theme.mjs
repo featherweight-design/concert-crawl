@@ -33,6 +33,11 @@ export default async function ({ page, base, press, check }) {
   );
   const retry = page.getByRole('button', { name: /try again/i });
   await retry.waitFor();
+  // A nested error.tsx would keep the root layout (and its theme script)
+  // mounted, and every theme check below would pass without testing this page.
+  const isGlobalError = () =>
+    page.evaluate(() => document.body.hasAttribute('data-global-error'));
+  check(await isGlobalError(), 'the root error page rendered', page.url());
 
   const first = await readTheme(page);
   check(
@@ -51,6 +56,7 @@ export default async function ({ page, base, press, check }) {
     await page.waitForLoadState('networkidle');
     await retry.waitFor();
     const now = await readTheme(page);
+    check(await isGlobalError(), `still the root error page ×${round}`);
     check(
       Boolean(now.theme && now.bg) &&
         now.theme === first.theme &&

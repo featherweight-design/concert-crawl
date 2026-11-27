@@ -93,6 +93,7 @@ describe('beforeSend probe tag', () => {
       { request: { url: 'https://staging.example.com/probe-throw?x=1' } },
     ],
     ['the transaction', { transaction: '/probe-throw' }],
+    ['a server transaction name', { transaction: 'GET /probe-throw' }],
     [
       'the server request path',
       { contexts: { nextjs: { request_path: '/probe-throw/' } } },
@@ -109,7 +110,7 @@ describe('beforeSend probe tag', () => {
     expect(result.tags).toEqual({ tier: 'free', ...tagged });
   });
 
-  it.each(['/probe-throwing', '/bot', '/events/probe-throw'])(
+  it.each(['/probe-throwing', '/bot', '/events/probe-throw', 'GET /bot'])(
     'leaves %s untagged',
     (path) => {
       expect(send({ transaction: path }).tags).toBeUndefined();

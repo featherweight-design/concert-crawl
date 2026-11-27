@@ -55,8 +55,9 @@ export const beforeSend = <
   event: T,
 ): T => {
   const next = { ...event };
-  // The probe page throws on purpose; tag it so triage skips it. Read before
-  // redaction, which leaves this path alone anyway.
+  // The probe page throws on purpose; tag it so triage can filter it out
+  // (`!probe:global-error`). Read before redaction, which leaves this path
+  // alone anyway.
   const requestPath = event.contexts?.nextjs?.request_path;
   const paths = [
     event.request?.url,

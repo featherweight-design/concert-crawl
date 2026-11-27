@@ -34,13 +34,13 @@ afterEach(() => {
   setClientUat(null);
 });
 
-const renderPage = () =>
-  render(
-    <GlobalError
-      error={Object.assign(new Error('boom'), { digest: '4471' })}
-      reset={vi.fn()}
-    />,
-  );
+const pageElement = () => (
+  <GlobalError
+    error={Object.assign(new Error('boom'), { digest: '4471' })}
+    reset={vi.fn()}
+  />
+);
+const renderPage = () => render(pageElement());
 
 describe('global-error', () => {
   it('renders the standalone error page with the digest as the error ID', () => {
@@ -140,5 +140,24 @@ describe('GlobalError theme', () => {
     new Function(script?.textContent ?? '')();
     expect(root.getAttribute('data-theme')).toBe('jade');
     expect(root.style.getPropertyValue('--bg')).not.toBe('');
+  });
+
+  it('falls back to the system theme when storage is blocked, and warns once', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const getItem = vi
+      .spyOn(Storage.prototype, 'getItem')
+      .mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const { rerender } = renderPage();
+      rerender(pageElement());
+      expect(root.getAttribute('data-theme')).toBe('electric');
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      getItem.mockRestore();
+      warn.mockRestore();
+    }
   });
 });
