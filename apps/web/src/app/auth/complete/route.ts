@@ -1,5 +1,4 @@
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import {
   verifyInviteCookie,
@@ -24,25 +23,32 @@ const isOnboardingPath = (destination: string): boolean => {
   return pathname === '/onboarding' || pathname.startsWith('/onboarding/');
 };
 
-interface AuthCompletePageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
+const redirectTo = (path: string, request: NextRequest): NextResponse =>
+  NextResponse.redirect(new URL(path, request.url));
 
-export default async function AuthCompletePage({
-  searchParams,
-}: AuthCompletePageProps) {
+/**
+ * Where every finished sign-up lands: it redeems the invite, spends the return
+ * path, and sends the new account on into the tour.
+ *
+ * A Route Handler rather than a page because it clears cookies, and Next only
+ * lets a Server Action or Route Handler modify them. As a Server Component the
+ * first `cookies().delete` threw after the invite had already been redeemed,
+ * so every invited sign-up ended on the error screen (Sentry
+ * CONCERT-CRAWL-WEB-E). The clears ride on the redirect response instead.
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const { userId, getToken } = await auth();
-  if (!userId) redirect('/sign-in');
+  if (!userId) return redirectTo('/sign-in', request);
 
   const secret = process.env.INVITE_COOKIE_SECRET;
-  if (!secret) {
-    redirect(DEFAULT_RETURN_PATH);
-  }
+  if (!secret) return redirectTo(DEFAULT_RETURN_PATH, request);
 
-  const cookieStore = await cookies();
-  const cookieValue = cookieStore.get(INVITE_COOKIE_NAME)?.value;
+  const cookieValue = request.cookies.get(INVITE_COOKIE_NAME)?.value;
   const verified = cookieValue ? verifyInviteCookie(cookieValue, secret) : null;
 
+  // Cleared only after a definitive answer (redeemed, or already used), so a
+  // failed call leaves the cookie for the next visit to retry.
+  let clearInvite = false;
   if (verified) {
     try {
       const token = await getToken();
@@ -55,25 +61,19 @@ export default async function AuthCompletePage({
         },
         body: JSON.stringify({ code: verified.code }),
       });
-      // Clear cookie only after a definitive response (success or already-used)
       if (res.ok || res.status === 409) {
-        cookieStore.delete(INVITE_COOKIE_NAME);
+        clearInvite = true;
       } else {
         // Non-OK, non-409 (e.g. 400 bad JSON, 500 API error) — the fetch
         // resolved so `catch` doesn't fire, but redemption still failed.
-        // Log so it's visible in the Next server logs / Sentry rather
-        // than becoming another silent gap now that #1113 routes every
-        // signup through this page.
+        // Logged so it's visible in the server logs / Sentry rather than a
+        // silent gap, now that #1113 routes every signup through here.
         console.warn('[auth/complete] redeem-code returned non-OK', {
           status: res.status,
         });
       }
     } catch (err) {
-      // Network failure — leave cookie so the next load can retry. This
-      // page is a Server Component, so the log lands in the Next.js
-      // server runtime logs (surfaced in Vercel logs / Sentry), not the
-      // browser console. Silent swallow used to hide these entirely; now
-      // that #1113 routes every new signup through here they need a trail.
+      // Network failure — leave the cookie so the next load can retry.
       console.warn('[auth/complete] redeem-code fetch failed', { err });
     }
   }
@@ -86,33 +86,30 @@ export default async function AuthCompletePage({
   // Clearing keys off the cookie being PRESENT, not off its value being
   // truthy: `Cookie: invite_return_path=` is a cookie whose value is `''`,
   // which verifies to nothing and would otherwise survive every visit.
-  const returnCookie = cookieStore.get(RETURN_PATH_COOKIE_NAME);
+  const returnCookie = request.cookies.get(RETURN_PATH_COOKIE_NAME);
   const pendingReturn = returnCookie?.value
     ? verifyInviteCookie(returnCookie.value, secret)
     : null;
-  if (returnCookie) cookieStore.delete(RETURN_PATH_COOKIE_NAME);
 
   // The launched funnel has no invite step, so nothing writes the cookie and
   // the destination rides a query param forwarded by /sign-up instead. The
   // cookie still wins where both exist: it is signed, and an invite link is a
   // stronger claim on where someone was headed than a param anyone can append.
-  const params = await searchParams;
-  const rawReturn = params['return'];
+  const params = request.nextUrl.searchParams;
+  const rawReturn = params.get('return');
 
   // A tier chosen before signing up rides on to the destination, where the
   // picker reopens on it (#1284). Validated against the tier keys rather than
   // forwarded blind: it lands in a `Location` header.
-  const rawTier = params[PENDING_TIER_PARAM];
+  const rawTier = params.get(PENDING_TIER_PARAM);
 
-  // Every visitor reaching this page has just CREATED an account — Clerk's
+  // Every visitor reaching this route has just CREATED an account — Clerk's
   // `SignUp` is the only thing that routes here — so this is the one place that
   // can send a new user into the tour without a "have they seen it" flag.
   // The destination rides along as `?return=`, and the tour's own finish CTA
   // spends it, so the walkthrough is a stop on the way rather than a detour
   // that loses where the visitor was headed.
-  const destination = sanitizeReturnPath(
-    pendingReturn?.code ?? (typeof rawReturn === 'string' ? rawReturn : null),
-  );
+  const destination = sanitizeReturnPath(pendingReturn?.code ?? rawReturn);
 
   // A destination that IS the tour is passed through rather than wrapped. The
   // signed-out Watch and Follow buttons build their own
@@ -124,10 +121,15 @@ export default async function AuthCompletePage({
     ? destination
     : `/onboarding?${new URLSearchParams({ return: destination }).toString()}`;
 
-  redirect(
-    appendPendingTier(
-      landing,
-      decodePendingTier(typeof rawTier === 'string' ? rawTier : null),
-    ),
+  const response = redirectTo(
+    appendPendingTier(landing, decodePendingTier(rawTier)),
+    request,
   );
+  // Same path the code action set them on, or the browser keeps the original.
+  if (clearInvite)
+    response.cookies.delete({ name: INVITE_COOKIE_NAME, path: '/' });
+  if (returnCookie) {
+    response.cookies.delete({ name: RETURN_PATH_COOKIE_NAME, path: '/' });
+  }
+  return response;
 }
