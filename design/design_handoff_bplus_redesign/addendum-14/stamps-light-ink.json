@@ -1,0 +1,140 @@
+{
+ "_note": "B+ addendum 14 item 3a, re-checked 2026-11-27. Light theme only. ring >= 3:1 and text >= 4.5:1 on Light --bg #FAFCFF and --surface-1 #F2F5FB. Dark themes keep the board hex.",
+ "venues": {
+  "ballarena": {
+   "to": "#7AE6FF",
+   "lightRing": "#5197AD",
+   "lightText": "#3E7488"
+  },
+  "blackbox": {
+   "to": "#7AE6FF",
+   "lightRing": "#5197AD",
+   "lightText": "#3E7488"
+  },
+  "bluebird": {
+   "to": "#4DA3FF",
+   "lightRing": "#438EDF",
+   "lightText": "#3772B6"
+  },
+  "cervantes": {
+   "to": "#FFB838",
+   "lightRing": "#B5842F",
+   "lightText": "#8D682A"
+  },
+  "church": {
+   "to": "#FF6B8A",
+   "lightRing": "#E6617F",
+   "lightText": "#B54E68"
+  },
+  "fiddlers": {
+   "to": "#C9F26E",
+   "lightRing": "#7B954C",
+   "lightText": "#607541"
+  },
+  "fillmore": {
+   "to": "#FFB838",
+   "lightRing": "#B5842F",
+   "lightText": "#8D682A"
+  },
+  "globe": {
+   "to": "#5DD4D6",
+   "lightRing": "#43979E",
+   "lightText": "#357780"
+  },
+  "gothic": {
+   "to": "#FFE36B",
+   "lightRing": "#9C8C4B",
+   "lightText": "#796E3F"
+  },
+  "hidive": {
+   "to": "#7AE6FF",
+   "lightRing": "#5197AD",
+   "lightText": "#3E7488"
+  },
+  "junkyard": {
+   "to": "#FFB838",
+   "lightRing": "#B5842F",
+   "lightText": "#8D682A"
+  },
+  "larimer": {
+   "to": "#FF6B8A",
+   "lightRing": "#E6617F",
+   "lightText": "#B54E68"
+  },
+  "levitt": {
+   "to": "#C9F26E",
+   "lightRing": "#7B954C",
+   "lightText": "#607541"
+  },
+  "lostlake": {
+   "to": "#7AE6FF",
+   "lightRing": "#5197AD",
+   "lightText": "#3E7488"
+  },
+  "marquis": {
+   "to": "#FF7BD4",
+   "lightRing": "#D267B3",
+   "lightText": "#A65291"
+  },
+  "meowwolf": {
+   "to": "#FF7BD4",
+   "lightRing": "#D267B3",
+   "lightText": "#A65291"
+  },
+  "mission": {
+   "to": "#A075FF",
+   "lightRing": "#9D73FA",
+   "lightText": "#7B5BC8"
+  },
+  "ogden": {
+   "to": "#FF6A3D",
+   "lightRing": "#EB623A",
+   "lightText": "#BA4F33"
+  },
+  "oriental": {
+   "to": "#5DD4D6",
+   "lightRing": "#43979E",
+   "lightText": "#357780"
+  },
+  "redrocks": {
+   "to": "#FF6A3D",
+   "lightRing": "#EB623A",
+   "lightText": "#BA4F33"
+  },
+  "summit": {
+   "to": "#7AE6FF",
+   "lightRing": "#5197AD",
+   "lightText": "#3E7488"
+  }
+ },
+ "fallbackAccents": {
+  "#7AE6FF": {
+   "lightRing": "#5197AD",
+   "lightText": "#3E7488"
+  },
+  "#FF7BD4": {
+   "lightRing": "#D267B3",
+   "lightText": "#A65291"
+  },
+  "#FFE36B": {
+   "lightRing": "#9C8C4B",
+   "lightText": "#796E3F"
+  },
+  "#A075FF": {
+   "lightRing": "#9D73FA",
+   "lightText": "#7B5BC8"
+  },
+  "#C9F26E": {
+   "lightRing": "#7B954C",
+   "lightText": "#607541"
+  },
+  "#FFB838": {
+   "lightRing": "#B5842F",
+   "lightText": "#8D682A"
+  },
+  "#5DD4D6": {
+   "lightRing": "#43979E",
+   "lightText": "#357780"
+  }
+ }
+}
