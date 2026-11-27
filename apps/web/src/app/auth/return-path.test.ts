@@ -4,9 +4,9 @@
 // code screen, and Clerk's own screens sit between that and the finished
 // account. A query param cannot cross them; a second signed cookie can. This
 // suite walks the two halves that carry it — the code action writes the
-// cookie, and the /auth/complete Route Handler spends it — so the four edits are not plumbing
-// nobody exercises. The middleware's first hop has its own suite in
-// src/proxy.test.ts.
+// cookie, and the /auth/complete Route Handler spends it — so the four edits
+// are not plumbing nobody exercises. The middleware's first hop has its own
+// suite in src/proxy.test.ts.
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
