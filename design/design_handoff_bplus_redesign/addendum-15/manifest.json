@@ -1,0 +1,74 @@
+[
+ {
+  "section": "01-artist-preview",
+  "name": "rulings-spec",
+  "title": "Artist preview · six rulings",
+  "note": "Plate, pitch copy, Open their page, palette back row, the error line, Close.",
+  "w": 1180,
+  "h": 760
+ },
+ {
+  "section": "01-artist-preview",
+  "name": "parts-spec",
+  "title": "Artist preview · the parts",
+  "note": "Plate sizes, Open their page, back row and Close states, the four error lines.",
+  "w": 1180,
+  "h": 1060
+ },
+ {
+  "section": "01-artist-preview",
+  "name": "preview-320-long",
+  "title": "Preview · 320px, a long name",
+  "note": "Close top-right beside the grabber; the head keeps a 44px gutter so a long name wraps before it, and the plate aligns to the top of the head.",
+  "w": 320,
+  "h": 760
+ },
+ {
+  "section": "01-artist-preview",
+  "name": "preview-360",
+  "title": "Preview · 360px",
+  "note": "Grabber and Close; the plate a 84px rounded square; built copy.",
+  "w": 360,
+  "h": 760
+ },
+ {
+  "section": "01-artist-preview",
+  "name": "preview-360-following",
+  "title": "Preview · 360px, after Follow",
+  "note": "Open their page 10px under the pitch: radius 12, trailing chevron.",
+  "w": 360,
+  "h": 800
+ },
+ {
+  "section": "01-artist-preview",
+  "name": "preview-360-error",
+  "title": "Preview · 360px, Follow refused (404)",
+  "note": "The error replaces the pitch; Follow greys out. No load error exists.",
+  "w": 360,
+  "h": 760
+ },
+ {
+  "section": "01-artist-preview",
+  "name": "palette-preview-d",
+  "title": "Preview · desktop palette",
+  "note": "Back row restyled; the footer says what Esc and Enter do here. No Close in the palette.",
+  "w": 1280,
+  "h": 780
+ },
+ {
+  "section": "01-artist-preview",
+  "name": "palette-preview-d-following",
+  "title": "Preview · desktop palette, after Follow",
+  "note": "↵ now opens their page.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "01-artist-preview",
+  "name": "search-page-preview-d-following",
+  "title": "Preview · desktop card, after Follow",
+  "note": "The 420px card: Close top-right, 96px plate, Open their page.",
+  "w": 1280,
+  "h": 880
+ }
+]
