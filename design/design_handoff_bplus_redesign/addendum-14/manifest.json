@@ -2,10 +2,10 @@
  {
   "section": "01-light-stamps",
   "name": "stamps-light-spec",
-  "title": "3a · Stamps on Light, darker ink",
-  "note": "The rule and every board venue&#39;s computed ink.",
-  "w": 1100,
-  "h": 620
+  "title": "3a · Stamps on Light, corrected ink",
+  "note": "Every venue&#39;s ink, checked on Light --bg and --surface-1.",
+  "w": 1180,
+  "h": 960
  },
  {
   "section": "01-light-stamps",
