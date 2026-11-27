@@ -1,0 +1,394 @@
+[
+ {
+  "section": "01-sign-up",
+  "name": "empty-m",
+  "title": "Sign up · Empty, before typing",
+  "note": "The meter's resting state replaces “At least 8 characters.”: four empty segments, no word, and the three guides with open rings.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "loading-m",
+  "title": "Sign up · Typing, no score yet",
+  "note": "The estimator loads on the first keystroke. Until it lands: no word, no lit segment, the third guide stays open. Length and number-or-symbol tick live because they need no estimator.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "short-m",
+  "title": "Sign up · Under 8, before the press",
+  "note": "Under 8 the meter never shows a word, even once the estimator has loaded. The open length ring is the cue; nothing is red before the press.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "short-press-m",
+  "title": "Sign up · Under 8, pressed",
+  "note": "Checked on the device before Clerk, as today: the field goes red and the line takes the slot under the meter. The next keystroke clears it.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "weak-m",
+  "title": "Sign up · Weak",
+  "note": "One segment, quiet ink. Clerk will refuse it, so a line under the guides says what to do. Red is kept for Clerk's answer.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "weak-email-m",
+  "title": "Sign up · Weak: built from their email",
+  "note": "The person's email goes to the estimator as their own words, so a password built from it scores Weak and the third guide stays open. Shown here with Show on so the match is visible.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "fair-m",
+  "title": "Sign up · Fair",
+  "note": "Two segments, still quiet ink: Clerk refuses Fair too. Every guide is ticked, so the line explains what the guides can't.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "good-m",
+  "title": "Sign up · Good",
+  "note": "Three segments in success green: Clerk should accept it. No line.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "strong-m",
+  "title": "Sign up · Strong",
+  "note": "Four segments. A passphrase with spaces leaves A number or symbol open and still reads Strong: the guides advise, only the estimator moves the meter.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "show-m",
+  "title": "Sign up · Good, shown",
+  "note": "Show on with the meter present. Nothing about the meter changes or re-announces; the button shows its pressed state.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "breached-m",
+  "title": "Sign up · Clerk refused: breached",
+  "note": "Clerk's answer after the press, on a password the meter called Good. The meter empties (Clerk's verdict wins), the red line takes the slot under it, the guides stay. Next keystroke clears it and the meter scores again.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "refused-weak-m",
+  "title": "Sign up · Clerk refused: too easy to guess",
+  "note": "Clerk's strength failure on a password the meter called Good. Same pattern as breached.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "empty-320",
+  "title": "Sign up · Empty, before typing at 320",
+  "note": "",
+  "w": 320,
+  "h": 1060
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "fair-320",
+  "title": "Sign up · Fair at 320",
+  "note": "The longest guide and the Fair line wrap; marks stay top-aligned to the first line.",
+  "w": 320,
+  "h": 1060
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "breached-320",
+  "title": "Sign up · Clerk refused: breached at 320",
+  "note": "",
+  "w": 320,
+  "h": 1060
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "empty-d",
+  "title": "Sign up · Empty, before typing, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 1140
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "good-d",
+  "title": "Sign up · Good, desktop",
+  "note": "Same block in the 440px panel; nothing changes at desktop.",
+  "w": 1300,
+  "h": 1140
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "breached-d",
+  "title": "Sign up · Clerk refused: breached, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 1140
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-empty-m",
+  "title": "Reset · Empty, before typing",
+  "note": "The same block under New password. The estimator gets the email they typed on the step before.",
+  "w": 390,
+  "h": 1020
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-fair-m",
+  "title": "Reset · Fair",
+  "note": "",
+  "w": 390,
+  "h": 1020
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-good-m",
+  "title": "Reset · Good",
+  "note": "",
+  "w": 390,
+  "h": 1020
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-breached-m",
+  "title": "Reset · Clerk refused: breached",
+  "note": "",
+  "w": 390,
+  "h": 1020
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-good-d",
+  "title": "Reset · Good, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 1080
+ },
+ {
+  "section": "01-sign-up",
+  "name": "empty-light-m",
+  "title": "Sign up · Empty, before typing, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "loading-light-m",
+  "title": "Sign up · Typing, no score yet, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "short-light-m",
+  "title": "Sign up · Under 8, before the press, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "short-press-light-m",
+  "title": "Sign up · Under 8, pressed, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "weak-light-m",
+  "title": "Sign up · Weak, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "weak-email-light-m",
+  "title": "Sign up · Weak: built from their email, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "fair-light-m",
+  "title": "Sign up · Fair, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "good-light-m",
+  "title": "Sign up · Good, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "strong-light-m",
+  "title": "Sign up · Strong, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "show-light-m",
+  "title": "Sign up · Good, shown, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "breached-light-m",
+  "title": "Sign up · Clerk refused: breached, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "01-sign-up",
+  "name": "refused-weak-light-m",
+  "title": "Sign up · Clerk refused: too easy to guess, Light",
+  "note": "",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "empty-light-320",
+  "title": "Sign up · Empty, before typing at 320, Light",
+  "note": "",
+  "w": 320,
+  "h": 1060
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "fair-light-320",
+  "title": "Sign up · Fair at 320, Light",
+  "note": "",
+  "w": 320,
+  "h": 1060
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "breached-light-320",
+  "title": "Sign up · Clerk refused: breached at 320, Light",
+  "note": "",
+  "w": 320,
+  "h": 1060
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "empty-light-d",
+  "title": "Sign up · Empty, before typing, desktop, Light",
+  "note": "",
+  "w": 1300,
+  "h": 1140
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "good-light-d",
+  "title": "Sign up · Good, desktop, Light",
+  "note": "",
+  "w": 1300,
+  "h": 1140
+ },
+ {
+  "section": "02-320-and-desktop",
+  "name": "breached-light-d",
+  "title": "Sign up · Clerk refused: breached, desktop, Light",
+  "note": "",
+  "w": 1300,
+  "h": 1140
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-empty-light-m",
+  "title": "Reset · Empty, before typing, Light",
+  "note": "",
+  "w": 390,
+  "h": 1020
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-fair-light-m",
+  "title": "Reset · Fair, Light",
+  "note": "",
+  "w": 390,
+  "h": 1020
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-good-light-m",
+  "title": "Reset · Good, Light",
+  "note": "",
+  "w": 390,
+  "h": 1020
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-breached-light-m",
+  "title": "Reset · Clerk refused: breached, Light",
+  "note": "",
+  "w": 390,
+  "h": 1020
+ },
+ {
+  "section": "03-reset",
+  "name": "reset-good-light-d",
+  "title": "Reset · Good, desktop, Light",
+  "note": "",
+  "w": 1300,
+  "h": 1080
+ },
+ {
+  "section": "00-spec",
+  "name": "meter-spec-d",
+  "title": "Password strength · every state",
+  "note": "All twelve states side by side, Electric and Light, with the tokens.",
+  "w": 1460,
+  "h": 2330
+ },
+ {
+  "section": "00-spec",
+  "name": "reduced-motion-d",
+  "title": "Changing level, with and without motion",
+  "note": "Default fills the new segment over --motion-fast; reduced motion swaps in one frame.",
+  "w": 1100,
+  "h": 640
+ },
+ {
+  "section": "00-spec",
+  "name": "screen-reader-d",
+  "title": "What a screen reader hears",
+  "note": "One polite line after a 1 s pause, only when the word or count changes; quiet while Clerk's alert shows.",
+  "w": 1200,
+  "h": 860
+ }
+]
