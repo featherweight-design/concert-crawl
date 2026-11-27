@@ -392,6 +392,21 @@ describe('proxy — auth gate (#841)', () => {
     expect(auth.protect).toHaveBeenCalled();
   });
 
+  it('lets the signed-out probe page through, and nothing under it', async () => {
+    const { middlewareHandler } = await import('./proxy');
+
+    // The global-error probe loads /probe-throw signed out.
+    const page = new NextRequest('http://localhost/probe-throw');
+    expect(await middlewareHandler(makeAuth(null), page)).toBeUndefined();
+
+    const under = new NextRequest('http://localhost/probe-throw/x');
+    const auth = makeAuth(null);
+    await expect(middlewareHandler(auth, under)).rejects.toThrow(
+      'Unauthorized',
+    );
+    expect(auth.protect).toHaveBeenCalled();
+  });
+
   it('does not make paths under /api/revalidate public', async () => {
     const { middlewareHandler } = await import('./proxy');
 

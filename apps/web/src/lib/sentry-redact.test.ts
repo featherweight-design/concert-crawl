@@ -74,3 +74,45 @@ describe('beforeSend', () => {
     });
   });
 });
+
+// The probe page throws on purpose (lib/definitions/probe-throw.ts); its events
+// are tagged so triage skips them.
+describe('beforeSend probe tag', () => {
+  const tagged = { probe: 'global-error' };
+  type EventShape = {
+    request?: { url?: string };
+    transaction?: string;
+    contexts?: Record<string, Record<string, unknown> | undefined>;
+    tags?: Record<string, unknown>;
+  };
+  const send = (event: EventShape) => beforeSend(event);
+
+  it.each([
+    [
+      'the browser URL',
+      { request: { url: 'https://staging.example.com/probe-throw?x=1' } },
+    ],
+    ['the transaction', { transaction: '/probe-throw' }],
+    [
+      'the server request path',
+      { contexts: { nextjs: { request_path: '/probe-throw/' } } },
+    ],
+  ])('tags an event from the probe page by %s', (_label, event) => {
+    expect(send(event).tags).toEqual(tagged);
+  });
+
+  it('keeps tags the event already had', () => {
+    const result = send({
+      transaction: '/probe-throw',
+      tags: { tier: 'free' },
+    });
+    expect(result.tags).toEqual({ tier: 'free', ...tagged });
+  });
+
+  it.each(['/probe-throwing', '/bot', '/events/probe-throw'])(
+    'leaves %s untagged',
+    (path) => {
+      expect(send({ transaction: path }).tags).toBeUndefined();
+    },
+  );
+});
