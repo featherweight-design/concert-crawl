@@ -4,7 +4,7 @@
 // <html> and <body> and cannot lean on ClerkProvider, ThemeProvider, next/font
 // or globals.css. It writes the stored theme's tokens itself (same keys as the
 // root layout's pre-paint script) and draws the StandaloneError page.
-import { useSyncExternalStore } from 'react';
+import { useLayoutEffect, useSyncExternalStore } from 'react';
 
 import { ErrorReport } from '@/components/consumer/error-report';
 import { CARD_EDGE_FALLBACK_CSS } from '@/components/consumer/error-report/ErrorTellUsCard';
@@ -12,24 +12,41 @@ import { hasClientSession } from '@/components/consumer/error-report/lib/report-
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 import { THEMES } from '@/theme/themes';
 
+/**
+ * Writes the stored theme's tokens onto <html>. It references nothing outside
+ * itself, because it is also serialised into the pre-paint script below: one
+ * body for both callers.
+ */
+function applyStoredTheme(themes: Record<string, Record<string, string>>) {
+  const root = document.documentElement;
+  let theme = 'light';
+  try {
+    const stored = localStorage.getItem('cc-theme');
+    const system = window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'electric'
+      : 'light';
+    theme =
+      stored && Object.prototype.hasOwnProperty.call(themes, stored)
+        ? stored
+        : system;
+  } catch {
+    // Storage or matchMedia blocked: keep the light default.
+  }
+  const tokens = themes[theme] ?? {};
+  for (const [key, value] of Object.entries(tokens)) {
+    root.style.setProperty(`--${key}`, value);
+  }
+  root.setAttribute('data-theme', theme);
+}
+
 // `<` is escaped so no token value can ever close the script tag early.
 const themesJson = JSON.stringify(THEMES).replace(/</g, '\\u003c');
 
-const themeScript = `
-  (function() {
-    var themes = ${themesJson};
-    var root = document.documentElement;
-    var theme = 'light';
-    try {
-      var stored = localStorage.getItem('cc-theme');
-      var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'electric' : 'light';
-      theme = (stored && Object.prototype.hasOwnProperty.call(themes, stored)) ? stored : system;
-    } catch (e) {}
-    var tokens = themes[theme];
-    Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
-    root.setAttribute('data-theme', theme);
-  })();
-`;
+// First paint, before hydration. It runs once: React never executes a script
+// it renders on the client, and each time it mounts this page's <html> it
+// strips every attribute it did not render (the tokens and data-theme), so
+// the effect in GlobalError writes them again after every commit.
+const themeScript = `(${applyStoredTheme.toString()})(${themesJson});`;
 
 // The cookie is read once per render; nothing on this page changes it.
 const subscribeNever = () => () => undefined;
@@ -44,6 +61,11 @@ export default function GlobalError({
   // The app's own rule (every boundary retries through the hook, so the cached
   // failed payload is refreshed too). The router context sits above this file.
   const retry = useErrorBoundaryRetry(reset);
+  // No deps on purpose: Try again can re-mount <html>, and every mount wipes
+  // the tokens. Layout effect, so the wiped frame never paints.
+  useLayoutEffect(() => {
+    applyStoredTheme(THEMES);
+  });
   // No ClerkProvider here, so the session is read from Clerk's `__client_uat`
   // cookie (addendum-2 §18). The server render has no cookie to read and draws
   // the signed-out layout; the browser corrects it after hydration.
