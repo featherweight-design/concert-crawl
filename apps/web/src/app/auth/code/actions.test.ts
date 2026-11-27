@@ -17,6 +17,7 @@ vi.mock('@/lib/invite-cookie', () => ({
   signInviteCookie: () => 'signed',
   INVITE_COOKIE_NAME: 'invite_verified',
   INVITE_COOKIE_MAX_AGE: 60,
+  INVITE_COOKIE_PATH: '/',
   RETURN_PATH_COOKIE_NAME: 'return_path',
 }));
 
