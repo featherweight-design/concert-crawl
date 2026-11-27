@@ -84,8 +84,10 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
   (`signInWithClerk`, `apps/e2e/src/fixtures/auth.ts`): `/sign-in`, email, password, then the `__session` cookie.
 - The account is the staging audit user: `E2E_AUDIT_USER_EMAIL` and `E2E_AUDIT_USER_PASSWORD`, or
   `E2E_AUDIT_ADMIN_EMAIL` and `E2E_AUDIT_ADMIN_PASSWORD` with `CONTACT_SHEET_ROLE=admin`. **They live in the
-  operator's shell profile, not in any `.env`**; grepping `.env.local` finds nothing. Reference them by name only;
-  never read, print or paste their values.
+  gitignored `apps/e2e/.env.local`** (not the shell profile, since 2026-11-24), which `sign-in.mjs` and
+  `prepareAuditAuth` load themselves; an exported shell value wins. In a worktree, `cp` the main checkout's
+  `apps/e2e/.env.local` into the worktree's `apps/e2e/` (the 2026-11-22 exception below). Reference the values by
+  name only; never read, print or paste them.
 - **Locally** the same credentials sign in to the Concert Crawl Staging Clerk app's development instance (the dev
   server's keys). Its session cookie is still `__session`, which is what the shared flow waits for, so `signIn`
   needs no local branch. The module keeps the kit's contract: it exports `signIn(page, { baseUrl })`, checks the host
