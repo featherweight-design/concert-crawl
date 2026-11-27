@@ -2,10 +2,9 @@
 // <html> still carries data-theme and the --bg token, and the page is not
 // drawn black on white. Then one press on Go home leaves the error page.
 //
-// Needs a route that trips global-error, named by PROBE_THROW_ROUTE. Nothing
-// in the app throws on demand, so locally make one page throw (never commit
-// the throw) and point the variable at it.
-const ROUTE = process.env.PROBE_THROW_ROUTE;
+// Loads /probe-throw, a page that always throws outside production
+// (apps/web/src/lib/definitions/probe-throw.ts). PROBE_THROW_ROUTE overrides.
+const ROUTE = process.env.PROBE_THROW_ROUTE || '/probe-throw';
 const PRESSES = 4;
 
 const readTheme = (page) =>
@@ -25,11 +24,13 @@ const readTheme = (page) =>
 const isRefresh = (res) => Boolean(res.request().headers()['rsc']);
 
 export default async function ({ page, base, press, check }) {
-  if (!ROUTE) {
-    check(false, 'PROBE_THROW_ROUTE names a route that throws', 'unset');
-    return;
-  }
-  await page.goto(new URL(ROUTE, base).href);
+  const res = await page.goto(new URL(ROUTE, base).href);
+  // The page's own status is 500 by design; a 404 means production, or no route.
+  check(
+    res?.status() !== 404,
+    `${ROUTE} exists on this deploy`,
+    `status=${res?.status()}`,
+  );
   const retry = page.getByRole('button', { name: /try again/i });
   await retry.waitFor();
 

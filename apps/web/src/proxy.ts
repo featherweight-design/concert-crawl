@@ -68,6 +68,11 @@ const isAlwaysPublic = createRouteMatcher([
   // which would make every future `/bot`-prefixed route public by default.
   '/bot',
   '/bot/',
+  // A page that always throws, for the root error page's probe; production
+  // answers 404 (lib/definitions/probe-throw.ts). Public so the probe works
+  // signed out. It reads nothing. Exact path and its trailing-slash spelling.
+  '/probe-throw',
+  '/probe-throw/',
   // Next generates these from app/robots.ts and app/sitemap.ts, and they are
   // ordinary routes as far as middleware is concerned — the `config.matcher`
   // extension allowlist below covers neither `.txt` nor `.xml`, so both were
@@ -212,6 +217,7 @@ export const KNOWN_TOP_LEVEL_SEGMENTS = new Set([
   'me',
   'onboarding',
   'passport',
+  'probe-throw',
   'robots.txt',
   'search',
   'share',
