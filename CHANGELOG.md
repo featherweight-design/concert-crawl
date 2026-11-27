@@ -1,3 +1,12 @@
+## [1.572.2](https://github.com/featherweight-design/concert-crawl/compare/v1.572.1...v1.572.2) (2026-11-27)
+
+
+### Bug Fixes
+
+* **e2e:** parse apps/e2e/.env.local literally so passwords may hold symbols ([d038314](https://github.com/featherweight-design/concert-crawl/commit/d038314f1f8a027393edd463926187b494400319))
+* **web:** clear auth/complete cookies from a Route Handler ([ecca5b3](https://github.com/featherweight-design/concert-crawl/commit/ecca5b32d022e7ef44afc4e3b35768b55f5c469b))
+* **web:** relative no-store redirect and one invite cookie path ([b4112fc](https://github.com/featherweight-design/concert-crawl/commit/b4112fcb04e7c622c90a4b9c7d7674cd3181f2fd))
+
 ## [1.572.1](https://github.com/featherweight-design/concert-crawl/compare/v1.572.0...v1.572.1) (2026-11-27)
 
 
