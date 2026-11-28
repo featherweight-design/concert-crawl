@@ -1,3 +1,5 @@
+import { PROBE_THROW_TAG, isProbeThrowPath } from './definitions/probe-throw';
+
 /**
  * An invite token is a capability: whoever holds it can join the crew. It
  * travels as a URL path segment, and Sentry's default fetch/XHR breadcrumbs
@@ -47,11 +49,24 @@ export const beforeSend = <
     request?: { url?: string };
     transaction?: string;
     contexts?: Record<string, Record<string, unknown> | undefined>;
+    tags?: Record<string, unknown>;
   },
 >(
   event: T,
 ): T => {
   const next = { ...event };
+  // The probe page throws on purpose; tag it so triage can filter it out
+  // (`!probe:global-error`). Read before redaction, which leaves this path
+  // alone anyway.
+  const requestPath = event.contexts?.nextjs?.request_path;
+  const paths = [
+    event.request?.url,
+    event.transaction,
+    typeof requestPath === 'string' ? requestPath : undefined,
+  ];
+  if (paths.some((path) => path !== undefined && isProbeThrowPath(path))) {
+    next.tags = { ...next.tags, [PROBE_THROW_TAG.key]: PROBE_THROW_TAG.value };
+  }
   // Server request errors (instrumentation.ts onRequestError) carry the route
   // path in contexts.nextjs.request_path, outside request.url.
   if (next.contexts) {

@@ -112,6 +112,10 @@ describe('AddVenueFlow', () => {
 
   it('saves the draft on Continue, moves the URL to it, checks Basics off and opens Source', async () => {
     mockCreateDraft.mockResolvedValue({ success: true, id: 'v-9' });
+    // Source starts its test crawl on open. Left to the default stub it ends
+    // refused within a microtask or two, which enables Continue, and the last
+    // assertion raced that. A crawl that never answers holds Source on running.
+    mockTestCrawl.mockReturnValue(new Promise(() => undefined));
     render(<AddVenueFlow draft={null} />);
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     fillDazzle();
@@ -135,7 +139,7 @@ describe('AddVenueFlow', () => {
     expect(
       screen.getByTestId('add-venue-step-source').getAttribute('aria-current'),
     ).toBe('step');
-    // Source's Continue has no step to open yet.
+    // Continue waits for the test crawl to finish.
     expect(
       screen.getByTestId<HTMLButtonElement>('add-venue-continue').disabled,
     ).toBe(true);

@@ -392,6 +392,21 @@ describe('proxy — auth gate (#841)', () => {
     expect(auth.protect).toHaveBeenCalled();
   });
 
+  it('lets the signed-out probe page through, and nothing under it', async () => {
+    const { middlewareHandler } = await import('./proxy');
+
+    // The global-error probe loads /probe-throw signed out.
+    const page = new NextRequest('http://localhost/probe-throw');
+    expect(await middlewareHandler(makeAuth(null), page)).toBeUndefined();
+
+    const under = new NextRequest('http://localhost/probe-throw/x');
+    const auth = makeAuth(null);
+    await expect(middlewareHandler(auth, under)).rejects.toThrow(
+      'Unauthorized',
+    );
+    expect(auth.protect).toHaveBeenCalled();
+  });
+
   it('does not make paths under /api/revalidate public', async () => {
     const { middlewareHandler } = await import('./proxy');
 
@@ -1147,5 +1162,170 @@ describe('proxy — invite short link', () => {
     const appDir = join(import.meta.dirname, 'app');
     const segments = readdirSync(appDir).map((name) => name.toLowerCase());
     expect(segments).not.toContain('i');
+  });
+});
+
+describe('proxy — a new account owes the tour (onboarding required)', () => {
+  const NEW = Date.parse('2026-12-01T12:00:00Z');
+  const OLD = Date.parse('2026-11-01T12:00:00Z');
+
+  const signedIn = (sessionClaims: unknown) =>
+    Object.assign(async () => ({ userId: 'user_new', sessionClaims }), {
+      protect: vi.fn(async () => {}),
+    });
+
+  it('sends a new account with no stamp to the tour, keeping where it was going', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW, metadata: { role: 'user' } }),
+      new NextRequest('http://localhost/events/e1?tab=prices'),
+    );
+    const location = new URL(redirectLocation(result) ?? '');
+    expect(location.pathname).toBe('/onboarding');
+    expect(location.searchParams.get('return')).toBe('/events/e1?tab=prices');
+  });
+
+  it('lets a new account through once the tour is stamped', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({
+        created_at: NEW,
+        metadata: { onboardedAt: '2026-12-01T12:05:00.000Z' },
+      }),
+      new NextRequest('http://localhost/events'),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it('lets a new account through on a browser whose tour cookie names it', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/events', {
+        headers: { cookie: 'cc_onboarded=user_new' },
+      }),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it('still sends a new account to the tour when the cookie names another account', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/events', {
+        headers: { cookie: 'cc_onboarded=user_other' },
+      }),
+    );
+    expect(new URL(redirectLocation(result) ?? '').pathname).toBe(
+      '/onboarding',
+    );
+  });
+
+  it('never redirects a non-page request (a Server Action POST)', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/events', { method: 'POST' }),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it('never redirects a router prefetch (the Skip link prefetches its target)', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/events', {
+        headers: { 'next-router-prefetch': '1', rsc: '1' },
+      }),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it('never answers a subresource (an image or font) with the tour', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    for (const dest of ['image', 'font']) {
+      const result = await middlewareHandler(
+        signedIn({ created_at: NEW }),
+        new NextRequest('http://localhost/apple-icon', {
+          headers: { 'sec-fetch-dest': dest },
+        }),
+      );
+      expect(result).toBeUndefined();
+    }
+  });
+
+  it('still sends a page load or an RSC navigation to the tour', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    for (const dest of ['document', 'empty']) {
+      const result = await middlewareHandler(
+        signedIn({ created_at: NEW }),
+        new NextRequest('http://localhost/events', {
+          headers: { 'sec-fetch-dest': dest },
+        }),
+      );
+      expect(new URL(redirectLocation(result) ?? '').pathname).toBe(
+        '/onboarding',
+      );
+    }
+  });
+
+  it('exempts the tour and its sub-paths only, not a look-alike path', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const tour = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/onboarding/step'),
+    );
+    expect(tour).toBeUndefined();
+    // A look-alike top-level path is an unknown route and 404s before the
+    // tour check runs, so the matcher is checked directly.
+    const { isOnboardingExempt } = await import('./proxy');
+    expect(
+      isOnboardingExempt(new NextRequest('http://localhost/onboarding')),
+    ).toBe(true);
+    expect(
+      isOnboardingExempt(new NextRequest('http://localhost/onboarding/step')),
+    ).toBe(true);
+    expect(
+      isOnboardingExempt(new NextRequest('http://localhost/onboardingxyz')),
+    ).toBe(false);
+  });
+
+  it('never forces an account created before the cutoff', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: OLD, metadata: {} }),
+      new NextRequest('http://localhost/events'),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it.each([
+    ['no created_at claim (template not edited yet)', { metadata: {} }],
+    ['no claims at all', undefined],
+    ['a created_at that is not a number', { created_at: '1764590400000' }],
+  ])('does not force with %s', async (_label, claims) => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn(claims),
+      new NextRequest('http://localhost/events'),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it.each([
+    '/onboarding',
+    '/onboarding?return=/events',
+    '/auth/complete',
+    '/legal/privacy',
+    '/bot',
+    '/~offline',
+    '/api/error-report',
+  ])('does not send an owed account away from %s', async (path) => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest(`http://localhost${path}`),
+    );
+    expect(result).toBeUndefined();
   });
 });

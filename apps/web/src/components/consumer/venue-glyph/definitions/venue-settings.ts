@@ -1,7 +1,8 @@
 import type { VenueGlyphKey } from './glyphs';
 
 /** The backdrop family a venue's hero art is drawn on. */
-export type VenueHeroSetting = 'street' | 'outdoor' | 'arena';
+export type VenueHeroSetting =
+  'street' | 'outdoor' | 'arena' | 'theater' | 'club' | 'gallery';
 
 /**
  * Which backdrop each venue's hero sits on, as the B+ board draws it

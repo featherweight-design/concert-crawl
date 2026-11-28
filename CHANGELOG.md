@@ -1,3 +1,20 @@
+# [1.573.0](https://github.com/featherweight-design/concert-crawl/compare/v1.572.2...v1.573.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **web:** a malformed URL never throws out of the probe tag check ([bb898d7](https://github.com/featherweight-design/concert-crawl/commit/bb898d755502289c9a058d661b928b11e89aa58f))
+* **web:** hero gallery panels match the wide SVG, strips scale with width ([71b1221](https://github.com/featherweight-design/concert-crawl/commit/71b1221bb75cddffa96837bd4ef333037024dd0a))
+* **web:** keep the root error page themed after Try again ([17c9985](https://github.com/featherweight-design/concert-crawl/commit/17c9985fb9a32acac4c9d65113821a56459b60cd))
+* **web:** review fixes for the global-error theme ([d0c973b](https://github.com/featherweight-design/concert-crawl/commit/d0c973bc78ff13aa1283c6db616e68d89f9c32de))
+* **web:** review fixes for the probe page gate and global-error theme ([0a931bc](https://github.com/featherweight-design/concert-crawl/commit/0a931bcc4c543d3d362d6473a66c51b1fa37b49d))
+
+
+### Features
+
+* **web:** staging-only /probe-throw page for the global-error probe ([64ee6fe](https://github.com/featherweight-design/concert-crawl/commit/64ee6fe00327c600092d9cd82f6978d68866effe))
+* **web:** venue hero Theater, Club and Gallery settings ([4cf4f8c](https://github.com/featherweight-design/concert-crawl/commit/4cf4f8c9d8110dce6a4b63a67c8af89d522ba811))
+
 ## [1.572.2](https://github.com/featherweight-design/concert-crawl/compare/v1.572.1...v1.572.2) (2026-11-27)
 
 

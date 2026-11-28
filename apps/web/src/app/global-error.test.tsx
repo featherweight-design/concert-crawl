@@ -34,13 +34,13 @@ afterEach(() => {
   setClientUat(null);
 });
 
-const renderPage = () =>
-  render(
-    <GlobalError
-      error={Object.assign(new Error('boom'), { digest: '4471' })}
-      reset={vi.fn()}
-    />,
-  );
+const pageElement = () => (
+  <GlobalError
+    error={Object.assign(new Error('boom'), { digest: '4471' })}
+    reset={vi.fn()}
+  />
+);
+const renderPage = () => render(pageElement());
 
 describe('global-error', () => {
   it('renders the standalone error page with the digest as the error ID', () => {
@@ -95,5 +95,74 @@ describe('global-error', () => {
     ).toBeNull();
     expect(screen.getByText(copy.signedOutBody)).toBeTruthy();
     expect(screen.queryByText(copy.errorBody)).toBeNull();
+  });
+});
+
+// A client render of this page (Try again, any client-side throw) never runs
+// its pre-paint script, and React strips <html>'s attributes when it mounts
+// it, so the effect must write the theme itself.
+describe('GlobalError theme', () => {
+  const root = document.documentElement;
+  const clearTheme = () => {
+    root.removeAttribute('data-theme');
+    root.removeAttribute('style');
+  };
+  beforeEach(() => {
+    clearTheme();
+    localStorage.setItem('cc-theme', 'jade');
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+  });
+  afterEach(() => {
+    localStorage.removeItem('cc-theme');
+    vi.unstubAllGlobals();
+    clearTheme();
+  });
+
+  it('writes the stored theme onto <html> after a client render', () => {
+    renderPage();
+    expect(root.getAttribute('data-theme')).toBe('jade');
+    expect(root.style.getPropertyValue('--bg')).not.toBe('');
+  });
+
+  it('writes it again when the page mounts a second time', () => {
+    renderPage();
+    cleanup();
+    clearTheme();
+    renderPage();
+    expect(root.getAttribute('data-theme')).toBe('jade');
+  });
+
+  it('ships a pre-paint script that runs on its own and themes the page', () => {
+    renderPage();
+    // React 19 renders <html>, <head> and <body> as the document's own
+    // singletons, so the script lands in document.head, not the container.
+    const script = Array.from(document.head.querySelectorAll('script')).find(
+      (el) => el.textContent?.includes('cc-theme'),
+    );
+    expect(script?.textContent).toBeTruthy();
+    clearTheme();
+    // The script must run with no module scope: a stray reference throws here.
+    new Function(script?.textContent ?? '')();
+    expect(root.getAttribute('data-theme')).toBe('jade');
+    expect(root.style.getPropertyValue('--bg')).not.toBe('');
+  });
+
+  it('falls back to the system theme when storage is blocked, and warns once', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const getItem = vi
+      .spyOn(Storage.prototype, 'getItem')
+      .mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const { rerender } = renderPage();
+      rerender(pageElement());
+      expect(root.getAttribute('data-theme')).toBe('electric');
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      getItem.mockRestore();
+      warn.mockRestore();
+    }
   });
 });

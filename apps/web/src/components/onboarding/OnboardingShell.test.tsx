@@ -17,6 +17,13 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
 }));
 
+// The mark itself is its own module's business (use-mark-onboarded). Here it
+// only has to happen before Finish navigates.
+const markOnboarded = vi.fn();
+vi.mock('./lib/use-mark-onboarded', () => ({
+  useMarkOnboarded: () => markOnboarded,
+}));
+
 vi.mock('next/link', () => ({
   default: ({
     href,
@@ -152,6 +159,7 @@ Object.defineProperty(window, 'matchMedia', {
 
 beforeEach(() => {
   push.mockClear();
+  markOnboarded.mockClear();
   fetchArtistSuggestions.mockReset();
   fetchArtistSuggestions.mockResolvedValue(SUGGESTIONS);
   followArtistsBulk.mockReset();
@@ -249,7 +257,21 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     advanceToEnd();
     expect(primaryCtas()[0]!.textContent).toBe(nav.finishButton(null));
     next();
+    expect(markOnboarded).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith('/events');
+  });
+
+  it('records the tour as done before Finish leaves (onboarding required)', () => {
+    // The proxy sends an unmarked new account back to the tour, so the mark
+    // must come first or the visitor bounces straight back here.
+    renderShell();
+    advanceToEnd();
+    next();
+    expect(markOnboarded).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith('/events');
+    expect(markOnboarded.mock.invocationCallOrder[0]).toBeLessThan(
+      push.mock.invocationCallOrder[0]!,
+    );
   });
 
   it('ends on the destination a plain return path names, with no intent', () => {
@@ -261,6 +283,7 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     advanceToEnd();
     expect(primaryCtas()[0]!.textContent).toBe(nav.finishButton(null));
     next();
+    expect(markOnboarded).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith('/events/e1');
   });
 
@@ -268,6 +291,7 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     renderShell({ returnPath: '//evil.com' });
     advanceToEnd();
     next();
+    expect(markOnboarded).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith('/events');
   });
 
@@ -280,6 +304,7 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     advanceToEnd();
     expect(primaryCtas()[0]!.textContent).toBe(nav.finishButton('Geese'));
     next();
+    expect(markOnboarded).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith(
       `/events/e1?intent=watch%3A${EVENT_ID}&label=Geese`,
     );
@@ -296,6 +321,7 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     });
     advanceToEnd();
     next();
+    expect(markOnboarded).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith(
       `/events/e1?intent=watch%3A${EVENT_ID}&label=Geese&tier=premium`,
     );

@@ -4,7 +4,7 @@
 // <html> and <body> and cannot lean on ClerkProvider, ThemeProvider, next/font
 // or globals.css. It writes the stored theme's tokens itself (same keys as the
 // root layout's pre-paint script) and draws the StandaloneError page.
-import { useSyncExternalStore } from 'react';
+import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 
 import { ErrorReport } from '@/components/consumer/error-report';
 import { CARD_EDGE_FALLBACK_CSS } from '@/components/consumer/error-report/ErrorTellUsCard';
@@ -12,24 +12,57 @@ import { hasClientSession } from '@/components/consumer/error-report/lib/report-
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 import { THEMES } from '@/theme/themes';
 
+/**
+ * Writes the stored theme's tokens onto <html>, and reports whether storage
+ * and matchMedia could both be read. It is also serialised into the pre-paint
+ * script below (one body for both callers), so it may touch browser globals
+ * only, never a module-scope name, and sticks to syntax no build target
+ * lowers into a helper call (no for-of, spread or destructuring).
+ */
+function applyStoredTheme(themes: Record<string, Record<string, string>>) {
+  const root = document.documentElement;
+  let readable = true;
+  let stored: string | null = null;
+  let system = 'light';
+  // Two reads, two guards: blocked storage must not cost the system theme.
+  try {
+    stored = localStorage.getItem('cc-theme');
+  } catch {
+    readable = false;
+  }
+  try {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      system = 'electric';
+    }
+  } catch {
+    readable = false;
+  }
+  const theme =
+    stored && Object.prototype.hasOwnProperty.call(themes, stored)
+      ? stored
+      : system;
+  const tokens = themes[theme] || {};
+  Object.keys(tokens).forEach(function (key) {
+    root.style.setProperty('--' + key, tokens[key] || '');
+  });
+  root.setAttribute('data-theme', theme);
+  return readable;
+}
+
 // `<` is escaped so no token value can ever close the script tag early.
 const themesJson = JSON.stringify(THEMES).replace(/</g, '\\u003c');
 
-const themeScript = `
-  (function() {
-    var themes = ${themesJson};
-    var root = document.documentElement;
-    var theme = 'light';
-    try {
-      var stored = localStorage.getItem('cc-theme');
-      var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'electric' : 'light';
-      theme = (stored && Object.prototype.hasOwnProperty.call(themes, stored)) ? stored : system;
-    } catch (e) {}
-    var tokens = themes[theme];
-    Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
-    root.setAttribute('data-theme', theme);
-  })();
-`;
+// First paint, before hydration. It runs once: React never executes a script
+// it renders on the client, and each time it mounts this page's <html> it
+// strips every attribute it did not render (the tokens and data-theme), so
+// the effect in GlobalError writes them again after every commit.
+// The function's source cannot be escaped like the JSON (`<` is valid in
+// code), so only a closing script tag is broken up, in case a minifier ever
+// emits one inside a string. The page must load whatever the build does.
+const applySource = applyStoredTheme
+  .toString()
+  .replace(/<\/(script)/gi, '<\\/$1');
+const themeScript = `(${applySource})(${themesJson});`;
 
 // The cookie is read once per render; nothing on this page changes it.
 const subscribeNever = () => () => undefined;
@@ -44,6 +77,15 @@ export default function GlobalError({
   // The app's own rule (every boundary retries through the hook, so the cached
   // failed payload is refreshed too). The router context sits above this file.
   const retry = useErrorBoundaryRetry(reset);
+  // No deps on purpose: Try again can re-mount <html>, and every mount wipes
+  // the tokens. Layout effect, so the wiped frame never paints.
+  // A blocked read is logged once, not on every commit.
+  const warned = useRef(false);
+  useLayoutEffect(() => {
+    if (applyStoredTheme(THEMES) || warned.current) return;
+    warned.current = true;
+    console.warn('global-error: stored theme unreadable, using the default');
+  });
   // No ClerkProvider here, so the session is read from Clerk's `__client_uat`
   // cookie (addendum-2 §18). The server render has no cookie to read and draws
   // the signed-out layout; the browser corrects it after hydration.
@@ -61,7 +103,9 @@ export default function GlobalError({
             not loaded on this page. */}
         <style>{CARD_EDGE_FALLBACK_CSS}</style>
       </head>
-      <body style={{ margin: 0, background: 'var(--bg)' }}>
+      {/* The global-error probe asserts it reached this boundary, not a
+          nested error.tsx under the root layout. */}
+      <body data-global-error="" style={{ margin: 0, background: 'var(--bg)' }}>
         {/* Signed in: the Tell us card, with Go home rather than Sign out
             (addendum-3 B20a), so the body is the one that names no Sign out.
             Signed out: no card. */}

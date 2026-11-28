@@ -10,6 +10,11 @@ import {
   isSafeReturnPath,
   sanitizeReturnPath,
 } from '@/lib/auth/intent';
+import {
+  needsOnboarding,
+  ONBOARDED_COOKIE,
+  ONBOARDING_PATH,
+} from '@/lib/auth/onboarding-required';
 
 /**
  * Routes any visitor may reach, signed in or out, in either launch mode.
@@ -68,6 +73,11 @@ const isAlwaysPublic = createRouteMatcher([
   // which would make every future `/bot`-prefixed route public by default.
   '/bot',
   '/bot/',
+  // A page that always throws, for the root error page's probe; production
+  // answers 404 (lib/definitions/probe-throw.ts). Public so the probe works
+  // signed out. It reads nothing. Exact path and its trailing-slash spelling.
+  '/probe-throw',
+  '/probe-throw/',
   // Next generates these from app/robots.ts and app/sitemap.ts, and they are
   // ordinary routes as far as middleware is concerned — the `config.matcher`
   // extension allowlist below covers neither `.txt` nor `.xml`, so both were
@@ -171,6 +181,24 @@ const isInviteGated = createRouteMatcher(['/sign-up(.*)']);
 const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)']);
 
 /**
+ * Where a signed-in account that still owes the tour may go without being
+ * sent to it: the tour itself, the auth funnel that leads there, the app's
+ * own API routes (a fetch must never be answered with a page), and every
+ * always-public page (legal, /bot, the offline fallback and the rest).
+ */
+const isOnboardingRoute = createRouteMatcher([
+  // The tour and its sub-paths only: `/onboardingxyz` is a different route.
+  ONBOARDING_PATH,
+  `${ONBOARDING_PATH}/(.*)`,
+  '/auth/(.*)',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/(.*)',
+]);
+export const isOnboardingExempt = (req: NextRequest): boolean =>
+  isOnboardingRoute(req) || isAlwaysPublic(req);
+
+/**
  * Every first URL segment this app actually serves, including the metadata
  * routes Next generates from `app/*.ts` and the one `public/` directory.
  *
@@ -212,6 +240,7 @@ export const KNOWN_TOP_LEVEL_SEGMENTS = new Set([
   'me',
   'onboarding',
   'passport',
+  'probe-throw',
   'robots.txt',
   'search',
   'share',
@@ -233,7 +262,7 @@ const isKnownRoute = (pathname: string): boolean => {
  * Clerk's richer object is assignable to it, and tests can pass a small stub.
  */
 interface MiddlewareAuth {
-  (): Promise<{ userId: string | null }>;
+  (): Promise<{ userId: string | null; sessionClaims?: unknown }>;
   protect(options: { unauthenticatedUrl: string }): Promise<unknown>;
 }
 
@@ -281,7 +310,7 @@ export const middlewareHandler = async (
   // not skip Clerk entirely — only the redirect and the page render behind it.
   if (!isKnownRoute(req.nextUrl.pathname)) return;
 
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
   const launched = isPublicBrowseEnabled();
 
   // Authenticated users skip directly to the app; no reason to see pre-auth pages
@@ -291,6 +320,38 @@ export const middlewareHandler = async (
   if (userId) {
     if (isPreAuth(req) || req.nextUrl.pathname === '/') {
       return NextResponse.redirect(new URL('/events', req.url));
+    }
+    // A new account goes through the tour before the app opens, wherever it
+    // lands: /auth/complete sends it there once, and this catches every way
+    // past that (an error on the way, a typed URL, a bookmark). The claims come
+    // from the session token, so the check costs no request. Only a page load
+    // (GET or HEAD) is redirected: a Server Action POST answered with the tour
+    // would just break. A router prefetch is let through too: the tour's own
+    // Skip link prefetches its destination, and a cached redirect would send
+    // the click back here after the tour was marked done. A subresource (an
+    // image such as /apple-icon or a share card, a font) is never answered
+    // with the tour's HTML; a page load, an RSC fetch (`empty`) or a client
+    // that sends no Sec-Fetch-Dest at all still is.
+    const fetchDest = req.headers.get('sec-fetch-dest');
+    const isSubresource =
+      fetchDest !== null && fetchDest !== 'document' && fetchDest !== 'empty';
+    if (
+      (req.method === 'GET' || req.method === 'HEAD') &&
+      req.headers.get('next-router-prefetch') === null &&
+      !isSubresource &&
+      !isOnboardingExempt(req) &&
+      needsOnboarding(
+        sessionClaims,
+        userId,
+        req.cookies.get(ONBOARDED_COOKIE)?.value,
+      )
+    ) {
+      const tourUrl = new URL(ONBOARDING_PATH, req.url);
+      tourUrl.searchParams.set(
+        'return',
+        toSafeReturnPath(req.nextUrl.pathname, req.nextUrl.search),
+      );
+      return NextResponse.redirect(tourUrl);
     }
     return;
   }

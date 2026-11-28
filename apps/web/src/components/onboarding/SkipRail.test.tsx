@@ -4,6 +4,11 @@ import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 
+const markOnboarded = vi.fn();
+vi.mock('./lib/use-mark-onboarded', () => ({
+  useMarkOnboarded: () => markOnboarded,
+}));
+
 vi.mock('next/link', () => ({
   default: ({
     href,
@@ -29,6 +34,7 @@ import { SkipRail } from './SkipRail';
 
 afterEach(() => {
   cleanup();
+  markOnboarded.mockReset();
   window.sessionStorage.clear();
 });
 
@@ -103,6 +109,54 @@ describe('SkipRail — three weights, one position (#794)', () => {
 
       expect(readPicks(GENRE_PICKS_KEY)).toEqual([]);
       expect(readPicks(ARTIST_PICKS_KEY)).toEqual([]);
+    });
+  });
+
+  // Skipping is done, like finishing: the proxy sends an unmarked new account
+  // back to the tour. The mark is synchronous, so the link still navigates.
+  describe('skipping records the tour as done (onboarding required)', () => {
+    it.each([
+      ['a plain click', {}],
+      ['a new-tab click', { metaKey: true }],
+    ])('marks it on %s and lets the link navigate', (_label, init) => {
+      render(<SkipRail mode={{ kind: 'default', href: '/events?tier=x' }} />);
+      const link = screen.getByRole('link', { name: /^skip$/i });
+      const event = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      });
+      link.dispatchEvent(event);
+      expect(markOnboarded).toHaveBeenCalledTimes(1);
+      // The mock Link has no router; a prevented click would mean the
+      // component itself held the navigation.
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('marks it on a middle-click, which opens a new tab with no click event', () => {
+      render(<SkipRail mode={{ kind: 'default', href: '/events' }} />);
+      fireEvent(
+        screen.getByRole('link', { name: /^skip$/i }),
+        new MouseEvent('auxclick', { bubbles: true, button: 1 }),
+      );
+      expect(markOnboarded).toHaveBeenCalledTimes(1);
+    });
+
+    it('marks it from the menu entry and the mid-intent link too', () => {
+      render(<SkipRail mode={{ kind: 'menu' }} />);
+      fireEvent.click(screen.getByRole('link', { name: /^close$/i }));
+      cleanup();
+      render(
+        <SkipRail
+          mode={{
+            kind: 'mid-intent',
+            href: '/events/e1',
+            destinationLabel: 'Tigers Jaw',
+          }}
+        />,
+      );
+      fireEvent.click(screen.getByRole('link', { name: /tigers jaw/i }));
+      expect(markOnboarded).toHaveBeenCalledTimes(2);
     });
   });
 });
