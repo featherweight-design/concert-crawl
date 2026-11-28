@@ -56,6 +56,22 @@ export default async function ({ goto, page, press, check, width }) {
     `box=${box && `${box.width}x${box.height}`}`,
   );
 
+  // Addendum 15 draws the hit box at right 8, top 14 of the sheet, and right
+  // 12, top 12 of the desktop card.
+  const frame = await dialog.boundingBox();
+  const wantRight = width.label === 'desktop' ? 12 : 8;
+  const wantTop = width.label === 'desktop' ? 12 : 14;
+  const gotRight =
+    box && frame
+      ? Math.round(frame.x + frame.width - (box.x + box.width))
+      : null;
+  const gotTop = box && frame ? Math.round(box.y - frame.y) : null;
+  check(
+    gotRight === wantRight && gotTop === wantTop,
+    'Close sits where the board draws it',
+    `right=${gotRight} top=${gotTop} want=${wantRight}/${wantTop}`,
+  );
+
   const focused = await page.evaluate(
     () => document.activeElement?.textContent?.trim() ?? '',
   );
