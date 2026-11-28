@@ -627,7 +627,8 @@ export async function testCrawlVenue(id: string): Promise<TestOutcome> {
     const { triggerId } = await triggerVenueTest(id, token);
     return { ok: true, triggerId };
   } catch (err: unknown) {
-    // Left mid-test: read the queued one rather than refuse.
+    // Left mid-test: read the queued one rather than refuse. It was queued
+    // against the page saved before this call, which Source saves first.
     const pending = pendingTriggerOf(err);
     if (pending !== null) return { ok: true, triggerId: pending };
     const code = testRefusalOf(err);
