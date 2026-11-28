@@ -174,7 +174,8 @@ export function GlyphShapes({
   );
 }
 
-function CustomShape({ shape }: { shape: GlyphSvgShape }) {
+/** One validated shape of a custom glyph; it takes the stroke of its parent. */
+export function CustomShape({ shape }: { shape: GlyphSvgShape }) {
   switch (shape.tag) {
     case 'path':
       return <path d={shape.d} />;
