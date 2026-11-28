@@ -112,7 +112,11 @@ const References = ({ phone, icon }: { phone: boolean; icon: IconDrafts }) => {
         value={icon.steer}
         onChange={(event) => icon.setSteer(event.target.value)}
         data-testid="add-venue-icon-steer"
-        style={inputStyle(false)}
+        style={{
+          ...inputStyle(false),
+          // iOS Safari zooms a focused input under 16px.
+          ...(phone ? { fontSize: 16 } : {}),
+        }}
       />
     </div>
   );
