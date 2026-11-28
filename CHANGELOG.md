@@ -1,3 +1,16 @@
+# [1.580.0](https://github.com/featherweight-design/concert-crawl/compare/v1.579.0...v1.580.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **search:** place the preview Close where addendum 15 draws it ([e0e52c8](https://github.com/featherweight-design/concert-crawl/commit/e0e52c8a64504d7a188f8dc43244f41fb144e856))
+* **search:** preview hover rules beat inline styles, focus Open page ([b6c006a](https://github.com/featherweight-design/concert-crawl/commit/b6c006a64208401ef3943f6c3848421431fa3b5a))
+
+
+### Features
+
+* **search:** artist preview close, plate sizes and palette footer hints ([331f9a9](https://github.com/featherweight-design/concert-crawl/commit/331f9a99755066949b03d4781e1b20a62179982e))
+
 # [1.579.0](https://github.com/featherweight-design/concert-crawl/compare/v1.578.0...v1.579.0) (2026-11-28)
 
 
