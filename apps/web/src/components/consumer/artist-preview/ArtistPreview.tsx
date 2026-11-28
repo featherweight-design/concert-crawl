@@ -294,8 +294,8 @@ export const ArtistPreview = ({
           onClick={close.onClose}
           style={{
             position: 'absolute',
-            top: close.placement === 'card' ? -6 : -4,
-            right: -6,
+            top: close.placement === 'card' ? -7 : -11,
+            right: -11,
             width: 44,
             height: 44,
             display: 'grid',
