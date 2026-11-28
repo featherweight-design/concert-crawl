@@ -1638,6 +1638,9 @@ export const ADMIN_COPY = {
         passedCount: (shows: number) =>
           `Test found ${shows} ${shows === 1 ? 'show' : 'shows'}`,
         rules: 'robots.txt allows · 3 s pace',
+        // How long the test took, appended to a line when the result has it.
+        withTook: (line: string, ms: number) =>
+          `${line} · ${Math.max(1, Math.round(ms / 1000))} s`,
         found: (shows: number, via: string, cost: string) =>
           `${shows} ${shows === 1 ? 'show' : 'shows'} found by ${via} · ${cost}`,
         noCost: 'no LLM cost',

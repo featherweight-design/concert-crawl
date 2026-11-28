@@ -106,6 +106,28 @@ describe('SourceStep', () => {
     expect(screen.queryByText(SOURCE.test.passed)).toBeNull();
   });
 
+  it('adds how long the test took when the result has it, and not otherwise', async () => {
+    mockTest.mockResolvedValue({ ok: true, triggerId: 't-1' });
+    mockRead.mockResolvedValue(trigger({ ...found, durationMs: 6200 }));
+    mount();
+    await settle();
+    expect(
+      screen.getByText(
+        SOURCE.test.withTook(
+          SOURCE.test.found(5, 'JSON-LD', 'no LLM cost'),
+          6200,
+        ),
+      ),
+    ).toBeTruthy();
+    cleanup();
+    mockRead.mockResolvedValue(trigger(found));
+    mount();
+    await settle();
+    expect(
+      screen.getByText(SOURCE.test.found(5, 'JSON-LD', 'no LLM cost')),
+    ).toBeTruthy();
+  });
+
   it('stops at robots.txt, offers Ask the venue and reads no trigger', async () => {
     mockTest.mockResolvedValue({ ok: false, code: 'robots_disallowed' });
     const onAsk = vi.fn();

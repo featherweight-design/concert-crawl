@@ -94,6 +94,11 @@ const TestBody = ({
     const { result } = state;
     const samples = result.samples.slice(0, SAMPLE_LIMIT);
     const more = result.found - samples.length;
+    // Older results carry no duration: show nothing rather than a guess.
+    const took = (line: string): string =>
+      result.durationMs === undefined
+        ? line
+        : test.withTook(line, result.durationMs);
     return (
       <>
         {phone ? (
@@ -108,7 +113,7 @@ const TestBody = ({
             <StatusBadge kind="success" dot>
               {test.passedCount(result.found)}
             </StatusBadge>
-            <span style={lineStyle}>{test.rules}</span>
+            <span style={lineStyle}>{took(test.rules)}</span>
           </div>
         ) : (
           <>
@@ -116,10 +121,12 @@ const TestBody = ({
               {test.passed}
             </StatusBadge>
             <p style={{ ...lineStyle, color: 'var(--fg)' }}>
-              {test.found(
-                result.found,
-                SOURCE.via[viaOf(result.counts)],
-                costLabel(result.costUsd),
+              {took(
+                test.found(
+                  result.found,
+                  SOURCE.via[viaOf(result.counts)],
+                  costLabel(result.costUsd),
+                ),
               )}
             </p>
           </>
