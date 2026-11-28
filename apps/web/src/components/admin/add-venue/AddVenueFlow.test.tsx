@@ -28,7 +28,12 @@ vi.mock('@/lib/actions/venues', () => ({
   testCrawlVenue: () => mockTestCrawl(),
   readTestCrawl: () => mockReadTest(),
   goLiveVenue: (id: string) => mockGoLive(id),
+  draftVenueGlyphs: () => mockDraftGlyphs(),
+  saveVenueIcon: (id: string, payload: unknown) => mockSaveIcon(id, payload),
 }));
+
+const mockDraftGlyphs = vi.fn();
+const mockSaveIcon = vi.fn();
 
 const mockTestCrawl = vi.fn();
 const mockReadTest = vi.fn();
@@ -308,19 +313,18 @@ describe('AddVenueFlow', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('draws Icon and Guide as not open yet, and Source and Review as open', () => {
+  it('draws Guide as not open yet, and Source, Icon and Review as open', () => {
     render(<AddVenueFlow draft={null} />);
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     expect(
       screen.getByTestId('add-venue-step-source').getAttribute('aria-disabled'),
     ).toBeNull();
-    for (const step of ['icon', 'guide']) {
-      expect(
-        screen
-          .getByTestId(`add-venue-step-${step}`)
-          .getAttribute('aria-disabled'),
-      ).toBe('true');
-    }
+    expect(
+      screen.getByTestId('add-venue-step-icon').getAttribute('aria-disabled'),
+    ).toBeNull();
+    expect(
+      screen.getByTestId('add-venue-step-guide').getAttribute('aria-disabled'),
+    ).toBe('true');
   });
 
   describe('Review and Go live', () => {
@@ -353,11 +357,34 @@ describe('AddVenueFlow', () => {
         timeout: 5000,
       });
       fireEvent.click(next);
+      expect(screen.getByTestId('add-venue-icon')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('add-venue-skip'));
       expect(screen.getByText(COPY.review.title)).toBeTruthy();
       expect(screen.getByTestId('add-venue-continue').textContent).toBe(
         COPY.review.goLive,
       );
+      expect(screen.getByTestId('add-venue-review-icon').textContent).toContain(
+        COPY.review.skipped,
+      );
       vi.useRealTimers();
+    });
+
+    it('Back from Review returns to Icon, and Back from Icon to Source', async () => {
+      mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
+      mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
+      resumeOnSource();
+      const next = screen.getByTestId('add-venue-continue');
+      await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {
+        timeout: 5000,
+      });
+      fireEvent.click(next);
+      fireEvent.click(screen.getByTestId('add-venue-skip'));
+      fireEvent.click(screen.getByTestId('add-venue-back'));
+      expect(screen.getByTestId('add-venue-icon')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('add-venue-back'));
+      await waitFor(() =>
+        expect(screen.queryByTestId('add-venue-icon')).toBeNull(),
+      );
     });
 
     it('goes live and shows Gone live, then starts over on Add another', async () => {
@@ -370,6 +397,7 @@ describe('AddVenueFlow', () => {
         timeout: 5000,
       });
       fireEvent.click(next);
+      fireEvent.click(screen.getByTestId('add-venue-skip'));
       fireEvent.click(screen.getByTestId('add-venue-continue'));
       await waitFor(() =>
         expect(screen.getByTestId('add-venue-gone-live')).toBeTruthy(),
@@ -400,6 +428,7 @@ describe('AddVenueFlow', () => {
         timeout: 5000,
       });
       fireEvent.click(next);
+      fireEvent.click(screen.getByTestId('add-venue-skip'));
       fireEvent.click(screen.getByTestId('add-venue-continue'));
       await waitFor(() =>
         expect(screen.getByTestId('add-venue-go-live-failed')).toBeTruthy(),

@@ -18,3 +18,4 @@ The full phase log up to 2026-10-31 is kept in the private archive. New rows go 
 | Admin | Add a venue 3e-2a: Source step with the live test crawl, and the draft resumes on it                                                                | ✅     |
 | Admin | Add a venue 3e-2a: Ask the venue sheet and dialog, recording the ask on Open in email or Copy                                                       | ✅     |
 | Admin | Add a venue 3e-2b: Review and Go live, Gone live, and the Venues + link replaces the old modal                                                      | ✅     |
+| Admin | Add a venue 3e-3b: Icon step with reference images, drafts, upload, the neon hero preview and the hero setting, Skip for now                        | ✅     |

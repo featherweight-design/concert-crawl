@@ -38,6 +38,21 @@ const mount = (over: Partial<Parameters<typeof ReviewStep>[0]> = {}) => {
 afterEach(cleanup);
 
 describe('ReviewStep', () => {
+  it('draws the Icon row Done with the chosen icon, else Skipped', () => {
+    mount({ iconLine: 'Glass and note · Club hero' });
+    expect(screen.getByTestId('add-venue-review-icon').textContent).toContain(
+      'Glass and note · Club hero',
+    );
+    expect(screen.getByTestId('add-venue-review-icon').textContent).toContain(
+      REVIEW.done,
+    );
+    cleanup();
+    mount();
+    expect(screen.getByTestId('add-venue-review-icon').textContent).toContain(
+      REVIEW.skipped,
+    );
+  });
+
   it('reads ready when the test passed, with what happens on Go live', () => {
     mount();
     expect(screen.getByText(REVIEW.title)).toBeTruthy();

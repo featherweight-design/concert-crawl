@@ -1468,6 +1468,7 @@ export const ADMIN_COPY = {
       savedAsYouGo: 'Saved as you go',
       continue: 'Continue',
       saving: 'Saving…',
+      skip: 'Skip for now',
     },
     // Step 3 (`05/step-3-icon-optional`, `icon-drafting`,
     // `icon-drafts-failed-the-style-check`, `icon-mobile`). Drafts come from the
@@ -1557,6 +1558,8 @@ export const ADMIN_COPY = {
         `Calendar page · test found ${found} ${found === 1 ? 'show' : 'shows'}`,
       sourceNotPassed: 'Hasn’t passed a test',
       skipped: 'Skipped',
+      iconChosen: (label: string, setting: string) =>
+        `${label} · ${setting} hero`,
       detailsLine: 'Fill in from Details any time',
       done: 'Done',
       later: 'Later',

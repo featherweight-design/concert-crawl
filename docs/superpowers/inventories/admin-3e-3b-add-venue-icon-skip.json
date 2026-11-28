@@ -1,0 +1,39 @@
+{
+  "feature": "Admin 3e-3b: Add a venue, Skip for now to Review (desktop)",
+  "note": "Desktop only: on a phone the local Next dev overlay badge sits over Skip for now at the footer's left and takes the press (dev-only; the phone's Skip is covered by AddVenueFlow.test.tsx). Review's Icon row reads Skipped.",
+  "widths": [
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "icon-skipped-review",
+      "label": "Skip for now lands on Review with the Icon row Skipped",
+      "steps": [
+        {
+          "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=source",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-ask\"]"
+        },
+        {
+          "click": "[data-testid=\"add-venue-continue\"]"
+        },
+        {
+          "wait": "[data-testid=\"add-venue-skip\"]"
+        },
+        {
+          "click": "[data-testid=\"add-venue-skip\"]"
+        },
+        {
+          "wait": "[data-testid=\"add-venue-review-icon\"]"
+        },
+        {
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}

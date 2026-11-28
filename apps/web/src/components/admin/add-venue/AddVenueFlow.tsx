@@ -18,14 +18,18 @@ import { slugify } from '@/components/admin/venues/details/details-rules';
 import {
   createDraftVenue,
   goLiveVenue,
+  saveVenueIcon,
   updateVenue,
 } from '@/lib/actions/venues';
+import { capacityTypeLabel } from '@/components/admin/venues/details/details-rules';
 import { AddVenueShell } from './AddVenueShell';
 import { AskVenueSheet } from './AskVenueSheet';
 import { BasicsStep } from './BasicsStep';
 import { GoneLive } from './GoneLive';
+import { IconStep } from './IconStep';
 import { ReviewStep } from './ReviewStep';
 import { SourceStep } from './SourceStep';
+import { useIconDrafts } from './useIconDrafts';
 import type { TestState } from './source-test-rules';
 import { StartScreen } from './StartScreen';
 import {
@@ -50,6 +54,11 @@ const VENUES_HREF = '/admin/venues';
 const NOTHING_DONE: ReadonlySet<AddVenueStep> = new Set();
 const BASICS_DONE: ReadonlySet<AddVenueStep> = new Set(['basics']);
 const SOURCE_DONE: ReadonlySet<AddVenueStep> = new Set(['basics', 'source']);
+const ICON_DONE: ReadonlySet<AddVenueStep> = new Set([
+  'basics',
+  'source',
+  'icon',
+]);
 const SOURCE_STEP = 'source';
 
 export interface AddVenueDraft {
@@ -77,9 +86,9 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   const router = useRouter();
   const phone = useIsPhone();
   const { setPageTitle, setPhoneBack } = usePageTitle();
-  const [stage, setStage] = useState<'start' | 'basics' | 'source' | 'review'>(
-    draft === null ? 'start' : (draft.step ?? 'basics'),
-  );
+  const [stage, setStage] = useState<
+    'start' | 'basics' | 'source' | 'icon' | 'review'
+  >(draft === null ? 'start' : (draft.step ?? 'basics'));
   const [venueId, setVenueId] = useState<string | null>(draft?.id ?? null);
   const [asking, setAsking] = useState(false);
   // What Source's test card last showed; null until the step reports. Review
@@ -93,9 +102,13 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     null,
   );
   const goingRef = useRef(false);
+  // The icon saved on step 3, as Review's line; null when skipped.
+  const [iconLine, setIconLine] = useState<string | null>(null);
+  const [iconSaving, setIconSaving] = useState(false);
   const [basics, setBasics] = useState<BasicsDraft>(
     draft?.basics ?? EMPTY_BASICS,
   );
+  const icon = useIconDrafts(basics.capacityType);
   const [saved, setSaved] = useState<BasicsColumns | null>(
     draft === null ? null : basicsColumnsOf(draft.basics),
   );
@@ -205,6 +218,31 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     openSource(id);
   };
 
+  // Icon's Continue: the chosen draft and hero setting saved, then Review.
+  // Nothing chosen is the same as Skip.
+  const saveIcon = async () => {
+    if (venueId === null || iconSaving) return;
+    const picked = icon.picked;
+    if (picked === null) {
+      setStage('review');
+      return;
+    }
+    setIconSaving(true);
+    const outcome = await saveVenueIcon(venueId, {
+      glyphSvg: picked.svg,
+      heroSetting: icon.setting,
+    });
+    setIconSaving(false);
+    if (!outcome.ok) {
+      icon.fail(outcome.error ?? COPY.icon.saveFailed);
+      return;
+    }
+    setIconLine(
+      COPY.review.iconChosen(picked.label, capacityTypeLabel(icon.setting)),
+    );
+    setStage('review');
+  };
+
   // Source tests the page again on every open, so what it showed before goes.
   const openSource = (id: string) => {
     setSource(null);
@@ -238,6 +276,8 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   // Drafts. An edit that can't be saved keeps the admin here with its error.
   const back = async () => {
     if (stage === 'review') {
+      if (venueId !== null) setStage('icon');
+    } else if (stage === 'icon') {
       if (venueId !== null) openSource(venueId);
     } else if (stage === 'source') {
       setStage('basics');
@@ -265,9 +305,16 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     );
   }
   const onSource = stage === 'source' && venueId !== null;
+  const onIcon = stage === 'icon' && venueId !== null;
   const onReview = stage === 'review' && venueId !== null;
   const found = source?.kind === 'found' ? source.result.found : null;
-  const step = onReview ? 'review' : onSource ? 'source' : 'basics';
+  const step = onReview
+    ? 'review'
+    : onIcon
+      ? 'icon'
+      : onSource
+        ? 'source'
+        : 'basics';
   return (
     <>
       <AddVenueShell
@@ -276,19 +323,23 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
         done={
           saved === null
             ? NOTHING_DONE
-            : found !== null
-              ? SOURCE_DONE
-              : BASICS_DONE
+            : iconLine !== null
+              ? ICON_DONE
+              : found !== null
+                ? SOURCE_DONE
+                : BASICS_DONE
         }
         name={basics.name}
-        busy={busy || going}
+        busy={busy || going || iconSaving}
         onBack={() => void back()}
         onContinue={() =>
           onReview
             ? void goLive()
-            : onSource
-              ? setStage('review')
-              : void toSource()
+            : onIcon
+              ? void saveIcon()
+              : onSource
+                ? setStage('icon')
+                : void toSource()
         }
         continueDisabled={
           onReview
@@ -296,14 +347,24 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
             : onSource && (source === null || source.kind === 'running')
         }
         continueLabel={onReview ? COPY.review.goLive : COPY.footer.continue}
+        onSkip={onIcon ? () => setStage('review') : undefined}
         busyLabel={going ? COPY.review.going : COPY.footer.saving}
       >
-        {onReview ? (
+        {onIcon ? (
+          <IconStep
+            phone={phone}
+            venueId={venueId}
+            venueName={basics.name}
+            icon={icon}
+            onSkip={() => setStage('review')}
+          />
+        ) : onReview ? (
           <ReviewStep
             phone={phone}
             basics={basics}
             found={found}
             going={going}
+            iconLine={iconLine}
             failed={goLiveFailed}
             onRetry={() => void goLive()}
             onEditBasics={() => {
