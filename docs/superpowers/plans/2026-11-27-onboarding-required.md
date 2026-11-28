@@ -10,7 +10,7 @@ signed-in page request from such an account without `publicMetadata.onboardedAt`
 
 ## How
 
-- **Claim source.** The Clerk session token template carries `created_at` (`{{user.created_at}}`, ms epoch) next to
+- **Claim source.** The Clerk session token template carries `created_at` (`{{user.created_at}}`, which the token renders in seconds; the rule also accepts ms) next to
   `metadata` (`{{user.public_metadata}}`). Hugh added `created_at` on staging and prod on 2026-11-27.
 - **Proxy** (`apps/web/src/proxy.ts`). `needsOnboarding(claims, userId, cookie)` (`lib/auth/onboarding-required.ts`) parses
   the claims with Zod. A missing or malformed claim, or an account made before the cutoff, never forces (fail open).
@@ -31,7 +31,7 @@ signed-in page request from such an account without `publicMetadata.onboardedAt`
 - Unit: `needsOnboarding`, the proxy redirect and exemptions, the API route, Finish and Skip marking the tour done.
 - Local contact sheet: `docs/superpowers/inventories/onboarding-required.json` (first step with Skip, last step with
   Finish, phone and desktop).
-- Staging after merge: an existing (pre-cutoff) account is not forced, and its session token carries `created_at` as
-  a ms number. Staging Clerk is a production instance with bot protection on sign-up, so a fresh account cannot be
+- Staging after merge: an existing (pre-cutoff) account is not forced, and its session token carries `created_at` (a
+  seconds number, verified on staging 2026-11-27). Staging Clerk is a production instance with bot protection on sign-up, so a fresh account cannot be
   made by script: Hugh's morning sign-up rewalk checks that typing `/events` bounces to `/onboarding?return=/events`
   until Finish or Skip, and not after.
