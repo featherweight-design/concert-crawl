@@ -1,3 +1,11 @@
+# [1.578.0](https://github.com/featherweight-design/concert-crawl/compare/v1.577.0...v1.578.0) (2026-11-28)
+
+
+### Features
+
+* **api:** a queued test crawl's 409 names its trigger ([882136f](https://github.com/featherweight-design/concert-crawl/commit/882136f5e6b0bcd89376ecf0982d5e9d48c9f47e))
+* **web:** phone Source badge carries the count and the crawl rules ([7f1f9f5](https://github.com/featherweight-design/concert-crawl/commit/7f1f9f5d321ddafb3a5c36d880c7cf9e127c790e))
+
 # [1.577.0](https://github.com/featherweight-design/concert-crawl/compare/v1.576.0...v1.577.0) (2026-11-28)
 
 
