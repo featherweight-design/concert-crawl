@@ -40,7 +40,14 @@ describe('useMarkOnboarded', () => {
     // the same handler already carries it.
     expect(document.cookie).toContain('cc_onboarded=user_new');
     await waitFor(() =>
-      expect(post).toHaveBeenCalledWith('/v1/me/onboarded', 'tok', {}),
+      expect(post).toHaveBeenCalledWith(
+        '/v1/me/onboarded',
+        'tok',
+        {},
+        {
+          keepalive: true,
+        },
+      ),
     );
   });
 

@@ -182,7 +182,9 @@ const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)']);
  * always-public page (legal, /bot, the offline fallback and the rest).
  */
 const isOnboardingRoute = createRouteMatcher([
-  `${ONBOARDING_PATH}(.*)`,
+  // The tour and its sub-paths only: `/onboardingxyz` is a different route.
+  ONBOARDING_PATH,
+  `${ONBOARDING_PATH}/(.*)`,
   '/auth/(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
@@ -320,10 +322,17 @@ export const middlewareHandler = async (
     // (GET or HEAD) is redirected: a Server Action POST answered with the tour
     // would just break. A router prefetch is let through too: the tour's own
     // Skip link prefetches its destination, and a cached redirect would send
-    // the click back here after the tour was marked done.
+    // the click back here after the tour was marked done. A subresource (an
+    // image such as /apple-icon or a share card, a font) is never answered
+    // with the tour's HTML; a page load, an RSC fetch (`empty`) or a client
+    // that sends no Sec-Fetch-Dest at all still is.
+    const fetchDest = req.headers.get('sec-fetch-dest');
+    const isSubresource =
+      fetchDest !== null && fetchDest !== 'document' && fetchDest !== 'empty';
     if (
       (req.method === 'GET' || req.method === 'HEAD') &&
       req.headers.get('next-router-prefetch') === null &&
+      !isSubresource &&
       !isOnboardingExempt(req) &&
       needsOnboarding(
         sessionClaims,
