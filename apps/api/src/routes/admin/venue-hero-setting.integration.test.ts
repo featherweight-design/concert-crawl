@@ -17,7 +17,8 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import { and, eq } from 'drizzle-orm';
-import { auditLog, venues } from '@concert-crawl/db';
+import { auditLog, heroSettingEnum, venues } from '@concert-crawl/db';
+import { HERO_SETTINGS } from '@concert-crawl/types';
 import { createApp } from '../../app.js';
 import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -46,6 +47,10 @@ describe('admin venue PATCH heroSetting (3e-3)', () => {
       sessionClaims: { metadata: { role: 'admin' } },
     };
     await clearTables();
+  });
+
+  it('accepts exactly the settings the DB enum holds', () => {
+    expect([...HERO_SETTINGS]).toEqual(heroSettingEnum.enumValues);
   });
 
   it('saves each of the six settings, and clears it with null', async () => {
