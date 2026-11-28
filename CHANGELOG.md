@@ -1,3 +1,15 @@
+# [1.576.0](https://github.com/featherweight-design/concert-crawl/compare/v1.575.0...v1.576.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **web:** state the real reference size cap and fix a stale comment ([83f0f3e](https://github.com/featherweight-design/concert-crawl/commit/83f0f3e5e74628ca7aed31daa773bb11f516a348))
+
+
+### Features
+
+* **web:** add the Icon step's draft logic, neon hero renderer and copy ([c373bf0](https://github.com/featherweight-design/concert-crawl/commit/c373bf0e36e0e05920274ff3b8effa242cd62ffd))
+
 # [1.575.0](https://github.com/featherweight-design/concert-crawl/compare/v1.574.0...v1.575.0) (2026-11-28)
 
 
