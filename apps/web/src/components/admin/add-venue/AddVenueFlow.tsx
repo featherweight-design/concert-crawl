@@ -280,7 +280,11 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     );
     guideDraftsRef.current = outcome.data;
     setGuideDrafts(outcome.data);
-    setGuideOpened(true);
+    // Pages that gave nothing keep the Nothing-to-draft card until the admin
+    // chooses to write; any draft opens the fields.
+    if (outcome.data.sections.some((section) => section.state !== 'blank')) {
+      setGuideOpened(true);
+    }
     setGuideStatus('ready');
   };
 

@@ -8,6 +8,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import { GUIDE_CHIP_ORDER } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 type Outcome = {
@@ -398,6 +399,38 @@ describe('AddVenueFlow', () => {
         ],
       });
       expect(mockSaveGuide).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows Nothing to draft from until the admin chooses to write', async () => {
+      mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
+      mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
+      mockDraftGuide.mockResolvedValue({
+        ok: true,
+        data: {
+          sources: [{ url: 'https://venue.example/faq', status: 'notFound' }],
+          sections: GUIDE_CHIP_ORDER.map((chipType) => ({
+            chipType,
+            state: 'blank' as const,
+            body: '',
+            sourceUrl: null,
+            note: null,
+          })),
+          costUsd: null,
+        },
+      });
+      resumeOnSource();
+      const next = screen.getByTestId('add-venue-continue');
+      await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {
+        timeout: 5000,
+      });
+      fireEvent.click(next);
+      await waitFor(() =>
+        expect(screen.getByTestId('add-venue-guide-nothing')).toBeTruthy(),
+      );
+      fireEvent.click(screen.getByText(COPY.guide.writeMyself));
+      expect(
+        screen.getByTestId('add-venue-guide-field-accessibility'),
+      ).toBeTruthy();
     });
 
     it('stays on the guide with its words when the save fails', async () => {
