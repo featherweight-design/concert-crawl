@@ -32,7 +32,13 @@ export const useMarkOnboarded = (): (() => void) => {
       try {
         const token = await getToken();
         if (!token) return;
-        await apiClient.post('/v1/me/onboarded', token, {});
+        // keepalive: a hard navigation or a closed tab must not cancel it.
+        await apiClient.post(
+          '/v1/me/onboarded',
+          token,
+          {},
+          { keepalive: true },
+        );
       } catch (err) {
         console.error('[onboarding] could not record the tour as done', err);
       }

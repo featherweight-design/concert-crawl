@@ -272,8 +272,15 @@ export const apiClient = {
   get: <T>(path: string, token: string, options?: RequestInit) =>
     request<T>(path, token, options),
 
-  post: <T>(path: string, token: string, data: unknown) =>
+  // `options` carries e.g. `keepalive` for a write that must outlive the page.
+  post: <T>(
+    path: string,
+    token: string,
+    data: unknown,
+    options?: RequestInit,
+  ) =>
     request<T>(path, token, {
+      ...options,
       method: 'POST',
       body: JSON.stringify(data),
     }),

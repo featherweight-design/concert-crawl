@@ -1241,6 +1241,50 @@ describe('proxy — a new account owes the tour (onboarding required)', () => {
     expect(result).toBeUndefined();
   });
 
+  it('never answers a subresource (an image or font) with the tour', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    for (const dest of ['image', 'font']) {
+      const result = await middlewareHandler(
+        signedIn({ created_at: NEW }),
+        new NextRequest('http://localhost/apple-icon', {
+          headers: { 'sec-fetch-dest': dest },
+        }),
+      );
+      expect(result).toBeUndefined();
+    }
+  });
+
+  it('still sends a page load or an RSC navigation to the tour', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    for (const dest of ['document', 'empty']) {
+      const result = await middlewareHandler(
+        signedIn({ created_at: NEW }),
+        new NextRequest('http://localhost/events', {
+          headers: { 'sec-fetch-dest': dest },
+        }),
+      );
+      expect(new URL(redirectLocation(result) ?? '').pathname).toBe(
+        '/onboarding',
+      );
+    }
+  });
+
+  it('exempts the tour and its sub-paths only, not a look-alike path', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const tour = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/onboarding/step'),
+    );
+    expect(tour).toBeUndefined();
+    const lookAlike = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/onboardingxyz'),
+    );
+    expect(new URL(redirectLocation(lookAlike) ?? '').pathname).toBe(
+      '/onboarding',
+    );
+  });
+
   it('never forces an account created before the cutoff', async () => {
     const { middlewareHandler } = await import('./proxy');
     const result = await middlewareHandler(
