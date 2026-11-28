@@ -36,6 +36,11 @@ import {
 } from '@/components/admin/venues/trial-rules';
 import { buildUpdateVenueBody } from './build-update-venue-body';
 import { venueGuideSchema } from '@/lib/admin/venue-guide-schema';
+import {
+  glyphDraftsSchema,
+  type GlyphDrafts,
+  type GlyphReference,
+} from '@/lib/admin/glyph-drafts-schema';
 
 async function getToken(): Promise<string> {
   const { getToken } = await auth();
@@ -697,5 +702,67 @@ export async function goLiveVenue(id: string): Promise<GoLiveOutcome> {
     }
     console.error('goLiveVenue: failed', { id, err });
     return { ok: false, reason: 'failed' };
+  }
+}
+
+export type DraftGlyphsOutcome =
+  | { ok: true; data: GlyphDrafts }
+  // `error` is the API's own message when it meant one for a human.
+  | { ok: false; error?: string };
+
+// Admin 3e-3: four style-checked glyph drafts from the name and any reference
+// images. Nothing is stored; a chosen draft is saved with `saveVenueIcon`.
+export async function draftVenueGlyphs(
+  venueId: string,
+  references: GlyphReference[],
+  steer: string,
+): Promise<DraftGlyphsOutcome> {
+  try {
+    const token = await getToken();
+    const data = await apiClient.post<unknown>(
+      `/v1/admin/venues/${venueId}/glyph-drafts`,
+      token,
+      { references, ...(steer.trim() === '' ? {} : { steer: steer.trim() }) },
+    );
+    const parsed = glyphDraftsSchema.safeParse(data);
+    if (parsed.success) return { ok: true, data: parsed.data };
+    console.error('draftVenueGlyphs: unexpected shape', {
+      venueId,
+      issues: parsed.error.issues,
+    });
+    return { ok: false };
+  } catch (err: unknown) {
+    console.error('draftVenueGlyphs: failed', { venueId, err });
+    return {
+      ok: false,
+      ...(err instanceof ApiError ? { error: err.message } : {}),
+    };
+  }
+}
+
+export interface SaveVenueIconPayload {
+  /** The chosen draft or an uploaded SVG; the API checks it again. */
+  glyphSvg?: string;
+  heroSetting?: 'street' | 'outdoor' | 'arena' | 'theater' | 'club' | 'gallery';
+}
+
+export type SaveVenueIconOutcome = { ok: true } | { ok: false; error?: string };
+
+// Admin 3e-3: the Icon step's glyph and hero setting, saved as the admin goes.
+export async function saveVenueIcon(
+  venueId: string,
+  payload: SaveVenueIconPayload,
+): Promise<SaveVenueIconOutcome> {
+  try {
+    const token = await getToken();
+    await apiClient.patch<Venue>(`/v1/admin/venues/${venueId}`, token, payload);
+    revalidatePath(`/admin/venues/${venueId}`);
+    return { ok: true };
+  } catch (err: unknown) {
+    console.error('saveVenueIcon: failed', { venueId, err });
+    return {
+      ok: false,
+      ...(err instanceof ApiError ? { error: err.message } : {}),
+    };
   }
 }
