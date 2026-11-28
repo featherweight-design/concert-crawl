@@ -24,8 +24,8 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
-    "@clerk/backend": "^3.27.0",
+    "@anthropic-ai/sdk": "^1.14.0",
+    "@clerk/backend": "^3.33.0",
     "@commitlint/cli": "21.2.4",
     "@concert-crawl/crawler-core": "workspace:*",
     "@concert-crawl/db": "workspace:*",

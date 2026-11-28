@@ -21,6 +21,6 @@
   },
   "dependencies": {
     "@concert-crawl/types": "workspace:*",
-    "@sentry/node": "^11.12.0"
+    "@sentry/node": "^11.17.0"
   }
 }

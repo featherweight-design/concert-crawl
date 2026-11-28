@@ -70,8 +70,8 @@
     "test:all": "vitest run && vitest run --config vitest.integration.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
-    "@clerk/backend": "^3.27.0",
+    "@anthropic-ai/sdk": "^1.14.0",
+    "@clerk/backend": "^3.33.0",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/entitlements": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
@@ -79,7 +79,7 @@
     "@concert-crawl/types": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "playwright": "^1.65.1",
-    "resend": "^6.38.0",
+    "resend": "^6.39.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
