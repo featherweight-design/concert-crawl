@@ -133,6 +133,15 @@ describe('SkipRail — three weights, one position (#794)', () => {
       expect(event.defaultPrevented).toBe(false);
     });
 
+    it('marks it on a middle-click, which opens a new tab with no click event', () => {
+      render(<SkipRail mode={{ kind: 'default', href: '/events' }} />);
+      fireEvent(
+        screen.getByRole('link', { name: /^skip$/i }),
+        new MouseEvent('auxclick', { bubbles: true, button: 1 }),
+      );
+      expect(markOnboarded).toHaveBeenCalledTimes(1);
+    });
+
     it('marks it from the menu entry and the mid-intent link too', () => {
       render(<SkipRail mode={{ kind: 'menu' }} />);
       fireEvent.click(screen.getByRole('link', { name: /^close$/i }));

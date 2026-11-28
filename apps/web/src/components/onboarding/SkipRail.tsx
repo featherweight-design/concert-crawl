@@ -82,7 +82,8 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
   const markOnboarded = useMarkOnboarded();
   // Skipping counts as done, exactly like finishing. The mark is synchronous
   // (a cookie, then a background stamp), so the link navigates as it always
-  // did: same look, copy and focus order, and a new-tab click works too.
+  // did: same look, copy and focus order. A middle-click opens a new tab
+  // without a click event, so it is marked through onAuxClick.
   const leave = (): void => {
     dropPickMirrors();
     markOnboarded();
@@ -98,7 +99,12 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Link href={mode.href} style={LOUD_LINK} onClick={leave}>
+          <Link
+            href={mode.href}
+            style={LOUD_LINK}
+            onClick={leave}
+            onAuxClick={leave}
+          >
             {copy.midIntent(mode.destinationLabel)}
           </Link>
         </div>
@@ -126,6 +132,7 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
       href={mode.kind === 'menu' ? DEFAULT_RETURN_PATH : mode.href}
       style={QUIET_LINK}
       onClick={leave}
+      onAuxClick={leave}
     >
       {mode.kind === 'menu' ? copy.menu : copy.default}
     </Link>
