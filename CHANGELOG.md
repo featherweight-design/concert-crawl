@@ -1,3 +1,19 @@
+# [1.574.0](https://github.com/featherweight-design/concert-crawl/compare/v1.573.0...v1.574.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **onboarding:** exempt subresources and look-alike paths, keep the stamp alive ([af1be57](https://github.com/featherweight-design/concert-crawl/commit/af1be57a0928833a1fe18f4aa9ae7dfc746d7c09))
+* **onboarding:** mark on middle-click, accept created_at in seconds ([f638d01](https://github.com/featherweight-design/concert-crawl/commit/f638d0177f6f69b58e16e87c7abe0956770b74ef))
+* **onboarding:** mark the tour done synchronously with a per-user cookie ([1c292bf](https://github.com/featherweight-design/concert-crawl/commit/1c292bf2903dd3ea9790ac01822e8189fa7f0006))
+* **test:** hold Source on running so Continue's disabled check does not race the crawl stub ([386aad9](https://github.com/featherweight-design/concert-crawl/commit/386aad9fa95ba738f759dfe1faedc29497b82414))
+
+
+### Features
+
+* **onboarding:** plan, rule tests and contact-sheet inventory ([a17eacb](https://github.com/featherweight-design/concert-crawl/commit/a17eacbb5a96aeda48ee59053cb46e3b3c4605c4))
+* **onboarding:** require the tour for new accounts (WIP) ([1648600](https://github.com/featherweight-design/concert-crawl/commit/164860094d9d22c50cb0806c4ef082eb4241a852))
+
 # [1.573.0](https://github.com/featherweight-design/concert-crawl/compare/v1.572.2...v1.573.0) (2026-11-28)
 
 
