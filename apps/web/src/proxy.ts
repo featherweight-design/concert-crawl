@@ -195,7 +195,7 @@ const isOnboardingRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/(.*)',
 ]);
-const isOnboardingExempt = (req: NextRequest): boolean =>
+export const isOnboardingExempt = (req: NextRequest): boolean =>
   isOnboardingRoute(req) || isAlwaysPublic(req);
 
 /**
