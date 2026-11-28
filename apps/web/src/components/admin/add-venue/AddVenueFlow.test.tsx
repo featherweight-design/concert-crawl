@@ -363,7 +363,11 @@ describe('AddVenueFlow', () => {
     it('goes live and shows Gone live, then starts over on Add another', async () => {
       mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
       mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
-      mockGoLive.mockResolvedValue({ ok: true, crawlQueued: true });
+      mockGoLive.mockResolvedValue({
+        ok: true,
+        crawlQueued: true,
+        guide: null,
+      });
       resumeOnSource();
       const next = screen.getByTestId('add-venue-continue');
       await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {
@@ -405,7 +409,11 @@ describe('AddVenueFlow', () => {
         expect(screen.getByTestId('add-venue-go-live-failed')).toBeTruthy(),
       );
       expect(screen.queryByTestId('add-venue-gone-live')).toBeNull();
-      mockGoLive.mockResolvedValue({ ok: true, crawlQueued: false });
+      mockGoLive.mockResolvedValue({
+        ok: true,
+        crawlQueued: false,
+        guide: null,
+      });
       fireEvent.click(screen.getByTestId('add-venue-go-live-retry'));
       await waitFor(() =>
         expect(screen.getByText(COPY.gone.crawlNotQueued)).toBeTruthy(),

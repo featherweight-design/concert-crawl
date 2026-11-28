@@ -1591,6 +1591,9 @@ export const ADMIN_COPY = {
         'Its shows land on the site when the first crawl finishes. First nightly crawl is tonight.',
       crawlNotQueued:
         'The first crawl didn’t start. Its shows land at tonight’s nightly crawl.',
+      guidePublished: 'The first-timer guide went live with it.',
+      guideDraft:
+        'The first-timer guide stayed a draft: Accessibility isn’t written. Add it on the venue page to publish.',
       open: 'Open the venue page',
       fan: 'See it as a fan',
       another: 'Add another',

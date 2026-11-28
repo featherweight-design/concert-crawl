@@ -21,6 +21,7 @@ import {
   auditLog,
   crawlTriggers,
   feedback,
+  venueGuideChips,
   venueSuggestionDismissals,
   venues,
 } from '@concert-crawl/db';
@@ -221,6 +222,60 @@ describe('admin venues API, 3c-3', () => {
       const audits = await auditRows('venue.go_live');
       expect(audits).toHaveLength(1);
       expect(audits[0]?.metadata).toEqual({ crawlQueued: true });
+    });
+
+    const goLive = async (id: string) => {
+      const res = await request('POST', `/v1/admin/venues/${id}/go-live`);
+      expect(res.status).toBe(200);
+      return (
+        (await res.json()) as {
+          data: { guide: { published: boolean; reason?: string } };
+        }
+      ).data.guide;
+    };
+    const publishedAt = async (id: string) => {
+      const [row] = await testDb
+        .select({ at: venues.guidePublishedAt })
+        .from(venues)
+        .where(eq(venues.id, id));
+      return row?.at ?? null;
+    };
+
+    it('publishes the guide with the venue when its gate passes', async () => {
+      const draft = await seedDraft();
+      await testDb.insert(venueGuideChips).values({
+        venueId: draft.id,
+        chipType: 'accessibility',
+        body: 'Ramp.',
+      });
+      expect(await goLive(draft.id)).toEqual({ published: true });
+      expect(await publishedAt(draft.id)).not.toBeNull();
+    });
+
+    it('goes live but leaves the guide a draft when Accessibility is not written', async () => {
+      const draft = await seedDraft();
+      await testDb
+        .insert(venueGuideChips)
+        .values({ venueId: draft.id, chipType: 'parking', body: 'Lot B.' });
+      expect(await goLive(draft.id)).toEqual({
+        published: false,
+        reason: 'accessibility',
+      });
+      expect(await publishedAt(draft.id)).toBeNull();
+      const [row] = await testDb
+        .select()
+        .from(venues)
+        .where(eq(venues.id, draft.id));
+      expect(row?.active).toBe(true);
+    });
+
+    it('reports none, and publishes nothing, when no guide was written', async () => {
+      const draft = await seedDraft();
+      expect(await goLive(draft.id)).toEqual({
+        published: false,
+        reason: 'none',
+      });
+      expect(await publishedAt(draft.id)).toBeNull();
     });
 
     it('409s a venue that is already live, and a second go live changes nothing', async () => {

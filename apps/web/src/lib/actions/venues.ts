@@ -672,12 +672,32 @@ export async function askVenuePermission(id: string): Promise<{ ok: boolean }> {
 // `crawlQueued` is null when the answer did not say. A refusal is `live` (a
 // second admin got there first), `robots` (the page is disallowed) or `failed`.
 export type GoLiveOutcome =
-  | { ok: true; crawlQueued: boolean | null }
+  | {
+      ok: true;
+      crawlQueued: boolean | null;
+      // The guide went live with the venue, stayed a draft because its gate
+      // failed, or there was nothing to say (none written, or no answer).
+      guide: 'published' | 'draft' | null;
+    }
   | { ok: false; reason: 'live' | 'robots' | 'failed' };
 
 const GoLiveResponse = z.object({
   crawl: z.object({ queued: z.boolean() }),
+  guide: z
+    .object({
+      published: z.boolean(),
+      reason: z.enum(['none', 'accessibility']).optional(),
+    })
+    .optional(),
 });
+
+const guideOutcome = (
+  guide: z.infer<typeof GoLiveResponse>['guide'],
+): 'published' | 'draft' | null => {
+  if (guide === undefined) return null;
+  if (guide.published) return 'published';
+  return guide.reason === 'accessibility' ? 'draft' : null;
+};
 
 export async function goLiveVenue(id: string): Promise<GoLiveOutcome> {
   try {
@@ -693,6 +713,7 @@ export async function goLiveVenue(id: string): Promise<GoLiveOutcome> {
     return {
       ok: true,
       crawlQueued: parsed.success ? parsed.data.crawl.queued : null,
+      guide: parsed.success ? guideOutcome(parsed.data.guide) : null,
     };
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 409) {

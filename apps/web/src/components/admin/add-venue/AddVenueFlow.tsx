@@ -89,9 +89,10 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   const [goLiveFailed, setGoLiveFailed] = useState<'failed' | 'robots' | null>(
     null,
   );
-  const [gone, setGone] = useState<{ crawlQueued: boolean | null } | null>(
-    null,
-  );
+  const [gone, setGone] = useState<{
+    crawlQueued: boolean | null;
+    guide: 'published' | 'draft' | null;
+  } | null>(null);
   const goingRef = useRef(false);
   const [basics, setBasics] = useState<BasicsDraft>(
     draft?.basics ?? EMPTY_BASICS,
@@ -221,7 +222,8 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     const outcome = await goLiveVenue(venueId);
     goingRef.current = false;
     setGoing(false);
-    if (outcome.ok) setGone({ crawlQueued: outcome.crawlQueued });
+    if (outcome.ok)
+      setGone({ crawlQueued: outcome.crawlQueued, guide: outcome.guide });
     else if (outcome.reason === 'live') router.push(`/admin/venues/${venueId}`);
     else setGoLiveFailed(outcome.reason);
   };
@@ -260,6 +262,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
         name={basics.name.trim() || COPY.rail.unnamed}
         slug={basics.slug}
         crawlQueued={gone.crawlQueued}
+        guide={gone.guide}
         onAddAnother={addAnother}
       />
     );

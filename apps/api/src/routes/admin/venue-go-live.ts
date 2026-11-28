@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import {
   db,
   feedback,
+  venueGuideChips,
   venueSuggestionDismissals,
   venues,
 } from '@concert-crawl/db';
@@ -14,6 +15,7 @@ import { validationHook } from '../../lib/validator.js';
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
 import { queueVenueCrawl } from './lib/crawl-trigger.js';
+import { publishGuide } from './venue-guide.js';
 
 // Admin 3c-3: the writes that take a draft venue live, and the Start list of
 // venues fans asked for. Mounted from admin/venues.ts, ahead of `/:id`, so
@@ -182,6 +184,40 @@ const queueAfterGoLive = async (
   }
 };
 
+type GuideOutcome = { published: boolean; reason?: 'none' | 'accessibility' };
+
+/**
+ * Publishes the guide with the venue when `/guide/publish`'s own gate passes
+ * (same function, no second rule). A guide that fails the gate stays a draft;
+ * one nobody wrote is `none`. Never throws: the venue is live either way.
+ */
+const publishGuideWithVenue = async (id: string): Promise<GuideOutcome> => {
+  try {
+    const result = await publishGuide(id);
+    if (result.kind === 'published') return { published: true };
+    if (result.kind === 'missing') return { published: false, reason: 'none' };
+    return { published: false, reason: await draftReason(id) };
+  } catch (err) {
+    apiLogger.error({ err, venueId: id }, 'go-live: guide not published');
+    return { published: false, reason: 'none' };
+  }
+};
+
+/** A blocked guide is `none` when nothing at all was written, else `accessibility`. */
+const draftReason = async (id: string): Promise<'none' | 'accessibility'> => {
+  const [chip] = await db
+    .select({ id: venueGuideChips.id })
+    .from(venueGuideChips)
+    .where(eq(venueGuideChips.venueId, id))
+    .limit(1);
+  if (chip) return 'accessibility';
+  const [venue] = await db
+    .select({ insiderTip: venues.insiderTip })
+    .from(venues)
+    .where(eq(venues.id, id));
+  return venue?.insiderTip ? 'accessibility' : 'none';
+};
+
 // POST /v1/admin/venues/:id/go-live: the only writer that sets `active` and
 // `went_live_at` together (decision 1). Option A (decision 4): the venue goes
 // live and a normal crawl is queued at once; test rows are never published.
@@ -257,14 +293,18 @@ venueGoLiveAdminRouter.post(
     // The venue is live whatever happens next. A crawl that could not be
     // queued is reported, not rolled back: the nightly crawl picks the venue up.
     const crawl = await queueAfterGoLive(id, actor);
+    const guide = await publishGuideWithVenue(id);
 
     ctx.set('auditAction', 'venue.go_live');
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', actor);
-    ctx.set('auditMeta', { crawlQueued: crawl.queued });
+    ctx.set('auditMeta', {
+      crawlQueued: crawl.queued,
+      guidePublished: guide.published,
+    });
     return ctx.json({
       success: true,
-      data: { id, wentLiveAt: live.wentLiveAt, crawl },
+      data: { id, wentLiveAt: live.wentLiveAt, crawl, guide },
     });
   },
 );
