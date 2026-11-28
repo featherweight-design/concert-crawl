@@ -1261,13 +1261,18 @@ describe('proxy — a new account owes the tour (onboarding required)', () => {
       new NextRequest('http://localhost/onboarding/step'),
     );
     expect(tour).toBeUndefined();
-    const lookAlike = await middlewareHandler(
-      signedIn({ created_at: NEW }),
-      new NextRequest('http://localhost/onboardingxyz'),
-    );
-    expect(new URL(redirectLocation(lookAlike) ?? '').pathname).toBe(
-      '/onboarding',
-    );
+    // A look-alike top-level path is an unknown route and 404s before the
+    // tour check runs, so the matcher is checked directly.
+    const { isOnboardingExempt } = await import('./proxy');
+    expect(
+      isOnboardingExempt(new NextRequest('http://localhost/onboarding')),
+    ).toBe(true);
+    expect(
+      isOnboardingExempt(new NextRequest('http://localhost/onboarding/step')),
+    ).toBe(true);
+    expect(
+      isOnboardingExempt(new NextRequest('http://localhost/onboardingxyz')),
+    ).toBe(false);
   });
 
   it('never forces an account created before the cutoff', async () => {
