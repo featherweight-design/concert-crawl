@@ -27,6 +27,7 @@ import {
   triggerVenueTrial,
 } from '@/components/admin/crawl-trigger-button/lib/crawl';
 import {
+  pendingTriggerOf,
   testRefusalOf,
   type TestOutcome,
 } from '@/components/admin/add-venue/source-test-rules';
@@ -626,6 +627,9 @@ export async function testCrawlVenue(id: string): Promise<TestOutcome> {
     const { triggerId } = await triggerVenueTest(id, token);
     return { ok: true, triggerId };
   } catch (err: unknown) {
+    // Left mid-test: read the queued one rather than refuse.
+    const pending = pendingTriggerOf(err);
+    if (pending !== null) return { ok: true, triggerId: pending };
     const code = testRefusalOf(err);
     if (code === null) {
       console.error('testCrawlVenue: failed', { id, err });

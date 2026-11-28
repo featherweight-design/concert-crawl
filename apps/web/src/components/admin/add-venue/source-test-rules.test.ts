@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { TestCrawlResult } from '@concert-crawl/types';
 import { ApiError } from '@/lib/api';
-import { testRefusalOf, testStateOf } from './source-test-rules';
+import {
+  pendingTriggerOf,
+  testRefusalOf,
+  testStateOf,
+} from './source-test-rules';
 
 const result = (patch: Partial<TestCrawlResult>): TestCrawlResult => ({
   status: 'found',
@@ -27,6 +31,37 @@ describe('testRefusalOf', () => {
     expect(testRefusalOf(new ApiError(400, 'x'))).toBeNull();
     expect(testRefusalOf(new ApiError(500, 'x'))).toBeNull();
     expect(testRefusalOf(new Error('boom'))).toBeNull();
+  });
+});
+
+describe('pendingTriggerOf', () => {
+  const pending = (body: unknown) =>
+    new ApiError(
+      409,
+      'x',
+      'test_pending',
+      undefined,
+      undefined,
+      undefined,
+      body,
+    );
+
+  it('reads the queued test a test_pending refusal names', () => {
+    expect(pendingTriggerOf(pending({ triggerId: 'trg-1' }))).toBe('trg-1');
+  });
+
+  it('leaves an API that sends no id, and every other failure, unnamed', () => {
+    expect(pendingTriggerOf(pending({ code: 'test_pending' }))).toBeNull();
+    expect(pendingTriggerOf(pending({ triggerId: '' }))).toBeNull();
+    expect(pendingTriggerOf(pending(undefined))).toBeNull();
+    expect(
+      pendingTriggerOf(
+        new ApiError(409, 'x', 'not_draft', undefined, undefined, undefined, {
+          triggerId: 'trg-1',
+        }),
+      ),
+    ).toBeNull();
+    expect(pendingTriggerOf(new Error('boom'))).toBeNull();
   });
 });
 
