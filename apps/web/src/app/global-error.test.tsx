@@ -133,8 +133,13 @@ describe('GlobalError theme', () => {
   });
 
   it('ships a pre-paint script that runs on its own and themes the page', () => {
-    const { container } = renderPage();
-    const script = container.querySelector('script');
+    renderPage();
+    // React 19 renders <html>, <head> and <body> as the document's own
+    // singletons, so the script lands in document.head, not the container.
+    const script = Array.from(document.head.querySelectorAll('script')).find(
+      (el) => el.textContent?.includes('cc-theme'),
+    );
+    expect(script?.textContent).toBeTruthy();
     clearTheme();
     // The script must run with no module scope: a stray reference throws here.
     new Function(script?.textContent ?? '')();
