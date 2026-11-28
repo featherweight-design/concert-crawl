@@ -68,10 +68,12 @@ const costLabel = (usd: number): string =>
 const TestBody = ({
   state,
   pageUrl,
+  phone,
   onAsk,
 }: {
   state: TestState;
   pageUrl: string;
+  phone: boolean;
   onAsk: () => void;
 }) => {
   const test = SOURCE.test;
@@ -94,16 +96,34 @@ const TestBody = ({
     const more = result.found - samples.length;
     return (
       <>
-        <StatusBadge kind="success" dot>
-          {test.passed}
-        </StatusBadge>
-        <p style={{ ...lineStyle, color: 'var(--fg)' }}>
-          {test.found(
-            result.found,
-            SOURCE.via[viaOf(result.counts)],
-            costLabel(result.costUsd),
-          )}
-        </p>
+        {phone ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              flexWrap: 'wrap',
+            }}
+          >
+            <StatusBadge kind="success" dot>
+              {test.passedCount(result.found)}
+            </StatusBadge>
+            <span style={lineStyle}>{test.rules}</span>
+          </div>
+        ) : (
+          <>
+            <StatusBadge kind="success" dot>
+              {test.passed}
+            </StatusBadge>
+            <p style={{ ...lineStyle, color: 'var(--fg)' }}>
+              {test.found(
+                result.found,
+                SOURCE.via[viaOf(result.counts)],
+                costLabel(result.costUsd),
+              )}
+            </p>
+          </>
+        )}
         <ul
           style={{
             listStyle: 'none',
@@ -346,7 +366,7 @@ export const SourceStep = ({
           data-state={state.kind}
           style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
         >
-          <TestBody state={state} pageUrl={saved} onAsk={onAsk} />
+          <TestBody state={state} pageUrl={saved} phone={phone} onAsk={onAsk} />
         </div>
       </Card>
     </>

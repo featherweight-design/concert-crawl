@@ -52,10 +52,11 @@ const mount = (
   onPageSaved = vi.fn(),
   pageUrl = 'https://dazzledenver.com/events',
   onAsk = vi.fn(),
+  phone = false,
 ) =>
   render(
     <SourceStep
-      phone={false}
+      phone={phone}
       venueId="v-1"
       venueName="Dazzle"
       pageUrl={pageUrl}
@@ -93,6 +94,16 @@ describe('SourceStep', () => {
     expect(screen.getByText('Ron Miles')).toBeTruthy();
     expect(screen.getByText('Fri Nov 13')).toBeTruthy();
     expect(screen.getByText(SOURCE.test.more(2))).toBeTruthy();
+  });
+
+  it('on a phone puts the count in the badge beside the crawl rules', async () => {
+    mockTest.mockResolvedValue({ ok: true, triggerId: 't-1' });
+    mockRead.mockResolvedValue(trigger(found));
+    mount(vi.fn(), 'https://dazzledenver.com/events', vi.fn(), true);
+    await settle();
+    expect(screen.getByText(SOURCE.test.passedCount(5))).toBeTruthy();
+    expect(screen.getByText(SOURCE.test.rules)).toBeTruthy();
+    expect(screen.queryByText(SOURCE.test.passed)).toBeNull();
   });
 
   it('stops at robots.txt, offers Ask the venue and reads no trigger', async () => {

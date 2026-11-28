@@ -1633,6 +1633,11 @@ export const ADMIN_COPY = {
         runningTitle: (venue: string) => `Testing ${venue}…`,
         runningSub: 'The real crawler, at the real pace. About 10 seconds.',
         passed: 'Test passed',
+        // The phone board (`05/source-mobile`) puts the count in the badge and
+        // the two crawl rules on one line, instead of the desktop found line.
+        passedCount: (shows: number) =>
+          `Test found ${shows} ${shows === 1 ? 'show' : 'shows'}`,
+        rules: 'robots.txt allows · 3 s pace',
         found: (shows: number, via: string, cost: string) =>
           `${shows} ${shows === 1 ? 'show' : 'shows'} found by ${via} · ${cost}`,
         noCost: 'no LLM cost',
