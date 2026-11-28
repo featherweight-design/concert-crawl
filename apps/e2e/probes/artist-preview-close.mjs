@@ -47,7 +47,9 @@ export default async function ({ goto, page, press, check, width }) {
   await page.waitForTimeout(500);
 
   const close = dialog.getByRole('button', { name: 'Close' });
-  const box = await close.boundingBox();
+  const drawn = (await close.count()) === 1;
+  check(drawn, 'the preview draws one Close', `count=${await close.count()}`);
+  const box = drawn ? await close.boundingBox() : null;
   check(
     box !== null && box.width >= 44 && box.height >= 44,
     'Close has a 44px hit box',
@@ -83,7 +85,7 @@ export default async function ({ goto, page, press, check, width }) {
   );
   check(overflow <= 0, 'no horizontal overflow', `overflow=${overflow}`);
 
-  await press(close);
+  if (drawn) await press(close);
   await page.waitForTimeout(400);
   const stillOpen = await dialog.count();
   check(
