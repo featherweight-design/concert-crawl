@@ -82,7 +82,7 @@ describe('admin venue PATCH heroSetting (3e-3)', () => {
   it('leaves the setting alone when the PATCH does not send it', async () => {
     const venue = await seedVenue();
     await patch(venue.id, { heroSetting: 'club' });
-    const res = await patch(venue.id, { description: 'A jazz room.' });
+    const res = await patch(venue.id, { lat: 39.74 });
     expect(res.status).toBe(200);
     expect(await heroOf(venue.id)).toBe('club');
   });
