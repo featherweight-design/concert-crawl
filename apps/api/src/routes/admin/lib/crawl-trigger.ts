@@ -27,7 +27,7 @@ export type QueueVenueTestResult =
   | { ok: 'not_found' }
   | { ok: 'removed' }
   | { ok: 'not_draft' }
-  | { ok: 'test_pending' }
+  | { ok: 'test_pending'; triggerId: string }
   | { ok: 'robots_disallowed' }
   | { ok: 'failed' };
 
@@ -236,7 +236,7 @@ export const queueVenueTest = async (
           ),
         )
         .limit(1);
-      if (open) return { ok: 'test_pending' };
+      if (open) return { ok: 'test_pending', triggerId: open.id };
 
       return insertTrigger(tx, {
         venueId,

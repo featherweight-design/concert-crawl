@@ -110,7 +110,11 @@ describe('POST /v1/admin/crawl/:venueId — a test crawl', () => {
     expect((await testCrawl(venue.id)).status).toBe(202);
     const second = await testCrawl(venue.id);
     expect(second.status).toBe(409);
-    expect(await second.json()).toMatchObject({ code: 'test_pending' });
+    const first = await triggersOf(venue.id);
+    expect(await second.json()).toMatchObject({
+      code: 'test_pending',
+      triggerId: first[0]?.id,
+    });
 
     await testDb
       .update(crawlTriggers)

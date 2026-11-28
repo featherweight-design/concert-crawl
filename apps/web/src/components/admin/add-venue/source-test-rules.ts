@@ -1,4 +1,5 @@
 import type { TestCrawlResult } from '@concert-crawl/types';
+import { z } from 'zod';
 import { ApiError } from '@/lib/api';
 
 /**
@@ -25,6 +26,19 @@ export const testRefusalOf = (err: unknown): TestRefusal | null => {
   if (!(err instanceof ApiError)) return null;
   if (err.status === 409 && isCodedRefusal(err.code)) return err.code;
   return null;
+};
+
+const pendingBody = z.object({ triggerId: z.string().min(1) });
+
+/**
+ * The test already queued, when a `test_pending` refusal names it. The page was
+ * left mid-test and reopened: it reads that trigger instead of showing a
+ * refusal. An API that predates the field sends none, and the refusal stands.
+ */
+export const pendingTriggerOf = (err: unknown): string | null => {
+  if (!(err instanceof ApiError) || err.code !== 'test_pending') return null;
+  const parsed = pendingBody.safeParse(err.body);
+  return parsed.success ? parsed.data.triggerId : null;
 };
 
 /** What Source's test card is showing. */

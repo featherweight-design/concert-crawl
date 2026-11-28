@@ -313,6 +313,8 @@ crawlAdminRouter.post(
           success: false,
           error: 'A test crawl of this venue is already queued',
           code: 'test_pending',
+          // The queued test, so a page that lost its handle can pick it up.
+          triggerId: queued.triggerId,
         },
         409,
       );
