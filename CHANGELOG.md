@@ -1,3 +1,15 @@
+# [1.577.0](https://github.com/featherweight-design/concert-crawl/compare/v1.576.0...v1.577.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **api:** keep an earlier guide date, report a failed guide publish ([2b5f53b](https://github.com/featherweight-design/concert-crawl/commit/2b5f53b90a9138fd6571bc373f9308da7a640411))
+
+
+### Features
+
+* **api:** go live publishes the guide when its gate passes ([fceb420](https://github.com/featherweight-design/concert-crawl/commit/fceb42049cc584dca295a592561e18c6744ee16d))
+
 # [1.576.0](https://github.com/featherweight-design/concert-crawl/compare/v1.575.0...v1.576.0) (2026-11-28)
 
 
