@@ -101,4 +101,22 @@ describe('ArtistPreview', () => {
     fireEvent.click(screen.getByText('Open their page'));
     expect(onOpenPage).toHaveBeenCalledTimes(1);
   });
+
+  it('draws no Close unless the host asks for one', () => {
+    render(<ArtistPreview {...base} />);
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+  });
+
+  it('draws a Close that calls onClose, after Follow in the tab order', () => {
+    const onClose = vi.fn();
+    render(<ArtistPreview {...base} close={{ onClose, placement: 'sheet' }} />);
+    const buttons = screen.getAllByRole('button');
+    expect(buttons[buttons.length - 1]?.getAttribute('aria-label')).toBe(
+      'Close',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    // Focus lands on Follow, not on the Close.
+    expect(document.activeElement?.textContent).toBe('Follow');
+  });
 });

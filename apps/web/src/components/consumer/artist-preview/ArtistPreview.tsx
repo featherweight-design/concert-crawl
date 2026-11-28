@@ -5,7 +5,9 @@
 // the search row and nothing else: no request, no photo, no shows, no summary,
 // because the row has none of them.
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { ChevronRight, X } from 'lucide-react';
 import type { ArtistSearchAllResult } from '@concert-crawl/types';
 
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
@@ -22,7 +24,9 @@ import { identityLine, typeLabel } from './lib/identity';
 
 const copy = ARTIST_PREVIEW_COPY;
 
-const PLATE_SIZE = 84;
+/** The phone sheet's plate; the palette and the desktop card pass 96. */
+export const PLATE_SIZE_SHEET = 84;
+export const PLATE_SIZE_WIDE = 96;
 
 const MONO = "'JetBrains Mono', ui-monospace, monospace";
 
@@ -41,6 +45,14 @@ interface ArtistPreviewProps {
   pageHref: string | null;
   /** Fired when Open their page is taken (the palette closes itself). */
   onOpenPage?: () => void;
+  /** Plate edge in px: 84 on the phone sheet (default), 96 elsewhere. */
+  plateSize?: number;
+  /**
+   * The modal's visible Close (addendum 15, ruling 6). Absent in the palette,
+   * which has Escape and its back row. Drawn at the sheet's or the card's
+   * corner, and focus lands on Follow when the preview opens.
+   */
+  close?: { onClose: () => void; placement: 'sheet' | 'card' };
 }
 
 const AboutRow = ({
@@ -89,7 +101,18 @@ export const ArtistPreview = ({
   error = null,
   pageHref,
   onOpenPage,
+  plateSize = PLATE_SIZE_SHEET,
+  close,
 }: ArtistPreviewProps) => {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const hasClose = close !== undefined;
+  useEffect(() => {
+    if (!hasClose) return;
+    // The Close is last in the DOM, so the first enabled button is Follow.
+    rootRef.current
+      ?.querySelector<HTMLButtonElement>('button:not([disabled])')
+      ?.focus();
+  }, [hasClose]);
   const identity = identityLine(artist);
   const type = typeLabel(artist.type);
   const area = artist.area?.trim() || null;
@@ -98,8 +121,20 @@ export const ArtistPreview = ({
   if (area) about.push({ label: copy.fromLabel, value: area });
 
   return (
-    <div data-artist-preview="">
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+    <div
+      ref={rootRef}
+      data-artist-preview=""
+      style={close ? { position: 'relative' } : undefined}
+    >
+      <div
+        style={{
+          display: 'flex',
+          gap: 16,
+          alignItems: close ? 'flex-start' : 'center',
+          // A long name wraps before the Close, never under it.
+          paddingRight: close ? 44 : 0,
+        }}
+      >
         <span
           style={{
             flex: 'none',
@@ -111,7 +146,7 @@ export const ArtistPreview = ({
             name={artist.name}
             surface="artist"
             photoUrl={null}
-            size={PLATE_SIZE}
+            size={plateSize}
             radius={SLOT_RADIUS.panel}
           />
         </span>
@@ -214,6 +249,7 @@ export const ArtistPreview = ({
         {following && pageHref && (
           <Link
             href={pageHref}
+            className="ap-preview-open"
             {...(onOpenPage ? { onClick: onOpenPage } : {})}
             style={{
               marginTop: 10,
@@ -221,7 +257,8 @@ export const ArtistPreview = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 14,
+              gap: 8,
+              borderRadius: 12,
               border: '1px solid var(--border-strong)',
               fontSize: 14,
               fontWeight: 700,
@@ -230,9 +267,50 @@ export const ArtistPreview = ({
             }}
           >
             {copy.openPage}
+            <ChevronRight
+              size={14}
+              strokeWidth={2}
+              aria-hidden
+              style={{ color: 'var(--fg-muted)' }}
+            />
           </Link>
         )}
       </div>
+      {close && (
+        <button
+          type="button"
+          className="ap-preview-close"
+          aria-label={copy.closeLabel}
+          onClick={close.onClose}
+          style={{
+            position: 'absolute',
+            top: close.placement === 'card' ? -6 : -4,
+            right: close.placement === 'card' ? -6 : -6,
+            width: 44,
+            height: 44,
+            display: 'grid',
+            placeItems: 'center',
+            background: 'none',
+            border: 0,
+            padding: 0,
+            cursor: 'pointer',
+          }}
+        >
+          <span
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              border: '1px solid var(--border-strong)',
+              display: 'grid',
+              placeItems: 'center',
+              color: 'var(--fg-muted)',
+            }}
+          >
+            <X size={11} strokeWidth={1.6} aria-hidden />
+          </span>
+        </button>
+      )}
     </div>
   );
 };

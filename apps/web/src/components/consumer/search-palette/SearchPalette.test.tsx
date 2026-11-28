@@ -405,6 +405,10 @@ describe('SearchPalette — artist list', () => {
     expect(document.activeElement?.textContent).toBe('Follow');
     expect(mockNavigateTo).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+    // The footer reads for the drill-in: follow, and esc back to results.
+    expect(screen.getByText('follow')).toBeTruthy();
+    expect(screen.getByText('back to results')).toBeTruthy();
+    expect(screen.queryByText('navigate')).toBeNull();
   });
 
   it('opens the page, not the preview, for an act followed in the drill-in', () => {

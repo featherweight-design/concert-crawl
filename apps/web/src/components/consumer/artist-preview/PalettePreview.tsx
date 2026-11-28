@@ -11,7 +11,7 @@ import type { ArtistSearchAllResult } from '@concert-crawl/types';
 
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
 
-import { ArtistPreview } from './ArtistPreview';
+import { ArtistPreview, PLATE_SIZE_WIDE } from './ArtistPreview';
 import { ARTIST_PREVIEW_COPY } from './definitions/copy';
 
 interface PalettePreviewProps {
@@ -63,6 +63,7 @@ export const PalettePreview = ({
       <button
         type="button"
         onClick={onBack}
+        className="ap-preview-back"
         // Stepping back mid-request would drop the answer that carries the slug.
         disabled={follow.pending}
         style={{
@@ -70,13 +71,15 @@ export const PalettePreview = ({
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
+          gap: 8,
+          padding: '0 6px',
           minHeight: 44,
           fontSize: 13,
+          fontWeight: 700,
           color: 'var(--fg-muted)',
         }}
       >
-        <ChevronLeft size={16} strokeWidth={1.75} aria-hidden />
+        <ChevronLeft size={14} strokeWidth={2} aria-hidden />
         {ARTIST_PREVIEW_COPY.backToResults(query.trim())}
       </button>
       <div ref={bodyRef}>
@@ -88,6 +91,7 @@ export const PalettePreview = ({
           error={follow.error}
           pageHref={pageHref}
           onOpenPage={onOpenPage}
+          plateSize={PLATE_SIZE_WIDE}
         />
       </div>
     </div>
