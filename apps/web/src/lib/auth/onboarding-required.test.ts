@@ -25,6 +25,11 @@ describe('needsOnboarding', () => {
     expect(owes({ created_at: AT_CUTOFF - 1 })).toBe(false);
   });
 
+  it('reads a created_at in seconds the same as in ms', () => {
+    expect(owes({ created_at: AT_CUTOFF / 1000 })).toBe(true);
+    expect(owes({ created_at: AT_CUTOFF / 1000 - 1 })).toBe(false);
+  });
+
   it('lets this browser through once the tour set its cookie for this user', () => {
     expect(owes({ created_at: AT_CUTOFF }, USER)).toBe(false);
   });

@@ -45,6 +45,11 @@ export const needsOnboarding = (
   if (onboardedCookie === userId) return false;
   const parsed = claimsSchema.safeParse(claims);
   if (!parsed.success) return false;
-  if (parsed.data.created_at < ONBOARDING_REQUIRED_SINCE) return false;
+  // Clerk's `created_at` is ms epoch; a seconds value (any number below 1e12,
+  // which as ms would be before 2001) is scaled, so a unit surprise in the
+  // template can never silently switch the rule off.
+  const createdAt = parsed.data.created_at;
+  const createdAtMs = createdAt < 1e12 ? createdAt * 1000 : createdAt;
+  if (createdAtMs < ONBOARDING_REQUIRED_SINCE) return false;
   return !parsed.data.metadata?.onboardedAt;
 };
