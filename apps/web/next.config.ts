@@ -29,6 +29,9 @@ const config: NextConfig = {
   experimental: {
     ...(process.env['VERCEL'] ? { cpus: 2 } : {}),
     webpackMemoryOptimizations: true,
+    // The Icon step posts up to three base64 reference images (about 750 KB
+    // each) in one server action; Next's default body limit is 1 MB.
+    serverActions: { bodySizeLimit: '4mb' },
   },
   env: {
     // Exact Clerk script versions, so the browser skips two uncacheable
