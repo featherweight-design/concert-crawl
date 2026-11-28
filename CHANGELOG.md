@@ -1,3 +1,18 @@
+# [1.575.0](https://github.com/featherweight-design/concert-crawl/compare/v1.574.0...v1.575.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **api:** hero setting test patches a plain boolean field ([3419df2](https://github.com/featherweight-design/concert-crawl/commit/3419df2c0999580e5ed524f4ea0bc2ab2a8780ed))
+* **api:** hero setting test sends a field the venue PATCH accepts ([3c50fe7](https://github.com/featherweight-design/concert-crawl/commit/3c50fe7aa0ec61a34885805a670d293d691b30ab))
+* **api:** hero settings come from the types package ([369193e](https://github.com/featherweight-design/concert-crawl/commit/369193ea26e6e090d3856a6878c53a1ea44f5f57))
+* **web:** address review on hero setting and glyph actions ([18560e2](https://github.com/featherweight-design/concert-crawl/commit/18560e23195837ca1e5665410826ab274f0000e2))
+
+
+### Features
+
+* **api:** venue PATCH saves the hero setting, and web actions for glyph drafts and the icon ([f02514b](https://github.com/featherweight-design/concert-crawl/commit/f02514b1df52272eb946c4c4d7f157ce774efc4b))
+
 # [1.574.0](https://github.com/featherweight-design/concert-crawl/compare/v1.573.0...v1.574.0) (2026-11-28)
 
 
