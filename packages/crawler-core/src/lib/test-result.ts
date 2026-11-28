@@ -33,6 +33,7 @@ export const buildTestResult = (input: {
   shows: readonly TestShow[];
   costUsd: number | null;
   crawlRunId: string;
+  durationMs: number;
 }): TestCrawlResult => ({
   status: input.shows.length > 0 ? 'found' : 'none',
   strategy: input.strategy,
@@ -42,6 +43,7 @@ export const buildTestResult = (input: {
   costUsd: input.costUsd ?? 0,
   crawlRunId: input.crawlRunId,
   error: null,
+  durationMs: input.durationMs,
 });
 
 /** The result of a test crawl that could not read the listing at all. */

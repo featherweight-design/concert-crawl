@@ -1453,6 +1453,7 @@ export async function crawlVenue(
           shows: survivingEvents,
           costUsd: testCostUsd,
           crawlRunId: id,
+          durationMs: Date.now() - startedAt,
         }),
       };
     }

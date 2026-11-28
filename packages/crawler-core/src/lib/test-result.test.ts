@@ -15,9 +15,11 @@ describe('buildTestResult', () => {
       shows: ['A', 'B', 'C', 'D'].map(show),
       costUsd: null,
       crawlRunId: 'run-1',
+      durationMs: 6200,
     });
     expect(result).toMatchObject({
       status: 'found',
+      durationMs: 6200,
       found: 4,
       counts: { html: 0, jsonLd: 4, haiku: 0 },
       costUsd: 0,
@@ -32,6 +34,7 @@ describe('buildTestResult', () => {
       shows: [show('A')],
       costUsd: 0,
       crawlRunId: 'run-2',
+      durationMs: 6200,
     });
     expect(platform.counts).toEqual({ html: 1, jsonLd: 0, haiku: 0 });
     const llm = buildTestResult({
@@ -39,6 +42,7 @@ describe('buildTestResult', () => {
       shows: [show('A')],
       costUsd: 0.002,
       crawlRunId: 'run-3',
+      durationMs: 6200,
     });
     expect(llm.counts).toEqual({ html: 0, jsonLd: 0, haiku: 1 });
     expect(llm.costUsd).toBe(0.002);
@@ -51,6 +55,7 @@ describe('buildTestResult', () => {
         shows: [],
         costUsd: 0,
         crawlRunId: 'run-4',
+        durationMs: 6200,
       }).status,
     ).toBe('none');
     const [sample] = buildTestResult({
@@ -58,6 +63,7 @@ describe('buildTestResult', () => {
       shows: [{ ...show('A'), title: '' }],
       costUsd: 0,
       crawlRunId: 'run-5',
+      durationMs: 6200,
     }).samples;
     expect(sample?.title).toBeNull();
   });
