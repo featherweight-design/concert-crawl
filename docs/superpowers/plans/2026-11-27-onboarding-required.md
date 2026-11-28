@@ -12,20 +12,23 @@ signed-in page request from such an account without `publicMetadata.onboardedAt`
 
 - **Claim source.** The Clerk session token template carries `created_at` (`{{user.created_at}}`, ms epoch) next to
   `metadata` (`{{user.public_metadata}}`). Hugh added `created_at` on staging and prod on 2026-11-27.
-- **Proxy** (`apps/web/src/proxy.ts`). `needsOnboarding(sessionClaims)` (`lib/auth/onboarding-required.ts`) parses
+- **Proxy** (`apps/web/src/proxy.ts`). `needsOnboarding(claims, userId, cookie)` (`lib/auth/onboarding-required.ts`) parses
   the claims with Zod. A missing or malformed claim, or an account made before the cutoff, never forces (fail open).
   Exempt: `/onboarding`, `/auth/*`, `/sign-in`, `/sign-up`, `/api/*`, and every always-public path.
 - **Stamp.** `POST /v1/me/onboarded` (empty strict body) writes `publicMetadata.onboardedAt` through
-  `updateUserMetadata`, which merges. First write wins. A structured log line is the audit.
-- **Leaving the tour.** Finish and Skip call `useMarkOnboarded()`, which posts the stamp and then mints a fresh
-  session token (`getToken({ skipCache: true })`) before navigating, so the proxy sees the stamp on the next request.
-  A failed write is logged and never blocks leaving; the proxy brings the visitor back on their next page.
-- **No visual change.** Skip stays a link with the same look, copy and focus order; only its click is held until the
-  stamp lands. A modified click (new tab) stamps and is not prevented.
+  `updateUserMetadata`, which merges. A repeat call returns the existing stamp. A structured log line is the audit.
+- **Leaving the tour.** Finish and Skip call `useMarkOnboarded()`, which is synchronous: it sets the
+  `cc_onboarded` cookie to the user's id, then posts the stamp in the background (skipped when the token already
+  carries one). The proxy honours either the cookie (this browser, at once, even if the write fails) or the claim
+  (every device, once the token refreshes). A cookie naming another user does not count, so a second new account on
+  the same browser still owes the tour. The cookie is not a security boundary: anyone can skip the tour anyway.
+- **Only page loads are redirected.** GET and HEAD only, and never a router prefetch: the Skip link prefetches its
+  destination, and a cached redirect would send the click back to the tour.
+- **No visual change.** Skip stays a link with the same look, copy and focus order, and navigates as before.
 
 ## Proof
 
-- Unit: `needsOnboarding`, the proxy redirect and exemptions, the API route, Finish and Skip holding navigation.
+- Unit: `needsOnboarding`, the proxy redirect and exemptions, the API route, Finish and Skip marking the tour done.
 - Local contact sheet: `docs/superpowers/inventories/onboarding-required.json` (first step with Skip, last step with
   Finish, phone and desktop).
 - Staging after merge: an existing (pre-cutoff) account is not forced, and its session token carries `created_at` as

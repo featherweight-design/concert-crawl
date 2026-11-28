@@ -3,8 +3,9 @@
 //
 // It stamps Clerk publicMetadata.onboardedAt, which the session token carries
 // as `metadata.onboardedAt`, so the web proxy can stop sending a new account
-// to /onboarding without a request of its own. First write wins: a repeat call
-// (Finish after a retry, two tabs) returns the stamp already there.
+// to /onboarding without a request of its own. A repeat call returns the stamp
+// already there. Two first calls racing (two tabs) may both write; the later
+// time wins, which is harmless since only the stamp's presence is read.
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { createClerkClient } from '@clerk/backend';

@@ -12,6 +12,7 @@ import {
 } from '@/lib/auth/intent';
 import {
   needsOnboarding,
+  ONBOARDED_COOKIE,
   ONBOARDING_PATH,
 } from '@/lib/auth/onboarding-required';
 
@@ -315,8 +316,21 @@ export const middlewareHandler = async (
     // A new account goes through the tour before the app opens, wherever it
     // lands: /auth/complete sends it there once, and this catches every way
     // past that (an error on the way, a typed URL, a bookmark). The claims come
-    // from the session token, so the check costs no request.
-    if (needsOnboarding(sessionClaims) && !isOnboardingExempt(req)) {
+    // from the session token, so the check costs no request. Only a page load
+    // (GET or HEAD) is redirected: a Server Action POST answered with the tour
+    // would just break. A router prefetch is let through too: the tour's own
+    // Skip link prefetches its destination, and a cached redirect would send
+    // the click back here after the tour was marked done.
+    if (
+      (req.method === 'GET' || req.method === 'HEAD') &&
+      req.headers.get('next-router-prefetch') === null &&
+      !isOnboardingExempt(req) &&
+      needsOnboarding(
+        sessionClaims,
+        userId,
+        req.cookies.get(ONBOARDED_COOKIE)?.value,
+      )
+    ) {
       const tourUrl = new URL(ONBOARDING_PATH, req.url);
       tourUrl.searchParams.set(
         'return',
