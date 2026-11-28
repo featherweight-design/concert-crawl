@@ -513,16 +513,17 @@
 }
 
 /* Artist preview (addendum 15): the back row, Open their page and the Close.
-   all:unset on the back row strips its ring, so each restores :focus-visible. */
+   all:unset on the back row strips its ring, so each restores :focus-visible.
+   The colour and border are set inline, so the hover rules need !important. */
 .ap-preview-back:hover:not(:disabled) {
-  color: var(--fg);
+  color: var(--fg) !important;
 }
 .ap-preview-back:disabled {
   opacity: 0.38;
   cursor: default;
 }
 .ap-preview-open:hover {
-  border-color: var(--fg-muted);
+  border-color: var(--fg-muted) !important;
   background: var(--surface-2);
 }
 .ap-preview-back:focus-visible,

@@ -113,6 +113,15 @@ export const ArtistPreview = ({
       ?.querySelector<HTMLButtonElement>('button:not([disabled])')
       ?.focus();
   }, [hasClose]);
+  // Following hands focus to Open their page, so the palette footer's Enter
+  // opens it instead of toggling Follow back off. Not on first render.
+  const openRef = useRef<HTMLAnchorElement | null>(null);
+  const linkShown = following && Boolean(pageHref);
+  const wasLinkShown = useRef(linkShown);
+  useEffect(() => {
+    if (linkShown && !wasLinkShown.current) openRef.current?.focus();
+    wasLinkShown.current = linkShown;
+  }, [linkShown]);
   const identity = identityLine(artist);
   const type = typeLabel(artist.type);
   const area = artist.area?.trim() || null;
@@ -248,6 +257,7 @@ export const ArtistPreview = ({
         )}
         {following && pageHref && (
           <Link
+            ref={openRef}
             href={pageHref}
             className="ap-preview-open"
             {...(onOpenPage ? { onClick: onOpenPage } : {})}
@@ -285,7 +295,7 @@ export const ArtistPreview = ({
           style={{
             position: 'absolute',
             top: close.placement === 'card' ? -6 : -4,
-            right: close.placement === 'card' ? -6 : -6,
+            right: -6,
             width: 44,
             height: 44,
             display: 'grid',

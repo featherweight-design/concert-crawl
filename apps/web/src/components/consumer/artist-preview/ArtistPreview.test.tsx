@@ -82,6 +82,19 @@ describe('ArtistPreview', () => {
     expect(link?.getAttribute('href')).toBe('/artists/clip');
   });
 
+  it('following moves focus to Open their page, but a preview opened already following does not', () => {
+    const { rerender, unmount } = render(
+      <ArtistPreview {...base} pageHref="/artists/clip" />,
+    );
+    rerender(<ArtistPreview {...base} following pageHref="/artists/clip" />);
+    expect(document.activeElement).toBe(
+      screen.getByText('Open their page').closest('a'),
+    );
+    unmount();
+    render(<ArtistPreview {...base} following pageHref="/artists/clip" />);
+    expect(document.activeElement).toBe(document.body);
+  });
+
   it('a refusal replaces the pitch line', () => {
     render(<ArtistPreview {...base} error={{ kind: 'unavailable' }} />);
     expect(document.querySelector('[data-follow-pitch]')).toBeNull();
