@@ -846,7 +846,7 @@ export interface TestCrawlResult {
   costUsd: number;
   crawlRunId: string | null;
   error: string | null;
-  /** How long the test took, pages and pacing included. Absent on older results. */
+  /** How long the test took, pages and pacing included. Absent on older results and on a test that failed. */
   durationMs?: number;
 }
 
