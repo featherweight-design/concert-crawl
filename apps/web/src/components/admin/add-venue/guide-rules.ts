@@ -33,15 +33,6 @@ export const EMPTY_FIELDS: GuideFields = {
   },
 };
 
-/** What the drafts put in each field; the Insider tip is never drafted. */
-export const fieldsOf = (drafts: GuideDrafts | null): GuideFields => {
-  const chips = { ...EMPTY_FIELDS.chips };
-  for (const section of drafts?.sections ?? []) {
-    chips[section.chipType] = section.body;
-  }
-  return { insiderTip: '', chips };
-};
-
 /**
  * Fields after a Redraft: a section the admin has edited keeps their words, and
  * every other one (blank, or still the old draft untouched) takes the new
@@ -88,18 +79,10 @@ export const tagOf = (
   return section.state;
 };
 
-/** True when no page gave the route anything: every section came back blank. */
-export const nothingToDraft = (drafts: GuideDrafts): boolean =>
-  drafts.sections.every((section) => section.state === 'blank');
-
 /** True once the admin has written anything: the step saves only then. */
 export const anyWritten = (fields: GuideFields): boolean =>
   fields.insiderTip.trim() !== '' ||
   GUIDE_CHIP_ORDER.some((key) => fields.chips[key].trim() !== '');
-
-/** True when Accessibility, the one section a publish needs, has text. */
-export const accessibilityWritten = (fields: GuideFields): boolean =>
-  fields.chips.accessibility.trim() !== '';
 
 /**
  * The guide PUT's body. It replaces the whole guide, so every section goes,

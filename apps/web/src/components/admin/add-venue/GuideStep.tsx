@@ -8,17 +8,15 @@
  * Insider tip is the admin's own and never drafted.
  */
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { Sparkles } from 'lucide-react';
 import { GUIDE_CHIP_ORDER, GUIDE_FIELD_MAX_LENGTH } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, StatusBadge } from '@/components/admin/primitives';
 import { Card } from '@/components/admin/venues/source/source-parts';
-import { draftVenueGuide } from '@/lib/actions/venues';
 import type { GuideDrafts } from '@/lib/admin/guide-drafts-schema';
 import {
   draftedHost,
-  mergeRedraft,
   pathOf,
   sectionFor,
   sourceLabel,
@@ -48,11 +46,14 @@ const TAG_KIND = {
 const costLabel = (cost: number | null): string | null =>
   cost === null ? null : `$${cost.toFixed(2)}`;
 
-export type GuideStatus = 'drafting' | 'failed' | 'ready';
+/** idle until the flow starts the first draft; the flow owns the call. */
+export type GuideStatus = 'idle' | 'drafting' | 'failed' | 'ready';
 
 interface GuideStepProps {
   phone: boolean;
-  venueId: string;
+  status: GuideStatus;
+  /** A Redraft failed: the fields stay as they were. */
+  redraftFailed: boolean;
   /** What the route last returned; null before the first draft or after a failure. */
   drafts: GuideDrafts | null;
   fields: GuideFields;
@@ -60,7 +61,8 @@ interface GuideStepProps {
   opened: boolean;
   /** Why Continue's save failed, shown under the fields. */
   saveError: string | null;
-  onDrafts: (drafts: GuideDrafts | null) => void;
+  /** Starts a draft; the flow runs one call at a time and keeps its result. */
+  onDraft: (again: boolean) => void;
   onFields: (fields: GuideFields) => void;
   onOpened: () => void;
   onSkip: () => void;
@@ -90,56 +92,29 @@ const Tag = ({ tag }: { tag: GuideTag }) => (
 
 export const GuideStep = ({
   phone,
-  venueId,
+  status,
+  redraftFailed,
   drafts,
   fields,
   opened,
   saveError,
-  onDrafts,
+  onDraft,
   onFields,
   onOpened,
   onSkip,
 }: GuideStepProps) => {
-  // Drafting runs once per open: the flow keeps what came back, so Back and
-  // Continue don't spend a second model call.
-  const [status, setStatus] = useState<GuideStatus>(
-    drafts !== null || opened ? 'ready' : 'drafting',
-  );
-  const started = useRef(drafts !== null || opened);
-  const draftsRef = useRef(drafts);
-  draftsRef.current = drafts;
-  const fieldsRef = useRef(fields);
-  fieldsRef.current = fields;
-
-  const draft = async (again: boolean) => {
-    setStatus('drafting');
-    const outcome = await draftVenueGuide(venueId);
-    if (!outcome.ok) return setStatus(again ? 'ready' : 'failed');
-    onFields(
-      again
-        ? mergeRedraft(fieldsRef.current, draftsRef.current, outcome.data)
-        : {
-            insiderTip: fieldsRef.current.insiderTip,
-            chips: mergeRedraft(fieldsRef.current, null, outcome.data).chips,
-          },
-    );
-    onDrafts(outcome.data);
-    onOpened();
-    setStatus('ready');
-  };
-
+  // The first draft starts once per venue: the flow guards it, so Back and
+  // Continue (a remount) never spend a second model call.
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    void draft(false);
-    // The first draft runs once, on open.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- a draft is a model call: it must not rerun when its callbacks change identity
+    if (status === 'idle') onDraft(false);
+    // Mount only: a draft is a model call and must not rerun on a prop change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, []);
 
   const change = (patch: Partial<GuideFields>) =>
     onFields({ ...fields, ...patch });
 
-  if (status === 'drafting' && drafts === null) {
+  if ((status === 'idle' || status === 'drafting') && drafts === null) {
     return (
       <>
         <Heading phone={phone} sub={COPY.sub} />
@@ -148,9 +123,7 @@ export const GuideStep = ({
           phone={phone}
           testId="add-venue-guide-drafting"
         >
-          <p style={lineStyle} role="status">
-            {COPY.draftingSub}
-          </p>
+          <p style={lineStyle}>{COPY.draftingSub}</p>
         </Card>
       </>
     );
@@ -170,7 +143,7 @@ export const GuideStep = ({
             {COPY.failedBody}
           </p>
           <Actions>
-            <AdminButton variant="outline" onClick={() => void draft(false)}>
+            <AdminButton variant="outline" onClick={() => onDraft(false)}>
               {COPY.tryAgain}
             </AdminButton>
             <AdminButton variant="ghost" onClick={onOpened}>
@@ -254,7 +227,7 @@ export const GuideStep = ({
               size="sm"
               icon={Sparkles}
               disabled={status === 'drafting'}
-              onClick={() => void draft(true)}
+              onClick={() => onDraft(true)}
               data-testid="add-venue-guide-redraft"
             >
               {status === 'drafting' ? COPY.redrafting : COPY.redraft}
@@ -262,6 +235,11 @@ export const GuideStep = ({
           )
         }
       >
+        {redraftFailed && (
+          <p role="alert" style={{ ...lineStyle, color: 'var(--danger)' }}>
+            {COPY.redraftFailed}
+          </p>
+        )}
         {drafts !== null && host !== null && (
           <p style={lineStyle}>
             {COPY.drafted(
@@ -328,7 +306,7 @@ const Heading = ({ phone, sub }: { phone: boolean; sub: string }) => (
   </div>
 );
 
-const Actions = ({ children }: { children: React.ReactNode }) => (
+const Actions = ({ children }: { children: ReactNode }) => (
   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{children}</div>
 );
 
@@ -350,7 +328,7 @@ const Field = ({
   label: string;
   eyebrow?: string;
   required?: boolean;
-  tag: React.ReactNode;
+  tag: ReactNode;
   value: string;
   placeholder?: string;
   hint?: string | undefined;
@@ -379,6 +357,8 @@ const Field = ({
       id={testId}
       data-testid={testId}
       value={value}
+      aria-required={required || undefined}
+      aria-describedby={`${testId}-meta`}
       maxLength={GUIDE_FIELD_MAX_LENGTH}
       {...(placeholder === undefined ? {} : { placeholder })}
       onChange={(event) => onChange(event.target.value)}
@@ -388,6 +368,7 @@ const Field = ({
       }}
     />
     <div
+      id={`${testId}-meta`}
       style={{
         display: 'flex',
         justifyContent: 'space-between',

@@ -2,10 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { GuideDrafts } from '@/lib/admin/guide-drafts-schema';
 import {
   EMPTY_FIELDS,
-  accessibilityWritten,
   anyWritten,
   draftedHost,
-  fieldsOf,
   guidePayload,
   mergeRedraft,
   pathOf,
@@ -46,13 +44,6 @@ const drafts = (over: Partial<GuideDrafts> = {}): GuideDrafts => ({
 });
 
 describe('guide-rules', () => {
-  it('seeds fields from the drafts and never drafts the Insider tip', () => {
-    const fields = fieldsOf(drafts());
-    expect(fields.chips.accessibility).toBe('Step-free entrance.');
-    expect(fields.chips.transit).toBe('');
-    expect(fields.insiderTip).toBe('');
-  });
-
   it('tags a section by its draft state, and a hand-written blank as yours', () => {
     const sample = drafts();
     expect(tagOf(sample, 'accessibility', 'x')).toBe('drafted');
@@ -78,7 +69,6 @@ describe('guide-rules', () => {
     expect(anyWritten({ ...EMPTY_FIELDS, insiderTip: 'Sit at the bar' })).toBe(
       true,
     );
-    expect(accessibilityWritten(EMPTY_FIELDS)).toBe(false);
   });
 
   it('keeps edited sections through a Redraft and refreshes untouched ones', () => {
@@ -92,7 +82,11 @@ describe('guide-rules', () => {
     });
     const edited = {
       insiderTip: 'Mine',
-      chips: { ...fieldsOf(before).chips, accessibility: 'My words' },
+      chips: {
+        ...EMPTY_FIELDS.chips,
+        accessibility: 'My words',
+        parking: 'Garage nearby.',
+      },
     };
     const merged = mergeRedraft(edited, before, after);
     expect(merged.chips.accessibility).toBe('My words');

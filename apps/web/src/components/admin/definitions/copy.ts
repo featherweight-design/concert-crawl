@@ -1481,6 +1481,7 @@ export const ADMIN_COPY = {
         `Drafted from ${pages} (allowed by robots.txt)${cost === null ? '' : `, about ${cost}`}. Every field is editable here.`,
       redraft: 'Redraft',
       redrafting: 'Drafting…',
+      redraftFailed: 'Couldn’t redraft. Your fields are as you left them.',
       required: 'Required',
       surfacedFirst: 'Surfaced first',
       tags: {

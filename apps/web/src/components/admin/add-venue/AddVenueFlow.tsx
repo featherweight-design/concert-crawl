@@ -17,6 +17,7 @@ import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { slugify } from '@/components/admin/venues/details/details-rules';
 import {
   createDraftVenue,
+  draftVenueGuide,
   goLiveVenue,
   saveVenueGuide,
   updateVenue,
@@ -26,11 +27,12 @@ import { AddVenueShell } from './AddVenueShell';
 import { AskVenueSheet } from './AskVenueSheet';
 import { BasicsStep } from './BasicsStep';
 import { GoneLive } from './GoneLive';
-import { GuideStep } from './GuideStep';
+import { GuideStep, type GuideStatus } from './GuideStep';
 import {
   EMPTY_FIELDS,
   anyWritten,
   guidePayload,
+  mergeRedraft,
   type GuideFields,
 } from './guide-rules';
 import { ReviewStep } from './ReviewStep';
@@ -105,7 +107,12 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   const [guideDrafts, setGuideDrafts] = useState<GuideDrafts | null>(null);
   const [guideFields, setGuideFields] = useState<GuideFields>(EMPTY_FIELDS);
   const [guideOpened, setGuideOpened] = useState(false);
+  const [guideStatus, setGuideStatus] = useState<GuideStatus>('idle');
+  const [redraftFailed, setRedraftFailed] = useState(false);
+  // True once a guide is on the server, so a cleared guide still sends its PUT.
   const [guideSaved, setGuideSaved] = useState(false);
+  const guideDrafting = useRef(false);
+  const guideDraftsRef = useRef<GuideDrafts | null>(null);
   const [guideError, setGuideError] = useState<string | null>(null);
   const [going, setGoing] = useState(false);
   const [goLiveFailed, setGoLiveFailed] = useState<'failed' | 'robots' | null>(
@@ -254,13 +261,36 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     window.location.href = '/admin/venues/new';
   };
 
+  // One draft call at a time, owned here so a remount of the step never makes a
+  // second one; the late result merges into the fields as they are now.
+  const draftGuide = async (again: boolean) => {
+    if (guideDrafting.current || venueId === null) return;
+    guideDrafting.current = true;
+    setGuideStatus('drafting');
+    setRedraftFailed(false);
+    const outcome = await draftVenueGuide(venueId);
+    guideDrafting.current = false;
+    if (!outcome.ok) {
+      setRedraftFailed(again);
+      setGuideStatus(again ? 'ready' : 'failed');
+      return;
+    }
+    setGuideFields((prev) =>
+      mergeRedraft(prev, guideDraftsRef.current, outcome.data),
+    );
+    guideDraftsRef.current = outcome.data;
+    setGuideDrafts(outcome.data);
+    setGuideOpened(true);
+    setGuideStatus('ready');
+  };
+
   // Guide's Continue saves what was written (a draft: publishing stays a
-  // separate step) and moves on. Nothing written saves nothing; a failed save
-  // keeps the admin here with the words they typed.
+  // separate step) and moves on. Nothing written and nothing saved before sends
+  // nothing; a guide saved earlier and since cleared sends its empty PUT. A
+  // failed save keeps the admin here with the words they typed.
   const continueGuide = async () => {
     if (venueId === null || saving.current) return;
-    if (!anyWritten(guideFields)) {
-      setGuideSaved(false);
+    if (!anyWritten(guideFields) && !guideSaved) {
       setStage('review');
       return;
     }
@@ -274,7 +304,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
       setGuideError(outcome.error ?? COPY.guide.saveFailed);
       return;
     }
-    setGuideSaved(true);
+    setGuideSaved(anyWritten(guideFields));
     setStage('review');
   };
 
@@ -348,14 +378,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
                 ? setStage('guide')
                 : void toSource()
         }
-        onSkip={
-          onGuide
-            ? () => {
-                setGuideSaved(false);
-                setStage('review');
-              }
-            : undefined
-        }
+        onSkip={onGuide ? () => setStage('review') : undefined}
         continueDisabled={
           onReview
             ? found === null
@@ -367,18 +390,16 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
         {onGuide ? (
           <GuideStep
             phone={phone}
-            venueId={venueId}
+            status={guideStatus}
+            redraftFailed={redraftFailed}
             drafts={guideDrafts}
             fields={guideFields}
             opened={guideOpened}
             saveError={guideError}
-            onDrafts={setGuideDrafts}
+            onDraft={(again) => void draftGuide(again)}
             onFields={setGuideFields}
             onOpened={() => setGuideOpened(true)}
-            onSkip={() => {
-              setGuideSaved(false);
-              setStage('review');
-            }}
+            onSkip={() => setStage('review')}
           />
         ) : onReview ? (
           <ReviewStep
