@@ -1197,6 +1197,50 @@ describe('proxy — a new account owes the tour (onboarding required)', () => {
     expect(result).toBeUndefined();
   });
 
+  it('lets a new account through on a browser whose tour cookie names it', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/events', {
+        headers: { cookie: 'cc_onboarded=user_new' },
+      }),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it('still sends a new account to the tour when the cookie names another account', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/events', {
+        headers: { cookie: 'cc_onboarded=user_other' },
+      }),
+    );
+    expect(new URL(redirectLocation(result) ?? '').pathname).toBe(
+      '/onboarding',
+    );
+  });
+
+  it('never redirects a non-page request (a Server Action POST)', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/events', { method: 'POST' }),
+    );
+    expect(result).toBeUndefined();
+  });
+
+  it('never redirects a router prefetch (the Skip link prefetches its target)', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const result = await middlewareHandler(
+      signedIn({ created_at: NEW }),
+      new NextRequest('http://localhost/events', {
+        headers: { 'next-router-prefetch': '1', rsc: '1' },
+      }),
+    );
+    expect(result).toBeUndefined();
+  });
+
   it('never forces an account created before the cutoff', async () => {
     const { middlewareHandler } = await import('./proxy');
     const result = await middlewareHandler(

@@ -2,20 +2,9 @@
 
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import {
-  render,
-  screen,
-  cleanup,
-  fireEvent,
-  waitFor,
-} from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 
-const push = vi.fn();
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
-}));
-
-const markOnboarded = vi.fn(async () => {});
+const markOnboarded = vi.fn();
 vi.mock('./lib/use-mark-onboarded', () => ({
   useMarkOnboarded: () => markOnboarded,
 }));
@@ -45,8 +34,7 @@ import { SkipRail } from './SkipRail';
 
 afterEach(() => {
   cleanup();
-  push.mockClear();
-  markOnboarded.mockReset().mockResolvedValue(undefined);
+  markOnboarded.mockReset();
   window.sessionStorage.clear();
 });
 
@@ -124,47 +112,42 @@ describe('SkipRail — three weights, one position (#794)', () => {
     });
   });
 
-  // Skipping is done, like finishing: the proxy sends an unstamped new account
-  // back to the tour, so the stamp has to land before the visitor leaves.
+  // Skipping is done, like finishing: the proxy sends an unmarked new account
+  // back to the tour. The mark is synchronous, so the link still navigates.
   describe('skipping records the tour as done (onboarding required)', () => {
-    it('holds the navigation until the stamp lands, then goes', async () => {
-      let release = () => {};
-      markOnboarded.mockImplementationOnce(
-        () => new Promise<void>((resolve) => (release = resolve)),
-      );
+    it.each([
+      ['a plain click', {}],
+      ['a new-tab click', { metaKey: true }],
+    ])('marks it on %s and lets the link navigate', (_label, init) => {
       render(<SkipRail mode={{ kind: 'default', href: '/events?tier=x' }} />);
       const link = screen.getByRole('link', { name: /^skip$/i });
       const event = new MouseEvent('click', {
         bubbles: true,
         cancelable: true,
+        ...init,
       });
       link.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(true);
       expect(markOnboarded).toHaveBeenCalledTimes(1);
-      expect(push).not.toHaveBeenCalled();
-      release();
-      await waitFor(() => expect(push).toHaveBeenCalledWith('/events?tier=x'));
+      // The mock Link has no router; a prevented click would mean the
+      // component itself held the navigation.
+      expect(event.defaultPrevented).toBe(false);
     });
 
-    it('leaves from the menu entry to the default path the same way', async () => {
+    it('marks it from the menu entry and the mid-intent link too', () => {
       render(<SkipRail mode={{ kind: 'menu' }} />);
       fireEvent.click(screen.getByRole('link', { name: /^close$/i }));
-      await waitFor(() => expect(push).toHaveBeenCalledWith('/events'));
-      expect(markOnboarded).toHaveBeenCalledTimes(1);
-    });
-
-    it('lets a new-tab click through to the browser, still stamping', () => {
-      render(<SkipRail mode={{ kind: 'default', href: '/events' }} />);
-      const link = screen.getByRole('link', { name: /^skip$/i });
-      const event = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        metaKey: true,
-      });
-      link.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
-      expect(markOnboarded).toHaveBeenCalledTimes(1);
-      expect(push).not.toHaveBeenCalled();
+      cleanup();
+      render(
+        <SkipRail
+          mode={{
+            kind: 'mid-intent',
+            href: '/events/e1',
+            destinationLabel: 'Tigers Jaw',
+          }}
+        />,
+      );
+      fireEvent.click(screen.getByRole('link', { name: /tigers jaw/i }));
+      expect(markOnboarded).toHaveBeenCalledTimes(2);
     });
   });
 });

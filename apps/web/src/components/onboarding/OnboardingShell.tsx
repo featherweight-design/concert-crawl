@@ -442,9 +442,10 @@ export function OnboardingShell({
       // anyone who comes back from the account menu in the same session.
       clearPicks(SEARCH_PICKS_KEY);
       clearPicks(STEP_INDEX_KEY);
-      // Stamped and the session refreshed before leaving, so the proxy lets the
-      // visitor through. It never throws, so Finish always navigates.
-      void markOnboarded().then(() => router.push(finishHref));
+      // Marked done before leaving (synchronously), so the proxy lets the
+      // visitor through on the very next request.
+      markOnboarded();
+      router.push(finishHref);
       return;
     }
     // The only step whose CTA writes anything. `commit` advances itself once

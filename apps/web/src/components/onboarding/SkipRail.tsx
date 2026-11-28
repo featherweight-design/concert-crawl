@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import type { MouseEvent } from 'react';
 import { useMarkOnboarded } from './lib/use-mark-onboarded';
 import { ONBOARDING_COPY } from './definitions/copy';
 import { DEFAULT_RETURN_PATH } from '@/lib/auth/intent';
@@ -80,32 +78,15 @@ const LOUD_LINK: React.CSSProperties = {
  * to make leaving *more* attractive than continuing. The tour stays reachable
  * from the account menu forever either way.
  */
-/** A click the browser should handle itself: a new tab, a new window, a save. */
-const isModifiedClick = (event: MouseEvent<HTMLAnchorElement>): boolean =>
-  event.button !== 0 ||
-  event.metaKey ||
-  event.ctrlKey ||
-  event.shiftKey ||
-  event.altKey;
-
 export const SkipRail = ({ mode }: { mode: SkipMode }) => {
-  const router = useRouter();
   const markOnboarded = useMarkOnboarded();
-  // Skipping counts as done, exactly like finishing: the stamp is written and
-  // the session refreshed before the navigation, or the proxy would send the
-  // visitor straight back. The element stays a link, so its look, its copy
-  // and its place in the focus order are unchanged; only the click is held.
-  const leave =
-    (href: string) =>
-    (event: MouseEvent<HTMLAnchorElement>): void => {
-      dropPickMirrors();
-      if (isModifiedClick(event)) {
-        void markOnboarded();
-        return;
-      }
-      event.preventDefault();
-      void markOnboarded().then(() => router.push(href));
-    };
+  // Skipping counts as done, exactly like finishing. The mark is synchronous
+  // (a cookie, then a background stamp), so the link navigates as it always
+  // did: same look, copy and focus order, and a new-tab click works too.
+  const leave = (): void => {
+    dropPickMirrors();
+    markOnboarded();
+  };
   if (mode.kind === 'mid-intent') {
     return (
       <div
@@ -117,7 +98,7 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Link href={mode.href} style={LOUD_LINK} onClick={leave(mode.href)}>
+          <Link href={mode.href} style={LOUD_LINK} onClick={leave}>
             {copy.midIntent(mode.destinationLabel)}
           </Link>
         </div>
@@ -140,9 +121,12 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
     );
   }
 
-  const href = mode.kind === 'menu' ? DEFAULT_RETURN_PATH : mode.href;
   return (
-    <Link href={href} style={QUIET_LINK} onClick={leave(href)}>
+    <Link
+      href={mode.kind === 'menu' ? DEFAULT_RETURN_PATH : mode.href}
+      style={QUIET_LINK}
+      onClick={leave}
+    >
       {mode.kind === 'menu' ? copy.menu : copy.default}
     </Link>
   );
