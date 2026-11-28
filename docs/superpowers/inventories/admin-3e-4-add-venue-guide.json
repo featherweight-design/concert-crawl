@@ -1,0 +1,51 @@
+{
+  "feature": "Admin 3e-4: Add a venue, Guide step (draft, nothing to draft from, Write it myself, Skip for now)",
+  "note": "Boards: design/design_handoff_admin_redesign/screens/05-add-a-venue (step-4-first-timer-guide-optional, guide-nothing-to-draft-from, guide-mobile). Admin role (CONTACT_SHEET_ROLE=admin). The local API runs with no model key, so drafting spends nothing: the step lands on its Couldn't-draft or Nothing-to-draft state, and Write it myself opens the nine empty sections. Drafted sections, Check this, Redraft and the cost line need a model call (spend) and are covered by guide-rules.test.ts and AddVenueFlow.test.tsx, and left for the staging walk.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "guide-no-draft",
+      "label": "Guide step with nothing drafted: state card and the footer's Skip for now",
+      "steps": [
+        {
+          "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=source",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-ask\"]"
+        },
+        { "click": "[data-testid=\"add-venue-continue\"]" },
+        { "settle": 12000 },
+        { "settle": 12000 },
+        {
+          "wait": "[data-testid=\"add-venue-guide-failed\"], [data-testid=\"add-venue-guide-nothing\"]"
+        },
+        { "settle": 600 }
+      ]
+    },
+    {
+      "id": "guide-sections",
+      "label": "Write it myself: the nine empty sections, Accessibility marked Required",
+      "steps": [
+        {
+          "goto": "/admin/venues/new?id=771b5c2e-e257-4c70-9186-033830a156ed&step=source",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"add-venue-ask\"]"
+        },
+        { "click": "[data-testid=\"add-venue-continue\"]" },
+        { "settle": 12000 },
+        { "settle": 12000 },
+        {
+          "wait": "[data-testid=\"add-venue-guide-failed\"], [data-testid=\"add-venue-guide-nothing\"]"
+        },
+        {
+          "click": "[data-testid=\"add-venue-guide-failed\"] button:last-of-type, [data-testid=\"add-venue-guide-nothing\"] button:first-of-type"
+        },
+        { "wait": "[data-testid=\"add-venue-guide-field-accessibility\"]" },
+        { "settle": 600 }
+      ]
+    }
+  ]
+}
