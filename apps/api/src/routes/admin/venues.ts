@@ -16,7 +16,6 @@ import {
   auditLog,
   notifications,
   venueFaultAcknowledgements,
-  heroSettingEnum,
   type NewVenue,
 } from '@concert-crawl/db';
 import {
@@ -55,6 +54,7 @@ import {
 } from '@concert-crawl/crawler-core/robots';
 import {
   CRAWLER_USER_AGENT,
+  HERO_SETTINGS,
   MIN_CRAWL_DELAY_MS,
   VENUE_PLATFORMS,
   VENUE_SHORT_NAME_MAX,
@@ -322,7 +322,7 @@ export const updateVenueSchema = createVenueSchema
     glyphSvg: glyphSvgField,
     // The setting the venue's hero art draws (admin 3e-3). Null hands the pick
     // back to the glyph's default setting.
-    heroSetting: z.enum(heroSettingEnum.enumValues).nullable().optional(),
+    heroSetting: z.enum(HERO_SETTINGS).nullable().optional(),
     // API-backed venue crawling (#506). When apiProvider is set, the crawler
     // (per #505) bypasses the HTML → JSON-LD → LLM cascade. null = None.
     apiProvider: z.enum(['venuepilot']).nullable().optional(),

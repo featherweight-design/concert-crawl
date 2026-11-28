@@ -516,3 +516,17 @@ export const validateGlyphSvg = (input: string): GlyphSvgResult => {
     throw err;
   }
 };
+
+/**
+ * The backdrops a venue's hero art can sit on. Mirrors the `hero_setting` DB
+ * enum; the API's integration test fails if the two drift.
+ */
+export const HERO_SETTINGS = [
+  'street',
+  'outdoor',
+  'arena',
+  'theater',
+  'club',
+  'gallery',
+] as const;
+export type HeroSetting = (typeof HERO_SETTINGS)[number];
