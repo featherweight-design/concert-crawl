@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { DESKTOP_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { FilterPopover } from '../filter-bar/FilterPopover';
 import { FilterSheet } from '../filter-bar/FilterSheet';
 import {
@@ -42,6 +44,7 @@ function IconChevDown({ size = 11 }: { size?: number }) {
 }
 
 export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
+  const isDesktop = useMediaQuery(DESKTOP_VIEWPORT_QUERY);
   const [openKey, setOpenKey] = useState<VenueFilterKey | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [opener, setOpener] = useState<HTMLElement | null>(null);
@@ -196,10 +199,12 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
         )}
       </div>
 
-      {/* Desktop popover — only render when anchorRect is set (desktop only) */}
-      {openKey && anchorRect && (
+      {/* Desktop popover. Gated on the viewport, not on anchorRect (a chip always
+          has a rect): a mounted-but-hidden popover on a phone treats a press on
+          the sheet's option as an outside press and closes it before the click. */}
+      {openKey && anchorRect && isDesktop && (
         <FilterPopover
-          open={!!openKey}
+          open
           title={VENUE_FILTER_DEFS[openKey]?.label ?? ''}
           options={VENUE_FILTER_DEFS[openKey]?.options ?? []}
           value={state[openKey] ?? ''}

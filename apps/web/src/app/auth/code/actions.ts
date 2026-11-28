@@ -6,6 +6,7 @@ import {
   signInviteCookie,
   INVITE_COOKIE_NAME,
   INVITE_COOKIE_MAX_AGE,
+  INVITE_COOKIE_PATH,
   RETURN_PATH_COOKIE_NAME,
 } from '@/lib/invite-cookie';
 import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent';
@@ -118,7 +119,7 @@ export async function validateAndSetInviteCode(
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: INVITE_COOKIE_MAX_AGE,
-    path: '/',
+    path: INVITE_COOKIE_PATH,
   });
 
   // A second signed cookie beside invite_verified, because a query param
@@ -141,7 +142,7 @@ export async function validateAndSetInviteCode(
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: INVITE_COOKIE_MAX_AGE,
-        path: '/',
+        path: INVITE_COOKIE_PATH,
       },
     );
   }

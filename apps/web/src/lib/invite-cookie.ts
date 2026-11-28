@@ -3,6 +3,8 @@ import { createHmac, timingSafeEqual } from 'crypto';
 
 export const INVITE_COOKIE_NAME = 'invite_verified';
 export const INVITE_COOKIE_MAX_AGE = 3600; // 1 hour in seconds
+/** Both invite cookies are set and cleared on this path; a clear on any other misses them. */
+export const INVITE_COOKIE_PATH = '/';
 
 /**
  * Where to send a new arrival once signup completes, when they started at a

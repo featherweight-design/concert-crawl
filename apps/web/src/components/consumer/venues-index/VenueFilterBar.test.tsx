@@ -5,7 +5,7 @@
 // still clears a venues filter, and that the open chip's own press closes it.
 
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { VenueFilterBar } from './VenueFilterBar';
 import {
@@ -41,7 +41,49 @@ const desktopPopover = () => {
   return popover ?? null;
 };
 
+const setViewport = (desktop: boolean) =>
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: desktop && query.includes('min-width'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+
+describe('VenueFilterBar phone sheet', () => {
+  beforeEach(() => {
+    setViewport(false);
+  });
+
+  it('mounts no popover, so an option press is not an outside press', () => {
+    const onChange = vi.fn();
+    render(<VenueFilterBar state={STATE} onChange={onChange} />);
+    fireEvent.click(desktopChip(venueChipLabel('capacity', 'club')));
+    expect(desktopPopover()).toBeNull();
+    const sheet = screen.getByRole('dialog', {
+      name: `${VENUE_FILTER_DEFS.capacity.label} filter`,
+    });
+    const option = within(sheet).getAllByRole('button').at(-1);
+    if (!option) throw new Error('no option in sheet');
+    fireEvent.pointerDown(option);
+    // Still open after the press, so the click lands on the option.
+    expect(
+      screen.getByRole('dialog', {
+        name: `${VENUE_FILTER_DEFS.capacity.label} filter`,
+      }),
+    ).toBeTruthy();
+  });
+});
+
 describe('VenueFilterBar desktop popover', () => {
+  beforeEach(() => {
+    setViewport(true);
+  });
+
   it('the header Clear clears the open filter', () => {
     const onChange = vi.fn();
     render(<VenueFilterBar state={STATE} onChange={onChange} />);

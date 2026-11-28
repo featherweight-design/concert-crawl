@@ -160,8 +160,9 @@ export function FilterPopover({
       return;
     }
     const popover = popoverRef.current;
-    // Under `sm` the popover is `hidden` and the sheet opens instead. Browse
-    // only opens it from 1024 (`open={isDesktop}`); Venues does too.
+    // Under `lg` the popover is `hidden` and the sheet opens instead. Browse
+    // (`open={isDesktop}`) and Venues (rendered only from 1024) both keep it
+    // closed there; this guard is a backstop.
     if (!popover || window.getComputedStyle(popover).display === 'none') {
       return;
     }

@@ -87,7 +87,8 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
   gitignored `apps/e2e/.env.local`** (not the shell profile, since 2026-11-24), which `sign-in.mjs` and
   `prepareAuditAuth` load themselves; an exported shell value wins. In a worktree, `cp` the main checkout's
   `apps/e2e/.env.local` into the worktree's `apps/e2e/` (the 2026-11-22 exception below). Reference the values by
-  name only; never read, print or paste them.
+  name only; never read, print or paste them. The loader reads values literally, so
+  symbols (`#`, `@`, `$`, `=`, spaces) are fine; quotes are optional.
 - **Locally** the same credentials sign in to the Concert Crawl Staging Clerk app's development instance (the dev
   server's keys). Its session cookie is still `__session`, which is what the shared flow waits for, so `signIn`
   needs no local branch. The module keeps the kit's contract: it exports `signIn(page, { baseUrl })`, checks the host
