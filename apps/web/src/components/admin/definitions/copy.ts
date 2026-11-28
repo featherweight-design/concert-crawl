@@ -1594,6 +1594,8 @@ export const ADMIN_COPY = {
       guidePublished: 'The first-timer guide went live with it.',
       guideDraft:
         'The first-timer guide stayed a draft: Accessibility isn’t written. Add it on the venue page to publish.',
+      guideFailed:
+        'The first-timer guide didn’t publish. Publish it from the venue page.',
       open: 'Open the venue page',
       fan: 'See it as a fan',
       another: 'Add another',

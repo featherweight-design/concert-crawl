@@ -17,6 +17,12 @@ import {
 
 const GONE = ADMIN_COPY.addVenue.gone;
 
+const GUIDE_LINE = {
+  published: GONE.guidePublished,
+  draft: GONE.guideDraft,
+  failed: GONE.guideFailed,
+} as const;
+
 const linkStyle = (
   variant: 'gradient' | 'outline',
   phone: boolean,
@@ -49,7 +55,7 @@ export const GoneLive = ({
   name: string;
   slug: string;
   crawlQueued: boolean | null;
-  guide: 'published' | 'draft' | null;
+  guide: 'published' | 'draft' | 'failed' | null;
   onAddAnother: () => void;
 }) => (
   <div
@@ -78,7 +84,7 @@ export const GoneLive = ({
         data-testid="add-venue-gone-guide"
         style={{ margin: 0, fontSize: 14, color: 'var(--fg-muted)' }}
       >
-        {guide === 'published' ? GONE.guidePublished : GONE.guideDraft}
+        {GUIDE_LINE[guide]}
       </p>
     )}
     <div

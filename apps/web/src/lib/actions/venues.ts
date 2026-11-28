@@ -677,7 +677,7 @@ export type GoLiveOutcome =
       crawlQueued: boolean | null;
       // The guide went live with the venue, stayed a draft because its gate
       // failed, or there was nothing to say (none written, or no answer).
-      guide: 'published' | 'draft' | null;
+      guide: 'published' | 'draft' | 'failed' | null;
     }
   | { ok: false; reason: 'live' | 'robots' | 'failed' };
 
@@ -686,17 +686,18 @@ const GoLiveResponse = z.object({
   guide: z
     .object({
       published: z.boolean(),
-      reason: z.enum(['none', 'accessibility']).optional(),
+      reason: z.enum(['none', 'accessibility', 'error']).optional(),
     })
     .optional(),
 });
 
 const guideOutcome = (
   guide: z.infer<typeof GoLiveResponse>['guide'],
-): 'published' | 'draft' | null => {
+): 'published' | 'draft' | 'failed' | null => {
   if (guide === undefined) return null;
   if (guide.published) return 'published';
-  return guide.reason === 'accessibility' ? 'draft' : null;
+  if (guide.reason === 'accessibility') return 'draft';
+  return guide.reason === 'error' ? 'failed' : null;
 };
 
 export async function goLiveVenue(id: string): Promise<GoLiveOutcome> {

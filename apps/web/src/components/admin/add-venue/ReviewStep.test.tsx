@@ -89,7 +89,7 @@ describe('ReviewStep', () => {
 describe('GoneLive', () => {
   const gone = (
     crawlQueued: boolean | null,
-    guide: 'published' | 'draft' | null = null,
+    guide: 'published' | 'draft' | 'failed' | null = null,
   ) =>
     render(
       <GoneLive
@@ -137,5 +137,10 @@ describe('GoneLive', () => {
   it('says plainly when the guide stayed a draft', () => {
     gone(true, 'draft');
     expect(screen.getByText(GONE.guideDraft)).toBeTruthy();
+  });
+
+  it('says when the guide could not be published', () => {
+    gone(true, 'failed');
+    expect(screen.getByText(GONE.guideFailed)).toBeTruthy();
   });
 });

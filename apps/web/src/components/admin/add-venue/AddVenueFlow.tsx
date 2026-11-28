@@ -91,7 +91,7 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   );
   const [gone, setGone] = useState<{
     crawlQueued: boolean | null;
-    guide: 'published' | 'draft' | null;
+    guide: 'published' | 'draft' | 'failed' | null;
   } | null>(null);
   const goingRef = useRef(false);
   const [basics, setBasics] = useState<BasicsDraft>(
