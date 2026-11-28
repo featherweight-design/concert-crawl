@@ -1,4 +1,9 @@
 import type { VenueHeroSetting } from './definitions/venue-settings';
+import {
+  ClubBackdrop,
+  GalleryBackdrop,
+  TheaterBackdrop,
+} from './VenueBackdropScenes';
 
 const MOON_YELLOW = '#FFE36B'; // fwd-allow-hex: board art colour
 const STAR_WHITE = '#FFFFFF'; // fwd-allow-hex: board art colour
@@ -157,9 +162,10 @@ const ARENA_STARS = [
 ] as const;
 
 /**
- * The quiet layer behind a venue's sign, one of the board's three families:
+ * The quiet layer behind a venue's sign, one of the board's six families:
  * brick courses (street), a night sky over the Front Range ridge (outdoor),
- * or a low skyline under a crescent moon (arena).
+ * a low skyline under a crescent moon (arena), or the three drawn in
+ * `VenueBackdropScenes` (theater, club, gallery).
  */
 export function VenueBackdrop({
   setting,
@@ -170,6 +176,10 @@ export function VenueBackdrop({
   wide = false,
 }: VenueBackdropProps) {
   const phoneOnly = wide ? 'block lg:hidden' : 'block';
+  const scene = { from, to, ground, uid, wide };
+  if (setting === 'theater') return <TheaterBackdrop {...scene} />;
+  if (setting === 'club') return <ClubBackdrop {...scene} />;
+  if (setting === 'gallery') return <GalleryBackdrop {...scene} />;
   if (setting === 'outdoor') {
     const horizonId = `vn${uid}h`;
     return (
