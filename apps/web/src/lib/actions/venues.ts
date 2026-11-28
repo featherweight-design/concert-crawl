@@ -38,6 +38,10 @@ import { buildUpdateVenueBody } from './build-update-venue-body';
 import type { VenueHeroSetting } from '@/components/consumer/venue-glyph/definitions/venue-settings';
 import { venueGuideSchema } from '@/lib/admin/venue-guide-schema';
 import {
+  guideDraftsSchema,
+  type GuideDrafts,
+} from '@/lib/admin/guide-drafts-schema';
+import {
   glyphDraftsSchema,
   type GlyphDrafts,
   type GlyphReference,
@@ -734,6 +738,40 @@ export async function draftVenueGlyphs(
     return { ok: false };
   } catch (err: unknown) {
     console.error('draftVenueGlyphs: failed', { venueId, err });
+    return {
+      ok: false,
+      ...(err instanceof ApiError ? { error: err.message } : {}),
+    };
+  }
+}
+
+export type DraftGuideOutcome =
+  | { ok: true; data: GuideDrafts }
+  // `error` is the API's own message when it meant one for a human.
+  | { ok: false; error?: string };
+
+// Admin 3e-4: the guide's sections drafted from the venue's own FAQ,
+// accessibility and policy pages. Nothing is stored; the admin edits the drafts
+// and saves them with `saveVenueGuide`.
+export async function draftVenueGuide(
+  venueId: string,
+): Promise<DraftGuideOutcome> {
+  try {
+    const token = await getToken();
+    const data = await apiClient.post<unknown>(
+      `/v1/admin/venues/${venueId}/guide-drafts`,
+      token,
+      {},
+    );
+    const parsed = guideDraftsSchema.safeParse(data);
+    if (parsed.success) return { ok: true, data: parsed.data };
+    console.error('draftVenueGuide: unexpected shape', {
+      venueId,
+      issues: parsed.error.issues,
+    });
+    return { ok: false };
+  } catch (err: unknown) {
+    console.error('draftVenueGuide: failed', { venueId, err });
     return {
       ok: false,
       ...(err instanceof ApiError ? { error: err.message } : {}),

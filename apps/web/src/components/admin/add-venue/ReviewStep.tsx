@@ -85,6 +85,8 @@ interface ReviewStepProps {
   onEditBasics: () => void;
   onEditSource: () => void;
   onSaveDraft: () => void;
+  /** What the Guide step saved, as a line; null when it was skipped. */
+  guideLine?: string | null;
 }
 
 export const ReviewStep = ({
@@ -97,6 +99,7 @@ export const ReviewStep = ({
   onEditBasics,
   onEditSource,
   onSaveDraft,
+  guideLine = null,
 }: ReviewStepProps) => {
   const ready = found !== null;
   const name = basics.name.trim() || COPY.rail.unnamed;
@@ -147,8 +150,14 @@ export const ReviewStep = ({
         <Row
           testId="add-venue-review-guide"
           name={REVIEW.rows.guide}
-          detail={REVIEW.skipped}
-          badge={<StatusBadge>{REVIEW.later}</StatusBadge>}
+          detail={guideLine ?? REVIEW.skipped}
+          badge={
+            guideLine === null ? (
+              <StatusBadge>{REVIEW.later}</StatusBadge>
+            ) : (
+              <StatusBadge kind="success">{REVIEW.done}</StatusBadge>
+            )
+          }
         />
         <Row
           testId="add-venue-review-details"

@@ -67,8 +67,43 @@ interface ShellProps {
   continueLabel?: string;
   /** Its words while busy: Saving…, or Going live… on Review. */
   busyLabel?: string;
+  /** Optional steps: "Skip for now" beside Continue (`step-3-icon-optional`). */
+  onSkip?: (() => void) | undefined;
   children: ReactNode;
 }
+
+/** The footer's "Skip for now": a quiet text button beside Continue. */
+const SkipButton = ({
+  onSkip,
+  busy,
+  phone,
+}: {
+  onSkip: () => void;
+  busy: boolean;
+  phone: boolean;
+}) => (
+  <button
+    type="button"
+    onClick={onSkip}
+    disabled={busy}
+    data-testid="add-venue-skip"
+    style={{
+      height: phone ? 46 : 38,
+      padding: '0 12px',
+      borderRadius: 9,
+      border: '1px solid transparent',
+      background: 'transparent',
+      color: 'var(--fg-muted)',
+      fontFamily: 'inherit',
+      fontSize: phone ? 15 : 13.5,
+      fontWeight: 600,
+      whiteSpace: 'nowrap',
+      cursor: 'pointer',
+    }}
+  >
+    {COPY.footer.skip}
+  </button>
+);
 
 /**
  * A rail row's two marks, kept apart: the current step keeps its highlight
@@ -170,6 +205,7 @@ const DesktopShell = ({
   continueDisabled = false,
   continueLabel = COPY.footer.continue,
   busyLabel = COPY.footer.saving,
+  onSkip,
   children,
 }: ShellProps) => (
   <div
@@ -282,6 +318,7 @@ const DesktopShell = ({
       >
         {COPY.footer.savedAsYouGo}
       </span>
+      {onSkip && <SkipButton onSkip={onSkip} busy={busy} phone={false} />}
       <button
         type="button"
         onClick={onContinue}
@@ -304,6 +341,7 @@ const PhoneShell = ({
   continueDisabled = false,
   continueLabel = COPY.footer.continue,
   busyLabel = COPY.footer.saving,
+  onSkip,
   children,
 }: ShellProps) => {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -417,6 +455,7 @@ const PhoneShell = ({
           gap: 8,
         }}
       >
+        {onSkip && <SkipButton onSkip={onSkip} busy={busy} phone />}
         <button
           type="button"
           onClick={onContinue}

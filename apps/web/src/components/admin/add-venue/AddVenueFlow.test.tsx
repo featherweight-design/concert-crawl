@@ -28,11 +28,15 @@ vi.mock('@/lib/actions/venues', () => ({
   testCrawlVenue: () => mockTestCrawl(),
   readTestCrawl: () => mockReadTest(),
   goLiveVenue: (id: string) => mockGoLive(id),
+  draftVenueGuide: () => mockDraftGuide(),
+  saveVenueGuide: (id: string, body: unknown) => mockSaveGuide(id, body),
 }));
 
 const mockTestCrawl = vi.fn();
 const mockReadTest = vi.fn();
 const mockGoLive = vi.fn();
+const mockDraftGuide = vi.fn();
+const mockSaveGuide = vi.fn();
 
 const mockReplace = vi.fn();
 const mockPush = vi.fn();
@@ -308,13 +312,13 @@ describe('AddVenueFlow', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('draws Icon and Guide as not open yet, and Source and Review as open', () => {
+  it('draws Icon as not open yet, and Source, Guide and Review as open', () => {
     render(<AddVenueFlow draft={null} />);
     fireEvent.click(screen.getByTestId('add-venue-from-scratch'));
     expect(
       screen.getByTestId('add-venue-step-source').getAttribute('aria-disabled'),
     ).toBeNull();
-    for (const step of ['icon', 'guide']) {
+    for (const step of ['icon']) {
       expect(
         screen
           .getByTestId(`add-venue-step-${step}`)
@@ -324,6 +328,10 @@ describe('AddVenueFlow', () => {
   });
 
   describe('Review and Go live', () => {
+    beforeEach(() => {
+      // The guide drafts on open; a draft that never lands leaves Skip as the way on.
+      mockDraftGuide.mockReturnValue(new Promise(() => {}));
+    });
     const FOUND = {
       status: 'found',
       found: 14,
@@ -353,11 +361,71 @@ describe('AddVenueFlow', () => {
         timeout: 5000,
       });
       fireEvent.click(next);
+      fireEvent.click(screen.getByTestId('add-venue-skip'));
       expect(screen.getByText(COPY.review.title)).toBeTruthy();
       expect(screen.getByTestId('add-venue-continue').textContent).toBe(
         COPY.review.goLive,
       );
       vi.useRealTimers();
+    });
+
+    it('saves what the guide holds on Continue, and nothing on Skip', async () => {
+      mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
+      mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
+      mockDraftGuide.mockResolvedValue({ ok: false });
+      mockSaveGuide.mockResolvedValue({ success: true });
+      resumeOnSource();
+      const next = screen.getByTestId('add-venue-continue');
+      await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {
+        timeout: 5000,
+      });
+      fireEvent.click(next);
+      await waitFor(() =>
+        expect(screen.getByTestId('add-venue-guide-failed')).toBeTruthy(),
+      );
+      fireEvent.click(screen.getByText(COPY.guide.writeMyself));
+      fireEvent.change(screen.getByTestId('add-venue-guide-field-parking'), {
+        target: { value: 'Garage on 20th' },
+      });
+      fireEvent.click(screen.getByTestId('add-venue-continue'));
+      await waitFor(() =>
+        expect(screen.getByText(COPY.review.title)).toBeTruthy(),
+      );
+      expect(mockSaveGuide).toHaveBeenCalledWith('v-9', {
+        insiderTip: null,
+        chips: [
+          { chipType: 'parking', body: 'Garage on 20th', isPlaceholder: false },
+        ],
+      });
+      expect(mockSaveGuide).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays on the guide with its words when the save fails', async () => {
+      mockTestCrawl.mockResolvedValue({ ok: true, triggerId: 't-1' });
+      mockReadTest.mockResolvedValue({ status: 'done', testResult: FOUND });
+      mockDraftGuide.mockResolvedValue({ ok: false });
+      mockSaveGuide.mockResolvedValue({ success: false });
+      resumeOnSource();
+      const next = screen.getByTestId('add-venue-continue');
+      await waitFor(() => expect(next.hasAttribute('disabled')).toBe(false), {
+        timeout: 5000,
+      });
+      fireEvent.click(next);
+      await waitFor(() =>
+        expect(screen.getByTestId('add-venue-guide-failed')).toBeTruthy(),
+      );
+      fireEvent.click(screen.getByText(COPY.guide.writeMyself));
+      fireEvent.change(screen.getByTestId('add-venue-guide-field-parking'), {
+        target: { value: 'Garage on 20th' },
+      });
+      fireEvent.click(screen.getByTestId('add-venue-continue'));
+      await waitFor(() =>
+        expect(screen.getByText(COPY.guide.saveFailed)).toBeTruthy(),
+      );
+      expect(
+        screen.getByTestId<HTMLTextAreaElement>('add-venue-guide-field-parking')
+          .value,
+      ).toBe('Garage on 20th');
     });
 
     it('goes live and shows Gone live, then starts over on Add another', async () => {
@@ -370,6 +438,7 @@ describe('AddVenueFlow', () => {
         timeout: 5000,
       });
       fireEvent.click(next);
+      fireEvent.click(screen.getByTestId('add-venue-skip'));
       fireEvent.click(screen.getByTestId('add-venue-continue'));
       await waitFor(() =>
         expect(screen.getByTestId('add-venue-gone-live')).toBeTruthy(),
@@ -400,6 +469,7 @@ describe('AddVenueFlow', () => {
         timeout: 5000,
       });
       fireEvent.click(next);
+      fireEvent.click(screen.getByTestId('add-venue-skip'));
       fireEvent.click(screen.getByTestId('add-venue-continue'));
       await waitFor(() =>
         expect(screen.getByTestId('add-venue-go-live-failed')).toBeTruthy(),
