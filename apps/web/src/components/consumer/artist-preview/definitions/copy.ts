@@ -17,6 +17,13 @@ export const ARTIST_PREVIEW_COPY = {
   pitchFollowing: 'Their dates will live on their page.',
   // Shown once the follow has returned the new slug.
   openPage: 'Open their page',
+  // The Close on the phone sheet and the desktop card (addendum 15, ruling 6).
+  closeLabel: 'Close',
+  // The palette footer while drilled in: Escape steps back, Enter follows and
+  // then opens the page (addendum 15, ruling 4).
+  footerBack: 'back to results',
+  footerFollow: 'follow',
+  footerOpenPage: 'open page',
   // Palette drill-in back row, `Results for “Clip”`.
   backToResults: (query: string) => `Results for “${query}”`,
 } as const;

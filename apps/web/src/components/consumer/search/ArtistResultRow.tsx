@@ -19,9 +19,15 @@ import {
   useArtistFollow,
 } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { ArtistPreview } from '@/components/consumer/artist-preview/ArtistPreview';
+import {
+  ArtistPreview,
+  PLATE_SIZE_SHEET,
+  PLATE_SIZE_WIDE,
+} from '@/components/consumer/artist-preview/ArtistPreview';
 import { AvatarSlot } from '@/components/consumer/image-slot';
 import { ModalShell } from '@/components/consumer/modal-shell';
+import { DESKTOP_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { GenreChips } from '../GenreChips';
 import {
   Highlight,
@@ -146,6 +152,7 @@ export const ArtistResultRow = ({
   // (addendum 13) instead of navigating. The preview reads this row's follow
   // state, so the row and the sheet never disagree.
   const [previewOpen, setPreviewOpen] = useState(false);
+  const isDesktop = useMediaQuery(DESKTOP_VIEWPORT_QUERY);
   const opensPreview = onNavigate === undefined && artist.slug === null;
   const openTarget = opensPreview ? () => setPreviewOpen(true) : onNavigate;
 
@@ -281,6 +288,11 @@ export const ArtistResultRow = ({
             pageHref={
               follow.following && follow.slug ? `/artists/${follow.slug}` : null
             }
+            plateSize={isDesktop ? PLATE_SIZE_WIDE : PLATE_SIZE_SHEET}
+            close={{
+              onClose: () => setPreviewOpen(false),
+              placement: isDesktop ? 'card' : 'sheet',
+            }}
           />
         </ModalShell>
       )}

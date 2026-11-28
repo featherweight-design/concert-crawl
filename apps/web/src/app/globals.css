@@ -512,6 +512,26 @@
   outline-offset: 2px;
 }
 
+/* Artist preview (addendum 15): the back row, Open their page and the Close.
+   all:unset on the back row strips its ring, so each restores :focus-visible. */
+.ap-preview-back:hover:not(:disabled) {
+  color: var(--fg);
+}
+.ap-preview-back:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+.ap-preview-open:hover {
+  border-color: var(--fg-muted);
+  background: var(--surface-2);
+}
+.ap-preview-back:focus-visible,
+.ap-preview-open:focus-visible,
+.ap-preview-close:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* Artist-page Follow control — same all:unset restoration. This is the page's
    primary conversion control, so an invisible keyboard focus is the worst
    place on the page to have one. */

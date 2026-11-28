@@ -17,6 +17,7 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { CCMark } from '@/components/brand/cc-mark';
 import { CCWordmark } from '@/components/brand/cc-wordmark';
 import { PalettePreview } from '../artist-preview/PalettePreview';
+import { ARTIST_PREVIEW_COPY } from '../artist-preview/definitions/copy';
 import { SearchDefaultState } from '../search/SearchDefaultState';
 import { SearchKeepTyping } from '../search/SearchKeepTyping';
 import { SearchTypedBody } from '../search/SearchTypedBody';
@@ -616,20 +617,38 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             color: 'var(--fg-subtle)',
           }}
         >
-          <span style={hintStyle}>
-            <kbd style={kbdStyle}>
-              ↑<span>↓</span>
-            </kbd>
-            {copy.paletteNavigateHint}
-          </span>
-          <span style={hintStyle}>
-            <kbd style={kbdStyle}>↵</kbd>
-            {copy.paletteOpenHint}
-          </span>
-          <span style={hintStyle}>
-            <kbd style={kbdStyle}>{copy.paletteEscHint}</kbd>
-            {copy.paletteCloseHint}
-          </span>
+          {preview ? (
+            <>
+              {/* Drilled in (addendum 15): Escape steps back, Enter acts. */}
+              <span style={hintStyle}>
+                <kbd style={kbdStyle}>↵</kbd>
+                {preview.mbid && followed.has(preview.mbid)
+                  ? ARTIST_PREVIEW_COPY.footerOpenPage
+                  : ARTIST_PREVIEW_COPY.footerFollow}
+              </span>
+              <span style={hintStyle}>
+                <kbd style={kbdStyle}>{copy.paletteEscHint}</kbd>
+                {ARTIST_PREVIEW_COPY.footerBack}
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={hintStyle}>
+                <kbd style={kbdStyle}>
+                  ↑<span>↓</span>
+                </kbd>
+                {copy.paletteNavigateHint}
+              </span>
+              <span style={hintStyle}>
+                <kbd style={kbdStyle}>↵</kbd>
+                {copy.paletteOpenHint}
+              </span>
+              <span style={hintStyle}>
+                <kbd style={kbdStyle}>{copy.paletteEscHint}</kbd>
+                {copy.paletteCloseHint}
+              </span>
+            </>
+          )}
           <span
             aria-hidden
             style={{
