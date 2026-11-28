@@ -1,0 +1,90 @@
+{
+  "feature": "U3 follow-up (addendum 15): preview Close, plate sizes, back row, Open their page",
+  "note": "Signed out, API mocked (route verb). Draws the preview with its Close at 320, 390 and desktop. Not drawn (no key verb, no signed-in follow mock): the Following preview with Open their page, and the palette drill-in; those are covered by unit tests and the probe apps/e2e/probes/artist-preview-close.mjs, and walked by hand.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "widths": [
+    {
+      "label": "xs",
+      "width": 320,
+      "height": 700,
+      "touch": true
+    },
+    {
+      "label": "md",
+      "width": 390,
+      "height": 800,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1280,
+      "height": 800
+    }
+  ],
+  "rows": [
+    {
+      "id": "preview-close",
+      "label": "/search: preview with the Close, long act name",
+      "steps": [
+        {
+          "goto": "/search",
+          "wait": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "settle": 2500
+        },
+        {
+          "route": "**/v1/search/artists*",
+          "body": {
+            "success": true,
+            "data": [
+              {
+                "name": "The Extraordinarily Long Named Appreciation Society Of Clip",
+                "slug": null,
+                "photoUrl": null,
+                "upcomingShowCount": 0,
+                "nextShow": null,
+                "following": false,
+                "mbid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "disambiguation": "Detroit rapper",
+                "area": "Michigan",
+                "type": "person",
+                "hasShows": false
+              }
+            ]
+          }
+        },
+        {
+          "route": "**/v1/events*",
+          "body": {
+            "success": true,
+            "data": {
+              "data": [],
+              "total": 0
+            }
+          }
+        },
+        {
+          "fill": "input[placeholder=\"Search artists, venues\u2026\"]",
+          "text": "clip"
+        },
+        {
+          "settle": 1500
+        },
+        {
+          "click": "button:has-text(\"Appreciation Society\")"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}
