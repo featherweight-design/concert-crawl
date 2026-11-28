@@ -1468,6 +1468,73 @@ export const ADMIN_COPY = {
       savedAsYouGo: 'Saved as you go',
       continue: 'Continue',
       saving: 'Saving…',
+      skip: 'Skip for now',
+    },
+    // Step 3 (`05/step-3-icon-optional`, `icon-drafting`,
+    // `icon-drafts-failed-the-style-check`, `icon-mobile`). Drafts come from the
+    // venue's name and any reference images; the boards' "about $0.03" is left
+    // out because the route reports no cost to show.
+    icon: {
+      title: (name: string) => `Give ${name} its icon`,
+      phoneTitle: (name: string) => `An icon for ${name}`,
+      sub: 'Optional. Skip it and the venue shows a plain pin until you add one from Details.',
+      references: {
+        title: 'References',
+        hint: 'Screenshots or photos of the sign, marquee or room, like the ones you used for The Ogden and the Oriental. Drafts trace what’s distinctive in them.',
+        add: 'Add image',
+        addPhone: 'Add reference images',
+        added: (count: number) => `${count} added`,
+        remove: (name: string) => `Remove ${name}`,
+        steerLabel: 'Steer the drafts',
+        steerPlaceholder:
+          'Steer it (optional): “the cocktail glass on the neon sign”',
+        tooLarge: (name: string) =>
+          `${name} is over 700 KB. Use a smaller image.`,
+        wrongType: (name: string) =>
+          `${name} isn’t a JPEG, PNG, WebP or GIF image.`,
+        unreadable: (name: string) => `${name} couldn’t be read.`,
+        limit: 'Three images at most. Remove one to add another.',
+      },
+      drafts: {
+        title: 'Drafts',
+        draft: 'Draft icons',
+        more: (count: number) => `Draft ${count} more`,
+        upload: 'Upload an SVG',
+        gridNote: 'Same 24-point grid and 1.6 stroke as the other 21.',
+        fromName: 'From the name',
+        fromReference: (name: string) => `From ${name}`,
+        uploaded: 'Your SVG',
+        uploadedFrom: (file: string) => `From ${file}`,
+        pick: 'Choose this icon',
+        requestFailed: 'The drafts didn’t come back. Try again.',
+        drafting: (count: number) => `Drafting ${count} icons…`,
+        draftingBadge: 'Drafting',
+        draftingSub: (sources: string) => `From ${sources}. About 15 seconds.`,
+        draftingSourceName: 'the name',
+        failedTitle: 'These drafts didn’t pass the style check',
+        hiddenBadge: (hidden: number, total: number) =>
+          `Hidden ${hidden} of ${total}`,
+        failedBody: (reasons: string) =>
+          `${reasons}, so we hid them rather than show icons that won’t match the set.`,
+        reasonFill: (count: number) =>
+          `${count} used ${count === 1 ? 'a fill' : 'fills'}`,
+        reasonOffGrid: (count: number) => `${count} ran off the 24-point grid`,
+        reasonInvalid: (count: number) => `${count} weren’t usable SVG`,
+        draftAgain: 'Draft again',
+        uploadFill: 'That SVG paints a fill. The set is strokes only.',
+        uploadOffGrid: 'That SVG runs off the 24-point grid.',
+        uploadInvalid:
+          'That file isn’t an SVG the style check can read (24 by 24, strokes only).',
+        uploadTooLarge: 'That file is too large for an icon.',
+      },
+      hero: {
+        title: 'Venue page hero',
+        note: 'The real hero: the glyph in neon over the backdrop for its setting. The setting is guessed from the venue; change it here.',
+        backdrop: 'Backdrop',
+        setting: 'Hero setting',
+      },
+      use: (label: string) => `Use ${label}`,
+      saveFailed: 'The icon didn’t save. Try again.',
     },
     // Step 3 (`05/step-3-icon-optional`, `icon-drafting`,
     // `icon-drafts-failed-the-style-check`, `icon-mobile`). Drafts come from the
@@ -1557,6 +1624,8 @@ export const ADMIN_COPY = {
         `Calendar page · test found ${found} ${found === 1 ? 'show' : 'shows'}`,
       sourceNotPassed: 'Hasn’t passed a test',
       skipped: 'Skipped',
+      iconChosen: (label: string, setting: string) =>
+        `${label} · ${setting} hero`,
       detailsLine: 'Fill in from Details any time',
       done: 'Done',
       later: 'Later',

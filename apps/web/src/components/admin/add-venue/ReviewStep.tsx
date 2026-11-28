@@ -79,6 +79,8 @@ interface ReviewStepProps {
   /** Shows the passing test found; null when Source has not passed. */
   found: number | null;
   going: boolean;
+  /** The icon saved on step 3, as its Review line; null when skipped. */
+  iconLine?: string | null;
   /** Go live was refused or failed: nothing was published. */
   failed: 'failed' | 'robots' | null;
   onRetry: () => void;
@@ -92,6 +94,7 @@ export const ReviewStep = ({
   basics,
   found,
   going,
+  iconLine = null,
   failed,
   onRetry,
   onEditBasics,
@@ -141,8 +144,14 @@ export const ReviewStep = ({
         <Row
           testId="add-venue-review-icon"
           name={REVIEW.rows.icon}
-          detail={REVIEW.skipped}
-          badge={<StatusBadge>{REVIEW.later}</StatusBadge>}
+          detail={iconLine ?? REVIEW.skipped}
+          badge={
+            iconLine === null ? (
+              <StatusBadge>{REVIEW.later}</StatusBadge>
+            ) : (
+              <StatusBadge kind="success">{REVIEW.done}</StatusBadge>
+            )
+          }
         />
         <Row
           testId="add-venue-review-guide"

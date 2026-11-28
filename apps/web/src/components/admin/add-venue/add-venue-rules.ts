@@ -26,13 +26,14 @@ export const OPTIONAL_STEPS: ReadonlySet<AddVenueStep> = new Set([
 ]);
 
 /**
- * The steps that open in this build: Basics (3e-1), Source (3e-2a) and Review
- * (3e-2b). Icon and Guide draw as the rail's not-yet steps until their PRs land
+ * The steps that open in this build: Basics (3e-1), Source (3e-2a), Icon (3e-3b)
+ * and Review (3e-2b). Guide draws as the rail's not-yet steps until their PRs land
  * (plan decision 12).
  */
 export const OPEN_STEPS: ReadonlySet<AddVenueStep> = new Set([
   'basics',
   'source',
+  'icon',
   'review',
 ]);
 
