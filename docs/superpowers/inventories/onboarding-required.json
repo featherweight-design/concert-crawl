@@ -1,0 +1,82 @@
+{
+  "feature": "Onboarding required: Finish and Skip record the tour as done (no visual change)",
+  "note": "The PR changes what Finish and Skip do on press (stamp onboardedAt, refresh the session, then navigate), not how they look. These rows photograph the first step with Skip in the rail and the last step with Finish, to show the surfaces unchanged. Signed in as the E2E audit account.",
+  "widths": [
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "id": "skip",
+      "label": "/onboarding: first step, Skip in the rail",
+      "steps": [
+        {
+          "goto": "/onboarding",
+          "wait": "a:visible:has-text('Skip')",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "finish",
+      "label": "/onboarding: last step, Start browsing",
+      "steps": [
+        {
+          "goto": "/onboarding",
+          "wait": "button:visible:has-text('Next \u2192')",
+          "settle": 800
+        },
+        {
+          "click": "button:visible:has-text('Next \u2192')",
+          "settle": 400
+        },
+        {
+          "click": "button:visible:has-text('Next \u2192')",
+          "settle": 400
+        },
+        {
+          "click": "button:visible:has-text('Next \u2192')",
+          "settle": 400
+        },
+        {
+          "click": "button:visible:has-text('Next \u2192')",
+          "settle": 400
+        },
+        {
+          "click": "button:visible:has-text('Next \u2192')",
+          "settle": 400
+        },
+        {
+          "click": "button:visible:has-text('Next \u2192')",
+          "settle": 400
+        },
+        {
+          "click": "button:visible:has-text('Continue without following')",
+          "settle": 400
+        },
+        {
+          "wait": "button:visible:has-text('Start browsing')",
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}
