@@ -100,12 +100,11 @@ function StripLayer({
       viewBox={`0 0 ${box.width} ${height}`}
       preserveAspectRatio="xMidYMin meet"
       width="100%"
-      height={height}
       aria-hidden="true"
       focusable="false"
       data-venue-strip={`${setting}-${box.name}`}
       className={visibility(box, wide)}
-      style={{ position: 'absolute', left: 0, top: 0 }}
+      style={{ position: 'absolute', left: 0, top: 0, height: 'auto' }}
     >
       {children}
     </svg>
@@ -367,12 +366,19 @@ export function ClubBackdrop({ to, ground, uid, wide }: SceneProps) {
 /** Depth lines as a share of the floor's height below the horizon. */
 const GALLERY_DEPTHS = [0.06, 0.172, 0.33, 0.52, 0.742, 1] as const;
 
-/** Three lit panels on the back wall, as fractions of the phone box. */
-const GALLERY_PANELS = [
-  { x: 23, y: 28, width: 38, height: 45, tone: NEON_CYAN },
-  { x: 76, y: 16, width: 23, height: 60, tone: NEON_YELLOW },
-  { x: 319, y: 24, width: 34, height: 51, tone: NEON_LIME },
-] as const;
+/** Three lit panels on the back wall, read off each box's drawn SVG. */
+const GALLERY_PANELS = {
+  phone: [
+    { x: 23, y: 28, width: 38, height: 45, tone: NEON_CYAN },
+    { x: 76, y: 16, width: 23, height: 60, tone: NEON_YELLOW },
+    { x: 319, y: 24, width: 34, height: 51, tone: NEON_LIME },
+  ],
+  wide: [
+    { x: 73, y: 58, width: 120, height: 93, tone: NEON_CYAN },
+    { x: 240, y: 34, width: 72, height: 125, tone: NEON_YELLOW },
+    { x: 1008, y: 51, width: 107, height: 108, tone: NEON_LIME },
+  ],
+} as const;
 
 /** Gallery (Meow Wolf): a room in one-point perspective, no top strip. */
 export function GalleryBackdrop({ to, ground, wide }: SceneProps) {
@@ -383,8 +389,6 @@ export function GalleryBackdrop({ to, ground, wide }: SceneProps) {
         const vanishX = box.width / 2;
         const floor = box.height - horizon;
         const rayStep = box.width * (60 / 380);
-        const sx = box.width / 380;
-        const sy = box.height / 200;
         return (
           <SceneLayer key={box.name} box={box} wide={wide} setting="gallery">
             <rect
@@ -414,14 +418,14 @@ export function GalleryBackdrop({ to, ground, wide }: SceneProps) {
                 />
               );
             })}
-            {GALLERY_PANELS.map((panel) => (
+            {GALLERY_PANELS[box.name].map((panel) => (
               <rect
                 key={panel.x}
-                x={Math.round(panel.x * sx)}
-                y={Math.round(panel.y * sy)}
-                width={Math.round(panel.width * sx)}
-                height={Math.round(panel.height * sy)}
-                rx={3 * box.k}
+                x={panel.x}
+                y={panel.y}
+                width={panel.width}
+                height={panel.height}
+                rx={box.name === 'wide' ? 5 : 3}
                 fill={panel.tone}
                 opacity={0.14}
                 stroke={panel.tone}
