@@ -17,13 +17,24 @@ import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { slugify } from '@/components/admin/venues/details/details-rules';
 import {
   createDraftVenue,
+  draftVenueGuide,
   goLiveVenue,
+  saveVenueGuide,
   updateVenue,
 } from '@/lib/actions/venues';
+import type { GuideDrafts } from '@/lib/admin/guide-drafts-schema';
 import { AddVenueShell } from './AddVenueShell';
 import { AskVenueSheet } from './AskVenueSheet';
 import { BasicsStep } from './BasicsStep';
 import { GoneLive } from './GoneLive';
+import { GuideStep, type GuideStatus } from './GuideStep';
+import {
+  EMPTY_FIELDS,
+  anyWritten,
+  guidePayload,
+  mergeRedraft,
+  type GuideFields,
+} from './guide-rules';
 import { ReviewStep } from './ReviewStep';
 import { SourceStep } from './SourceStep';
 import type { TestState } from './source-test-rules';
@@ -66,6 +77,12 @@ type SaveOutcome = {
   conflict?: boolean;
 };
 
+/** How many of the guide's nine sections have words. */
+const guideCount = (fields: GuideFields): number =>
+  [fields.insiderTip, ...Object.values(fields.chips)].filter(
+    (text) => text.trim() !== '',
+  ).length;
+
 /** Moves focus to the first field Basics marked, so the error is announced. */
 const focusFirstInvalid = (errors: BasicsErrors) => {
   const first = BASICS_FIELD_ORDER.find((key) => errors[key] !== undefined);
@@ -77,14 +94,26 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
   const router = useRouter();
   const phone = useIsPhone();
   const { setPageTitle, setPhoneBack } = usePageTitle();
-  const [stage, setStage] = useState<'start' | 'basics' | 'source' | 'review'>(
-    draft === null ? 'start' : (draft.step ?? 'basics'),
-  );
+  const [stage, setStage] = useState<
+    'start' | 'basics' | 'source' | 'guide' | 'review'
+  >(draft === null ? 'start' : (draft.step ?? 'basics'));
   const [venueId, setVenueId] = useState<string | null>(draft?.id ?? null);
   const [asking, setAsking] = useState(false);
   // What Source's test card last showed; null until the step reports. Review
   // is ready only on a passing test.
   const [source, setSource] = useState<TestState | null>(null);
+  // The guide step's state lives here so Back and Continue keep it, and so a
+  // second visit never spends a second draft (a model call).
+  const [guideDrafts, setGuideDrafts] = useState<GuideDrafts | null>(null);
+  const [guideFields, setGuideFields] = useState<GuideFields>(EMPTY_FIELDS);
+  const [guideOpened, setGuideOpened] = useState(false);
+  const [guideStatus, setGuideStatus] = useState<GuideStatus>('idle');
+  const [redraftFailed, setRedraftFailed] = useState(false);
+  // True once a guide is on the server, so a cleared guide still sends its PUT.
+  const [guideSaved, setGuideSaved] = useState(false);
+  const guideDrafting = useRef(false);
+  const guideDraftsRef = useRef<GuideDrafts | null>(null);
+  const [guideError, setGuideError] = useState<string | null>(null);
   const [going, setGoing] = useState(false);
   const [goLiveFailed, setGoLiveFailed] = useState<'failed' | 'robots' | null>(
     null,
@@ -232,12 +261,66 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     window.location.href = '/admin/venues/new';
   };
 
+  // One draft call at a time, owned here so a remount of the step never makes a
+  // second one; the late result merges into the fields as they are now.
+  const draftGuide = async (again: boolean) => {
+    if (guideDrafting.current || venueId === null) return;
+    guideDrafting.current = true;
+    setGuideStatus('drafting');
+    setRedraftFailed(false);
+    const outcome = await draftVenueGuide(venueId);
+    guideDrafting.current = false;
+    if (!outcome.ok) {
+      setRedraftFailed(again);
+      setGuideStatus(again ? 'ready' : 'failed');
+      return;
+    }
+    setGuideFields((prev) =>
+      mergeRedraft(prev, guideDraftsRef.current, outcome.data),
+    );
+    guideDraftsRef.current = outcome.data;
+    setGuideDrafts(outcome.data);
+    // Pages that gave nothing keep the Nothing-to-draft card until the admin
+    // chooses to write; any draft opens the fields.
+    if (outcome.data.sections.some((section) => section.state !== 'blank')) {
+      setGuideOpened(true);
+    }
+    setGuideStatus('ready');
+  };
+
+  // Guide's Continue saves what was written (a draft: publishing stays a
+  // separate step) and moves on. Nothing written and nothing saved before sends
+  // nothing; a guide saved earlier and since cleared sends its empty PUT. A
+  // failed save keeps the admin here with the words they typed.
+  const continueGuide = async () => {
+    if (venueId === null || saving.current) return;
+    if (!anyWritten(guideFields) && !guideSaved) {
+      setStage('review');
+      return;
+    }
+    saving.current = true;
+    setBusy(true);
+    setGuideError(null);
+    const outcome = await saveVenueGuide(venueId, guidePayload(guideFields));
+    saving.current = false;
+    setBusy(false);
+    if (!outcome.success) {
+      setGuideError(outcome.error ?? COPY.guide.saveFailed);
+      return;
+    }
+    setGuideSaved(anyWritten(guideFields));
+    setStage('review');
+  };
+
   // From Source, Back returns to Basics. Before the draft exists, Back returns
   // to Start; after, it saves any edits
   // ("Saved as you go") and leaves for Venues, where the draft waits under
   // Drafts. An edit that can't be saved keeps the admin here with its error.
   const back = async () => {
     if (stage === 'review') {
+      setGoLiveFailed(null);
+      setStage('guide');
+    } else if (stage === 'guide') {
       if (venueId !== null) openSource(venueId);
     } else if (stage === 'source') {
       setStage('basics');
@@ -265,9 +348,16 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
     );
   }
   const onSource = stage === 'source' && venueId !== null;
+  const onGuide = stage === 'guide' && venueId !== null;
   const onReview = stage === 'review' && venueId !== null;
   const found = source?.kind === 'found' ? source.result.found : null;
-  const step = onReview ? 'review' : onSource ? 'source' : 'basics';
+  const step = onReview
+    ? 'review'
+    : onGuide
+      ? 'guide'
+      : onSource
+        ? 'source'
+        : 'basics';
   return (
     <>
       <AddVenueShell
@@ -286,10 +376,13 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
         onContinue={() =>
           onReview
             ? void goLive()
-            : onSource
-              ? setStage('review')
-              : void toSource()
+            : onGuide
+              ? void continueGuide()
+              : onSource
+                ? setStage('guide')
+                : void toSource()
         }
+        onSkip={onGuide ? () => setStage('review') : undefined}
         continueDisabled={
           onReview
             ? found === null
@@ -298,7 +391,21 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
         continueLabel={onReview ? COPY.review.goLive : COPY.footer.continue}
         busyLabel={going ? COPY.review.going : COPY.footer.saving}
       >
-        {onReview ? (
+        {onGuide ? (
+          <GuideStep
+            phone={phone}
+            status={guideStatus}
+            redraftFailed={redraftFailed}
+            drafts={guideDrafts}
+            fields={guideFields}
+            opened={guideOpened}
+            saveError={guideError}
+            onDraft={(again) => void draftGuide(again)}
+            onFields={setGuideFields}
+            onOpened={() => setGuideOpened(true)}
+            onSkip={() => setStage('review')}
+          />
+        ) : onReview ? (
           <ReviewStep
             phone={phone}
             basics={basics}
@@ -313,6 +420,11 @@ export const AddVenueFlow = ({ draft }: { draft: AddVenueDraft | null }) => {
             }}
             onEditSource={() => openSource(venueId)}
             onSaveDraft={() => router.push(VENUES_HREF)}
+            guideLine={
+              guideSaved
+                ? COPY.review.guideSaved(guideCount(guideFields))
+                : null
+            }
           />
         ) : onSource ? (
           <SourceStep

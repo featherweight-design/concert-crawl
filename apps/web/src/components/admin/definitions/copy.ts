@@ -1468,6 +1468,55 @@ export const ADMIN_COPY = {
       savedAsYouGo: 'Saved as you go',
       continue: 'Continue',
       saving: 'Saving…',
+      skip: 'Skip for now',
+    },
+    // Step 4 (`05/step-4-first-timer-guide-optional`, `05/guide-mobile`,
+    // `05/guide-nothing-to-draft-from`). The drafting and failed states are not
+    // drawn; their words follow the Icon step's.
+    guide: {
+      title: 'First-timer guide',
+      sub: 'Optional, but fans rely on it. Edit anything now; it saves as a draft. Accessibility is the one section it can’t publish without.',
+      cardTitle: 'Guide',
+      drafted: (pages: string, cost: string | null) =>
+        `Drafted from ${pages} (allowed by robots.txt)${cost === null ? '' : `, about ${cost}`}. Every field is editable here.`,
+      redraft: 'Redraft',
+      redrafting: 'Drafting…',
+      redraftFailed: 'Couldn’t redraft. Your fields are as you left them.',
+      required: 'Required',
+      surfacedFirst: 'Surfaced first',
+      tags: {
+        drafted: 'Drafted',
+        check: 'Check this',
+        blank: 'Blank',
+        yours: 'Yours',
+      },
+      insiderHint:
+        'Yours to write: the thing you’d tell a friend who’s never been. We don’t draft this one.',
+      insiderPlaceholder:
+        'e.g. Sit at the bar for late sets: no cover after 10.',
+      from: (path: string) => `From ${path}`,
+      fromNote: (path: string, note: string) => `From ${path}. ${note}`,
+      left: (count: number) => `${count} left`,
+      drafting: 'Reading the venue’s pages…',
+      draftingSub:
+        'Only pages robots.txt allows, a few seconds apart. This can take a minute.',
+      failedTitle: 'Couldn’t draft the guide',
+      failedBody: 'The guide starts blank if you’d rather write it yourself.',
+      tryAgain: 'Try again',
+      nothingTitle: 'Nothing to draft from',
+      nothingBadge: 'Blank',
+      nothingBody:
+        'We found no FAQ, policy or accessibility page that robots.txt lets us read. The guide starts blank; every field is still editable here.',
+      writeMyself: 'Write it myself',
+      pageStatus: {
+        read: 'Read',
+        notFound: 'Not found',
+        disallowed: 'Disallowed by robots.txt',
+        offSite: 'On another site',
+        unreachable: 'Couldn’t reach it',
+        skipped: 'Not tried',
+      },
+      saveFailed: 'Couldn’t save the guide. Try again.',
     },
     // Step 3 (`05/step-3-icon-optional`, `icon-drafting`,
     // `icon-drafts-failed-the-style-check`, `icon-mobile`). Drafts come from the
@@ -1557,6 +1606,7 @@ export const ADMIN_COPY = {
         `Calendar page · test found ${found} ${found === 1 ? 'show' : 'shows'}`,
       sourceNotPassed: 'Hasn’t passed a test',
       skipped: 'Skipped',
+      guideSaved: (count: number) => `${count} of 9 sections written`,
       detailsLine: 'Fill in from Details any time',
       done: 'Done',
       later: 'Later',
