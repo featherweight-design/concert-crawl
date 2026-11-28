@@ -221,7 +221,11 @@ describe('admin venues API, 3c-3', () => {
 
       const audits = await auditRows('venue.go_live');
       expect(audits).toHaveLength(1);
-      expect(audits[0]?.metadata).toEqual({ crawlQueued: true });
+      expect(audits[0]?.metadata).toEqual({
+        crawlQueued: true,
+        guidePublished: false,
+        guideReason: 'none',
+      });
     });
 
     const goLive = async (id: string) => {
