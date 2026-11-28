@@ -1,3 +1,16 @@
+# [1.579.0](https://github.com/featherweight-design/concert-crawl/compare/v1.578.0...v1.579.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **web:** keep the phone crawl rules line as drawn, with no duration ([3cf3181](https://github.com/featherweight-design/concert-crawl/commit/3cf31811b70f70a215ab610376b1ffe3e14ac25e))
+
+
+### Features
+
+* **crawler-core:** a test crawl's result carries how long it took ([684c545](https://github.com/featherweight-design/concert-crawl/commit/684c54513d98422eea2c746f29a211692d26500f))
+* **web:** source shows how long the test took when the result has it ([7bb09d5](https://github.com/featherweight-design/concert-crawl/commit/7bb09d5ecad9da9294f85c0cea9d31381e774b11))
+
 # [1.578.0](https://github.com/featherweight-design/concert-crawl/compare/v1.577.0...v1.578.0) (2026-11-28)
 
 
