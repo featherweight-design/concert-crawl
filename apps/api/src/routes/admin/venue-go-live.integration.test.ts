@@ -269,6 +269,13 @@ describe('admin venues API, 3c-3', () => {
       expect(row?.active).toBe(true);
     });
 
+    it('keeps the date of a guide already published by hand', async () => {
+      const when = new Date('2026-01-02T03:04:05Z');
+      const draft = await seedDraft({ guidePublishedAt: when });
+      expect(await goLive(draft.id)).toEqual({ published: true });
+      expect((await publishedAt(draft.id))?.getTime()).toBe(when.getTime());
+    });
+
     it('reports none, and publishes nothing, when no guide was written', async () => {
       const draft = await seedDraft();
       expect(await goLive(draft.id)).toEqual({

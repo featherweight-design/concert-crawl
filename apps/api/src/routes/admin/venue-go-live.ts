@@ -184,7 +184,10 @@ const queueAfterGoLive = async (
   }
 };
 
-type GuideOutcome = { published: boolean; reason?: 'none' | 'accessibility' };
+type GuideOutcome = {
+  published: boolean;
+  reason?: 'none' | 'accessibility' | 'error';
+};
 
 /**
  * Publishes the guide with the venue when `/guide/publish`'s own gate passes
@@ -193,13 +196,19 @@ type GuideOutcome = { published: boolean; reason?: 'none' | 'accessibility' };
  */
 const publishGuideWithVenue = async (id: string): Promise<GuideOutcome> => {
   try {
+    const [already] = await db
+      .select({ at: venues.guidePublishedAt })
+      .from(venues)
+      .where(eq(venues.id, id));
+    // Published earlier by hand: keep its date, do not re-stamp it.
+    if (already?.at) return { published: true };
     const result = await publishGuide(id);
     if (result.kind === 'published') return { published: true };
     if (result.kind === 'missing') return { published: false, reason: 'none' };
     return { published: false, reason: await draftReason(id) };
   } catch (err) {
     apiLogger.error({ err, venueId: id }, 'go-live: guide not published');
-    return { published: false, reason: 'none' };
+    return { published: false, reason: 'error' };
   }
 };
 
@@ -301,6 +310,7 @@ venueGoLiveAdminRouter.post(
     ctx.set('auditMeta', {
       crawlQueued: crawl.queued,
       guidePublished: guide.published,
+      ...(guide.reason && { guideReason: guide.reason }),
     });
     return ctx.json({
       success: true,
