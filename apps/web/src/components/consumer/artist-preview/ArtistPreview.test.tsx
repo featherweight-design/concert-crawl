@@ -6,21 +6,19 @@ import type { ArtistSearchAllResult } from '@concert-crawl/types';
 
 import { ArtistPreview } from './ArtistPreview';
 
-vi.mock('next/link', () => ({
-  default: ({
-    href,
-    children,
-    onClick,
-  }: {
-    href: string;
-    children: React.ReactNode;
-    onClick?: () => void;
-  }) => (
-    <a href={href} onClick={onClick}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock('next/link', async () => {
+  const { forwardRef } = await import('react');
+  return {
+    default: forwardRef<
+      HTMLAnchorElement,
+      { href: string; children: React.ReactNode; onClick?: () => void }
+    >(({ href, children, onClick }, ref) => (
+      <a ref={ref} href={href} onClick={onClick}>
+        {children}
+      </a>
+    )),
+  };
+});
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/search',

@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ArtistSearchAllResult } from '@concert-crawl/types';
 import type { FollowError } from '@/components/consumer/artist-page/lib/use-artist-follow';
@@ -62,6 +70,11 @@ vi.mock(
 import { stubMatchMedia } from '@/test-utils/match-media';
 import { ARTIST_PREVIEW_COPY } from '@/components/consumer/artist-preview/definitions/copy';
 import { ArtistResultRow } from './ArtistResultRow';
+
+// The row reads the desktop breakpoint to size its preview; jsdom has none.
+beforeEach(() => {
+  stubMatchMedia(false);
+});
 
 afterEach(() => {
   cleanup();
