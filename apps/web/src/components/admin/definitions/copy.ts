@@ -1475,7 +1475,7 @@ export const ADMIN_COPY = {
     // drawn; their words follow the Icon step's.
     guide: {
       title: 'First-timer guide',
-      sub: 'Optional, but fans rely on it. Edit anything now; it publishes with the venue. Accessibility is the one section it can’t publish without.',
+      sub: 'Optional, but fans rely on it. Edit anything now; it saves as a draft. Accessibility is the one section it can’t publish without.',
       cardTitle: 'Guide',
       drafted: (pages: string, cost: string | null) =>
         `Drafted from ${pages} (allowed by robots.txt)${cost === null ? '' : `, about ${cost}`}. Every field is editable here.`,

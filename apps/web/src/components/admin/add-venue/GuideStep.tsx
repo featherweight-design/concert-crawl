@@ -4,7 +4,7 @@
  * Add a venue, step 4: First-timer guide (`05/step-4-first-timer-guide-optional`,
  * `05/guide-mobile`, `05/guide-nothing-to-draft-from`). The sections are drafted
  * from the venue's own pages when the step opens; each is editable, and
- * Continue saves what is written (a draft, published with the venue). The
+ * Continue saves what is written (a draft; publishing is a separate route). The
  * Insider tip is the admin's own and never drafted.
  */
 
