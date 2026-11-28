@@ -170,6 +170,44 @@ function accessibilityGateInput(chips: VenueGuideChip[]): {
   };
 }
 
+export type PublishGuideResult =
+  | { kind: 'missing' }
+  | { kind: 'blocked' }
+  | {
+      kind: 'published';
+      publishedAt: Date;
+      publishState: string;
+      chips: VenueGuideChip[];
+      insiderTip: string | null;
+    };
+
+/**
+ * The one publish gate, shared by `/guide/publish` and Go live so the two can
+ * never disagree. It re-derives the gate against the PERSISTED rows, never a
+ * request body, and sets `guidePublishedAt` only when the gate passes.
+ */
+export async function publishGuide(
+  venueId: string,
+): Promise<PublishGuideResult> {
+  const row = await loadVenueGuideRow(venueId);
+  if (!row) return { kind: 'missing' };
+  const chips = await loadChips(venueId);
+  const publishState = deriveGuidePublishState(accessibilityGateInput(chips));
+  if (publishState.kind === 'blocked') return { kind: 'blocked' };
+  const publishedAt = new Date();
+  await db
+    .update(venues)
+    .set({ guidePublishedAt: publishedAt })
+    .where(eq(venues.id, venueId));
+  return {
+    kind: 'published',
+    publishedAt,
+    publishState: publishState.kind,
+    chips,
+    insiderTip: row.insiderTip,
+  };
+}
+
 // GET /v1/admin/venues/:id/guide
 venueGuideAdminRouter.get('/', async (ctx) => {
   const id = readVenueId(ctx);
@@ -265,17 +303,11 @@ venueGuideAdminRouter.post('/publish', async (ctx) => {
     return ctx.json({ success: false, error: 'Venue not found' }, 404);
   }
 
-  const row = await loadVenueGuideRow(id);
-  if (!row) {
+  const result = await publishGuide(id);
+  if (result.kind === 'missing') {
     return ctx.json({ success: false, error: 'Venue not found' }, 404);
   }
-
-  // Re-derive the gate against the PERSISTED rows, never the request body —
-  // a hand-rolled request must not be able to bypass it.
-  const chips = await loadChips(id);
-  const publishState = deriveGuidePublishState(accessibilityGateInput(chips));
-
-  if (publishState.kind === 'blocked') {
+  if (result.kind === 'blocked') {
     return ctx.json(
       {
         success: false,
@@ -287,20 +319,17 @@ venueGuideAdminRouter.post('/publish', async (ctx) => {
     );
   }
 
-  const guidePublishedAt = new Date();
-  await db.update(venues).set({ guidePublishedAt }).where(eq(venues.id, id));
-
   ctx.set('auditAction', 'venue.guide.publish');
   ctx.set('auditTargetId', id);
   ctx.set('auditActorId', getAuthUser(ctx).userId);
-  ctx.set('auditMeta', { publishState: publishState.kind });
+  ctx.set('auditMeta', { publishState: result.publishState });
 
   return ctx.json({
     success: true,
     data: {
-      chips,
-      insiderTip: row.insiderTip,
-      publishedAt: guidePublishedAt.toISOString(),
+      chips: result.chips,
+      insiderTip: result.insiderTip,
+      publishedAt: result.publishedAt.toISOString(),
     },
   });
 });

@@ -41,6 +41,7 @@ export const GoneLive = ({
   name,
   slug,
   crawlQueued,
+  guide,
   onAddAnother,
 }: {
   phone: boolean;
@@ -48,6 +49,7 @@ export const GoneLive = ({
   name: string;
   slug: string;
   crawlQueued: boolean | null;
+  guide: 'published' | 'draft' | null;
   onAddAnother: () => void;
 }) => (
   <div
@@ -71,6 +73,14 @@ export const GoneLive = ({
           ? GONE.crawlQueued
           : GONE.crawlNotQueued}
     </p>
+    {guide !== null && (
+      <p
+        data-testid="add-venue-gone-guide"
+        style={{ margin: 0, fontSize: 14, color: 'var(--fg-muted)' }}
+      >
+        {guide === 'published' ? GONE.guidePublished : GONE.guideDraft}
+      </p>
+    )}
     <div
       style={{
         display: 'flex',

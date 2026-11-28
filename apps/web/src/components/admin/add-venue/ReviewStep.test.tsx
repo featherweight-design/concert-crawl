@@ -87,7 +87,10 @@ describe('ReviewStep', () => {
 });
 
 describe('GoneLive', () => {
-  const gone = (crawlQueued: boolean | null) =>
+  const gone = (
+    crawlQueued: boolean | null,
+    guide: 'published' | 'draft' | null = null,
+  ) =>
     render(
       <GoneLive
         phone={false}
@@ -95,6 +98,7 @@ describe('GoneLive', () => {
         name="Dazzle Jazz"
         slug="dazzle"
         crawlQueued={crawlQueued}
+        guide={guide}
         onAddAnother={vi.fn()}
       />,
     );
@@ -118,5 +122,20 @@ describe('GoneLive', () => {
   it('says when the first crawl did not start', () => {
     gone(false);
     expect(screen.getByText(GONE.crawlNotQueued)).toBeTruthy();
+  });
+
+  it('says nothing about the guide when there is nothing to say', () => {
+    gone(true);
+    expect(screen.queryByTestId('add-venue-gone-guide')).toBeNull();
+  });
+
+  it('says the guide went live with the venue', () => {
+    gone(true, 'published');
+    expect(screen.getByText(GONE.guidePublished)).toBeTruthy();
+  });
+
+  it('says plainly when the guide stayed a draft', () => {
+    gone(true, 'draft');
+    expect(screen.getByText(GONE.guideDraft)).toBeTruthy();
   });
 });
