@@ -95,7 +95,8 @@ describe('admin venue PATCH heroSetting (3e-3)', () => {
           eq(auditLog.action, 'venue.update'),
           eq(auditLog.targetId, venue.id),
         ),
-      );
+      )
+      .orderBy(auditLog.createdAt);
     expect(updates.map((audit) => audit.metadata)).toEqual([
       { heroSetting: { before: null, after: 'club' } },
       { heroSetting: { before: 'club', after: 'theater' } },

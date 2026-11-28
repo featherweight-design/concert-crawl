@@ -35,6 +35,7 @@ import {
   type TrialOutcome,
 } from '@/components/admin/venues/trial-rules';
 import { buildUpdateVenueBody } from './build-update-venue-body';
+import type { VenueHeroSetting } from '@/components/consumer/venue-glyph/definitions/venue-settings';
 import { venueGuideSchema } from '@/lib/admin/venue-guide-schema';
 import {
   glyphDraftsSchema,
@@ -743,7 +744,7 @@ export async function draftVenueGlyphs(
 export interface SaveVenueIconPayload {
   /** The chosen draft or an uploaded SVG; the API checks it again. */
   glyphSvg?: string;
-  heroSetting?: 'street' | 'outdoor' | 'arena' | 'theater' | 'club' | 'gallery';
+  heroSetting?: VenueHeroSetting | null;
 }
 
 export type SaveVenueIconOutcome = { ok: true } | { ok: false; error?: string };
@@ -755,7 +756,12 @@ export async function saveVenueIcon(
 ): Promise<SaveVenueIconOutcome> {
   try {
     const token = await getToken();
-    await apiClient.patch<Venue>(`/v1/admin/venues/${venueId}`, token, payload);
+    await apiClient.patch<unknown>(
+      `/v1/admin/venues/${venueId}`,
+      token,
+      payload,
+    );
+    revalidatePath('/admin/venues');
     revalidatePath(`/admin/venues/${venueId}`);
     return { ok: true };
   } catch (err: unknown) {
