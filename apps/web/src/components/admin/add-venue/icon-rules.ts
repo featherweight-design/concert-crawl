@@ -15,7 +15,7 @@ const COPY = ADMIN_COPY.addVenue.icon;
 
 /** The route takes at most three reference images (3d-1). */
 export const REFERENCE_LIMIT = 3;
-/** The route's cap on one image's base64 text. */
+/** The route's cap on one image's base64 text: 1,000,000 characters is 750 KB of image. */
 export const REFERENCE_MAX_CHARS = 1_000_000;
 
 const REFERENCE_TYPES: ReadonlyArray<GlyphReference['mediaType']> = [
@@ -35,7 +35,7 @@ export const referenceType = (
 export const referenceSrc = (reference: GlyphReference): string =>
   `data:${reference.mediaType};base64,${reference.data}`;
 
-/** An image's name and type checked, then its base64 text; null if it won't go. */
+/** An image's type checked: its media type, or the error to show. */
 export type ReferenceCheck =
   | { ok: true; mediaType: GlyphReference['mediaType'] }
   | { ok: false; error: string };
