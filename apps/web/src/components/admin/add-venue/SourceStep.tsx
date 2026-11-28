@@ -94,7 +94,8 @@ const TestBody = ({
     const { result } = state;
     const samples = result.samples.slice(0, SAMPLE_LIMIT);
     const more = result.found - samples.length;
-    // Older results carry no duration: show nothing rather than a guess.
+    // Desktop only: the phone board draws the crawl rules without a duration.
+    // Older results carry none: show nothing rather than a guess.
     const took = (line: string): string =>
       result.durationMs === undefined
         ? line
@@ -113,7 +114,7 @@ const TestBody = ({
             <StatusBadge kind="success" dot>
               {test.passedCount(result.found)}
             </StatusBadge>
-            <span style={lineStyle}>{took(test.rules)}</span>
+            <span style={lineStyle}>{test.rules}</span>
           </div>
         ) : (
           <>

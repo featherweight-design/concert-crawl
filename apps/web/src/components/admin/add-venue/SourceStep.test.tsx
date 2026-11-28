@@ -128,14 +128,12 @@ describe('SourceStep', () => {
     ).toBeTruthy();
   });
 
-  it('on a phone ends the crawl rules line with how long the test took', async () => {
+  it('keeps the phone rules line as drawn, with no duration', async () => {
     mockTest.mockResolvedValue({ ok: true, triggerId: 't-1' });
     mockRead.mockResolvedValue(trigger({ ...found, durationMs: 6200 }));
     mount(vi.fn(), 'https://dazzledenver.com/events', vi.fn(), true);
     await settle();
-    expect(
-      screen.getByText(SOURCE.test.withTook(SOURCE.test.rules, 6200)),
-    ).toBeTruthy();
+    expect(screen.getByText(SOURCE.test.rules)).toBeTruthy();
   });
 
   it('stops at robots.txt, offers Ask the venue and reads no trigger', async () => {
